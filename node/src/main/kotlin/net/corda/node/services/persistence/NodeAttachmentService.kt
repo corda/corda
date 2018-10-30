@@ -22,6 +22,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -283,6 +284,14 @@ class NodeAttachmentService(
         return import(jar, uploader, filename)
     }
 
+    override fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
+        return try {
+            import(jar, uploader, filename)
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+            AttachmentId.parse(faee.message!!)
+        }
+    }
+
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
@@ -329,9 +338,9 @@ class NodeAttachmentService(
                         attachmentCache.invalidate(id)
                         attachmentContentCache.invalidate(id)
                     }
-                    id
+                    throw DuplicateAttachmentException(id.toString())
                 }
-                else id
+                else throw DuplicateAttachmentException(id.toString())
             }
         }
     }

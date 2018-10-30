@@ -7,6 +7,11 @@ import net.corda.core.flows.IdentifiableException
 import net.corda.core.serialization.CordaSerializable
 
 /**
+ * Thrown to indicate that an attachment was already uploaded to a Corda node.
+ */
+class DuplicateAttachmentException(attachmentHash: String) : java.nio.file.FileAlreadyExistsException(attachmentHash), ClientRelevantError
+
+/**
  * Thrown to indicate that a flow was not designed for RPC and should be started from an RPC client.
  */
 class NonRpcFlowException(logicType: Class<*>) : IllegalArgumentException("${logicType.name} was not designed for RPC"), ClientRelevantError

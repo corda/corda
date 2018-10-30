@@ -135,11 +135,11 @@ class NodeAttachmentServiceTest {
         // TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
 
         database.transaction {
-            val id = testJar.read { storage.privilegedImportAttachment(it, P2P_UPLOADER, null) }
+            val id = testJar.read { storage.privilegedImportOrGetAttachment(it, P2P_UPLOADER, null) }
             assertEquals(expectedHash, id)
             val attachment1 = storage.openAttachment(expectedHash)
 
-            val id2 = testJar.read { storage.privilegedImportAttachment(it, DEPLOYED_CORDAPP_UPLOADER, null) }
+            val id2 = testJar.read { storage.privilegedImportOrGetAttachment(it, DEPLOYED_CORDAPP_UPLOADER, null) }
             assertEquals(expectedHash, id2)
             val attachment2 = storage.openAttachment(expectedHash)
 
