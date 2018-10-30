@@ -13,11 +13,11 @@ import net.corda.bootstrapper.gui.Gui
 import net.corda.bootstrapper.serialization.SerializationEngine
 import picocli.CommandLine
 import javax.ws.rs.ProcessingException
+import kotlin.system.exitProcess
 
 val baseArgs = CliParser()
 
 fun main(args: Array<String>) {
-
     SerializationEngine.init()
     CommandLine(baseArgs).parse(*args)
     testDockerConnectivity()
@@ -43,10 +43,10 @@ private fun testDockerConnectivity() {
         DockerUtils.createLocalDockerClient().listImagesCmd().exec()
     } catch (se: ProcessingException) {
         if (baseArgs.gui) {
-            GuiUtils.showAndQuit("Could not connect to docker", "Please ensure that docker is running locally", null)
+            GuiUtils.showAndQuit("Could not connect to Docker", "Please ensure that docker is running locally", null)
         } else {
-            System.err.println("Could not connect to docker, Please ensure that docker is running locally")
-            System.exit(22)
+            System.err.println("Could not connect to Docker, please ensure that docker is running locally")
+            exitProcess(1)
         }
     }
 }

@@ -29,12 +29,9 @@ public class GuiUtils {
             TextArea textArea = new TextArea(exceptionText);
             textArea.setEditable(false);
             textArea.setWrapText(true);
-
             textArea.setMaxWidth(Double.MAX_VALUE);
             textArea.setMaxHeight(Double.MAX_VALUE);
             Label label = new Label("Details:");
-
-
             GridPane.setVgrow(textArea, Priority.ALWAYS);
             GridPane.setHgrow(textArea, Priority.ALWAYS);
             GridPane expContent = new GridPane();
@@ -52,7 +49,7 @@ public class GuiUtils {
         Platform.runLater(() -> {
             showException(title, message, exception);
             countDownLatch.countDown();
-            System.exit(22);
+            System.exit(1);
         });
         try {
             countDownLatch.await();
