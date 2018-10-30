@@ -88,17 +88,8 @@ cordapp {
         name "net/corda/finance"
         vendor "Corda Open Source"
     }
-    // TODO enable once plugin with signing DSL entry is released
-    // Pass system properties via ./gradlew -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
-    //signing {
-    //    enabled System.getProperty('signingEnabled')
-    //    options {
-    //        keystore System.getProperty('signingKeystore')
-    //        alias System.getProperty('signingAlias')
-    //        storepass System.getProperty('signingStorepass')
-    //        keypass System.getProperty('signingKeypass')
-    //    }
-    //}
+    // By default the Cordapp is signed by Corda development certificate, for production build pass the follwoing system properties for Gradle to configure specific keyStore/key e.g:
+    // ./gradlew -Dsigningnabled="true" -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
 }
 
 publish {

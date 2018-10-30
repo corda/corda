@@ -113,7 +113,7 @@ Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
 The ``cordapp`` plugin signs the generated Cordapp JAR with well known Corda development certificate.
 Cordapp signing can disabled or configured to use an external keystore.
-`signing`` entry may contain the following parameters:
+``signing`` entry may contain the following parameters:
 
  * ``enabled`` - the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
  * ``options`` - any relevant task parameters as for ANT task `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
@@ -140,13 +140,13 @@ Cordapp signing can disabled or configured to use an external keystore.
 
 Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
 without need to create a keyStore and configure the task.
-For production deployment ensure to sign CorDapp using own certificate e.g. by configuring options to point to external keyStore
-or by disabling signing in ``corpapp`` plugin and require the CordDapp JAR is signed downstream in your build/deployment pipeline.
+For production deployment ensure to sign the CorDapp using your own certificate e.g. by configuring options to point to external keystore
+or by disabling signing in ``cordapp`` plugin and require the CordDapp JAR is signed downstream in your build/deployment pipeline.
 CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
 
 Signing options can be contextually overwritten by system properties allowing a single ``gradle.build`` file to be used
-for development build (defaulting to Corda development keyStore) and production build (using external keyStore).
-This can achieved be assigning system properties to signing options, if a system property is not set then the default value is used.
+for development build (defaulting to Corda development keystore) and production build (using external keyStore).
+This can achieved by assigning system properties to signing options, if a system property is not set then the default value is used.
 The example configuration using system properties:
 
 .. sourcecode:: groovy
@@ -173,7 +173,7 @@ To disable CorDapp signing:
 
 .. sourcecode:: shell
 
-    ./gradlew signingEnabled=false
+    ./gradlew -DsigningEnabled=false
 
 Not providing any system properties will trigger signing with default Corda development keyStore:
 
