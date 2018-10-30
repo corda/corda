@@ -155,3 +155,63 @@ which is then referenced within a custom flow:
 
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
 
+WithEntityManager
+-----------------
+In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
+method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
+useful if off-ledger data must be maintained in conjunction with on-ledger state data.
+
+    .. note:: Your entity *must* sub-class ``MappedSchema``.
+
+The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. This is exactly how schemas,
+except that the entity should not subclass ``PersistentState`` (as it is not a state object):
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        object FooSchema
+
+        @CordaSerializable
+        object FooSchemaV1 : MappedSchema(schemaFamily = FooSchema.javaClass, version = 1, mappedTypes = listOf(PersistentFoo::class.java)) {
+            @Entity
+            @Table(name = "foos")
+            class PersistentFoo(@Id @Column(name = "foo_id") var fooId: String, @Column(name = "foo_data") var fooData: String) : Serializable
+        }
+
+Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
+        serviceHub.withEntityManager {
+            // Persist the foo.
+            persist(foo)
+            // Sync.
+            flush()
+        }
+
+And retrieved via a query, as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        val result: MutableList<FooSchemaV1.PersistentFoo> = services.withEntityManager {
+            val query = criteriaBuilder.createQuery(FooSchemaV1.PersistentFoo::class.java)
+            val type = query.from(FooSchemaV1.PersistentFoo::class.java)
+            query.select(type)
+            createQuery(query).resultList
+        }
+
+Please note that suspendable flow operations such as:
+
+* ``FlowSession.send``
+* ``FlowSession.receive``
+* ``FlowLogic.receiveAll``
+* ``FlowLogic.sleep``
+* ``FlowLogic.subFlow``
+
+Cannot be used within the lambda function passed to ``withEntityManager``.

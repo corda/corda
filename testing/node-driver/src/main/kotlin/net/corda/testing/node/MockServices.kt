@@ -29,6 +29,7 @@ import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -40,6 +41,7 @@ import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
 import java.util.*
+import javax.persistence.EntityManager
 
 /**
  * Returns a simple [InMemoryIdentityService] containing the supplied [identities].
@@ -121,6 +123,10 @@ open class MockServices private constructor(
                     }
 
                     override fun jdbcSession(): Connection = database.createSession()
+
+                    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+                        return block(contextTransaction.restrictedEntityManager)
+                    }
                 }
             }
             return Pair(database, mockService)
@@ -267,6 +273,10 @@ open class MockServices private constructor(
     }
 
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
+
+    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+        throw UnsupportedOperationException()
+    }
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) = throw UnsupportedOperationException()
 
