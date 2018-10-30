@@ -1,125 +1,17 @@
 package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigObject
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.*
-import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.tools.shell.SSHDConfiguration
-import java.net.URL
+import net.corda.node.services.config.schema.parsers.*
 import java.time.Duration
-import java.util.*
-
-// TODO sollecitom move
-internal object UserSpec : Configuration.Specification<User>("User") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<User> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object SecurityConfigurationSpec : Configuration.Specification<SecurityConfiguration>("SecurityConfiguration") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<SecurityConfiguration> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object DevModeOptionsSpec : Configuration.Specification<DevModeOptions>("DevModeOptions") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<DevModeOptions> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object NetworkServicesConfigSpec : Configuration.Specification<NetworkServicesConfig>("NetworkServicesConfig") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<NetworkServicesConfig> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-@Suppress("DEPRECATION")
-internal object CertChainPolicyConfigSpec : Configuration.Specification<CertChainPolicyConfig>("CertChainPolicyConfig") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<CertChainPolicyConfig> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowTimeoutConfiguration>("FlowTimeoutConfiguration") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<FlowTimeoutConfiguration> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("NotaryConfig") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<NotaryConfig> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object RpcOptionsSpec : Configuration.Specification<NodeRpcOptions>("NodeRpcOptions") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<NodeRpcOptions> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfiguration>("SSHDConfiguration") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<SSHDConfiguration> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-// TODO sollecitom move
-internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
-
-    // TODO sollecitom add fields here
-
-    override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
 
+    // TODO sollecitom review all default values against NodeConfigurationImpl
     private val myLegalName by string().mapValid(::toLegalName)
     private val emailAddress by string()
     private val jmxMonitoringHttpPort by int().optional()
@@ -137,7 +29,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val additionalNodeInfoPollingFrequencyMsec by long()
     private val p2pAddress by string().mapValid(::toNetworkHostAndPort)
     private val additionalP2PAddresses by string().mapValid(::toNetworkHostAndPort).list()
-    private val rpcOptions by nested(RpcOptionsSpec)
+    private val rpcSettings by nested(NodeRpcSettingsSpec)
     private val messagingServerAddress by string().mapValid(::toNetworkHostAndPort).optional()
     private val messagingServerExternal by boolean()
     private val useTestClock by boolean().optional(false)
@@ -147,56 +39,35 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val database by nested(DatabaseConfigSpec)
     private val noLocalShell by boolean().optional(false)
     // TODO sollecitom perhaps create a Property.Definition.Optional interface exposing a `withDefault(<non-null> defaultValue: TYPE): Property.Definition<TYPE>`
+    // TODO sollecitom use it for list properties to default to empty
     private val transactionCacheSizeBytes by long().optional(NodeConfiguration.defaultTransactionCacheSize)
     private val attachmentContentCacheSizeBytes by long().optional(NodeConfiguration.defaultAttachmentContentCacheSize)
     private val attachmentCacheBound by long().optional(NodeConfiguration.defaultAttachmentCacheBound)
     private val drainingModePollPeriod by duration().optional(Duration.ofSeconds(5))
+    private val extraNetworkMapKeys by string().mapValid(::toUuid).list()
+    private val tlsCertCrlDistPoint by string().mapValid(::toUrl).optional()
+    private val tlsCertCrlIssuer by string().mapValid(::toPrincipal).optional()
+    private val h2Settings by nested(NodeH2SettingsSpec).optional()
+    private val flowMonitorPeriodMillis by duration().optional(DEFAULT_FLOW_MONITOR_PERIOD_MILLIS)
+    private val flowMonitorSuspensionLoggingThresholdMillis by duration().optional(DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS)
+    private val crlCheckSoftFail by boolean()
+    private val jmxReporterType by enum(JmxReporterType::class).optional(NodeConfiguration.defaultJmxReporterType)
+    private val baseDirectory by string().mapValid(::toPath)
+    private val certificatesDirectory by string().mapValid(::toPath)
+    private val flowOverrides by nested(FlowOverrideConfigSpec).optional()
+    private val keyStorePassword by string()
+    private val trustStorePassword by string()
+    private val rpcAddress by string().mapValid(::toNetworkHostAndPort).optional()
+    private val transactionCacheSizeMegaBytes by int().optional()
+    private val attachmentContentCacheSizeMegaBytes by int().optional()
+    private val h2port by int().optional()
+    // TODO sollecitom this should really be List<Path>, not sure why it's List<String> in NodeConfigurationImpl
+    private val jarDirs by string().list()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
         TODO("not implemented")
     }
-
-    private fun toLegalName(rawValue: String): Valid<CordaX500Name> {
-
-        TODO("not implemented")
-    }
-
-    private fun toProperties(rawValue: ConfigObject): Properties {
-
-        val properties = Properties()
-        rawValue.entries.forEach { (key, value) ->
-            properties[key] = value.unwrapped()
-        }
-        return properties
-    }
-
-    private fun toUrl(rawValue: String): Valid<URL> {
-
-        TODO("not implemented")
-    }
-
-    private fun toNetworkHostAndPort(rawValue: String): Valid<NetworkHostAndPort> {
-
-        TODO("not implemented")
-    }
-
-//    val extraNetworkMapKeys: List<UUID>
-//    val tlsCertCrlDistPoint: URL?
-//    val tlsCertCrlIssuer: X500Principal?
-//    val effectiveH2Settings: NodeH2Settings?
-//    val flowMonitorPeriodMillis: Duration get() = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS
-//    val flowMonitorSuspensionLoggingThresholdMillis: Duration get() = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
-//    val crlCheckSoftFail: Boolean
-//    val jmxReporterType: JmxReporterType? get() = defaultJmxReporterType
-//
-//    val baseDirectory: Path
-//    val certificatesDirectory: Path
-//    val signingCertificateStore: FileBasedCertificateStoreSupplier
-//    val p2pSslOptions: MutualSslConfiguration
-//
-//    val cordappDirectories: List<Path>
-//    val flowOverrides: FlowOverrideConfig?
 
 //    private fun validateTlsCertCrlConfig(): List<String> {
 //        val errors = mutableListOf<String>()
