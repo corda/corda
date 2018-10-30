@@ -111,19 +111,32 @@ For further information about managing dependencies, see
 
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
-The ``cordapp`` plugin signs the generated Cordapp JAR with well known Corda development certificate.
-Cordapp signing can disabled or configured to use an external keystore.
-``signing`` entry may contain the following parameters:
+The ``cordapp`` plugin can sign the generated Cordapp JAR file using `JAR signing tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
+Signing the Cordapp enables it's contract classes to use signature constraints instead of other types of the constraints,
+refer to :doc:`api-contract-constraints` for description.
+By default the JAR file is signed by Corda development certificate.
+The signing process can be disabled or configured to use an external keystore.
+The ``signing`` entry may contain the following parameters:
 
- * ``enabled`` - the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
- * ``options`` - any relevant task parameters as for ANT task `SignJar <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
- the minimal set of options to sign using external keyStore is:
+ * ``enabled`` the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
+ * ``options`` any relevant parameters of `SignJar ANT task <https://ant.apache.org/manual/Tasks/signjar.html>`_ ,
+   by default the JAR file is signed by Corda development key, the external keystore can be specified,
+   the minimal list of required options is shown below (for all options referer to the `SignJar task <https://ant.apache.org/manual/Tasks/signjar.html>`_).
 
-     * ``keystore`` - path to the keystore file, by default cordadevcakeys.jks keyStore is shipped with the plugin
-     * ``alias`` - the alias to sign under, the default value is `cordaintermediateca`
-     * ``storepass`` - password for keystore, the default value is `cordacadevpass`
-     * ``keypass``  - password for private key if different than password for the keyStore, the dafualt value is `cordacadevkeypass`
-     * ``storetype`` - keystore type, the default value is `JKS`
+   * ``keystore`` the path to the keystore file, by default `cordadevcakeys.jks` keystore is shipped with the plugin
+   * ``alias`` the alias to sign under, the default value is `cordaintermediateca`
+   * ``storepass`` the keystore password, the default value is `cordacadevpass`
+   * ``keypass`` the private key password if it's different than the password for the keyStore, the default value is `cordacadevkeypass`
+   * ``storetype`` the keystore type, the default value is `JKS`
+
+The parameters can be also set by system properties passed to Gradle build process.
+The system properties naming convention is the prefix signing` and the relevant option name starting with upper case e.g.
+the value for ``alias`` option can be taken from the ``signingAlias`` system property. Only the following system properties can be used:
+``signingEnabled``, ``signingKeystore``, ``signingAlias``, ``signingStorepass``, ``signingKeypass``, ``signingStoretype``.
+The resolution order of a configuration value is as follows: the signing process takes value specified in ``signing`` entry first,
+the empty value `""` is also the correct value.
+If the option is not set, the relevant system property (`signingOption`) is tried.
+If the system property is not set then the value defaults to the configuration of the Corda development certificate.
 
 .. sourcecode:: groovy
 
@@ -139,47 +152,49 @@ Cordapp signing can disabled or configured to use an external keystore.
     }
 
 Cordapp auto-signing allows to use signature constraints for contracts from the CorDapp
-without need to create a keyStore and configure the task.
-For production deployment ensure to sign the CorDapp using your own certificate e.g. by configuring options to point to external keystore
-or by disabling signing in ``cordapp`` plugin and require the CordDapp JAR is signed downstream in your build/deployment pipeline.
+without need to create a keyStore and configure the ``cordapp`` plugin.
+For production deployment ensure to sign the CorDapp using your own certificate e.g. by setting system properties to point to an external keystore
+or by disabling signing in ``cordapp`` plugin and signing the CordDapp JAR downstream in your build pipeline.
 CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
-
-Signing options can be contextually overwritten by system properties allowing a single ``gradle.build`` file to be used
-for development build (defaulting to Corda development keystore) and production build (using external keyStore).
-This can achieved by assigning system properties to signing options, if a system property is not set then the default value is used.
+Signing options can be contextually overwritten by system properties `signingOption` as described above.
+This allows the single ``gradle.build`` file to be used for a development build (defaulting to the Corda development keystore)
+and for a production build (using an external keystore).
 The example configuration using system properties:
-
-.. sourcecode:: groovy
-
-    cordapp {
-        signing {
-            enabled System.getProperty('signingEnabled')
-            options {
-                keystore System.getProperty('signingKeystore')
-                alias System.getProperty('signingAlias')
-                storepass System.getProperty('signingStorepass')
-                keypass System.getProperty('signingKeypass')
-            }
-        }
-    }
-
-The above configuration can leverage system properties pointing to a custom keyStore, by the following command line (for Linux/Mac OS):
 
 .. sourcecode:: shell
 
     ./gradlew -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
 
-To disable CorDapp signing:
+
+Not providing any system properties will trigger signing with the default Corda development keystore:
+
+.. sourcecode:: shell
+
+    ./gradlew
+
+To disable Cordapp signing:
 
 .. sourcecode:: shell
 
     ./gradlew -DsigningEnabled=false
 
-Not providing any system properties will trigger signing with default Corda development keyStore:
+The ``cordapp`` plugin can use system properties for other options if the plugin is configured:
+
+.. sourcecode:: groovy
+
+    cordapp {
+        signing {
+            options {
+                sigalg System.getProperty('customSigalg','')
+            }
+        }
+    }
+
+And set the system properties:
 
 .. sourcecode:: shell
 
-    ./gradlew
+    ./gradlew -DcustomSigalg="SHA256withECDSA" -DsigningKeystore="/path/to/keystore.jks" -DsigningAlias="alias" -DsigningStorepass="password" -DsigningKeypass="password"
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
