@@ -10,7 +10,6 @@ import net.corda.node.services.config.schema.parsers.*
 import java.time.Duration
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
-
     // TODO sollecitom review all default values against NodeConfigurationImpl
     private val myLegalName by string().mapValid(::toLegalName)
     private val emailAddress by string()
@@ -20,7 +19,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val security by nested(SecurityConfigurationSpec).optional()
     private val devMode by boolean()
     private val devModeOptions by nested(DevModeOptionsSpec).optional()
-    private val compatibilityZoneURL by string().mapValid(::toUrl).optional()
+    private val compatibilityZoneURL by string().mapValid(::toURL).optional()
     private val networkServices by nested(NetworkServicesConfigSpec).optional()
     private val certificateChainCheckPolicies by nested(CertChainPolicyConfigSpec).list()
     private val verifierType by enum(VerifierType::class)
@@ -42,8 +41,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val attachmentContentCacheSizeBytes by long().optional().withDefaultValue(NodeConfiguration.defaultAttachmentContentCacheSize)
     private val attachmentCacheBound by long().optional().withDefaultValue(NodeConfiguration.defaultAttachmentCacheBound)
     private val drainingModePollPeriod by duration().optional().withDefaultValue(Duration.ofSeconds(5))
-    private val extraNetworkMapKeys by string().mapValid(::toUuid).list()
-    private val tlsCertCrlDistPoint by string().mapValid(::toUrl).optional()
+    private val extraNetworkMapKeys by string().mapValid(::toUUID).list()
+    private val tlsCertCrlDistPoint by string().mapValid(::toURL).optional()
     private val tlsCertCrlIssuer by string().mapValid(::toPrincipal).optional()
     private val h2Settings by nested(NodeH2SettingsSpec).optional()
     private val flowMonitorPeriodMillis by duration().optional().withDefaultValue(DEFAULT_FLOW_MONITOR_PERIOD_MILLIS)
@@ -63,7 +62,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
-
         TODO("not implemented")
     }
 
