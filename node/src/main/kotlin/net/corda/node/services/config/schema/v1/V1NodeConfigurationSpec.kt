@@ -9,9 +9,11 @@ import net.corda.node.services.config.*
 import net.corda.node.services.config.schema.parsers.*
 import java.time.Duration
 
+// TODO sollecitom make all password fields sensitive
+// TODO sollecitom remove all default values from NodeConfiguration/Impl plus referred types, when possible (reference these values from the parsers when not)
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
-    // TODO sollecitom review all default values against NodeConfigurationImpl
-    private val myLegalName by string().mapValid(::toLegalName)
+    // TODO sollecitom review all default values against NodeConfigurationImpl (list values should probably all have defaults to empty list, if not specified)
+    private val myLegalName by string().mapValid(::toCordaX500Name)
     private val emailAddress by string()
     private val jmxMonitoringHttpPort by int().optional()
     private val dataSourceProperties by nestedObject().map(::toProperties)
@@ -51,7 +53,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jmxReporterType by enum(JmxReporterType::class).optional().withDefaultValue(NodeConfiguration.defaultJmxReporterType)
     private val baseDirectory by string().mapValid(::toPath)
     private val certificatesDirectory by string().mapValid(::toPath)
-    private val flowOverrides by nested(FlowOverrideConfigSpec).optional()
+    private val flowOverrides by nested(FlowOverridesConfigSpec).optional()
     private val keyStorePassword by string()
     private val trustStorePassword by string()
     private val rpcAddress by string().mapValid(::toNetworkHostAndPort).optional()

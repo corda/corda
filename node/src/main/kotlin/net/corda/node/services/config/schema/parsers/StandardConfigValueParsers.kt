@@ -23,7 +23,7 @@ internal fun toProperties(rawValue: ConfigObject): Properties {
     return properties
 }
 
-internal fun toLegalName(rawValue: String) = attempt<CordaX500Name, IllegalArgumentException> { CordaX500Name.parse(rawValue) }
+internal fun toCordaX500Name(rawValue: String) = attempt<CordaX500Name, IllegalArgumentException> { CordaX500Name.parse(rawValue) }
 
 internal fun toURL(rawValue: String) = attempt<URL, MalformedURLException> { URL(rawValue) }
 
@@ -46,6 +46,6 @@ private inline fun <RESULT, reified ERROR : Exception> attempt(action: () -> RES
     }
 }
 
-private inline fun <reified RESULT, reified ERROR : Exception> attempt(action: () -> RESULT) = attempt(action, { e: ERROR -> "value does not comply with ${RESULT::class.java.simpleName} specification (${e.message})" })
+internal inline fun <reified RESULT, reified ERROR : Exception> attempt(action: () -> RESULT) = attempt(action, { e: ERROR -> "value does not comply with ${RESULT::class.java.simpleName} specification (${e.message})" })
 
 private fun <RESULT> badValue(message: String) = invalid<RESULT, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(message))
