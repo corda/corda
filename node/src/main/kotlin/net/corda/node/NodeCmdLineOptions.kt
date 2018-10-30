@@ -1,7 +1,12 @@
 package net.corda.node
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.internal.div
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
@@ -38,9 +43,20 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
-    open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> = configuration.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
+    open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
 
-    open fun rawConfiguration(): Config = ConfigHelper.loadConfig(baseDirectory, configFile)
+        val option = Configuration.Validation.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
+        return configuration.parseAsNodeConfiguration(option)
+    }
+
+    open fun rawConfiguration(): Validated<Config, ConfigException> {
+
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile))
+        } catch (e: ConfigException) {
+            return invalid(e)
+        }
+    }
 
     fun copyFrom(other: SharedNodeCmdLineOptions) {
         baseDirectory = other.baseDirectory
@@ -133,7 +149,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         }
     }
 
-    override fun rawConfiguration(): Config {
+    override fun rawConfiguration(): Validated<Config, ConfigException> {
         val configOverrides = mutableMapOf<String, Any>()
         configOverrides += "noLocalShell" to noLocalShell
         if (sshdServer) {
@@ -142,7 +158,11 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         devMode?.let {
             configOverrides += "devMode" to it
         }
-        return ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides))
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
+        } catch (e: ConfigException) {
+            return invalid(e)
+        }
     }
 }
 

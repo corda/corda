@@ -2,6 +2,7 @@ package net.corda.node.services.config
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
@@ -11,11 +12,11 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
+import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
-import org.slf4j.Logger
 import java.net.URL
 import java.nio.file.Path
 import java.time.Duration
@@ -78,8 +79,6 @@ interface NodeConfiguration {
 
     val cordappDirectories: List<Path>
     val flowOverrides: FlowOverrideConfig?
-
-    fun validate(): List<String>
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -163,24 +162,9 @@ data class FlowTimeoutConfiguration(
         val backoffBase: Double
 )
 
-fun Config.parseAsNodeConfiguration(onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle): Valid<NodeConfiguration> = attempt { parseAs<NodeConfigurationImpl>(onUnknownKeys) }.mapValid(::validate)
+internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
-// TODO sollecitom check
-private fun <VALUE> attempt(action: () -> VALUE): Valid<VALUE> {
-    return try {
-        Validated.valid(action.invoke())
-    } catch (exception: Exception) {
-        return Validated.invalid(exception)
-    }
-}
-
-// TODO sollecitom check
-private fun validate(configuration: NodeConfiguration): Valid<NodeConfiguration> {
-    return Validated.withResult(configuration, configuration.validate().asSequence().map { error -> IllegalArgumentException(error) }.toSet())
-}
-
-// TODO sollecitom check
-internal typealias Valid<TARGET> = Validated<TARGET, Exception>
+fun Config.parseAsNodeConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
 
 data class NodeConfigurationImpl(
         /** This is not retrieved from the config file but rather from a command line argument. */
@@ -276,82 +260,6 @@ data class NodeConfigurationImpl(
         get() {
             return actualRpcSettings.asOptions()
         }
-
-    private fun validateTlsCertCrlConfig(): List<String> {
-        val errors = mutableListOf<String>()
-        if (tlsCertCrlIssuer != null) {
-            if (tlsCertCrlDistPoint == null) {
-                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
-            }
-        }
-        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
-            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
-        }
-        return errors
-    }
-
-    override fun validate(): List<String> {
-        val errors = mutableListOf<String>()
-        errors += validateDevModeOptions()
-        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
-        errors += rpcSettingsErrors
-        if (rpcSettingsErrors.isEmpty()) {
-            // Forces lazy property to initialise in order to throw exceptions
-            rpcOptions
-        }
-        errors += validateTlsCertCrlConfig()
-        errors += validateNetworkServices()
-        errors += validateH2Settings()
-        return errors
-    }
-
-    private fun validateH2Settings(): List<String> {
-        val errors = mutableListOf<String>()
-        if (h2port != null && h2Settings != null) {
-            errors += "Cannot specify both 'h2port' and 'h2Settings' in configuration"
-        }
-        return errors
-    }
-
-    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
-        val errors = mutableListOf<String>()
-        if (options.adminAddress == null) {
-            errors += "'rpcSettings.adminAddress': missing"
-        }
-        if (options.useSsl && options.ssl == null) {
-            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
-        }
-        return errors
-    }
-
-    private fun validateDevModeOptions(): List<String> {
-        if (devMode) {
-            compatibilityZoneURL?.let {
-                if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
-                }
-            }
-
-            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
-            // this check by returning above is fine.
-            networkServices?.let {
-                if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
-                }
-            }
-        }
-        return emptyList()
-    }
-
-    private fun validateNetworkServices(): List<String> {
-        val errors = mutableListOf<String>()
-
-        if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
-            errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
-        }
-
-        return errors
-    }
 
     override val transactionCacheSizeBytes: Long
         get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes

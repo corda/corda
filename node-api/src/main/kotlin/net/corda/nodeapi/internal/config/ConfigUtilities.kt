@@ -300,7 +300,6 @@ private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config"
 enum class UnknownConfigKeysPolicy(private val handle: (Set<String>, logger: Logger) -> Unit) {
 
     FAIL({ unknownKeys, _ -> throw UnknownConfigurationKeysException.of(unknownKeys) }),
-    WARN({ unknownKeys, logger -> logger.warn("Unknown configuration keys found: ${unknownKeys.joinToString(", ", "[", "]")}.") }),
     IGNORE({ _, _ -> });
 
     fun handle(unknownKeys: Set<String>, logger: Logger) {

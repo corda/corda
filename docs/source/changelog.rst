@@ -188,7 +188,7 @@ Unreleased
 * Configuration file changes:
 
   * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+    Values are: [FAIL, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.

@@ -16,10 +16,10 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val propertyErrors = properties.flatMap { property -> property.validate(target, options).errors }.toMutableSet()
-        if (options?.strict == true) {
+        if (options.strict) {
             val unknownKeys = target.root().keys - properties.map(Configuration.Property.Definition<*>::key)
             propertyErrors += unknownKeys.map { Configuration.Validation.Error.Unknown.of(it) }
         }

@@ -7,7 +7,7 @@ import net.corda.common.validation.internal.Validated.Companion.valid
 
 internal class LongProperty(key: String, sensitive: Boolean = false) : StandardProperty<Long>(key, Long::class.javaObjectType.simpleName, Config::getLong, Config::getLongList, sensitive) {
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val validated = super.validate(target, options)
         if (validated.isValid && target.getValue(key).unwrapped().toString().contains(".")) {
@@ -39,7 +39,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
 
     override val isMandatory = true
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
@@ -63,7 +63,7 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += errorsWhenExtractingValue(target)
@@ -100,7 +100,7 @@ private class OptionalProperty<TYPE>(delegate: Configuration.Property.Definition
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val result = delegate.validate(target, options)
         val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
@@ -121,7 +121,7 @@ private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Pro
 
     override fun list(): Configuration.Property.Definition.Required<List<MAPPED>> = FunctionalListProperty(this)
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val errors = mutableSetOf<Configuration.Validation.Error>()
         errors += delegate.validate(target, options).errors
@@ -140,7 +140,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
 
     override fun valueIn(configuration: Config): List<TYPE> = delegate.extractListValue.invoke(configuration, key).asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.map(ConfigObject::toConfig).map(delegate::valueIn).toList()
 
-    override fun validate(target: Config, options: Configuration.Validation.Options?): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val list = try {
             delegate.extractListValue.invoke(target, key)
