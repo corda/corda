@@ -3,6 +3,8 @@ Platform support matrix
 
 Our supported Operating System platforms are a subset of those supported by Java `8u172 <http://www.oracle.com/technetwork/java/javase/certconfig-2095354.html>`_. Production use of Corda Enterprise 3.0 is only supported on Linux OS, see details below.
 
+.. warning:: On all platforms listed below, only the **Oracle JDK 8 JVM 8u171\+** is supported. OpenJDK is not currently supported.
+
 Operating systems supported in production
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
