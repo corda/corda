@@ -1,5 +1,15 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "io.github.classgraph:classgraph:$class_graph_version"
+    }
+}
+
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-jpa'
+apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.api-scanner'
@@ -11,7 +21,12 @@ configurations {
     integrationTestRuntime.extendsFrom testRuntime
 }
 
+def generatedResources = "$buildDir/generated-resources/main"
+
 sourceSets {
+    main {
+        output.dir(generatedResources, builtBy: 'generateNodeDepsFiles')
+    }
     integrationTest {
         kotlin {
             compileClasspath += main.output + test.output
@@ -20,6 +35,47 @@ sourceSets {
         }
         resources {
             srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+task generateNodeDepsFiles {
+    doLast {
+        mkdir generatedResources
+        
+        // Get all the (transitive) dependencies of node
+        def dependencies = project(':node')
+                .configurations
+                .runtime
+                .incoming
+                .resolutionResult
+                .allDependencies
+                .collect { ((ResolvedDependencyResult)it).selected.id }
+                .unique()
+
+        // Write out the external dependencies in the form group:module. It is assumed by DriverDSLImpl.nodeClasspath
+        // that the classpath will contain include these dependencies as jars with a full path containing group/module.
+        new File(generatedResources, "node-external-deps.txt").text = dependencies
+                .findAll { it instanceof ModuleComponentIdentifier }
+                .collect { ((ModuleComponentIdentifier)it).moduleIdentifier }
+                .join('\n')
+        
+        // Get all the corda dependencies and write out the packages they contain. This way DriverDSLImpl can still work
+        // from an IDE by scanning for the locations of these packages.
+        def cordaDepsClasspath = dependencies
+                .findAll { it instanceof ProjectComponentIdentifier }
+                .collectMany { project(((ProjectComponentIdentifier)it).projectPath).sourceSets.main.output.classesDirs.files }
+
+        new io.github.classgraph.ClassGraph()
+                .overrideClasspath(cordaDepsClasspath)
+                .enableClassInfo()
+                .scan()
+                .withCloseable { result ->
+            new File(generatedResources, "node-corda-packages-deps.txt").text = result
+                    .allClasses
+                    .collect { it.name.take(it.name.lastIndexOf('.')) }
+                    .unique()
+                    .join('\n')
         }
     }
 }
