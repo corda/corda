@@ -12,7 +12,9 @@ Interacting with a node
 Overview
 --------
 To interact with your node, you need to write a client in a JVM-compatible language using the `CordaRPCClient`_ class.
-This class allows you to connect to your node and perform RPC operations via a message queue protocol.
+This class allows you to connect to your node via a message queue protocol and provides a simple RPC interface for
+interacting with the node. You make calls on a JVM object as normal, and the marshalling back-and-forth is handled for
+you.
 
 .. warning:: The built-in Corda webserver is deprecated and unsuitable for production use. If you want to interact with
    your node via HTTP, you will need to stand up your own webserver that connects to your node using the
