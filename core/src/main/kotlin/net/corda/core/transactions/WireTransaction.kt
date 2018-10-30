@@ -166,8 +166,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         minus(ltx.inputs.serialize().size)
 
         // For Commands and outputs we can use the component groups as they are already serialized.
-        minus(componentGroupSize(this.componentGroups[COMMANDS_GROUP.ordinal]))
-        minus(componentGroupSize(this.componentGroups[OUTPUTS_GROUP.ordinal]))
+        minus(componentGroupSize(this.componentGroups.firstOrNull { it.groupIndex == COMMANDS_GROUP.ordinal }!!))
+        minus(componentGroupSize(this.componentGroups.firstOrNull { it.groupIndex == OUTPUTS_GROUP.ordinal }!!))
     }
 
     /**
