@@ -39,10 +39,6 @@ dependencies {
     // Jackson support: serialisation to/from JSON, YAML, etc.
     compile project(':client:jackson')
 
-
-    // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
-
     // CRaSH: An embeddable monitoring and admin shell with support for adding new commands written in Groovy.
     compile("com.github.corda.crash:crash.shell:$crash_version") {
         exclude group: "org.slf4j", module: "slf4j-jdk14"
