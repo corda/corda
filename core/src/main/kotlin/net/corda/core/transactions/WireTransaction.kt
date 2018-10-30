@@ -269,13 +269,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
             if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
             // Adding commandData only to the commands group. Signers are added in their own group.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.lazyMapped { value, _ -> value.value.serialize() }))
+            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
             if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
             if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
             if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
             // Adding signers to their own group. This is required for command visibility purposes: a party receiving
             // a FilteredTransaction can now verify it sees all the commands it should sign.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.lazyMapped { value, _ -> value.signers.serialize() }))
+            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
             return componentGroupMap
         }
     }
