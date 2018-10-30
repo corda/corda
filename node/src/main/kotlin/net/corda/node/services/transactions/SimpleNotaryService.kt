@@ -1,14 +1,14 @@
 package net.corda.node.services.transactions
 
 import net.corda.core.flows.FlowSession
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.ServiceHubInternal
 import java.security.PublicKey
 
 /** An embedded notary service that uses the node's database to store committed states. */
-class SimpleNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
+class SimpleNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 

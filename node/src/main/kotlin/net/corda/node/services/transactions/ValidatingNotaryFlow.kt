@@ -8,9 +8,9 @@ import net.corda.core.flows.NotarisationPayload
 import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.ResolveTransactionsFlow
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.core.transactions.WireTransaction
@@ -22,7 +22,7 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSideSession: FlowSession, service: TrustedAuthorityNotaryService) : NotaryServiceFlow(otherSideSession, service) {
+class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService) : NotaryServiceFlow(otherSideSession, service) {
     /**
      * Fully resolves the received transaction and its dependencies, runs contract verification logic and checks that
      * the transaction in question has all required signatures apart from the notary's.
