@@ -9,6 +9,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.JarSignatureTestUtils.createJar
 import net.corda.core.JarSignatureTestUtils.generateKey
 import net.corda.core.JarSignatureTestUtils.signJar
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -47,6 +48,7 @@ import javax.tools.StandardLocation
 import javax.tools.ToolProvider
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 
@@ -120,6 +122,30 @@ class NodeAttachmentServiceTest {
         storage.openAttachment(id)!!.openAsJAR().use {
             it.nextJarEntry
             it.readBytes()
+        }
+    }
+
+    @Test
+    fun `insert contract attachment as an untrusted uploader and then as trusted CorDapp uploader`() {
+        val contractJarName = makeTestContractJar("com.example.MyContract")
+        val testJar = dir.resolve(contractJarName)
+        val expectedHash = testJar.readAll().sha256()
+
+        // PRIVILEGED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, P2P_UPLOADER, UNKNOWN_UPLOADER)
+        // TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
+
+        database.transaction {
+            val id = testJar.read { storage.privilegedImportOrGetAttachment(it, P2P_UPLOADER, null) }
+            assertEquals(expectedHash, id)
+            val attachment1 = storage.openAttachment(expectedHash)
+
+            val id2 = testJar.read { storage.privilegedImportOrGetAttachment(it, DEPLOYED_CORDAPP_UPLOADER, null) }
+            assertEquals(expectedHash, id2)
+            val attachment2 = storage.openAttachment(expectedHash)
+
+            assertNotEquals(attachment1, attachment2)
+            assertEquals(P2P_UPLOADER, (attachment1 as ContractAttachment).uploader)
+            assertEquals(DEPLOYED_CORDAPP_UPLOADER, (attachment2 as ContractAttachment).uploader)
         }
     }
 
