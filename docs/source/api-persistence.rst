@@ -174,7 +174,6 @@ the entity in this case should not subclass ``PersistentState`` (as it is not a 
 
         public class FooSchema {}
 
-        @CordaSerializable
         public class FooSchemaV1 extends MappedSchema {
             FooSchemaV1() {
                 super(FooSchema.class, 1, ImmutableList.of(PersistentFoo.class));
@@ -211,7 +210,6 @@ Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
         PersistentFoo foo = new PersistentFoo(new UniqueIdentifier().getId().toString(), "Bar");
         node.getServices().withEntityManager(entityManager -> {
             entityManager.persist(foo);
-            entityManager.flush();
             return null;
         });
 
