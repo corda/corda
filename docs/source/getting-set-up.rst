@@ -6,6 +6,7 @@ Software requirements
 Corda uses industry-standard tools:
 
 * **Oracle JDK 8 JVM** - minimum supported version **8u171**
+.. warning:: OpenJDK is not currently supported.
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
 * **Git**
 
@@ -13,9 +14,6 @@ We also use Gradle and Kotlin, but you do not need to install them. A standalone
 will download the correct version of Kotlin.
 
 Please note:
-
-* Corda runs in a JVM. JVM implementations other than Oracle JDK 8 are not actively supported. However, if you do
-  choose to use OpenJDK, you will also need to `install OpenJFX <http://openjdk.java.net/install/>`_.
 
 * Applications on Corda (CorDapps) can be written in any language targeting the JVM. However, Corda itself and most of
   the samples are written in Kotlin. Kotlin is an
