@@ -1,0 +1,74 @@
+package net.corda.node.services.persistence
+
+import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowLogic.Companion.sleep
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.CordaSerializable
+import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.node.MockServices
+import net.corda.testing.node.makeTestIdentityService
+import org.junit.BeforeClass
+import org.junit.ClassRule
+import org.junit.Test
+import java.io.Serializable
+import java.time.Duration
+import javax.persistence.Column
+import javax.persistence.Entity
+import javax.persistence.Id
+import javax.persistence.Table
+import kotlin.test.assertEquals
+
+
+class ExposeJpaToFlowsTests {
+
+    object FooSchema
+
+    @CordaSerializable
+    object FooSchemaV1 : MappedSchema(schemaFamily = FooSchema.javaClass, version = 1, mappedTypes = listOf(PersistentFoo::class.java)) {
+        @Entity
+        @Table(name = "foos")
+        class PersistentFoo(@Id @Column(name = "foo_id") var fooId: String, @Column(name = "foo_data") var fooData: String) : Serializable
+    }
+
+    val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
+    val cordapps = listOf("net.corda.node.services.persistence")
+    val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+            cordappPackages = cordapps,
+            identityService = makeTestIdentityService(myself.identity),
+            initialIdentity = myself,
+            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+    )
+
+    val services: MockServices = databaseAndServices.second
+    val database: CordaPersistence = databaseAndServices.first
+
+    @Test
+    fun `can persist and query custom entities`() {
+        val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
+
+        // Persist the foo.
+        database.transaction {
+            services.withEntityManager {
+                // Persist the foo.
+                persist(foo)
+                // Sync.
+                flush()
+            }
+        }
+
+        // Query for the foo.
+        val result: MutableList<FooSchemaV1.PersistentFoo> = database.transaction {
+            services.withEntityManager {
+                val query = criteriaBuilder.createQuery(FooSchemaV1.PersistentFoo::class.java)
+                val type = query.from(FooSchemaV1.PersistentFoo::class.java)
+                query.select(type)
+                createQuery(query).resultList
+            }
+        }
+
+        assertEquals("Bar", result.single().fooData)
+    }
+}

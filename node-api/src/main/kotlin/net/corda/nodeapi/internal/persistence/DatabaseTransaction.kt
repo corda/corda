@@ -7,6 +7,7 @@ import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import java.sql.Connection
 import java.util.*
+import javax.persistence.EntityManager
 
 fun currentDBSession(): Session = contextTransaction.session
 private val _contextTransaction = ThreadLocal<DatabaseTransaction>()
@@ -59,6 +60,12 @@ class DatabaseTransaction(
         session
     }
 
+    // Returns a delegate which overrides certain operations that we do not want CorDapp developers to call.
+    val restrictedEntityManager: RestrictedEntityManager by lazy {
+        val entityManager = database.entityManagerFactory.withOptions().connection(connection).openSession() as EntityManager
+        RestrictedEntityManager(entityManager)
+    }
+
     val session: Session by sessionDelegate
     private lateinit var hibernateTransaction: Transaction
 
@@ -101,3 +108,4 @@ class DatabaseTransaction(
         boundary.filter { !it.success }.subscribe { callback() }
     }
 }
+

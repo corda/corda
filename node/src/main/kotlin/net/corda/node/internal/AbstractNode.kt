@@ -48,7 +48,6 @@ import net.corda.node.services.FinalityHandler
 import net.corda.node.services.NotaryChangeHandler
 import net.corda.node.services.api.*
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.shell.toShellConfig
@@ -107,6 +106,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
+import javax.persistence.EntityManager
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -904,6 +904,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun jdbcSession(): Connection = database.createSession()
+
+        override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+            return block(contextTransaction.restrictedEntityManager)
+        }
 
         // allows services to register handlers to be informed when the node stop method is called
         override fun registerUnloadHandler(runOnStop: () -> Unit) {
