@@ -10,7 +10,16 @@ import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 object SerializerFactoryBuilder {
 
     @JvmStatic
-    @JvmOverloads
+    fun buildDeterministic(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter) =
+            SerializerFactory(
+                    whitelist,
+                    classCarpenter,
+                    DefaultEvolutionSerializerProvider,
+                    ::SerializerFingerPrinter,
+                    false)
+
+    @JvmStatic
+    @DeleteForDJVM
     fun build(
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
@@ -24,10 +33,8 @@ object SerializerFactoryBuilder {
                     fingerPrinterProvider,
                     onlyCustomSerializers)
 
-
-    @DeleteForDJVM
     @JvmStatic
-    @JvmOverloads
+    @DeleteForDJVM
     fun build(
             whitelist: ClassWhitelist,
             carpenterClassLoader: ClassLoader,
