@@ -97,9 +97,6 @@ dependencies {
     // For async logging
     compile "com.lmax:disruptor:$disruptor_version"
 
-    // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
-
     // Artemis: for reliable p2p message queues.
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
     compile "org.apache.commons:commons-collections4:${commons_collections_version}"

@@ -16,6 +16,7 @@ import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -79,6 +80,8 @@ interface NodeConfiguration {
 
     val cordappDirectories: List<Path>
     val flowOverrides: FlowOverrideConfig?
+
+    val cordappSignerKeyFingerprintBlacklist: List<String>
 
     fun validate(): List<String>
 
@@ -219,7 +222,8 @@ data class NodeConfigurationImpl(
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
-        override val flowOverrides: FlowOverrideConfig?
+        override val flowOverrides: FlowOverrideConfig?,
+        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()
