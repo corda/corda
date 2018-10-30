@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.*
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -193,7 +194,7 @@ class NodeConfigurationImplTest {
 
         val config = rawConfig.parseAsNodeConfiguration()
 
-        assertThat(config.errors.asSequence().map(Exception::message).filter { it?.contains("rpcSettings.adminAddress") ?: false }.toList()).isNotEmpty
+        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::pathAsString).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
     }
 
     @Test
