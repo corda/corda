@@ -67,19 +67,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         TODO("not implemented")
     }
 
-//    private fun validateTlsCertCrlConfig(): List<String> {
-//        val errors = mutableListOf<String>()
-//        if (tlsCertCrlIssuer != null) {
-//            if (tlsCertCrlDistPoint == null) {
-//                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
-//            }
-//        }
-//        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
-//            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
-//        }
-//        return errors
-//    }
-
 //    override fun validate(): List<String> {
 //        val errors = mutableListOf<String>()
 //        errors += validateDevModeOptions()
@@ -92,6 +79,19 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
 //        errors += validateTlsCertCrlConfig()
 //        errors += validateNetworkServices()
 //        errors += validateH2Settings()
+//        return errors
+//    }
+//
+//    private fun validateTlsCertCrlConfig(): List<String> {
+//        val errors = mutableListOf<String>()
+//        if (tlsCertCrlIssuer != null) {
+//            if (tlsCertCrlDistPoint == null) {
+//                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
+//            }
+//        }
+//        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+//            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+//        }
 //        return errors
 //    }
 //
