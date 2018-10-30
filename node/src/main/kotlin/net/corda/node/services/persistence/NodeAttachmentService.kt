@@ -325,9 +325,9 @@ class NodeAttachmentService(
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
-                    id
+                    return@withContractsInJar id
                 }
-                else if (isUploaderTrusted(uploader)) {
+                if (isUploaderTrusted(uploader)) {
                     val session = currentDBSession()
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `upLoader` field (as the existing attachment may have been resolved from a peer)
@@ -338,9 +338,8 @@ class NodeAttachmentService(
                         attachmentCache.invalidate(id)
                         attachmentContentCache.invalidate(id)
                     }
-                    throw DuplicateAttachmentException(id.toString())
                 }
-                else throw DuplicateAttachmentException(id.toString())
+                throw DuplicateAttachmentException(id.toString())
             }
         }
     }
