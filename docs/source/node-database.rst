@@ -22,21 +22,17 @@ configuration for PostgreSQL:
 
     dataSourceProperties = {
         dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
-        dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/postgres"
+        dataSource.url = "jdbc:postgresql://[HOST]:[PORT]/[DATABASE]"
         dataSource.user = [USER]
         dataSource.password = [PASSWORD]
     }
     database = {
         transactionIsolationLevel = READ_COMMITTED
-        schema = [SCHEMA]
     }
 
 Note that:
-
-* The ``database.schema`` property is optional
-* The value of ``database.schema`` is not wrapped in double quotes and Postgres always treats it as a lower-case value
-  (e.g. ``AliceCorp`` becomes ``alicecorp``)
-* If you provide a custom ``database.schema``, its value must either match the ``dataSource.user`` value to end up
+* Database schema name can be set in JDBC URL string e.g. currentSchema=myschema
+* Database schema name must either match the ``dataSource.user`` value to end up
   on the standard schema search path according to the
   `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
   the schema search path must be set explicitly for the user.
@@ -56,15 +52,13 @@ an example node configuration for SQLServer:
     }
     database = {
         transactionIsolationLevel = READ_COMMITTED
-        schema = [SCHEMA]
     }
     jarDirs = ["[FULL_PATH]/sqljdbc_6.2/enu/"]
 
 Note that:
 
-* The ``database.schema`` property is optional and is ignored as of release 3.1.
 * Ensure the directory referenced by jarDirs contains only one JDBC driver JAR file; by the default,
-  sqljdbc_6.2/enu/contains two JDBC JAR file for different Java versions.
+  sqljdbc_6.2/enu/contains two JDBC JAR files for different Java versions.
 
 Node database tables
 ^^^^^^^^^^^^^^^^^^^^
