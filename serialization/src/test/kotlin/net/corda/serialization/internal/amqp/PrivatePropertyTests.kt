@@ -3,10 +3,7 @@ package net.corda.serialization.internal.amqp
 import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.assertEquals
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
-import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
 import org.apache.qpid.proton.amqp.Symbol
 import org.assertj.core.api.Assertions
@@ -14,7 +11,9 @@ import java.io.NotSerializableException
 import java.util.*
 
 class PrivatePropertyTests {
-    private val factory = testDefaultFactoryNoEvolution()
+
+    private val registry = TestDescriptorBasedSerializerRegistry()
+    private val factory = testDefaultFactoryNoEvolution(registry)
 
     @Test
     fun testWithOnePrivateProperty() {
@@ -124,7 +123,7 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
+        val serializersByDescriptor = registry.contents
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
         val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
@@ -149,7 +148,7 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
+        val serializersByDescriptor = registry.contents
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
         val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
@@ -174,7 +173,7 @@ class PrivatePropertyTests {
         val output = SerializationOutput(factory).serializeAndReturnSchema(c1)
         println (output.schema)
 
-        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
+        val serializersByDescriptor = registry.contents
 
         // Inner and Outer
         assertEquals(2, serializersByDescriptor.size)
@@ -194,7 +193,7 @@ class PrivatePropertyTests {
 
         val output = SerializationOutput(factory).serializeAndReturnSchema(C("this is nice"))
 
-        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
+        val serializersByDescriptor = registry.contents
 
         val schemaDescriptor = output.schema.types.first().descriptor.name
         val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer

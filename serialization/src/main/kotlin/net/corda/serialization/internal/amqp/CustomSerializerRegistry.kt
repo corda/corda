@@ -18,7 +18,7 @@ interface CustomSerializerRegistry {
 }
 
 class CachingCustomSerializerRegistry(
-        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>)
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry)
     : CustomSerializerRegistry {
 
     companion object {

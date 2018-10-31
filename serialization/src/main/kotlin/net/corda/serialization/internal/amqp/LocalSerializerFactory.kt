@@ -16,7 +16,6 @@ interface LocalSerializerFactory {
     val fingerPrinter: FingerPrinter
     val classloader: ClassLoader
 
-    val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>
     val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
 
     /**
@@ -33,7 +32,7 @@ class DefaultLocalSerializerFactory(
         override val whitelist: ClassWhitelist,
         override val fingerPrinter: FingerPrinter,
         override val classloader: ClassLoader,
-        override val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>,
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {

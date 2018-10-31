@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
-import net.corda.serialization.internal.carpenter.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -13,20 +12,6 @@ import javax.annotation.concurrent.ThreadSafe
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 @KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
-
-interface EvolutionSerializerFactory : LocalSerializerFactory {
-    fun registerByDescriptor(name: String, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
-}
-
-class ComposedEvolutionSerializerFactory(
-        private val localSerializerFactory: LocalSerializerFactory,
-        private val serializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>)
-    : EvolutionSerializerFactory,
-        LocalSerializerFactory by localSerializerFactory {
-
-    override fun registerByDescriptor(descriptor: String, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
-            serializerRegistry.getOrBuild(descriptor, serializerCreator)
-}
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.

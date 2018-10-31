@@ -1,11 +1,14 @@
 package net.corda.serialization.internal.amqp;
 
+import net.corda.serialization.internal.amqp.testutils.TestDescriptorBasedSerializerRegistry;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
+import java.lang.reflect.Field;
 import java.util.Map;
 
+import static net.corda.core.internal.InternalUtils.uncheckedCast;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 import static org.junit.Assert.*;
 
@@ -104,7 +107,7 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void testCapitalisationOfIs() throws NotSerializableException {
+    public void testCapitilsationOfIs() throws NotSerializableException {
         SerializerFactory factory = testDefaultFactory();
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -132,7 +135,8 @@ public class JavaPrivatePropertyTests {
 
     @Test
     public void singlePrivateWithConstructor() throws NotSerializableException {
-        SerializerFactory factory = testDefaultFactory();
+        TestDescriptorBasedSerializerRegistry registry = new TestDescriptorBasedSerializerRegistry();
+        SerializerFactory factory = testDefaultFactory(registry);
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -142,14 +146,18 @@ public class JavaPrivatePropertyTests {
 
         assertEquals (c.a, c2.a);
 
-        // TODO: replace this with a test that doesn't depend on looking inside the private data of objects under test.
-        assertEquals(1, factory.getDescriptorBasedSerializerRegistry().getSize());
+        assertEquals(1, registry.getContents().size());
+        ObjectSerializer cSerializer = ((ObjectSerializer)registry.getContents().values().toArray()[0]);
+        assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
+        Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
+        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PrivatePropertyReader);
     }
 
     @Test
     public void singlePrivateWithConstructorAndGetter()
             throws NotSerializableException {
-        SerializerFactory factory = testDefaultFactory();
+        TestDescriptorBasedSerializerRegistry registry = new TestDescriptorBasedSerializerRegistry();
+        SerializerFactory factory = testDefaultFactory(registry);
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -159,7 +167,10 @@ public class JavaPrivatePropertyTests {
 
         assertEquals (c.a, c2.a);
 
-        // TODO: replace this with a test that doesn't depend on looking inside the private data of objects under test.
-        assertEquals(1, factory.getDescriptorBasedSerializerRegistry().getSize());
+        assertEquals(1, registry.getContents().size());
+        ObjectSerializer cSerializer = ((ObjectSerializer)registry.getContents().values().toArray()[0]);
+        assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
+        Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
+        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PublicPropertyReader);
     }
 }

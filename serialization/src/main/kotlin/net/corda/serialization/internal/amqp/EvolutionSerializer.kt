@@ -271,7 +271,8 @@ class EvolutionSerializerViaSetters(
  */
 interface EvolutionSerializerProvider {
     fun getEvolutionSerializer(
-            factory: EvolutionSerializerFactory,
+            factory: LocalSerializerFactory,
+            descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
             schemas: SerializationSchemas): AMQPSerializer<Any>
@@ -283,11 +284,12 @@ interface EvolutionSerializerProvider {
  */
 @KeepForDJVM
 object DefaultEvolutionSerializerProvider : EvolutionSerializerProvider {
-    override fun getEvolutionSerializer(factory: EvolutionSerializerFactory,
+    override fun getEvolutionSerializer(factory: LocalSerializerFactory,
+                                        descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.registerByDescriptor(typeNotation.descriptor.name!!.toString()) {
+        return descriptorBasedSerializerRegistry.getOrBuild(typeNotation.descriptor.name!!.toString()) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {

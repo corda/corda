@@ -8,18 +8,15 @@ import net.corda.serialization.internal.model.DefaultCacheProvider
  * This registry gets shared around between various participants that might want to use it as a lookup, or register
  * serialisers that they have created with it.
  */
-interface DescriptorBasedSerializerRegistry<T> {
-    operator fun get(descriptor: String): T?
-    operator fun set(descriptor: String, serializer: T)
-    fun getOrBuild(descriptor: String, builder: () -> T): T
-    val size: Int
+interface DescriptorBasedSerializerRegistry {
+    operator fun get(descriptor: String): AMQPSerializer<Any>?
+    operator fun set(descriptor: String, serializer: AMQPSerializer<Any>)
+    fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
 }
 
-class AMQPDescriptorBasedSerializerLookupRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>> {
+class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry {
 
     private val registry: MutableMap<String, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-
-    override val size: Int get() = registry.size
 
     override fun get(descriptor: String): AMQPSerializer<Any>? = registry[descriptor]
 

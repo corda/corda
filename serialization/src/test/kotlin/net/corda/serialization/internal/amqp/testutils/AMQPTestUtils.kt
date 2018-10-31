@@ -18,19 +18,45 @@ import java.io.File.separatorChar
 import java.io.NotSerializableException
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
-fun testDefaultFactory() = SerializerFactoryBuilder.build(AllWhitelist,
-        ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
-)
+/**
+ * For tests that want to see inside the serializer registry
+ */
+class TestDescriptorBasedSerializerRegistry : DescriptorBasedSerializerRegistry {
+    val contents = mutableMapOf<String, AMQPSerializer<Any>>()
 
-fun testDefaultFactoryNoEvolution(): SerializerFactory =
+    override fun get(descriptor: String): AMQPSerializer<Any>? = contents[descriptor]
+
+    override fun set(descriptor: String, serializer: AMQPSerializer<Any>) {
+        contents.putIfAbsent(descriptor, serializer)
+    }
+
+    override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
+            get(descriptor) ?: builder().also { set(descriptor, it) }
+}
+
+@JvmOverloads
+fun testDefaultFactory(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
+                               DefaultDescriptorBasedSerializerRegistry()) =
+        SerializerFactoryBuilder.build(
+            AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry)
+
+@JvmOverloads
+fun testDefaultFactoryNoEvolution(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
+                                          DefaultDescriptorBasedSerializerRegistry()): SerializerFactory =
     SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry,
             evolutionSerializerProvider = FailIfEvolutionAttempted)
 
-fun testDefaultFactoryWithWhitelist() = SerializerFactoryBuilder.build(EmptyWhitelist,
-        ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())
-)
+@JvmOverloads
+fun testDefaultFactoryWithWhitelist(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
+                                            DefaultDescriptorBasedSerializerRegistry()) =
+        SerializerFactoryBuilder.build(EmptyWhitelist,
+        ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader()),
+        descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry)
 
 class TestSerializationOutput(
         private val verbose: Boolean,

@@ -1,10 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
-import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals
 import org.apache.qpid.proton.amqp.Symbol
@@ -16,7 +13,8 @@ class SerializationPropertyOrdering {
     companion object {
         val VERBOSE get() = false
 
-        val sf = testDefaultFactoryNoEvolution()
+        val registry = TestDescriptorBasedSerializerRegistry()
+        val sf = testDefaultFactoryNoEvolution(registry)
     }
 
     // Force object references to be ued to ensure we go through that code path
@@ -107,7 +105,7 @@ class SerializationPropertyOrdering {
             }
         }
 
-        val serializersByDescriptor = sf.descriptorBasedSerializerRegistry
+        val serializersByDescriptor = registry.contents
         val schemaDescriptor = output.schema.types.first().descriptor.name
 
         // make sure that each property accessor has a setter to ensure we're using getter / setter instantiation

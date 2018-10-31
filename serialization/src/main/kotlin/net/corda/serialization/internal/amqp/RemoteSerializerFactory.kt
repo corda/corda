@@ -27,8 +27,8 @@ class DefaultRemoteSerializerFactory(
         private val classCarpenter: ClassCarpenter,
         private val classloader: ClassLoader,
         private val evolutionSerializerProvider: EvolutionSerializerProvider,
-        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>,
-        private val evolutionSerializerFactory: EvolutionSerializerFactory)
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+        private val localSerializerFactory: LocalSerializerFactory)
     : RemoteSerializerFactory {
 
     companion object {
@@ -77,7 +77,7 @@ class DefaultRemoteSerializerFactory(
         if (serialiser.typeDescriptor == typeNotation.descriptor.name) return
 
         logger.trace { "typeNotation=${typeNotation.name} action=\"requires Evolution\"" }
-        evolutionSerializerProvider.getEvolutionSerializer(evolutionSerializerFactory, typeNotation, serialiser, schemaAndDescriptor.schemas)
+        evolutionSerializerProvider.getEvolutionSerializer(localSerializerFactory, descriptorBasedSerializerRegistry, typeNotation, serialiser, schemaAndDescriptor.schemas)
     }
 
     private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
@@ -95,12 +95,12 @@ class DefaultRemoteSerializerFactory(
 
     // TODO: class loader logic, and compare the schema.
     private fun processRestrictedType(typeNotation: RestrictedType) =
-            evolutionSerializerFactory.get(null, typeForName(typeNotation.name, classloader))
+            localSerializerFactory.get(null, typeForName(typeNotation.name, classloader))
 
     private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
         val type = typeForName(typeNotation.name, classloader)
-        return evolutionSerializerFactory.get(type.asClass(), type)
+        return localSerializerFactory.get(type.asClass(), type)
     }
 
     private fun typeForName(name: String, classloader: ClassLoader): Type =
