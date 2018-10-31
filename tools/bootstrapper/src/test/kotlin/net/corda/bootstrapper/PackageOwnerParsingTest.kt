@@ -86,7 +86,7 @@ class PackageOwnerParsingTest {
     fun `parse registration request with invalid java package name`() {
         val args = arrayOf("--register-package-owner", "com.!example.stuff=A:B:C")
         expectedEx.expect(CommandLine.ParameterException::class.java)
-        expectedEx.expectMessage("Invalid java package name")
+        expectedEx.expectMessage("Invalid Java package name")
         commandLine.parse(*args)
     }
 

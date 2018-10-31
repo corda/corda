@@ -173,7 +173,7 @@ class ZoneVersionTooLowException(message: String) : CordaRuntimeException(messag
 @CordaSerializable
 data class JavaPackageName(val name: String) {
     init {
-        require(isPackageValid(name)) { "Invalid java package name: $name" }
+        require(isPackageValid(name)) { "Invalid Java package name: $name" }
     }
 
     /**
