@@ -113,7 +113,7 @@ Several examples of entities and mappings are provided in the codebase, includin
     :language: kotlin
 
 .. note:: Ensure table and column names are compatible with the naming convention of database vendors for which the Cordapp will be deployed,
-   e.g. prior to Oracle 12.2 the maximum length of table/column name is 30 bytes (the exact number of characters depends on the database encoding).
+   e.g. for Oracle database, prior to version 12.2 the maximum length of table/column name is 30 bytes (the exact number of characters depends on the database encoding).
 
 Identity mapping
 ----------------
