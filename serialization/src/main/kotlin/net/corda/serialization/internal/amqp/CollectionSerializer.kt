@@ -23,7 +23,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
                     .getLocalType(factory.classloader) // replace erased type parameters
 
     override val typeDescriptor: Symbol by lazy {
-        Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+        factory.createDescriptor(type)
     }
 
     companion object {

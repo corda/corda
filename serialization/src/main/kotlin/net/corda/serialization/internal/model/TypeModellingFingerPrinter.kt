@@ -15,28 +15,6 @@ import java.util.*
 typealias Fingerprint = String
 
 /**
- * Bridges between [SerializerFactory] and [TypeModellingFingerPrinter], creating objects which encapsulate the small
- * pieces of [SerializerFactory]'s functionality that [TypeModellingFingerPrinter] is actually interested in.
- *
- * First we construct a [CustomTypeDescriptorLookup] to obtain type descriptors for types which have custom serializers,
- * then we construct a [LocalTypeModel] which is configured to use the factory's whitelist, and to treat types as opaque
- * if they are either in the list of [opaqueTypes] or they have a custom type descriptor.
- *
- * Finally we build a [LocalTypeInformationFingerPrinter], which builds fingerprints from [LocalTypeInformation] rather
- * than from [Type]s. This and the [LocalTypeModel] are then used to construct a [TypeModellingFingerPrinter].
- */
-internal fun getTypeModellingFingerPrinter(whitelist: ClassWhitelist, customSerializerRegistry: CustomSerializerRegistry): TypeModellingFingerPrinter {
-
-    fun isOpaque(type: Type) = Primitives.unwrap(type.asClass()) in opaqueTypes ||
-            customSerializerRegistry.findCustomSerializer(type.asClass(), type) != null
-
-    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(whitelist, ::isOpaque))
-    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customSerializerRegistry, typeModel)
-
-    return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
-}
-
-/**
  * An implementation of [FingerPrinter] that uses a [LocalTypeModel] to obtain [LocalTypeInformation] for each [Type] it
  * is asked to fingerprint, then passes that [LocalTypeInformation] to a [LocalTypeInformationFingerPrinter] for
  * fingerprinting.
@@ -289,28 +267,3 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
 internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
         FingerprintWriter(false).write(typeDescriptors.joinToString()).fingerprint
 // endregion
-
-// Copied from SerializerFactory so that we can have equivalent behaviour, for now.
-private val opaqueTypes = setOf(
-        Character::class.java,
-        Char::class.java,
-        Boolean::class.java,
-        Byte::class.java,
-        UnsignedByte::class.java,
-        Short::class.java,
-        UnsignedShort::class.java,
-        Int::class.java,
-        UnsignedInteger::class.java,
-        Long::class.java,
-        UnsignedLong::class.java,
-        Float::class.java,
-        Double::class.java,
-        Decimal32::class.java,
-        Decimal64::class.java,
-        Decimal128::class.java,
-        Date::class.java,
-        UUID::class.java,
-        ByteArray::class.java,
-        String::class.java,
-        Symbol::class.java
-)

@@ -11,8 +11,7 @@ import java.lang.reflect.Type
  * want converting back to that singleton instance on the receiving JVM.
  */
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
-    override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
+    override val typeDescriptor = factory.createDescriptor(type)
 
     private val interfaces = interfacesForSerialization(type, factory)
 

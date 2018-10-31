@@ -128,7 +128,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     abstract class Proxy<T : Any, P : Any>(clazz: Class<T>,
                                            protected val proxyClass: Class<P>,
-                                           protected val factory: SerializerFactory,
+                                           protected val factory: LocalSerializerFactory,
                                            withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
 

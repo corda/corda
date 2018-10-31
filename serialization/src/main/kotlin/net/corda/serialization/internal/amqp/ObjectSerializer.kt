@@ -31,7 +31,7 @@ open class ObjectSerializer(val clazz: Type, factory: LocalSerializerFactory) : 
 
     private val typeName = nameForType(clazz)
 
-    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+    override val typeDescriptor: Symbol = factory.createDescriptor(type)
 
     // We restrict to only those annotated or whitelisted
     private val interfaces = interfacesForSerialization(clazz, factory)

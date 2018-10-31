@@ -92,18 +92,3 @@ interface LocalTypeModelConfiguration {
      */
     fun isExcluded(type: Type): Boolean
 }
-
-/**
- * [LocalTypeModelConfiguration] based on a [ClassWhitelist]
- */
-class WhitelistBasedTypeModelConfiguration(
-        private val whitelist: ClassWhitelist,
-        private val opaqueTest: (Type) -> Boolean = {
-            it.asClass() != Any::class.java &&
-            !it.asClass().isCollectionOrMap &&
-            it.typeName.startsWith("java")
-        })
-    : LocalTypeModelConfiguration {
-    override fun isExcluded(type: Type): Boolean = whitelist.isNotWhitelisted(type.asClass())
-    override fun isOpaque(type: Type): Boolean = opaqueTest(type)
-}

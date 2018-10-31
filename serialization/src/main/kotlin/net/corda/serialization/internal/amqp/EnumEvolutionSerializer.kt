@@ -40,8 +40,7 @@ class EnumEvolutionSerializer(
         factory: LocalSerializerFactory,
         private val conversions: Map<String, String>,
         private val ordinals: Map<String, Int>) : AMQPSerializer<Any> {
-    override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
+    override val typeDescriptor = factory.createDescriptor(type)
 
     companion object {
         private fun MutableMap<String, String>.mapInPlace(f: (String) -> String) {

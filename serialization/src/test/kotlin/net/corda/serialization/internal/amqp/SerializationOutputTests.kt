@@ -475,10 +475,11 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     @Test
     fun `class constructor is invoked on deserialisation`() {
         compression == null || return // Manipulation of serialized bytes is invalid if they're compressed.
-        val ser = SerializationOutput(SerializerFactoryBuilder.build(AllWhitelist,
+        val serializerFactory = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
-        ))
-        val des = DeserializationInput(ser.serializerFactory)
+        )
+        val ser = SerializationOutput(serializerFactory)
+        val des = DeserializationInput(serializerFactory)
         val serialisedOne = ser.serialize(NonZeroByte(1), compression).bytes
         val serialisedTwo = ser.serialize(NonZeroByte(2), compression).bytes
 

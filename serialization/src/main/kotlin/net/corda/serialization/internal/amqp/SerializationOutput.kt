@@ -28,7 +28,7 @@ data class BytesAndSchemas<T : Any>(
  */
 @KeepForDJVM
 open class SerializationOutput constructor(
-        internal val serializerFactory: SerializerFactory
+        internal val serializerFactory: LocalSerializerFactory
 ) {
     companion object {
         private val logger = contextLogger()

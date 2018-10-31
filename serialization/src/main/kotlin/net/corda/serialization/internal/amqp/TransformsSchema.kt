@@ -7,6 +7,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.NotSerializableWithReasonException
+import net.corda.serialization.internal.model.DefaultCacheProvider
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
@@ -207,7 +208,8 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * @param sf the [SerializerFactory] building this transform set. Needed as each can define it's own
          * class loader and this dictates which classes we can and cannot see
          */
-        fun get(name: String, sf: LocalSerializerFactory) = sf.transformsCache.computeIfAbsent(name) {
+        fun get(name: String, sf: LocalSerializerFactory) =
+                sf.getOrBuildTransform(name) {
             val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
             try {
                 val clazz = sf.classloader.loadClass(name)
@@ -244,7 +246,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
 
         private fun getAndAdd(
                 type: String,
-                sf: SerializerFactory,
+                sf: LocalSerializerFactory,
                 map: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
             try {
                 get(type, sf).apply {
@@ -268,7 +270,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * @param schema should be a [Schema] generated for a serialised data structure
          * @param sf should be provided by the same serialization context that generated the schema
          */
-        fun build(schema: Schema, sf: SerializerFactory) = TransformsSchema(
+        fun build(schema: Schema, sf: LocalSerializerFactory) = TransformsSchema(
                 mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>().apply {
                     schema.types.forEach { type -> getAndAdd(type.name, sf, this) }
                 })

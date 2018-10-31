@@ -7,17 +7,21 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.LocalTypeInformationFingerPrinter
+import net.corda.serialization.internal.model.WhitelistBasedTypeModelConfiguration
 
-class FingerPrinterTesting : FingerPrinter {
+class FingerPrinterTesting : LocalTypeInformationFingerPrinter {
     private var index = 0
-    private val cache = mutableMapOf<Type, String>()
+    private val cache = mutableMapOf<LocalTypeInformation, String>()
 
-    override fun fingerprint(type: Type): String {
-        return cache.computeIfAbsent(type) { index++.toString() }
+    override fun fingerprint(typeInformation: LocalTypeInformation): String {
+        return cache.computeIfAbsent(typeInformation) { index++.toString() }
     }
 
     @Suppress("UNUSED")
-    fun changeFingerprint(type: Type) {
+    fun changeFingerprint(type: LocalTypeInformation) {
         cache.computeIfAbsent(type) { "" }.apply { index++.toString() }
     }
 }
@@ -30,10 +34,11 @@ class FingerPrinterTestingTests {
     @Test
     fun testingTest() {
         val fpt = FingerPrinterTesting()
-        assertEquals("0", fpt.fingerprint(Integer::class.java))
-        assertEquals("1", fpt.fingerprint(String::class.java))
-        assertEquals("0", fpt.fingerprint(Integer::class.java))
-        assertEquals("1", fpt.fingerprint(String::class.java))
+        val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+        assertEquals("0", fpt.fingerprint(typeModel.inspect(Integer::class.java)))
+        assertEquals("1", fpt.fingerprint(typeModel.inspect(String::class.java)))
+        assertEquals("0", fpt.fingerprint(typeModel.inspect(Integer::class.java)))
+        assertEquals("1", fpt.fingerprint(typeModel.inspect(String::class.java)))
     }
 
     @Test

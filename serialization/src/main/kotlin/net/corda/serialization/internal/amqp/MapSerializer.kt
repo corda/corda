@@ -24,8 +24,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                     .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)
                     .getLocalType(factory.classloader) // replace erased type parameters
 
-    override val typeDescriptor: Symbol = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+    override val typeDescriptor: Symbol = factory.createDescriptor(type)
 
     companion object {
         // NB: Order matters in this map, the most specific classes should be listed at the end
