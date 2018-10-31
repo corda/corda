@@ -140,7 +140,7 @@ the empty string *""* is also considered as the correct value.
 If the option is not set, the relevant system property named *signing.option* is tried.
 If the system property is not set then the value defaults to the configuration of the Corda development certificate.
 
-The example ``cordapp`` plugin with plugin ``singing`` configuration:
+The example ``cordapp`` plugin with plugin ``signing`` configuration:
 
 .. sourcecode:: groovy
 
@@ -184,8 +184,8 @@ CorDapp signing can be disabled for a build:
 
     ./gradlew -Dsigning.enabled=false
 
-Other system properties can be explicitly assigned to options by calling `System.getProperty` in ``cordapp`` plugin configuration.
-For example the below configuration sets the specific singing algorithm when a system property is available otherwise defaults to an empty string:
+Other system properties can be explicitly assigned to options by calling ``System.getProperty`` in ``cordapp`` plugin configuration.
+For example the below configuration sets the specific signing algorithm when a system property is available otherwise defaults to an empty string:
 
 .. sourcecode:: groovy
 
@@ -197,7 +197,7 @@ For example the below configuration sets the specific singing algorithm when a s
         }
         //...
 
-Then the build process can set the value for `custom.sigalg` system property and other system properties recognized by ``cordapp`` plugin:
+Then the build process can set the value for *custom.sigalg* system property and other system properties recognized by ``cordapp`` plugin:
 
 .. sourcecode:: shell
 
@@ -207,7 +207,7 @@ To check if CorDapp is signed use `JAR signing and verification tool <https://do
 
 .. sourcecode:: shell
 
-   jarsinger --verify path/to/cordapp.jar
+   jarsigner --verify path/to/cordapp.jar
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
