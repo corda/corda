@@ -18,9 +18,9 @@ membership criteria, yet linked by the same underlying network (‘Corda Network
 the exchange of data or assets via a secure, efficient ‘internet layer’, in a way that isn’t possible with competing 
 permissioned distributed ledger technologies or legacy systems.
 
-Corda Network operates the protocol of Corda and will always do so. The protocol is currently specified in the Corda 
-Open Source Project codebase, but later may be formalised in a protocol specification document, which then will become 
-canonical.
+Corda Network operates the protocol of Corda currently, and is always expected to. The protocol is currently 
+specified in the Corda Open Source Project codebase, but later may be formalised in a protocol specification document, 
+which then will become canonical.
 
 1.1	Reason for a Corda Network Foundation
 -----------------------------------------
@@ -34,11 +34,11 @@ that Corda Network will be most effectively governed via a Foundation, a not-for
 Network Participants elect, and can be elected to, a governing Board.
 
 A Foundation will enable Network Participants to be involved with, and also understand, how decisions are made (including 
-around issues of identity and permission), building trust and engagement from a wide range of stakeholders. We believe 
-this will bring about the best decisions and outcomes for the Network’s long-term success.
+around issues of identity and permission), building trust and engagement from a wide range of stakeholders. This will 
+bring about the best decisions and outcomes for the Network’s long-term success.
 
-In other words, to achieve our objective of Corda ubiquity,  it is necessary to put in place a governance structure 
-which explicitly limits R3’s control of Corda Network, and enables this ubiquity. 
+In other words, to achieve the community's objective of Corda ubiquity,  it is necessary to put in place a governance 
+structure which explicitly limits R3’s control of Corda Network, and enables this ubiquity. 
 
 2 The Corda Network Foundation
 ==============================
@@ -61,8 +61,9 @@ straightforward voting process.
 * Democracy and transparency – Key decisions and rationale are shared openly with Participants. 
 * Stability (with a long-term view) with flexibility – Board directors’ terms will last three years with a staggered 
 board, and the governance model will be flexible to adapt where required.
-* Efficiency – Staying a lean organisation, sufficient to commission and monitor an Operator to run the Network to 
-achieve the vision of Corda. Provide adequate support, through advisory committees. 
+* Efficiency – Staying a lean organisation, sufficient to commission and monitor an Operator to run any services, 
+physical infrastructure, or operational processes that may be needed to achieve the vision of Corda. Provide adequate 
+support, through advisory committees. 
 * Cost effectiveness - Funding received through participation fees pays for an Operator to run the Network securely, and 
 the Foundation shall not be a profit-making entity.
 * Independence – Corda Network Foundation makes its own decisions (within the law), and is not following another 
@@ -139,13 +140,13 @@ change.
 ----------------------------------------------
 ### 3.3.1 Size
 The Board shall consist of 11 voting members (‘Directors’) in total, to allow broad representation but maintain an agile 
-decision-making ability. The Participant Community and selection process shall ensure that the Board is composed of 
-members who display diversity in geography, culture, skills, experience and perspective, and that the abilities and 
-interests of Directors are aligned with those of Corda.
+decision-making ability. The selection process (using the Participant Community) is intended to ensure that the Board is 
+composed of members who display diversity in geography, culture, skills, experience and perspective, and that the 
+abilities and interests of Directors are aligned with those of Corda.
 
-R3 shall have the ongoing right to appoint 2 Directors, as the firm which developed Corda and funded the initial 
-construction of the Network. It represents the interests of its large and diverse alliance of financial institutions, 
-commercial organisations, and regulatory bodies. Similarly to the rest of the board, the Directors will have three-year 
+R3 shall have the ongoing right to appoint two Directors, as the firm which developed Corda and funded the initial 
+construction of the Network. It represents the interests of its large and diverse alliance of commercial organisations, 
+financial institutions, and regulatory bodies. Similarly to the rest of the board, the Directors will have three-year 
 terms (unless the director resigns or leaves for another reason) and can be re-appointed without limit. Appointment will 
 be effective immediately. 
 
@@ -153,71 +154,72 @@ The Chair of the board will be elected for a one year term by a vote of the Dire
 meeting following the Board election.
 
 #### 3.3.2 Participation Criteria
-Participants shall seek to ensure that the Board is composed of Directors who in the aggregate produce the broadest 
-diversity on the Board, consistent with meeting the other criteria. In addition, the Board is to be comprised of 
-individuals who meet the following requirements:
+Participants shall be directed to vote to ensure that the Board is composed of Directors who in the aggregate produce 
+the broadest diversity on the Board, consistent with meeting the other criteria. In addition, the Board is to be 
+comprised of individuals who can demonstrate to Participants they meet the following requirements:
 
 * Hold an understanding and appreciation of the Corda protocol and community purpose.  
-* Will produce, in aggregate, the broadest cultural and geographic diversity.
+* Have an awareness of cultural and geographic perspectives.
 * Demonstrate integrity, intelligence and objectivity.
 * Can work and communicate in written and spoken English. 
 
-To promote diversity, the following guidelines are adopted, in particular for steady-state governance (we recognise that 
+To promote diversity, the following guidelines are adopted, in particular for steady-state governance (recognising that 
 these may not be possible to fulfil during the transition period):
 
-* No corporate group of participants may have more than 1 Director. In the event of votes for 2 different candidates 
+* No corporate group of participants may have more than one Director. In the event of votes for two different candidates 
 representing the same overall corporate group, the candidate with the most votes shall be considered.
-* There is no restriction of re-election of Directors or the Chair of the Board.
-* Of the 9 Directors, there should not be more than 3 Directors from any broad industry classification, according to 
+* Of the nine Directors, there should not be more than three Directors from any broad industry classification, according to 
 company classification data.
-* Of the 9 Directors, there should not be more than 3 Directors from any continent (one must be based in the Americas, 
+* Of the nine Directors, there should not be more than three Directors from any continent (one must be based in the Americas, 
 Europe/Africa and Asia, to ensure geographic diversity. 
-* Of the 9 Directors, there should not be more than 3 Directors representing any Corporate Group with more than 
+* Of the nine Directors, there should not be more than three Directors representing any Corporate Group with more than 
 100,000 employees.
+* There is no restriction of re-election of Directors or the Chair of the Board.
 
 ### 3.3.3 Establishment of the Board
 #### 3.3.3.1 Pre-Foundation 
 Initially R3 shall govern the Network to ensure rapid progress on its implementation. Once the Foundation is set-up and 
-at least 3 business networks are conduction live transactions using the network with at least 3 Participants each, the 
+at least three business networks are conducting live transactions using the network with at least three Participants each, the 
 'transition period' of one year will commence.
 #### 3.3.3.2	Transition: Initial set-up of Foundation Board: 
-For the transition year, the first 3 business networks shall have the right to choose 3 Participants, to 
+For the transition year, the first three business networks shall have the right to choose three Participants, to 
 represent the interests of the business network. One of each of these must be based in the Americas, Europe/Africa and 
 Asia, to ensure geographic diversity, if the pool Participants allows.  Each selected Participant will appoint a 
-Director, to sit on the Board, making 9 Directors in addition to the 2 Directors from R3. 
+Director, to sit on the Board, making nine Directors in addition to the two Directors from R3. 
 
 After this start-up period, there will be a vote for Board Directors.
 
-For the first election only, of the 9 vacant seats, three will be for a duration of one year, three for two years, and 
+For the first election only, of the nine vacant seats, three will be for a duration of one year, three for two years, and 
 three for three years. This will introduce a staggered board, so there is greater continuity at the end of each term. 
-Candidates with the most votes will fill the 3-year seats first, followed by 2-year and then 1-year seats. In all other 
+Candidates with the most votes will fill the three-year seats first, followed by two-year and then one-year seats. In all other 
 respects, the first election will follow the steady state process.
 #### 3.3.3.3	Steady-State
-1. Participants may nominate candidates for Director election. Appointments to the 9 rotating seats of the Board will be 
+1. Participants may nominate candidates for Director election. Appointments to the nine rotating seats of the Board will be 
 by vote of the Participants, with three seats up for election each year. Any seats vacated mid-term will also be 
-elected at the same time. R3 may not put forward candidates for the 9 rotating seats.
+elected at the same time. R3 may not put forward candidates for the nine rotating seats, and these may not be held by 
+R3 employees.
 2. Candidates will create a personal statement and short biography, which will be shared with all Participants.
-3. Participants may each cast up to 3 votes for 3 separate candidates.
+3. Participants may each cast up to three votes for three separate candidates.
 4. Subject to meeting certain criteria (including diversity of geography and industry), the most popular candidates 
 will be appointed as Directors. 
 5. Candidates will be considered in sequence from most popular to least, and if a seat is vacant according to the 
 diversity criteria in section 3.3.2, the candidate will be allocated to it. This may mean that occasionally a less 
 popular candidate fills a seat instead of a more popular one.
-6. R3 shall appoint Directors to the 2 remaining seats, when appropriate.
+6. R3 shall appoint Directors to the two remaining seats, when appropriate.
 #### 3.3.4	Removal from the Board and Re-election.
-Apart from the three-year expiry, Directors can otherwise leave the Board by resignation, significant sickness or 
-death, or if necessary, removal by a Mandatory Governance Event. In any case, a vacant seat will trigger an election 
-for that seat.
+Apart from the three-year expiry, Directors can otherwise leave the Board by resignation, prolonged non-attendance of 
+board meetings of more than six months, death, or if necessary, removal by a Mandatory Governance Event. In any case, a 
+vacant seat will be contested at the next annual election.
 
 3.4	Conduct of Board Meetings
 -----------------------------
 Attendance may be in person or by video-conference.
 
-The Board shall meet not less than every 6 months, and may meet on the request of any Director, but not more than every 
-2 months. At least 2 weeks’ notice shall be given to Directors. By exception, the Chair may convene an emergency 
-meeting with 1 day’s notice. 
+The Board shall meet not less than every six months, and may meet on the request of any Director, but not more than every 
+two months. At least two weeks’ notice shall be given to Directors. By exception, the Chair may convene an emergency 
+meeting with minimal notice, appropriate to the situation in the Chair's judgement. 
 
-The Board shall consider all Governance Events proposed since the previous meeting.
+The Board shall consider all Governance Events proposed since the previous meeting, except for an emergency convening.
 
 Board meetings shall be limited to the Board representatives, and shall follow the requirements for quorum and voting 
 outlined in this Constitution. 
@@ -236,9 +238,9 @@ vote, and may be asked to join by video-conference if there are logistical const
 4	Relation of the Foundation to Business Networks
 ===================================================
 
-The global Network shall support the operation of business networks by industry-specific operators on top of the 
-Network. The Board shall ensure that there is a clear separation between areas of governance for the Foundation and 
-Network outlined in this document, and for individual business networks.
+The global Network shall support the operation of any business networks which may be formed by industry-specific 
+operators on top of the Network. The Board shall ensure that there is a clear separation between areas of governance 
+for the Foundation and Network outlined in this document, and for individual business networks.
 
 Additionally, the structure and control processes defined for the Foundation shall be documented and made available 
 under a Creative Commons license, both for reuse by business network operators if business networks need a similar 
@@ -248,8 +250,8 @@ governance structure, and so that such governance layers are complementary and n
 =====================
 
 All formal changes to the Network and the Foundation shall be controlled through a formal Governance Event process, and 
-the right to initiate this shall be held by all Participants. In the event of disruptive behaviour, this right may be 
-curtailed, as described in 5.2.5.
+the right to initiate this shall be held by all Directors and Participants. In the event of disruptive behaviour by an 
+individual Participant or group of Participants, this right may be curtailed, as described in 5.2.5.
 
 5.1	Types of Governance Events
 ------------------------------
@@ -310,15 +312,18 @@ not-for-profit status of the Foundation and the mission to promote the Corda Eco
 
 The Foundation shall charge a fee for Membership, as described in section 6.1.
 
-The Operator shall charge the Foundation for the provision of services, including management of Participants, Network 
-participation and access services, Network map and notary services. The Operator may also provide fee-based services 
-that are supplementary to those needed to participate on the Network.
+The Operator shall charge the Foundation for services that the Operator provides under the requirements of the contract 
+with the Foundation, including management of Participants, Network participation and access services, Network map 
+and Operator-provided notary services. The Operator may also provide fee-based services that are supplementary to those 
+needed to participate on the Network.
 
 #### 5.2.3 Change of Network Operator
 For three years upon establishment of the Foundation, R3 will undertake the role of Operator. Annually thereafter, the 
 Board will approve the appointment of the Operator, which may be changed with a Mandatory Governance Event and vote. 
 As noted, the Foundation shall hold the Trust Root, and the Operator and any services they operate shall be provisioned 
-with intermediate certificates that derive from this.
+with intermediate certificates that derive from this. The Operator must enter into an escrow arrangement upon 
+appointment, so that existing certificates continue to work, certificate revocation lists continue to be published, and 
+there is no disruption to Participants if the Operator is changed.
 
 #### 5.2.4 Change Management Process
 The Network will periodically require participating nodes to implement change. A change notification and management 
@@ -326,7 +331,7 @@ process shall be defined and communicated; and any change to the change manageme
 Mandatory Governance Event.
 
 #### 5.2.5 Other Mandatory Governance Events
-Restrictions on individual Participants to initiate Governance Events; in the event of disruptive behaviour.
+Restrictions on individual Participants or a group to initiate Governance Events; in the event of disruptive behaviour.
 
 Audit: the Board may request an audit of the activities and services provided by the Operator, no more frequently than 
 every year, unless an emergency audit is authorised through a Mandatory Governance Event.
@@ -350,7 +355,7 @@ and backwards compatibility as key design goals, there may be circumstances unde
 change. Where these changes require participants in the Network to update to remain compatible, these changes will be 
 subject to Governance Events. 
 
-Changes to technical standards, such as network parameters, shall require formal design processes, and the Operator may 
+Changes to technical standards, such as some network parameters, shall require formal design processes, and the Operator may 
 choose to delegate technical due diligence to the Technical Advisory Committee prior to formally accepting a change to 
 the technical standards.
 
@@ -369,8 +374,8 @@ performance.
 jurisdictions in which they operate. 
 3. Availability for independent audits upon request by the Board.
 
-Additionally, the Operator shall manage a reference distributed notary service for the Network, using an approved crash 
-or Byzantine fault tolerant (BFT) consensus algorithm, with nodes provided by a minimum number of identified and 
+Additionally, the Operator shall manage a reference distributed notary service for the Network, using a Board-approved 
+crash or Byzantine fault tolerant (BFT) consensus algorithm, with nodes provided by a minimum number of identified and 
 independent entities. 
 
 #### 5.3.3	Dispute Resolution Process
@@ -380,11 +385,11 @@ the Board by creating an Advisory Governance Event.
 
 5.4	Emergency Governance Events
 -------------------------------
-Certain Network incidents, which impact one or more Network participants and that would be the subject of Mandatory or 
-Advisory Governance Events, shall require immediate resolution. In these cases, the Operator may make emergency changes, 
-but these shall be subject to post-event evaluation and standard Governance Event processing. Areas of control that are 
-the subject of Mandatory Governance Events are not expected to require emergency remediation, but the Operator shall be 
-entitled to make emergency changes to preserve the stability and integrity of the Network.
+Certain Network incidents, which could impact one or more Network participants and that would be the subject of 
+Mandatory or Advisory Governance Events, shall require immediate resolution. In these cases, the Operator may make 
+emergency changes, but these shall be subject to post-event evaluation and standard Governance Event processing. Areas 
+of control that are the subject of Mandatory Governance Events are not expected to require emergency remediation, but 
+the Operator shall be entitled to make emergency changes to preserve the stability and integrity of the Network.
 
 5.5	Voting
 ----------
@@ -392,18 +397,18 @@ All Constitutional, Mandatory and Advisory Governance Events outlined in section
 Board for voting. The representatives of the Board shall vote on a one vote per Director basis to approve or reject the 
 Governance Event.
 
-Quorum for the Board shall require two thirds of the Directors to vote. The Board may continue to meet if quorum is not 
-met, but shall be prevented from making any decisions at the meeting. Decisions by electronic vote without a meeting 
-shall require a vote by two thirds majority of all Directors.
+Quorum for the Board shall require two thirds of the Directors to vote. Abstention is not a vote. The Board may continue 
+to meet if quorum is not met, but shall be prevented from making any decisions at the meeting. Decisions by electronic 
+vote without a meeting shall require a vote by two thirds majority of all Directors.
 
 Provided quorum is met, Constitutional Governance Events shall require a three quarters majority vote, and Mandatory 
 Governance Events shall require a two thirds majority vote.
 
 In the event of a tied vote (the odd number of representatives is intended to avoid tied votes) the vote of the Chair 
-shall carry the vote.
+shall carry the vote. If the Chair does not vote in the case of a tied vote, the Event will not be passed.
 
 All Governance Events proposed for consideration by the Board at a meeting shall be circulated in draft form to the 
-members of the Board at least 1 week prior to the date of the meeting, and the text of such draft events may be altered 
+members of the Board at least one week prior to the date of the meeting, and the text of such draft events may be altered 
 at the meeting.
 
 The Foundation may chose to implement the tracking and voting for Governance Events using an on-ledger Corda application 
@@ -423,7 +428,7 @@ The Participant Community have the right to:
 
 1. Propose a formal Governance Event to the Board for voting. This must meet the appropriate standards and formats.
 2. Request observer representation at a board meeting subject to logistical constraints. 
-3. Utilise the brand and marketing materials provided by the Foundation to Participants.
+3. Utilise any brand and marketing materials that may be provided by the Foundation to Participants.
 4. Identify themselves as participants of the Foundation.
 5. Vote in the periodic election of a new Board.  
 6. Participate in conferences, projects and initiatives of the Foundation. Numbers of participants and any additional 
@@ -469,7 +474,7 @@ Network Foundation will need separate staff. Administrative operations and meeti
 Operator.
 
 The Operator shall invoice the Foundation for the costs of operating the Network and minor administrative expenses, 
-initially on a cost-plus basis of 10%, and subject to annual review. Corda Network identity and map technical services 
+initially on a cost-plus basis, and subject to annual review. Corda Network identity and map technical services 
 have been designed to be highly cacheable, and low-cost in operation.
 
 For the first three years, R3 shall act as the Operator. 
@@ -481,7 +486,7 @@ For the first three years, R3 shall act as the Operator.
 ---------
 In line with the mission and values of the Foundation, the Network Foundation is not a profit seeking entity. But the 
 Foundation needs to provide governance and technical services, and these will incur costs. The Foundation maintains these 
-cost principles:
+cost principles, as ideals but not contractual standards:
 
 1. Costs for all services should be borne by all users of those services.
 2. One group of participants should not subsidise another.
@@ -497,7 +502,7 @@ fee will be independent of organisation size and number of transactions on Corda
 identity issuance. 
 
 The fee shall be based on the number of Participants divided by an estimate of the cost of running the Foundation, 
-which is set out in 7. There may be variance in the fee depending on whether the Participant is indirectly using a 
+which is set out in section 7. There may be variance in the fee depending on whether the Participant is indirectly using a 
 Corda Network-powered application, and therefore the services which the Participant is able to access.
 
 Such fees shall be detailed in a separate schedule to be updated annually and approved by the Board by a Mandatory 
@@ -528,8 +533,8 @@ participation of leading Participants of the ecosystem, including developers, se
 users. This community shall work towards furthering the adoption of Corda, and contribute to the specific capabilities 
 identified in the technical white paper.
 
-The Corda technical community shall be broad and open, encouraging participation and active conversations on the 
-technology and applications.
+The Corda technical community should be broad and open, encouraging participation and active conversations on the 
+technology and applications, but this cannot be mandated by the Foundation.
 
 9.1	Non-Discrimination
 ----------------------

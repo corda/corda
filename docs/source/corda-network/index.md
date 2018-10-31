@@ -14,9 +14,9 @@ The network is due to go live in December 2018, and initially it will be governe
 Foundation is currently being set-up which is intended to govern the Network from mid 2019, after a transition period
 when control moves entirely to the Foundation. See the [governance model](governance-structure.md) for more detail.
 
-The Network will comprise of many sub-groups or 'business networks' of participants running particular CorDapps, and such 
-groups will often have a co-ordinating party (the 'Business Network Operator') who manages the distribution of the app and 
-rules (including around membership) for its use. 
+The Network will comprise many sub-groups many sub-groups of participants running particular CorDapps (sometimes but not 
+always referred to as 'business networks'), and such groups will often have a co-ordinating party (the 'Business 
+Network Operator') who manages the distribution of the app and rules (including around membership) for its use. 
 
 Corda Network will support the operation of business networks by industry-specific operators within the Network. There 
 will be a clear separation between areas of governance for the Network and for individual business networks. For example, 
@@ -49,8 +49,8 @@ Corda design separates correctness consensus from uniqueness consensus, and the 
 services. The Notary will digitally sign a transaction presented to it - provided no transaction referring to 
 any of the same inputs has been previously signed by the Notary, and the transaction timestamp is within bounds. 
 
-Business Network Operators and Network Participants can enter into legal agreements which rely on the presence of such 
-digital signatures when determining whether a transaction to which they are party, or upon the details of which they 
+Business Network Operators and Network Participants may choose to enter into legal agreements which rely on the presence 
+of such digital signatures when determining whether a transaction to which they are party, or upon the details of which they 
 otherwise rely, is to be treated as 'confirmed' in accordance with the terms of the underlying agreement. 
 
 Support 
