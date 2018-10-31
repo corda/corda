@@ -6,11 +6,11 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.JarSignatureTestUtils.createJar
-import net.corda.core.JarSignatureTestUtils.generateKey
-import net.corda.core.JarSignatureTestUtils.signJar
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.crypto.SecureHash
+import net.corda.testing.core.JarSignatureTestUtils.createJar
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.JarSignatureTestUtils.signJar
+import net.corda.core.cJarSignatureTestUtilsrypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
