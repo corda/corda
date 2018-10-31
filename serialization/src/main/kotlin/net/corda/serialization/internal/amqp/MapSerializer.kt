@@ -18,7 +18,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  * Serialization / deserialization of certain supported [Map] types.
  */
 @KeepForDJVM
-class MapSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
+class MapSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
             ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
                     .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)

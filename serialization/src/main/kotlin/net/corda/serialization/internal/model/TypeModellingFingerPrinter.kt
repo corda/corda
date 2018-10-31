@@ -3,34 +3,16 @@ package net.corda.serialization.internal.model
 import com.google.common.hash.Hashing
 import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
+import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
-import net.corda.serialization.internal.amqp.FingerPrinter
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.asClass
-import net.corda.serialization.internal.amqp.ifThrowsAppend
+import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
 import java.util.*
 
-
 typealias Fingerprint = String
-
-/**
- *
- */
-interface CustomTypeDescriptorLookup {
-    fun getCustomTypeDescriptor(type: Type): String?
-}
-
-/**
- * Obtains the custom type descriptor for any type that has a custom serializer, according to the [SerializerFactory].
- */
-private class FactoryBasedCustomTypeDescriptorLookup(private val factory: SerializerFactory): CustomTypeDescriptorLookup {
-    override fun getCustomTypeDescriptor(type: Type): String? =
-            factory.findCustomSerializer(type.asClass(), type)?.typeDescriptor?.toString()
-}
 
 /**
  * Bridges between [SerializerFactory] and [TypeModellingFingerPrinter], creating objects which encapsulate the small
@@ -43,14 +25,13 @@ private class FactoryBasedCustomTypeDescriptorLookup(private val factory: Serial
  * Finally we build a [LocalTypeInformationFingerPrinter], which builds fingerprints from [LocalTypeInformation] rather
  * than from [Type]s. This and the [LocalTypeModel] are then used to construct a [TypeModellingFingerPrinter].
  */
-internal fun getTypeModellingFingerPrinter(factory: SerializerFactory): TypeModellingFingerPrinter {
-    val customTypeDescriptorLookup = FactoryBasedCustomTypeDescriptorLookup(factory)
+internal fun getTypeModellingFingerPrinter(whitelist: ClassWhitelist, customSerializerRegistry: CustomSerializerRegistry): TypeModellingFingerPrinter {
 
     fun isOpaque(type: Type) = Primitives.unwrap(type.asClass()) in opaqueTypes ||
-            customTypeDescriptorLookup.getCustomTypeDescriptor(type) != null
+            customSerializerRegistry.findCustomSerializer(type.asClass(), type) != null
 
-    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, ::isOpaque))
-    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customTypeDescriptorLookup, typeModel)
+    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(whitelist, ::isOpaque))
+    val localTypeInformationFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(customSerializerRegistry, typeModel)
 
     return TypeModellingFingerPrinter(typeModel, localTypeInformationFingerPrinter)
 }
@@ -107,7 +88,7 @@ interface LocalTypeInformationFingerPrinter {
  * selected types.
  */
 class CustomisableLocalTypeInformationFingerPrinter(
-        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val customTypeDescriptorLookup: CustomSerializerRegistry,
         private val typeModel: LocalTypeModel,
         private val debugEnabled: Boolean = false) : LocalTypeInformationFingerPrinter {
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
@@ -164,7 +145,7 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
  * during fingerprinting.
  */
 private class CustomisableLocalTypeInformationFingerPrintingState(
-        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
+        private val customSerializerRegistry: CustomSerializerRegistry,
         private val typeModel: LocalTypeModel,
         private val writer: FingerprintWriter) {
 
@@ -288,7 +269,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
 
     // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
     private fun fingerprintWithCustomSerializerOrElse(type: LocalTypeInformation, defaultAction: () -> Unit) {
-        val customTypeDescriptor = customTypeDescriptorLookup.getCustomTypeDescriptor(type.observedType)
+        val customTypeDescriptor = customSerializerRegistry.findCustomSerializer(type.observedType.asClass(), type.observedType)?.typeDescriptor?.toString()
         if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
         else defaultAction()
     }

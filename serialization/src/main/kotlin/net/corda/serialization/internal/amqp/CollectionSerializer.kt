@@ -16,7 +16,7 @@ import kotlin.collections.LinkedHashSet
  * Serialization / deserialization of predefined set of supported [Collection] types covering mostly [List]s and [Set]s.
  */
 @KeepForDJVM
-class CollectionSerializer(private val declaredType: ParameterizedType, factory: SerializerFactory) : AMQPSerializer<Any> {
+class CollectionSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = (declaredType as? ParameterizedType)
             ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
                     .toParameterized(TypeIdentifier.TopType)

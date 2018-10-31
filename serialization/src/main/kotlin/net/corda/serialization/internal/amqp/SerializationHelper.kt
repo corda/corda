@@ -65,12 +65,12 @@ fun constructorForDeserialization(type: Type): KFunction<Any> {
 fun <T : Any> propertiesForSerialization(
         kotlinConstructor: KFunction<T>?,
         type: Type,
-        factory: SerializerFactory): PropertySerializers = PropertySerializers.make(
+        factory: LocalSerializerFactory): PropertySerializers = PropertySerializers.make(
             getValueProperties(kotlinConstructor, type, factory)
                 .addCalculatedProperties(factory, type)
                 .sortedWith(PropertyAccessor))
 
-fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, factory: SerializerFactory)
+fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, factory: LocalSerializerFactory)
         : List<PropertyAccessor> =
     if (kotlinConstructor != null) {
         propertiesForSerializationFromConstructor(kotlinConstructor, type, factory)
@@ -78,7 +78,7 @@ fun <T : Any> getValueProperties(kotlinConstructor: KFunction<T>?, type: Type, f
         propertiesForSerializationFromAbstract(type.asClass(), type, factory)
     }
 
-private fun List<PropertyAccessor>.addCalculatedProperties(factory: SerializerFactory, type: Type)
+private fun List<PropertyAccessor>.addCalculatedProperties(factory: LocalSerializerFactory, type: Type)
         : List<PropertyAccessor> {
     val nonCalculated = map { it.serializer.name }.toSet()
     return this + type.asClass().calculatedPropertyDescriptors().mapNotNull { (name, descriptor) ->
@@ -104,7 +104,7 @@ private fun List<PropertyAccessor>.addCalculatedProperties(factory: SerializerFa
 internal fun <T : Any> propertiesForSerializationFromConstructor(
         kotlinConstructor: KFunction<T>,
         type: Type,
-        factory: SerializerFactory): List<PropertyAccessor> {
+        factory: LocalSerializerFactory): List<PropertyAccessor> {
     val clazz = (kotlinConstructor.returnType.classifier as KClass<*>).javaObjectType
 
     val classProperties = clazz.propertyDescriptors()
@@ -127,7 +127,7 @@ internal fun <T : Any> propertiesForSerializationFromConstructor(
     }
 }
 
-private fun toPropertyAccessorConstructor(index: Int, param: KParameter, classProperties: Map<String, PropertyDescriptor>, type: Type, clazz: Class<out Any>, factory: SerializerFactory): PropertyAccessorConstructor {
+private fun toPropertyAccessorConstructor(index: Int, param: KParameter, classProperties: Map<String, PropertyDescriptor>, type: Type, clazz: Class<out Any>, factory: LocalSerializerFactory): PropertyAccessorConstructor {
     // name cannot be null, if it is then this is a synthetic field and we will have bailed
     // out prior to this
     val name = param.name!!
@@ -163,7 +163,7 @@ private fun toPropertyAccessorConstructor(index: Int, param: KParameter, classPr
 fun propertiesForSerializationFromSetters(
         properties: Map<String, PropertyDescriptor>,
         type: Type,
-        factory: SerializerFactory): List<PropertyAccessor> =
+        factory: LocalSerializerFactory): List<PropertyAccessor> =
         properties.asSequence().map { entry ->
             val (name, property) = entry
 
@@ -208,7 +208,7 @@ private fun getPublicPropertyReader(getter: Method, type: Type, param: KParamete
 private fun propertiesForSerializationFromAbstract(
         clazz: Class<*>,
         type: Type,
-        factory: SerializerFactory): List<PropertyAccessor> =
+        factory: LocalSerializerFactory): List<PropertyAccessor> =
         clazz.propertyDescriptors().asSequence().withIndex().mapNotNull { (index, entry) ->
             val (name, property) = entry
             if (property.getter == null || property.field == null) return@mapNotNull null
@@ -221,10 +221,10 @@ private fun propertiesForSerializationFromAbstract(
                     PropertySerializer.make(name, PublicPropertyReader(getter), returnType, factory))
         }.toList()
 
-internal fun interfacesForSerialization(type: Type, serializerFactory: SerializerFactory): List<Type> =
+internal fun interfacesForSerialization(type: Type, serializerFactory: LocalSerializerFactory): List<Type> =
         exploreType(type, serializerFactory).toList()
 
-private fun exploreType(type: Type, serializerFactory: SerializerFactory, interfaces: MutableSet<Type> = LinkedHashSet()): MutableSet<Type> {
+private fun exploreType(type: Type, serializerFactory: LocalSerializerFactory, interfaces: MutableSet<Type> = LinkedHashSet()): MutableSet<Type> {
     val clazz = type.asClass()
 
     if (clazz.isInterface) {

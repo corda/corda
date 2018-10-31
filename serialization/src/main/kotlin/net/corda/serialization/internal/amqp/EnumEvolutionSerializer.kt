@@ -37,7 +37,7 @@ import java.util.*
  */
 class EnumEvolutionSerializer(
         override val type: Type,
-        factory: SerializerFactory,
+        factory: LocalSerializerFactory,
         private val conversions: Map<String, String>,
         private val ordinals: Map<String, Int>) : AMQPSerializer<Any> {
     override val typeDescriptor = Symbol.valueOf(
@@ -58,13 +58,13 @@ class EnumEvolutionSerializer(
          * @param old The description of the enum as it existed at the time of serialisation taken from the
          * received AMQP header
          * @param new The Serializer object we built based on the current state of the enum class on our classpath
-         * @param factory the [SerializerFactory] that is building this serialization object.
+         * @param factory the [LocalSerializerFactory] that is building this serialization object.
          * @param schemas the transforms attached to the class in the AMQP header, i.e. the transforms
          * known at serialization time
          */
         fun make(old: RestrictedType,
                  new: AMQPSerializer<Any>,
-                 factory: SerializerFactory,
+                 factory: LocalSerializerFactory,
                  schemas: SerializationSchemas): AMQPSerializer<Any> {
             val wireTransforms = schemas.transforms.types[old.name]
                     ?: EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)

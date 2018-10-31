@@ -2,13 +2,11 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Type
@@ -18,7 +16,7 @@ import kotlin.reflect.jvm.javaConstructor
  * Responsible for serializing and deserializing a regular object instance via a series of properties
  * (matched with a constructor).
  */
-open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
+open class ObjectSerializer(val clazz: Type, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type get() = clazz
     open val kotlinConstructor = if (clazz.asClass().isConcreteClass) constructorForDeserialization(clazz) else null
     val javaConstructor by lazy { kotlinConstructor?.javaConstructor }

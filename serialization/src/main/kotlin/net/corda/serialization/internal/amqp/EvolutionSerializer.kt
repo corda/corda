@@ -30,7 +30,7 @@ import kotlin.reflect.jvm.jvmErasure
  */
 abstract class EvolutionSerializer(
         clazz: Type,
-        factory: SerializerFactory,
+        factory: LocalSerializerFactory,
         protected val oldReaders: Map<String, OldParam>,
         override val kotlinConstructor: KFunction<Any>
 ) : ObjectSerializer(clazz, factory) {
@@ -113,7 +113,7 @@ abstract class EvolutionSerializer(
 
         private fun makeWithConstructor(
                 new: ObjectSerializer,
-                factory: SerializerFactory,
+                factory: LocalSerializerFactory,
                 constructor: KFunction<Any>,
                 readersAsSerialized: Map<String, OldParam>): AMQPSerializer<Any> {
 
@@ -148,7 +148,7 @@ abstract class EvolutionSerializer(
 
         private fun makeWithSetters(
                 new: ObjectSerializer,
-                factory: SerializerFactory,
+                factory: LocalSerializerFactory,
                 constructor: KFunction<Any>,
                 readersAsSerialized: Map<String, OldParam>,
                 classProperties: Map<String, PropertyDescriptor>): AMQPSerializer<Any> {
@@ -171,7 +171,7 @@ abstract class EvolutionSerializer(
          */
         fun make(old: CompositeType,
                  new: ObjectSerializer,
-                 factory: SerializerFactory
+                 factory: LocalSerializerFactory
         ): AMQPSerializer<Any> {
             // The order in which the properties were serialised is important and must be preserved
             val readersAsSerialized = LinkedHashMap<String, OldParam>()
@@ -207,7 +207,7 @@ abstract class EvolutionSerializer(
 
 class EvolutionSerializerViaConstructor(
         clazz: Type,
-        factory: SerializerFactory,
+        factory: LocalSerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
         kotlinConstructor: KFunction<Any>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
     /**
@@ -239,7 +239,7 @@ class EvolutionSerializerViaConstructor(
  */
 class EvolutionSerializerViaSetters(
         clazz: Type,
-        factory: SerializerFactory,
+        factory: LocalSerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.OldParam>,
         kotlinConstructor: KFunction<Any>,
         private val setters: Map<String, PropertyAccessor>) : EvolutionSerializer(clazz, factory, oldReaders, kotlinConstructor) {
@@ -271,7 +271,7 @@ class EvolutionSerializerViaSetters(
  */
 interface EvolutionSerializerProvider {
     fun getEvolutionSerializer(
-            factory: SerializerFactory,
+            factory: EvolutionSerializerFactory,
             typeNotation: TypeNotation,
             newSerializer: AMQPSerializer<Any>,
             schemas: SerializationSchemas): AMQPSerializer<Any>
@@ -283,7 +283,7 @@ interface EvolutionSerializerProvider {
  */
 @KeepForDJVM
 object DefaultEvolutionSerializerProvider : EvolutionSerializerProvider {
-    override fun getEvolutionSerializer(factory: SerializerFactory,
+    override fun getEvolutionSerializer(factory: EvolutionSerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {

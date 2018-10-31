@@ -17,7 +17,7 @@ object SerializerFactoryBuilder {
                     whitelist,
                     classCarpenter,
                     DefaultEvolutionSerializerProvider,
-                    ::SerializerFingerPrinter,
+                    null,
                     false)
 
     @JvmStatic
@@ -26,13 +26,13 @@ object SerializerFactoryBuilder {
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
+            customFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
                     classCarpenter,
                     evolutionSerializerProvider,
-                    fingerPrinterProvider,
+                    customFingerPrinter,
                     onlyCustomSerializers)
 
     @JvmStatic
@@ -42,30 +42,46 @@ object SerializerFactoryBuilder {
             carpenterClassLoader: ClassLoader,
             lenientCarpenterEnabled: Boolean = false,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
+            customFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
                     ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
                     evolutionSerializerProvider,
-                    fingerPrinterProvider,
+                    customFingerPrinter,
                     onlyCustomSerializers)
 
     private fun makeFactory(whitelist: ClassWhitelist,
                             classCarpenter: ClassCarpenter,
                             evolutionSerializerProvider: EvolutionSerializerProvider,
-                            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter,
+                            customFingerPrinter: FingerPrinter?,
                             onlyCustomSerializers: Boolean): SerializerFactory {
         val descriptorBasedSerializerRegistry = AMQPDescriptorBasedSerializerLookupRegistry()
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
 
-        return DefaultSerializerFactory(
+        val fingerPrinter = customFingerPrinter ?:
+                getTypeModellingFingerPrinter(whitelist, customSerializerRegistry)
+
+        val localSerializerFactory = DefaultLocalSerializerFactory(
                 whitelist,
-                classCarpenter,
+                fingerPrinter,
+                classCarpenter.classloader,
                 descriptorBasedSerializerRegistry,
                 customSerializerRegistry,
-                evolutionSerializerProvider,
-                fingerPrinterProvider,
                 onlyCustomSerializers)
+
+        val evolutionSerializerFactory = ComposedEvolutionSerializerFactory(
+                localSerializerFactory,
+                descriptorBasedSerializerRegistry
+        )
+
+        val remoteSerializerFactory = DefaultRemoteSerializerFactory(
+                classCarpenter,
+                classCarpenter.classloader,
+                evolutionSerializerProvider,
+                descriptorBasedSerializerRegistry,
+                evolutionSerializerFactory)
+
+        return ComposedSerializerFactory(localSerializerFactory, remoteSerializerFactory, customSerializerRegistry)
     }
 }

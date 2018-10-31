@@ -9,7 +9,7 @@ import java.io.NotSerializableException
  * prevents that by simply throwing an exception whenever such a serializer is requested.
  */
 object FailIfEvolutionAttempted : EvolutionSerializerProvider {
-    override fun getEvolutionSerializer(factory: SerializerFactory,
+    override fun getEvolutionSerializer(factory: EvolutionSerializerFactory,
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {

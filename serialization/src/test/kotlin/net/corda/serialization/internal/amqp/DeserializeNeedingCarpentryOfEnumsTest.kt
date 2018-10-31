@@ -20,15 +20,15 @@ class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
         // Setup the test
         //
         val setupFactory = testDefaultFactoryNoEvolution()
-
+        val classCarpenter = ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
                 "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })
 
         // create the enum
-        val testEnumType = setupFactory.classCarpenter.build(EnumSchema("test.testEnumType", enumConstants))
+        val testEnumType = classCarpenter.build(EnumSchema("test.testEnumType", enumConstants))
 
         // create the class that has that enum as an element
-        val testClassType = setupFactory.classCarpenter.build(ClassSchema("test.testClassType",
+        val testClassType = classCarpenter.build(ClassSchema("test.testClassType",
                 mapOf("a" to NonNullableField(testEnumType))))
 
         // create an instance of the class we can then serialise
@@ -59,16 +59,16 @@ class DeserializeNeedingCarpentryOfEnumsTest : AmqpCarpenterBase(AllWhitelist) {
         // Setup the test
         //
         val setupFactory = testDefaultFactoryNoEvolution()
-
+        val classCarpenter = ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
         val enumConstants = listOf("AAA", "BBB", "CCC", "DDD", "EEE", "FFF",
                 "GGG", "HHH", "III", "JJJ").associateBy({ it }, { EnumField() })
 
         // create the enum
-        val testEnumType1 = setupFactory.classCarpenter.build(EnumSchema("test.testEnumType1", enumConstants))
-        val testEnumType2 = setupFactory.classCarpenter.build(EnumSchema("test.testEnumType2", enumConstants))
+        val testEnumType1 = classCarpenter.build(EnumSchema("test.testEnumType1", enumConstants))
+        val testEnumType2 = classCarpenter.build(EnumSchema("test.testEnumType2", enumConstants))
 
         // create the class that has that enum as an element
-        val testClassType = setupFactory.classCarpenter.build(ClassSchema("test.testClassType",
+        val testClassType = classCarpenter.build(ClassSchema("test.testClassType",
                 mapOf(
                         "a" to NonNullableField(testEnumType1),
                         "b" to NonNullableField(testEnumType2),

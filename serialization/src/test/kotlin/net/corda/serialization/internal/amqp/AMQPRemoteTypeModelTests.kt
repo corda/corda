@@ -19,11 +19,14 @@ class AMQPRemoteTypeModelTests {
     private val typeModel = AMQPRemoteTypeModel()
 
     private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    private val localTypeFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(
+            factory,
+            localTypeModel)
 
     private val reflector = TypeLoadingRemoteTypeReflector(
             ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist), ClassLoader.getSystemClassLoader()),
             localTypeModel,
-            getTypeModellingFingerPrinter(factory))
+            TypeModellingFingerPrinter(localTypeModel, localTypeFingerPrinter))
 
     private fun <T: Any> getRemoteType(obj: T): RemoteTypeInformation {
         val output = SerializationOutput(factory)

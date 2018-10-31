@@ -46,7 +46,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
     }
 
     companion object {
-        fun make(name: String, readMethod: PropertyReader, resolvedType: Type, factory: SerializerFactory): PropertySerializer {
+        fun make(name: String, readMethod: PropertyReader, resolvedType: Type, factory: LocalSerializerFactory): PropertySerializer {
             return if (SerializerFactory.isPrimitive(resolvedType)) {
                 when (resolvedType) {
                     Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, readMethod)
