@@ -22,7 +22,7 @@ sealed class RemoteTypeInformation {
         return when (this) {
             is RemoteTypeInformation.AnInterface ->
                 typeIdentifier.prettyPrint() + printInterfaces(interfaces)
-            is RemoteTypeInformation.APojo -> typeIdentifier.prettyPrint() +
+            is RemoteTypeInformation.Composable -> typeIdentifier.prettyPrint() +
                     printInterfaces(interfaces) +
                     printProperties(properties, indent + 1)
             else -> typeIdentifier.prettyPrint()
@@ -62,7 +62,7 @@ sealed class RemoteTypeInformation {
 
     data class AnInterface(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val interfaces: List<RemoteTypeInformation>, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
 
-    data class APojo(
+    data class Composable(
             val typeDescriptor: TypeDescriptor,
             override val typeIdentifier: TypeIdentifier,
             val properties: Map<PropertyName, RemotePropertyInformation>,

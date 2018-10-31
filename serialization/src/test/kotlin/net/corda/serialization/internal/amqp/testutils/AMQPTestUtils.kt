@@ -22,12 +22,11 @@ fun testDefaultFactory() = SerializerFactoryBuilder.build(AllWhitelist,
         ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
 )
 
-fun testDefaultFactoryNoEvolution(): SerializerFactory {
-    return SerializerFactoryBuilder.build(
+fun testDefaultFactoryNoEvolution(): SerializerFactory =
+    SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-            FailIfEvolutionAttempted)
-}
+            evolutionSerializerProvider = FailIfEvolutionAttempted)
 
 fun testDefaultFactoryWithWhitelist() = SerializerFactoryBuilder.build(EmptyWhitelist,
         ClassCarpenterImpl(EmptyWhitelist, ClassLoader.getSystemClassLoader())

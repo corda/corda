@@ -18,16 +18,14 @@ interface CustomSerializerRegistry {
 }
 
 class CachingCustomSerializerRegistry(
-        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry)
+        private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>)
     : CustomSerializerRegistry {
 
     companion object {
         val logger = contextLogger()
     }
 
-    private data class CustomSerializerIdentifier(val actualTypeIdentifier: TypeIdentifier, val declaredTypeIdentifier: TypeIdentifier)
-
-    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private val customSerializersCache: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
     private var customSerializers: List<SerializerFor> = emptyList()
 
     /**
@@ -54,17 +52,10 @@ class CachingCustomSerializerRegistry(
             customSerializer
         }
     }
-    
-    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        val typeIdentifier = CustomSerializerIdentifier(
-                TypeIdentifier.forClass(clazz),
-                TypeIdentifier.forGenericType(declaredType))
 
-        return customSerializersCache[typeIdentifier]
-                ?: doFindCustomSerializer(clazz, declaredType)?.also { serializer ->
-                    customSerializersCache.putIfAbsent(typeIdentifier, serializer)
-                }
-    }
+    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? =
+            customSerializersCache[TypeIdentifier.forGenericType(declaredType)] ?:
+            doFindCustomSerializer(clazz, declaredType)?.also { customSerializersCache::putIfAbsent }
 
     private fun doFindCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is

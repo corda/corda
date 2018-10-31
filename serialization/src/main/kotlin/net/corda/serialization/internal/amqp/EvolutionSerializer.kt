@@ -287,7 +287,7 @@ object DefaultEvolutionSerializerProvider : EvolutionSerializerProvider {
                                         typeNotation: TypeNotation,
                                         newSerializer: AMQPSerializer<Any>,
                                         schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.registerByDescriptor(typeNotation.descriptor.name!!) {
+        return factory.registerByDescriptor(typeNotation.descriptor.name!!.toString()) {
             when (typeNotation) {
                 is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
                 is RestrictedType -> {

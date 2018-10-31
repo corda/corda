@@ -11,7 +11,6 @@ import org.junit.Test
 import org.apache.qpid.proton.amqp.Symbol
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
-import java.util.concurrent.ConcurrentHashMap
 import java.util.*
 
 class PrivatePropertyTests {
@@ -125,21 +124,18 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = factory.serializersByDescriptor
+        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
-        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
-            assertEquals(1, this.size)
-            assertTrue(this.first() is ObjectSerializer)
-            val propertySerializers = (this.first() as ObjectSerializer).propertySerializers.serializationOrder.map { it.serializer }
-            assertEquals(2, propertySerializers.size)
-            // a was public so should have a synthesised getter
-            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
+        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
+        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
+        assertEquals(2, propertySerializers.size)
+        // a was public so should have a synthesised getter
+        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
 
-            // b is private and thus won't have teh getter so we'll have reverted
-            // to using reflection to remove the inaccessible property
-            assertTrue(propertySerializers[1].propertyReader is PrivatePropertyReader)
-        }
+        // b is private and thus won't have teh getter so we'll have reverted
+        // to using reflection to remove the inaccessible property
+        assertTrue(propertySerializers[1].propertyReader is PrivatePropertyReader)
     }
 
     @Test
@@ -153,22 +149,19 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = factory.serializersByDescriptor
+        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
 
         val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
-        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
-            assertEquals(1, this.size)
-            assertTrue(this.first() is ObjectSerializer)
-            val propertySerializers = (this.first() as ObjectSerializer).propertySerializers.serializationOrder.map { it.serializer }
+        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
+        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
             assertEquals(2, propertySerializers.size)
 
-            // as before, a is public so we'll use the getter method
-            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
+        // as before, a is public so we'll use the getter method
+        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
 
-            // the getB() getter explicitly added means we should use the "normal" public
-            // method reader rather than the private oen
-            assertTrue(propertySerializers[1].propertyReader is PublicPropertyReader)
-        }
+        // the getB() getter explicitly added means we should use the "normal" public
+        // method reader rather than the private oen
+        assertTrue(propertySerializers[1].propertyReader is PublicPropertyReader)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -181,7 +174,7 @@ class PrivatePropertyTests {
         val output = SerializationOutput(factory).serializeAndReturnSchema(c1)
         println (output.schema)
 
-        val serializersByDescriptor = factory.serializersByDescriptor
+        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
 
         // Inner and Outer
         assertEquals(2, serializersByDescriptor.size)
@@ -201,21 +194,17 @@ class PrivatePropertyTests {
 
         val output = SerializationOutput(factory).serializeAndReturnSchema(C("this is nice"))
 
-        val serializersByDescriptor = factory.serializersByDescriptor
+        val serializersByDescriptor = factory.descriptorBasedSerializerRegistry
 
         val schemaDescriptor = output.schema.types.first().descriptor.name
-        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
-            assertEquals(1, size)
+        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
+        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
 
-            assertTrue(this.first() is ObjectSerializer)
-            val propertySerializers = (this.first() as ObjectSerializer).propertySerializers.serializationOrder.map { it.serializer }
+        // CCC is the only property to be serialised
+        assertEquals(1, propertySerializers.size)
 
-            // CCC is the only property to be serialised
-            assertEquals(1, propertySerializers.size)
-
-            // and despite being all caps it should still be a public getter
-            assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
-        }
+        // and despite being all caps it should still be a public getter
+        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
     }
 
 }

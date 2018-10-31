@@ -6,7 +6,6 @@ import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.junit.Test
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.Method
@@ -108,16 +107,13 @@ class SerializationPropertyOrdering {
             }
         }
 
-        val serializersByDescriptor = sf.serializersByDescriptor
+        val serializersByDescriptor = sf.descriptorBasedSerializerRegistry
         val schemaDescriptor = output.schema.types.first().descriptor.name
 
         // make sure that each property accessor has a setter to ensure we're using getter / setter instantiation
-        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
-            assertEquals(1, this.size)
-            assertTrue(this.first() is ObjectSerializer)
-            val propertyAccessors = (this.first() as ObjectSerializer).propertySerializers.serializationOrder as List<PropertyAccessorGetterSetter>
-            propertyAccessors.forEach { property -> assertNotNull(fields["setter"]!!.get(property) as Method?) }
-        }
+        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
+        val propertyAccessors =serializer.propertySerializers.serializationOrder as List<PropertyAccessorGetterSetter>
+        propertyAccessors.forEach { property -> assertNotNull(fields["setter"]!!.get(property) as Method?) }
 
         val input = DeserializationInput(sf).deserialize(output.obj)
         assertEquals(100, input.a)

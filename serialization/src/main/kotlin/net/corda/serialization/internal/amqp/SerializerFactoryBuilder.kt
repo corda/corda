@@ -4,6 +4,8 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import net.corda.serialization.internal.model.*
+import java.lang.reflect.Type
 
 @KeepForDJVM
 object SerializerFactoryBuilder {
@@ -24,7 +26,7 @@ object SerializerFactoryBuilder {
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
+            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
@@ -40,7 +42,7 @@ object SerializerFactoryBuilder {
             carpenterClassLoader: ClassLoader,
             lenientCarpenterEnabled: Boolean = false,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
-            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
+            fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::getTypeModellingFingerPrinter,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
@@ -53,7 +55,17 @@ object SerializerFactoryBuilder {
                             classCarpenter: ClassCarpenter,
                             evolutionSerializerProvider: EvolutionSerializerProvider,
                             fingerPrinterProvider: (SerializerFactory) -> FingerPrinter,
-                            onlyCustomSerializers: Boolean) =
-            DefaultSerializerFactory(whitelist, classCarpenter, evolutionSerializerProvider, fingerPrinterProvider,
-                    onlyCustomSerializers)
+                            onlyCustomSerializers: Boolean): SerializerFactory {
+        val descriptorBasedSerializerRegistry = AMQPDescriptorBasedSerializerLookupRegistry()
+        val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
+
+        return DefaultSerializerFactory(
+                whitelist,
+                classCarpenter,
+                descriptorBasedSerializerRegistry,
+                customSerializerRegistry,
+                evolutionSerializerProvider,
+                fingerPrinterProvider,
+                onlyCustomSerializers)
+    }
 }

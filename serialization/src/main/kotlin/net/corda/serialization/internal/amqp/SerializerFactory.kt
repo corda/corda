@@ -4,7 +4,6 @@ import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.kotlinObjectInstance
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.*
 import net.corda.serialization.internal.carpenter.*
@@ -19,8 +18,40 @@ import javax.annotation.concurrent.ThreadSafe
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 @KeepForDJVM
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
-@KeepForDJVM
-data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type)
+
+interface EvolutionSerializerRegistry {
+    fun registerByDescriptor(name: String, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
+}
+
+interface LocalSerializerFactory {
+    val whitelist: ClassWhitelist
+    val fingerPrinter: FingerPrinter
+    val classloader: ClassLoader
+
+    val serializersByType: MutableMap<Type, AMQPSerializer<Any>>
+    val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>
+    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
+
+    /**
+     * Look up, and manufacture if necessary, a serializer for the given type.
+     *
+     * @param actualClass Will be null if there isn't an actual object instance available (e.g. for
+     * restricted type processing).
+     */
+    @Throws(NotSerializableException::class)
+    fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any>
+}
+
+interface RemoteSerializerFactory {
+    val classCarpenter: ClassCarpenter
+
+    /**
+     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the necessary types
+     * contained in the [Schema].
+     */
+    @Throws(NotSerializableException::class)
+    fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any>
+}
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -44,41 +75,7 @@ data class CustomSerializersCacheKey(val clazz: Class<*>, val declaredType: Type
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @KeepForDJVM
 @ThreadSafe
-interface SerializerFactory {
-    val whitelist: ClassWhitelist
-    val classCarpenter: ClassCarpenter
-    val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter
-    // Caches
-    val serializersByType: MutableMap<Type, AMQPSerializer<Any>>
-    val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>>
-    val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
-    val fingerPrinter: FingerPrinter
-    val classloader: ClassLoader
-    /**
-     * Look up, and manufacture if necessary, a serializer for the given type.
-     *
-     * @param actualClass Will be null if there isn't an actual object instance available (e.g. for
-     * restricted type processing).
-     */
-    @Throws(NotSerializableException::class)
-    fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any>
-
-    /**
-     * Lookup and manufacture a serializer for the given AMQP type descriptor, assuming we also have the necessary types
-     * contained in the [Schema].
-     */
-    @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any>
-
-    /**
-     * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
-     * that expects to find getters and a constructor with a parameter for each property.
-     */
-    fun register(customSerializer: CustomSerializer<out Any>)
-
-    fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>?
-    fun registerExternal(customSerializer: CorDappCustomSerializer)
-    fun registerByDescriptor(name: Symbol, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
+interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, CustomSerializerRegistry, EvolutionSerializerRegistry {
 
     object AnyType : WildcardType {
         override fun getUpperBounds(): Array<Type> = arrayOf(Object::class.java)
@@ -94,10 +91,6 @@ interface SerializerFactory {
         fun primitiveTypeName(type: Type): String? {
             val clazz = type as? Class<*> ?: return null
             return primitiveTypeNames[Primitives.unwrap(clazz)]
-        }
-
-        fun primitiveType(type: String): Class<*>? {
-            return namesOfPrimitiveTypes[type]
         }
 
         private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
@@ -145,16 +138,16 @@ interface SerializerFactory {
 open class DefaultSerializerFactory(
         override val whitelist: ClassWhitelist,
         override val classCarpenter: ClassCarpenter,
+        override val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry<AMQPSerializer<Any>>,
+        private val customSerializerRegistry: CachingCustomSerializerRegistry,
         private val evolutionSerializerProvider: EvolutionSerializerProvider,
-        override val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter,
+        private val fingerPrinterConstructor: (SerializerFactory) -> FingerPrinter,
         private val onlyCustomSerializers: Boolean = false
-) : SerializerFactory {
+) : SerializerFactory, CustomSerializerRegistry by customSerializerRegistry {
 
     // Caches
     override val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    override val serializersByDescriptor: MutableMap<Any, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    private var customSerializers: List<SerializerFor> = emptyList()
-    private val customSerializersCache: MutableMap<CustomSerializersCacheKey, AMQPSerializer<Any>?> = DefaultCacheProvider.createCache()
+
     override val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
 
     override val fingerPrinter by lazy { fingerPrinterConstructor(this) }
@@ -213,7 +206,7 @@ open class DefaultSerializerFactory(
             }
         }
 
-        serializersByDescriptor.putIfAbsent(serializer.typeDescriptor, serializer)
+        descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer
 
         return serializer
     }
@@ -224,35 +217,12 @@ open class DefaultSerializerFactory(
      */
     @Throws(NotSerializableException::class)
     override fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> {
-        return serializersByDescriptor[typeDescriptor] ?: {
+        return descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: {
             logger.trace("get Serializer descriptor=${typeDescriptor}")
             processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
-            serializersByDescriptor[typeDescriptor] ?: throw NotSerializableException(
+            descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
                     "Could not find type matching descriptor $typeDescriptor.")
         }()
-    }
-
-    /**
-     * Register a custom serializer for any type that cannot be serialized or deserialized by the default serializer
-     * that expects to find getters and a constructor with a parameter for each property.
-     */
-    override fun register(customSerializer: CustomSerializer<out Any>) {
-        logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
-        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
-            customSerializers += customSerializer
-            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
-            for (additional in customSerializer.additionalSerializers) {
-                register(additional)
-            }
-        }
-    }
-
-    override fun registerExternal(customSerializer: CorDappCustomSerializer) {
-        logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
-        if (!serializersByDescriptor.containsKey(customSerializer.typeDescriptor)) {
-            customSerializers += customSerializer
-            serializersByDescriptor[customSerializer.typeDescriptor] = customSerializer
-        }
     }
 
     /**
@@ -398,47 +368,14 @@ open class DefaultSerializerFactory(
         }
     }
 
-    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        return customSerializersCache.computeIfAbsent(CustomSerializersCacheKey(clazz, declaredType), ::doFindCustomSerializer)
-    }
-
-    private fun doFindCustomSerializer(key: CustomSerializersCacheKey): AMQPSerializer<Any>? {
-        val (clazz, declaredType) = key
-
-        // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
-        // AbstractMap, only Map. Otherwise it needs to inject additional schema for a RestrictedType source of the
-        // super type.  Could be done, but do we need it?
-        for (customSerializer in customSerializers) {
-            if (customSerializer.isSerializerFor(clazz)) {
-                val declaredSuperClass = declaredType.asClass().superclass
-
-
-                return if (declaredSuperClass == null
-                        || !customSerializer.isSerializerFor(declaredSuperClass)
-                        || !customSerializer.revealSubclassesInSchema
-                ) {
-                    logger.debug("action=\"Using custom serializer\", class=${clazz.typeName}, " +
-                            "declaredType=${declaredType.typeName}")
-
-                    @Suppress("UNCHECKED_CAST")
-                    customSerializer as? AMQPSerializer<Any>
-                } else {
-                    // Make a subclass serializer for the subclass and return that...
-                    CustomSerializer.SubClass(clazz, uncheckedCast(customSerializer))
-                }
-            }
-        }
-        return null
-    }
-
     private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
         val rawType = declaredType.rawType as Class<*>
         rawType.checkSupportedMapType()
         return MapSerializer(declaredType, this)
     }
 
-    override fun registerByDescriptor(name: Symbol, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
-            serializersByDescriptor.computeIfAbsent(name) { _ -> serializerCreator() }
+    override fun registerByDescriptor(descriptor: String, serializerCreator: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
+            descriptorBasedSerializerRegistry.getOrBuild(descriptor, serializerCreator)
 
     companion object {
         private val logger = contextLogger()

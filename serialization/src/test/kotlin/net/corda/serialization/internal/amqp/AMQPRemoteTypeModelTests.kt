@@ -21,7 +21,7 @@ class AMQPRemoteTypeModelTests {
     private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
 
     private val reflector = TypeLoadingRemoteTypeReflector(
-            ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist)),
+            ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist), ClassLoader.getSystemClassLoader()),
             localTypeModel,
             getTypeModellingFingerPrinter(factory))
 

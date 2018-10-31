@@ -1,8 +1,6 @@
 package net.corda.serialization.internal.model
 
-import net.corda.serialization.internal.amqp.asClass
 import net.corda.serialization.internal.carpenter.ClassCarpenter
-import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 
 /**
@@ -21,7 +19,7 @@ interface TypeLoader {
  * A [TypeLoader] that uses the [ClassCarpenter] to build a class matching the supplied [RemoteTypeInformation] if none
  * is visible from the current classloader.
  */
-class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoader {
+class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter, private val classLoader: ClassLoader): TypeLoader {
 
     val cache = DefaultCacheProvider.createCache<TypeIdentifier, Type>()
 
@@ -34,12 +32,11 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
         val uncached = typeGraph.filter { it.typeIdentifier !in cache }
 
         // Find or carpent classes for all TypeIdentifiers we don't have cached types for.
-        val existingClasses = mutableMapOf<TypeIdentifier, Class<*>>()
         val requiringCarpentry = mutableListOf<RemoteTypeInformation>()
 
         for (information in uncached) {
             try {
-                existingClasses[information.typeIdentifier] = information.typeIdentifier.getLocalType().asClass()
+                cache[information.typeIdentifier] = information.typeIdentifier.getLocalType(classLoader)
             } catch (e: ClassNotFoundException) {
                 requiringCarpentry += information
             }
@@ -49,10 +46,10 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
 
         // Try again for classes that had to be carpented into existence.
         for (information in requiringCarpentry) {
-            existingClasses[information.typeIdentifier] = information.typeIdentifier.getLocalType().asClass()
+            cache[information.typeIdentifier] = information.typeIdentifier.getLocalType(classLoader)
         }
 
-        return makeType(remoteTypeInformation.typeIdentifier, existingClasses)
+        return cache[remoteTypeInformation.typeIdentifier]!!
     }
 
     @Suppress("unused")
@@ -62,20 +59,11 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
         throw UnsupportedOperationException("Not implemented yet") // TODO: convert remote type information to carpenter schema
     }
 
-    private fun makeType(typeIdentifier: TypeIdentifier, classLookup: Map<TypeIdentifier, Class<*>>): Type =
-            cache[typeIdentifier] ?: when(typeIdentifier) {
-                is TypeIdentifier.Parameterised -> RemoteParameterisedType(
-                        classLookup[typeIdentifier]!!,
-                        typeIdentifier.parameters.map { makeType(it, classLookup) })
-                else -> classLookup[typeIdentifier]!!
-            }.apply { cache.putIfAbsent(typeIdentifier, this) }
-
     // Recursively traverse all of the types connected to this type in the remote type DAG.
     private val RemoteTypeInformation.traverse: Sequence<RemoteTypeInformation> get() = sequenceOf(this) + when(this) {
         is RemoteTypeInformation.AnInterface -> typeParameters.traverse + interfaces.traverse
-        //is RemoteTypeInformation.AnEnum -> interfaces.traverse
         is RemoteTypeInformation.AnArray -> componentType.traverse
-        is RemoteTypeInformation.APojo -> typeParameters.traverse + interfaces.traverse + properties.traverse
+        is RemoteTypeInformation.Composable -> typeParameters.traverse + interfaces.traverse + properties.traverse
         else -> emptySequence()
     }
 
@@ -84,10 +72,4 @@ class ClassCarpentingTypeLoader(private val carpenter: ClassCarpenter): TypeLoad
 
     private val Map<String, RemotePropertyInformation>.traverse: Sequence<RemoteTypeInformation> get() =
         values.asSequence().flatMap { it.type.traverse }
-}
-
-private class RemoteParameterisedType(private val rawType: Class<*>, private val typeParameters: List<Type>): ParameterizedType {
-    override fun getRawType(): Type = rawType
-    override fun getOwnerType(): Type? = null
-    override fun getActualTypeArguments(): Array<Type> = typeParameters.toTypedArray()
 }

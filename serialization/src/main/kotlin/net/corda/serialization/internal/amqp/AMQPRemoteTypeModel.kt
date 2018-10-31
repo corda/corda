@@ -34,7 +34,7 @@ class AMQPRemoteTypeModel {
                 ?: throw IllegalStateException("Composite type $this has no type descriptor")
 
         return if (isInterface) RemoteTypeInformation.AnInterface(typeDescriptor, identifier, interfaces, typeParameters)
-        else RemoteTypeInformation.APojo(typeDescriptor, identifier, properties, interfaces, typeParameters)
+        else RemoteTypeInformation.Composable(typeDescriptor, identifier, properties, interfaces, typeParameters)
     }
 
     private fun TypeIdentifier.interpretTypeParameters(notationLookup: Map<TypeIdentifier, TypeNotation>): List<RemoteTypeInformation> = when (this) {
