@@ -111,9 +111,10 @@ Several examples of entities and mappings are provided in the codebase, includin
 .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/schemas/CashSchemaV1.kt
     :language: kotlin
 
-.. note:: If Cordapp needs to be portable between Corda OS (running against H2) and Corda Enterprise (running against a standalone database), consider database vendors specific requirements.
-          Ensure that table and column names are compatible with the naming convention of database vendors for which the Cordapp will be deployed,
-          e.g. prior to Oracle 12.2 the maximum length of table/column name is 30 bytes.
+.. note:: If Cordapp needs to be portable between Corda OS (running against H2) and Corda Enterprise (running against a standalone database),
+          consider database vendors specific requirements.
+          Ensure that table and column names are compatible with the naming convention of the database vendors for which the Cordapp will be deployed,
+          e.g. for Oracle database, prior to version 12.2 the maximum length of table/column name is 30 bytes (the exact number of characters depends on the database encoding).
 
 Identity mapping
 ----------------
