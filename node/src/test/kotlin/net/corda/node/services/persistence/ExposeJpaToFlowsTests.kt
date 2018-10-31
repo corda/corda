@@ -1,6 +1,9 @@
 package net.corda.node.services.persistence
 
+import co.paralleluniverse.fibers.Suspendable
+import com.esotericsoftware.kryo.KryoException
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowLogic.Companion.sleep
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
@@ -8,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.BeforeClass
@@ -20,6 +24,7 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 
 class ExposeJpaToFlowsTests {
@@ -70,5 +75,22 @@ class ExposeJpaToFlowsTests {
         }
 
         assertEquals("Bar", result.single().fooData)
+    }
+
+    @Test
+    fun `can't perform suspendable operations inside withEntityManager`() {
+        val mockNet = MockNetwork(cordapps)
+        val mockNode = mockNet.createNode()
+        assertFailsWith(KryoException::class) {
+            mockNode.startFlow(object : FlowLogic<Unit>() {
+                @Suspendable
+                override fun call() {
+                    serviceHub.withEntityManager {
+                        val session = initiateFlow(myself.party)
+                        session.send("Ooohhh eee oooh ah ah ting tang walla walla bing bang!")
+                    }
+                }
+            })
+        }
     }
 }
