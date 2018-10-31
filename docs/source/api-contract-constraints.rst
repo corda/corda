@@ -83,6 +83,8 @@ time effectively stop being a part of the network.
 **Signature constraints.** These are not yet supported, but once implemented they will allow a state to require a JAR
 signed by a specified identity, via the regular Java ``jarsigner`` tool. This will be the most flexible type
 and the smoothest to deploy: no restarts or contract upgrade transactions are needed.
+When CorDapp is build using :ref:`corda-gradle-plugin <cordapp_build_system_signing_cordapp_jar_ref>` the JAR is signed
+by Corda development key by default, an external keystore can be configured or signing can be disabled.
 
 **Defaults.** The default constraint type is either a zone constraint, if the network parameters in effect when the
 transaction is built contain an entry for that contract class, or a hash constraint if not.

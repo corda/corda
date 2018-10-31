@@ -109,6 +109,8 @@ in Gradle. See the example below, specifically the ``apache-commons`` include.
 For further information about managing dependencies, see
 `the Gradle docs <https://docs.gradle.org/current/userguide/dependency_management.html>`_.
 
+.. _cordapp_build_system_signing_cordapp_jar_ref:
+
 Signing the CorDapp JAR
 ^^^^^^^^^^^^^^^^^^^^^^^
 The ``cordapp`` plugin can sign the generated CorDapp JAR file using `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/signing.html>`_.
