@@ -4,7 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -12,6 +15,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
@@ -177,7 +181,14 @@ class TimedFlowTests {
     }
 
     private class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
-        override val uniquenessProvider = mock<UniquenessProvider>()
+        override val uniquenessProvider = object : UniquenessProvider {
+            /** A dummy commit method that immediately returns a success message. */
+            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
+                return openFuture<UniquenessProvider.Result>(). apply {
+                    set(UniquenessProvider.Result.Success)
+                }
+            }
+        }
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}
         override fun stop() {}
