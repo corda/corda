@@ -109,7 +109,7 @@ class NetworkParametersTest {
                             JavaPackageName("com.!example.stuff") to key2
                     )
             )
-        }.withMessageContaining("Invalid java package name")
+        }.withMessageContaining("Invalid Java package name")
 
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             NetworkParameters(1,
