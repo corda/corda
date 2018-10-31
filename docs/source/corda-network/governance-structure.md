@@ -1,13 +1,14 @@
 Governance Structure
 ====================
 
-We at R3 believe it is critically important that we should not control Corda Network going forwards, and that it should 
+It is critically important that a commercial entity should not control Corda Network going forwards, and that it should 
 be governed transparently, with a fair and representative structure that can deliver a stable operating environment for 
 its members in the long term.
 
-We have decided to set up a Corda Network Foundation, using a not-for-profit legal entity type known as a Stichting, 
-residing in the Netherlands. This is a legal entity suited for governance activities, able to act commercially, with 
-limited liability but no shareholders, capital or dividends. It is defined in a set of Articles of Association and By-laws.
+A separate entity called Corda Network Foundation will be set up, using a not-for-profit legal entity type known as a 
+Stichting, residing in the Netherlands. This type is suited for governance activities, able to act commercially, with 
+limited liability but no shareholders, capital or dividends. Its constitution is defined in a set of Articles of 
+Association and By-laws.
 
 A Foundation will enable Network members to be involved with, and also understand, how decisions are made (including 
 around issues of identity and permission), building trust and engagement from a wide range of stakeholders. We believe 
