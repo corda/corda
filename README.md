@@ -1,6 +1,6 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
+![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png) 
 
-<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_CordaBuild&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a>
+<a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=Corda_CordaBuild&tab=buildTypeStatusDiv&guest=1"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a> [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Corda
 
