@@ -90,7 +90,7 @@ class TimedFlowTests {
             )
 
             val notaryNodes = (0 until CLUSTER_SIZE).map {
-                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverides(
+                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(
                         notary = notaryConfig
                 )))
             }
@@ -98,7 +98,7 @@ class TimedFlowTests {
             val aliceNode = mockNet.createUnstartedNode(
                     InternalMockNodeParameters(
                             legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                            configOverrides = MockNodeConfigOverides(flowTimeout = MockNetFlowTimeOut(1.seconds, 3, 1.0))
+                            configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(1.seconds, 3, 1.0))
                     )
             )
 

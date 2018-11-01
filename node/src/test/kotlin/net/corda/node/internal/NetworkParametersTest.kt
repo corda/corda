@@ -18,7 +18,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetNotaryConfig
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.MockNodeConfigOverides
+import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
@@ -67,7 +67,7 @@ class NetworkParametersTest {
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
         val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME,
-                configOverrides = MockNodeConfigOverides(notary = MockNetNotaryConfig(validating = false))))
+                configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating = false))))
         val fakeNotaryId = fakeNotary.info.singleIdentity()
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)

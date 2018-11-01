@@ -27,7 +27,7 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetNotaryConfig
-import net.corda.testing.node.MockNodeConfigOverides
+import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.hamcrest.Matchers.instanceOf
@@ -80,7 +80,7 @@ class BFTNotaryServiceTests {
             val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
 
             val nodes = replicaIds.map { replicaId ->
-                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverides(notary = MockNetNotaryConfig(
+                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(
                             validating = false,
                             extraConfig = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
                             className = "net.corda.notary.bftsmart.BftSmartNotaryService",
