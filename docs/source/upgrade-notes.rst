@@ -84,6 +84,9 @@ For H2:
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
 
+* MockNetwork: ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration``
+  object. Use a ``MockNetworkConfigOverrides`` object instead.
+
 V3.2 to v3.3
 ------------
 
