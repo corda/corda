@@ -272,6 +272,8 @@ The network bootstrapper can be started with the following command-line options:
 * ``--register-package-owner``: Register a java package namespace with its owners public key.
 * ``--unregister-package-owner``: Unregister a java package namespace.
 
+.. note:: Read more about *Package ownership* here :doc:`design/data-model-upgrades/package-namespace-ownership`.
+
 Sub-commands
 ^^^^^^^^^^^^
 
@@ -316,7 +318,7 @@ This will generate a key store file called ``_teststore`` in the current directo
     # Register the java package namespace using the bootstrapper tool
     java -jar tools/bootstrapper/build/libs/network-bootstrapper.jar \
          --dir samples/bank-of-corda-demo/build/nodes
-         --register-package-owner net.corda.bank=./_teststore:MyStorePassword:MyKeyAlias
+         --register-package-owner net.corda.bank;./_teststore;MyStorePassword;MyKeyAlias
 
 3. Unregister the package namespace
 

@@ -2,7 +2,6 @@ package net.corda.bootstrapper
 
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
-import net.corda.core.internal.list
 import net.corda.core.node.JavaPackageName
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -57,31 +56,31 @@ class PackageOwnerParsingTest {
     @Test
     fun `parse registration request with single mapping`() {
         val aliceKeyStorePath = dirAlice / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:$ALICE")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;$ALICE")
         commandLine.parse(*args)
-        assertThat(networkBootstrapper.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo(JavaPackageName("com.example.stuff"))
     }
 
     @Test
     fun `parse registration request with invalid arguments`() {
         val args = arrayOf("--register-package-owner", "com.!example.stuff")
         expectedEx.expect(CommandLine.ParameterException::class.java)
-        expectedEx.expectMessage("should be in KEY=VALUE format")
+        expectedEx.expectMessage("Package owner must specify 4 elements separated by semi-colon")
         commandLine.parse(*args)
     }
 
     @Test
     fun `parse registration request with incorrect keystore specification`() {
         val aliceKeyStorePath = dirAlice / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath$ALICE_PASS")
         expectedEx.expect(CommandLine.ParameterException::class.java)
-        expectedEx.expectMessage("keystore argument must specify 3 elements")
+        expectedEx.expectMessage("Package owner must specify 4 elements separated by semi-colon")
         commandLine.parse(*args)
     }
 
     @Test
     fun `parse registration request with invalid java package name`() {
-        val args = arrayOf("--register-package-owner", "com.!example.stuff=A:B:C")
+        val args = arrayOf("--register-package-owner", "com.!example.stuff;A;B;C")
         expectedEx.expect(CommandLine.ParameterException::class.java)
         expectedEx.expectMessage("Invalid Java package name")
         commandLine.parse(*args)
@@ -89,25 +88,25 @@ class PackageOwnerParsingTest {
 
     @Test
     fun `parse registration request with invalid keystore file`() {
-        val args = arrayOf("--register-package-owner", "com.example.stuff=NONSENSE:B:C")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;NONSENSE;B;C")
         expectedEx.expect(CommandLine.ParameterException::class.java)
-        expectedEx.expectMessage("java.nio.file.NoSuchFileException")
+        expectedEx.expectMessage("Error reading the key store from the file")
         commandLine.parse(*args)
     }
 
     @Test
     fun `parse registration request with invalid keystore password`() {
         val aliceKeyStorePath = dirAlice / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:BAD_PASSWORD:$ALICE")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;BAD_PASSWORD;$ALICE")
         expectedEx.expect(CommandLine.ParameterException::class.java)
-        expectedEx.expectMessage("Keystore was tampered with, or password was incorrect")
+        expectedEx.expectMessage("Error reading the key store from the file")
         commandLine.parse(*args)
     }
 
     @Test
     fun `parse registration request with invalid keystore alias`() {
         val aliceKeyStorePath = dirAlice / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:BAD_ALIAS")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;BAD_ALIAS")
         expectedEx.expect(CommandLine.ParameterException::class.java)
         expectedEx.expectMessage("must not be null")
         commandLine.parse(*args)
@@ -118,9 +117,9 @@ class PackageOwnerParsingTest {
         val aliceKeyStorePath = dirAlice / "_teststore"
         val bobKeyStorePath = dirBob / "_teststore"
         val charlieKeyStorePath = dirCharlie / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:$ALICE",
-                                        "--register-package-owner", "com.example.more.stuff=$bobKeyStorePath:$BOB_PASS:$BOB",
-                                        "--register-package-owner", "com.example.even.more.stuff=$charlieKeyStorePath:$CHARLIE_PASS:$CHARLIE")
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;$ALICE",
+                                        "--register-package-owner", "com.example.more.stuff;$bobKeyStorePath;$BOB_PASS;$BOB",
+                                        "--register-package-owner", "com.example.even.more.stuff;$charlieKeyStorePath;$CHARLIE_PASS;$CHARLIE")
         commandLine.parse(*args)
         assertThat(networkBootstrapper.registerPackageOwnership).hasSize(3)
     }
@@ -135,10 +134,10 @@ class PackageOwnerParsingTest {
     @Test
     fun `parse mixed register and unregister request`() {
         val aliceKeyStorePath = dirAlice / "_teststore"
-        val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:$ALICE",
+        val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;$ALICE",
                                         "--unregister-package-owner", "com.example.stuff2")
         commandLine.parse(*args)
-        assertThat(networkBootstrapper.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.registerPackageOwnership.map { it.javaPackageName }).contains(JavaPackageName("com.example.stuff"))
         assertThat(networkBootstrapper.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff2"))
     }
 }
