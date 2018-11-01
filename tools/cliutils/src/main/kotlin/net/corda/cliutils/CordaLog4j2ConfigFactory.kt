@@ -10,9 +10,8 @@ import org.apache.logging.log4j.core.config.xml.XmlConfiguration
 import org.apache.logging.log4j.core.impl.LogEventFactory
 
 @Plugin(name = "CordaLog4j2ConfigFactory", category = "ConfigurationFactory")
-@Order(10)
+@Order(Integer.MAX_VALUE)
 class CordaLog4j2ConfigFactory : ConfigurationFactory() {
-
     private companion object {
         private val SUPPORTED_TYPES = arrayOf(".xml", "*")
     }
@@ -22,13 +21,17 @@ class CordaLog4j2ConfigFactory : ConfigurationFactory() {
     override fun getSupportedTypes() = SUPPORTED_TYPES
 
     private class ErrorCodeAppendingConfiguration(loggerContext: LoggerContext, source: ConfigurationSource) : XmlConfiguration(loggerContext, source) {
+        init {
+            println("Log4j2: Initialising ConfigurationFactory of type CordaLog4j2ConfigFactory.")
+        }
 
         override fun doConfigure() {
-
             super.doConfigure()
             loggers.values.forEach {
                 val existingFactory = it.logEventFactory
-                it.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error -> existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error, level), properties, error) }
+                it.logEventFactory = LogEventFactory { loggerName, marker, fqcn, level, message, properties, error ->
+                    existingFactory.createEvent(loggerName, marker, fqcn, level, message?.withErrorCodeFor(error, level), properties, error)
+                }
             }
         }
     }
