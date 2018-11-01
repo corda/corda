@@ -150,18 +150,42 @@ which is then referenced within a custom flow:
 
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
 
-WithEntityManager
------------------
+JPA Support
+-----------
 In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
 method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
 useful if off-ledger data must be maintained in conjunction with on-ledger state data.
 
-    .. note:: Your entity *must* sub-class ``MappedSchema``.
+    .. note:: Your entity must be included as a mappedType in as part of a MappedSchema for it to be added to Hibernate
+              as a custom schema. See Samples below.
 
-The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. This is exactly how schemas,
-except that the entity should not subclass ``PersistentState`` (as it is not a state object):
+The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. Note that ``PersistentFoo`` is added to
+a list of mapped types which is passed to ``MappedSChema``. This is exactly how state schemas are defined, except that
+the entity in this case should not subclass ``PersistentState`` (as it is not a state object). See examples:
 
 .. container:: codeset
+
+    .. sourcecode:: java
+
+        public class FooSchema {}
+
+        @CordaSerializable
+        public class FooSchemaV1 extends MappedSchema {
+            FooSchemaV1() {
+                super(FooSchema.class, 1, ImmutableList.of(PersistentFoo.class));
+            }
+
+            @Entity
+            @Table(name = "foos")
+            class PersistentFoo implements Serializable {
+                @Id
+                @Column(name = "foo_id")
+                String fooId;
+
+                @Column(name = "foo_data")
+                String fooData;
+            }
+        }
 
     .. sourcecode:: kotlin
 
@@ -178,19 +202,35 @@ Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
 
 .. container:: codeset
 
+    .. sourcecode:: java
+
+        PersistentFoo foo = new PersistentFoo(new UniqueIdentifier().getId().toString(), "Bar");
+        node.getServices().withEntityManager(entityManager -> {
+            entityManager.persist(foo);
+            entityManager.flush();
+            return null;
+        });
+
     .. sourcecode:: kotlin
 
         val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
         serviceHub.withEntityManager {
-            // Persist the foo.
             persist(foo)
-            // Sync.
             flush()
         }
 
 And retrieved via a query, as follows:
 
 .. container:: codeset
+
+    .. sourcecode:: java
+
+        node.getServices().withEntityManager((EntityManager entityManager) -> {
+            CriteriaQuery<PersistentFoo> query = entityManager.getCriteriaBuilder().createQuery(PersistentFoo.class);
+            Root<PersistentFoo> type = query.from(PersistentFoo.class);
+            query.select(type);
+            return entityManager.createQuery(query).getResultList();
+        });
 
     .. sourcecode:: kotlin
 
