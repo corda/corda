@@ -25,7 +25,7 @@ A malicious party should not be able to attack this feature, by "taking ownershi
 
 ## Non-Goals
 
-Migration from the whitelist constraint was already implemented. so will not be addressed. (The cordapp develper just needs to sign the jar and whitelist the signed jar.)
+Migration from the whitelist constraint was already implemented. so will not be addressed. (The cordapp developer or owner just needs to sign the jar and whitelist the signed jar.)
 
 Also versioning is being addressed in different design docs.
 
