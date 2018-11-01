@@ -92,5 +92,6 @@ class ExposeJpaToFlowsTests {
                 }
             })
         }
+        mockNet.stopNodes()
     }
 }

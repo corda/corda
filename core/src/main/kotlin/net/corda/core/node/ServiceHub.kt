@@ -18,6 +18,7 @@ import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
+import java.util.function.Consumer
 import javax.persistence.EntityManager
 
 /**
@@ -368,7 +369,7 @@ interface ServiceHub : ServicesForResolution {
      *
      * @param block a lambda function with access to an [EntityManager].
      */
-    fun <T : Any>withEntityManager(block: EntityManager.() -> T): T
+    fun <T : Any> withEntityManager(block: EntityManager.() -> T): T
 
     /**
      * Allows the registration of a callback that may inform services when the app is shutting down.
