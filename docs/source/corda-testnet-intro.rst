@@ -1,5 +1,5 @@
-The Corda Testnet
-=================
+What is Corda Testnet?
+======================
 
 .. contents::
 
