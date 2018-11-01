@@ -6,7 +6,6 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.executeAsync
 import net.corda.core.utilities.unwrap
 
 /**
@@ -35,33 +34,19 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val parts = validateRequest(requestPayload)
             txId = parts.id
             checkNotary(parts.notary)
-            commitInputStates(parts, txId, requestPayload)
+            service.commitInputStates(
+                    parts.inputs,
+                    txId,
+                    otherSideSession.counterparty,
+                    requestPayload.requestSignature,
+                    parts.timestamp,
+                    parts.references
+            )
             signTransactionAndSendResponse(txId)
         } catch (e: NotaryInternalException) {
             throw NotaryException(e.error, txId)
         }
         return null
-    }
-
-    @Suspendable
-    private fun commitInputStates(parts: TransactionParts, txId: SecureHash, requestPayload: NotarisationPayload) {
-        // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
-        // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
-        // `UniquenessProvider`.
-        val result = executeAsync(
-                SinglePartyNotaryService.CommitOperation(
-                        service,
-                        parts.inputs,
-                        txId,
-                        otherSideSession.counterparty,
-                        requestPayload.requestSignature,
-                        parts.timestamp,
-                        parts.references
-                )
-        )
-        if (result is UniquenessProvider.Result.Failure) {
-            throw NotaryInternalException(result.error)
-        }
     }
 
     /** Checks whether the number of input states is too large. */
