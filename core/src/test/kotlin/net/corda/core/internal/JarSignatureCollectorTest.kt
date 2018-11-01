@@ -36,7 +36,6 @@ class JarSignatureCollectorTest {
         fun beforeClass() {
             dir.generateKey(ALICE, ALICE_PASS, ALICE_NAME.toString())
             dir.generateKey(BOB, BOB_PASS, BOB_NAME.toString())
-            dir.generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME.toString(), "EC")
 
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))
