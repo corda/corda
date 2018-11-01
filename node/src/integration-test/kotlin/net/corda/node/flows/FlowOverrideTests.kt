@@ -6,6 +6,8 @@ import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -66,8 +68,8 @@ class FlowOverrideTests {
     @Test
     fun `should use the most specific implementation of a responding flow`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))).getOrThrow()
-            val nodeB = startNode(additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
             Assert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(net.corda.node.flows.FlowOverrideTests.Pongiest.GORGONZOLA))
         }
     }
@@ -76,8 +78,8 @@ class FlowOverrideTests {
     fun `should use the overriden implementation of a responding flow`() {
         val flowOverrides = mapOf(Ping::class.java to Pong::class.java)
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray())), flowOverrides = flowOverrides).getOrThrow()
-            val nodeB = startNode(additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
+            val nodeA = startNode(providedName = ALICE_NAME, additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray())), flowOverrides = flowOverrides).getOrThrow()
+            val nodeB = startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
             Assert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(net.corda.node.flows.FlowOverrideTests.Pong.PONG))
         }
     }
