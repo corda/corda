@@ -4,7 +4,6 @@ import com.typesafe.config.Config
 import net.corda.core.identity.CordaX500Name
 import java.time.Duration
 
-
 /**
  * This is a data class to configure overrides to the node configuration used in the mock network
  * without having to expose/use the actual (internal) node configuration interface on the API.
@@ -33,4 +32,3 @@ data class MockNetFlowTimeOut(
         val timeout: Duration,
         val maxRestartCount: Int,
         val backoffBase: Double)
-
