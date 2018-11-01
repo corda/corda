@@ -57,3 +57,16 @@ fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
 internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
 }
+
+/**
+ * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
+ * Size is very cheap as it doesn't call [transform].
+ */
+class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
+    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
+
+    override val size = originalList.size
+
+    override fun get(index: Int) = partialResolvedList[index]
+            ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+}
