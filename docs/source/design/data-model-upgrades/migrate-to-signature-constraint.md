@@ -94,6 +94,10 @@ If the rightful owner took over the contract of states originally released with 
 This is an impossible transaction. Because if you select version1 of the contract you violate the non-downgrade rule. If you select version2 , you violate the initial HashConstraint.
 
 
+Note:  If we consider this to be a real problem, then we can implement a new NoOp Transaction type similar to the Notary change or the contract upgrade. The security implications need to be considered before such work is started.
+Nodes could use this type of transaction to change the constraint of existing states without the need to transact. 
+
+
 ### Implementation details
  
 - Create a function to return the hash of a signed jar after it stripped the signatures. 
@@ -105,6 +109,43 @@ This is an impossible transaction. Because if you select version1 of the contrac
 
 ## Alternatives considered
 
-Creating an explicit upgrade type flow that just replaces the constraint of a state. 
 
-This option is too heavy for this purpose, as it would require authorisation for each state from all participants.  
+###  Migrating from the HashConstraint to the SignatureConstraint via the WhitelistConstraint. 
+
+We already have a strategy to migrate from the WhitelistConstraint to the Signature contraint:
+
+- Original developer (owner) signs the last version of the jar, and whitelists the signed version. 
+- The platform allows transitioning to the SignatureConstraint as long as all the signers of the jar are in the SignatureConstraint.  
+
+
+We could attempt to extend this strategy with a HashConstraint -> WhitelistConstraint path.
+
+#### The process would be:
+
+- Original developer of the contract that used the hashConstraint will make a whitelist contract request, and provide both the original jar and the original jar but signed.
+- The zone operator needs to make sure that this is the original developer who claims ownership of that corDapp. 
+
+##### Option 1: Skip the WhitelistConstraint when spending states. (InputState = HashConstraint, OutputState = SignatureConstraint)
+
+- This is not possible as one of the 2 constraints will fail.
+- Special constraint logic is needed which is risky.
+
+
+##### Option 2: Go through the WhitelistConstraint when spending states
+
+- When a state is spent, the transaction builder sees there is a whitelist constraint, and selects the first entry.
+- The transition matrix will allow the transition from hash to Whitelist.
+- Next time the state is spent, it will transition from the Whitelist constraint to the signature constraint.  
+
+
+##### Advantage:
+
+- The tricky step of removing the signature from a jar to calculate the hash is no longer required.
+
+
+##### Disadvantage:
+
+- The transition will happen in 2 steps, which will add another layer of surprise and of potential problems. 
+- The No-Op transaction will become mandatory for this, along with all the complexity it brings (all participants signing). It will need to be run twice. 
+- An unnecessary whitelist entry is added. If that developer also decides to claim the package (as probably most will do in the beginning), it will grow the network parameters and increase the workload on the Zone Operator.
+- We create an unintended migration path from the HashConstraint to the WhitelistConstraint.
