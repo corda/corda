@@ -89,7 +89,7 @@ class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, ove
     @Suppress("UNCHECKED_CAST")
     override fun resolve(services: ServiceHub): StateAndRef<T> {
         // Return the latest version of the linear state.
-        // TODO: Add paging as chains of provenance for token types could be quite long!
+        // This query will only ever return one or zero states.
         val query = QueryCriteria.LinearStateQueryCriteria(
                 linearId = listOf(pointer),
                 status = Vault.StateStatus.UNCONSUMED,

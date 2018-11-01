@@ -232,23 +232,25 @@ open class TransactionBuilder @JvmOverloads constructor(
      * @throws IllegalStateException if no [ServiceHub] is provided and no flow context is available.
      */
     private fun resolveStatePointers(transactionState: TransactionState<*>) {
-        if (serviceHub == null) {
-            logger.warn("You must pass in a ServiceHub reference to TransactionBuilder to resolve state pointers " +
-                    "outside flows. If you are writing a unit test then pass in a MockServices instance.")
-        } else {
-            val contractState = transactionState.data
-            // Find pointers in all inputs and outputs.
-            val inputAndOutputPointers = StatePointerSearch(contractState).search()
-            // Queue up the pointers to resolve.
-            val statePointerQueue = ArrayDeque<StatePointer<*>>().apply { addAll(inputAndOutputPointers) }
-            // Recursively resolve all pointers.
-            while (statePointerQueue.isNotEmpty()) {
-                val nextStatePointer = statePointerQueue.pop()
+        val contractState = transactionState.data
+        // Find pointers in all inputs and outputs.
+        val inputAndOutputPointers = StatePointerSearch(contractState).search()
+        // Queue up the pointers to resolve.
+        val statePointerQueue = ArrayDeque<StatePointer<*>>().apply { addAll(inputAndOutputPointers) }
+        // Recursively resolve all pointers.
+        while (statePointerQueue.isNotEmpty()) {
+            val nextStatePointer = statePointerQueue.pop()
+            if (serviceHub != null) {
                 val resolvedStateAndRef = nextStatePointer.resolve(serviceHub)
                 // Don't add dupe reference states because CoreTransaction doesn't allow it.
                 if (resolvedStateAndRef.ref !in referenceStates()) {
                     addReferenceState(resolvedStateAndRef.referenced())
                 }
+            } else {
+                logger.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                        "state pointers outside of flows. If you are writing a unit test then pass in a " +
+                        "MockServices instance.")
+                return
             }
         }
     }
