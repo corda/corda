@@ -14,6 +14,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -50,7 +51,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
     @DeleteForDJVM
-    @JvmOverloads constructor(
+    @JvmOverloads
+    constructor(
             inputs: List<StateRef>,
             attachments: List<SecureHash>,
             outputs: List<TransactionState<ContractState>>,
@@ -127,17 +129,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             networkParameters: NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
-        val authenticatedArgs = commands.map {
-            val parties = it.signers.mapNotNull { pk -> resolveIdentity(pk) }
-            CommandWithParties(it.signers, parties, it.value)
+        val authenticatedArgs = commands.lazyMapped { cmd, _ ->
+            val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
+            CommandWithParties(cmd.signers, parties, cmd.value)
         }
-        val resolvedInputs = inputs.map { ref ->
+        val resolvedInputs = inputs.lazyMapped { ref, _ ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val resolvedReferences = references.map { ref ->
+        val resolvedReferences = references.lazyMapped { ref, _ ->
             resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
         }
-        val attachments = attachments.map { resolveAttachment(it) ?: throw AttachmentResolutionException(it) }
+        val attachments = attachments.lazyMapped { att, _ ->
+            resolveAttachment(att) ?: throw AttachmentResolutionException(att)
+        }
         val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences)
         checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
         return ltx
@@ -151,13 +155,22 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             remainingTransactionSize -= size
         }
 
+        // This calculates a value that is slightly lower than the actual re-serialized version. But it is stable and does not depend on the classloader.
+        fun componentGroupSize(componentGroup: ComponentGroupEnum): Int {
+            return this.componentGroups.firstOrNull { it.groupIndex == componentGroup.ordinal }?.let { cg -> cg.components.sumBy { it.size } + 4 } ?: 0
+        }
+
         // Check attachments size first as they are most likely to go over the limit. With ContractAttachment instances
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
         ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
+
+        // TODO - these can be optimized by creating a LazyStateAndRef class, that just stores (a pointer) the serialized output componentGroup from the previous transaction.
         minus(ltx.references.serialize().size)
         minus(ltx.inputs.serialize().size)
-        minus(ltx.commands.serialize().size)
-        minus(ltx.outputs.serialize().size)
+
+        // For Commands and outputs we can use the component groups as they are already serialized.
+        minus(componentGroupSize(COMMANDS_GROUP))
+        minus(componentGroupSize(OUTPUTS_GROUP))
     }
 
     /**
@@ -253,18 +266,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                                   notary: Party?,
                                   timeWindow: TimeWindow?,
                                   references: List<StateRef> = emptyList()): List<ComponentGroup> {
+            val serialize = { value: Any, _: Int -> value.serialize() }
             val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
-            if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }))
-            if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCES_GROUP.ordinal, references.map { it.serialize() }))
-            if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }))
+            if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
+            if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
+            if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
             // Adding commandData only to the commands group. Signers are added in their own group.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.map { it.value.serialize() }))
-            if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ATTACHMENTS_GROUP.ordinal, attachments.map { it.serialize() }))
-            if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary.serialize())))
-            if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow.serialize())))
+            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
+            if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
+            if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
+            if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
             // Adding signers to their own group. This is required for command visibility purposes: a party receiving
             // a FilteredTransaction can now verify it sees all the commands it should sign.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }))
+            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
             return componentGroupMap
         }
     }

@@ -211,7 +211,7 @@ You manually process received messages as follows:
 
 * ``StartedMockNode.pumpReceive()`` processes a single message from the node's queue
 * ``MockNetwork.runNetwork()`` processes all the messages in every node's queue until there are no further messages to
-      process
+  process
       
 When ``networkSendManuallyPumped`` is set to ``true``, nodes will automatically process the messages they receive. You 
 can block until all messages have been processed using ``MockNetwork.waitQuiescent()``.

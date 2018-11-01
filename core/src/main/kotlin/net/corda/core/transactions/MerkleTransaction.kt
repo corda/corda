@@ -6,9 +6,11 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.util.function.Predicate
 import kotlin.reflect.KClass
@@ -69,21 +71,29 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     private fun <T : Any> deserialiseComponentGroup(clazz: KClass<T>,
                                                     groupEnum: ComponentGroupEnum,
                                                     attachmentsContext: Boolean = false): List<T> {
+        val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
+
+        if (group == null || group.components.isEmpty()) {
+            return emptyList()
+        }
+
+        // If the componentGroup is a [LazyMappedList] it means that the original deserialized version is already available.
+        val components = group.components
+        if (components is LazyMappedList<*, OpaqueBytes>) {
+            return components.originalList as List<T>
+        }
+
         val factory = SerializationFactory.defaultFactory
         val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
-        val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
-        return if (group != null && group.components.isNotEmpty()) {
-            group.components.mapIndexed { internalIndex, component ->
-                try {
-                    factory.deserialize(component, clazz.java, context)
-                } catch (e: MissingAttachmentsException) {
-                    throw e
-                } catch (e: Exception) {
-                    throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
-                }
+
+        return components.lazyMapped { component, internalIndex ->
+            try {
+                factory.deserialize(component, clazz.java , context)
+            } catch (e: MissingAttachmentsException) {
+                throw e
+            } catch (e: Exception) {
+                throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
             }
-        } else {
-            emptyList()
         }
     }
 
@@ -105,14 +115,14 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
             if (leafIndices.isNotEmpty())
                 check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
-            commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[leafIndices[index]]) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
         } else {
             // It is a WireTransaction
             // or a FilteredTransaction with no Commands (in which case group is null).
             check(commandDataList.size == signersList.size) {
                 "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
             }
-            commandDataList.mapIndexed { index, commandData -> Command(commandData, signersList[index]) }
+            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
         }
     }
 }
@@ -335,7 +345,7 @@ class FilteredTransaction internal constructor(
     private fun expectedNumOfCommands(publicKey: PublicKey, commandSigners: ComponentGroup?): Int {
         checkAllComponentsVisible(SIGNERS_GROUP)
         if (commandSigners == null) return 0
-        fun signersKeys (internalIndex: Int, opaqueBytes: OpaqueBytes): List<PublicKey> {
+        fun signersKeys(internalIndex: Int, opaqueBytes: OpaqueBytes): List<PublicKey> {
             try {
                 return SerializedBytes<List<PublicKey>>(opaqueBytes.bytes).deserialize()
             } catch (e: Exception) {
@@ -344,7 +354,7 @@ class FilteredTransaction internal constructor(
         }
 
         return commandSigners.components
-                .mapIndexed { internalIndex, opaqueBytes ->  signersKeys(internalIndex, opaqueBytes) }
+                .mapIndexed { internalIndex, opaqueBytes -> signersKeys(internalIndex, opaqueBytes) }
                 .filter { signers -> publicKey in signers }.size
     }
 

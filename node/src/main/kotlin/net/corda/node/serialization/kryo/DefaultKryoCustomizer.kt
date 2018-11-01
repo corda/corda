@@ -18,6 +18,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.readFully
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationWhitelist
@@ -82,6 +83,7 @@ object DefaultKryoCustomizer {
             // TODO: re-organise registrations into logical groups before v1.0
 
             register(Arrays.asList("").javaClass, ArraysAsListSerializer())
+            register(LazyMappedList::class.java, LazyMappedListSerializer)
             register(SignedTransaction::class.java, SignedTransactionSerializer)
             register(WireTransaction::class.java, WireTransactionSerializer)
             register(SerializedBytes::class.java, SerializedBytesSerializer)
