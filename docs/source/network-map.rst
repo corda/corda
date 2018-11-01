@@ -1,5 +1,5 @@
-Network map
-===========
+The network map
+===============
 
 .. contents::
 

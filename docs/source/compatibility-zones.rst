@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Compatibility zones
-===================
+What is a compatibility zone?
+=============================
 
 Every Corda node is part of a "zone" (also sometimes called a Corda network) that is *permissioned*. Production
 deployments require a secure certificate authority. Most users will join an existing network such as Corda

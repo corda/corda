@@ -5,14 +5,11 @@ Networks
    :maxdepth: 1
 
    compatibility-zones
-   corda-testnet-intro
-   running-a-notary
    permissioning
    network-map
+   running-a-notary
    versioning
-   azure-vm-explore
-   aws-vm-explore
-   gcp-vm
-   deploy-locally
-   testnet-explorer-corda
    cipher-suites
+   corda-testnet-intro
+   deploy-to-testnet-index
+   testnet-explorer-corda
