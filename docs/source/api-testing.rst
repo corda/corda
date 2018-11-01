@@ -179,14 +179,14 @@ provide different parameters to each node using the following methods on ``MockN
          * @param forcedID A unique identifier for the node.
          * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
          * but can be overridden to cause nodes to have stable or colliding identity/service keys.
-         * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
+         * @param configOverrides Add/override behaviour of the node configuration mock object
          * @param extraCordappPackages Extra CorDapp packages to add for this node.
          */
         @JvmOverloads
         fun createNode(legalName: CordaX500Name? = null,
                        forcedID: Int? = null,
                        entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                       configOverrides: (NodeConfiguration) -> Any? = {},
+                       configOverrides: MockNodeConfigOverrides? = null,
                        extraCordappPackages: List<String> = emptyList()
         ): StartedMockNode
 
@@ -194,8 +194,9 @@ provide different parameters to each node using the following methods on ``MockN
         fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode
 
 As you can see above, parameters can be added individually or encapsulated within a ``MockNodeParameters`` object. Of
-particular interest are ``configOverrides`` which allow you to override any default config option specified within the
-``NodeConfiguration`` object. Also, the ``extraCordappPackages`` parameter allows you to add extra CorDapps to a
+particular interest are ``configOverrides`` which allow you to override some of the default config option specified node
+configuration. Please refer to the ``MockNodeConfigOverrides`` class for details what can currently be overridden.
+Also, the ``extraCordappPackages`` parameter allows you to add extra CorDapps to a
 specific node. This is useful when you wish for all nodes to load a common CorDapp but for a subset of nodes to load
 CorDapps specific to their role in the network.
 

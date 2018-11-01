@@ -345,7 +345,7 @@ open class MockNetwork(
      * @param forcedID A unique identifier for the node.
      * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
      * but can be overridden to cause nodes to have stable or colliding identity/service keys.
-     * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
+     * @param configOverrides Add/override behaviour of the node configuration mock object
      * @param extraCordappPackages Extra CorDapp packages to add for this node.
      */
     @JvmOverloads
