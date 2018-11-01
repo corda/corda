@@ -149,9 +149,9 @@ internal fun createClientOpenSslHandler(target: NetworkHostAndPort,
     return SslHandler(sslEngine)
 }
 
-internal fun createServerSslHelper(keyStore: CertificateStore,
-                                   keyManagerFactory: KeyManagerFactory,
-                                   trustManagerFactory: TrustManagerFactory): SslHandler {
+internal fun createServerSslHandler(keyStore: CertificateStore,
+                                    keyManagerFactory: KeyManagerFactory,
+                                    trustManagerFactory: TrustManagerFactory): SslHandler {
     val sslContext = SSLContext.getInstance("TLS")
     val keyManagers = keyManagerFactory.keyManagers
     val trustManagers = trustManagerFactory.trustManagers.filterIsInstance(X509ExtendedTrustManager::class.java).map { LoggingTrustManagerWrapper(it) }.toTypedArray()
@@ -189,12 +189,10 @@ internal fun initialiseTrustStoreAndEnableCrlChecking(trustStore: CertificateSto
 internal fun createServerOpenSslHandler(keyManagerFactory: KeyManagerFactory,
                                         trustManagerFactory: TrustManagerFactory,
                                         alloc: ByteBufAllocator): SslHandler {
-    val sslContext = SslContextBuilder.forServer(keyManagerFactory).sslProvider(SslProvider.OPENSSL).trustManager(LoggingTrustManagerFactoryWrapper(trustManagerFactory)).build()
+
+    val sslContext = getServerSslContextBuilder(keyManagerFactory, trustManagerFactory).build()
     val sslEngine = sslContext.newEngine(alloc)
     sslEngine.useClientMode = false
-    sslEngine.needClientAuth = true
-    sslEngine.enabledProtocols = ArtemisTcpTransport.TLS_VERSIONS.toTypedArray()
-    sslEngine.enabledCipherSuites = ArtemisTcpTransport.CIPHER_SUITES.toTypedArray()
     return SslHandler(sslEngine)
 }
 
@@ -205,20 +203,21 @@ internal fun createServerSNIOpenSslHandler(keyManagerFactoriesMap: Map<String, K
                                            trustManagerFactory: TrustManagerFactory): SniHandler {
 
     // Default value can be any in the map.
-    val sslCtxBuilder = SslContextBuilder.forServer(keyManagerFactoriesMap.values.first())
+    val sslCtxBuilder = getServerSslContextBuilder(keyManagerFactoriesMap.values.first(), trustManagerFactory)
+    val mapping = DomainNameMappingBuilder(sslCtxBuilder.build())
+    keyManagerFactoriesMap.forEach {
+        mapping.add(it.key, sslCtxBuilder.keyManager(it.value).build())
+    }
+    return SniHandler(mapping.build())
+}
+
+private fun getServerSslContextBuilder(keyManagerFactory: KeyManagerFactory, trustManagerFactory: TrustManagerFactory): SslContextBuilder {
+    return SslContextBuilder.forServer(keyManagerFactory)
             .sslProvider(SslProvider.OPENSSL)
             .trustManager(LoggingTrustManagerFactoryWrapper(trustManagerFactory))
             .clientAuth(ClientAuth.REQUIRE)
             .ciphers(ArtemisTcpTransport.CIPHER_SUITES)
             .protocols(*ArtemisTcpTransport.TLS_VERSIONS.toTypedArray())
-
-    val mapping = DomainNameMappingBuilder(sslCtxBuilder.build())
-
-    keyManagerFactoriesMap.forEach {
-        mapping.add(it.key, sslCtxBuilder.keyManager(it.value).build())
-    }
-
-    return SniHandler(mapping.build())
 }
 
 internal fun splitKeystore(config: AMQPConfiguration): Map<String, CertHoldingKeyManagerFactoryWrapper> {

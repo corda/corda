@@ -41,8 +41,8 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val userName: String?,
                                   private val password: String?,
                                   private val trace: Boolean,
-                                  private val onOpen: (Pair<SocketChannel, ConnectionChange>) -> Unit,
-                                  private val onClose: (Pair<SocketChannel, ConnectionChange>) -> Unit,
+                                  private val onOpen: (SocketChannel, ConnectionChange) -> Unit,
+                                  private val onClose: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
     companion object {
         private val log = contextLogger()
@@ -114,7 +114,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
         val ch = ctx.channel()
         logInfoWithMDC("Closed client connection ${ch.id()} from $remoteAddress to ${ch.localAddress()}")
         if (!suppressClose) {
-            onClose(Pair(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert)))
+            onClose(ch as SocketChannel, ConnectionChange(remoteAddress, remoteCert, false, badCert))
         }
         eventProcessor?.close()
         ctx.fireChannelInactive()
@@ -263,7 +263,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
 
         logInfoWithMDC("Handshake completed with subject: $remoteX500Name, requested server name: ${sslHandler.getRequestedServerName()}.")
         createAMQPEngine(ctx)
-        onOpen(Pair(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false)))
+        onOpen(ctx.channel() as SocketChannel, ConnectionChange(remoteAddress, remoteCert, true, false))
     }
 
     private fun handleFailedHandshake(ctx: ChannelHandlerContext, evt: SslHandshakeCompletionEvent) {

@@ -83,6 +83,7 @@ interface NodeConfiguration {
     val p2pSslOptions: MutualSslConfiguration
 
     val cordappDirectories: List<Path>
+    val enableSNI: Boolean
     val flowOverrides: FlowOverrideConfig?
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
@@ -236,6 +237,7 @@ data class NodeConfigurationImpl(
         override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
+        override val enableSNI: Boolean = true,
         private val useOpenSsl: Boolean = false,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }

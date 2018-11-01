@@ -247,7 +247,7 @@ class FlowWorkerTest {
     }
 
     private fun createBridgeControlListener(config: NodeConfiguration, maxMessageSize: Int): BridgeControlListener {
-        val bridgeControlListener = BridgeControlListener(config.p2pSslOptions, config.messagingServerAddress!!, maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(config.p2pSslOptions, config.messagingServerAddress!!, maxMessageSize, enableSNI = true)
         bridgeControlListener.start()
         return bridgeControlListener
     }

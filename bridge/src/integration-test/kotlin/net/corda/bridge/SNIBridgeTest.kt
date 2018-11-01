@@ -116,7 +116,6 @@ class SNIBridgeTest : IntegrationTest() {
             // Start broker
             val broker = createArtemisTextCertsLogin(artemisPort, nodeConfigs[DUMMY_BANK_B_NAME]!!.p2pSslOptions)
             broker.start()
-            println(broker.isActive)
             val aFuture = startNode(
                     providedName = DUMMY_BANK_A_NAME,
                     rpcUsers = listOf(demoUser),
@@ -125,14 +124,11 @@ class SNIBridgeTest : IntegrationTest() {
                             "p2pAddress" to "localhost:$advertisedP2PPort",
                             "messagingServerAddress" to "0.0.0.0:$artemisPort",
                             "messagingServerExternal" to true,
-                            "enterpriseConfiguration" to mapOf(
-                                    "externalBridge" to true
-                            )
+                            "enterpriseConfiguration" to mapOf("externalBridge" to true)
                     )
             )
 
             val a = aFuture.getOrThrow()
-            println(a.nodeInfo)
 
             val bFuture = startNode(
                     providedName = DUMMY_BANK_B_NAME,
@@ -142,25 +138,14 @@ class SNIBridgeTest : IntegrationTest() {
                             "p2pAddress" to "localhost:$advertisedP2PPort",
                             "messagingServerAddress" to "0.0.0.0:$artemisPort",
                             "messagingServerExternal" to true,
-                            "enterpriseConfiguration" to mapOf(
-                                    "externalBridge" to true
-                            )
+                            "enterpriseConfiguration" to mapOf("externalBridge" to true)
                     )
             )
 
             val b = bFuture.getOrThrow()
-            println(b.nodeInfo)
 
-
-            val bridge = startBridge(ALICE_NAME, advertisedP2PPort, artemisPort, mapOf(
-                    "outboundConfig" to mapOf(
-                            "artemisBrokerAddress" to "localhost:$artemisPort"
-                    ),
-                    "inboundConfig" to mapOf(
-                            "listeningAddress" to "0.0.0.0:$advertisedP2PPort"
-                    )
+            val bridge = startBridge(ALICE_NAME, advertisedP2PPort, artemisPort, emptyMap(
             )).getOrThrow()
-            println(bridge.brokerPort)
 
             // Start a node on the other side of the bridge
             val c = startNode(providedName = DUMMY_BANK_C_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${portAllocation.nextPort()}")).getOrThrow()

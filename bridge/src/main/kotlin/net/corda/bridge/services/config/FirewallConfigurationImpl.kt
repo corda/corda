@@ -7,8 +7,8 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
@@ -39,7 +39,8 @@ data class BridgeInboundConfigurationImpl(override val listeningAddress: Network
 data class BridgeInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
                                         override val expectedCertificateSubject: CordaX500Name,
                                         override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                        override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInnerConfiguration
+                                        override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                        override val enableSNI: Boolean = true) : BridgeInnerConfiguration
 
 data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAndPort,
                                        override val expectedCertificateSubject: CordaX500Name,
@@ -71,15 +72,12 @@ data class FirewallConfigurationImpl(
         override val p2pConfirmationWindowSize: Int = 1048576,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
-        override val healthCheckPhrase: String? = null
-) : FirewallConfiguration {
+        override val healthCheckPhrase: String? = null) : FirewallConfiguration {
     init {
-        if (firewallMode == FirewallMode.SenderReceiver) {
-            require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }
-        } else if (firewallMode == FirewallMode.BridgeInner) {
-            require(bridgeInnerConfig != null && outboundConfig != null) { "Missing required configuration" }
-        } else if (firewallMode == FirewallMode.FloatOuter) {
-            require(inboundConfig != null && floatOuterConfig != null) { "Missing required configuration" }
+        when (firewallMode) {
+            FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }
+            FirewallMode.BridgeInner -> require(bridgeInnerConfig != null && outboundConfig != null) { "Missing required configuration" }
+            FirewallMode.FloatOuter -> require(inboundConfig != null && floatOuterConfig != null) { "Missing required configuration" }
         }
     }
 

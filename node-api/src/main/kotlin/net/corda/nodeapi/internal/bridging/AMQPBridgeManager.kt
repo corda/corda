@@ -35,9 +35,12 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig? = null, maxMessageSize: Int,
-                        private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
-                        private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
+open class AMQPBridgeManager(config: MutualSslConfiguration,
+                             socksProxyConfig: SocksProxyConfig? = null,
+                             maxMessageSize: Int,
+                             enableSNI: Boolean,
+                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                             private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
 
     private val lock = ReentrantLock()
     private val queueNamesToBridgesMap = mutableMapOf<String, MutableList<AMQPBridge>>()
@@ -47,19 +50,21 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                                         override val socksProxyConfig: SocksProxyConfig?,
                                         override val maxMessageSize: Int,
                                         override val useOpenSsl: Boolean,
+                                        override val enableSNI: Boolean,
                                         override val sourceX500Name: String? = null) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int) : this(config.keyStore.get(),
+        constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int, enableSNI: Boolean) : this(config.keyStore.get(),
                 config.trustStore.get(),
                 socksProxyConfig,
                 maxMessageSize,
-                config.useOpenSsl)
+                config.useOpenSsl,
+                enableSNI)
     }
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, socksProxyConfig, maxMessageSize)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, socksProxyConfig, maxMessageSize, enableSNI)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
 
-    constructor(config: MutualSslConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, socksProxyConfig: SocksProxyConfig? = null) : this(config, socksProxyConfig, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: MutualSslConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, enableSNI: Boolean, socksProxyConfig: SocksProxyConfig? = null) : this(config, socksProxyConfig, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -154,7 +159,11 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                         val session = sessionFactory.createSession(NODE_P2P_USER, NODE_P2P_USER, false, true, true, false, DEFAULT_ACK_BATCH_SIZE)
                         this.session = session
                         // Several producers (in the case of shared bridge) can put messages in the same outbound p2p queue. The consumers are created using the source x500 name as a filter
-                        val consumer = session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '${amqpConfig.sourceX500Name}'")
+                        val consumer = if (amqpConfig.enableSNI) {
+                            session.createConsumer(queueName, "hyphenated_props:sender-subject-name = '${amqpConfig.sourceX500Name}'")
+                        } else {
+                            session.createConsumer(queueName)
+                        }
                         this.consumer = consumer
                         consumer.setMessageHandler(this@AMQPBridge::clientArtemisMessageHandler)
                         session.start()
@@ -230,7 +239,7 @@ class AMQPBridgeManager(config: MutualSslConfiguration, socksProxyConfig: SocksP
                     return
                 }
             }
-            val newAMQPConfig = AMQPConfigurationImpl(amqpConfig.keyStore, amqpConfig.trustStore, amqpConfig.socksProxyConfig, amqpConfig.maxMessageSize, amqpConfig.useOpenSsl, sourceX500Name)
+            val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, socksProxyConfig, maxMessageSize, useOpenSsl, enableSNI, sourceX500Name) }
             val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)

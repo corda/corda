@@ -14,19 +14,14 @@ import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
 import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
-import sun.security.x509.X500Name
 import java.lang.Long.min
 import java.net.InetSocketAddress
-import java.security.KeyStore
-import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import javax.net.ssl.KeyManagerFactory
@@ -99,23 +94,21 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         retryInterval = min(MAX_RETRY_INTERVAL, retryInterval * BACKOFF_MULTIPLIER)
     }
 
-    private val connectListener = object : ChannelFutureListener {
-        override fun operationComplete(future: ChannelFuture) {
-            if (!future.isSuccess) {
-                log.info("Failed to connect to $currentTarget")
+    private val connectListener = ChannelFutureListener { future ->
+        if (!future.isSuccess) {
+            log.info("Failed to connect to $currentTarget")
 
-                if (!stopping) {
-                    workerGroup?.schedule({
-                        nextTarget()
-                        restart()
-                    }, retryInterval, TimeUnit.MILLISECONDS)
-                }
-            } else {
-                log.info("Connected to $currentTarget")
-                // Connection established successfully
-                clientChannel = future.channel()
-                clientChannel?.closeFuture()?.addListener(closeListener)
+            if (!stopping) {
+                workerGroup?.schedule({
+                    nextTarget()
+                    restart()
+                }, retryInterval, TimeUnit.MILLISECONDS)
             }
+        } else {
+            log.info("Connected to $currentTarget")
+            // Connection established successfully
+            clientChannel = future.channel()
+            clientChannel?.closeFuture()?.addListener(closeListener)
         }
     }
 
@@ -164,7 +157,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
             val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, parent.configuration)
             val target = parent.currentTarget
-            val handler = if (parent.configuration.useOpenSsl){
+            val handler = if (parent.configuration.useOpenSsl) {
                 createClientOpenSslHandler(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
             } else {
                 createClientSslHelper(target, parent.allowedRemoteLegalNames, wrappedKeyManagerFactory, trustManagerFactory)
@@ -178,13 +171,13 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     conf.userName,
                     conf.password,
                     conf.trace,
-                    {
+                    { _, change ->
                         parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
-                        parent._onConnection.onNext(it.second)
+                        parent._onConnection.onNext(change)
                     },
-                    {
-                        parent._onConnection.onNext(it.second)
-                        if (it.second.badCert) {
+                    { _, change ->
+                        parent._onConnection.onNext(change)
+                        if (change.badCert) {
                             log.error("Blocking future connection attempts to $target due to bad certificate on endpoint")
                             parent.badCertTargets += target
                         }

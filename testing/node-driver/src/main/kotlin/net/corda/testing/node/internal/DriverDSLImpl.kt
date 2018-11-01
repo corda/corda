@@ -89,7 +89,8 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordapp>
+        val cordappsForAllNodes: Collection<TestCordapp>,
+        val enableSNI: Boolean
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -308,7 +309,8 @@ class DriverDSLImpl(
                 NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                 NodeConfiguration::verifierType.name to verifierType.name,
                 "enterpriseConfiguration.tuning.flowThreadPoolSize" to "1",
-                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
+                NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped(),
+                NodeConfiguration::enableSNI.name to enableSNI
         ) + czUrlConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
@@ -1116,7 +1118,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    enableSNI = defaultParameters.enableSNI
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1210,6 +1213,7 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordapp> = DriverParameters().cordappsForAllNodes(),
+        enableSNI: Boolean = DriverParameters().enableSNI,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1228,7 +1232,8 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    enableSNI = enableSNI
             ),
             coerce = { it },
             dsl = dsl,

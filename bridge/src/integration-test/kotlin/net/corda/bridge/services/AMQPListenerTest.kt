@@ -83,6 +83,7 @@ class AMQPListenerTest {
             override val trustStore = clientTrustStore
             override val maxMessageSize: Int = maxMessageSize
             override val trace: Boolean = true
+            override val enableSNI: Boolean = clientConfig.bridgeInnerConfig?.enableSNI ?: true
         }
         // create and connect a real client
         val amqpClient = AMQPClient(listOf(NetworkHostAndPort("localhost", 10005)),

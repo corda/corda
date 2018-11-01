@@ -26,15 +26,11 @@ class CertHoldingKeyManagerFactorySpiWrapper(private val factorySpi: KeyManagerF
         return if (factorySpi is CertHoldingKeyManagerFactorySpiWrapper) keyManagers else keyManagers.map {
             val aliasProvidingKeyManager = getDefaultKeyManager(it)
             // Use the SNIKeyManager if keystore has several entries and only for clients and non-openSSL servers.
-            if (amqpConfig.keyStore.aliases().size > 1) {
-                // Clients
-                if (amqpConfig.sourceX500Name != null) {
-                    SNIKeyManager(aliasProvidingKeyManager as X509ExtendedKeyManager, amqpConfig)
-                } else if (!amqpConfig.useOpenSsl) { // JDK SSL servers
-                    SNIKeyManager(aliasProvidingKeyManager as X509ExtendedKeyManager, amqpConfig)
-                } else {
-                    aliasProvidingKeyManager
-                }
+            // Condition of using SNIKeyManager: if its client, or JDKSsl server.
+            val isClient = amqpConfig.sourceX500Name != null
+            val enableSNI = amqpConfig.enableSNI && amqpConfig.keyStore.aliases().size > 1
+            if (enableSNI && (isClient || !amqpConfig.useOpenSsl)) {
+                SNIKeyManager(aliasProvidingKeyManager as X509ExtendedKeyManager, amqpConfig)
             } else {
                 aliasProvidingKeyManager
             }
@@ -78,5 +74,4 @@ class CertHoldingKeyManagerFactoryWrapper(factory: KeyManagerFactory, amqpConfig
             keyManager.getCertificateChain(alias)
         } else null
     }
-
 }

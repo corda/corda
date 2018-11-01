@@ -248,7 +248,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     metricRegistry,
                     queueBound = config.enterpriseConfiguration.tuning.maximumMessagingBatchSize,
                     ourSenderUUID = ourSenderUUID,
-                    myLegalName = legalName
+                    myLegalName = legalName,
+                    enableSNI = config.enableSNI
             )
             this@P2PMessagingClient.messagingExecutor = messagingExecutor
             messagingExecutor.start()
@@ -574,7 +575,9 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val internalTargetQueue = (address as? ArtemisAddress)?.queueName
                     ?: throw IllegalArgumentException("Not an Artemis address")
             state.locked {
-                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = false, isServiceAddress = address is ServiceAddress)
+                val isServiceAddress = address is ServiceAddress
+                val exclusive = if (config.enableSNI) false else !isServiceAddress
+                createQueueIfAbsent(internalTargetQueue, producerSession!!, exclusive = exclusive, isServiceAddress = isServiceAddress)
             }
             internalTargetQueue
         }

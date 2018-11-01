@@ -14,6 +14,7 @@ import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
+import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -44,7 +45,8 @@ class MessagingExecutor(
         metricRegistry: MetricRegistry,
         val ourSenderUUID: String,
         queueBound: Int,
-        val myLegalName: String
+        val myLegalName: String,
+        private val enableSNI: Boolean
 ) {
     private sealed class Job {
         data class Acknowledge(val message: ClientMessage) : Job()
@@ -56,7 +58,10 @@ class MessagingExecutor(
         ) : Job() {
             override fun toString() = "Send(${message.uniqueMessageId}, target=$target)"
         }
-        object Shutdown : Job() { override fun toString() = "Shutdown" }
+
+        object Shutdown : Job() {
+            override fun toString() = "Shutdown"
+        }
     }
 
     private val queue = ArrayBlockingQueue<Job>(queueBound)
@@ -68,9 +73,7 @@ class MessagingExecutor(
     private val sendQueueSizeOnInsert = metricRegistry.histogram("P2P.SendQueueSizeOnInsert")
 
     init {
-        metricRegistry.register("P2P.SendQueueSize", Gauge<Int> {
-            queue.size
-        })
+        metricRegistry.register("P2P.SendQueueSize", Gauge<Int> { queue.size })
     }
 
     private val ourSenderSeqNo = AtomicLong()
@@ -125,7 +128,7 @@ class MessagingExecutor(
                             }
                         }
                         Job.Shutdown -> {
-                            if(session.stillOpen()) {
+                            if (session.stillOpen()) {
                                 session.commit()
                             }
                             break@eventLoop
@@ -157,10 +160,10 @@ class MessagingExecutor(
             "Send to: $mqAddress topic: ${job.message.topic} " +
                     "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId}"
         }
-        producer.send(SimpleString(mqAddress), artemisMessage, {
+        producer.send(SimpleString(mqAddress), artemisMessage) {
             job.timer.stop()
             job.sentFuture.set(Unit)
-        })
+        }
     }
 
     fun cordaToArtemisMessage(message: Message, target: MessageRecipients? = null): ClientMessage? {
@@ -172,15 +175,17 @@ class MessagingExecutor(
             putStringProperty(P2PMessagingHeaders.bridgedCertificateSubject, SimpleString(myLegalName))
             // Add a group ID to messages to be able to have multiple filtered consumers  while preventing reordering.
             // This header will be dropped off during transit through the bridge, which is fine as it's needed locally only.
-            if (target != null && target is ArtemisMessagingComponent.ServiceAddress) {
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_GROUP_ID, SimpleString(message.uniqueMessageId.toString))
-            } else {
-                putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_GROUP_ID, SimpleString(myLegalName))
+            if (enableSNI) {
+                if (target is ArtemisMessagingComponent.ServiceAddress) {
+                    putStringProperty(HDR_GROUP_ID, SimpleString(message.uniqueMessageId.toString))
+                } else {
+                    putStringProperty(HDR_GROUP_ID, SimpleString(myLegalName))
+                }
             }
             sendMessageSizeMetric.update(message.data.bytes.size)
             writeBodyBufferBytes(message.data.bytes)
             // Use the magic deduplication property built into Artemis as our message identity too
-            putStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
+            putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(message.uniqueMessageId.toString))
             // If we are the sender (ie. we are not going through recovery of some sort), use sequence number short cut.
             if (ourSenderUUID == message.senderUUID) {
                 putStringProperty(P2PMessagingHeaders.senderUUID, SimpleString(ourSenderUUID))
@@ -188,7 +193,7 @@ class MessagingExecutor(
             }
             // For demo purposes - if set then add a delay to messages in order to demonstrate that the flows are doing as intended
             if (amqDelayMillis > 0 && message.topic == FlowMessagingImpl.sessionTopic) {
-                putLongProperty(org.apache.activemq.artemis.api.core.Message.HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
+                putLongProperty(HDR_SCHEDULED_DELIVERY_TIME, System.currentTimeMillis() + amqDelayMillis)
             }
             message.additionalHeaders.forEach { key, value -> putStringProperty(key, value) }
         }
@@ -196,7 +201,7 @@ class MessagingExecutor(
 
     private fun acknowledgeJob(job: Job.Acknowledge) {
         log.debug {
-            val id = job.message.getStringProperty(org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID)
+            val id = job.message.getStringProperty(HDR_DUPLICATE_DETECTION_ID)
             "Acking $id"
         }
         job.message.individualAcknowledge()

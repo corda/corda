@@ -5,7 +5,10 @@ package net.corda.testing.core
 
 import net.corda.core.contracts.PartyAndReference
 import net.corda.core.contracts.StateRef
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
@@ -161,3 +164,7 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
+
+fun Collection<Any>.product(p2: Collection<Any>): Collection<Array<Any>> = flatMap { param1 ->
+    p2.map { param2 -> arrayOf(param1, param2) }
+}

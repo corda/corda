@@ -16,6 +16,7 @@ import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
 import java.io.ByteArrayInputStream
+import java.lang.String.valueOf
 import java.security.KeyStore
 import java.util.*
 
@@ -28,17 +29,13 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         private val consoleLogger = LoggerFactory.getLogger("BasicInfo")
     }
 
-    private val statusFollower: ServiceStateCombiner
+    private val statusFollower: ServiceStateCombiner = ServiceStateCombiner(listOf(auditService))
     private var statusSubscriber: Subscription? = null
     private var amqpServer: AMQPServer? = null
     private var keyStorePrivateKeyPassword: CharArray? = null
     private var onConnectSubscription: Subscription? = null
     private var onConnectAuditSubscription: Subscription? = null
     private var onReceiveSubscription: Subscription? = null
-
-    init {
-        statusFollower = ServiceStateCombiner(listOf(auditService))
-    }
 
     override fun provisionKeysAndActivate(keyStoreBytes: ByteArray,
                                           keyStorePassword: CharArray,
@@ -59,6 +56,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
             override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
             override val maxMessageSize: Int = maximumMessageSize
             override val trace: Boolean = conf.enableAMQPPacketTrace
+            override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
         }
         val server = AMQPServer(bindAddress.host,
@@ -93,7 +91,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
         ByteArrayInputStream(keyStoreBytes).use {
             keyStore.load(it, keyStorePassword)
         }
-        return X509KeyStore(keyStore, java.lang.String.valueOf(keyStorePassword))
+        return X509KeyStore(keyStore, valueOf(keyStorePassword))
     }
 
     override fun wipeKeysAndDeactivate() {

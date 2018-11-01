@@ -94,5 +94,5 @@ class TestKeyManagerFactoryWrapper {
         assertNull(otherWrappedKeyManagerFactory.getCurrentCertChain())
     }
 
-    private class AMQPConfigurationImpl(override val keyStore: CertificateStore, override val trustStore: CertificateStore, override val maxMessageSize: Int) : AMQPConfiguration
+    private class AMQPConfigurationImpl(override val keyStore: CertificateStore, override val trustStore: CertificateStore, override val maxMessageSize: Int, override val enableSNI: Boolean = true) : AMQPConfiguration
 }

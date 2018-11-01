@@ -71,5 +71,9 @@ interface AMQPConfiguration {
      */
     val healthCheckPhrase: String?
         get() = null
+
+    @JvmDefault
+    val enableSNI: Boolean
+        get() = true
 }
 

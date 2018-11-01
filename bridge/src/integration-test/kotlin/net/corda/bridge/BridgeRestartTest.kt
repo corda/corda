@@ -22,14 +22,21 @@ import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.ClassRule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
-class BridgeRestartTest : IntegrationTest() {
+@RunWith(Parameterized::class)
+class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
     companion object {
         val pingStarted = ConcurrentHashMap<StateMachineRunId, OpenFuture<Unit>>()
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "enableSNI = {0}")
+        fun data() = listOf(false, true)
 
         @ClassRule
         @JvmField
@@ -44,7 +51,7 @@ class BridgeRestartTest : IntegrationTest() {
             val pongSession = initiateFlow(pongParty)
             pongSession.sendAndReceive<Unit>(times)
             pingStarted.getOrPut(runId) { openFuture() }.set(Unit)
-            for (i in 1 .. times) {
+            for (i in 1..times) {
                 logger.info("PING $i")
                 val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
                 assertEquals(i, j)
@@ -57,7 +64,7 @@ class BridgeRestartTest : IntegrationTest() {
         @Suspendable
         override fun call() {
             val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
-            for (i in 1 .. times) {
+            for (i in 1..times) {
                 logger.info("PONG $i")
                 val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
                 assertEquals(i, j)
@@ -68,7 +75,7 @@ class BridgeRestartTest : IntegrationTest() {
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
@@ -121,7 +128,7 @@ class BridgeRestartTest : IntegrationTest() {
     @Test
     fun restartSeveralPingPongFlowsRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
@@ -154,7 +161,7 @@ class BridgeRestartTest : IntegrationTest() {
 
             // We kill -9 and restart the bridge after a random sleep
             CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) { connection ->
-                val handles = (1 .. 10).map {
+                val handles = (1..10).map {
                     connection.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 100)
                 }
 

@@ -193,6 +193,7 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
             doReturn(true).whenever(it).crlCheckSoftFail
             doReturn(artemisAddress).whenever(it).p2pAddress
+            doReturn(true).whenever(it).enableSNI
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
         }
@@ -204,7 +205,13 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = LoopbackBridgeManager({ ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize) })
+        val bridgeManager = LoopbackBridgeManager(artemisConfig.p2pSslOptions,
+                null,
+                MAX_MESSAGE_SIZE,
+                artemisConfig.enableSNI,
+                { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize) },
+                null,
+                { true })
         bridgeManager.start()
 
         val artemis = artemisClient.started!!

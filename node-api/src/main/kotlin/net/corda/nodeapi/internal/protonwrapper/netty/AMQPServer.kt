@@ -1,10 +1,7 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.EventLoopGroup
+import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -67,51 +64,44 @@ class AMQPServer(val hostName: String,
         override fun initChannel(ch: SocketChannel) {
             val amqpConfiguration = parent.configuration
             val pipeline = ch.pipeline()
-
             amqpConfiguration.healthCheckPhrase?.let { pipeline.addLast(ModeSelectingChannel.NAME, ModeSelectingChannel(it)) }
-
-            val keyStore = amqpConfiguration.keyStore
-
-            // Used for SNI matching with javaSSL.
-            val wrappedKeyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfiguration)
-            // Used to create a mapping for SNI matching with openSSL.
-            val keyManagerFactoriesMap = splitKeystore(amqpConfiguration)
-            val handler = if (amqpConfiguration.useOpenSsl){
-                // SNI matching needed only when multiple nodes exist behind the server.
-                if (keyStore.aliases().size > 1) {
-                    createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory)
-                } else {
-                    createServerOpenSslHandler(wrappedKeyManagerFactory, trustManagerFactory, ch.alloc())
-                }
-            } else {
-                // For javaSSL, SNI matching is handled at key manager level.
-                createServerSslHelper(keyStore, wrappedKeyManagerFactory, trustManagerFactory)
-            }
-
-            pipeline.addLast("sslHandler", handler)
-
+            val (sslHandler, keyManagerFactoriesMap) = createSSLHandler(amqpConfiguration, ch)
+            pipeline.addLast("sslHandler", sslHandler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
                     // Passing a mapping of legal names to key managers to be able to pick the correct one after
                     // SNI completion event is fired up.
-                    if (keyStore.aliases().size > 1 && amqpConfiguration.useOpenSsl)
-                        keyManagerFactoriesMap
-                    else
-                        // Single entry, key can be anything.
-                        mapOf(DEFAULT to wrappedKeyManagerFactory),
+                    keyManagerFactoriesMap,
                     conf.userName,
                     conf.password,
                     conf.trace,
-                    {
-                        parent.clientChannels[it.first.remoteAddress()] = it.first
-                        parent._onConnection.onNext(it.second)
+                    { channel, change ->
+                        parent.clientChannels[channel.remoteAddress()] = channel
+                        parent._onConnection.onNext(change)
                     },
-                    {
-                        parent.clientChannels.remove(it.first.remoteAddress())
-                        parent._onConnection.onNext(it.second)
+                    { channel, change ->
+                        parent.clientChannels.remove(channel.remoteAddress())
+                        parent._onConnection.onNext(change)
                     },
                     { rcv -> parent._onReceive.onNext(rcv) }))
+        }
+
+        private fun createSSLHandler(amqpConfig: AMQPConfiguration, ch: SocketChannel): Pair<ChannelHandler, Map<String, CertHoldingKeyManagerFactoryWrapper>> {
+            return if (amqpConfig.useOpenSsl && amqpConfig.enableSNI && amqpConfig.keyStore.aliases().size > 1) {
+                val keyManagerFactoriesMap = splitKeystore(amqpConfig)
+                // SNI matching needed only when multiple nodes exist behind the server.
+                Pair(createServerSNIOpenSslHandler(keyManagerFactoriesMap, trustManagerFactory), keyManagerFactoriesMap)
+            } else {
+                val keyManagerFactory = CertHoldingKeyManagerFactoryWrapper(keyManagerFactory, amqpConfig)
+                val handler = if (amqpConfig.useOpenSsl) {
+                    createServerOpenSslHandler(keyManagerFactory, trustManagerFactory, ch.alloc())
+                } else {
+                    // For javaSSL, SNI matching is handled at key manager level.
+                    createServerSslHandler(amqpConfig.keyStore, keyManagerFactory, trustManagerFactory)
+                }
+                Pair(handler, mapOf(DEFAULT to keyManagerFactory))
+            }
         }
     }
 
@@ -189,10 +179,7 @@ class AMQPServer(val hostName: String,
     }
 
     fun dropConnection(connectionRemoteHost: InetSocketAddress) {
-        val channel = clientChannels[connectionRemoteHost]
-        if (channel != null) {
-            channel.close()
-        }
+        clientChannels[connectionRemoteHost]?.close()
     }
 
     fun complete(delivery: Delivery, target: InetSocketAddress) {

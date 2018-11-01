@@ -17,10 +17,7 @@ import net.corda.nodeapi.internal.bridging.AMQPBridgeManager
 import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
@@ -45,7 +42,7 @@ import kotlin.system.measureTimeMillis
 import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
-class AMQPBridgeTest(private val useOpenSsl: Boolean) {
+class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boolean) {
     companion object {
 
         private val logger = contextLogger()
@@ -53,8 +50,8 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         const val echoPhrase = "Hello!"
 
         @JvmStatic
-        @Parameterized.Parameters(name = "useOpenSsl = {0}")
-        fun data(): Collection<Boolean> = listOf(false, true)
+        @Parameterized.Parameters(name = "useOpenSsl = {0}, enableSNI = {1}")
+        fun data() = listOf(false, true).product(listOf(false, true))
 
         private fun String.assertEchoResponse(address: InetSocketAddress, drip: Boolean = false) {
             SocketChannel.open(address).use {
@@ -357,7 +354,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, enableSNI)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -413,10 +410,11 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean) {
         val keyStore = serverConfig.p2pSslOptions.keyStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = keyStore
-            override val trustStore  = serverConfig.p2pSslOptions.trustStore.get()
+            override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             //override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
             override val useOpenSsl = serverConfig.p2pSslOptions.useOpenSsl
+            override val enableSNI: Boolean = this@AMQPBridgeTest.enableSNI
             override val healthCheckPhrase = echoPhrase
         }
         return AMQPServer("0.0.0.0",

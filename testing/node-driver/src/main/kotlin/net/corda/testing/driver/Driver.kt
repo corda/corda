@@ -344,7 +344,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    enableSNI = defaultParameters.enableSNI
             ),
             coerce = { it },
             dsl = dsl,
@@ -400,7 +401,8 @@ data class DriverParameters(
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
         val inMemoryDB: Boolean = true,
-        val cordappsForAllNodes: Collection<TestCordapp>? = null
+        val cordappsForAllNodes: Collection<TestCordapp>? = null,
+        val enableSNI: Boolean = true
     ) {
     constructor(
             isDebug: Boolean = false,

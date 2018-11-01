@@ -66,6 +66,7 @@ interface BridgeInnerConfiguration {
     val customSSLConfiguration: BridgeSSLConfiguration?
     // The SSL keystores to provision into the Float in DMZ
     val customFloatOuterSSLConfiguration: BridgeSSLConfiguration?
+    val enableSNI: Boolean
 }
 
 interface BridgeHAConfig {

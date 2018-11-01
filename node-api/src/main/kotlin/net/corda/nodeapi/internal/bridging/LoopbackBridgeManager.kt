@@ -9,7 +9,9 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -23,8 +25,17 @@ import org.slf4j.MDC
  *  inboxes.
  */
 @VisibleForTesting
-class LoopbackBridgeManager(private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
-                            private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
+class LoopbackBridgeManager(config: MutualSslConfiguration,
+                            socksProxyConfig: SocksProxyConfig? = null,
+                            maxMessageSize: Int,
+                            enableSNI: Boolean,
+                            private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
+                            private val bridgeMetricsService: BridgeMetricsService? = null,
+                            private val isLocalInbox: (String) -> Boolean) : AMQPBridgeManager(config, socksProxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService) {
+
+    companion object {
+        private val log = contextLogger()
+    }
 
     private val queueNamesToBridgesMap = ConcurrentBox(mutableMapOf<String, MutableList<LoopbackBridge>>())
     private var artemis: ArtemisSessionProvider? = null
@@ -118,21 +129,29 @@ class LoopbackBridgeManager(private val artemisMessageClientFactory: () -> Artem
     }
 
     override fun deployBridge(sourceX500Name: String, queueName: String, targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {
-        queueNamesToBridgesMap.exclusive {
-            val bridges = getOrPut(queueName) { mutableListOf() }
-            for (target in targets) {
-                if (bridges.any { it.targets.contains(target) && it.sourceX500Name == sourceX500Name }) {
-                    return
+        val inboxAddress = translateLocalQueueToInboxAddress(queueName)
+        if (isLocalInbox(inboxAddress)) {
+            log.info("Deploying loopback bridge for $queueName, source $sourceX500Name")
+            queueNamesToBridgesMap.exclusive {
+                val bridges = getOrPut(queueName) { mutableListOf() }
+                for (target in targets) {
+                    if (bridges.any { it.targets.contains(target) && it.sourceX500Name == sourceX500Name }) {
+                        return
+                    }
                 }
-            }
-            val newBridge = LoopbackBridge(sourceX500Name, queueName, targets, legalNames, artemis!!, bridgeMetricsService)
-            bridges += newBridge
-            bridgeMetricsService?.bridgeCreated(targets, legalNames)
-            newBridge
-        }.start()
+                val newBridge = LoopbackBridge(sourceX500Name, queueName, targets, legalNames, artemis!!, bridgeMetricsService)
+                bridges += newBridge
+                bridgeMetricsService?.bridgeCreated(targets, legalNames)
+                newBridge
+            }.start()
+        } else {
+            log.info("Deploying AMQP bridge for $queueName, source $sourceX500Name")
+            super.deployBridge(sourceX500Name, queueName, targets, legalNames)
+        }
     }
 
     override fun destroyBridge(queueName: String, targets: List<NetworkHostAndPort>) {
+        super.destroyBridge(queueName, targets)
         queueNamesToBridgesMap.exclusive {
             val bridges = this[queueName] ?: mutableListOf()
             for (target in targets) {
@@ -149,7 +168,19 @@ class LoopbackBridgeManager(private val artemisMessageClientFactory: () -> Artem
         }
     }
 
+    /**
+     * Remove any AMQP bridge for the local inbox and create a loopback bridge for that queue.
+     */
+    fun inboxesAdded(inboxes: List<String>) {
+        for (inbox in inboxes) {
+            super.destroyAllBridge(inbox).forEach { source, bridgeEntry ->
+                deployBridge(source, bridgeEntry.queueName, bridgeEntry.targets, bridgeEntry.legalNames.toSet())
+            }
+        }
+    }
+
     override fun start() {
+        super.start()
         val artemis = artemisMessageClientFactory()
         this.artemis = artemis
         artemis.start()
@@ -158,6 +189,7 @@ class LoopbackBridgeManager(private val artemisMessageClientFactory: () -> Artem
     override fun stop() = close()
 
     override fun close() {
+        super.close()
         queueNamesToBridgesMap.exclusive {
             for (bridge in values.flatten()) {
                 bridge.stop()
