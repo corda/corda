@@ -1,4 +1,6 @@
-![Corda](https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png)
+<p align="center">
+  <img src="https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png" alt="Corda" width="500">
+</p>
 
 <a href="https://ci-master.corda.r3cev.com/viewType.html?buildTypeId=CordaEnterprise_Build&tab=buildTypeStatusDiv"><img src="https://ci.corda.r3cev.com/app/rest/builds/buildType:Corda_CordaBuild/statusIcon"/></a>
 

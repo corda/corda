@@ -63,9 +63,9 @@ class StaticInitialisationOfSerializedObjectTest {
         // we can't actually construct one
         sf.get(null, D::class.java)
 
-        // post creation of the serializer we should have one element in the map, this
+        // post creation of the serializer we should have two elements in the map, this
         // proves we didn't statically construct an instance of C when building the serializer
-        assertEquals(1, serialisersByType.size)
+        assertEquals(2, serialisersByType.size)
     }
 
     @Test
