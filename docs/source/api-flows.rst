@@ -798,7 +798,7 @@ Because of this, care must be taken when performing locking or waiting operation
 
 Locking
 ^^^^^^^
-Flows should avoid using locks or interacting with objects that areshared between flows (except for ``ServiceHub`` and other 
+Flows should avoid using locks or interacting with objects that are shared between flows (except for ``ServiceHub`` and other 
 carefully crafted services such as Oracles.  See :doc:`oracles`). Locks will significantly reduce the scalability of the 
 node, and can cause the node to deadlock if they remain locked across flow context switch boundaries (such as when sending 
 and receiving from peers, as discussed above, or sleeping, as discussed below).
