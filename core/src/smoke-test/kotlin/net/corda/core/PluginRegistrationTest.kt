@@ -6,6 +6,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -22,6 +23,7 @@ class PluginRegistrationTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
+    @Ignore
     @Test
     fun `test plugin registration` () {
         // Create node jarDir with an empty jar file in it
