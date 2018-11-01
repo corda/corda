@@ -514,14 +514,15 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
         val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.mapNotNull {
+        else emptyList<SecureHash.SHA256>() //TODO enable once snapshot builds will have prod key
+        /* configuration.cordappSignerKeyFingerprintBlacklist.mapNotNull {
             try {
                 SecureHash.parse(it)
             } catch (e: IllegalArgumentException) {
                 log.error("Error while adding key fingerprint $it to cordappSignerKeyFingerprintBlacklist due to ${e.message}", e)
                 throw e
             }
-        }
+        } */
         return JarScanningCordappLoader.fromDirectories(
                 configuration.cordappDirectories,
                 versionInfo,
