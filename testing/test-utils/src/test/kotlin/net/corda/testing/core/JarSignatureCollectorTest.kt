@@ -143,15 +143,11 @@ class JarSignatureCollectorTest {
     }
 
     @Test
-    fun `one signer jar with META-INF INDEX dot LIST`() {
-        dir.createJar(FILENAME, "_signable1", "_signable2")
+    fun `one signer jar with INDEX_LIST`() {
+        dir.createJar(FILENAME, "_signable1")
         dir.addIndexList(FILENAME)
         val key = signAsAlice()
         assertEquals(listOf(key), dir.getJarSigners(FILENAME))
-
-        (dir / "my-dir").createDirectory()
-        dir.updateJar(FILENAME, "my-dir")
-        assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // Unsigned directory is irrelevant.
     }
 
     private fun signAsAlice() = dir.signJar(FILENAME, ALICE, "storepass", ALICE_PASS)
