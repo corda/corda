@@ -165,7 +165,7 @@ useful if off-ledger data must be maintained in conjunction with on-ledger state
               as a custom schema. See Samples below.
 
 The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. Note that ``PersistentFoo`` is added to
-a list of mapped types which is passed to ``MappedSChema``. This is exactly how state schemas are defined, except that
+a list of mapped types which is passed to ``MappedSchema``. This is exactly how state schemas are defined, except that
 the entity in this case should not subclass ``PersistentState`` (as it is not a state object). See examples:
 
 .. container:: codeset
