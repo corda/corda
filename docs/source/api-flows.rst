@@ -788,28 +788,36 @@ HTTP, database and other calls to external resources are allowed in flows. Howev
 
 Concurrency, Locking and Waiting
 --------------------------------
-This is an advanced topic.  Because Corda is designed to:
+Corda is designed to:
 
-* run many flows in parallel,
-* may persist flows to storage and resurrect those flows much later,
-* (in the future) migrate flows between JVMs,
+* run many flows in parallel
+* persist flows to storage and resurrect those flows much later
+* (in the future) migrate flows between JVMs
 
-flows should avoid use of locks and typically not even attempt to interact with objects shared between flows (except
-``ServiceHub`` and other carefully crafted services such as Oracles.  See :doc:`oracles`).
-Locks will significantly reduce the scalability of the node, in the best case, and can cause the node to deadlock if they
-remain locked across flow context switch boundaries (such as sending and receiving
-from peers discussed above, and the sleep discussed below).
+Because of this, care must be taken when performing locking or waiting operations.
 
-If you need activities that are scheduled, you should investigate the use of ``SchedulableState``.
-However, we appreciate that Corda support for some more advanced patterns is still in the future, and if there is a need
-for brief pauses in flows then you should use ``FlowLogic.sleep`` in place of where you might have used ``Thread.sleep``.
-Flows should expressly not use ``Thread.sleep``, since this will prevent the node from processing other flows
-in the meantime, significantly impairing the performance of the node.
-Even ``FlowLogic.sleep`` is not to be used to create long running flows, since the Corda ethos is for short lived flows
-(otherwise upgrading nodes or CorDapps is much more complicated), or as a substitute to using the ``SchedulableState`` scheduler.
+Locking
+^^^^^^^
+Flows should avoid using locks or interacting with objects that areshared between flows (except for ``ServiceHub`` and other 
+carefully crafted services such as Oracles.  See :doc:`oracles`). Locks will significantly reduce the scalability of the 
+node, and can cause the node to deadlock if they remain locked across flow context switch boundaries (such as when sending 
+and receiving from peers, as discussed above, or sleeping, as discussed below).
 
-Currently the ``finance`` package uses ``FlowLogic.sleep`` to make several attempts at coin selection, where necessary,
-when many states are soft locked and we wish to wait for those, or other new states in their place, to become unlocked.
+Waiting
+^^^^^^^
+A flow can wait until a specific transaction has been received and verified by the node using `FlowLogic.waitForLedgerCommit`. 
+Outside of this, scheduling an activity to occur at some future time should be achieved using ``SchedulableState``.
+
+However, if there is a need for brief pauses in flows, you have the option of using ``FlowLogic.sleep`` in place of where you
+might have used ``Thread.sleep``. Flows should expressly not use ``Thread.sleep``, since this will prevent the node from 
+processing other flows in the meantime, significantly impairing the performance of the node.
+
+Even ``FlowLogic.sleep`` should not be used to create long running flows or as a substitute to using the ``SchedulableState``
+scheduler, since the Corda ethos is for short-lived flows (long-lived flows make upgrading nodes or CorDapps much more 
+complicated).
+
+For example, the ``finance`` package currently uses ``FlowLogic.sleep`` to make several attempts at coin selection when 
+many states are soft locked, to wait for states to become unlocked:
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/cash/selection/AbstractCashSelection.kt
         :language: kotlin
