@@ -18,21 +18,22 @@ class AMQPRemoteTypeModelTests {
     private val factory = SerializerFactoryBuilder.build(AllWhitelist, ClassLoader.getSystemClassLoader())
     private val typeModel = AMQPRemoteTypeModel()
 
-    private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    private val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
+    private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
+    private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
     private val localTypeFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(
             factory,
             localTypeModel)
 
     private val reflector = TypeLoadingRemoteTypeReflector(
             ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist), ClassLoader.getSystemClassLoader()),
-            localTypeModel,
-            TypeModellingFingerPrinter(localTypeModel, localTypeFingerPrinter))
+            DefaultFingerprintingLocalTypeModel(localTypeModel, localTypeFingerPrinter))
 
     private fun <T: Any> getRemoteType(obj: T): RemoteTypeInformation {
         val output = SerializationOutput(factory)
         val schema = output.serializeAndReturnSchema(obj).schema
         println(schema)
-        return typeModel.interpret(SerializerFactory.nameForType(obj::class.java), schema)
+        return typeModel.interpret(schema.types[0].descriptor.name!!.toString(), schema)
     }
 
     interface Interface<P, Q, R> {

@@ -27,25 +27,22 @@ data class ReflectedTypeInformation(
  *
  * @param typeLoader The [TypeLoader] to use to load local types reflecting remote types.
  * @param localTypeModel The [LocalTypeModel] to use to obtain [LocalTypeInformation] for the local [Type]s so obtained.
- * @param typeModellingFingerPrinter The [TypeModellingFingerPrinter] to use to obtain type descriptors for local [Type]s
  */
 class TypeLoadingRemoteTypeReflector(
         private val typeLoader: TypeLoader,
-        private val localTypeModel: LocalTypeModel,
-        private val typeModellingFingerPrinter: TypeModellingFingerPrinter): RemoteTypeReflector {
+        private val localTypeModel: FingerprintingLocalTypeModel): RemoteTypeReflector {
 
     // Reflected type information is cached by remote type information.
     private val cache = DefaultCacheProvider.createCache<RemoteTypeInformation, ReflectedTypeInformation>()
 
     override fun reflect(remoteTypeInformation: RemoteTypeInformation): ReflectedTypeInformation =
         cache.computeIfAbsent(remoteTypeInformation) { _ ->
-            val localTypeInformation = localTypeModel[remoteTypeInformation.typeIdentifier] ?:
-                localTypeModel.inspect(typeLoader.load(remoteTypeInformation))
-            val localTypeDescriptor = typeModellingFingerPrinter.fingerprint(localTypeInformation)
+            val type = typeLoader.load(remoteTypeInformation)
+            val (fingerprint, localTypeInformation) = localTypeModel.inspect(type)
 
             ReflectedTypeInformation(
                     remoteTypeInformation,
                     localTypeInformation,
-                    localTypeDescriptor)
+                    fingerprint)
         }
 }

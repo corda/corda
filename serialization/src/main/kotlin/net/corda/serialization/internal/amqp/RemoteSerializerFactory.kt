@@ -8,8 +8,9 @@ import net.corda.serialization.internal.carpenter.CarpenterMetaSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.MetaCarpenter
 import net.corda.serialization.internal.carpenter.MetaCarpenterException
-import net.corda.serialization.internal.model.DefaultCacheProvider
+import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
+import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
 import java.util.*
 
@@ -30,6 +31,8 @@ class DefaultRemoteSerializerFactory(
         private val classloader: ClassLoader,
         private val evolutionSerializerProvider: EvolutionSerializerProvider,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+        private val remoteTypeModel: AMQPRemoteTypeModel,
+        private val typeReflector: RemoteTypeReflector,
         private val localSerializerFactory: LocalSerializerFactory)
     : RemoteSerializerFactory {
 
@@ -39,11 +42,30 @@ class DefaultRemoteSerializerFactory(
 
     override fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> =
             descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: {
-            logger.trace("get Serializer descriptor=${typeDescriptor}")
-            processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
-            descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
-                    "Could not find type matching descriptor $typeDescriptor.")
+                logger.trace("get Serializer descriptor=${typeDescriptor}")
+
+                try {
+                    val reflected = typeReflector.reflect(remoteTypeModel.interpret(typeDescriptor.toString(), schema.schema))
+                    if (reflected.requiresEvolution) {
+                        processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
+                        descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
+                                "Could not find type matching descriptor $typeDescriptor.")
+                    } else {
+                        localSerializerFactory.get(reflected.localTypeInformation)
+                    }
+                } catch (e: UnsupportedOperationException) {
+                    processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
+                    descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
+                            "Could not find type matching descriptor $typeDescriptor.")
+                }
         }()
+
+    private val ReflectedTypeInformation.requiresEvolution: Boolean get() =
+        when (remoteTypeInformation) {
+            is RemoteTypeInformation.AnEnum -> remoteTypeInformation.typeDescriptor != localTypeDescriptor
+            is RemoteTypeInformation.Composable -> remoteTypeInformation.typeDescriptor != localTypeDescriptor
+            else -> false
+        }
 
     /**
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,

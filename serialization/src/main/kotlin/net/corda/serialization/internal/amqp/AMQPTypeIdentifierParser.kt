@@ -51,7 +51,7 @@ object AMQPTypeIdentifierParser {
                     maxArrayDepth = Math.max(maxArrayDepth,arrayDepth)
                 }
                 ']' -> arrayDepth--
-                else -> throw IllegalTypeNameParserStateException("Type name contains illegal character '$c'")
+                else -> throw IllegalTypeNameParserStateException("Type name '$typeString' contains illegal character '$c'")
             }
             wasArray = c == ']'
         }

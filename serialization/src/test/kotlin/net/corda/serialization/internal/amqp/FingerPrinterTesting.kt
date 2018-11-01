@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import org.junit.Test
-import java.lang.reflect.Type
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
@@ -9,10 +8,9 @@ import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
 import net.corda.serialization.internal.model.LocalTypeInformation
-import net.corda.serialization.internal.model.LocalTypeInformationFingerPrinter
-import net.corda.serialization.internal.model.WhitelistBasedTypeModelConfiguration
+import net.corda.serialization.internal.model.FingerPrinter
 
-class FingerPrinterTesting : LocalTypeInformationFingerPrinter {
+class FingerPrinterTesting : FingerPrinter {
     private var index = 0
     private val cache = mutableMapOf<LocalTypeInformation, String>()
 
@@ -34,7 +32,10 @@ class FingerPrinterTestingTests {
     @Test
     fun testingTest() {
         val fpt = FingerPrinterTesting()
-        val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+        val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
+        val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
+        val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
+
         assertEquals("0", fpt.fingerprint(typeModel.inspect(Integer::class.java)))
         assertEquals("1", fpt.fingerprint(typeModel.inspect(String::class.java)))
         assertEquals("0", fpt.fingerprint(typeModel.inspect(Integer::class.java)))

@@ -1,53 +1,15 @@
 package net.corda.serialization.internal.model
 
 import com.google.common.hash.Hashing
-import com.google.common.primitives.Primitives
-import net.corda.core.KeepForDJVM
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
 import net.corda.serialization.internal.amqp.*
-import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.*
-import java.util.*
-
-typealias Fingerprint = String
 
 /**
- * An implementation of [FingerPrinter] that uses a [LocalTypeModel] to obtain [LocalTypeInformation] for each [Type] it
- * is asked to fingerprint, then passes that [LocalTypeInformation] to a [LocalTypeInformationFingerPrinter] for
- * fingerprinting.
- *
- * Eventually we will want to use the [LocalTypeInformationFingerPrinter] directly, e.g. from a [TypeLoader] that
- * maintains its own [LocalTypeModel], and the adaptor for the [FingerPrinter] interface will no longer be necessary.
+ * A fingerprinter that fingerprints [LocalTypeInformation].
  */
-@KeepForDJVM
-class TypeModellingFingerPrinter(private val typeModel: LocalTypeModel,
-                                 private val localTypeFingerPrinter: LocalTypeInformationFingerPrinter) : FingerPrinter {
-
-    private val cache = DefaultCacheProvider.createCache<TypeIdentifier, Fingerprint>()
-
-    /**
-     * The method generates a fingerprint for a given JVM [Type] that should be unique to the schema representation.
-     * Thus it only takes into account properties and types and only supports the same object graph subset as the overall
-     * serialization code.
-     *
-     * The idea being that even for two classes that share the same name but differ in a minor way, the fingerprint will be
-     * different.
-     */
-    override fun fingerprint(type: Type): String = fingerprint(typeModel.inspect(type))
-
-    fun fingerprint(typeInformation: LocalTypeInformation): String =
-            cache[typeInformation.typeIdentifier] ?: localTypeFingerPrinter.fingerprint(typeInformation).apply {
-                cache.putIfAbsent(typeInformation.typeIdentifier, this)
-            }
-}
-
-/**
- * A fingerprinter that fingerprints [LocalTypeInformation], rather than a [Type] directly.
- */
-interface LocalTypeInformationFingerPrinter {
+interface FingerPrinter {
     /**
      * Traverse the provided [LocalTypeInformation] graph and emit a short fingerprint string uniquely representing
      * the shape of that graph.
@@ -58,7 +20,7 @@ interface LocalTypeInformationFingerPrinter {
 }
 
 /**
- * A [LocalTypeInformationFingerPrinter] that consults a [CustomTypeDescriptorLookup] to obtain type descriptors for
+ * A [FingerPrinter] that consults a [CustomTypeDescriptorLookup] to obtain type descriptors for
  * types that do not need to be traversed to calculate their fingerprint information. (Usually these will be the type
  * descriptors supplied by custom serializers).
  *
@@ -68,7 +30,7 @@ interface LocalTypeInformationFingerPrinter {
 class CustomisableLocalTypeInformationFingerPrinter(
         private val customTypeDescriptorLookup: CustomSerializerRegistry,
         private val typeModel: LocalTypeModel,
-        private val debugEnabled: Boolean = false) : LocalTypeInformationFingerPrinter {
+        private val debugEnabled: Boolean = false) : FingerPrinter {
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
             CustomisableLocalTypeInformationFingerPrintingState(
                     customTypeDescriptorLookup,

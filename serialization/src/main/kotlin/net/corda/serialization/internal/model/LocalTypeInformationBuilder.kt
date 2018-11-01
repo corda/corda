@@ -92,7 +92,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             type: ParameterizedType,
             typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation = withContext(type) {
         when {
-            rawType.isCollectionOrMap -> LocalTypeInformation.ACollection(rawType, typeIdentifier, buildTypeParameterInformation(type))
+            rawType.isCollectionOrMap -> LocalTypeInformation.ACollection(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isInterface -> buildInterface(rawType, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(rawType, typeIdentifier, buildTypeParameterInformation(type))
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))

@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,7 +13,9 @@ import java.util.*
 
 class LocalTypeModelTests {
 
-    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    private val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
+    private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
+    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
 
     interface CollectionHolder<K, V> {
         val list: List<V>
@@ -122,7 +125,15 @@ class LocalTypeModelTests {
 
     @Test
     fun `non-composable types`() {
-        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist) { false })
+        val serializerRegistry = object: CustomSerializerRegistry {
+            override fun register(customSerializer: CustomSerializer<out Any>) {}
+
+            override fun registerExternal(customSerializer: CorDappCustomSerializer) {}
+
+            override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? = null
+
+        }
+        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, serializerRegistry) )
         assertTrue(modelWithoutOpacity.inspect(typeOf<Exception>()) is LocalTypeInformation.NonComposable)
         assertTrue(modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()) is LocalTypeInformation.NonComposable)
     }

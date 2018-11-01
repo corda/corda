@@ -5,10 +5,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
-import net.corda.serialization.internal.model.DefaultCacheProvider
-import net.corda.serialization.internal.model.LocalTypeInformationFingerPrinter
-import net.corda.serialization.internal.model.LocalTypeModel
-import net.corda.serialization.internal.model.TypeModellingFingerPrinter
+import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.Symbol
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
@@ -31,6 +28,8 @@ interface LocalSerializerFactory {
     @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any>
 
+    fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any>
+
     fun createDescriptor(type: Type): Symbol
     fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>>
@@ -38,8 +37,7 @@ interface LocalSerializerFactory {
 
 class DefaultLocalSerializerFactory(
         override val whitelist: ClassWhitelist,
-        private val typeModel: LocalTypeModel,
-        private val fingerPrinter: LocalTypeInformationFingerPrinter,
+        private val typeModel: FingerprintingLocalTypeModel,
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val customSerializerRegistry: CustomSerializerRegistry,
@@ -54,11 +52,13 @@ class DefaultLocalSerializerFactory(
     private val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
 
     override fun createDescriptor(type: Type): Symbol =
-        Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeModel.inspect(type))}")
+        Symbol.valueOf("$DESCRIPTOR_DOMAIN:${typeModel.inspect(type).fingerprint}")
 
     override fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>> =
             transformsCache.computeIfAbsent(name) { _ -> builder() }
+
+    override fun get(localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> = get(null, localTypeInformation.observedType)
 
     override fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
         // can be useful to enable but will be *extremely* chatty if you do

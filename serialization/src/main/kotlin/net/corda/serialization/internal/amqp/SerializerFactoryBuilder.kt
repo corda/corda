@@ -34,7 +34,7 @@ object SerializerFactoryBuilder {
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
-            overrideFingerPrinter: LocalTypeInformationFingerPrinter? = null,
+            overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
@@ -54,7 +54,7 @@ object SerializerFactoryBuilder {
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
-            overrideFingerPrinter: LocalTypeInformationFingerPrinter? = null,
+            overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false) =
             makeFactory(
                     whitelist,
@@ -68,32 +68,41 @@ object SerializerFactoryBuilder {
                             classCarpenter: ClassCarpenter,
                             evolutionSerializerProvider: EvolutionSerializerProvider,
                             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
-                            overrideFingerPrinter: LocalTypeInformationFingerPrinter?,
+                            overrideFingerPrinter: FingerPrinter?,
                             onlyCustomSerializers: Boolean): SerializerFactory {
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
 
-        val typeModel = ConfigurableLocalTypeModel(
+        val localTypeModel = ConfigurableLocalTypeModel(
                 WhitelistBasedTypeModelConfiguration(
                         whitelist,
                         customSerializerRegistry))
 
         val fingerPrinter = overrideFingerPrinter ?:
-            CustomisableLocalTypeInformationFingerPrinter(customSerializerRegistry, typeModel)
+            CustomisableLocalTypeInformationFingerPrinter(customSerializerRegistry, localTypeModel)
+
+        val fingerprintingLocalTypeModel = DefaultFingerprintingLocalTypeModel(localTypeModel, fingerPrinter)
 
         val localSerializerFactory = DefaultLocalSerializerFactory(
                 whitelist,
-                typeModel,
-                fingerPrinter,
+                fingerprintingLocalTypeModel,
                 classCarpenter.classloader,
                 descriptorBasedSerializerRegistry,
                 customSerializerRegistry,
                 onlyCustomSerializers)
+
+        val typeLoader = ClassCarpentingTypeLoader(classCarpenter, classCarpenter.classloader)
+
+        val remoteTypeReflector = TypeLoadingRemoteTypeReflector(
+                typeLoader,
+                fingerprintingLocalTypeModel)
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
                 classCarpenter,
                 classCarpenter.classloader,
                 evolutionSerializerProvider,
                 descriptorBasedSerializerRegistry,
+                AMQPRemoteTypeModel(),
+                remoteTypeReflector,
                 localSerializerFactory)
 
         return ComposedSerializerFactory(localSerializerFactory, remoteSerializerFactory, customSerializerRegistry)

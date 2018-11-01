@@ -4,14 +4,6 @@ typealias TypeDescriptor = String
 
 data class RemotePropertyInformation(val type: RemoteTypeInformation, val isMandatory: Boolean)
 
-data class RemoteConstructorParameterInformation(
-        val name: String,
-        val type: RemoteTypeInformation,
-        val isMandatory: Boolean)
-
-data class RemoteConstructorInformation(
-        val parameters: List<RemoteConstructorParameterInformation>)
-
 sealed class RemoteTypeInformation {
 
     abstract val typeIdentifier: TypeIdentifier
@@ -51,6 +43,8 @@ sealed class RemoteTypeInformation {
     object Any : RemoteTypeInformation() {
         override val typeIdentifier = TypeIdentifier.TopType
     }
+
+    data class Cycle(override val typeIdentifier: TypeIdentifier, val follow: () -> RemoteTypeInformation) : RemoteTypeInformation()
 
     data class Unparameterised(override val typeIdentifier: TypeIdentifier) : RemoteTypeInformation()
     data class Parameterised(override val typeIdentifier: TypeIdentifier, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
