@@ -155,7 +155,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             remainingTransactionSize -= size
         }
 
-        // TODO - does it matter if it is slightly lower than the actual re-serialized version?
+        // This calculates a value that is slightly lower than the actual re-serialized version. But it is stable and does not depend on the classloader.
         fun componentGroupSize(componentGroup: ComponentGroupEnum): Int {
             return this.componentGroups.firstOrNull { it.groupIndex == componentGroup.ordinal }?.let { cg -> cg.components.sumBy { it.size } + 4 } ?: 0
         }
