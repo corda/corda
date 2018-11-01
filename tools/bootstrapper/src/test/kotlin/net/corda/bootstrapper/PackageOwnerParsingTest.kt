@@ -36,15 +36,13 @@ class PackageOwnerParsingTest {
         private val dirBob = Files.createTempDirectory(BOB)
         private val dirCharlie = Files.createTempDirectory(CHARLIE)
 
-        val packageOwner = PackageOwner()
-        val commandLine = CommandLine(packageOwner)
+        val networkBootstrapper = NetworkBootstrapperRunner()
+        val commandLine = CommandLine(networkBootstrapper)
 
         @BeforeClass
         @JvmStatic
         fun beforeClass() {
-            println(dirAlice)
             dirAlice.generateKey(ALICE, ALICE_PASS, ALICE_NAME.toString())
-            println(dirAlice.list())
             dirBob.generateKey(BOB, BOB_PASS, BOB_NAME.toString(), "EC")
             dirCharlie.generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME.toString(), "DSA")
         }
@@ -61,8 +59,7 @@ class PackageOwnerParsingTest {
         val aliceKeyStorePath = dirAlice / "_teststore"
         val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:$ALICE")
         commandLine.parse(*args)
-        println(packageOwner)
-        assertThat(packageOwner.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
     }
 
     @Test
@@ -125,15 +122,14 @@ class PackageOwnerParsingTest {
                                         "--register-package-owner", "com.example.more.stuff=$bobKeyStorePath:$BOB_PASS:$BOB",
                                         "--register-package-owner", "com.example.even.more.stuff=$charlieKeyStorePath:$CHARLIE_PASS:$CHARLIE")
         commandLine.parse(*args)
-        println(packageOwner)
-        assertThat(packageOwner.registerPackageOwnership).hasSize(3)
+        assertThat(networkBootstrapper.registerPackageOwnership).hasSize(3)
     }
 
     @Test
     fun `parse unregister request with single mapping`() {
         val args = arrayOf("--unregister-package-owner", "com.example.stuff")
         commandLine.parse(*args)
-        assertThat(packageOwner.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff"))
     }
 
     @Test
@@ -142,8 +138,8 @@ class PackageOwnerParsingTest {
         val args = arrayOf("--register-package-owner", "com.example.stuff=$aliceKeyStorePath:$ALICE_PASS:$ALICE",
                                         "--unregister-package-owner", "com.example.stuff2")
         commandLine.parse(*args)
-        assertThat(packageOwner.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
-        assertThat(packageOwner.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff2"))
+        assertThat(networkBootstrapper.registerPackageOwnership).containsKey(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff2"))
     }
 }
 

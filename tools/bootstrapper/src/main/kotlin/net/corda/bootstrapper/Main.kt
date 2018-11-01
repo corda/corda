@@ -13,10 +13,10 @@ import java.nio.file.Paths
 import java.security.PublicKey
 
 fun main(args: Array<String>) {
-    PackageOwner().start(args)
+    NetworkBootstrapperRunner().start(args)
 }
 
-abstract class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
+class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
     @Option(
             names = ["--dir"],
             description = [
@@ -31,13 +31,7 @@ abstract class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Boot
 
     @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in the network-parameters."])
     var minimumPlatformVersion = PLATFORM_VERSION
-}
 
-/**
- * Extend the base Bootstrapper arguments with Java package namespace ownership CLI arguments
- * (split out as a separate class for standalone testability)
- */
-class PackageOwner : NetworkBootstrapperRunner() {
     @Option(names = ["--register-package-owner"],
             converter = [JavaPackageNameConverter::class, PublicKeyConverter::class],
             description = [
