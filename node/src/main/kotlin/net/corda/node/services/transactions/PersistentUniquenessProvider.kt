@@ -12,7 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.AsyncUniquenessProvider
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
@@ -36,7 +36,7 @@ import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
 @ThreadSafe
-class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, cacheFactory: NamedCacheFactory) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersistence, cacheFactory: NamedCacheFactory) : UniquenessProvider, SingletonSerializeAsToken() {
 
     @MappedSuperclass
     class BaseComittedState(
@@ -77,7 +77,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
-            val future: OpenFuture<AsyncUniquenessProvider.Result>)
+            val future: OpenFuture<UniquenessProvider.Result>)
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_states")
@@ -133,15 +133,15 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
      *
      * Returns a future that will complete once the request is processed, containing the commit [Result].
      */
-    override fun commitAsync(
+    override fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ): CordaFuture<AsyncUniquenessProvider.Result> {
-        val future = openFuture<AsyncUniquenessProvider.Result>()
+    ): CordaFuture<UniquenessProvider.Result> {
+        val future = openFuture<UniquenessProvider.Result>()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
         requestQueue.put(request)
         return future
@@ -232,13 +232,13 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
             if (exception is NotaryInternalException) {
-                request.future.set(AsyncUniquenessProvider.Result.Failure(exception.error))
+                request.future.set(UniquenessProvider.Result.Failure(exception.error))
             } else {
                 request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
             }
     }
 
     private fun respondWithSuccess(request: CommitRequest) {
-        request.future.set(AsyncUniquenessProvider.Result.Success)
+        request.future.set(UniquenessProvider.Result.Success)
     }
 }
