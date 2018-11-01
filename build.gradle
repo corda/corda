@@ -160,6 +160,7 @@ allprojects {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
         format = 'ALL'
+        failOnError = project.getProperty('owasp.failOnError')
     }
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
