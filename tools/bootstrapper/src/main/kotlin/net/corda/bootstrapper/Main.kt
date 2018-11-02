@@ -76,13 +76,19 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
     override fun convert(packageOwner: String): PackageOwner {
         if (!packageOwner.isBlank()) {
             val packageOwnerSpec = packageOwner.split(";")
-            if (packageOwnerSpec.size != 4)
-                throw IllegalArgumentException("Package owner must specify 4 elements separated by semi-colon: 'java-package-namespace;keyStorePath;password;alias'")
+            if (packageOwnerSpec.size < 4)
+                throw IllegalArgumentException("Package owner must specify 4 elements separated by semi-colon: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
+            // java package name validation
             val javaPackageName = JavaPackageName(packageOwnerSpec[0])
+            // cater for passwords that include the argument delimiter field
+            val keyStorePassword =
+                if (packageOwnerSpec.size > 4)
+                    packageOwnerSpec.subList(2, packageOwnerSpec.size-1).joinToString(";")
+                else packageOwnerSpec[2]
             try {
-                val ks = loadKeyStore(Paths.get(packageOwnerSpec[1]), packageOwnerSpec[2])
+                val ks = loadKeyStore(Paths.get(packageOwnerSpec[1]), keyStorePassword)
                 try {
-                    val publicKey = ks.getCertificate(packageOwnerSpec[3]).publicKey
+                    val publicKey = ks.getCertificate(packageOwnerSpec[packageOwnerSpec.size-1]).publicKey
                     return PackageOwner(javaPackageName,publicKey)
                 }
                 catch(kse: KeyStoreException) {
@@ -90,13 +96,13 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
                 }
             }
             catch(kse: KeyStoreException) {
-                throw IllegalArgumentException("Password is incorrect or the key store is damaged for keyStoreFilePath: ${packageOwnerSpec[1]} and storePassword: ${packageOwnerSpec[2]}")
+                throw IllegalArgumentException("Password is incorrect or the key store is damaged for keyStoreFilePath: ${packageOwnerSpec[1]} and keyStorePassword: $keyStorePassword")
             }
             catch(e: IOException) {
-                throw IllegalArgumentException("Error reading the key store from the file for keyStoreFilePath: ${packageOwnerSpec[1]} and storePassword: ${packageOwnerSpec[2]}")
+                throw IllegalArgumentException("Error reading the key store from the file for keyStoreFilePath: ${packageOwnerSpec[1]} and keyStorePassword: $keyStorePassword")
             }
         }
-        else throw IllegalArgumentException("Must specify package owner argument: 'java-package-namespace;keyStorePath;password;alias'")
+        else throw IllegalArgumentException("Must specify package owner argument: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
     }
 }
 

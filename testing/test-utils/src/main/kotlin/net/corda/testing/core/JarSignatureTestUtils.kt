@@ -25,8 +25,8 @@ object JarSignatureTestUtils {
                 .waitFor())
     }
 
-    fun Path.generateKey(alias: String, storePassword: String, name: String, keyalg: String = "RSA", keyPassword: String = storePassword) =
-            executeProcess("keytool", "-genkeypair", "-keystore", "_teststore", "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
+    fun Path.generateKey(alias: String, storePassword: String, name: String, keyalg: String = "RSA", keyPassword: String = storePassword, storeName: String = "_teststore") =
+            executeProcess("keytool", "-genkeypair", "-keystore" ,storeName, "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
 
     fun Path.createJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "cvf", fileName) + contents))
