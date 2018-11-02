@@ -52,10 +52,15 @@ class CachingCustomSerializerRegistry(
             customSerializer
         }
     }
+    
+    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
+        val typeIdentifier = TypeIdentifier.forGenericType(declaredType)
 
-    override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? =
-            customSerializersCache[TypeIdentifier.forGenericType(declaredType)] ?:
-            doFindCustomSerializer(clazz, declaredType)?.also { customSerializersCache::putIfAbsent }
+        return customSerializersCache[typeIdentifier]
+                ?: doFindCustomSerializer(clazz, declaredType)?.also { serializer ->
+                    customSerializersCache.putIfAbsent(typeIdentifier, serializer)
+                }
+    }
 
     private fun doFindCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
         // e.g. Imagine if we provided a Map serializer this way, then it won't work if the declared type is
