@@ -7,7 +7,7 @@ import com.codahale.metrics.graphite.PickledGraphite
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.StartableByRPC
-import net.corda.core.internal.notary.AsyncCFTNotaryService
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.utilities.NetworkHostAndPort
@@ -24,19 +24,19 @@ import java.security.PublicKey
 import java.util.concurrent.TimeUnit
 
 @CordaService
-class JDBCNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : AsyncCFTNotaryService() {
+class JDBCNotaryService(override val services: AppServiceHub, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
     private val appConfig = ConfigHelper.loadConfig(Paths.get(".")).getConfig("custom")
 
-    override val asyncUniquenessProvider: MySQLUniquenessProvider = createUniquenessProvider()
+    override val uniquenessProvider: MySQLUniquenessProvider = createUniquenessProvider()
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this)
 
     override fun start() {
-        asyncUniquenessProvider.createTable()
+        uniquenessProvider.createTable()
     }
 
     override fun stop() {
-        asyncUniquenessProvider.stop()
+        uniquenessProvider.stop()
     }
 
     private fun createMetricsRegistry(): MetricRegistry {

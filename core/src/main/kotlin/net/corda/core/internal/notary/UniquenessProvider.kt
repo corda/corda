@@ -1,16 +1,16 @@
 package net.corda.core.internal.notary
 
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
 
 /**
  * A service that records input states of the given transaction and provides conflict information
  * if any of the inputs have already been used in another transaction.
- *
- * A uniqueness provider is expected to be used from within the context of a flow.
  */
 interface UniquenessProvider {
     /** Commits all input states of the given transaction. */
@@ -21,5 +21,13 @@ interface UniquenessProvider {
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
-    )
+    ): CordaFuture<Result>
+
+    /** The outcome of committing a transaction. */
+    sealed class Result {
+        /** Indicates that all input states have been committed successfully. */
+        object Success : Result()
+        /** Indicates that the transaction has not been committed. */
+        data class Failure(val error: NotaryError) : Result()
+    }
 }

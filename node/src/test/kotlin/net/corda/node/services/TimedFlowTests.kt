@@ -4,7 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
@@ -12,8 +15,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
@@ -52,19 +56,19 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
     lateinit var notary: Party
     lateinit var node: TestStartedNode
 
-        private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
-            val replicaIds = (0 until clusterSize)
-            val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
-            val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
-                    replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                    serviceLegalName)
+    private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
+        val replicaIds = (0 until clusterSize)
+        val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
+        val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+                replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
+                serviceLegalName)
 
-            val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
-            val notaryConfig = mock<NotaryConfig> {
-                whenever(it.serviceLegalName).thenReturn(serviceLegalName)
-                whenever(it.validating).thenReturn(true)
-                whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
-            }
+        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, true))))
+        val notaryConfig = mock<NotaryConfig> {
+            whenever(it.serviceLegalName).thenReturn(serviceLegalName)
+            whenever(it.validating).thenReturn(true)
+            whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
+        }
 
         val notaryNodes = (0 until clusterSize).map {
             mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
@@ -128,7 +132,8 @@ class TimedFlowTests {
         /** The notary nodes don't run any consensus protocol, so 2 nodes are sufficient for the purpose of this test. */
         private val globalRule = TimedFlowTestRule(2)
 
-        @ClassRule @JvmField
+        @ClassRule
+        @JvmField
         val ruleChain = RuleChain.outerRule(globalDatabaseRule).around(globalRule)
 
     }
@@ -190,8 +195,16 @@ class TimedFlowTests {
         }.bufferUntilSubscribed().toBlocking().toFuture()
     }
 
-    class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : TrustedAuthorityNotaryService() {
-        override val uniquenessProvider = mock<UniquenessProvider>()
+    class TestNotaryService(override val services: ServiceHubInternal, override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
+        override val uniquenessProvider = object : UniquenessProvider {
+            /** A dummy commit method that immediately returns a success message. */
+            override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
+                return openFuture<UniquenessProvider.Result>().apply {
+                    set(UniquenessProvider.Result.Success)
+                }
+            }
+        }
+
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}
         override fun stop() {}

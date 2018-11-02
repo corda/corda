@@ -1,8 +1,8 @@
 package net.corda.notary.jpa
 
 import net.corda.core.flows.FlowSession
-import net.corda.core.internal.notary.AsyncCFTNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
@@ -12,12 +12,12 @@ import java.security.PublicKey
 /** Notary service backed by a replicated MySQL database. */
 class JPANotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey) : AsyncCFTNotaryService() {
+        override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
 
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
-    override val asyncUniquenessProvider = with(services) {
+    override val uniquenessProvider = with(services) {
         val jpaNotaryConfig = try {
             notaryConfig.extraConfig!!.parseAs<JPANotaryConfiguration>()
         } catch (e: Exception) {
@@ -36,6 +36,6 @@ class JPANotaryService(
     }
 
     override fun stop() {
-        asyncUniquenessProvider.stop()
+        uniquenessProvider.stop()
     }
 }

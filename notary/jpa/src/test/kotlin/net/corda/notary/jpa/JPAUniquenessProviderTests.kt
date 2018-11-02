@@ -7,10 +7,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.node.services.config.NotaryConfig
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.jpa.JPAUniquenessProvider.Companion.decodeStateRef
@@ -27,7 +25,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class JPAUniquenessProviderTests {
     @Rule
@@ -54,11 +51,12 @@ class JPAUniquenessProviderTests {
     }
 
     @Test
-    fun `should commit a transaction with unused inputs without exception`() {
+    fun `should successfully commit a transaction with unused inputs`() {
         val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
         val inputState = generateStateRef()
 
-        provider.commit(listOf(inputState), txID, identity, requestSignature)
+        val result = provider.commit(listOf(inputState), txID, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result)
     }
 
     @Test
@@ -68,13 +66,12 @@ class JPAUniquenessProviderTests {
 
         val inputs = listOf(inputState)
         val firstTxId = txID
-        provider.commit(inputs, firstTxId, identity, requestSignature)
+        val firstResult = provider.commit(inputs, firstTxId, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, firstResult)
 
         val secondTxId = SecureHash.randomSHA256()
-        val ex = assertFailsWith<NotaryInternalException> {
-            provider.commit(inputs, secondTxId, identity, requestSignature)
-        }
-        val error = ex.error as NotaryError.Conflict
+        val secondResult = provider.commit(inputs, secondTxId, identity, requestSignature).get()
+        val error = (secondResult as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
 
         val conflictCause = error.consumedStates[inputState]!!
         assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
@@ -91,14 +88,15 @@ class JPAUniquenessProviderTests {
         val nrStates = notaryConfig.maxInputStates + notaryConfig.maxInputStates / 2
         val stateRefs = (1..nrStates).map { generateStateRef() }
         println(stateRefs.size)
+
         val firstTxId = SecureHash.randomSHA256()
         val provider = JPAUniquenessProvider(Clock.systemUTC(), database, notaryConfig)
-        provider.commit(stateRefs, firstTxId, identity, requestSignature)
+        val firstResult = provider.commit(stateRefs, firstTxId, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, firstResult)
+
         val secondTxId = SecureHash.randomSHA256()
-        val ex = assertFailsWith<NotaryInternalException> {
-            provider.commit(stateRefs, secondTxId, identity, requestSignature)
-        }
-        val error = ex.error as NotaryError.Conflict
+        val secondResult = provider.commit(stateRefs, secondTxId, identity, requestSignature).get()
+        val error = (secondResult as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
         assertEquals(nrStates, error.consumedStates.size)
     }
 }

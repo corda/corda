@@ -10,20 +10,19 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotarisationRequest
-import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.notary.AsyncCFTNotaryService
-import net.corda.core.internal.notary.AsyncUniquenessProvider
+import net.corda.core.internal.notary.SinglePartyNotaryService
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.generateSignature
 import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 @StartableByRPC
-open class AsyncLoadTestFlow<T : AsyncCFTNotaryService>(
+open class AsyncLoadTestFlow<T : SinglePartyNotaryService>(
         private val serviceType: Class<T>,
         private val transactionCount: Int,
         private val batchSize: Int = 100,
@@ -57,7 +56,7 @@ open class AsyncLoadTestFlow<T : AsyncCFTNotaryService>(
 
     private fun runBatch(transactionCount: Int): Long {
         val stopwatch = Stopwatch.createStarted()
-        val futures = mutableListOf<CordaFuture<AsyncUniquenessProvider.Result>>()
+        val futures = mutableListOf<CordaFuture<UniquenessProvider.Result>>()
 
         val service = serviceHub.cordaService(serviceType)
 
@@ -72,7 +71,7 @@ open class AsyncLoadTestFlow<T : AsyncCFTNotaryService>(
             val inputs = inputGenerator.generateOrFail(random)
             val requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
 
-            futures += AsyncCFTNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature,
+            futures += SinglePartyNotaryService.CommitOperation(service, inputs, txId, callerParty, requestSignature,
                     null, emptyList()).execute("")
         }
 

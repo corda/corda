@@ -1,8 +1,8 @@
 package net.corda.notary.mysql
 
 import net.corda.core.flows.FlowSession
-import net.corda.core.internal.notary.AsyncCFTNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
@@ -12,7 +12,7 @@ import java.security.PublicKey
 /** Notary service backed by a replicated MySQL database. */
 class MySQLNotaryService(
         override val services: ServiceHubInternal,
-        override val notaryIdentityKey: PublicKey) : AsyncCFTNotaryService() {
+        override val notaryIdentityKey: PublicKey) : SinglePartyNotaryService() {
 
     /** Database table will be automatically created in dev mode */
     private val devMode = services.configuration.devMode
@@ -20,7 +20,7 @@ class MySQLNotaryService(
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
-    override val asyncUniquenessProvider = with(services) {
+    override val uniquenessProvider = with(services) {
         val mysqlConfig = try {
             notaryConfig.extraConfig!!.parseAs<MySQLNotaryConfiguration>()
         } catch (e: Exception) {
@@ -41,10 +41,10 @@ class MySQLNotaryService(
 
 
     override fun start() {
-        if (devMode) asyncUniquenessProvider.createTable()
+        if (devMode) uniquenessProvider.createTable()
     }
 
     override fun stop() {
-        asyncUniquenessProvider.stop()
+        uniquenessProvider.stop()
     }
 }

@@ -1,8 +1,8 @@
 package net.corda.notary.raft
 
 import net.corda.core.flows.FlowSession
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.TrustedAuthorityNotaryService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
@@ -13,7 +13,7 @@ import java.security.PublicKey
 class RaftNotaryService(
         override val services: ServiceHubInternal,
         override val notaryIdentityKey: PublicKey
-) : TrustedAuthorityNotaryService() {
+) : SinglePartyNotaryService() {
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: notary configuration not present")
 

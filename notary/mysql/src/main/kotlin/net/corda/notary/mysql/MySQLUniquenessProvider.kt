@@ -19,9 +19,9 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.AsyncUniquenessProvider
-import net.corda.core.internal.notary.AsyncUniquenessProvider.Result
 import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.SerializationDefaults
@@ -49,7 +49,7 @@ class MySQLUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
         val config: MySQLNotaryConfiguration
-) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
         // TODO: optimize table schema for InnoDB
@@ -161,7 +161,7 @@ class MySQLUniquenessProvider(
      *
      * Returns a future that will complete once the request is processed, containing the commit [Result].
      */
-    override fun commitAsync(
+    override fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,

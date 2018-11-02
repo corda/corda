@@ -12,8 +12,8 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.AsyncUniquenessProvider
 import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.CordaSerializable
@@ -38,7 +38,7 @@ import kotlin.concurrent.thread
 
 /** A JPA backed Uniqueness provider */
 @ThreadSafe
-class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, val config: JPANotaryConfiguration) : AsyncUniquenessProvider, SingletonSerializeAsToken() {
+class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, val config: JPANotaryConfiguration) : UniquenessProvider, SingletonSerializeAsToken() {
 
     // TODO: test vs. MySQLUniquenessProvider
 
@@ -75,7 +75,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             val requestSignature: NotarisationRequestSignature,
             val timeWindow: TimeWindow?,
             val references: List<StateRef>,
-            val future: OpenFuture<AsyncUniquenessProvider.Result>,
+            val future: OpenFuture<UniquenessProvider.Result>,
             val requestEntity: Request,
             val committedStatesEntities: List<CommittedState>)
 
@@ -132,15 +132,15 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
      *
      * Returns a future that will complete once the requestEntitiy is processed, containing the commit [Result].
      */
-    override fun commitAsync(
+    override fun commit(
             states: List<StateRef>,
             txId: SecureHash,
             callerIdentity: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ): CordaFuture<AsyncUniquenessProvider.Result> {
-        val future = openFuture<AsyncUniquenessProvider.Result>()
+    ): CordaFuture<UniquenessProvider.Result> {
+        val future = openFuture<UniquenessProvider.Result>()
         val requestEntities = Request(consumingTxHash = txId.toString(),
                 partyName = callerIdentity.name.toString(),
                 requestSignature = requestSignature.serialize(context = SerializationDefaults.STORAGE_CONTEXT.withEncoding(CordaSerializationEncoding.SNAPPY)).bytes,
@@ -215,7 +215,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         return findAlreadyCommitted(session, allInputs, references).toMutableMap()
     }
 
-    private fun processRequest(request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): AsyncUniquenessProvider.Result {
+    private fun processRequest(request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): UniquenessProvider.Result {
 
         val conflicts = (request.states + request.references).mapNotNull {
             if (allConflicts.containsKey(it)) it to allConflicts[it]!!
@@ -223,9 +223,9 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         }.toMap()
         val result = if (conflicts.isNotEmpty()) {
             if (isConsumedByTheSameTx(request.txId.sha256(), conflicts)) {
-                AsyncUniquenessProvider.Result.Success
+                UniquenessProvider.Result.Success
             } else {
-                AsyncUniquenessProvider.Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+                UniquenessProvider.Result.Failure(NotaryError.Conflict(request.txId, conflicts))
             }
         } else {
             val outsideTimeWindowError = validateTimeWindow(clock.instant(), request.timeWindow)
@@ -235,9 +235,9 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                 request.states.forEach {
                     allConflicts[it] = StateConsumptionDetails(request.txId.sha256())
                 }
-                AsyncUniquenessProvider.Result.Success
+                UniquenessProvider.Result.Success
             } else {
-                AsyncUniquenessProvider.Result.Failure(outsideTimeWindowError)
+                UniquenessProvider.Result.Failure(outsideTimeWindowError)
             }
         }
         return result
@@ -275,7 +275,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
         if (exception is NotaryInternalException) {
-            request.future.set(AsyncUniquenessProvider.Result.Failure(exception.error))
+            request.future.set(UniquenessProvider.Result.Failure(exception.error))
         } else {
             request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
         }

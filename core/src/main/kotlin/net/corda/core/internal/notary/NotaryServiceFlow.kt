@@ -7,8 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.IdempotentFlow
-import net.corda.core.internal.executeAsync
-import net.corda.core.internal.notary.AsyncUniquenessProvider.Result
 import net.corda.core.utilities.unwrap
 
 /**
@@ -20,7 +18,7 @@ import net.corda.core.utilities.unwrap
  * Additional transaction validation logic can be added when implementing [validateRequest].
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: TrustedAuthorityNotaryService) : FlowLogic<Void?>(), IdempotentFlow {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>(), IdempotentFlow {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000
@@ -37,7 +35,14 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val parts = validateRequest(requestPayload)
             txId = parts.id
             checkNotary(parts.notary)
-            service.commitInputStates(parts.inputs, txId, otherSideSession.counterparty, requestPayload.requestSignature, parts.timestamp, parts.references)
+            service.commitInputStates(
+                    parts.inputs,
+                    txId,
+                    otherSideSession.counterparty,
+                    requestPayload.requestSignature,
+                    parts.timestamp,
+                    parts.references
+            )
             signTransactionAndSendResponse(txId)
         } catch (e: NotaryInternalException) {
             throw NotaryException(e.error, txId)
@@ -78,7 +83,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
-        val signature = service.sign(txId)
+        val signature = service.signTransaction(txId)
         otherSideSession.send(NotarisationResponse(listOf(signature)))
     }
 
