@@ -14,7 +14,7 @@ import java.nio.file.Path
 
 internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
     internal companion object {
-        internal val logger = loggerFor<ValidateConfigurationCli>()
+        internal val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 
         private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
 

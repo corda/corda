@@ -31,8 +31,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
-                                                              override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
-    private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
+                                                              override val lenientCarpenterEnabled: Boolean = false,
+                                                              private val builder: AttachmentsClassLoaderBuilder = AttachmentsClassLoaderBuilder()
+) : SerializationContext {
+
 
     /**
      * {@inheritDoc}
@@ -41,7 +43,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
         properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val classLoader = builder.build(attachmentHashes) ?: return this
+        val classLoader = builder.build(attachmentHashes, properties, deserializationClassLoader) ?: return this
         return withClassLoader(classLoader)
     }
 
@@ -75,13 +77,13 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
  * can replace it with an alternative version.
  */
 @DeleteForDJVM
-internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
-    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
+class AttachmentsClassLoaderBuilder() {
+    private val cache: Cache<Pair<List<SecureHash>, ClassLoader>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
 
-    fun build(attachmentHashes: List<SecureHash>): AttachmentsClassLoader? {
+    fun build(attachmentHashes: List<SecureHash>, properties: Map<Any, Any>, deserializationClassLoader: ClassLoader): AttachmentsClassLoader? {
         val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.
         try {
-            return cache.get(attachmentHashes) {
+            return cache.get(Pair(attachmentHashes, deserializationClassLoader)) {
                 val missing = ArrayList<SecureHash>()
                 val attachments = ArrayList<Attachment>()
                 attachmentHashes.forEach { id ->
@@ -120,12 +122,13 @@ open class SerializationFactoryImpl(
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
         val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
-        return schemes.computeIfAbsent(lookupKey) {
+        // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
+        return (schemes[lookupKey] ?: schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
                     "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
             throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
-        } to magic
+        }) to magic
     }
 
     @Throws(NotSerializableException::class)

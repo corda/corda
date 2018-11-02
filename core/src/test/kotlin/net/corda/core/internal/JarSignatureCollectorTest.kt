@@ -8,6 +8,7 @@ import net.corda.core.JarSignatureTestUtils.updateJar
 import net.corda.core.identity.Party
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.AfterClass
@@ -127,6 +128,16 @@ class JarSignatureCollectorTest {
         signAsBob()
         // The JDK doesn't care that BOB has correctly signed the whole thing, it won't let us process the entry with ALICE's bad signature:
         assertFailsWith<SecurityException> { dir.getJarSigners(FILENAME) }
+    }
+
+    // Signing with EC algorithm produces META-INF/*.EC file name not compatible with JAR File Spec however it's compatible with java.util.JarVerifier
+    // and our JarSignatureCollector
+    @Test
+    fun `one signer with EC algorithm`() {
+        dir.generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME.toString(), "EC")
+        dir.createJar(FILENAME, "_signable1", "_signable2")
+        val key = dir.signJar(FILENAME, CHARLIE, CHARLIE_PASS)
+        assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
     private fun signAsAlice() = dir.signJar(FILENAME, ALICE, ALICE_PASS)
