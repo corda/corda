@@ -63,8 +63,14 @@ class DefaultLocalSerializerFactory(
             EnumMap<TransformTypes, MutableList<Transform>> =
             transformsCache.computeIfAbsent(name) { _ -> builder() }
 
-    override fun get(declaredType: Type): AMQPSerializer<Any> =
-            get(declaredType, typeModel.inspect(declaredType))
+    override fun get(declaredType: Type): AMQPSerializer<Any> {
+        val resolvedType = when(declaredType) {
+            is WildcardType -> if (declaredType.upperBounds.size == 1) declaredType.upperBounds[0]
+            else throw IllegalArgumentException("Cannot obtain upper bound for type $declaredType")
+            else -> declaredType
+        }
+        return get(resolvedType, typeModel.inspect(resolvedType))
+    }
 
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
             get(typeInformation.observedType, typeInformation)
@@ -180,6 +186,9 @@ class DefaultLocalSerializerFactory(
                 whitelist.requireWhitelisted(clazz)
                 SingletonSerializer(clazz, singleton, this)
             } else {
+                if (type.typeName.startsWith("?")) {
+                    assert(false)
+                }
                 whitelist.requireWhitelisted(type)
                 ObjectSerializer(type, this)
             }
