@@ -137,10 +137,9 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
     // This needs to be called before loggers (See: NodeStartup.kt:51 logger called by lazy, initLogging happens before).
     // Node's logging is more rich. In corda configurations two properties, defaultLoggingLevel and consoleLogLevel, are usually used.
     open fun initLogging() {
-        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-        System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
         if (verbose) {
-            System.setProperty("consoleLogLevel", loggingLevel)
+            System.setProperty("consoleLogLevel", specifiedLogLevel)
         }
         System.setProperty("log-path", Paths.get(".").toString())
     }
@@ -154,6 +153,8 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         logger.info("Application Args: ${args.joinToString(" ")}")
         return runProgram()
     }
+
+    val specifiedLogLevel: String by lazy { System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH) }
 }
 
 /**

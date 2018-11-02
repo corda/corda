@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="info">
+<Configuration status="info" packages="net.corda.cliutils">
 
     <Properties>
         <Property name="log-path">${sys:log-path:-logs}</Property>
         <Property name="log-name">node-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
-        <Property name="defaultLogLevel">${sys:log4j2.level:-info}</Property>
+        <Property name="defaultLogLevel">${sys:defaultLogLevel:-info}</Property>
         <Property name="consoleLogLevel">${sys:consoleLogLevel:-error}</Property>
-        <Property name="fileLogLevel">${sys:fileLogLevel:-${defaultLogLevel}}</Property>
     </Properties>
 
     <Appenders>
@@ -78,7 +77,7 @@
     <Loggers>
         <Root level="${defaultLogLevel}">
             <AppenderRef ref="Console-Appender" level="${consoleLogLevel}"/>
-            <AppenderRef ref="RollingFile-Appender" level="${fileLogLevel}"/>
+            <AppenderRef ref="RollingFile-Appender"/>
         </Root>
         <Logger name="BasicInfo" additivity="false">
             <AppenderRef ref="Console-Appender-Println"/>
