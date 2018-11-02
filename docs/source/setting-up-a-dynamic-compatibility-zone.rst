@@ -146,12 +146,12 @@ tree, but a flavour of it looks like this:
 
       NetworkParameters networkParameters = new NetworkParameters(
                 4,                        // minPlatformVersion
-                Collections.emptyList(),  // notaries
+                Collections.emptyList(),  // the `NotaryInfo`s of all the network's notaries
                 1024 * 1024 * 20,         // maxMessageSize
                 1024 * 1024 * 15,         // maxTransactionSize
                 Instant.now(),            // modifiedTime
                 2,                        // epoch
-                Collections.emptyMap()    // whitelist
+                Collections.emptyMap()    // whitelisted contract code JARs
       );
       CertificateAndKeyPair signingCertAndKeyPair = loadNetworkMapCA();
       SerializedBytes<SignedDataWithCert<NetworkParameters>> bytes = SerializedBytes.from(netMapCA.sign(networkParameters));
