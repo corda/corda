@@ -157,7 +157,10 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         return when {
             attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)
-            else -> makeSignatureAttachmentConstraint(attachmentSigners)
+            else -> {
+                services.ensureMinimumPlatformVersion(4, "Signature constraints")
+                makeSignatureAttachmentConstraint(attachmentSigners)
+            }
         }
     }
 

@@ -7,6 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.checkMinimumPlatformVersion
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
@@ -148,6 +149,8 @@ data class LedgerTransaction @JvmOverloads constructor(
 
             val contractAttachment = uniqueAttachmentsForStateContract.first()
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract, networkParameters?.whitelistedContractImplementations)
+            if (state.constraint is SignatureAttachmentConstraint)
+                checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
