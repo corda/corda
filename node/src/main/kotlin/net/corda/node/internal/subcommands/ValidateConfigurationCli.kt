@@ -17,7 +17,7 @@ import java.nio.file.Path
 
 internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
     internal companion object {
-        private val logger = loggerFor<ValidateConfigurationCli>()
+        private val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 
         internal fun logConfigurationErrors(errors: Iterable<Exception>, configFile: Path) {
             errors.forEach { error ->
@@ -56,7 +56,7 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
 internal fun SharedNodeCmdLineOptions.nodeConfiguration(): Valid<NodeConfiguration> = NodeConfigurationParser.invoke(this)
 
 private object NodeConfigurationParser : (SharedNodeCmdLineOptions) -> Valid<NodeConfiguration> {
-    private val logger = loggerFor<ValidateConfigurationCli>()
+    private val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 
     private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
 
