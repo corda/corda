@@ -24,7 +24,12 @@ class ConfigHolder(services: AppServiceHub) : SingletonSerializeAsToken() {
     val issuableCurrencies: List<Currency>
 
     init {
-        val issuableCurrenciesStringList: List<String> = uncheckedCast(services.getAppContext().config.get("issuableCurrencies"))
+        val config = services.getAppContext().config
+        val issuableCurrenciesStringList: List<String> = if (config.exists("issuableCurrencies")) {
+            uncheckedCast(config.get("issuableCurrencies"))
+        } else {
+            emptyList()
+        }
         issuableCurrencies = issuableCurrenciesStringList.map(Currency::getInstance)
         (issuableCurrencies - supportedCurrencies).let {
             require(it.isEmpty()) { "$it are not supported currencies" }
