@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.internal.div
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.driver.DriverParameters
@@ -18,12 +19,7 @@ class ErrorCodeLoggingTests {
     fun `log entries with a throwable and ERROR or WARN get an error code appended`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(startInSameProcess = false).getOrThrow()
-            try {
-                node.rpc.startFlow(::MyFlow).returnValue.getOrThrow()
-            } catch (e: Exception) {
-                // This is expected to throw an exception.
-            }
-
+            node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
 
             val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.toList() }
@@ -38,6 +34,14 @@ class ErrorCodeLoggingTests {
         override fun call(): String {
             throw IllegalArgumentException("Mwahahahah")
         }
+    }
+}
+
+private fun FlowHandle<*>.waitForCompletion() {
+    try {
+        returnValue.getOrThrow()
+    } catch (e: Exception) {
+        // This is expected to throw an exception, using getOrThrow() just to wait until done.
     }
 }
 
