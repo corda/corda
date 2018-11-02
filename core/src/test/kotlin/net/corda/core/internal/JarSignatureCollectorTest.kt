@@ -36,7 +36,6 @@ class JarSignatureCollectorTest {
         fun beforeClass() {
             dir.generateKey(ALICE, ALICE_PASS, ALICE_NAME.toString())
             dir.generateKey(BOB, BOB_PASS, BOB_NAME.toString())
-            dir.generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME.toString(), "EC")
 
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))
@@ -131,16 +130,14 @@ class JarSignatureCollectorTest {
         assertFailsWith<SecurityException> { dir.getJarSigners(FILENAME) }
     }
 
-    // Signing using EC algorithm produced JAR File spec incompatible signature block (META-INF/*.EC) which is anyway accepted by jarsiner, see [JarSignatureCollector]
+    // Signing with EC algorithm produces META-INF/*.EC file name not compatible with JAR File Spec however it's compatible with java.util.JarVerifier
+    // and our JarSignatureCollector
     @Test
-    fun `one signer with EC sign algorithm`() {
+    fun `one signer with EC algorithm`() {
+        dir.generateKey(CHARLIE, CHARLIE_PASS, CHARLIE_NAME.toString(), "EC")
         dir.createJar(FILENAME, "_signable1", "_signable2")
-        val charlieKey = dir.signJar(FILENAME, CHARLIE, CHARLIE_PASS)
-        assertEquals(setOf(charlieKey), dir.getJarSigners(FILENAME).toSet()) // We only reused CHARLIE's distinguished name, so the keys will be different.
-
-        (dir / "my-dir").createDirectory()
-        dir.updateJar(FILENAME, "my-dir")
-        assertEquals(setOf(charlieKey), dir.getJarSigners(FILENAME).toSet()) // Unsigned directory is irrelevant.
+        val key = dir.signJar(FILENAME, CHARLIE, CHARLIE_PASS)
+        assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
     private fun signAsAlice() = dir.signJar(FILENAME, ALICE, ALICE_PASS)

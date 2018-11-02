@@ -99,3 +99,12 @@ application development please continue to refer to `the main project documentat
    corda-networks-index.rst
    certificate-revocation
 
+.. conditional-toctree::
+   :caption: Corda Network
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   corda-network/index.md
+   corda-network/governance-structure.md
+   corda-network/governance-guidelines.md
+   corda-network/joining-corda-network.md

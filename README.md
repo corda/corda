@@ -38,7 +38,7 @@ Corda is an open source blockchain project, designed for business from the start
 ## Useful links
 
 * [Project Website](https://corda.net)
-* [Mailing Lists](https://www.corda.net/mailing-lists/)
+* [Mailing List](https://groups.io/g/corda-dev/)
 * [Documentation](https://docs.corda.net)
 * [Stack Overflow Tag](https://stackoverflow.com/questions/tagged/corda)
 * [Slack Channel](https://slack.corda.net/)

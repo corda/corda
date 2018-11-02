@@ -1,8 +1,10 @@
 @file:KeepForDJVM
+
 package net.corda.core.utilities
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.concurrent.get
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
@@ -135,6 +137,12 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 } catch (e: ExecutionException) {
     throw e.cause!!
 }
+
+/**
+ * Returns a [List] implementation that applies the expensive [transform] function only when an element is accessed and then caches the calculated values.
+ * Size is very cheap as it doesn't call [transform].
+ */
+fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
 
 private const val MAX_SIZE = 100
 private val warnings = Collections.newSetFromMap(object : LinkedHashMap<String, Boolean>() {
