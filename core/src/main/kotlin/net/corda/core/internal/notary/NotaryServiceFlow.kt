@@ -6,6 +6,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.IdempotentFlow
 import net.corda.core.utilities.unwrap
 
 /**
@@ -17,7 +18,7 @@ import net.corda.core.utilities.unwrap
  * Additional transaction validation logic can be added when implementing [validateRequest].
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>(), IdempotentFlow {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000

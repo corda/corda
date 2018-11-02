@@ -15,8 +15,8 @@ import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.notary.AsyncCFTNotaryService
-import net.corda.core.internal.notary.AsyncUniquenessProvider.Result
+import net.corda.core.internal.notary.SinglePartyNotaryService
+import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
@@ -223,7 +223,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                 if (requestSignature == null || random.nextInt(10) < 2) {
                     requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
                 }
-                futures += AsyncCFTNotaryService.CommitOperation(
+                futures += SinglePartyNotaryService.CommitOperation(
                         service,
                         inputs,
                         txId,
