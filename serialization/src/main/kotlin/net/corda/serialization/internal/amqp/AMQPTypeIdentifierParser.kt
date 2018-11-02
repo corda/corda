@@ -123,7 +123,7 @@ object AMQPTypeIdentifierParser {
 
             fun addParameter(parameter: TypeIdentifier) = copy(parameters = parameters + parameter)
 
-            override fun getTypeIdentifier() = TypeIdentifier.Parameterised(typeName, parameters)
+            override fun getTypeIdentifier() = TypeIdentifier.Parameterised(typeName, null, parameters)
         }
 
         /**

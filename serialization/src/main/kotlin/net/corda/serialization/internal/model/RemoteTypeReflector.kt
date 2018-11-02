@@ -30,7 +30,8 @@ data class ReflectedTypeInformation(
  */
 class TypeLoadingRemoteTypeReflector(
         private val typeLoader: TypeLoader,
-        private val localTypeModel: FingerprintingLocalTypeModel): RemoteTypeReflector {
+        private val localTypeModel: LocalTypeModel,
+        private val fingerPrinter: FingerPrinter): RemoteTypeReflector {
 
     // Reflected type information is cached by remote type information.
     private val cache = DefaultCacheProvider.createCache<RemoteTypeInformation, ReflectedTypeInformation>()
@@ -38,7 +39,8 @@ class TypeLoadingRemoteTypeReflector(
     override fun reflect(remoteTypeInformation: RemoteTypeInformation): ReflectedTypeInformation =
         cache.computeIfAbsent(remoteTypeInformation) { _ ->
             val type = typeLoader.load(remoteTypeInformation)
-            val (fingerprint, localTypeInformation) = localTypeModel.inspect(type)
+            val localTypeInformation = localTypeModel.inspect(type)
+            val fingerprint = fingerPrinter.fingerprint(localTypeInformation)
 
             ReflectedTypeInformation(
                     remoteTypeInformation,

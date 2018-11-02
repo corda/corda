@@ -4,9 +4,11 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
@@ -41,33 +43,43 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                 }
         ))
 
+        private val supportedTypeIdentifiers = supportedTypes.keys.asSequence()
+                .map { TypeIdentifier.forGenericType(it) }.toSet()
+
         private fun findConcreteType(clazz: Class<*>): MapCreationFunction {
             return supportedTypes[clazz] ?: throw AMQPNotSerializableException(clazz, "Unsupported map type $clazz.")
         }
 
-        fun deriveParameterizedType(declaredType: Type, declaredClass: Class<*>, actualClass: Class<*>?): ParameterizedType {
-            declaredClass.checkSupportedMapType()
-            if (supportedTypes.containsKey(declaredClass)) {
-                // Simple case - it is already known to be a map.
-                return deriveParametrizedType(declaredType, uncheckedCast(declaredClass))
-            } else if (actualClass != null && Map::class.java.isAssignableFrom(actualClass)) {
-                // Declared class is not map, but [actualClass] is - represent it accordingly.
-                val mapClass = findMostSuitableMapType(actualClass)
-                return deriveParametrizedType(declaredType, mapClass)
-            }
+        fun resolveDeclared(declaredTypeInformation: LocalTypeInformation.AMap): LocalTypeInformation.AMap {
+            declaredTypeInformation.observedType.asClass().checkSupportedMapType()
+            if (supportedTypeIdentifiers.contains(declaredTypeInformation.typeIdentifier.erased))
+                return if (!declaredTypeInformation.isErased) declaredTypeInformation
+                else declaredTypeInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
 
-            throw AMQPNotSerializableException(declaredType,
-                    "Cannot derive map type for declaredType=\"$declaredType\", declaredClass=\"$declaredClass\", actualClass=\"$actualClass\"")
+            throw NotSerializableException("Cannot derive map type for declared type " +
+                    declaredTypeInformation.prettyPrint(false))
         }
 
-        private fun deriveParametrizedType(declaredType: Type, collectionClass: Class<out Map<*, *>>): ParameterizedType =
-                (declaredType as? ParameterizedType)
-                        ?: TypeIdentifier.Erased(collectionClass.name, 2)
-                                .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)
-                                .getLocalType(
-                                        collectionClass.classLoader ?:
-                                        TypeIdentifier::class.java.classLoader) as ParameterizedType
+        fun resolveActual(actualClass: Class<*>, declaredTypeInformation: LocalTypeInformation.AMap): LocalTypeInformation.AMap {
+            declaredTypeInformation.observedType.asClass().checkSupportedMapType()
+            if (supportedTypeIdentifiers.contains(declaredTypeInformation.typeIdentifier.erased)) {
+                return if (!declaredTypeInformation.isErased) declaredTypeInformation
+                else declaredTypeInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
+            }
 
+            val mapClass = findMostSuitableMapType(actualClass)
+            val erasedInformation = LocalTypeInformation.AMap(
+                    mapClass,
+                    TypeIdentifier.forClass(mapClass),
+                    LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
+
+            return when(declaredTypeInformation.typeIdentifier) {
+                is TypeIdentifier.Parameterised -> erasedInformation.withParameters(
+                        declaredTypeInformation.keyType,
+                        declaredTypeInformation.valueType)
+                else -> erasedInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
+            }
+        }
 
         private fun findMostSuitableMapType(actualClass: Class<*>): Class<out Map<*, *>> =
                 MapSerializer.supportedTypes.keys.findLast { it.isAssignableFrom(actualClass) }!!

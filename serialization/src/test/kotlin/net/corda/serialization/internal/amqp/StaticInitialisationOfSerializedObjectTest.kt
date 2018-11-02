@@ -65,7 +65,7 @@ class StaticInitialisationOfSerializedObjectTest {
 
         // build a serializer for type D without an instance of it to serialise, since
         // we can't actually construct one
-        sf.get(null, D::class.java)
+        sf.get(D::class.java)
 
         // post creation of the serializer we should have two elements in the map, this
         // proves we didn't statically construct an instance of C when building the serializer

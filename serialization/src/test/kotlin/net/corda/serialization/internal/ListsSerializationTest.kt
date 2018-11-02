@@ -88,7 +88,7 @@ class ListsSerializationTest {
         payload.add(2)
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declaredType")
+                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declared type")
     }
 
     @CordaSerializable

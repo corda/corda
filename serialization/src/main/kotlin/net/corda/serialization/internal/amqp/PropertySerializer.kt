@@ -53,7 +53,7 @@ sealed class PropertySerializer(val name: String, val propertyReader: PropertyRe
                     else -> AMQPPrimitivePropertySerializer(name, readMethod, resolvedType)
                 }
             } else {
-                DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(null, resolvedType) }
+                DescribedTypePropertySerializer(name, readMethod, resolvedType) { factory.get(resolvedType) }
             }
         }
     }

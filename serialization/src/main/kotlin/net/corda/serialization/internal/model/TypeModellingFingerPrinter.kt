@@ -29,13 +29,16 @@ interface FingerPrinter {
  */
 class CustomisableLocalTypeInformationFingerPrinter(
         private val customTypeDescriptorLookup: CustomSerializerRegistry,
-        private val typeModel: LocalTypeModel,
         private val debugEnabled: Boolean = false) : FingerPrinter {
+
+    private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
+
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
-            CustomisableLocalTypeInformationFingerPrintingState(
-                    customTypeDescriptorLookup,
-                    typeModel,
-                    FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
+            cache.computeIfAbsent(typeInformation.typeIdentifier) {
+                CustomisableLocalTypeInformationFingerPrintingState(
+                        customTypeDescriptorLookup,
+                        FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
+            }
 }
 
 /**
@@ -86,7 +89,6 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
  */
 private class CustomisableLocalTypeInformationFingerPrintingState(
         private val customSerializerRegistry: CustomSerializerRegistry,
-        private val typeModel: LocalTypeModel,
         private val writer: FingerprintWriter) {
 
     companion object {
@@ -109,8 +111,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
         // Don't go round in circles.
         when {
             hasSeen(type.typeIdentifier) -> writer.writeAlreadySeen()
-            type is LocalTypeInformation.Cycle -> fingerprintType(typeModel[type.typeIdentifier] ?:
-                throw IllegalStateException("Cycle $type encountered, but no type information found in type model"))
+            type is LocalTypeInformation.Cycle -> fingerprintType(type.follow)
             else -> ifThrowsAppend({ type.observedType.typeName }, {
                 typesSeen.add(type.typeIdentifier)
                 fingerprintNewType(type)
@@ -130,6 +131,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
                 writer.writeArray()
             }
             is LocalTypeInformation.ACollection -> fingerprintCollection(type)
+            is LocalTypeInformation.AMap -> fingerprintMap(type)
             is LocalTypeInformation.Atomic -> fingerprintName(type)
             is LocalTypeInformation.Opaque -> fingerprintOpaque(type)
             is LocalTypeInformation.AnEnum -> fingerprintEnum(type)
@@ -144,7 +146,13 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
 
     private fun fingerprintCollection(type: LocalTypeInformation.ACollection) {
         fingerprintName(type)
-        fingerprintTypeParameters(type.typeParameters)
+        fingerprintType(type.elementType)
+    }
+
+    private fun fingerprintMap(type: LocalTypeInformation.AMap) {
+        fingerprintName(type)
+        fingerprintType(type.keyType)
+        fingerprintType(type.valueType)
     }
 
     private fun fingerprintOpaque(type: LocalTypeInformation) =

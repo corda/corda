@@ -11,6 +11,7 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.io.OutputStream
 import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -118,7 +119,7 @@ open class SerializationOutput constructor(
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, context, debugIndent)
+            writeObject(obj, data, if (type.typeName == "?" || type == SerializerFactory.AnyType) obj.javaClass else type, context, debugIndent)
         }
     }
 
@@ -144,12 +145,15 @@ open class SerializationOutput constructor(
     }
 
     internal open fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
+        if (typeNotation.any { it.name == "?" }) {
+            assert(false)
+        }
         return schemaHistory.addAll(typeNotation)
     }
 
     internal open fun requireSerializer(type: Type) {
-        if (type != SerializerFactory.AnyType && type != Object::class.java) {
-            val serializer = serializerFactory.get(null, type)
+        if (type != Object::class.java && type.typeName != "?") {
+            val serializer = serializerFactory.get(type)
             if (serializer !in serializerHistory) {
                 serializerHistory.add(serializer)
                 serializer.writeClassInfo(this)

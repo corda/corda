@@ -12,7 +12,6 @@ import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import java.lang.UnsupportedOperationException
 import java.lang.reflect.Type
-import java.util.*
 
 /**
  * A factory that knows how to create serializers to deserialize values sent to us by remote parties.
@@ -119,12 +118,11 @@ class DefaultRemoteSerializerFactory(
 
     // TODO: class loader logic, and compare the schema.
     private fun processRestrictedType(typeNotation: RestrictedType) =
-            localSerializerFactory.get(null, typeForName(typeNotation.name, classloader))
+            localSerializerFactory.get(typeForName(typeNotation.name, classloader))
 
     private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
         // TODO: class loader logic, and compare the schema.
-        val type = typeForName(typeNotation.name, classloader)
-        return localSerializerFactory.get(type.asClass(), type)
+        return localSerializerFactory.get(typeForName(typeNotation.name, classloader))
     }
 
     private fun typeForName(name: String, classloader: ClassLoader): Type =

@@ -1,7 +1,9 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.kotlinObjectInstance
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -10,6 +12,7 @@ import org.apache.qpid.proton.amqp.Symbol
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 import java.util.*
 
 interface LocalSerializerFactory {
@@ -26,8 +29,9 @@ interface LocalSerializerFactory {
      * restricted type processing).
      */
     @Throws(NotSerializableException::class)
-    fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any>
+    fun get(actualClass: Class<*>, declaredType: Type): AMQPSerializer<Any>
 
+    fun get(declaredType: Type): AMQPSerializer<Any>
     fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any>
 
     fun createDescriptor(type: Type): Symbol
@@ -37,7 +41,8 @@ interface LocalSerializerFactory {
 
 class DefaultLocalSerializerFactory(
         override val whitelist: ClassWhitelist,
-        private val typeModel: FingerprintingLocalTypeModel,
+        private val typeModel: LocalTypeModel,
+        private val fingerPrinter: FingerPrinter,
         override val classloader: ClassLoader,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val customSerializerRegistry: CustomSerializerRegistry,
@@ -49,108 +54,136 @@ class DefaultLocalSerializerFactory(
     }
 
     private val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
-    private val serializersByType: MutableMap<Type, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private val serializersByType: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
 
     override fun createDescriptor(type: Type): Symbol =
-        Symbol.valueOf("$DESCRIPTOR_DOMAIN:${typeModel.inspect(type).fingerprint}")
+            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeModel.inspect(type))}")
 
     override fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>> =
             transformsCache.computeIfAbsent(name) { _ -> builder() }
 
-    override fun get(localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> = get(null, localTypeInformation.observedType)
+    override fun get(declaredType: Type): AMQPSerializer<Any> =
+            get(declaredType, typeModel.inspect(declaredType))
 
-    override fun get(actualClass: Class<*>?, declaredType: Type): AMQPSerializer<Any> {
+    override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
+            get(typeInformation.observedType, typeInformation)
+
+    private fun make(typeInformation: LocalTypeInformation, build: () -> AMQPSerializer<Any>) =
+            make(typeInformation.typeIdentifier, build)
+
+    private fun make(typeIdentifier: TypeIdentifier, build: () -> AMQPSerializer<Any>) =
+            serializersByType.computeIfAbsent(typeIdentifier) { _ ->
+                build()
+            }
+
+    private fun get(declaredType: Type, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
+        val declaredClass = declaredType.asClass()
+
+        // can be useful to enable but will be *extremely* chatty if you do
+        logger.trace { "Get Serializer for $declaredClass ${declaredType.typeName}" }
+
+        return when(localTypeInformation) {
+            is LocalTypeInformation.ACollection -> makeDeclaredCollection(localTypeInformation)
+            is LocalTypeInformation.AMap -> makeDeclaredMap(localTypeInformation)
+            is LocalTypeInformation.AnEnum -> makeDeclaredEnum(localTypeInformation, declaredType, declaredClass)
+            else -> makeClassSerializer(declaredClass, declaredType, declaredType, localTypeInformation)
+        }.also { serializer -> descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer }
+    }
+
+    private fun makeDeclaredEnum(localTypeInformation: LocalTypeInformation, declaredType: Type, declaredClass: Class<*>): AMQPSerializer<Any> =
+        make(localTypeInformation) {
+            whitelist.requireWhitelisted(declaredType)
+            EnumSerializer(declaredType, declaredClass, this)
+        }
+
+    private fun makeActualEnum(localTypeInformation: LocalTypeInformation, declaredType: Type, declaredClass: Class<*>): AMQPSerializer<Any> =
+            make(localTypeInformation) {
+                whitelist.requireWhitelisted(declaredType)
+                println(localTypeInformation)
+                println(declaredType)
+                EnumSerializer(declaredType, declaredClass, this)
+            }
+
+    private fun makeDeclaredCollection(localTypeInformation: LocalTypeInformation.ACollection): AMQPSerializer<Any> {
+        val resolved = CollectionSerializer.resolveDeclared(localTypeInformation)
+        return make(resolved) {
+            CollectionSerializer(resolved.observedType as ParameterizedType, this)
+        }
+    }
+
+    private fun makeDeclaredMap(localTypeInformation: LocalTypeInformation.AMap): AMQPSerializer<Any> {
+        val resolved = MapSerializer.resolveDeclared(localTypeInformation)
+        return make(resolved) {
+            MapSerializer(resolved.observedType as ParameterizedType, this)
+        }
+    }
+
+    override fun get(actualClass: Class<*>, declaredType: Type): AMQPSerializer<Any> {
         // can be useful to enable but will be *extremely* chatty if you do
         logger.trace { "Get Serializer for $actualClass ${declaredType.typeName}" }
 
         val declaredClass = declaredType.asClass()
-        val actualType: Type = if (actualClass == null) declaredType
-        else inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+        val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
+        val typeInformation = typeModel.inspect(actualType)
 
-        val serializer = when {
-            // Declared class may not be set to Collection, but actual class could be a collection.
-            // In this case use of CollectionSerializer is perfectly appropriate.
-            (Collection::class.java.isAssignableFrom(declaredClass) ||
-                    (actualClass != null && Collection::class.java.isAssignableFrom(actualClass))) &&
-                    !EnumSet::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                val declaredTypeAmended = CollectionSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                serializersByType.computeIfAbsent(declaredTypeAmended) {
-                    CollectionSerializer(declaredTypeAmended, this)
-                }
-            }
-            // Declared class may not be set to Map, but actual class could be a map.
-            // In this case use of MapSerializer is perfectly appropriate.
-            (Map::class.java.isAssignableFrom(declaredClass) ||
-                    (actualClass != null && Map::class.java.isAssignableFrom(actualClass))) -> {
-                val declaredTypeAmended = MapSerializer.deriveParameterizedType(declaredType, declaredClass, actualClass)
-                serializersByType.computeIfAbsent(declaredTypeAmended) {
-                    makeMapSerializer(declaredTypeAmended)
-                }
-            }
-            Enum::class.java.isAssignableFrom(actualClass ?: declaredClass) -> {
-                logger.trace {
-                    "class=[${actualClass?.simpleName} | $declaredClass] is an enumeration " +
-                            "declaredType=${declaredType.typeName} " +
-                            "isEnum=${declaredType::class.java.isEnum}"
-                }
+        return when(typeInformation) {
+            is LocalTypeInformation.ACollection -> makeActualCollection(actualClass, typeInformation)
+            is LocalTypeInformation.AMap -> makeActualMap(declaredType, actualClass, typeInformation)
+            is LocalTypeInformation.AnEnum -> makeActualEnum(typeInformation, actualType, actualClass)
+            else -> makeClassSerializer(actualClass, actualType, declaredType, typeInformation)
+        }.also { serializer -> descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer }
+    }
 
-                serializersByType.computeIfAbsent(actualClass ?: declaredClass) {
-                    whitelist.requireWhitelisted(actualType)
-                    EnumSerializer(actualType, actualClass ?: declaredClass, this)
-                }
-            }
-            else -> {
-                makeClassSerializer(actualClass ?: declaredClass, actualType, declaredType)
-            }
+    private fun makeActualMap(declaredType: Type, actualClass: Class<*>, typeInformation: LocalTypeInformation.AMap): AMQPSerializer<Any> {
+        declaredType.asClass().checkSupportedMapType()
+        val resolved = MapSerializer.resolveActual(actualClass, typeInformation)
+        return make(resolved) {
+            MapSerializer(resolved.observedType as ParameterizedType, this)
         }
+    }
 
-        descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer
-
-        return serializer
+    private fun makeActualCollection(actualClass: Class<*>, typeInformation: LocalTypeInformation.ACollection): AMQPSerializer<Any> {
+        val resolved = CollectionSerializer.resolveActual(actualClass, typeInformation)
+        return serializersByType.computeIfAbsent(resolved.typeIdentifier) {
+            CollectionSerializer(resolved.observedType as ParameterizedType, this)
+        }
     }
 
     private fun makeClassSerializer(
             clazz: Class<*>,
             type: Type,
-            declaredType: Type
-    ): AMQPSerializer<Any> = serializersByType.computeIfAbsent(type) {
+            declaredType: Type,
+            typeInformation: LocalTypeInformation
+    ): AMQPSerializer<Any> = make(typeInformation) {
         logger.debug { "class=${clazz.simpleName}, type=$type is a composite type" }
-        if (clazz.isSynthetic) {
-            // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
-            // captures Lambda expressions and other anonymous functions
-            throw AMQPNotSerializableException(
-                    type,
-                    "Serializer does not support synthetic classes")
-        } else if (SerializerFactory.isPrimitive(clazz)) {
-            AMQPPrimitiveSerializer(clazz)
-        } else {
-            customSerializerRegistry.findCustomSerializer(clazz, declaredType) ?: run {
-                if (onlyCustomSerializers) {
-                    throw AMQPNotSerializableException(type, "Only allowing custom serializers")
-                }
-                if (type.isArray()) {
-                    // Don't need to check the whitelist since each element will come back through the whitelisting process.
-                    if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
-                    else ArraySerializer.make(type, this)
-                } else {
-                    val singleton = clazz.kotlinObjectInstance
-                    if (singleton != null) {
-                        whitelist.requireWhitelisted(clazz)
-                        SingletonSerializer(clazz, singleton, this)
-                    } else {
-                        whitelist.requireWhitelisted(type)
-                        ObjectSerializer(type, this)
-                    }
-                }
-            }
+        when {
+            clazz.isSynthetic -> // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
+                // captures Lambda expressions and other anonymous functions
+                throw AMQPNotSerializableException(
+                        type,
+                        "Serializer does not support synthetic classes")
+            SerializerFactory.isPrimitive(clazz) -> AMQPPrimitiveSerializer(clazz)
+            else -> customSerializerRegistry.findCustomSerializer(clazz, declaredType) ?:
+                makeNonCustomSerializer(type, clazz)
         }
     }
 
-    private fun makeMapSerializer(declaredType: ParameterizedType): AMQPSerializer<Any> {
-        val rawType = declaredType.rawType as Class<*>
-        rawType.checkSupportedMapType()
-        return MapSerializer(declaredType, this)
+    private fun makeNonCustomSerializer(type: Type, clazz: Class<*>): AMQPSerializer<Any> = when {
+        onlyCustomSerializers -> throw AMQPNotSerializableException(type, "Only allowing custom serializers")
+        type.isArray() ->
+            if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
+            else ArraySerializer.make(type, this)
+        else -> {
+            val singleton = clazz.kotlinObjectInstance
+            if (singleton != null) {
+                whitelist.requireWhitelisted(clazz)
+                SingletonSerializer(clazz, singleton, this)
+            } else {
+                whitelist.requireWhitelisted(type)
+                ObjectSerializer(type, this)
+            }
+        }
     }
 
 }
