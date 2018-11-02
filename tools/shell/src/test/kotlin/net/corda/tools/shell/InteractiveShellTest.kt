@@ -59,7 +59,6 @@ class InteractiveShellTest {
         assertEquals(expected, output!!, input)
     }
 
-    
     @Test
     fun flowStartSimple() {
         check("a: Hi there", "Hi there")
