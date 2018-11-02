@@ -58,6 +58,7 @@ class InteractiveShellTest {
         }, input, FlowA::class.java, om)
         assertEquals(expected, output!!, input)
     }
+
     
     @Test
     fun flowStartSimple() {
