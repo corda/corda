@@ -2,10 +2,7 @@ package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.TransactionVerificationException
-import net.corda.core.contracts.requireThat
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.finance.DOLLARS
@@ -33,6 +30,7 @@ class TransactionEncumbranceTests {
 
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+        val DUMMY_NOTARY2 = TestIdentity(DUMMY_NOTARY_NAME.copy(organisation = "${DUMMY_NOTARY_NAME.organisation}2"), 30).party
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val MINI_CORP = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).party
         val MEGA_CORP get() = megaCorp.party
@@ -77,7 +75,7 @@ class TransactionEncumbranceTests {
     }
 
     @Test
-    fun `states can be bi-directionally encumbered`() {
+    fun `states must be bi-directionally encumbered`() {
         // Basic encumbrance example for encumbrance index links 0 -> 1 and 1 -> 0
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -314,6 +312,43 @@ class TransactionEncumbranceTests {
                 timeWindow(FIVE_PM)
                 this `fails with` "Missing required encumbrance 1 in INPUT"
             }
+        }
+    }
+
+    @Test
+    fun `encumbered states cannot be assigned to different notaries`() {
+        // Single encumbrance with different notaries.
+        assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
+            TransactionBuilder()
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticHashConstraint)
+                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                    .toLedgerTransaction(ledgerServices)
+        }
+
+        // More complex encumbrance (full cycle of size 4) where one of the encumbered states is assigned to a different notary.
+        // 0 -> 1, 1 -> 3, 3 -> 2, 2 -> 0
+        assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
+            TransactionBuilder()
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 2, AutomaticHashConstraint)
+                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                    .toLedgerTransaction(ledgerServices)
+        }
+
+        // Two different encumbrance chains, where only one fails due to mismatched notary.
+        // 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2 (where encumbered states with indices 2 and 3, respectively, are assigned
+        // to different notaries.
+        assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
+            TransactionBuilder()
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 0, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
+                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 2, AutomaticHashConstraint)
+                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                    .toLedgerTransaction(ledgerServices)
         }
     }
 }
