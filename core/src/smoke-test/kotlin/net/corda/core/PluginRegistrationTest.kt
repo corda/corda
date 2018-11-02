@@ -5,14 +5,12 @@ import net.corda.core.internal.div
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Ignore
+import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.FileOutputStream
 import java.util.jar.JarOutputStream
-
 
 class PluginRegistrationTest {
     private companion object {
@@ -23,7 +21,6 @@ class PluginRegistrationTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    @Ignore
     @Test
     fun `test plugin registration` () {
         // Create node jarDir with an empty jar file in it
@@ -39,7 +36,7 @@ class PluginRegistrationTest {
                 jarDirs = listOf(jarDir))
 
         // Check we do not have plugin on classpath
-        assertThatThrownBy({ Class.forName("net.corda.smoketesting.plugins.DummyJDBCDriver") })
+        assertThatCode { Class.forName("net.corda.smoketesting.plugins.DummyJDBCDriver") }.isInstanceOf(ClassNotFoundException::class.java)
 
         // Install plugin Jars in node directory, then start the node and close it
         val consoleOutput = temporaryFolder.newFile("node-stdout.txt")

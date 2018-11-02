@@ -17,7 +17,6 @@ import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.nio.file.Path
-import java.util.*
 
 class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall application for handling outbound and inbound connections to Corda.") {
     companion object {
@@ -158,10 +157,9 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
     }
 
     override fun initLogging() {
-        val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-        System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
         if (verbose) {
-            System.setProperty("consoleLogLevel", loggingLevel)
+            System.setProperty("consoleLogLevel", specifiedLogLevel)
         }
         System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
