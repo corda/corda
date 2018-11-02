@@ -34,10 +34,11 @@ call a coalition of nodes that have chosen to run a particular app within a give
 aren't represented in the Corda API at this time, partly because the technical side is so simple. You can create one
 via a simple three step process:
 
-1. Distribute a list of X.500 names that are members of your business network, e.g. a simple way to do this is by
-   hosting a text file with one name per line on your website at a fixed HTTPS URL. You could also write a simple
-   request/response flow that serves the list over the Corda protocol itself, although this requires the business
-   network to have a node for itself.
+1. Distribute a list of X.500 names that are members of your business network. You can use the
+   `reference Business Network Membership Service implementation <https://github.com/corda/corda-solutions/tree/master/bn-apps/memberships-management>`_.
+   Alternatively, you could do this is by hosting a text file with one name per line on your website at a fixed HTTPS
+   URL. You could also write a simple request/response flow that serves the list over the Corda protocol itself,
+   although this requires the business network to have its own node.
 2. Write a bit of code that downloads and caches the contents of this file on disk, and which loads it into memory in
    the node. A good place to do this is in a class annotated with ``@CordaService``, because this class can expose
    a ``Set<Party>`` field representing the membership of your service.
