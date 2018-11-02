@@ -48,4 +48,6 @@ private inline fun <RESULT, reified ERROR : Exception> attempt(action: () -> RES
 
 internal inline fun <reified RESULT, reified ERROR : Exception> attempt(action: () -> RESULT) = attempt(action, { e: ERROR -> "value does not comply with ${RESULT::class.java.simpleName} specification (${e.message})" })
 
-private fun <RESULT> badValue(message: String) = invalid<RESULT, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(message))
+internal fun <RESULT> validValue(result: RESULT) = valid<RESULT, Configuration.Validation.Error>(result)
+
+internal fun <RESULT> badValue(message: String) = invalid<RESULT, Configuration.Validation.Error>(Configuration.Validation.Error.BadValue.of(message))
