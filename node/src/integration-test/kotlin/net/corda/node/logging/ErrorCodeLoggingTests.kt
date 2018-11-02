@@ -17,12 +17,16 @@ class ErrorCodeLoggingTests {
     @Test
     fun `log entries with a throwable and ERROR or WARN get an error code appended`() {
         driver(DriverParameters(notarySpecs = emptyList())) {
-            val logFile = startNode(startInSameProcess = false).getOrThrow().use {
-                it.rpc.startFlow(::MyFlow)
-                it.logFile()
+            val node = startNode(startInSameProcess = false).getOrThrow()
+            try {
+                node.rpc.startFlow(::MyFlow).returnValue.getOrThrow()
+            } catch (e: Exception) {
+                // This is expected to throw an exception.
             }
 
-            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.toList() }
+            val logFile = node.logFile()
+
+            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=").also { println(line) } }.toList() }
 
             assertThat(linesWithErrorCode).isNotEmpty
         }
