@@ -426,10 +426,9 @@ interface NodeStartupLogging {
 }
 
 fun CliWrapperBase.initLogging(baseDirectory: Path) {
-    val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-    System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+    System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
-        System.setProperty("consoleLogLevel", loggingLevel)
+        System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())
