@@ -136,6 +136,16 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
             "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
             "a full cycle. Offending indices $nonMatching", null)
 
+    /**
+     * If two encumbered states are assigned to different notaries, then these states cannot be encumbered. This is
+     * due to the fact that multi-notary transactions are not supported yet and thus two encumbered states with different
+     * notaries cannot be consumed in the same transaction.
+     */
+    @KeepForDJVM
+    class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party)
+        : TransactionVerificationException(txId, "Encumbered output states assigned to different notaries found. " +
+            "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]", null)
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM
