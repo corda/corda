@@ -72,9 +72,6 @@ class CachingCustomSerializerRegistry(
         // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
-
-                println("$clazz $declaredType ${TypeIdentifier.forGenericType(declaredType)}")
-                println("-> ${customSerializer::class.java}")
                 val declaredSuperClass = declaredType.asClass().superclass
 
                 return if (declaredSuperClass == null
