@@ -137,9 +137,9 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
             "a full cycle. Offending indices $nonMatching", null)
 
     /**
-     * If two encumbered states are assigned to different notaries, then these states cannot be encumbered. This is
-     * due to the fact that multi-notary transactions are not supported yet and thus two encumbered states with different
-     * notaries cannot be consumed in the same transaction.
+     * All encumbered states should be assigned to the same notary. This is due to the fact that multi-notary
+     * transactions are not supported yet and thus two encumbered states with different notaries cannot be consumed
+     * in the same transaction.
      */
     @KeepForDJVM
     class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party)

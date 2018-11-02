@@ -246,8 +246,8 @@ data class LedgerTransaction @JvmOverloads constructor(
         // Note that if a notary is defined for a transaction, we already check if all outputs are assigned
         // to the same notary (transaction's notary) in [checkNoNotaryChange()].
         if (notary == null) {
-            // Cache for already checked indices.
-            val indicesAlreadyChecked = hashSetOf<Int>()
+            // Cache to bypass already checked indices and to avoid cycles.
+            val indicesAlreadyChecked = HashSet<Int>()
             statesAndEncumbrance.forEach {
                 checkNotary(it.first, indicesAlreadyChecked)
             }

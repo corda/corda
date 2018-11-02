@@ -339,7 +339,7 @@ class TransactionEncumbranceTests {
         }
 
         // Two different encumbrance chains, where only one fails due to mismatched notary.
-        // 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2 (where encumbered states with indices 2 and 3, respectively, are assigned
+        // 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2 where encumbered states with indices 2 and 3, respectively, are assigned
         // to different notaries.
         assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
             TransactionBuilder()
