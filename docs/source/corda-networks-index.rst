@@ -9,8 +9,7 @@ Networks
    network-map
    versioning
    cipher-suites
-   bootstrapping-a-compatibility-zone
-   connecting-to-a-compatibility-zone
+   joining-a-compatibility-zone
    corda-testnet-intro
    deploy-to-testnet-index
    testnet-explorer-corda

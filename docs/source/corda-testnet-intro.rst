@@ -1,5 +1,5 @@
-What is Corda Testnet?
-======================
+Joining Corda Testnet
+=====================
 
 .. contents::
 

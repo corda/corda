@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Connecting to an existing compatibility zone
-============================================
+Joining an existing compatibility zone
+======================================
 
 To connect to a compatibility zone you need to register with its certificate signing authority (doorman) by submitting
 a certificate signing request (CSR) to obtain a valid identity for the zone. You could do this out of band, for instance
