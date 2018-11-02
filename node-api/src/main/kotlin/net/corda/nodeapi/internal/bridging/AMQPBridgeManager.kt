@@ -16,7 +16,7 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPClient
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -36,7 +36,7 @@ import kotlin.concurrent.withLock
  */
 @VisibleForTesting
 open class AMQPBridgeManager(config: MutualSslConfiguration,
-                             socksProxyConfig: SocksProxyConfig? = null,
+                             proxyConfig: ProxyConfig? = null,
                              maxMessageSize: Int,
                              enableSNI: Boolean,
                              private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
@@ -47,24 +47,24 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
 
     private class AMQPConfigurationImpl(override val keyStore: CertificateStore,
                                         override val trustStore: CertificateStore,
-                                        override val socksProxyConfig: SocksProxyConfig?,
+                                        override val proxyConfig: ProxyConfig?,
                                         override val maxMessageSize: Int,
                                         override val useOpenSsl: Boolean,
                                         override val enableSNI: Boolean,
                                         override val sourceX500Name: String? = null) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, socksProxyConfig: SocksProxyConfig?, maxMessageSize: Int, enableSNI: Boolean) : this(config.keyStore.get(),
+        constructor(config: MutualSslConfiguration, proxyConfig: ProxyConfig?, maxMessageSize: Int, enableSNI: Boolean) : this(config.keyStore.get(),
                 config.trustStore.get(),
-                socksProxyConfig,
+                proxyConfig,
                 maxMessageSize,
                 config.useOpenSsl,
                 enableSNI)
     }
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, socksProxyConfig, maxMessageSize, enableSNI)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, proxyConfig, maxMessageSize, enableSNI)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
 
-    constructor(config: MutualSslConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, enableSNI: Boolean, socksProxyConfig: SocksProxyConfig? = null) : this(config, socksProxyConfig, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: MutualSslConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int, enableSNI: Boolean, proxyConfig: ProxyConfig? = null) : this(config, proxyConfig, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool
@@ -239,7 +239,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                     return
                 }
             }
-            val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, socksProxyConfig, maxMessageSize, useOpenSsl, enableSNI, sourceX500Name) }
+            val newAMQPConfig = with(amqpConfig) { AMQPConfigurationImpl(keyStore, trustStore, proxyConfig, maxMessageSize, useOpenSsl, enableSNI, sourceX500Name) }
             val newBridge = AMQPBridge(sourceX500Name, queueName, targets, legalNames, newAMQPConfig, sharedEventLoopGroup!!, artemis!!, bridgeMetricsService)
             bridges += newBridge
             bridgeMetricsService?.bridgeCreated(targets, legalNames)

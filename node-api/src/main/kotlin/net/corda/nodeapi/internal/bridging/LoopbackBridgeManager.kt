@@ -11,7 +11,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.C
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -26,12 +26,12 @@ import org.slf4j.MDC
  */
 @VisibleForTesting
 class LoopbackBridgeManager(config: MutualSslConfiguration,
-                            socksProxyConfig: SocksProxyConfig? = null,
+                            proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             private val bridgeMetricsService: BridgeMetricsService? = null,
-                            private val isLocalInbox: (String) -> Boolean) : AMQPBridgeManager(config, socksProxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService) {
+                            private val isLocalInbox: (String) -> Boolean) : AMQPBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService) {
 
     companion object {
         private val log = contextLogger()

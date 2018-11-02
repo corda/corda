@@ -9,13 +9,25 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.config.*
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import java.nio.file.Path
 
 fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
     return try {
         parseAs<FirewallConfigurationImpl>()
     } catch (ex: UnknownConfigurationKeysException) {
+
+        // Previously `proxyConfig` was known as `socksProxyConfig`
+        data class Version3BridgeOutboundConfigurationImpl(val artemisBrokerAddress: NetworkHostAndPort,
+                                                   val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
+                                                   val customSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                                   val socksProxyConfig: ProxyConfig? = null) {
+
+            fun toConfig(): BridgeOutboundConfigurationImpl {
+                return BridgeOutboundConfigurationImpl(artemisBrokerAddress, alternateArtemisBrokerAddresses,
+                        customSSLConfiguration, socksProxyConfig)
+            }
+        }
 
         data class Version3BridgeConfigurationImpl(
                 val baseDirectory: Path,
@@ -27,7 +39,7 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
                 val trustStorePassword: String,
                 val bridgeMode: FirewallMode,
                 val networkParametersPath: Path,
-                val outboundConfig: BridgeOutboundConfigurationImpl?,
+                val outboundConfig: Version3BridgeOutboundConfigurationImpl?,
                 val inboundConfig: BridgeInboundConfigurationImpl?,
                 val bridgeInnerConfig: BridgeInnerConfigurationImpl?,
                 val floatOuterConfig: FloatOuterConfigurationImpl?,
@@ -51,7 +63,7 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
                         trustStorePassword,
                         bridgeMode,
                         networkParametersPath,
-                        outboundConfig,
+                        outboundConfig?.toConfig(),
                         inboundConfig,
                         bridgeInnerConfig,
                         floatOuterConfig,
@@ -95,7 +107,7 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
                                            override val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
                                            override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                           override val socksProxyConfig: SocksProxyConfig? = null) : BridgeOutboundConfiguration
+                                           override val proxyConfig: ProxyConfig? = null) : BridgeOutboundConfiguration
 
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
                                           override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : BridgeInboundConfiguration

@@ -12,9 +12,11 @@ Please refer to :doc:`changelog` for all Open Source changes which automatically
 Changelog entries in this unreleased section refer to Enterprise-only changes.
 
 * The ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
-  with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``
-  and within that file the ``bridgeMode`` propety has been modified to ``firewallMode`` for overall consistency.
-  This will be a breaking change for early adopters and their deployments, but hopefully will be more future proof.
+  with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``.
+  Within that configuration file the ``bridgeMode`` property has been modified to ``firewallMode`` for overall consistency.
+  Furthermore, under ``outboundConfig`` - ``socksProxyConfig`` been renamed into ``proxyConfig``.
+  This will not be a breaking change for early adopters and their deployments, as new version of software can still consume
+  old style configs and produce a meaningful warning.
 
 * Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems
   related to database migrations before exiting with a non-zero code.

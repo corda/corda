@@ -29,7 +29,7 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
     private var statusSubscriber: Subscription? = null
     private var listenerActiveSubscriber: Subscription? = null
     private var bridgeControlListener = BridgeControlListener(conf.p2pSslOptions,
-            conf.outboundConfig!!.socksProxyConfig,
+            conf.outboundConfig!!.proxyConfig,
             maxMessageSize,
             conf.bridgeInnerConfig?.enableSNI ?: true,
             { ForwardingArtemisMessageClient(artemisConnectionService) },

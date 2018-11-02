@@ -52,7 +52,7 @@ interface AMQPConfiguration {
     val maxMessageSize: Int
 
     @JvmDefault
-    val socksProxyConfig: SocksProxyConfig?
+    val proxyConfig: ProxyConfig?
         get() = null
 
     @JvmDefault

@@ -5,7 +5,7 @@ import net.corda.bridge.services.api.FirewallMode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyVersion
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -118,10 +118,10 @@ class ConfigTest {
     fun `Load config withsocks support`() {
         val configResource = "/net/corda/bridge/withsocks/firewall.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
-        assertEquals(SocksProxyVersion.SOCKS5, config.outboundConfig!!.socksProxyConfig!!.version)
-        assertEquals(NetworkHostAndPort("localhost", 12345), config.outboundConfig!!.socksProxyConfig!!.proxyAddress)
-        assertEquals("proxyUser", config.outboundConfig!!.socksProxyConfig!!.userName)
-        assertEquals("pwd", config.outboundConfig!!.socksProxyConfig!!.password)
+        assertEquals(ProxyVersion.SOCKS5, config.outboundConfig!!.proxyConfig!!.version)
+        assertEquals(NetworkHostAndPort("localhost", 12345), config.outboundConfig!!.proxyConfig!!.proxyAddress)
+        assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
+        assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
         val badConfigResource4 = "/net/corda/bridge/withsocks/badconfig/badsocksversion4.conf"
         assertFailsWith<IllegalArgumentException> {
             createAndLoadConfigFromResource(tempFolder.root.toPath() / "4", badConfigResource4)
@@ -162,6 +162,6 @@ class ConfigTest {
         val configResource = "/net/corda/bridge/version3/bridge.conf"
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals("HelloCorda!", config.healthCheckPhrase)
-        assertEquals("proxyUser", config.outboundConfig?.socksProxyConfig?.userName)
+        assertEquals("proxyUser", config.outboundConfig?.proxyConfig?.userName)
     }
 }

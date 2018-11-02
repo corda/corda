@@ -117,7 +117,7 @@ absolute path to the firewall's base directory.
 
         :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
-   :socksProxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, or SOCKS5 proxy:
+   :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, or SOCKS5 proxy:
 
         :version: Either SOCKS4, or SOCKS5 to define the protocol version used in connecting to the SOCKS proxy.
 
@@ -397,7 +397,7 @@ Configuration in ``firewall.conf`` for ``bridgeserver1``:
     outboundConfig { // Required section
         artemisBrokerAddress = "nodeserver1:11005" // point at primary Artemis address in the node
         alternateArtemisBrokerAddresses = [ "nodeserver2:11005" ] // List any other HA Artemis addresses
-        socksProxyConfig { // Enable SOCKS proxying by specifying this section
+        proxyConfig { // Enable SOCKS proxying by specifying this section
             version = SOCKS5
             proxyAddress = "proxyserver:12345"
             username = "proxyuser"
@@ -428,7 +428,7 @@ Configuration in ``firewall.conf`` for ``bridgeserver2``:
     outboundConfig { // Required section
         artemisBrokerAddress = "nodeserver2:11005" // point at primary Artemis address in the node
         alternateArtemisBrokerAddresses = [ "nodeserver1:11005" ] // List any other HA Artemis addresses
-        socksProxyConfig { // Enable SOCKS proxying by specifying this section
+        proxyConfig { // Enable SOCKS proxying by specifying this section
             version = SOCKS5
             proxyAddress = "proxyserver:12345"
             username = "proxyuser"

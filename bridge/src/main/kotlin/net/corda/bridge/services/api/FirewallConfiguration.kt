@@ -3,7 +3,7 @@ package net.corda.bridge.services.api
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import java.nio.file.Path
 
 enum class FirewallMode {
@@ -40,7 +40,7 @@ interface BridgeOutboundConfiguration {
     // Allows override of [KeyStore] details for the artemis connection, otherwise the general top level details are used.
     val customSSLConfiguration: BridgeSSLConfiguration?
     // Allows use of a SOCKS 4/5 proxy
-    val socksProxyConfig: SocksProxyConfig?
+    val proxyConfig: ProxyConfig?
 }
 
 /**

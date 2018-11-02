@@ -12,7 +12,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
+import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.SimpleString
@@ -24,7 +24,7 @@ import rx.subjects.PublishSubject
 import java.util.*
 
 class BridgeControlListener(val config: MutualSslConfiguration,
-                            socksProxyConfig: SocksProxyConfig? = null,
+                            proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
@@ -34,9 +34,9 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, socksProxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic)
+        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic)
     } else {
-        AMQPBridgeManager(config, socksProxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService)
+        AMQPBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
@@ -46,7 +46,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int,
                 enableSNI: Boolean,
-                socksProxy: SocksProxyConfig? = null) : this(config, socksProxy, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()

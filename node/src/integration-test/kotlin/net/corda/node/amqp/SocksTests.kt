@@ -312,7 +312,7 @@ class SocksTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
-            override val socksProxyConfig: SocksProxyConfig? = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+            override val proxyConfig: ProxyConfig? = ProxyConfig(ProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
@@ -344,7 +344,7 @@ class SocksTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = MAX_MESSAGE_SIZE
-            override val socksProxyConfig: SocksProxyConfig? = SocksProxyConfig(SocksProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
+            override val proxyConfig: ProxyConfig? = ProxyConfig(ProxyVersion.SOCKS5, NetworkHostAndPort("127.0.0.1", socksPort), null, null)
         }
 
         return AMQPClient(

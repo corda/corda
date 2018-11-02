@@ -28,14 +28,14 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.TrustManagerFactory
 import kotlin.concurrent.withLock
 
-enum class SocksProxyVersion {
+enum class ProxyVersion {
     SOCKS4,
     SOCKS5
 }
 
-data class SocksProxyConfig(val version: SocksProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null) {
+data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null) {
     init {
-        if (version == SocksProxyVersion.SOCKS4) {
+        if (version == ProxyVersion.SOCKS4) {
             require(password == null) { "SOCKS4 does not support a password" }
         }
     }
@@ -136,14 +136,14 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
-            val socksConfig = conf.socksProxyConfig
+            val socksConfig = conf.proxyConfig
             if (socksConfig != null) {
                 val proxyAddress = InetSocketAddress(socksConfig.proxyAddress.host, socksConfig.proxyAddress.port)
-                val proxy = when (conf.socksProxyConfig!!.version) {
-                    SocksProxyVersion.SOCKS4 -> {
+                val proxy = when (conf.proxyConfig!!.version) {
+                    ProxyVersion.SOCKS4 -> {
                         Socks4ProxyHandler(proxyAddress, socksConfig.userName)
                     }
-                    SocksProxyVersion.SOCKS5 -> {
+                    ProxyVersion.SOCKS5 -> {
                         Socks5ProxyHandler(proxyAddress, socksConfig.userName, socksConfig.password)
                     }
                 }
