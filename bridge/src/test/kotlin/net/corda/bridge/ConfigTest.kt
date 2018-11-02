@@ -156,4 +156,12 @@ class ConfigTest {
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals("ISpeakAMQP!", config.healthCheckPhrase)
     }
+
+    @Test
+    fun `Load old style config`() {
+        val configResource = "/net/corda/bridge/version3/bridge.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals("HelloCorda!", config.healthCheckPhrase)
+        assertEquals("proxyUser", config.outboundConfig?.socksProxyConfig?.userName)
+    }
 }

@@ -4,6 +4,7 @@ import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.createDirectories
+import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
@@ -42,13 +43,13 @@ fun createNetworkParams(baseDirectory: Path): Int {
 
 fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String): FirewallConfiguration {
     val workspaceFolder = baseDirectory.normalize().toAbsolutePath()
+    workspaceFolder.createDirectories()
+    ConfigTest::class.java.getResourceAsStream(configResource).use {
+        Files.copy(it, baseDirectory / "firewall.conf")
+    }
+
     val cmdLineOptions = FirewallCmdLineOptions()
     cmdLineOptions.baseDirectory = workspaceFolder
-        val configFile = cmdLineOptions.configFile
-    configFile.normalize().parent?.createDirectories()
-    ConfigTest::class.java.getResourceAsStream(configResource).use {
-        Files.copy(it, configFile)
-    }
     val config = cmdLineOptions.loadConfig()
     return config
 }

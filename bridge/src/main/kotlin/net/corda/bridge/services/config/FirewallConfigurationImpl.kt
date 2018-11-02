@@ -1,19 +1,83 @@
 package net.corda.bridge.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigRenderOptions
+import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
-import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.config.SslConfiguration
-import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.protonwrapper.netty.SocksProxyConfig
 import java.nio.file.Path
 
-fun Config.parseAsFirewallConfiguration(): FirewallConfiguration = parseAs<FirewallConfigurationImpl>()
+fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
+    return try {
+        parseAs<FirewallConfigurationImpl>()
+    } catch (ex: UnknownConfigurationKeysException) {
+
+        data class Version3BridgeConfigurationImpl(
+                val baseDirectory: Path,
+                val certificatesDirectory: Path = baseDirectory / "certificates",
+                val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
+                val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
+                val crlCheckSoftFail: Boolean,
+                val keyStorePassword: String,
+                val trustStorePassword: String,
+                val bridgeMode: FirewallMode,
+                val networkParametersPath: Path,
+                val outboundConfig: BridgeOutboundConfigurationImpl?,
+                val inboundConfig: BridgeInboundConfigurationImpl?,
+                val bridgeInnerConfig: BridgeInnerConfigurationImpl?,
+                val floatOuterConfig: FloatOuterConfigurationImpl?,
+                val haConfig: BridgeHAConfigImpl?,
+                val enableAMQPPacketTrace: Boolean,
+                val artemisReconnectionIntervalMin: Int = 5000,
+                val artemisReconnectionIntervalMax: Int = 60000,
+                val politeShutdownPeriod: Int = 1000,
+                val p2pConfirmationWindowSize: Int = 1048576,
+                val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
+                val healthCheckPhrase: String? = null
+        ) {
+            fun toConfig(): FirewallConfiguration {
+                return FirewallConfigurationImpl(
+                        baseDirectory,
+                        certificatesDirectory,
+                        sslKeystore,
+                        trustStoreFile,
+                        crlCheckSoftFail,
+                        keyStorePassword,
+                        trustStorePassword,
+                        bridgeMode,
+                        networkParametersPath,
+                        outboundConfig,
+                        inboundConfig,
+                        bridgeInnerConfig,
+                        floatOuterConfig,
+                        haConfig,
+                        enableAMQPPacketTrace,
+                        artemisReconnectionIntervalMin,
+                        artemisReconnectionIntervalMax,
+                        politeShutdownPeriod,
+                        p2pConfirmationWindowSize,
+                        whitelistedHeaders,
+                        AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
+                        healthCheckPhrase
+                )
+            }
+        }
+
+        // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to V3 configuration
+        val oldStyleConfig = parseAs<Version3BridgeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
+        val newStyleConfig = oldStyleConfig.toConfig()
+
+        val configAsString = newStyleConfig.toConfig().root().render(ConfigRenderOptions.defaults())
+        FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
+                "New style config will look as follows:\n$configAsString")
+        newStyleConfig
+    }
+}
 
 data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
                                       private val keyStorePassword: String,
