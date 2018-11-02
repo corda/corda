@@ -56,7 +56,7 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
     private object AuthServiceSpec : Configuration.Specification<SecurityConfiguration.AuthService>("AuthService") {
         private object DataSourceSpec : Configuration.Specification<SecurityConfiguration.AuthService.DataSource>("DataSource") {
             private val type by enum(AuthDataSourceType::class)
-            private val passwordEncryption by enum(PasswordEncryption::class).optional().withDefaultValue(PasswordEncryption.NONE)
+            private val passwordEncryption by enum(PasswordEncryption::class).optional().withDefaultValue(SecurityConfiguration.AuthService.DataSource.Defaults.passwordEncryption)
             private val connection by nestedObject().map(::toProperties).optional()
             private val users by nested(UserSpec).list().optional()
 
@@ -96,7 +96,6 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
         val options by nested(OptionsSpec).optional()
 
         override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService> {
-
             val dataSource = configuration[dataSource]
             val id = configuration[id] ?: defaultAuthServiceId(dataSource.type)
             val options = configuration[options]
@@ -115,8 +114,8 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
 }
 
 internal object DevModeOptionsSpec : Configuration.Specification<DevModeOptions>("DevModeOptions") {
-    private val disableCheckpointChecker by boolean().optional().withDefaultValue(false)
-    private val allowCompatibilityZone by boolean().optional().withDefaultValue(false)
+    private val disableCheckpointChecker by boolean().optional().withDefaultValue(DevModeOptions.Defaults.disableCheckpointChecker)
+    private val allowCompatibilityZone by boolean().optional().withDefaultValue(DevModeOptions.Defaults.allowCompatibilityZone)
 
     override fun parseValid(configuration: Config): Valid<DevModeOptions> {
         return valid(DevModeOptions(configuration[disableCheckpointChecker], configuration[allowCompatibilityZone]))
@@ -178,8 +177,8 @@ internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSetting
 
     private val address by string().mapValid(::toNetworkHostAndPort).optional()
     private val adminAddress by string().mapValid(::toNetworkHostAndPort).optional()
-    private val standAloneBroker by boolean().optional().withDefaultValue(false)
-    private val useSsl by boolean().optional().withDefaultValue(false)
+    private val standAloneBroker by boolean().optional().withDefaultValue(NodeRpcSettings.Defaults.standAloneBroker)
+    private val useSsl by boolean().optional().withDefaultValue(NodeRpcSettings.Defaults.useSsl)
     private val ssl by nested(BrokerRpcSslOptionsSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<NodeRpcSettings> {
@@ -195,10 +194,10 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 
 
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
-    private val initialiseSchema by boolean().optional().withDefaultValue(true)
-    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(TransactionIsolationLevel.REPEATABLE_READ)
-    private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(false)
-    private val mappedSchemaCacheSize by long().optional().withDefaultValue(100)
+    private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
+    private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
+    private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
+    private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
         return valid(DatabaseConfig(configuration[initialiseSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))

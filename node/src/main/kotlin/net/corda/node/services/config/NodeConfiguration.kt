@@ -1,22 +1,18 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
-import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
-import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.*
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -25,10 +21,6 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 val Int.MB: Long get() = this * 1024L * 1024L
-
-internal val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
-internal val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
-private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
 
 interface NodeConfiguration {
     val myLegalName: CordaX500Name
@@ -85,19 +77,22 @@ interface NodeConfiguration {
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
-        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+        internal val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+
+        internal val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
+        internal val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)
 
         // add 5% of any heapsize over 300MB to the default transaction cache size
         private fun getAdditionalCacheMemory(): Long {
             return Math.max((Runtime.getRuntime().maxMemory() - 300.MB) / 20, 0)
         }
 
-        val defaultAttachmentContentCacheSize: Long = 10.MB
-        const val defaultAttachmentCacheBound = 1024L
+        internal val defaultAttachmentContentCacheSize: Long = 10.MB
+        internal const val defaultAttachmentCacheBound = 1024L
 
         const val cordappDirectoriesKey = "cordappDirectories"
 
-        val defaultJmxReporterType = JmxReporterType.JOLOKIA
+        internal val defaultJmxReporterType = JmxReporterType.JOLOKIA
     }
 }
 
@@ -111,7 +106,14 @@ enum class JmxReporterType {
     JOLOKIA, NEW_RELIC
 }
 
-data class DevModeOptions(val disableCheckpointChecker: Boolean = false, val allowCompatibilityZone: Boolean = false)
+data class DevModeOptions(val disableCheckpointChecker: Boolean = Defaults.disableCheckpointChecker, val allowCompatibilityZone: Boolean = Defaults.disableCheckpointChecker) {
+
+    internal object Defaults {
+
+        val disableCheckpointChecker = false
+        val allowCompatibilityZone = false
+    }
+}
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true
@@ -168,157 +170,6 @@ data class FlowTimeoutConfiguration(
 internal typealias Valid<TARGET> = Validated<TARGET, Configuration.Validation.Error>
 
 fun Config.parseAsNodeConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = true)): Valid<NodeConfiguration> = V1NodeConfigurationSpec.parse(this, options)
-
-data class NodeConfigurationImpl(
-        /** This is not retrieved from the config file but rather from a command line argument. */
-        override val baseDirectory: Path,
-        override val myLegalName: CordaX500Name,
-        override val jmxMonitoringHttpPort: Int? = null,
-        override val emailAddress: String,
-        private val keyStorePassword: String,
-        private val trustStorePassword: String,
-        override val crlCheckSoftFail: Boolean,
-        override val dataSourceProperties: Properties,
-        override val compatibilityZoneURL: URL? = null,
-        override var networkServices: NetworkServicesConfig? = null,
-        override val tlsCertCrlDistPoint: URL? = null,
-        override val tlsCertCrlIssuer: X500Principal? = null,
-        override val rpcUsers: List<User>,
-        override val security: SecurityConfiguration? = null,
-        override val verifierType: VerifierType,
-        override val flowTimeout: FlowTimeoutConfiguration,
-        override val p2pAddress: NetworkHostAndPort,
-        override val additionalP2PAddresses: List<NetworkHostAndPort> = emptyList(),
-        private val rpcAddress: NetworkHostAndPort? = null,
-        private val rpcSettings: NodeRpcSettings,
-        override val messagingServerAddress: NetworkHostAndPort?,
-        override val messagingServerExternal: Boolean = (messagingServerAddress != null),
-        override val notary: NotaryConfig?,
-        @Suppress("DEPRECATION")
-        @Deprecated("Do not configure")
-        override val certificateChainCheckPolicies: List<CertChainPolicyConfig> = emptyList(),
-        override val devMode: Boolean = false,
-        override val noLocalShell: Boolean = false,
-        override val devModeOptions: DevModeOptions? = null,
-        override val useTestClock: Boolean = false,
-        override val lazyBridgeStart: Boolean = true,
-        override val detectPublicIp: Boolean = true,
-        // TODO See TODO above. Rename this to nodeInfoPollingFrequency and make it of type Duration
-        override val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis(),
-        override val sshd: SSHDConfiguration? = null,
-        override val database: DatabaseConfig = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode),
-        private val transactionCacheSizeMegaBytes: Int? = null,
-        private val attachmentContentCacheSizeMegaBytes: Int? = null,
-        override val attachmentCacheBound: Long = NodeConfiguration.defaultAttachmentCacheBound,
-        override val extraNetworkMapKeys: List<UUID> = emptyList(),
-        // do not use or remove (breaks DemoBench together with rejection of unknown configuration keys during parsing)
-        private val h2port: Int? = null,
-        private val h2Settings: NodeH2Settings? = null,
-        // do not use or remove (used by Capsule)
-        private val jarDirs: List<String> = emptyList(),
-        override val flowMonitorPeriodMillis: Duration = DEFAULT_FLOW_MONITOR_PERIOD_MILLIS,
-        override val flowMonitorSuspensionLoggingThresholdMillis: Duration = DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS,
-        override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
-        override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
-        override val flowOverrides: FlowOverrideConfig?,
-        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
-) : NodeConfiguration {
-    companion object {
-        private val logger = loggerFor<NodeConfigurationImpl>()
-
-    }
-
-    private val actualRpcSettings: NodeRpcSettings
-
-    init {
-        actualRpcSettings = when {
-            rpcAddress != null -> {
-                require(rpcSettings.address == null) { "Can't provide top-level rpcAddress and rpcSettings.address (they control the same property)." }
-                logger.warn("Top-level declaration of property 'rpcAddress' is deprecated. Please use 'rpcSettings.address' instead.")
-
-                rpcSettings.copy(address = rpcAddress)
-            }
-            else -> {
-                rpcSettings.address ?: throw ConfigException.Missing("rpcSettings.address")
-                rpcSettings
-            }
-        }
-    }
-
-    override val certificatesDirectory = baseDirectory / "certificates"
-
-    private val signingCertificateStorePath = certificatesDirectory / "nodekeystore.jks"
-    private val p2pKeystorePath: Path get() = certificatesDirectory / "sslkeystore.jks"
-
-    // TODO: There are two implications here:
-    // 1. "signingCertificateStore" and "p2pKeyStore" have the same passwords. In the future we should re-visit this "rule" and see of they can be made different;
-    // 2. The passwords for store and for keys in this store are the same, this is due to limitations of Artemis.
-    override val signingCertificateStore = FileBasedCertificateStoreSupplier(signingCertificateStorePath, keyStorePassword, keyStorePassword)
-    private val p2pKeyStore = FileBasedCertificateStoreSupplier(p2pKeystorePath, keyStorePassword, keyStorePassword)
-
-    private val p2pTrustStoreFilePath: Path get() = certificatesDirectory / "truststore.jks"
-    private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, trustStorePassword)
-    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
-
-    override val rpcOptions: NodeRpcOptions
-        get() {
-            return actualRpcSettings.asOptions()
-        }
-
-    override val transactionCacheSizeBytes: Long
-        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
-    override val attachmentContentCacheSizeBytes: Long
-        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
-
-    override val effectiveH2Settings: NodeH2Settings?
-        get() = when {
-            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
-            else -> h2Settings
-        }
-
-    init {
-        // This is a sanity feature do not remove.
-        require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-        require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
-        require(security == null || rpcUsers.isEmpty()) {
-            "Cannot specify both 'rpcUsers' and 'security' in configuration"
-        }
-        @Suppress("DEPRECATION")
-        if (certificateChainCheckPolicies.isNotEmpty()) {
-            logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
-                |Please contact the R3 team on the public slack to discuss your use case.
-            """.trimMargin())
-        }
-
-        // Support the deprecated method of configuring network services with a single compatibilityZoneURL option
-        if (compatibilityZoneURL != null && networkServices == null) {
-            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, inferred = true)
-        }
-        require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
-    }
-}
-
-data class NodeRpcSettings(
-        val address: NetworkHostAndPort?,
-        val adminAddress: NetworkHostAndPort?,
-        val standAloneBroker: Boolean = false,
-        val useSsl: Boolean = false,
-        val ssl: BrokerRpcSslOptions?
-) {
-    fun asOptions(): NodeRpcOptions {
-        return object : NodeRpcOptions {
-            override val address = this@NodeRpcSettings.address!!
-            override val adminAddress = this@NodeRpcSettings.adminAddress!!
-            override val standAloneBroker = this@NodeRpcSettings.standAloneBroker
-            override val useSsl = this@NodeRpcSettings.useSsl
-            override val sslConfig = this@NodeRpcSettings.ssl
-
-            override fun toString(): String {
-                return "address: $address, adminAddress: $adminAddress, standAloneBroker: $standAloneBroker, useSsl: $useSsl, sslConfig: $sslConfig"
-            }
-        }
-    }
-}
 
 data class NodeH2Settings(
         val address: NetworkHostAndPort?
@@ -392,7 +243,7 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
 
         // Provider of users credentials and permissions data
         data class DataSource(val type: AuthDataSourceType,
-                              val passwordEncryption: PasswordEncryption = PasswordEncryption.NONE,
+                              val passwordEncryption: PasswordEncryption = Defaults.passwordEncryption,
                               val connection: Properties? = null,
                               val users: List<User>? = null) {
             init {
@@ -400,6 +251,10 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                     AuthDataSourceType.INMEMORY -> require(users != null && connection == null)
                     AuthDataSourceType.DB -> require(users == null && connection != null)
                 }
+            }
+
+            internal object Defaults {
+                val passwordEncryption = PasswordEncryption.NONE
             }
         }
 
