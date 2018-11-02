@@ -145,9 +145,6 @@ open class SerializationOutput constructor(
     }
 
     internal open fun writeTypeNotations(vararg typeNotation: TypeNotation): Boolean {
-        if (typeNotation.any { it.name == "?" }) {
-            assert(false)
-        }
         return schemaHistory.addAll(typeNotation)
     }
 

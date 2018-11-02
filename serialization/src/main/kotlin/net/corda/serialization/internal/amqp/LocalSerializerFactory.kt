@@ -106,8 +106,6 @@ class DefaultLocalSerializerFactory(
     private fun makeActualEnum(localTypeInformation: LocalTypeInformation, declaredType: Type, declaredClass: Class<*>): AMQPSerializer<Any> =
             make(localTypeInformation) {
                 whitelist.requireWhitelisted(declaredType)
-                println(localTypeInformation)
-                println(declaredType)
                 EnumSerializer(declaredType, declaredClass, this)
             }
 
@@ -131,13 +129,14 @@ class DefaultLocalSerializerFactory(
 
         val declaredClass = declaredType.asClass()
         val actualType: Type = inferTypeVariables(actualClass, declaredClass, declaredType) ?: declaredType
-        val typeInformation = typeModel.inspect(actualType)
+        val declaredTypeInformation = typeModel.inspect(declaredType)
+        val actualTypeInformation = typeModel.inspect(actualType)
 
-        return when(typeInformation) {
-            is LocalTypeInformation.ACollection -> makeActualCollection(actualClass, typeInformation)
-            is LocalTypeInformation.AMap -> makeActualMap(declaredType, actualClass, typeInformation)
-            is LocalTypeInformation.AnEnum -> makeActualEnum(typeInformation, actualType, actualClass)
-            else -> makeClassSerializer(actualClass, actualType, declaredType, typeInformation)
+        return when(actualTypeInformation) {
+            is LocalTypeInformation.ACollection -> makeActualCollection(actualClass,declaredTypeInformation as? LocalTypeInformation.ACollection ?: actualTypeInformation)
+            is LocalTypeInformation.AMap -> makeActualMap(declaredType, actualClass,declaredTypeInformation as? LocalTypeInformation.AMap ?: actualTypeInformation)
+            is LocalTypeInformation.AnEnum -> makeActualEnum(actualTypeInformation, actualType, actualClass)
+            else -> makeClassSerializer(actualClass, actualType, declaredType, actualTypeInformation)
         }.also { serializer -> descriptorBasedSerializerRegistry[serializer.typeDescriptor.toString()] = serializer }
     }
 
@@ -151,6 +150,7 @@ class DefaultLocalSerializerFactory(
 
     private fun makeActualCollection(actualClass: Class<*>, typeInformation: LocalTypeInformation.ACollection): AMQPSerializer<Any> {
         val resolved = CollectionSerializer.resolveActual(actualClass, typeInformation)
+
         return serializersByType.computeIfAbsent(resolved.typeIdentifier) {
             CollectionSerializer(resolved.observedType as ParameterizedType, this)
         }

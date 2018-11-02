@@ -11,6 +11,8 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -19,10 +21,7 @@ import kotlin.collections.LinkedHashSet
  */
 @KeepForDJVM
 class CollectionSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = (declaredType as? ParameterizedType)
-            ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
-                    .toParameterized(TypeIdentifier.TopType)
-                    .getLocalType(factory.classloader) // replace erased type parameters
+    override val type: Type = declaredType
 
     override val typeDescriptor: Symbol by lazy {
         factory.createDescriptor(type)
@@ -62,14 +61,14 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
             return when(declaredTypeInformation.typeIdentifier) {
                 is TypeIdentifier.Parameterised -> erasedInformation.withElementType(declaredTypeInformation.elementType)
-                else -> erasedInformation.withElementType(LocalTypeInformation.Top)
+                else -> erasedInformation.withElementType(LocalTypeInformation.Unknown)
             }
         }
 
         private fun reparameterise(typeInformation: LocalTypeInformation.ACollection): LocalTypeInformation.ACollection =
                 when(typeInformation.typeIdentifier) {
                     is TypeIdentifier.Parameterised -> typeInformation
-                    is TypeIdentifier.Erased -> typeInformation.withElementType(LocalTypeInformation.Top)
+                    is TypeIdentifier.Erased -> typeInformation.withElementType(LocalTypeInformation.Unknown)
                     else -> throw NotSerializableException(
                             "Unexpected type identifier ${typeInformation.typeIdentifier.prettyPrint(false)} " +
                                     "for collection type ${typeInformation.prettyPrint(false)}")

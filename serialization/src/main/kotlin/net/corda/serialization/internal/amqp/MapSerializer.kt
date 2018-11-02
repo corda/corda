@@ -21,10 +21,7 @@ private typealias MapCreationFunction = (Map<*, *>) -> Map<*, *>
  */
 @KeepForDJVM
 class MapSerializer(private val declaredType: ParameterizedType, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type = (declaredType as? ParameterizedType)
-            ?: (TypeIdentifier.forGenericType(declaredType) as TypeIdentifier.Erased)
-                    .toParameterized(TypeIdentifier.TopType, TypeIdentifier.TopType)
-                    .getLocalType(factory.classloader) // replace erased type parameters
+    override val type: Type = declaredType
 
     override val typeDescriptor: Symbol = factory.createDescriptor(type)
 
@@ -54,7 +51,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
             declaredTypeInformation.observedType.asClass().checkSupportedMapType()
             if (supportedTypeIdentifiers.contains(declaredTypeInformation.typeIdentifier.erased))
                 return if (!declaredTypeInformation.isErased) declaredTypeInformation
-                else declaredTypeInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
+                else declaredTypeInformation.withParameters(LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
 
             throw NotSerializableException("Cannot derive map type for declared type " +
                     declaredTypeInformation.prettyPrint(false))
@@ -64,7 +61,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
             declaredTypeInformation.observedType.asClass().checkSupportedMapType()
             if (supportedTypeIdentifiers.contains(declaredTypeInformation.typeIdentifier.erased)) {
                 return if (!declaredTypeInformation.isErased) declaredTypeInformation
-                else declaredTypeInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
+                else declaredTypeInformation.withParameters(LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
             }
 
             val mapClass = findMostSuitableMapType(actualClass)
@@ -77,7 +74,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
                 is TypeIdentifier.Parameterised -> erasedInformation.withParameters(
                         declaredTypeInformation.keyType,
                         declaredTypeInformation.valueType)
-                else -> erasedInformation.withParameters(LocalTypeInformation.Top, LocalTypeInformation.Top)
+                else -> erasedInformation.withParameters(LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
             }
         }
 

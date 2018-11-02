@@ -25,7 +25,9 @@ class CachingCustomSerializerRegistry(
         val logger = contextLogger()
     }
 
-    private val customSerializersCache: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private data class CustomSerializerIdentifier(val actualTypeIdentifier: TypeIdentifier, val declaredTypeIdentifier: TypeIdentifier)
+
+    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
     private var customSerializers: List<SerializerFor> = emptyList()
 
     /**
@@ -54,7 +56,9 @@ class CachingCustomSerializerRegistry(
     }
     
     override fun findCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {
-        val typeIdentifier = TypeIdentifier.forGenericType(declaredType)
+        val typeIdentifier = CustomSerializerIdentifier(
+                TypeIdentifier.forClass(clazz),
+                TypeIdentifier.forGenericType(declaredType))
 
         return customSerializersCache[typeIdentifier]
                 ?: doFindCustomSerializer(clazz, declaredType)?.also { serializer ->
@@ -68,6 +72,9 @@ class CachingCustomSerializerRegistry(
         // super type.  Could be done, but do we need it?
         for (customSerializer in customSerializers) {
             if (customSerializer.isSerializerFor(clazz)) {
+
+                println("$clazz $declaredType ${TypeIdentifier.forGenericType(declaredType)}")
+                println("-> ${customSerializer::class.java}")
                 val declaredSuperClass = declaredType.asClass().superclass
 
                 return if (declaredSuperClass == null

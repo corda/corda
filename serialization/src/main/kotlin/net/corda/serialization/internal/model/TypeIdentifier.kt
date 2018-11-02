@@ -94,10 +94,7 @@ sealed class TypeIdentifier {
                             type.actualTypeArguments.map { forGenericType(it.resolveAgainst(resolutionContext), seen = seen + type) })
                     is Class<*> -> forClass(type)
                     is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext), seen = seen + type))
-                    is WildcardType -> when {
-                        type.upperBounds.isEmpty() || type.upperBounds.size > 1 -> UnknownType
-                        else -> forGenericType(type.upperBounds[0], resolutionContext, seen)
-                    }
+                    is WildcardType -> type.upperBound.let { if (it == type) UnknownType else forGenericType(it) }
                     else -> UnknownType
                 }
     }
@@ -166,11 +163,6 @@ sealed class TypeIdentifier {
      * because they have been erased.
      */
     data class Erased(override val name: String, val erasedParameterCount: Int) : TypeIdentifier() {
-        /**
-         * Get a parameterised version of this type, with the type parameters populated with [TopType].
-         */
-        fun toParameterized(): TypeIdentifier = toParameterized((0 until erasedParameterCount).map { TopType })
-
         fun toParameterized(vararg parameters: TypeIdentifier): TypeIdentifier = toParameterized(parameters.toList())
 
         fun toParameterized(parameters: List<TypeIdentifier>): TypeIdentifier {
