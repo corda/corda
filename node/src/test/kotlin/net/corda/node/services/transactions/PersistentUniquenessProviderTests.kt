@@ -50,11 +50,12 @@ class PersistentUniquenessProviderTests {
     }
 
     @Test
-    fun `should commit a transaction with unused inputs without exception`() {
+    fun `should successfully commit a transaction with unused inputs`() {
         val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
         val inputState = generateStateRef()
 
-        provider.commit(listOf(inputState), txID, identity, requestSignature).get()
+        val result = provider.commit(listOf(inputState), txID, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result)
     }
 
     @Test
@@ -64,7 +65,8 @@ class PersistentUniquenessProviderTests {
 
         val inputs = listOf(inputState)
         val firstTxId = txID
-        provider.commit(inputs, firstTxId, identity, requestSignature).get()
+        val result = provider.commit(inputs, firstTxId, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result)
 
         val secondTxId = SecureHash.randomSHA256()
 
