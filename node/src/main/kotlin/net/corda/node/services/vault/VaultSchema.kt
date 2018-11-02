@@ -12,6 +12,7 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Type
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -39,6 +40,19 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name", nullable = false)
             var notary: Party,
+
+            /** Public keys of participant parties **/
+            @ElementCollection
+            @CollectionTable(
+                    name = "contract_states_parts",
+                    joinColumns = [
+                        (JoinColumn(name = "output_index", referencedColumnName = "output_index")),
+                        (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))
+                    ],
+                    foreignKey = ForeignKey(name = "FK__vault_stat_parts__vault_stat")
+            )
+            @Column(name = "participants", nullable = false)
+            var participants: MutableSet<PublicKey>,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name", nullable = false)
