@@ -46,8 +46,8 @@ your own ``firewall.conf`` file will use these defaults:
 .. literalinclude:: ../../bridge/src/main/resources/firewalldefault.conf
     :language: javascript
    
-Bridge operating modes
-----------------------
+Firewall operating modes
+------------------------
 .. note:: By default, the Corda node assumes that it will carry out the peer-to-peer functions of the ``bridge`` internally!
           Before running a dedicated firewall process, it is essential to turn off the dev mode component by setting the
           ``enterpriseConfiguration.externalBridge`` property of the ``node.conf`` file to ``true``.
@@ -213,16 +213,21 @@ absolute path to the firewall's base directory.
             :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
-    Currently, only Zookeeper can be used as master elector. Eventually other electors may be supported e.g. ``etcd``. This configuration section controls these options:
+    Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see <https://en.wikipedia.org/wiki/Bully_algorithm>) via Publish/Subscribe messages on the artemis broker.
+    For production it is recommended that a Zookeeper cluster be used as this will protect against network partitioning scenarios. However, the ``Bully Algorithm`` mode does not require any additional server processes.
+    Eventually other electors may be supported e.g. ``etcd``. This configuration section controls these options:
 
-    :haConnectionString:  A string containing the connection details of the master electors as a comma delimited list of connection string in the format ``zk://<host>:<port>``.
-        In future it intended that other schemes such as ``etcd`` are supported.
+    :haConnectionString:  A string containing the connection details of the master electors as a comma delimited list of individual connection strings.
+
+        * To use an external Zookeeper cluster each connection item should be in the format ``zk://<host>:<port>``.
+        
+        * To use the ``Bully Algorithm`` running over artemis the single connection string should be set to ``bully://localhost``.
 
     :haPriority: The implementation uses a prioritise leader election algorithm, so that a preferred master instance can be set. The highest priority is 0 and larger integers have lower priority.
         At the same level of priority, it is random which instance wins the leader election. If a ``bridge`` instance dies another will have the opportunity to become master in instead.
 
-    :haTopic: Sets the zookeeper topic prefix that the nodes used in resolving the election and must be the same for all ``bridge``
-        instances competing for master status. This is available to allow a single zookeeper cluster to be reused with multiple
+    :haTopic: Sets the zookeeper/artemis topic that the nodes used in resolving the election and must be the same for all ``bridge``
+        instances competing for master status. This is available to allow a single zookeeper/artemis cluster to be reused with multiple
         sets of ``bridges`` (e.g. in test environments).
         The default value is ``bridge/ha`` and would not normally need to be changed if the cluster is not shared.
 

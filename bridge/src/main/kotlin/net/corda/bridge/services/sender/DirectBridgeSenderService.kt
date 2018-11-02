@@ -1,13 +1,12 @@
 package net.corda.bridge.services.sender
 
 import net.corda.bridge.services.api.*
+import net.corda.bridge.services.artemis.ForwardingArtemisMessageClient
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.ArtemisMessagingClient
-import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.bridging.BridgeMetricsService
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
@@ -35,21 +34,6 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
             { ForwardingArtemisMessageClient(artemisConnectionService) },
             BridgeAuditServiceAdaptor(auditService),
             conf.enableAMQPPacketTrace)
-
-    private class ForwardingArtemisMessageClient(val artemisConnectionService: BridgeArtemisConnectionService) : ArtemisSessionProvider {
-        override fun start(): ArtemisMessagingClient.Started {
-            // We don't want to start and stop artemis from clients as the lifecycle management is provided by the BridgeArtemisConnectionService
-            return artemisConnectionService.started!!
-        }
-
-        override fun stop() {
-            // We don't want to start and stop artemis from clients as the lifecycle management is provided by the BridgeArtemisConnectionService
-        }
-
-        override val started: ArtemisMessagingClient.Started?
-            get() = artemisConnectionService.started
-
-    }
 
     private class BridgeAuditServiceAdaptor(private val auditService: FirewallAuditService) : BridgeMetricsService {
         override fun bridgeCreated(targets: List<NetworkHostAndPort>, legalNames: Set<CordaX500Name>) {

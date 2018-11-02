@@ -1,13 +1,11 @@
 package net.corda.bridge.services.ha
 
-import net.corda.bridge.services.api.BridgeArtemisConnectionService
-import net.corda.bridge.services.api.BridgeMasterService
-import net.corda.bridge.services.api.FirewallAuditService
-import net.corda.bridge.services.api.FirewallConfiguration
-import net.corda.bridge.services.api.ServiceStateSupport
+import net.corda.bridge.services.api.*
+import net.corda.bridge.services.artemis.ForwardingArtemisMessageClient
 import net.corda.bridge.services.util.ServiceStateCombiner
 import net.corda.bridge.services.util.ServiceStateHelper
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.bully.BullyLeaderClient
 import net.corda.nodeapi.internal.zookeeper.CordaLeaderListener
 import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.nodeapi.internal.zookeeper.ZkLeader
@@ -22,10 +20,17 @@ import kotlin.concurrent.withLock
  */
 class ExternalMasterElectionService(private val conf: FirewallConfiguration,
                                     private val auditService: FirewallAuditService,
-                                    artemisService: BridgeArtemisConnectionService,
+                                    private val artemisService: BridgeArtemisConnectionService,
                                     private val stateHelper: ServiceStateHelper = ServiceStateHelper(log)) : BridgeMasterService, ServiceStateSupport by stateHelper {
 
     private var haElector: ZkLeader? = null
+
+    private enum class ElectorMode {
+        ZOOKEEPER,
+        BULLY_OVER_ARTEMIS
+    }
+
+    private val mode: ElectorMode
     private var leaderListener: CordaLeaderListener? = null
     private var statusSubscriber: Subscription? = null
     private val statusFollower = ServiceStateCombiner(listOf(artemisService))
@@ -38,7 +43,11 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
 
     init {
         require(conf.haConfig != null) { "Undefined HA Config" }
-        require(conf.haConfig!!.haConnectionString.split(',').all { it.startsWith("zk://") }) { "Only Zookeeper HA mode 'zk://IPADDR:PORT supported" }
+        val connectionStrings = conf.haConfig!!.haConnectionString.split(',')
+        val zkOnly = connectionStrings.all { it.startsWith("zk://") }
+        val bullyOnly = (connectionStrings.size == 1) && (connectionStrings.single().toLowerCase() == "bully://localhost")
+        require(zkOnly xor bullyOnly) { "Only all Zookeeper HA mode 'zk://IPADDR:PORT, or Bully Algorithm mode 'bully://localhost' supported" }
+        if (zkOnly) mode = ElectorMode.ZOOKEEPER else if (bullyOnly) mode = ElectorMode.BULLY_OVER_ARTEMIS else throw IllegalArgumentException("Unsupported elector URL")
     }
 
     private fun becomeMaster() {
@@ -75,29 +84,37 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
      */
     private fun activate() {
         activeTransitionLock.withLock {
-            val zkConf = conf.haConfig!!.haConnectionString.split(',').map { it.replace("zk://", "") }.joinToString(",")
+            val connectionStrings = conf.haConfig!!.haConnectionString.split(',')
             val leaderPriority = conf.haConfig!!.haPriority
             val hostName: String = InetAddress.getLocalHost().hostName
             val info = ManagementFactory.getRuntimeMXBean()
             val pid = info.name.split("@").firstOrNull()  // TODO Java 9 has better support for this
             val nodeId = "$hostName:$pid"
-            val leaderElector = ZkClient(zkConf, conf.haConfig!!.haTopic, nodeId, leaderPriority)
+            val leaderElector: ZkLeader = when (mode) {
+                ElectorMode.ZOOKEEPER -> {
+                    val zkConf = connectionStrings.map { it.replace("zk://", "") }.joinToString(",")
+                    ZkClient(zkConf, conf.haConfig!!.haTopic, nodeId, leaderPriority)
+                }
+                ElectorMode.BULLY_OVER_ARTEMIS -> {
+                    BullyLeaderClient(ForwardingArtemisMessageClient(artemisService), conf.haConfig!!.haTopic, nodeId, leaderPriority)
+                }
+            }
             haElector = leaderElector
             val listener = object : CordaLeaderListener {
                 override fun notLeader() {
-                    auditService.statusChangeEvent("Leadership loss signalled from Zookeeper")
+                    auditService.statusChangeEvent("Leadership loss signalled from $mode")
                     becomeSlave()
                 }
 
                 override fun isLeader() {
-                    log.info("Zookeeper has signalled leadership acquired.")
+                    log.info("$mode has signalled leadership acquired.")
                     becomeMaster()
                 }
             }
             leaderListener = listener
             leaderElector.addLeadershipListener(listener)
             leaderElector.start()
-            auditService.statusChangeEvent("Requesting leadership from Zookeeper")
+            auditService.statusChangeEvent("Requesting leadership from $mode")
             leaderElector.requestLeadership()
         }
     }
