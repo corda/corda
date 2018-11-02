@@ -21,10 +21,6 @@ class CordaLog4j2ConfigFactory : ConfigurationFactory() {
     override fun getSupportedTypes() = SUPPORTED_TYPES
 
     private class ErrorCodeAppendingConfiguration(loggerContext: LoggerContext, source: ConfigurationSource) : XmlConfiguration(loggerContext, source) {
-        init {
-            println("Log4j2: Initialising ConfigurationFactory of type CordaLog4j2ConfigFactory.")
-        }
-
         override fun doConfigure() {
             super.doConfigure()
             loggers.values.forEach {

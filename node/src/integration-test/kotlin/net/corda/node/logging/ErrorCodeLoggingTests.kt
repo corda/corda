@@ -26,7 +26,7 @@ class ErrorCodeLoggingTests {
 
             val logFile = node.logFile()
 
-            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=").also { println(line) } }.toList() }
+            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.toList() }
 
             assertThat(linesWithErrorCode).isNotEmpty
         }
