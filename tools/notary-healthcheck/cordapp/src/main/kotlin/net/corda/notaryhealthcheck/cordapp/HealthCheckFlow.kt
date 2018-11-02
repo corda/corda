@@ -4,7 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
-import net.corda.core.identity.AbstractParty
+import net.corda.core.flows.NotaryFlow.Client.Companion.REQUESTING
+import net.corda.core.flows.NotaryFlow.Client.Companion.VALIDATING
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.notary.generateSignature
@@ -23,11 +24,6 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
     private val notary = monitorable.notary
     private val party = monitorable.party
 
-    data class NullCommand(val data: Byte = 0) : CommandData // Param must be public for AMQP serialization.
-
-    @BelongsToContract(NullContract::class)
-    data class State(override val participants: List<AbstractParty>) : ContractState
-
     companion object {
         object PREPARING : ProgressTracker.Step("Preparing")
         object CHECKING : ProgressTracker.Step("Checking")
@@ -39,8 +35,8 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
     override fun call(): List<TransactionSignature> {
         progressTracker.currentStep = PREPARING
         val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
-            addOutputState(State(listOf(ourIdentity)), NullContract::class.java.name, AlwaysAcceptAttachmentConstraint)
-            addCommand(NullCommand(), listOf(ourIdentity.owningKey))
+            addOutputState(NullContract.State(listOf(ourIdentity)), NullContract::class.java.name, AlwaysAcceptAttachmentConstraint)
+            addCommand(NullContract.NullCommand(), listOf(ourIdentity.owningKey))
         })
         progressTracker.currentStep = CHECKING
         return subFlow(NotaryClientFlow(stx, party, notary))
