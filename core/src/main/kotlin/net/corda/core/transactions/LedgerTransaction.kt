@@ -230,7 +230,8 @@ data class LedgerTransaction @JvmOverloads constructor(
         // Check that in the outputs,
         // a) an encumbered state does not refer to itself as the encumbrance
         // b) the number of outputs can contain the encumbrance
-        // c) the bi-directionality (full cycle) property is satisfied.
+        // c) the bi-directionality (full cycle) property is satisfied
+        // d) encumbered output states are assigned to the same notary.
         val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
         if (!statesAndEncumbrance.isEmpty()) {
             checkBidirectionalOutputEncumbrances(statesAndEncumbrance)
@@ -239,14 +240,14 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     // Method to check if all encumbered states are assigned to the same notary Party.
-    // This method should be invoked after [checkBidirectionalOutputEncumbrances], because it assumes bi-directionality
-    // property is already satisfied.
+    // This method should be invoked after [checkBidirectionalOutputEncumbrances], because it assumes that the
+    // bi-directionality property is already satisfied.
     private fun checkNotariesOutputEncumbrance(statesAndEncumbrance: List<Pair<Int, Int>>) {
         // We only check for transactions in which notary is null (i.e., issuing transactions).
         // Note that if a notary is defined for a transaction, we already check if all outputs are assigned
         // to the same notary (transaction's notary) in [checkNoNotaryChange()].
         if (notary == null) {
-            // Cache to bypass already checked indices and to avoid cycles.
+            // indicesAlreadyChecked is used to bypass already checked indices and to avoid cycles.
             val indicesAlreadyChecked = HashSet<Int>()
             statesAndEncumbrance.forEach {
                 checkNotary(it.first, indicesAlreadyChecked)
@@ -261,7 +262,6 @@ data class LedgerTransaction @JvmOverloads constructor(
                 throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(id, index, encumbranceIndex, outputs[index].notary, outputs[encumbranceIndex].notary)
             } else {
                 checkNotary(encumbranceIndex, indicesAlreadyChecked)
-                indicesAlreadyChecked.add(encumbranceIndex)
             }
         }
     }
