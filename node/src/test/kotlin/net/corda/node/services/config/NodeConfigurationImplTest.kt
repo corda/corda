@@ -30,21 +30,19 @@ class NodeConfigurationImplTest {
         configDebugOptions(false, null)
     }
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
-//        val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
-//        assertTrue { configValidationResult.isNotEmpty() }
-//        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
-//    }
+    @Test
+    fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
+        val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
+    }
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
-//        val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
-//        assertTrue { configValidationResult.isNotEmpty() }
-//        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
-//    }
+    @Test
+    fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
+        val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
+        assertTrue { configValidationResult.isNotEmpty() }
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
+    }
 
     @Test
     fun `check devModeOptions flag helper`() {
@@ -119,29 +117,27 @@ class NodeConfigurationImplTest {
         return cfg
     }
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
-//        val configuration = testConfiguration.copy(
-//                devMode = true,
-//                compatibilityZoneURL = URL("https://r3.com"))
-//
-//        val errors = configuration.validate()
-//
-//        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
-//    }
+    @Test
+    fun `validation has error when compatibilityZoneURL is present and devMode is true`() {
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"))
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `validation succeeds when compatibilityZoneURL is present and devMode is true and allowCompatibilityZoneURL is set`() {
-//        val configuration = testConfiguration.copy(
-//                devMode = true,
-//                compatibilityZoneURL = URL("https://r3.com"),
-//                devModeOptions = DevModeOptions(allowCompatibilityZone = true))
-//
-//        val errors = configuration.validate()
-//        assertThat(errors).isEmpty()
-//    }
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("compatibilityZoneURL") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `validation succeeds when compatibilityZoneURL is present and devMode is true and allowCompatibilityZoneURL is set`() {
+        val configuration = testConfiguration.copy(
+                devMode = true,
+                compatibilityZoneURL = URL("https://r3.com"),
+                devModeOptions = DevModeOptions(allowCompatibilityZone = true))
+
+        val errors = configuration.validate()
+        assertThat(errors).isEmpty()
+    }
 
     @Test
     fun `errors for nested config keys contain path`() {
@@ -155,34 +151,32 @@ class NodeConfigurationImplTest {
         }
     }
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `validation has error when compatibilityZone is present and devMode is true`() {
-//        val configuration = testConfiguration.copy(devMode = true, networkServices = NetworkServicesConfig(
-//                URL("https://r3.com.doorman"),
-//                URL("https://r3.com/nm")))
-//
-//        val errors = configuration.validate()
-//
-//        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
-//    }
+    @Test
+    fun `validation has error when compatibilityZone is present and devMode is true`() {
+        val configuration = testConfiguration.copy(devMode = true, networkServices = NetworkServicesConfig(
+                URL("https://r3.com.doorman"),
+                URL("https://r3.com/nm")))
 
-    // TODO sollecitom remove or substitute with check that constructor with these invalid values throws an exception
-//    @Test
-//    fun `validation has error when both compatibilityZoneURL and networkServices are configured`() {
-//        val configuration = testConfiguration.copy(
-//                devMode = false,
-//                compatibilityZoneURL = URL("https://r3.com"),
-//                networkServices = NetworkServicesConfig(
-//                        URL("https://r3.com.doorman"),
-//                        URL("https://r3.com/nm")))
-//
-//        val errors = configuration.validate()
-//
-//        assertThat(errors).hasOnlyOneElementSatisfying { error ->
-//            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
-//        }
-//    }
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying { error -> error.contains("networkServices") && error.contains("devMode") }
+    }
+
+    @Test
+    fun `validation has error when both compatibilityZoneURL and networkServices are configured`() {
+        val configuration = testConfiguration.copy(
+                devMode = false,
+                compatibilityZoneURL = URL("https://r3.com"),
+                networkServices = NetworkServicesConfig(
+                        URL("https://r3.com.doorman"),
+                        URL("https://r3.com/nm")))
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying { error ->
+            error.contains("Cannot configure both compatibilityZoneUrl and networkServices simultaneously")
+        }
+    }
 
     @Test
     fun `rpcAddress and rpcSettings_address are equivalent`() {
@@ -238,11 +232,11 @@ class NodeConfigurationImplTest {
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }
 
-    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
+    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
+    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfigurationImpl {
         return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer?.let { X500Principal(it) }, crlCheckSoftFail = crlCheckSoftFail)
     }
 
