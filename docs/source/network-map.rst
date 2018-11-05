@@ -45,7 +45,7 @@ The set of REST end-points for the network map service are as follows.
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/network-parameters/{hash}  | Retrieve the signed network parameters (see below). The entire object is signed with the network map certificate which is also attached.     |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
-| GET            | /network-map/my-ip                      | Retrieve the IP address of the caller (and **not** of the network map).                                                                      |
+| GET            | /network-map/my-hostname                | Retrieve the IP address of the caller (and **not** of the network map).                                                                      |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
 HTTP is used for the network map service instead of Corda's own AMQP based peer to peer messaging protocol to
