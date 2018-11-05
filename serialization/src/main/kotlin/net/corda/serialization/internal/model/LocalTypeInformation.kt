@@ -3,6 +3,8 @@ package net.corda.serialization.internal.model
 import java.lang.reflect.*
 import kotlin.reflect.KFunction
 import net.corda.core.serialization.SerializableCalculatedProperty
+import net.corda.serialization.internal.amqp.asClass
+import java.util.*
 
 typealias PropertyName = String
 
@@ -99,7 +101,22 @@ sealed class LocalTypeInformation {
     /**
      * The [LocalTypeInformation] emitted if we hit a cycle while traversing the graph of related types.
      */
-    data class Cycle(override val observedType: Type, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
+    data class Cycle(
+            override val observedType: Type,
+            override val typeIdentifier: TypeIdentifier,
+            private val _follow: () -> LocalTypeInformation) : LocalTypeInformation() {
+        val follow: LocalTypeInformation get() = _follow()
+
+        // Custom equals / hashcode because otherwise the "follow" lambda makes equality harder to reason about.
+        override fun equals(other: Any?): Boolean =
+                other is Cycle &&
+                        other.observedType == observedType &&
+                        other.typeIdentifier == typeIdentifier
+
+        override fun hashCode(): Int = Objects.hash(observedType, typeIdentifier)
+
+        override fun toString(): String = "Cycle($observedType, $typeIdentifier)"
+    }
 
     /**
      * May in fact be a more complex class, but is treated as if atomic, i.e. we don't further expand its properties.
@@ -207,12 +224,63 @@ sealed class LocalTypeInformation {
             val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
 
     /**
-     * Represents a type whose underlying class is a collection class such as a [Map] or [List].
+     * Represents a type whose underlying class is a collection class such as [List] with a single type parameter.
      *
-     * @param typeParameters [LocalTypeInformation] for the resolved type parameters of the type, i.e. the types of its
-     * keys and/or elements.
+     * @param elementType [LocalTypeInformation] for the resolved type parameter of the type, i.e. the type of its
+     * elements. [Unknown] if the type is erased.
      */
-    data class ACollection(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val typeParameters: List<LocalTypeInformation>) : LocalTypeInformation()
+    data class ACollection(override val observedType: Type, override val typeIdentifier: TypeIdentifier, val elementType: LocalTypeInformation) : LocalTypeInformation() {
+        val isErased: Boolean get() = typeIdentifier is TypeIdentifier.Erased
+
+        fun withElementType(parameter: LocalTypeInformation): ACollection = when(typeIdentifier) {
+            is TypeIdentifier.Erased -> {
+                val unerasedType = typeIdentifier.toParameterized(listOf(parameter.typeIdentifier))
+                ACollection(
+                        unerasedType.getLocalType(this::class.java.classLoader),
+                        unerasedType,
+                        parameter)
+            }
+            is TypeIdentifier.Parameterised -> {
+                val reparameterizedType = typeIdentifier.copy(parameters = listOf(parameter.typeIdentifier))
+                ACollection(
+                        reparameterizedType.getLocalType(this::class.java.classLoader),
+                        reparameterizedType,
+                        parameter
+                )
+            }
+            else -> throw IllegalStateException("Cannot parameterise $this")
+        }
+    }
+
+    /**
+     * Represents a type whose underlying class is a collection class such as [List] with a single type parameter.
+     *
+     * @param elementType [LocalTypeInformation] for the resolved type parameter of the type, i.e. the type of its
+     * elements. [Unknown] if the type is erased.
+     */
+    data class AMap(override val observedType: Type, override val typeIdentifier: TypeIdentifier,
+                    val keyType: LocalTypeInformation, val valueType: LocalTypeInformation) : LocalTypeInformation() {
+        val isErased: Boolean get() = typeIdentifier is TypeIdentifier.Erased
+
+        fun withParameters(keyType: LocalTypeInformation, valueType: LocalTypeInformation): AMap = when(typeIdentifier) {
+            is TypeIdentifier.Erased -> {
+                val unerasedType = typeIdentifier.toParameterized(listOf(keyType.typeIdentifier, valueType.typeIdentifier))
+                AMap(
+                        unerasedType.getLocalType(this::class.java.classLoader),
+                        unerasedType,
+                        keyType, valueType)
+            }
+            is TypeIdentifier.Parameterised -> {
+                val reparameterizedType = typeIdentifier.copy(parameters = listOf(keyType.typeIdentifier, valueType.typeIdentifier))
+                AMap(
+                        reparameterizedType.getLocalType(this::class.java.classLoader),
+                        reparameterizedType,
+                        keyType, valueType
+                )
+            }
+            else -> throw IllegalStateException("Cannot parameterise $this")
+        }
+    }
 }
 
 /**

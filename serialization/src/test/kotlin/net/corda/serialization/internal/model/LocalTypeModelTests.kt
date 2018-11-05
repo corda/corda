@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -12,7 +13,18 @@ import java.util.*
 
 class LocalTypeModelTests {
 
-    private val model = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist))
+    object TestTypeModelConfiguration : LocalTypeModelConfiguration {
+        private val notOpaque = listOf(Map::class, Collection::class, Exception::class)
+
+        override fun isOpaque(type: Type): Boolean =
+                notOpaque.none { it.java.isAssignableFrom(type.asClass()) } &&
+                        type.asClass() != Any::class.java &&
+                        type.typeName.startsWith("java")
+
+        override fun isExcluded(type: Type): Boolean = !AllWhitelist.isWhitelisted(type.asClass())
+    }
+
+    private val model = ConfigurableLocalTypeModel(TestTypeModelConfiguration)
 
     interface CollectionHolder<K, V> {
         val list: List<V>
@@ -122,9 +134,8 @@ class LocalTypeModelTests {
 
     @Test
     fun `non-composable types`() {
-        val modelWithoutOpacity = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist) { false })
-        assertTrue(modelWithoutOpacity.inspect(typeOf<Exception>()) is LocalTypeInformation.NonComposable)
-        assertTrue(modelWithoutOpacity.inspect(typeOf<TransitivelyNonComposable>()) is LocalTypeInformation.NonComposable)
+        assertTrue(model.inspect(typeOf<Exception>()) is LocalTypeInformation.NonComposable)
+        assertTrue(model.inspect(typeOf<TransitivelyNonComposable>()) is LocalTypeInformation.NonComposable)
     }
 
     private inline fun <reified T> assertInformation(expected: String) {

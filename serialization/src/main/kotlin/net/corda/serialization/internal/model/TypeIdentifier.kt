@@ -40,6 +40,8 @@ sealed class TypeIdentifier {
      */
     abstract fun getLocalType(classLoader: ClassLoader = ClassLoader.getSystemClassLoader()): Type
 
+    open val erased: TypeIdentifier get() = this
+
     /**
      * Obtain a nicely-formatted representation of the identified type, for help with debugging.
      */
@@ -82,14 +84,19 @@ sealed class TypeIdentifier {
          * class implementing a parameterised interface and specifying values for type variables which are referred to
          * by methods defined in the interface.
          */
-        fun forGenericType(type: Type, resolutionContext: Type = type): TypeIdentifier = when(type) {
-            is ParameterizedType -> Parameterised((type.rawType as Class<*>).name, type.actualTypeArguments.map {
-                forGenericType(it.resolveAgainst(resolutionContext))
-            })
-            is Class<*> -> forClass(type)
-            is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
-            else -> UnknownType
-        }
+        fun forGenericType(type: Type, resolutionContext: Type = type): TypeIdentifier =
+            when(type) {
+                is ParameterizedType -> Parameterised(
+                        (type.rawType as Class<*>).name,
+                        type.ownerType?.let { forGenericType(it) },
+                        type.actualTypeArguments.map {
+                            forGenericType(it.resolveAgainst(resolutionContext))
+                        })
+                is Class<*> -> forClass(type)
+                is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
+                is WildcardType -> type.upperBound.let { if (it == type) UnknownType else forGenericType(it) }
+                else -> UnknownType
+            }
     }
 
     /**
@@ -145,23 +152,15 @@ sealed class TypeIdentifier {
      * because they have been erased.
      */
     data class Erased(override val name: String, val erasedParameterCount: Int) : TypeIdentifier() {
-        /**
-         * Get a parameterised version of this type, with the type parameters populated with [Unknown].
-         */
-        fun toParameterized(): TypeIdentifier = toParameterized((0 until erasedParameterCount).map { UnknownType })
-
-        fun toParameterized(vararg parameters: TypeIdentifier): TypeIdentifier = toParameterized(parameters.toList())
-
         fun toParameterized(parameters: List<TypeIdentifier>): TypeIdentifier {
             if (parameters.size != erasedParameterCount) throw IncompatibleTypeIdentifierException(
                     "Erased type $name takes $erasedParameterCount parameters, but ${parameters.size} supplied"
             )
-            return Parameterised(name, parameters)
+            return Parameterised(name, null, parameters)
         }
 
         override fun toString() = "Erased($name)"
 
-        // Populate erased type parameters when creating local type.
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
     }
 
@@ -192,19 +191,19 @@ sealed class TypeIdentifier {
 
     private class ReconstitutedParameterizedType(
             private val _rawType: Type,
+            private val _ownerType: Type?,
             private val _actualTypeArguments: Array<Type>) : ParameterizedType {
         override fun getRawType(): Type = _rawType
-        override fun getOwnerType(): Type? = null
+        override fun getOwnerType(): Type? = _ownerType
         override fun getActualTypeArguments(): Array<Type> = _actualTypeArguments
         override fun toString(): String = TypeIdentifier.forGenericType(this).prettyPrint(false)
         override fun equals(other: Any?): Boolean =
                 other is ParameterizedType &&
                         other.rawType == rawType &&
-                        other.ownerType == null &&
+                        other.ownerType == ownerType &&
                         Arrays.equals(other.actualTypeArguments, actualTypeArguments)
         override fun hashCode(): Int =
                 Arrays.hashCode(actualTypeArguments) xor Objects.hashCode(ownerType) xor Objects.hashCode(rawType)
-
     }
 
     /**
@@ -212,11 +211,11 @@ sealed class TypeIdentifier {
      *
      * @param parameters [TypeIdentifier]s for each of the resolved type parameter values of this type.
      */
-    data class Parameterised(override val name: String, val parameters: List<TypeIdentifier>) : TypeIdentifier() {
+    data class Parameterised(override val name: String, val owner: TypeIdentifier?, val parameters: List<TypeIdentifier>) : TypeIdentifier() {
         /**
          * Get the type-erased equivalent of this type.
          */
-        fun erased(): TypeIdentifier = Erased(name, parameters.size)
+        override val erased: TypeIdentifier get() = Erased(name, parameters.size)
 
         override fun toString() = "Parameterised(${prettyPrint()})"
         override fun getLocalType(classLoader: ClassLoader): Type {
@@ -228,6 +227,7 @@ sealed class TypeIdentifier {
             }
             return ReconstitutedParameterizedType(
                     rawType,
+                    owner?.getLocalType(classLoader),
                     parameters.map { it.getLocalType(classLoader) }.toTypedArray())
         }
     }

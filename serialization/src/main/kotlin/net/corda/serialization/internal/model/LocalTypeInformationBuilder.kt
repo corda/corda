@@ -17,6 +17,7 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.jvm.internal.KotlinReflectionInternalError
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaConstructor
 import kotlin.reflect.jvm.javaGetter
@@ -37,7 +38,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
      */
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
-        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier)
+        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
+            LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
+        }
         else lookup.lookup(type, typeIdentifier) {
             copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
         }
@@ -70,6 +73,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
 
     private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier): LocalTypeInformation = withContext(type) {
         when {
+            Collection::class.java.isAssignableFrom(type) &&
+            !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
+            Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isPrimitive -> LocalTypeInformation.Atomic(type, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
@@ -92,30 +98,35 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             type: ParameterizedType,
             typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation = withContext(type) {
         when {
-            rawType.isCollectionOrMap -> LocalTypeInformation.ACollection(rawType, typeIdentifier, buildTypeParameterInformation(type))
-            rawType.isInterface -> buildInterface(rawType, typeIdentifier, buildTypeParameterInformation(type))
-            rawType.isAbstractClass -> buildAbstract(rawType, typeIdentifier, buildTypeParameterInformation(type))
+            Collection::class.java.isAssignableFrom(rawType) &&
+            !EnumSet::class.java.isAssignableFrom(rawType) ->
+                LocalTypeInformation.ACollection(type, typeIdentifier, buildTypeParameterInformation(type)[0])
+            Map::class.java.isAssignableFrom(rawType) -> {
+                val (keyType, valueType) = buildTypeParameterInformation(type)
+                LocalTypeInformation.AMap(type, typeIdentifier, keyType, valueType)
+            }
+            rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
+            rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
-
         }
     }
 
-    private fun buildAbstract(type: Class<*>, typeIdentifier: TypeIdentifier,
+    private fun buildAbstract(type: Type, typeIdentifier: TypeIdentifier,
                               typeParameters: List<LocalTypeInformation>): LocalTypeInformation.Abstract =
             LocalTypeInformation.Abstract(
                     type,
                     typeIdentifier,
-                    buildReadOnlyProperties(type),
+                    buildReadOnlyProperties(type.asClass()),
                     buildSuperclassInformation(type),
                     buildInterfaceInformation(type),
                     typeParameters)
 
-    private fun buildInterface(type: Class<*>, typeIdentifier: TypeIdentifier,
+    private fun buildInterface(type: Type, typeIdentifier: TypeIdentifier,
                                typeParameters: List<LocalTypeInformation>): LocalTypeInformation.AnInterface =
             LocalTypeInformation.AnInterface(
                     type,
                     typeIdentifier,
-                    buildReadOnlyProperties(type),
+                    buildReadOnlyProperties(type.asClass()),
                     buildInterfaceInformation(type),
                     typeParameters)
 
@@ -268,17 +279,13 @@ private fun Method.returnsNullable(): Boolean = try {
     }?.returnType?.toString() ?: "?"
 
     returnTypeString.endsWith('?') || returnTypeString.endsWith('!')
-} catch (e: kotlin.reflect.jvm.internal.KotlinReflectionInternalError) {
+} catch (e: KotlinReflectionInternalError) {
     // This might happen for some types, e.g. kotlin.Throwable? - the root cause of the issue
     // is: https://youtrack.jetbrains.com/issue/KT-13077
     // TODO: Revisit this when Kotlin issue is fixed.
 
     true
 }
-
-internal val Class<*>.isCollectionOrMap
-    get() = (Collection::class.java.isAssignableFrom(this) || Map::class.java.isAssignableFrom(this))
-            && !EnumSet::class.java.isAssignableFrom(this)
 
 /**
  * Code for finding the unique constructor we will use for deserialization.
@@ -291,7 +298,7 @@ internal val Class<*>.isCollectionOrMap
  */
 private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val clazz = type.asClass()
-    if (!clazz.isConcreteClass) return null
+    if (!clazz.isConcreteClass || clazz.isSynthetic) return null
 
     val kotlinCtors = clazz.kotlin.constructors
 
