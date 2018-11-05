@@ -109,7 +109,7 @@ class NodeVaultService(
 
             val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
-                val stateOnly = stateAndRef.value.state.data
+                  val stateOnly = stateAndRef.value.state.data
                 // TODO: Optimise this.
                 //
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
@@ -134,6 +134,8 @@ class NodeVaultService(
                 val keys = stateOnly.participants.map { it.owningKey }
                 val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
+                val persistentKeys = keys.map { VaultSchemaV1.PersistentPublicKey(it) }
+                persistentKeys.forEach { session.save(it) }
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
@@ -141,7 +143,8 @@ class NodeVaultService(
                         recordedTime = clock.instant(),
                         relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
                         constraintType = constraintInfo.type(),
-                        constraintData = constraintInfo.data()
+                        constraintData = constraintInfo.data(),
+                        participants = persistentKeys.toMutableSet()
                 )
                 stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
                 session.save(stateToAdd)

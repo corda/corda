@@ -11,6 +11,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.util.*
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,

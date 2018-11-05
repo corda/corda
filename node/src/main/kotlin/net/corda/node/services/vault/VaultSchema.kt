@@ -2,16 +2,23 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
+import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.MAX_CONSTRAINT_DATA_SIZE
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Cascade
+import org.hibernate.annotations.CascadeType
+import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.Type
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -26,7 +33,7 @@ object VaultSchema
  */
 @CordaSerializable
 object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-        mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+        mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java, PersistentPublicKey::class.java, PublicKeyHashToExternalIdMapping::class.java, ExtIdToPubKeyView::class.java)) {
 
     override val migrationResource = "vault-schema.changelog-master"
 
@@ -39,6 +46,12 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             /** refers to the X500Name of the notary a state is attached to */
             @Column(name = "notary_name", nullable = false)
             var notary: Party,
+
+            /** Public keys of participant parties **/
+            @OneToMany
+            @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
+            @Cascade(CascadeType.ALL)
+            var participants: MutableSet<PersistentPublicKey>,
 
             /** references a concrete ContractState that is [QueryableState] and has a [MappedSchema] */
             @Column(name = "contract_state_class_name", nullable = false)
@@ -172,5 +185,59 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             var note: String?
     ) {
         constructor(txId: String, note: String) : this(0, txId, note)
+    }
+
+    @Entity
+    @Table(name = "state_public_key_hash", indexes = [Index(name = "state_pk_hash_idx", columnList = "public_key_hash")])
+    class PersistentPublicKey(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            var id: Long? = null,
+
+            @ManyToOne(fetch = FetchType.EAGER)
+            @JoinColumns(
+                    JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"),
+                    JoinColumn(name = "output_index", referencedColumnName = "output_index")
+            )
+            var state: VaultStates? = null,
+
+            @Column(name = "public_key_hash")
+            var publicKeyHash: String
+    ) {
+        constructor(publicKey: PublicKey) : this(null, null, publicKey.toStringShort())
+    }
+
+    @Entity
+    @Table(
+            name = "public_key_hash_to_external_id_mapping",
+            indexes = [javax.persistence.Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")]
+    )
+    class PublicKeyHashToExternalIdMapping(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            var key: Long? = null,
+
+            @Column(name = "external_id")
+            var externalId: UUID,
+
+            @Column(name = "public_key_hash", nullable = false)
+            var publicKeyHash: String
+    ) {
+        constructor(accountId: UUID, publicKey: PublicKey) : this(null, accountId, publicKey.toStringShort())
+    }
+
+    @Entity
+    @Immutable
+    @Table(name = "v_pkey_hash_ex_id_map")
+    class ExtIdToPubKeyView(
+            @Column(name = "public_key_hash")
+            var publicKeyHash: String,
+
+            @Column(name = "external_id")
+            var externalId: UUID
+    ) : PersistentState() {
+        constructor(publicKey: PublicKey, accountId: UUID) : this(publicKey.toStringShort(), accountId)
     }
 }
