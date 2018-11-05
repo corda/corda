@@ -269,11 +269,8 @@ The following four items are passed as a semi-colon separated string to the ``--
     3. Password refers to the key store password (not to be confused with the key password).
     4. Alias refers to the name associated with a certificate containing the public key to be associated with the package namespace.
 
-Let us use the Bank of Corda example to initialise a simple network:
-
-.. code-block:: shell
-    # checkout the Corda Open Source repository change directory to the root ($CORDA_HOME)
-    ./gradlew sample:bank-of-corda-demo:clean samples:bank-of-corda-demo:deployNodes
+Let's use the `Example CorDapp <https://github.com/corda/cordapp-example>`_ to initialise a simple network, and then register and unregister a package namespace.
+Checkout the Example CorDapp and follow the instructions to build it `here <https://docs.corda.net/tutorial-cordapp.html#building-the-example-cordapp>`_.
 
 .. note:: You can point to any existing bootstrapped corda network (this will have the effect of updating the associated network parameters file).
 
@@ -289,22 +286,15 @@ This will generate a key store file called ``_teststore`` in the current directo
 
 .. code-block:: shell
 
-    # Use a prebuilt bootstrapper jar (from the corda maven repository) or build it from source:
-    ./gradlew tools:bootstrapper:clean tools:bootstrapper:jar
-
     # Register the java package namespace using the bootstrapper tool
-    java -jar tools/bootstrapper/build/libs/network-bootstrapper-|version|.jar
-         --dir samples/bank-of-corda-demo/build/nodes
-         --register-package-owner net.corda.bank;./_teststore;MyStorePassword;MyKeyAlias
+    java -jar network-bootstrapper.jar --dir build/nodes --register-package-owner com.example;./_teststore;MyStorePassword;MyKeyAlias
 
 3. Unregister the package namespace:
 
 .. code-block:: shell
 
     # Unregister the java package namespace using the bootstrapper tool
-    java -jar tools/bootstrapper/build/libs/network-bootstrapper-|version|.jar
-         --dir samples/bank-of-corda-demo/build/nodes
-         --unregister-package-owner net.corda.bank
+    java -jar network-bootstrapper.jar --dir build/nodes --unregister-package-owner com.example
 
 Command-line options
 --------------------
