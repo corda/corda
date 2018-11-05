@@ -52,7 +52,7 @@ The utility performs the following steps:
 
 4. It creates the node's keystore and trust store using the received certificates
 
-5. It creates and stores the node's TLS keys and legal identity key
+5. It creates and stores the node's TLS keys and legal identity key along with their corresponding certificate-chains
 
 .. note:: You can exit the utility at any time if the approval process is taking longer than expected. The request
    process will resume on restart as long as the ``--initial-registration`` flag is specified.
