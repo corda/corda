@@ -44,7 +44,7 @@ import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {
     private val username by string()
-    private val password by string()
+    private val password by string(sensitive = true)
     private val permissions by string().listOrEmpty()
 
     override fun parseValid(configuration: Config): Valid<User> {
@@ -57,7 +57,7 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
         private object DataSourceSpec : Configuration.Specification<SecurityConfiguration.AuthService.DataSource>("DataSource") {
             private val type by enum(AuthDataSourceType::class)
             private val passwordEncryption by enum(PasswordEncryption::class).optional().withDefaultValue(SecurityConfiguration.AuthService.DataSource.Defaults.passwordEncryption)
-            private val connection by nestedObject().map(::toProperties).optional()
+            private val connection by nestedObject(sensitive = true).map(::toProperties).optional()
             private val users by nested(UserSpec).list().optional()
 
             override fun parseValid(configuration: Config): Valid<SecurityConfiguration.AuthService.DataSource> {
@@ -168,7 +168,7 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
 internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSettings>("NodeRpcSettings") {
     internal object BrokerRpcSslOptionsSpec : Configuration.Specification<BrokerRpcSslOptions>("BrokerRpcSslOptions") {
         private val keyStorePath by string().mapValid(::toPath)
-        private val keyStorePassword by string()
+        private val keyStorePassword by string(sensitive = true)
 
         override fun parseValid(configuration: Config): Valid<BrokerRpcSslOptions> {
             return valid(BrokerRpcSslOptions(configuration[keyStorePath], configuration[keyStorePassword]))

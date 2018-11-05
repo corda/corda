@@ -21,12 +21,11 @@ import net.corda.node.services.config.schema.parsers.toProperties
 import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
 
-// TODO sollecitom make all password fields sensitive, including nested configs
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
     private val emailAddress by string()
     private val jmxMonitoringHttpPort by int().optional()
-    private val dataSourceProperties by nestedObject().map(::toProperties)
+    private val dataSourceProperties by nestedObject(sensitive = true).map(::toProperties)
     private val rpcUsers by nested(UserSpec).list()
     private val security by nested(SecurityConfigurationSpec).optional()
     private val devMode by boolean().optional().withDefaultValue(Defaults.devMode)
@@ -60,8 +59,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jmxReporterType by enum(JmxReporterType::class).optional().withDefaultValue(Defaults.jmxReporterType)
     private val baseDirectory by string().mapValid(::toPath)
     private val flowOverrides by nested(FlowOverridesConfigSpec).optional()
-    private val keyStorePassword by string()
-    private val trustStorePassword by string()
+    private val keyStorePassword by string(sensitive = true)
+    private val trustStorePassword by string(sensitive = true)
     private val rpcAddress by string().mapValid(::toNetworkHostAndPort).optional()
     private val transactionCacheSizeMegaBytes by int().optional()
     private val attachmentContentCacheSizeMegaBytes by int().optional()
