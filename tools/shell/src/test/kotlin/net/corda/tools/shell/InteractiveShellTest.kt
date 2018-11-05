@@ -16,7 +16,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.util.*
