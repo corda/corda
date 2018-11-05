@@ -138,7 +138,7 @@ class CompatibleTransactionTests {
                 timeWindowGroup,
                 signersGroup
         )
-        assertFails { WireTransaction(componentGroupsB, privacySalt) }
+        assertFails { WireTransaction(componentGroupsB, privacySalt).attachments.toList() }
 
         // Malformed tx - duplicated component group detected.
         val componentGroupsDuplicatedCommands = listOf(

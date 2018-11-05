@@ -13,13 +13,14 @@ import io.atomix.copycat.server.CopycatServer
 import io.atomix.copycat.server.cluster.Member
 import io.atomix.copycat.server.storage.Storage
 import io.atomix.copycat.server.storage.StorageLevel
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
-import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -193,7 +194,7 @@ class RaftUniquenessProvider(
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
             references: List<StateRef>
-    ) {
+    ): CordaFuture<UniquenessProvider.Result> {
         log.debug { "Attempting to commit input states: ${states.joinToString()}" }
         val commitCommand = CommitTransaction(
                 states,
@@ -203,10 +204,16 @@ class RaftUniquenessProvider(
                 timeWindow,
                 references
         )
-        val commitError = client.submit(commitCommand).get()
-        if (commitError != null) throw NotaryInternalException(commitError)
-        log.debug { "All input states of transaction $txId have been committed" }
+        val future = openFuture<UniquenessProvider.Result>()
+        client.submit(commitCommand).thenAccept { commitError ->
+            val result = if (commitError != null) {
+                UniquenessProvider.Result.Failure(commitError)
+            } else {
+                log.debug { "All input states of transaction $txId have been committed" }
+                UniquenessProvider.Result.Success
+            }
+            future.set(result)
+        }
+        return future
     }
 }
-
-
