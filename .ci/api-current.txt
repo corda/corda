@@ -617,6 +617,18 @@ public @interface net.corda.core.contracts.LegalProseReference
   public abstract String uri()
 ##
 @CordaSerializable
+public final class net.corda.core.contracts.LinearPointer extends net.corda.core.contracts.StatePointer
+  public <init>(net.corda.core.contracts.UniqueIdentifier, Class<T>)
+  @NotNull
+  public net.corda.core.contracts.UniqueIdentifier getPointer()
+  @NotNull
+  public Class<T> getType()
+  @NotNull
+  public net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.node.ServiceHub)
+  @NotNull
+  public net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.transactions.LedgerTransaction)
+##
+@CordaSerializable
 public interface net.corda.core.contracts.LinearState extends net.corda.core.contracts.ContractState
   @NotNull
   public abstract net.corda.core.contracts.UniqueIdentifier getLinearId()
@@ -760,6 +772,17 @@ public final class net.corda.core.contracts.StateAndRef extends java.lang.Object
   public String toString()
 ##
 @CordaSerializable
+public abstract class net.corda.core.contracts.StatePointer extends java.lang.Object
+  @NotNull
+  public abstract Object getPointer()
+  @NotNull
+  public abstract Class<T> getType()
+  @NotNull
+  public abstract net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.node.ServiceHub)
+  @NotNull
+  public abstract net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.transactions.LedgerTransaction)
+##
+@CordaSerializable
 public final class net.corda.core.contracts.StateRef extends java.lang.Object
   public <init>(net.corda.core.crypto.SecureHash, int)
   @NotNull
@@ -774,6 +797,18 @@ public final class net.corda.core.contracts.StateRef extends java.lang.Object
   public int hashCode()
   @NotNull
   public String toString()
+##
+@CordaSerializable
+public final class net.corda.core.contracts.StaticPointer extends net.corda.core.contracts.StatePointer
+  public <init>(net.corda.core.contracts.StateRef, Class<T>)
+  @NotNull
+  public net.corda.core.contracts.StateRef getPointer()
+  @NotNull
+  public Class<T> getType()
+  @NotNull
+  public net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.node.ServiceHub)
+  @NotNull
+  public net.corda.core.contracts.StateAndRef<T> resolve(net.corda.core.transactions.LedgerTransaction)
 ##
 public final class net.corda.core.contracts.Structures extends java.lang.Object
   @NotNull
