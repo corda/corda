@@ -150,7 +150,7 @@ data class LedgerTransaction @JvmOverloads constructor(
             val contractAttachment = uniqueAttachmentsForStateContract.first()
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract, networkParameters?.whitelistedContractImplementations)
             if (state.constraint is SignatureAttachmentConstraint)
-                checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
+                checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
