@@ -185,6 +185,82 @@ data class NodeConfigurationImpl(
             h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
             else -> h2Settings
         }
+
+    fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        errors += validateDevModeOptions()
+        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
+        errors += rpcSettingsErrors
+        if (rpcSettingsErrors.isEmpty()) {
+            // Forces lazy property to initialise in order to throw exceptions
+            rpcOptions
+        }
+        errors += validateTlsCertCrlConfig()
+        errors += validateNetworkServices()
+        errors += validateH2Settings()
+        return errors
+    }
+
+    private fun validateTlsCertCrlConfig(): List<String> {
+        val errors = mutableListOf<String>()
+        if (tlsCertCrlIssuer != null) {
+            if (tlsCertCrlDistPoint == null) {
+                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
+            }
+        }
+        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
+            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+        }
+        return errors
+    }
+
+    private fun validateH2Settings(): List<String> {
+        val errors = mutableListOf<String>()
+        if (h2port != null && h2Settings != null) {
+            errors += "Cannot specify both 'h2port' and 'h2Settings' in configuration"
+        }
+        return errors
+    }
+
+    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
+        val errors = mutableListOf<String>()
+        if (options.adminAddress == null) {
+            errors += "'rpcSettings.adminAddress': missing"
+        }
+        if (options.useSsl && options.ssl == null) {
+            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
+        }
+        return errors
+    }
+
+    private fun validateDevModeOptions(): List<String> {
+        if (devMode) {
+            compatibilityZoneURL?.let {
+                if (devModeOptions?.allowCompatibilityZone != true) {
+                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
+                }
+            }
+
+            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // this check by returning above is fine.
+            networkServices?.let {
+                if (devModeOptions?.allowCompatibilityZone != true) {
+                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
+                }
+            }
+        }
+        return emptyList()
+    }
+
+    private fun validateNetworkServices(): List<String> {
+        val errors = mutableListOf<String>()
+
+        if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
+            errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
+        }
+
+        return errors
+    }
 }
 
 data class NodeRpcSettings(

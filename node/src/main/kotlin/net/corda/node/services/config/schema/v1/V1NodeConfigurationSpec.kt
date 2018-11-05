@@ -22,7 +22,6 @@ import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
 
 // TODO sollecitom make all password fields sensitive, including nested configs
-// TODO sollecitom reuse default values for all nested configs
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
     private val emailAddress by string()
@@ -120,9 +119,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectory)
         val cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
 
-        // TODO sollecitom add validation here
-
-        return valid(NodeConfigurationImpl(
+        val result = valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
                 baseDirectory = baseDirectory,
                 myLegalName = myLegalName,
                 emailAddress = emailAddress,
@@ -170,81 +167,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                 cordappDirectories = cordappDirectories,
                 cordappSignerKeyFingerprintBlacklist = cordappSignerKeyFingerprintBlacklist
         ))
+        return result.mapValid { conf -> Valid.withResult(conf as NodeConfiguration, conf.validate().map(::toError).toSet()) }
     }
-
-//    override fun validate(): List<String> {
-//        val errors = mutableListOf<String>()
-//        errors += validateDevModeOptions()
-//        val rpcSettingsErrors = validateRpcSettings(rpcSettings)
-//        errors += rpcSettingsErrors
-//        if (rpcSettingsErrors.isEmpty()) {
-//            // Forces lazy property to initialise in order to throw exceptions
-//            rpcOptions
-//        }
-//        errors += validateTlsCertCrlConfig()
-//        errors += validateNetworkServices()
-//        errors += validateH2Settings()
-//        return errors
-//    }
-//
-//    private fun validateTlsCertCrlConfig(): List<String> {
-//        val errors = mutableListOf<String>()
-//        if (tlsCertCrlIssuer != null) {
-//            if (tlsCertCrlDistPoint == null) {
-//                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
-//            }
-//        }
-//        if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
-//            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
-//        }
-//        return errors
-//    }
-//
-//    private fun validateH2Settings(): List<String> {
-//        val errors = mutableListOf<String>()
-//        if (h2port != null && h2Settings != null) {
-//            errors += "Cannot specify both 'h2port' and 'h2Settings' in configuration"
-//        }
-//        return errors
-//    }
-//
-//    private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
-//        val errors = mutableListOf<String>()
-//        if (options.adminAddress == null) {
-//            errors += "'rpcSettings.adminAddress': missing"
-//        }
-//        if (options.useSsl && options.ssl == null) {
-//            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
-//        }
-//        return errors
-//    }
-//
-//    private fun validateDevModeOptions(): List<String> {
-//        if (devMode) {
-//            compatibilityZoneURL?.let {
-//                if (devModeOptions?.allowCompatibilityZone != true) {
-//                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
-//                }
-//            }
-//
-//            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
-//            // this check by returning above is fine.
-//            networkServices?.let {
-//                if (devModeOptions?.allowCompatibilityZone != true) {
-//                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
-//                }
-//            }
-//        }
-//        return emptyList()
-//    }
-//
-//    private fun validateNetworkServices(): List<String> {
-//        val errors = mutableListOf<String>()
-//
-//        if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
-//            errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
-//        }
-//
-//        return errors
-//    }
 }
+
+private fun toError(validationErrorMessage: String): Configuration.Validation.Error = Configuration.Validation.Error.BadValue.of(validationErrorMessage)
