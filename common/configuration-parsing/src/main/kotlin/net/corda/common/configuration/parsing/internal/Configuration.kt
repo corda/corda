@@ -446,6 +446,8 @@ object Configuration {
                 companion object {
 
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
+
+                    fun forKey(keyName: String, expectedTypeName: String, actualTypeName: String): WrongType = of("$keyName has type ${actualTypeName.toUpperCase()} rather than ${expectedTypeName.toUpperCase()}")
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList())
@@ -462,7 +464,6 @@ object Configuration {
 
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
 
-                    // TODO sollecitom add these functions to the others?
                     fun forKey(keyName: String): MissingValue = of("No configuration setting found for key '$keyName'", keyName)
                 }
 

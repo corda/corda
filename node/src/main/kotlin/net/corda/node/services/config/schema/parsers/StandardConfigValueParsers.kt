@@ -17,15 +17,7 @@ import java.nio.file.Paths
 import java.util.*
 import javax.security.auth.x500.X500Principal
 
-internal fun toProperties(rawValue: ConfigObject): Properties {
-    // TODO sollecitom check
-    return rawValue.toConfig().toProperties()
-//    val properties = Properties()
-//    rawValue.entries.forEach { (key, value) ->
-//        properties[key] = value.unwrapped()
-//    }
-//    return properties
-}
+internal fun toProperties(rawValue: ConfigObject): Properties = rawValue.toConfig().toProperties()
 
 private fun Config.toProperties() = entrySet().associateByTo(Properties(), { ConfigUtil.splitPath(it.key).joinToString(".") }, { it.value.unwrapped().toString() })
 
