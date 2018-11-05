@@ -1,5 +1,5 @@
-Setting up your local environment to allow the deployment of a Corda node
-=========================================================================
+Deploying Corda to Corda Testnet from your local environment
+============================================================
 
 .. contents::
 
