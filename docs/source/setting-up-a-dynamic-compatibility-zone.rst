@@ -16,8 +16,9 @@ By *dynamic compatibility zone*, we mean a compatibility zone that relies on a n
 join dynamically, instead of requiring each node to be bootstrapped and have the node-infos distributed manually. While
 this may sound appealing, think twice before going down this route:
 
-1. It isn't necessary for testing.
-2. It isn't necessary for adding another layer of permissioning or 'know your customer' requirements onto your app.
+1. If you need to test a CorDapp, it is easier to create a test network using the network bootstrapper tool (see below)
+2. If you need to control who uses your CorDapp, it is easier to apply permissioning by creating a business network
+   (see below)
 
 **Testing.** Creating a production-ready zone isn't necessary for testing as you can use the *network bootstrapper*
 tool to create all the certificates, keys, and distribute the needed map files to run many nodes. The bootstrapper can
