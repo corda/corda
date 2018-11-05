@@ -46,7 +46,6 @@ sealed class TypeIdentifier {
      * Obtain a nicely-formatted representation of the identified type, for help with debugging.
      */
     fun prettyPrint(simplifyClassNames: Boolean = true): String = when(this) {
-            is TypeIdentifier.Cycle -> "cycle($name)"
             is TypeIdentifier.UnknownType -> "?"
             is TypeIdentifier.TopType -> "*"
             is TypeIdentifier.Unparameterised -> name.simplifyClassNameIfRequired(simplifyClassNames)
@@ -85,18 +84,19 @@ sealed class TypeIdentifier {
          * class implementing a parameterised interface and specifying values for type variables which are referred to
          * by methods defined in the interface.
          */
-        fun forGenericType(type: Type, resolutionContext: Type = type, seen: Set<Type> = emptySet()): TypeIdentifier =
-                if (type in seen) Cycle(type)
-                else when(type) {
-                    is ParameterizedType -> Parameterised(
-                            (type.rawType as Class<*>).name,
-                            type.ownerType?.let { forGenericType(it, seen = seen + type) },
-                            type.actualTypeArguments.map { forGenericType(it.resolveAgainst(resolutionContext), seen = seen + type) })
-                    is Class<*> -> forClass(type)
-                    is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext), seen = seen + type))
-                    is WildcardType -> type.upperBound.let { if (it == type) UnknownType else forGenericType(it) }
-                    else -> UnknownType
-                }
+        fun forGenericType(type: Type, resolutionContext: Type = type): TypeIdentifier =
+            when(type) {
+                is ParameterizedType -> Parameterised(
+                        (type.rawType as Class<*>).name,
+                        type.ownerType?.let { forGenericType(it) },
+                        type.actualTypeArguments.map {
+                            forGenericType(it.resolveAgainst(resolutionContext))
+                        })
+                is Class<*> -> forClass(type)
+                is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
+                is WildcardType -> type.upperBound.let { if (it == type) UnknownType else forGenericType(it) }
+                else -> UnknownType
+            }
     }
 
     /**
@@ -121,17 +121,6 @@ sealed class TypeIdentifier {
         override val name get() = "?"
         override fun getLocalType(classLoader: ClassLoader): Type = UnboundedWildcardType
         override fun toString() = "UnknownType"
-    }
-
-    /**
-     * A type that closes a cycle in a graph of related types, e.g. type parameters that refer to the type of which
-     * they are parameters.
-     */
-    data class Cycle(val type: Type): TypeIdentifier() {
-        override val name get() = type.typeName
-        override fun getLocalType(classLoader: ClassLoader): Type = type
-        override fun toString() = type.toString()
-        val follow: TypeIdentifier get() = forGenericType(type)
     }
 
     /**
@@ -163,8 +152,6 @@ sealed class TypeIdentifier {
      * because they have been erased.
      */
     data class Erased(override val name: String, val erasedParameterCount: Int) : TypeIdentifier() {
-        fun toParameterized(vararg parameters: TypeIdentifier): TypeIdentifier = toParameterized(parameters.toList())
-
         fun toParameterized(parameters: List<TypeIdentifier>): TypeIdentifier {
             if (parameters.size != erasedParameterCount) throw IncompatibleTypeIdentifierException(
                     "Erased type $name takes $erasedParameterCount parameters, but ${parameters.size} supplied"
@@ -174,7 +161,6 @@ sealed class TypeIdentifier {
 
         override fun toString() = "Erased($name)"
 
-        // Populate erased type parameters when creating local type.
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
     }
 

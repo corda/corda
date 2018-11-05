@@ -22,13 +22,6 @@ interface LocalSerializerFactory {
     // TODO: remove from interface
     val classloader: ClassLoader
 
-    /**
-     * Look up, and manufacture if necessary, a serializer for the given type.
-     *
-     * @param actualClass Will be null if there isn't an actual object instance available (e.g. for
-     * restricted type processing).
-     */
-    @Throws(NotSerializableException::class)
     fun get(actualClass: Class<*>, declaredType: Type): AMQPSerializer<Any>
 
     fun get(declaredType: Type): AMQPSerializer<Any>
@@ -66,7 +59,7 @@ class DefaultLocalSerializerFactory(
     override fun get(declaredType: Type): AMQPSerializer<Any> {
         val resolvedType = when(declaredType) {
             is WildcardType -> if (declaredType.upperBounds.size == 1) declaredType.upperBounds[0]
-            else throw IllegalArgumentException("Cannot obtain upper bound for type $declaredType")
+            else throw NotSerializableException("Cannot obtain upper bound for type $declaredType")
             else -> declaredType
         }
         return get(resolvedType, typeModel.inspect(resolvedType))
@@ -186,9 +179,6 @@ class DefaultLocalSerializerFactory(
                 whitelist.requireWhitelisted(clazz)
                 SingletonSerializer(clazz, singleton, this)
             } else {
-                if (type.typeName.startsWith("?")) {
-                    assert(false)
-                }
                 whitelist.requireWhitelisted(type)
                 ObjectSerializer(type, this)
             }

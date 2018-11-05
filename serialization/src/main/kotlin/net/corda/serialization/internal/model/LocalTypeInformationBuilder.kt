@@ -57,7 +57,6 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
     private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
         val rawType = type.asClass()
         return when (typeIdentifier) {
-            is TypeIdentifier.Cycle -> build(type, typeIdentifier.follow)
             is TypeIdentifier.TopType -> LocalTypeInformation.Top
             is TypeIdentifier.UnknownType -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
