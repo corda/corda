@@ -36,7 +36,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
@@ -89,7 +88,7 @@ data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val configOverrides: MockNodeConfigOverrides? = null,
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordapp>? = null,
         val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
@@ -257,7 +256,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary },
+                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating)),
                     version = version
             ))
         }
@@ -463,7 +462,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
-            parameters.configOverrides(it)
+            parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 
         val cordapps = (parameters.additionalCordapps ?: emptySet()) + cordappsForAllNodes
@@ -631,3 +630,4 @@ class MockNodeFlowManager : NodeFlowManager() {
         testingRegistrations.put(initiator, factory)
     }
 }
+
