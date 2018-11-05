@@ -6,9 +6,8 @@ data class RemotePropertyInformation(val type: RemoteTypeInformation, val isMand
 
 sealed class RemoteTypeInformation {
 
+    abstract val typeDescriptor: TypeDescriptor
     abstract val typeIdentifier: TypeIdentifier
-
-    //region Pretty printing
 
     fun prettyPrint(indent: Int = 0): String {
         return when (this) {
@@ -37,27 +36,36 @@ sealed class RemoteTypeInformation {
     //endregion
 
     object Unknown : RemoteTypeInformation() {
+        override val typeDescriptor = "?"
         override val typeIdentifier = TypeIdentifier.UnknownType
     }
 
-    object Any : RemoteTypeInformation() {
+    object Top : RemoteTypeInformation() {
+        override val typeDescriptor = "*"
         override val typeIdentifier = TypeIdentifier.TopType
     }
 
-    data class Cycle(override val typeIdentifier: TypeIdentifier, val follow: () -> RemoteTypeInformation) : RemoteTypeInformation()
+    data class Cycle(override val typeIdentifier: TypeIdentifier, private val _follow: () -> RemoteTypeInformation) : RemoteTypeInformation() {
+        override val typeDescriptor = typeIdentifier.name
+        val follow: RemoteTypeInformation get() = _follow()
 
-    data class Unparameterised(override val typeIdentifier: TypeIdentifier) : RemoteTypeInformation()
-    data class Parameterised(override val typeIdentifier: TypeIdentifier, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
+        override fun equals(other: Any?): Boolean = other is Cycle && other.typeIdentifier == typeIdentifier
+        override fun hashCode(): Int = typeIdentifier.hashCode()
+        override fun toString(): String = "Cycle($typeIdentifier)"
+    }
 
-    data class AnArray(override val typeIdentifier: TypeIdentifier, val componentType: RemoteTypeInformation) : RemoteTypeInformation()
+    data class Unparameterised(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier) : RemoteTypeInformation()
+    data class Parameterised(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
 
-    data class AnEnum(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val members: List<String>)
+    data class AnArray(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val componentType: RemoteTypeInformation) : RemoteTypeInformation()
+
+    data class AnEnum(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val members: List<String>)
         : RemoteTypeInformation()
 
-    data class AnInterface(val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val interfaces: List<RemoteTypeInformation>, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
+    data class AnInterface(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val properties: Map<PropertyName, RemotePropertyInformation>, val interfaces: List<RemoteTypeInformation>, val typeParameters: List<RemoteTypeInformation>) : RemoteTypeInformation()
 
     data class Composable(
-            val typeDescriptor: TypeDescriptor,
+            override val typeDescriptor: TypeDescriptor,
             override val typeIdentifier: TypeIdentifier,
             val properties: Map<PropertyName, RemotePropertyInformation>,
             val interfaces: List<RemoteTypeInformation>,

@@ -2,16 +2,16 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.model.RemotePropertyInformation
 import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.TypeDescriptor
 import net.corda.serialization.internal.model.TypeIdentifier
 import java.io.NotSerializableException
 
 class AMQPRemoteTypeModel {
 
-    fun interpret(typeDescriptor: String, schema: Schema): RemoteTypeInformation {
+    fun interpret(schema: Schema): Map<TypeDescriptor, RemoteTypeInformation> {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
-        val target = schema.types.find { it.descriptor.name?.toString() == typeDescriptor } ?:
-                throw NotSerializableException("Type descriptor '$typeDescriptor' not found in schema")
-        return target.name.typeIdentifier.interpretIdentifier(notationLookup, emptySet())
+        val byTypeDescriptor = schema.types.associateBy { it.descriptor.name.toString() }
+        return byTypeDescriptor.mapValues { (k, v) -> v.name.typeIdentifier.interpretIdentifier(notationLookup, emptySet()) }
     }
 
     private fun TypeIdentifier.interpretIdentifier(notationLookup: Map<TypeIdentifier, TypeNotation>, seen: Set<TypeIdentifier>): RemoteTypeInformation =
@@ -37,7 +37,7 @@ class AMQPRemoteTypeModel {
         val typeDescriptor = descriptor.name?.toString()
                 ?: throw IllegalStateException("Composite type $this has no type descriptor")
 
-        return if (isInterface) RemoteTypeInformation.AnInterface(typeDescriptor, identifier, interfaces, typeParameters)
+        return if (isInterface) RemoteTypeInformation.AnInterface(typeDescriptor, identifier, properties, interfaces, typeParameters)
         else RemoteTypeInformation.Composable(typeDescriptor, identifier, properties, interfaces, typeParameters)
     }
 
@@ -48,29 +48,48 @@ class AMQPRemoteTypeModel {
 
     private fun RestrictedType.interpretRestricted(identifier: TypeIdentifier, notationLookup: Map<TypeIdentifier, TypeNotation>, seen: Set<TypeIdentifier>): RemoteTypeInformation =
         when (identifier) {
-            is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(identifier, identifier.interpretTypeParameters(notationLookup, seen))
-            is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(identifier, identifier.componentType.interpretIdentifier(notationLookup, seen))
-            else -> RemoteTypeInformation.AnEnum(descriptor.name.toString(), identifier, choices.map { it.name })
+            is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(typeDescriptor, identifier, identifier.interpretTypeParameters(notationLookup, seen))
+            is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(typeDescriptor, identifier, identifier.componentType.interpretIdentifier(notationLookup, seen))
+            else -> RemoteTypeInformation.AnEnum(typeDescriptor, identifier, choices.map { it.name })
         }
 
     private fun Field.interpret(notationLookup: Map<TypeIdentifier, TypeNotation>, seen: Set<TypeIdentifier>): Pair<String, RemotePropertyInformation> {
         val identifier = type.typeIdentifier
         val fieldTypeIdentifier = if (identifier == TypeIdentifier.TopType && !requires.isEmpty()) requires[0].typeIdentifier else identifier
-        val fieldType = fieldTypeIdentifier.interpretIdentifier(notationLookup, seen)
+        val fieldType = fieldTypeIdentifier.forcePrimitive(mandatory).interpretIdentifier(notationLookup, seen)
         return name to RemotePropertyInformation(
                 fieldType,
                 mandatory)
     }
 
+    private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?: ""
+
     private fun TypeIdentifier.interpretNoNotation(notationLookup: Map<TypeIdentifier, TypeNotation>, seen: Set<TypeIdentifier>): RemoteTypeInformation =
             when (this) {
-                is TypeIdentifier.TopType -> RemoteTypeInformation.Any
+                is TypeIdentifier.TopType -> RemoteTypeInformation.Top
                 is TypeIdentifier.UnknownType -> RemoteTypeInformation.Unknown
-                is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(this, componentType.interpretIdentifier(notationLookup, seen))
-                is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(this, parameters.map { it.interpretIdentifier(notationLookup, seen) })
-                else -> RemoteTypeInformation.Unparameterised(this)
+                is TypeIdentifier.ArrayOf -> RemoteTypeInformation.AnArray(name,this, componentType.interpretIdentifier(notationLookup, seen))
+                is TypeIdentifier.Parameterised -> RemoteTypeInformation.Parameterised(name, this, parameters.map { it.interpretIdentifier(notationLookup, seen) })
+                else -> RemoteTypeInformation.Unparameterised(name, this)
             }
 
     private val String.typeIdentifier get(): TypeIdentifier = AMQPTypeIdentifierParser.parse(this)
 
+    private fun TypeIdentifier.forcePrimitive(mandatory: Boolean) =
+            if (mandatory) primitives[this] ?: this
+            else this
+
+    companion object {
+        private val primitives = sequenceOf(
+                Boolean::class,
+                Byte::class,
+                Char::class,
+                Int::class,
+                Short::class,
+                Long::class,
+                Float::class,
+                Double::class).associate {
+            TypeIdentifier.forClass(it.javaObjectType) to TypeIdentifier.forClass(it.javaPrimitiveType!!)
+        }
+    }
 }

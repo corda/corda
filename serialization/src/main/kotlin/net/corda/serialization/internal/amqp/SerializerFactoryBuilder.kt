@@ -89,15 +89,15 @@ object SerializerFactoryBuilder {
                 customSerializerRegistry,
                 onlyCustomSerializers)
 
-        val typeLoader = ClassCarpentingTypeLoader(classCarpenter, classCarpenter.classloader)
+        val typeLoader = ClassCarpentingTypeLoader(
+                SchemaBuildingRemoteTypeCarpenter(classCarpenter),
+                classCarpenter.classloader)
 
         val remoteTypeReflector = TypeLoadingRemoteTypeReflector(
                 typeLoader,
-                localTypeModel,
-                fingerPrinter)
+                localTypeModel)
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
-                classCarpenter,
                 classCarpenter.classloader,
                 evolutionSerializerProvider,
                 descriptorBasedSerializerRegistry,

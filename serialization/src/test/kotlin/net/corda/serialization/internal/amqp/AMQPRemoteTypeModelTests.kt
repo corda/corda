@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
@@ -18,22 +19,15 @@ class AMQPRemoteTypeModelTests {
     private val factory = SerializerFactoryBuilder.build(AllWhitelist, ClassLoader.getSystemClassLoader())
     private val typeModel = AMQPRemoteTypeModel()
 
-    private val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
-    private val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
-    private val localTypeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
-    private val localTypeFingerPrinter = CustomisableLocalTypeInformationFingerPrinter(
-            factory)
-
-    private val reflector = TypeLoadingRemoteTypeReflector(
-            ClassCarpentingTypeLoader(ClassCarpenterImpl(AllWhitelist), ClassLoader.getSystemClassLoader()),
-            localTypeModel, localTypeFingerPrinter)
-
-    private fun <T: Any> getRemoteType(obj: T): RemoteTypeInformation {
+    private fun getRemoteType(obj: Any): RemoteTypeInformation {
         val output = SerializationOutput(factory)
         val schema = output.serializeAndReturnSchema(obj).schema
         println(schema)
-        return typeModel.interpret(schema.types[0].descriptor.name!!.toString(), schema)
+        println(typeModel.interpret(schema).keys)
+        return typeModel.interpret(schema).values.find { it.typeIdentifier.name == obj::class.java.name }!!
     }
+
+    private inline fun <reified T: Any> typeOf() = object : TypeToken<T>() {}.type
 
     interface Interface<P, Q, R> {
         val array: Array<out P>
@@ -63,8 +57,5 @@ class AMQPRemoteTypeModelTests {
                 Enum.BAZ)
         val remoteType = getRemoteType(singleValue)
         println(remoteType.prettyPrint())
-        println("===")
-        val reflectedType = reflector.reflect(remoteType)
-        println(reflectedType.localTypeInformation.prettyPrint())
     }
 }

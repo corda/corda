@@ -26,7 +26,6 @@ interface RemoteSerializerFactory {
 }
 
 class DefaultRemoteSerializerFactory(
-        private val classCarpenter: ClassCarpenter,
         private val classloader: ClassLoader,
         private val evolutionSerializerProvider: EvolutionSerializerProvider,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
@@ -40,59 +39,38 @@ class DefaultRemoteSerializerFactory(
     }
 
     override fun get(typeDescriptor: Any, schema: SerializationSchemas): AMQPSerializer<Any> =
-            descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: {
-                logger.trace("get Serializer descriptor=${typeDescriptor}")
+        descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: {
+            logger.trace("get Serializer descriptor=${typeDescriptor}")
 
-                try {
-                    val reflected = typeReflector.reflect(remoteTypeModel.interpret(typeDescriptor.toString(), schema.schema))
-                    if (reflected.requiresEvolution) {
-                        processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
-                        descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
-                                "Could not find type matching descriptor $typeDescriptor.")
-                    } else {
-                        localSerializerFactory.get(reflected.localTypeInformation)
-                    }
-                } catch (e: UnsupportedOperationException) {
-                    processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
-                    descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
-                            "Could not find type matching descriptor $typeDescriptor.")
-                }
+            val remoteTypeInformation = remoteTypeModel.interpret(schema.schema)
+            val reflected = typeReflector.reflect(remoteTypeInformation)
+
+            val requested = reflected[typeDescriptor.toString()] ?: throw NotSerializableException(
+                    "Could not find type matching descriptor $typeDescriptor.")
+
+            val localDescriptor = localSerializerFactory.createDescriptor(requested.localTypeInformation.observedType)
+            if (localDescriptor.toString() == typeDescriptor.toString()) {
+                localSerializerFactory.get(requested.localTypeInformation)
+            } else {
+                processSchema(FactorySchemaAndDescriptor(schema, typeDescriptor))
+                descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: throw NotSerializableException(
+                        "Could not find type matching descriptor $typeDescriptor.")
+            }
         }()
-
-    private val ReflectedTypeInformation.requiresEvolution: Boolean get() =
-        when (remoteTypeInformation) {
-            is RemoteTypeInformation.AnEnum -> remoteTypeInformation.typeDescriptor != localTypeDescriptor
-            is RemoteTypeInformation.Composable -> remoteTypeInformation.typeDescriptor != localTypeDescriptor
-            else -> false
-        }
 
     /**
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
      * if not, use the [ClassCarpenter] to generate a class to use in its place.
      */
-    private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
-        val requiringCarpentry = schemaAndDescriptor.schemas.schema.types.asSequence().mapNotNull { typeNotation ->
-            try {
-                getOrRegisterSerializer(schemaAndDescriptor, typeNotation)
-                return@mapNotNull null
-            } catch (e: ClassNotFoundException) {
-                if (sentinel) {
-                    logger.error("typeNotation=${typeNotation.name} error=\"after Carpentry attempt failed to load\"")
-                    throw e
-                }
-                logger.trace { "typeNotation=\"${typeNotation.name}\" action=\"carpentry required\"" }
-                return@mapNotNull typeNotation
-            }
-        }.toList()
-
-        if (requiringCarpentry.isEmpty()) return
-
-        runCarpentry(schemaAndDescriptor, CarpenterMetaSchema.buildWith(classloader, requiringCarpentry))
+    private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
+        schemaAndDescriptor.schemas.schema.types.asSequence().forEach { typeNotation ->
+            getOrRegisterSerializer(schemaAndDescriptor, typeNotation)
+        }
     }
 
     private fun getOrRegisterSerializer(schemaAndDescriptor: FactorySchemaAndDescriptor, typeNotation: TypeNotation) {
         logger.trace { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
-        val serialiser = processSchemaEntry(typeNotation)
+        val serialiser = localSerializerFactory.get(typeForName(typeNotation.name, classloader))
 
         // if we just successfully built a serializer for the type but the type fingerprint
         // doesn't match that of the serialised object then we may be dealing with different
@@ -103,47 +81,6 @@ class DefaultRemoteSerializerFactory(
         evolutionSerializerProvider.getEvolutionSerializer(localSerializerFactory, descriptorBasedSerializerRegistry, typeNotation, serialiser, schemaAndDescriptor.schemas)
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-        // java.lang.Class (whether a class or interface)
-        is CompositeType -> {
-            logger.trace("typeNotation=${typeNotation.name} amqpType=CompositeType")
-            processCompositeType(typeNotation)
-        }
-        // Collection / Map, possibly with generics
-        is RestrictedType -> {
-            logger.trace("typeNotation=${typeNotation.name} amqpType=RestrictedType")
-            processRestrictedType(typeNotation)
-        }
-    }
-
-    // TODO: class loader logic, and compare the schema.
-    private fun processRestrictedType(typeNotation: RestrictedType) =
-            localSerializerFactory.get(typeForName(typeNotation.name, classloader))
-
-    private fun processCompositeType(typeNotation: CompositeType): AMQPSerializer<Any> {
-        // TODO: class loader logic, and compare the schema.
-        return localSerializerFactory.get(typeForName(typeNotation.name, classloader))
-    }
-
     private fun typeForName(name: String, classloader: ClassLoader): Type =
             AMQPTypeIdentifierParser.parse(name).getLocalType(classloader)
-
-    @StubOutForDJVM
-    private fun runCarpentry(schemaAndDescriptor: FactorySchemaAndDescriptor, metaSchema: CarpenterMetaSchema) {
-        val mc = MetaCarpenter(metaSchema, classCarpenter)
-        try {
-            mc.build()
-        } catch (e: MetaCarpenterException) {
-            // preserve the actual message locally
-            loggerFor<SerializerFactory>().apply {
-                error("${e.message} [hint: enable trace debugging for the stack trace]")
-                trace("", e)
-            }
-
-            // prevent carpenter exceptions escaping into the world, convert things into a nice
-            // NotSerializableException for when this escapes over the wire
-            NotSerializableException(e.name)
-        }
-        processSchema(schemaAndDescriptor, true)
-    }
 }
