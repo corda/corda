@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -24,7 +25,7 @@ object Configuration {
         /**
          * Describes a [Config] hiding sensitive data.
          */
-        fun describe(configuration: Config): ConfigValue
+        fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString())}): ConfigValue?
     }
 
     object Value {
@@ -267,6 +268,8 @@ object Configuration {
          */
         fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
 
+        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue
+
         companion object {
 
             /**
@@ -357,7 +360,7 @@ object Configuration {
 
         override fun validate(target: Config, options: Validation.Options) = schema.validate(target, options)
 
-        override fun describe(configuration: Config) = schema.describe(configuration)
+        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = schema.describe(configuration, serialiseValue)
 
         final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).mapValid(::parseValid)
 

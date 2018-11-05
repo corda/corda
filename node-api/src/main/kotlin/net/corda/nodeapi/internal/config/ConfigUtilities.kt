@@ -222,7 +222,8 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
 /**
  * Convert the receiver object into a [Config]. This does the inverse action of [parseAs].
  */
-fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
+fun Any.toConfig(): Config = toConfigValue().toConfig()
+fun Any.toConfigValue(): ConfigValue = ConfigValueFactory.fromMap(toConfigMap())
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.

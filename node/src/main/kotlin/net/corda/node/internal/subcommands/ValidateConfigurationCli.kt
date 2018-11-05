@@ -9,6 +9,9 @@ import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.utilities.loggerFor
 import net.corda.node.SharedNodeCmdLineOptions
 import net.corda.node.internal.initLogging
+import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
+import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.config.toConfigValue
 import picocli.CommandLine.Mixin
 import java.nio.file.Path
 
@@ -26,9 +29,8 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
             return "key: $pathAsString, message: $message"
         }
 
-        // TODO sollecitom modify here to use the specification to hide sensitive fields instead
         // TODO sollecitom move this back to debug level
-        internal fun logRawConfig(config: Config) = logger.info("Actual configuration:\n${config.root().render(configRenderingOptions)}")
+        internal fun logRawConfig(config: Config) = logger.info("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any::toConfigValue).render(configRenderingOptions)}")
     }
 
     @Mixin
