@@ -10,6 +10,7 @@ import net.corda.common.configuration.parsing.internal.listOrEmpty
 import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.node.services.config.AuthDataSourceType
@@ -43,12 +44,17 @@ import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {
-    private val username by string()
+    private val username by string().optional()
+    private val user by string().optional()
     private val password by string(sensitive = true)
     private val permissions by string().listOrEmpty()
 
     override fun parseValid(configuration: Config): Valid<User> {
-        return valid(User(configuration[username], configuration[password], configuration[permissions].toSet()))
+        val username = configuration[username] ?: configuration[user]
+        return when (username) {
+            null -> invalid(Configuration.Validation.Error.MissingValue.forKey("username"))
+            else -> valid(User(username, configuration[password], configuration[permissions].toSet()))
+        }
     }
 }
 
@@ -67,8 +73,8 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
                 val users = configuration[users]
 
                 return when {
-                    type == AuthDataSourceType.INMEMORY && users != null && connection == null -> badValue("\"INMEMORY\" datasource type requires \"users\" and cannot specify \"connection\"")
-                    type == AuthDataSourceType.DB && users == null && connection != null -> badValue("\"DB\" datasource type requires \"connection\" and cannot specify \"users\"")
+                    type == AuthDataSourceType.INMEMORY && (users == null || connection != null) -> badValue("\"INMEMORY\" datasource type requires \"users\" and cannot specify \"connection\"")
+                    type == AuthDataSourceType.DB && (users != null || connection == null) -> badValue("\"DB\" datasource type requires \"connection\" and cannot specify \"users\"")
                     else -> valid(SecurityConfiguration.AuthService.DataSource(type, passwordEncryption, connection, users))
                 }
             }

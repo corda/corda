@@ -461,6 +461,9 @@ object Configuration {
                 companion object {
 
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
+
+                    // TODO sollecitom add these functions to the others?
+                    fun forKey(keyName: String): MissingValue = of("No configuration setting found for key '$keyName'", keyName)
                 }
 
                 override fun withContainingPath(vararg containingPath: String) =

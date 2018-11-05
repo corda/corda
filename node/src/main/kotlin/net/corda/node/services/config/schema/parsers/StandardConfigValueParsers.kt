@@ -1,6 +1,8 @@
 package net.corda.node.services.config.schema.parsers
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigUtil
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
@@ -16,12 +18,16 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 
 internal fun toProperties(rawValue: ConfigObject): Properties {
-    val properties = Properties()
-    rawValue.entries.forEach { (key, value) ->
-        properties[key] = value.unwrapped()
-    }
-    return properties
+    // TODO sollecitom check
+    return rawValue.toConfig().toProperties()
+//    val properties = Properties()
+//    rawValue.entries.forEach { (key, value) ->
+//        properties[key] = value.unwrapped()
+//    }
+//    return properties
 }
+
+private fun Config.toProperties() = entrySet().associateByTo(Properties(), { ConfigUtil.splitPath(it.key).joinToString(".") }, { it.value.unwrapped().toString() })
 
 internal fun toCordaX500Name(rawValue: String) = attempt<CordaX500Name, IllegalArgumentException> { CordaX500Name.parse(rawValue) }
 
