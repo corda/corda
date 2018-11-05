@@ -149,9 +149,9 @@ class NodeConfigurationImplTest {
         val missingPropertyPath = "rpcSettings.address"
         rawConfig = rawConfig.withoutPath(missingPropertyPath)
 
-        assertThat(rawConfig.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(ConfigException.Missing::class.java) { exception ->
-            assertThat(exception.message).isNotNull()
-            assertThat(exception.message).contains(missingPropertyPath)
+        assertThat(rawConfig.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
+            assertThat(error.message).contains(missingPropertyPath)
+            assertThat(error.typeName).isEqualTo(NodeConfiguration::class.java.simpleName)
         }
     }
 
@@ -200,11 +200,11 @@ class NodeConfigurationImplTest {
 
         val config = rawConfig.parseAsNodeConfiguration()
 
-        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::pathAsString).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
+        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
     }
 
     @Test
-    fun `compatiilityZoneURL populates NetworkServices`() {
+    fun `compatibilityZoneURL populates NetworkServices`() {
         val compatibilityZoneURL = URI.create("https://r3.com").toURL()
         val configuration = testConfiguration.copy(
                 devMode = false,

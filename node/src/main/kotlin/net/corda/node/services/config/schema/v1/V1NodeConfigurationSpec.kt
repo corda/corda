@@ -1,12 +1,15 @@
 package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.get
 import net.corda.common.configuration.parsing.internal.listOrEmpty
 import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.configuration.parsing.internal.toValidationError
+import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.JmxReporterType
 import net.corda.node.services.config.NodeConfiguration
@@ -14,6 +17,7 @@ import net.corda.node.services.config.NodeConfigurationImpl
 import net.corda.node.services.config.NodeConfigurationImpl.Defaults
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.schema.parsers.badValue
 import net.corda.node.services.config.schema.parsers.toCordaX500Name
 import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
 import net.corda.node.services.config.schema.parsers.toPath
@@ -119,54 +123,62 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectory)
         val cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
 
-        val result = valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
-                baseDirectory = baseDirectory,
-                myLegalName = myLegalName,
-                emailAddress = emailAddress,
-                p2pAddress = p2pAddress,
-                keyStorePassword = keyStorePassword,
-                trustStorePassword = trustStorePassword,
-                crlCheckSoftFail = crlCheckSoftFail,
-                dataSourceProperties = dataSourceProperties,
-                rpcUsers = rpcUsers,
-                verifierType = verifierType,
-                flowTimeout = flowTimeout,
-                rpcSettings = rpcSettings,
-                messagingServerAddress = messagingServerAddress,
-                notary = notary,
-                flowOverrides = flowOverrides,
-                additionalP2PAddresses = additionalP2PAddresses,
-                additionalNodeInfoPollingFrequencyMsec = additionalNodeInfoPollingFrequencyMsec,
-                jmxMonitoringHttpPort = jmxMonitoringHttpPort,
-                security = security,
-                devMode = devMode,
-                devModeOptions = devModeOptions,
-                compatibilityZoneURL = compatibilityZoneURL,
-                networkServices = networkServices,
-                certificateChainCheckPolicies = certificateChainCheckPolicies,
-                messagingServerExternal = messagingServerExternal,
-                useTestClock = useTestClock,
-                lazyBridgeStart = lazyBridgeStart,
-                detectPublicIp = detectPublicIp,
-                sshd = sshd,
-                database = database,
-                noLocalShell = noLocalShell,
-                attachmentCacheBound = attachmentCacheBound,
-                extraNetworkMapKeys = extraNetworkMapKeys,
-                tlsCertCrlDistPoint = tlsCertCrlDistPoint,
-                tlsCertCrlIssuer = tlsCertCrlIssuer,
-                h2Settings = h2Settings,
-                flowMonitorPeriodMillis = flowMonitorPeriodMillis,
-                flowMonitorSuspensionLoggingThresholdMillis = flowMonitorSuspensionLoggingThresholdMillis,
-                jmxReporterType = jmxReporterType,
-                rpcAddress = rpcAddress,
-                transactionCacheSizeMegaBytes = transactionCacheSizeMegaBytes,
-                attachmentContentCacheSizeMegaBytes = attachmentContentCacheSizeMegaBytes,
-                h2port = h2port,
-                jarDirs = jarDirs,
-                cordappDirectories = cordappDirectories,
-                cordappSignerKeyFingerprintBlacklist = cordappSignerKeyFingerprintBlacklist
-        ))
+        val result = try {
+            valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
+                    baseDirectory = baseDirectory,
+                    myLegalName = myLegalName,
+                    emailAddress = emailAddress,
+                    p2pAddress = p2pAddress,
+                    keyStorePassword = keyStorePassword,
+                    trustStorePassword = trustStorePassword,
+                    crlCheckSoftFail = crlCheckSoftFail,
+                    dataSourceProperties = dataSourceProperties,
+                    rpcUsers = rpcUsers,
+                    verifierType = verifierType,
+                    flowTimeout = flowTimeout,
+                    rpcSettings = rpcSettings,
+                    messagingServerAddress = messagingServerAddress,
+                    notary = notary,
+                    flowOverrides = flowOverrides,
+                    additionalP2PAddresses = additionalP2PAddresses,
+                    additionalNodeInfoPollingFrequencyMsec = additionalNodeInfoPollingFrequencyMsec,
+                    jmxMonitoringHttpPort = jmxMonitoringHttpPort,
+                    security = security,
+                    devMode = devMode,
+                    devModeOptions = devModeOptions,
+                    compatibilityZoneURL = compatibilityZoneURL,
+                    networkServices = networkServices,
+                    certificateChainCheckPolicies = certificateChainCheckPolicies,
+                    messagingServerExternal = messagingServerExternal,
+                    useTestClock = useTestClock,
+                    lazyBridgeStart = lazyBridgeStart,
+                    detectPublicIp = detectPublicIp,
+                    sshd = sshd,
+                    database = database,
+                    noLocalShell = noLocalShell,
+                    attachmentCacheBound = attachmentCacheBound,
+                    extraNetworkMapKeys = extraNetworkMapKeys,
+                    tlsCertCrlDistPoint = tlsCertCrlDistPoint,
+                    tlsCertCrlIssuer = tlsCertCrlIssuer,
+                    h2Settings = h2Settings,
+                    flowMonitorPeriodMillis = flowMonitorPeriodMillis,
+                    flowMonitorSuspensionLoggingThresholdMillis = flowMonitorSuspensionLoggingThresholdMillis,
+                    jmxReporterType = jmxReporterType,
+                    rpcAddress = rpcAddress,
+                    transactionCacheSizeMegaBytes = transactionCacheSizeMegaBytes,
+                    attachmentContentCacheSizeMegaBytes = attachmentContentCacheSizeMegaBytes,
+                    h2port = h2port,
+                    jarDirs = jarDirs,
+                    cordappDirectories = cordappDirectories,
+                    cordappSignerKeyFingerprintBlacklist = cordappSignerKeyFingerprintBlacklist
+            ))
+        } catch (e: Exception) {
+            return when (e) {
+                is ConfigException -> invalid(e.toValidationError("", "NodeConfiguration"))
+                is IllegalArgumentException -> badValue(e.message!!)
+                else -> throw e
+            }
+        }
         return result.mapValid { conf -> Valid.withResult(conf as NodeConfiguration, conf.validate().map(::toError).toSet()) }
     }
 }
