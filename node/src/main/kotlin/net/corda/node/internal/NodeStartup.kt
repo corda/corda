@@ -15,6 +15,7 @@ import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
 import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
+import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
@@ -138,8 +139,8 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val rawConfig = cmdLineOptions.rawConfiguration().doIfValid(ValidateConfigurationCli.Companion::logRawConfig).doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
-        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
