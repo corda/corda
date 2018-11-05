@@ -423,9 +423,11 @@ object Configuration {
             val containingPathAsString: String = containingPath.joinToString(".")
 
             /**
-             * [pathstr] joined by "." characters.
+             * [path] joined by "." characters.
              */
-            val pathAsString: String = path.joinToString(".")
+            val pathAsString: String get() = path.joinToString(".")
+
+            internal fun withContainingPathPrefix(vararg containingPath: String): Error = withContainingPath(*(containingPath.toList() + this.containingPath).toTypedArray())
 
             internal abstract fun withContainingPath(vararg containingPath: String): Error
 
@@ -446,7 +448,7 @@ object Configuration {
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): WrongType = WrongType.of(message, keyName, typeName, containingPath)
             }
@@ -461,7 +463,8 @@ object Configuration {
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) =
+                        MissingValue(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): MissingValue = MissingValue.of(message, keyName, typeName, containingPath)
             }
@@ -476,7 +479,7 @@ object Configuration {
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): BadValue = BadValue.of(message, keyName, typeName, containingPath)
             }
@@ -491,7 +494,7 @@ object Configuration {
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): BadPath = BadPath.of(message, keyName, typeName, containingPath)
             }
@@ -506,7 +509,7 @@ object Configuration {
                     fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): MalformedStructure = MalformedStructure.of(message, keyName, typeName, containingPath)
             }
@@ -518,14 +521,14 @@ object Configuration {
 
                 companion object {
 
-                    private fun message(keyName: String) = "Unknown property \"$keyName\"."
+                    private fun message(keyName: String) = "Unknown property \'$keyName\'"
 
                     fun of(keyName: String = UNKNOWN, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
                 }
 
-                override val message = message(pathAsString)
+                override val message = message(keyName)
 
-                override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): Unknown = Unknown.of(keyName, containingPath)
             }
@@ -540,7 +543,7 @@ object Configuration {
                     fun of(version: Int): UnsupportedVersion = UnsupportedVersion(version)
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): UnsupportedVersion = this
             }

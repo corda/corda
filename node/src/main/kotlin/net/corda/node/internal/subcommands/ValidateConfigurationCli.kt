@@ -16,16 +16,19 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
     internal companion object {
         internal val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 
-        private val configRenderingOptions = ConfigRenderOptions.defaults().setComments(false).setOriginComments(false).setFormatted(true)
+        private val configRenderingOptions = ConfigRenderOptions.defaults().setFormatted(true).setComments(false).setOriginComments(false)
 
         internal fun logConfigurationErrors(errors: Iterable<Configuration.Validation.Error>) {
             errors.map { "Error while parsing node configuration. ${it.description()}." }.forEach(logger::error)
         }
 
-        private fun Configuration.Validation.Error.description(): String = "key: $pathAsString, message: $message"
+        private fun Configuration.Validation.Error.description(): String {
+            return "key: $pathAsString, message: $message"
+        }
 
         // TODO sollecitom modify here to use the specification to hide sensitive fields instead
-        internal fun logRawConfig(config: Config) = logger.debug("Actual configuration:\n${config.root().render(configRenderingOptions)}")
+        // TODO sollecitom move this back to debug level
+        internal fun logRawConfig(config: Config) = logger.info("Actual configuration:\n${config.root().render(configRenderingOptions)}")
     }
 
     @Mixin

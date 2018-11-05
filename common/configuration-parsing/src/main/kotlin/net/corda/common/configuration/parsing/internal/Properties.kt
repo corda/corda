@@ -47,7 +47,7 @@ internal open class StandardProperty<TYPE>(override val key: String, typeNameArg
             schema?.let { nestedSchema ->
                 val nestedConfig: Config? = target.getConfig(key)
                 nestedConfig?.let {
-                    errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPath(*key.split(".").toTypedArray()) }
+                    errors += nestedSchema.validate(nestedConfig, options).errors.map { error -> error.withContainingPathPrefix(*key.split(".").toTypedArray()) }
                 }
             }
         }
@@ -69,7 +69,7 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
         errors += errorsWhenExtractingValue(target)
         if (errors.isEmpty()) {
             delegate.schema?.let { schema ->
-                errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }
+                errors += valueIn(target).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).mapIndexed { index, targetConfig -> schema.validate(targetConfig, options).errors.map { error -> error.withContainingPath(*error.containingPath(index).toTypedArray()) } }.fold(emptyList<Configuration.Validation.Error>()) { one, other -> one + other }.toSet()
             }
         }
         return Validated.withResult(target, errors)
@@ -81,6 +81,14 @@ private class ListProperty<TYPE>(delegate: StandardProperty<TYPE>) : RequiredDel
             return ConfigValueFactory.fromAnyRef(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER)
         }
         return delegate.schema?.let { schema -> ConfigValueFactory.fromAnyRef(valueIn(configuration).asSequence().map { element -> element as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it) }.toList()) } ?: ConfigValueFactory.fromAnyRef(valueIn(configuration))
+    }
+
+    private fun Configuration.Validation.Error.containingPath(index: Int): List<String> {
+        val newContainingPath = listOf(key, "[$index]")
+        return when {
+            containingPath.size > 1 -> newContainingPath + containingPath.subList(1, containingPath.size)
+            else -> newContainingPath
+        }
     }
 }
 
@@ -137,8 +145,16 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
                 throw e
             }
         }
-        val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value -> delegate.validate(value.toConfig(), options).errors.map { error -> error.withContainingPath(key, "[$index]") } }.reduce { one, other -> one + other }.toSet()
+        val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value -> delegate.validate(value.toConfig(), options).errors.map { error -> error.withContainingPath(*error.containingPath(index).toTypedArray()) } }.fold(emptyList<Configuration.Validation.Error>()) { one, other -> one + other }.toSet()
         return Validated.withResult(target, errors)
+    }
+
+    private fun Configuration.Validation.Error.containingPath(index: Int): List<String> {
+        val newContainingPath = listOf(key, "[$index]")
+        return when {
+            containingPath.size > 1 -> newContainingPath + containingPath.subList(1, containingPath.size)
+            else -> newContainingPath
+        }
     }
 
     override fun describe(configuration: Config): ConfigValue {

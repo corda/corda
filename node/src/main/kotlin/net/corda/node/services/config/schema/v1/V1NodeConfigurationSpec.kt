@@ -3,6 +3,7 @@ package net.corda.node.services.config.schema.v1
 import com.typesafe.config.Config
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.get
+import net.corda.common.configuration.parsing.internal.listOrEmpty
 import net.corda.common.configuration.parsing.internal.map
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
@@ -26,7 +27,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val emailAddress by string()
     private val jmxMonitoringHttpPort by int().optional()
     private val dataSourceProperties by nestedObject(sensitive = true).map(::toProperties)
-    private val rpcUsers by nested(UserSpec).list()
+    private val rpcUsers by nested(UserSpec).listOrEmpty()
     private val security by nested(SecurityConfigurationSpec).optional()
     private val devMode by boolean().optional().withDefaultValue(Defaults.devMode)
     private val devModeOptions by nested(DevModeOptionsSpec).optional()
@@ -35,7 +36,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val certificateChainCheckPolicies by nested(CertChainPolicyConfigSpec).list().optional().withDefaultValue(Defaults.certificateChainCheckPolicies)
     private val verifierType by enum(VerifierType::class)
     private val flowTimeout by nested(FlowTimeoutConfigurationSpec)
-    private val notary by nested(NotaryConfigSpec)
+    private val notary by nested(NotaryConfigSpec).optional()
     private val additionalNodeInfoPollingFrequencyMsec by long().optional().withDefaultValue(Defaults.additionalNodeInfoPollingFrequencyMsec)
     private val p2pAddress by string().mapValid(::toNetworkHostAndPort)
     private val additionalP2PAddresses by string().mapValid(::toNetworkHostAndPort).list().optional().withDefaultValue(Defaults.additionalP2PAddresses)

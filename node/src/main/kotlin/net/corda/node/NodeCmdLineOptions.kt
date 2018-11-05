@@ -50,7 +50,6 @@ open class SharedNodeCmdLineOptions {
     }
 
     open fun rawConfiguration(): Validated<Config, ConfigException> {
-
         return try {
             valid(ConfigHelper.loadConfig(baseDirectory, configFile))
         } catch (e: ConfigException) {
