@@ -159,49 +159,132 @@ Database management tool
 The database management tool is distributed as a standalone JAR file named ``tools-database-manager-${corda_version}.jar``.
 It is intended to be used by Corda Enterprise node administrators.
 
-Currently it has these features:
+The following sections document the available subcommands.
 
-    1. ``--create-migration-sql-for-cordapp``: Creates migration scripts for each ``MappedSchema`` in a CorDapp. Each 
-       ``MappedSchema`` in a CorDapp installed on a Corda Enterprise node requires the creation of a new table in the 
-       node's database. It is bad practice to apply these changesets to a production database automatically. Instead, 
-       migration scripts must be generated for each schema. These can then be inspected before being applied
-    2. ``--dry-run``: Inspects the actual SQL statements that will be run as part of a migration job
-    3. ``--execute-migration``: Runs migration scripts on the node's database
-    4. ``--release-lock``: Forces the release of database locks. Sometimes, when a node or the database management 
-       tool crashes while running migrations, Liquibase will not release the lock. This can happen during some long 
-       database operations, or when an admin kills the process (this cannot happen during normal operation of a node, 
-       only during the migration process - see: <http://www.liquibase.org/documentation/databasechangeloglock_table.html>) 
+Creating SQL migration scripts for CorDapps
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It has the following command line options:
+The ``create-migration-sql-for-cordapp`` subcommand can be used to create migration scripts for each ``MappedSchema`` in
+a CorDapp. Each ``MappedSchema`` in a CorDapp installed on a Corda Enterprise node requires the creation of new tables
+in the node's database. It is generally considered bad practice to apply changes to a production database automatically.
+Instead, migration scripts can be generated for each schema, which can then be inspected before being applied.
 
-.. table::
+Usage:
 
-   ====================================  =======================================================================
-     Option                               Description
-   ====================================  =======================================================================
-    --help                               Print help message
-    --mode                               Either 'NODE' or 'DOORMAN'. By default 'NODE'
-    --base-directory(*)                  The node directory
-    --config-file                        The name of the config file, by default 'node.conf'
-    --doorman-jar-path                   For internal use only
-    --create-migration-sql-for-cordapp   Create migration files for a CorDapp. You can specify the fully qualified
-                                         name of the ``MappedSchema`` class. If not specified it will generate the migration
-                                         for all schemas that don't have migrations. The output directory is the
-                                         base-directory, where a ``migration`` folder is created.
-    --dry-run                            Output the database migration to the specified output file. The output directory
-                                         is the base-directory. You can specify a file name or 'CONSOLE' if you want to send the output to the console.
-    --execute-migration                  This option will run the database migration on the configured database. This is the
-                                         only command that will actually write to the database.    
-    --release-lock                       Releases whatever locks are on the database change log table, in case shutdown failed.
-   ====================================  =======================================================================
+.. code-block:: shell
 
-For example::
+    database-manager create-migration-sql-for-cordapp [-hvV] [--jar]
+                                                      [--logging-level=<loggingLevel>]
+                                                      -b=<baseDirectory>
+                                                      [-f=<configFile>]
+                                                      [<schemaClass>]
 
-    java -jar tools-database-manager-3.0.0.jar --base-directory /path/to/node --execute-migration
+The ``schemaClass`` parameter can be optionally set to create migrations for a particular class, otherwise migration
+schemas will be created for all classes found.
+
+Additional options:
+
+* ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--jar``: Place generated migration scripts into a jar.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
+
+
+Executing SQL migration scripts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``execute-migration`` subcommand runs migration scripts on the node's database.
+
+Usage:
+
+.. code-block:: shell
+
+    database-manager execute-migration [-hvV] [--doorman-jar-path=<doormanJarPath>]
+                                       [--logging-level=<loggingLevel>]
+                                       [--mode=<mode>] -b=<baseDirectory>
+                                       [-f=<configFile>]
+
+* ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
+
+
+Executing a dry run of the SQL migration scripts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``dry-run`` subcommand can be used to output the database migration to the specified output file or to the console.
+The output directory is the one specified by the ``--base-directory`` parameter.
+
+Usage:
+
+.. code-block:: shell
+
+    database-manager dry-run [-hvV] [--doorman-jar-path=<doormanJarPath>]
+                             [--logging-level=<loggingLevel>] [--mode=<mode>]
+                             -b=<baseDirectory> [-f=<configFile>] [<outputFile>]
+
+The ``outputFile`` parameter can be optionally specified determine what file to output the generated SQL to, or use
+``CONSOLE`` to output to the console.
+
+Additional options:
+
+* ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
+
+
+Releasing database locks
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``release-lock`` subcommand forces the release of database locks. Sometimes, when a node or the database management
+tool crashes while running migrations, Liquibase will not release the lock. This can happen during some long
+database operations, or when an admin kills the process (this cannot happen during normal operation of a node,
+only during the migration process - see: <http://www.liquibase.org/documentation/databasechangeloglock_table.html>)
+
+Usage:
+
+.. code-block:: shell
+
+    database-manager release-lock [-hvV] [--doorman-jar-path=<doormanJarPath>]
+                                  [--logging-level=<loggingLevel>] [--mode=<mode>]
+                                  -b=<baseDirectory> [-f=<configFile>]
+
+Additional options:
+
+* ``--base-directory``, ``-b``: (Required) The node working directory where all the files are kept (default: ``.``).
+* ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
+* ``--mode``: The operating mode. Possible values: NODE, DOORMAN. Default: NODE.
+* ``--doorman-jar-path=<doormanJarPath>``: The path to the doorman JAR.
+* ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
+* ``--help``, ``-h``: Show this help message and exit.
+* ``--version``, ``-V``: Print version information and exit.
+
+
+Database Manager shell extensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``install-shell-extensions`` subcommand can be used to install the ``database-manager`` alias and auto completion for
+bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
+
 
 .. note:: When running the database management tool, prefer using absolute paths when specifying the "base-directory".
 
 .. warning:: It is good practice for node operators to backup the database before upgrading to a new version.
+
 
 Examples
 --------
