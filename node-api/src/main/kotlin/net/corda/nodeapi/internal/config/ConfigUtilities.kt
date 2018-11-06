@@ -222,15 +222,9 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
 /**
  * Convert the receiver object into a [Config]. This does the inverse action of [parseAs].
  */
-fun Any.toConfig(): Config {
-    val value = toConfigValue()
-    return when (value) {
-        is ConfigObject -> value.toConfig()
-        // Here we picked the same `toConfig()` name for our function, which is a bit unfortunate. The branches look like the same, but they are not.
-        else -> value.toConfig()
-    }
-}
-fun Any.toConfigValue(): ConfigValue = if (this is ConfigValue) this else ConfigValueFactory.fromMap(toConfigMap())
+fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
+
+fun Any.toConfigValue(): ConfigValue = if (this is ConfigValue) this else ConfigValueFactory.fromAnyRef(convertValue(this))
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.
@@ -263,6 +257,28 @@ private fun Any.toConfigMap(): Map<String, Any> {
     return values
 }
 
+private fun convertValue(value: Any): Any {
+
+    return if (value is String || value is Boolean || value is Number) {
+        // These types are supported by Config as use as is
+        value
+    } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
+        // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
+        value.toString()
+    } else if (value is Enum<*>) {
+        // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
+        value.name
+    } else if (value is Properties) {
+        // For Properties we treat keys with . as nested configs
+        ConfigFactory.parseMap(uncheckedCast(value)).root()
+    } else if (value is Iterable<*>) {
+        value.toConfigIterable()
+    } else {
+        // Else this is a custom object recursed over
+        value.toConfigMap()
+    }
+}
+
 // For Iterables figure out the type parameter and apply the same logic as above on the individual elements.
 private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
@@ -289,6 +305,8 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
         }
     }
 }
+
+private fun Iterable<*>.toConfigIterable(): Iterable<Any?> = map { element -> element?.let(::convertValue) }
 
 // The typesafe .getBoolean function is case sensitive, this is a case insensitive version
 fun Config.getBooleanCaseInsensitive(path: String): Boolean {
