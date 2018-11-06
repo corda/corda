@@ -61,14 +61,6 @@ The template has a number of files, but we can ignore most of them. We will only
         // 2. The flow
         cordapp/src/main/kotlin/com/template/App.kt
 
-Clean up
---------
-To prevent build errors later on, we should delete the following files before we begin:
-
-* Java: ``cordapp/src/main/java/com/template/TemplateClient.java``
-
-* Kotlin: ``cordapp/src/main/kotlin/com/template/Client.kt``
-
 Progress so far
 ---------------
 We now have a template that we can build upon to define our IOU CorDapp. Let's start by defining the ``IOUState``.
