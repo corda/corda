@@ -199,6 +199,12 @@ object Crypto {
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 
+    /**
+     * Map of supported digital signature schemes associated by [SignatureScheme.schemeNumberID].
+     * SchemeNumberID is the scheme identifier attached to [SignatureMetadata].
+     */
+    private val signatureSchemeNumberIDMap: Map<Int, SignatureScheme> = Crypto.supportedSignatureSchemes().associateBy { it.schemeNumberID }
+
     @JvmStatic
     fun supportedSignatureSchemes(): List<SignatureScheme> = ArrayList(signatureSchemeMap.values)
 
@@ -222,6 +228,13 @@ object Crypto {
     fun findSignatureScheme(algorithm: AlgorithmIdentifier): SignatureScheme {
         return algorithmMap[normaliseAlgorithmIdentifier(algorithm)]
                 ?: throw IllegalArgumentException("Unrecognised algorithm: ${algorithm.algorithm.id}")
+    }
+
+    /** Find [SignatureScheme] by platform specific schemeNumberID. */
+    @JvmStatic
+    fun findSignatureScheme(schemeNumberID: Int): SignatureScheme {
+        return signatureSchemeNumberIDMap[schemeNumberID]
+                ?: throw IllegalArgumentException("Unsupported key/algorithm for schemeNumberID: $schemeNumberID")
     }
 
     /**
@@ -458,9 +471,14 @@ object Crypto {
     @JvmStatic
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun doSign(keyPair: KeyPair, signableData: SignableData): TransactionSignature {
-        val sigKey: SignatureScheme = findSignatureScheme(keyPair.private)
-        val sigMetaData: SignatureScheme = findSignatureScheme(keyPair.public)
-        require(sigKey == sigMetaData) {
+        val sigKey: SignatureScheme = Crypto.findSignatureScheme(keyPair.private)
+        val sigMetaData: SignatureScheme = Crypto.findSignatureScheme(signableData.signatureMetadata.schemeNumberID)
+        // Special handling if the advertised SignatureScheme is CompositeKey.
+        // TODO fix notaries that advertise [CompositeKey] in their signature Metadata. Currently, clustered notary nodes
+        //      mention Crypto.COMPOSITE_KEY in their SignatureMetadata, but they are actually signing with a leaf-key
+        //      (and if they refer to it as a Composite key, then we lose info about the actual type of their signing key).
+        //      In short, their metadata should be the leaf key-type, until we support CompositeKey signatures.
+        require(sigKey == sigMetaData || sigMetaData == Crypto.COMPOSITE_KEY) {
             "Metadata schemeCodeName: ${sigMetaData.schemeCodeName} is not aligned with the key type: ${sigKey.schemeCodeName}."
         }
         val signatureBytes = doSign(sigKey.schemeCodeName, keyPair.private, signableData.serialize().bytes)

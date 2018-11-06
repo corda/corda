@@ -10,8 +10,8 @@ import java.security.SecureRandom
 import java.security.Signature
 
 /**
- *  Provide extra OID look up for signature algorithm not supported by bouncy castle.
- *  This builder will use bouncy castle's JcaContentSignerBuilder as fallback for unknown algorithm.
+ *  Provide extra OID look up for signature algorithm not supported by BouncyCastle.
+ *  This builder will use BouncyCastle's JcaContentSignerBuilder as fallback for unknown algorithm.
  */
 object ContentSignerBuilder {
     fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider, random: SecureRandom? = null): ContentSigner {
