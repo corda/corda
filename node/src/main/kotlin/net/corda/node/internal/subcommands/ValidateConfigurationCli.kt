@@ -28,7 +28,7 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
             return "key: $pathAsString, message: $message"
         }
 
-        internal fun logRawConfig(config: Config) = logger.info("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any::toConfigValue).render(configRenderingOptions)}")
+        internal fun logRawConfig(config: Config) = logger.debug("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any::toConfigValue).render(configRenderingOptions)}")
     }
 
     @Mixin
