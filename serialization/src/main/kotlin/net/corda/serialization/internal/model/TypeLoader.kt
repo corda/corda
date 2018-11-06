@@ -29,7 +29,7 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
         val remoteInformationByIdentifier = remoteTypeInformation.associateBy { it.typeIdentifier }
         val noCarpentryRequired = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, _) ->
             try {
-                identifier to (cache[identifier] ?: identifier.getLocalType(classLoader))
+                identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
                     null
             }
@@ -37,11 +37,16 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
 
         if (noCarpentryRequired.size == remoteTypeInformation.size) return noCarpentryRequired
 
-        val requiringCarpentry = remoteInformationByIdentifier.mapNotNull { (identifier, information) ->
+        val requiringCarpentry = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, information) ->
             if (identifier in noCarpentryRequired) null else information
+        }.toSet()
+
+        val carpented = CarpentryDependencyGraph.buildInReverseDependencyOrder(requiringCarpentry) { typeToCarpent ->
+            cache.computeIfAbsent(typeToCarpent.typeIdentifier) {
+                carpenter.carpent(typeToCarpent)
+            }
         }
 
-        val carpented = CarpentryDependencyGraph.carpentInOrder(carpenter, cache, requiringCarpentry)
         return noCarpentryRequired + carpented
     }
 }
