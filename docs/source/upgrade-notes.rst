@@ -131,3 +131,13 @@ to be set to true.
 .. note::
     Mitigation of this issue and thus being able to use the ``strict`` mode (i.e. with ``crlCheckSoftFail = false``)
     of the CRL checking with the certificates generated in previous versions of Corda is going to be added in the near future.
+
+Upgrading from Corda Enterprise 3
+---------------------------------
+
+API Changes
++++++++++++
+
+
+* MockNetwork: ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration``
+  object. Use a ``MockNetworkConfigOverrides`` object instead.
