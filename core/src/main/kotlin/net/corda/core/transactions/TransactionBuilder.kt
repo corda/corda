@@ -12,6 +12,7 @@ import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.StatePointerSearch
 import net.corda.core.internal.ensureMinimumPlatformVersion
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.node.NetworkParameters
@@ -83,7 +84,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
         protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val references: MutableList<StateRef> = arrayListOf()
+        protected val references: MutableList<StateRef> = arrayListOf(),
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
 
     private companion object {
@@ -105,7 +107,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                 commands = ArrayList(commands),
                 window = window,
                 privacySalt = privacySalt,
-                references = references
+                references = references,
+                serviceHub = serviceHub
         )
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
@@ -437,6 +440,44 @@ open class TransactionBuilder @JvmOverloads constructor(
     private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
 
     /**
+     * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method can be
+     * optionally called to resolve those [StatePointer]s to [StateAndRef]s. The [StateAndRef]s are then added as
+     * reference states to the transaction. The effect is that the referenced data is carried along with the
+     * transaction. This may or may not be appropriate in all circumstances, which is why calling this method is
+     * optional.
+     *
+     * If this method is called outside the context of a flow, a [ServiceHub] instance must be passed to this method
+     * for it to be able to resolve [StatePointer]s. Usually for a unit test, this will be an instance of mock services.
+     *
+     * @param serviceHub a [ServiceHub] instance needed for performing vault queries.
+     *
+     * @throws IllegalStateException if no [ServiceHub] is provided and no flow context is available.
+     */
+    private fun resolveStatePointers(transactionState: TransactionState<*>) {
+        val contractState = transactionState.data
+        // Find pointers in all inputs and outputs.
+        val inputAndOutputPointers = StatePointerSearch(contractState).search()
+        // Queue up the pointers to resolve.
+        val statePointerQueue = ArrayDeque<StatePointer<*>>().apply { addAll(inputAndOutputPointers) }
+        // Recursively resolve all pointers.
+        while (statePointerQueue.isNotEmpty()) {
+            val nextStatePointer = statePointerQueue.pop()
+            if (serviceHub != null) {
+                val resolvedStateAndRef = nextStatePointer.resolve(serviceHub)
+                // Don't add dupe reference states because CoreTransaction doesn't allow it.
+                if (resolvedStateAndRef.ref !in referenceStates()) {
+                    addReferenceState(resolvedStateAndRef.referenced())
+                }
+            } else {
+                logger.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                        "state pointers outside of flows. If you are writing a unit test then pass in a " +
+                        "MockServices instance.")
+                return
+            }
+        }
+    }
+
+    /**
      * Adds a reference input [StateRef] to the transaction.
      *
      * Note: Reference states are only supported on Corda networks running a minimum platform version of 4.
@@ -462,6 +503,10 @@ open class TransactionBuilder @JvmOverloads constructor(
             "Transactions with reference states using multiple different notaries are currently unsupported."
         }
 
+        // State Pointers are recursively resolved. NOTE: That this might be expensive.
+        // TODO: Add support for making recursive resolution optional if it becomes an issue.
+        resolveStatePointers(stateAndRef.state)
+
         checkNotary(stateAndRef)
         references.add(stateAndRef.ref)
         checkForInputsAndReferencesOverlap()
@@ -472,6 +517,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
         inputsWithTransactionState.add(stateAndRef.state)
+        resolveStatePointers(stateAndRef.state)
+        return this
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */
@@ -482,6 +529,8 @@ open class TransactionBuilder @JvmOverloads constructor(
     /** Adds an output state to the transaction. */
     fun addOutputState(state: TransactionState<*>) = apply {
         outputs.add(state)
+        resolveStatePointers(state)
+        return this
     }
 
     /** Adds an output state, with associated contract code (and constraints), and notary, to the transaction. */

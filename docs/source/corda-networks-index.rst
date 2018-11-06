@@ -5,8 +5,6 @@ Networks
    :maxdepth: 1
 
    compatibility-zones
-   corda-testnet-intro
-   running-a-notary
    permissioning
    network-map
    versioning
@@ -14,3 +12,9 @@ Networks
    azure-template-guide
    testnet-explorer
    cipher-suites
+   joining-a-compatibility-zone
+   corda-testnet-intro
+   deploy-to-testnet-index
+   testnet-explorer-corda
+   setting-up-a-dynamic-compatibility-zone
+   running-a-notary

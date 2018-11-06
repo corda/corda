@@ -6,9 +6,6 @@ import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.JarSignatureTestUtils.createJar
-import net.corda.core.JarSignatureTestUtils.generateKey
-import net.corda.core.JarSignatureTestUtils.signJar
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -25,9 +22,11 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.JarSignatureTestUtils.createJar
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.JarSignatureTestUtils.signJar
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
