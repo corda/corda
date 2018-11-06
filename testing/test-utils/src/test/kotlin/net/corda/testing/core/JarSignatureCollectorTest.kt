@@ -38,6 +38,7 @@ class JarSignatureCollectorTest {
         fun beforeClass() {
             dir.generateKey(ALICE, "storepass", ALICE_NAME.toString(), keyPassword = ALICE_PASS)
             dir.generateKey(BOB, "storepass", BOB_NAME.toString(), keyPassword = BOB_PASS)
+            dir.generateKey(CHARLIE, "storepass", CHARLIE_NAME.toString(), "EC", CHARLIE_PASS)
 
             (dir / "_signable1").writeLines(listOf("signable1"))
             (dir / "_signable2").writeLines(listOf("signable2"))
@@ -136,14 +137,13 @@ class JarSignatureCollectorTest {
     // and our JarSignatureCollector
     @Test
     fun `one signer with EC algorithm`() {
-        dir.generateKey(CHARLIE, "storepass", CHARLIE_NAME.toString(), "EC", CHARLIE_PASS)
         dir.createJar(FILENAME, "_signable1", "_signable2")
         val key = dir.signJar(FILENAME, CHARLIE, "storepass", CHARLIE_PASS)
         assertEquals(listOf(key), dir.getJarSigners(FILENAME)) // We only used CHARLIE's distinguished name, so the keys will be different.
     }
 
     @Test
-    fun `one signer jar with INDEX_LIST`() {
+    fun `jar with jar index file`() {
         dir.createJar(FILENAME, "_signable1")
         dir.addIndexList(FILENAME)
         val key = signAsAlice()
