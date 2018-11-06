@@ -37,8 +37,8 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
     override fun initLogging() = initLogging(cmdLineOptions.baseDirectory)
 
     override fun runProgram(): Int {
-        val rawConfig = cmdLineOptions.rawConfiguration().doIfValid(::logRawConfig).doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
-        return cmdLineOptions.parseConfiguration(rawConfig).doOnErrors(::logConfigurationErrors).optional?.let { ExitCodes.SUCCESS } ?: ExitCodes.FAILURE
+        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        return cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional?.let { ExitCodes.SUCCESS } ?: ExitCodes.FAILURE
     }
 }
 

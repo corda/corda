@@ -230,7 +230,7 @@ fun Any.toConfig(): Config {
         else -> value.toConfig()
     }
 }
-fun Any.toConfigValue(): ConfigValue = ConfigValueFactory.fromMap(toConfigMap())
+fun Any.toConfigValue(): ConfigValue = if (this is ConfigValue) this else ConfigValueFactory.fromMap(toConfigMap())
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.

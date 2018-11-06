@@ -238,11 +238,4 @@ private val expectedExceptionTypes = setOf(ConfigException.Missing::class, Confi
 
 private fun isErrorExpected(error: ConfigException) = expectedExceptionTypes.any { expected -> expected.isInstance(error) }
 
-private fun valueDescription(value: Any, serialiseValue: (Any) -> ConfigValue): ConfigValue {
-
-    return try {
-        ConfigValueFactory.fromAnyRef(value)
-    } catch (e: ConfigException.BugOrBroken) {
-        return serialiseValue.invoke(value)
-    }
-}
+private fun valueDescription(value: Any, serialiseValue: (Any) -> ConfigValue) = serialiseValue.invoke(value)
