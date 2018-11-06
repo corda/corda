@@ -1,4 +1,4 @@
-package net.corda.node.internal.cryptoservice
+package net.corda.node.services.keys.cryptoservice
 
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.newSecureRandom
@@ -6,6 +6,7 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore

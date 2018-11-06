@@ -40,7 +40,7 @@ import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.internal.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService

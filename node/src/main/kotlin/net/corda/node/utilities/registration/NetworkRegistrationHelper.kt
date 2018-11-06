@@ -1,13 +1,13 @@
 package net.corda.node.utilities.registration
 
-import net.corda.core.crypto.AliasPrivateKey
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.Crypto
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.NodeRegistrationOption
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.internal.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.NOT_YET_REGISTERED_MARKER_KEYS_AND_CERTS

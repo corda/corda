@@ -9,7 +9,7 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.AliasPrivateKey
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.newSecureRandom
@@ -56,7 +56,7 @@ import net.corda.node.services.events.ScheduledActivityObserver
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
-import net.corda.node.internal.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient

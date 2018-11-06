@@ -1,4 +1,4 @@
-package net.corda.core.crypto
+package net.corda.core.crypto.internal
 
 import org.bouncycastle.asn1.*
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo

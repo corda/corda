@@ -1,6 +1,6 @@
 package net.corda.nodeapi.internal.config
 
-import net.corda.core.crypto.AliasPrivateKey
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.internal.outputStream
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
