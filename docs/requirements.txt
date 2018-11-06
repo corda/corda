@@ -18,7 +18,7 @@ Pygments==2.2.0
 pyparsing==2.2.0
 pytz==2016.4
 reportlab==3.4.0
-requests==2.18.4
+requests==2.20.0
 rst2pdf==0.93
 six==1.10.0
 snowballstemmer==1.2.1
