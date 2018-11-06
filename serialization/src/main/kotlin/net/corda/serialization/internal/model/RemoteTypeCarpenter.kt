@@ -9,6 +9,9 @@ import java.lang.reflect.Type
  * Constructs [Type]s using [RemoteTypeInformation].
  */
 interface RemoteTypeCarpenter {
+    /**
+     * Build a [Type] from the provided [RemoteTypeInformation].
+     */
     fun carpent(typeInformation: RemoteTypeInformation): Type
 }
 
