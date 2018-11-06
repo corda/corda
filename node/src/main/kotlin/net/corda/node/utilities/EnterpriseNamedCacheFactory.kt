@@ -28,7 +28,7 @@ class EnterpriseNamedCacheFactory private constructor(private val tracingConfig:
     // This results in a minium of 1024 entries as per OS, but then grows linearly with attachment cache size.
     private fun defaultAttachmentPresenceCacheBound(nodeConfiguration: NodeConfiguration): Long = defaultAttachmentCacheBound(nodeConfiguration) / 10.KB
 
-    override val defaultCacheSize = if (nodeConfiguration == null) super.defaultCacheSize else defaultAttachmentCacheBound(nodeConfiguration)
+    override val defaultCacheSize = if (nodeConfiguration == null) super.defaultCacheSize else defaultBound(nodeConfiguration)
 
     override fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return with(nodeConfiguration!!) {

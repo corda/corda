@@ -10,12 +10,10 @@ import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
-import net.corda.core.node.services.*
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.Vault.ConstraintInfo.Companion.constraintInfo
-import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.VaultQueryException
 import net.corda.core.node.services.vault.*
 import net.corda.core.schemas.PersistentStateRef
@@ -121,14 +119,14 @@ class NodeVaultService(
             val session = currentDBSession()
             val now = clock.instant()
             producedStateRefsMap.forEach { stateAndRef ->
-                val uuid = if (stateAndRef.value.state.data is FungibleAsset<*>) {
+                val stateOnly = stateAndRef.value.state.data
+                val uuid = if (stateOnly is FungibleState<*>) {
                     FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
                 } else null
                 if (uuid != null) {
                     FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
                     log.trace { "Reserving soft lock for flow id $uuid and state ${stateAndRef.key}" }
                 }
-                val stateOnly = stateAndRef.value.state.data
                 // TODO: Optimise this.
                 //
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
@@ -333,17 +331,6 @@ class NodeVaultService(
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
-                if (uuid != null) {
-                    val fungible = netUpdate.produced.filter { stateAndRef ->
-                        val state = stateAndRef.state.data
-                        state is FungibleAsset<*> || state is FungibleState<*>
-                    }
-                    if (fungible.isNotEmpty()) {
-                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
-                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
-                        softLockReserve(uuid, stateRefs)
-                    }
-                }
                 persistentStateService.persist(vaultUpdate.produced)
                 updatesPublisher.onNext(vaultUpdate)
             }
