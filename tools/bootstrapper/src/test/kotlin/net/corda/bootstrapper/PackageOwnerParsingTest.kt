@@ -125,26 +125,12 @@ class PackageOwnerParsingTest {
     }
 
     @Test
-    fun `parse registration request with delimiter inclusive passwords`() {
-        val aliceKeyStorePath1 = dirAlice / "_alicestore1"
-        dirAlice.generateKey("${ALICE}1", "passw;rd", ALICE_NAME.toString(), storeName = "_alicestore1")
-        val aliceKeyStorePath2 = dirAlice / "_alicestore2"
-        dirAlice.generateKey("${ALICE}2", "\"passw;rd\"", ALICE_NAME.toString(), storeName = "_alicestore2")
-        val aliceKeyStorePath3 = dirAlice / "_alicestore3"
-        dirAlice.generateKey("${ALICE}3", "passw;rd", ALICE_NAME.toString(), storeName = "_alicestore3")
-        val aliceKeyStorePath4 = dirAlice / "_alicestore4"
-        dirAlice.generateKey("${ALICE}4", "\'passw;rd\'", ALICE_NAME.toString(), storeName = "_alicestore4")
-        val aliceKeyStorePath5 = dirAlice / "_alicestore5"
-        dirAlice.generateKey("${ALICE}5", "\"\"passw;rd\"\"", ALICE_NAME.toString(), storeName = "_alicestore5")
-        val packageOwnerSpecs = listOf("net.something0;$aliceKeyStorePath1;passw;rd;${ALICE}1",
-                "net.something1;$aliceKeyStorePath2;\"passw;rd\";${ALICE}2",
-                "\"net.something2;$aliceKeyStorePath3;passw;rd;${ALICE}3\"",
-                "net.something3;$aliceKeyStorePath4;\'passw;rd\';${ALICE}4",
-                "net.something4;$aliceKeyStorePath5;\"\"passw;rd\"\";${ALICE}5")
-        packageOwnerSpecs.forEachIndexed { i, packageOwnerSpec ->
-            commandLine.parse(*arrayOf("--register-package-owner", packageOwnerSpec))
-            assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo(JavaPackageName("net.something$i"))
-        }
+    fun `parse registration request with delimiter inclusive password`() {
+        val aliceKeyStorePath = dirAlice / "_alicestore"
+        dirAlice.generateKey("$ALICE", "passw;rd", ALICE_NAME.toString(), storeName = "_alicestore")
+        val packageOwnerSpec = "net.something;$aliceKeyStorePath;passw;rd;$ALICE"
+        commandLine.parse("--register-package-owner", packageOwnerSpec)
+        assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo(JavaPackageName("net.something"))
     }
 
     @Test
