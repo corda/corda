@@ -316,7 +316,7 @@ class DriverDSLImpl(
                         config.corda,
                         HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
-                ).buildKeystore()
+                ).generateKeysAndRegister()
                 config
             }
         } else {
@@ -595,7 +595,12 @@ class DriverDSLImpl(
             emptyList()
         }
 
-        val cordappDirectories = existingCorDappDirectoriesOption + (cordappsForAllNodes + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
+        // Instead of using cordappsForAllNodes we get only these that are missing from additionalCordapps
+        // This way we prevent errors when we want the same CordApp but with different config
+        val appOverrides = additionalCordapps.map { it.name to it.version}.toSet()
+        val baseCordapps = cordappsForAllNodes.filter { !appOverrides.contains(it.name to it.version) }
+
+        val cordappDirectories = existingCorDappDirectoriesOption + (baseCordapps + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
 
         val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
 

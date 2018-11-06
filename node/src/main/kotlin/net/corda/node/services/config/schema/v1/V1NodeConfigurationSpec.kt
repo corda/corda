@@ -25,6 +25,7 @@ import net.corda.node.services.config.schema.parsers.toPrincipal
 import net.corda.node.services.config.schema.parsers.toProperties
 import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
+import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -73,6 +74,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
+    private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
+    private val cryptoServiceConf by string().optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
         val myLegalName = configuration[myLegalName]
@@ -122,6 +125,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
         val jarDirs = configuration[jarDirs]
         val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(baseDirectory)
         val cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
+        val cryptoServiceName = configuration[cryptoServiceName]
+        val cryptoServiceConf = configuration[cryptoServiceConf]
 
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
@@ -170,7 +175,9 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = h2port,
                     jarDirs = jarDirs,
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = cordappSignerKeyFingerprintBlacklist
+                    cordappSignerKeyFingerprintBlacklist = cordappSignerKeyFingerprintBlacklist,
+                    cryptoServiceName = cryptoServiceName,
+                    cryptoServiceConf = cryptoServiceConf
             ))
         } catch (e: Exception) {
             return when (e) {

@@ -109,12 +109,11 @@ class NodeConfigurationImplTest {
 
     private fun getConfig(cfgName: String, overrides: Config = ConfigFactory.empty()): Config {
         val path = this::class.java.classLoader.getResource(cfgName).toPath()
-        val cfg = ConfigHelper.loadConfig(
+        return ConfigHelper.loadConfig(
                 baseDirectory = path.parent,
                 configFile = path,
                 configOverrides = overrides
         )
-        return cfg
     }
 
     @Test
@@ -179,6 +178,27 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `validation has error on non-null cryptoServiceConf for null cryptoServiceName`() {
+        val configuration = testConfiguration.copy(cryptoServiceConf = "unsupported.conf")
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying {
+            error -> error.contains("cryptoServiceName is null, but cryptoServiceConf is set to unsupported.conf")
+        }
+    }
+
+    @Test
+    fun `fail on wrong cryptoServiceName`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        rawConfig = rawConfig.withValue("cryptoServiceName", ConfigValueFactory.fromAnyRef("UNSUPPORTED"))
+
+        val config = rawConfig.parseAsNodeConfiguration()
+
+        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("has no constant of the name 'UNSUPPORTED'") }.toList()).isNotEmpty
+    }
+
+    @Test
     fun `rpcAddress and rpcSettings_address are equivalent`() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         rawConfig = rawConfig.withoutPath("rpcSettings.address")
@@ -211,7 +231,7 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `jmxReporterType is null and defaults to Jokolia`() {
-        var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }

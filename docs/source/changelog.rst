@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
+  to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
+
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter

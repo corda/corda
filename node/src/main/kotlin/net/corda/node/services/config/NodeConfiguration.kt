@@ -9,9 +9,12 @@ import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
+import net.corda.node.services.keys.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
@@ -67,6 +70,8 @@ interface NodeConfiguration {
 
     val baseDirectory: Path
     val certificatesDirectory: Path
+    // signingCertificateStore is used to store certificate chains.
+    // However, BCCryptoService is reusing this to store keys as well.
     val signingCertificateStore: FileBasedCertificateStoreSupplier
     val p2pSslOptions: MutualSslConfiguration
 
@@ -74,6 +79,11 @@ interface NodeConfiguration {
     val flowOverrides: FlowOverrideConfig?
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
+
+    // TODO At the moment this is just an identifier for the desired CryptoService engine. Consider using a classname to
+    //      to allow for pluggable implementations.
+    val cryptoServiceName: SupportedCryptoServices?
+    val cryptoServiceConf: String? // Location for the cryptoService conf file.
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
@@ -93,6 +103,13 @@ interface NodeConfiguration {
         const val cordappDirectoriesKey = "cordappDirectories"
 
         internal val defaultJmxReporterType = JmxReporterType.JOLOKIA
+    }
+
+    fun makeCryptoService(): CryptoService {
+        return when(cryptoServiceName) {
+            SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this)
+            null -> BCCryptoService(this) // Pick default BCCryptoService when null.
+        }
     }
 }
 

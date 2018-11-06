@@ -73,6 +73,10 @@
       <module name="core_main" target="1.8" />
       <module name="core_smokeTest" target="1.8" />
       <module name="core_test" target="1.8" />
+      <module name="crypto-service_main" target="1.8" />
+      <module name="crypto-service_test" target="1.8" />
+      <module name="crypto-services_main" target="1.8" />
+      <module name="crypto-services_test" target="1.8" />
       <module name="data_main" target="1.8" />
       <module name="data_test" target="1.8" />
       <module name="demobench_main" target="1.8" />

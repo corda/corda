@@ -1,5 +1,5 @@
-Supported cipher suites
-=======================
+Cipher suites supported by Corda
+================================
 
 .. contents::
 

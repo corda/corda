@@ -36,11 +36,11 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
+import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.persistence.NodeAttachmentService
@@ -68,7 +68,7 @@ import rx.internal.schedulers.CachedThreadScheduler
 import java.math.BigInteger
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.KeyPair
+import java.security.PublicKey
 import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -89,7 +89,7 @@ data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val configOverrides: MockNodeConfigOverrides? = null,
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordapp>? = null,
         val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
@@ -257,7 +257,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary },
+                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating)),
                     version = version
             ))
         }
@@ -381,7 +381,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
 
         override fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
-            return E2ETestKeyManagementService(identityService)
+            return E2ETestKeyManagementService(identityService, cryptoService)
         }
 
         override fun startShell() {
@@ -389,10 +389,13 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         }
 
         // This is not thread safe, but node construction is done on a single thread, so that should always be fine
-        override fun generateKeyPair(): KeyPair {
+        override fun generateKeyPair(alias: String): PublicKey {
+            require(cryptoService is BCCryptoService) { "MockNode supports BCCryptoService only, but it is ${cryptoService.javaClass.name}" }
             counter = counter.add(BigInteger.ONE)
             // The StartedMockNode specifically uses EdDSA keys as they are fixed and stored in json files for some tests (e.g IRSSimulation).
-            return Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
+            val keyPair = Crypto.deriveKeyPairFromEntropy(Crypto.EDDSA_ED25519_SHA512, counter)
+            (cryptoService as BCCryptoService).importKey(alias, keyPair)
+            return keyPair.public
         }
 
         // NodeInfo requires a non-empty addresses list and so we give it a dummy value for mock nodes.
@@ -463,7 +466,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
-            parameters.configOverrides(it)
+            parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 
         val cordapps = (parameters.additionalCordapps ?: emptySet()) + cordappsForAllNodes
@@ -615,6 +618,8 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(FlowTimeoutConfiguration(1.hours, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
+        doReturn(null).whenever(it).cryptoServiceName
+        doReturn(null).whenever(it).cryptoServiceConf
     }
 }
 
@@ -631,3 +636,4 @@ class MockNodeFlowManager : NodeFlowManager() {
         testingRegistrations.put(initiator, factory)
     }
 }
+

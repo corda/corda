@@ -1,4 +1,4 @@
-package net.corda.core
+package net.corda.testing.core
 
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.div
@@ -25,18 +25,22 @@ object JarSignatureTestUtils {
                 .waitFor())
     }
 
-    fun Path.generateKey(alias: String, password: String, name: String, keyalg: String = "RSA") =
-            executeProcess("keytool", "-genkey", "-keystore", "_teststore", "-storepass", "storepass", "-keyalg", keyalg, "-alias", alias, "-keypass", password, "-dname", name)
+    fun Path.generateKey(alias: String, storePassword: String, name: String, keyalg: String = "RSA", keyPassword: String = storePassword, storeName: String = "_teststore") =
+            executeProcess("keytool", "-genkeypair", "-keystore" ,storeName, "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
 
     fun Path.createJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "cvf", fileName) + contents))
 
+    fun Path.addIndexList(fileName: String) {
+        executeProcess(*(arrayOf("jar", "i", fileName)))
+    }
+
     fun Path.updateJar(fileName: String, vararg contents: String) =
             executeProcess(*(arrayOf("jar", "uvf", fileName) + contents))
 
-    fun Path.signJar(fileName: String, alias: String, password: String): PublicKey {
-        executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", "storepass", "-keypass", password, fileName, alias)
-        val ks = loadKeyStore(this.resolve("_teststore"), "storepass")
+    fun Path.signJar(fileName: String, alias: String, storePassword: String, keyPassword: String = storePassword): PublicKey {
+        executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
+        val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
     }
 
