@@ -554,7 +554,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                         ServiceHub::class.java.name)
             } catch (e: ServiceInstantiationException) {
-                log.error("Corda service ${it.name} failed to instantiate", e.cause)
+                log.error("Corda service ${it.name} failed to instantiate (${e.cause?.rootMessage})", e.cause)
             } catch (e: Exception) {
                 log.error("Unable to install Corda service ${it.name}", e)
             }
