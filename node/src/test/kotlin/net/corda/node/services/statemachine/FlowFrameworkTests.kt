@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Fiber
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
 import co.paralleluniverse.strands.concurrent.Semaphore
+import net.corda.client.rpc.notUsed
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
@@ -68,7 +69,7 @@ class FlowFrameworkTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
                 servicePeerAllocationStrategy = RoundRobin()
         )
 
@@ -100,8 +101,8 @@ class FlowFrameworkTests {
         assertThat(flow.lazyTime).isNotNull()
     }
 
-    class SuspendThrowingActionExecutor(private val exception: Exception, val delegate: ActionExecutor) : ActionExecutor {
-        var thrown = false
+    class SuspendThrowingActionExecutor(private val exception: Exception, private val delegate: ActionExecutor) : ActionExecutor {
+        private var thrown = false
         @Suspendable
         override fun executeAction(fiber: FlowFiber, action: Action) {
             if (action is Action.CommitTransaction && !thrown) {
@@ -367,10 +368,17 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `unknown class in session init`() {
+    fun `session init with unknown class is sent to the flow hospital, from where it's dropped`() {
         aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
-        assertThat(receivedSessionMessages).hasSize(2) // Only the session-init and session-reject are expected
+        assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
+        val medicalRecords = bobNode.smm.flowHospital.track().apply { updates.notUsed() }.snapshot
+        assertThat(medicalRecords).hasSize(1)
+        val sessionInitRecord = medicalRecords[0] as StaffedFlowHospital.MedicalRecord.SessionInit
+        assertThat(sessionInitRecord.initiatorFlowClassName).isEqualTo("not.a.real.Class")
+        bobNode.smm.flowHospital.dropSessionInit(sessionInitRecord.id)  // Drop the message which is processed as an error back to sender
+        mockNet.runNetwork()
+        assertThat(receivedSessionMessages).hasSize(2) // Now the session-reject is expected
         val lastMessage = receivedSessionMessages.last().message as ExistingSessionMessage
         assertThat((lastMessage.payload as RejectSessionMessage).message).isEqualTo("Don't know not.a.real.Class")
     }
@@ -603,10 +611,6 @@ class FlowFrameworkTripartyTests {
 
     private val normalEnd = ExistingSessionMessage(SessionId(0), EndSessionMessage) // NormalSessionEnd(0)
 
-    private fun assertSessionTransfers(vararg expected: SessionTransfer) {
-        assertThat(receivedSessionMessages).containsExactly(*expected)
-    }
-
     private fun assertSessionTransfers(node: TestStartedNode, vararg expected: SessionTransfer): List<SessionTransfer> {
         val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }
         assertThat(actualForNode).containsExactly(*expected)
@@ -749,16 +753,6 @@ class FlowFrameworkPersistenceTests {
         return newNode.getSingleFlow<P>().first
     }
 
-    private fun assertSessionTransfers(vararg expected: SessionTransfer) {
-        assertThat(receivedSessionMessages).containsExactly(*expected)
-    }
-
-    private fun assertSessionTransfers(node: TestStartedNode, vararg expected: SessionTransfer): List<SessionTransfer> {
-        val actualForNode = receivedSessionMessages.filter { it.from == node.internals.id || it.to == node.network.myAddress }
-        assertThat(actualForNode).containsExactly(*expected)
-        return actualForNode
-    }
-
     private fun receivedSessionMessagesObservable(): Observable<SessionTransfer> {
         return mockNet.messagingNetwork.receivedMessages.toSessionTransfers()
     }
@@ -831,19 +825,6 @@ private val FlowLogic<*>.progressSteps: CordaFuture<List<Notification<ProgressTr
                 .toList()
                 .toFuture()
     }
-
-class ThrowingActionExecutor(private val exception: Exception, val delegate: ActionExecutor) : ActionExecutor {
-    var thrown = false
-    @Suspendable
-    override fun executeAction(fiber: FlowFiber, action: Action) {
-        if (thrown) {
-            delegate.executeAction(fiber, action)
-        } else {
-            thrown = true
-            throw exception
-        }
-    }
-}
 
 @InitiatingFlow
 private class WaitForOtherSideEndBeforeSendAndReceive(val otherParty: Party,
