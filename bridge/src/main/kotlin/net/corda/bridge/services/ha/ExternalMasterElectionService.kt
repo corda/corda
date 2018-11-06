@@ -14,9 +14,6 @@ import net.corda.nodeapi.internal.zookeeper.ZkLeader
 import rx.Subscription
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
@@ -30,9 +27,6 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
 
     private var haElector: ZkLeader? = null
     private var leaderListener: CordaLeaderListener? = null
-    private val scheduler = Executors.newSingleThreadScheduledExecutor()
-    private var becomeMasterFuture: ScheduledFuture<*>? = null
-
     private var statusSubscriber: Subscription? = null
     private val statusFollower = ServiceStateCombiner(listOf(artemisService))
 
@@ -40,7 +34,6 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
 
     private companion object {
         private val log = contextLogger()
-        private const val DELAYED_LEADER_START = 5000L
     }
 
     init {
@@ -51,15 +44,10 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
     private fun becomeMaster() {
         auditService.statusChangeEvent("Acquired leadership. Going active")
         stateHelper.active = true
-        becomeMasterFuture = null
     }
 
     private fun becomeSlave() {
         log.info("Cancelling leadership")
-        becomeMasterFuture?.apply {
-            cancel(false)
-        }
-        becomeMasterFuture = null
         stateHelper.active = false
     }
 
@@ -102,11 +90,8 @@ class ExternalMasterElectionService(private val conf: FirewallConfiguration,
                 }
 
                 override fun isLeader() {
-                    log.info("Zookeeper has signalled leadership acquired. Delay master claim for a short period to allow old master to close")
-                    becomeMasterFuture?.apply {
-                        cancel(false)
-                    }
-                    becomeMasterFuture = scheduler.schedule(::becomeMaster, DELAYED_LEADER_START, TimeUnit.MILLISECONDS)
+                    log.info("Zookeeper has signalled leadership acquired.")
+                    becomeMaster()
                 }
             }
             leaderListener = listener

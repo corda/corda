@@ -9,9 +9,7 @@ import org.apache.curator.framework.api.CuratorEvent
 import org.apache.curator.framework.listen.ListenerContainer
 import org.apache.curator.framework.recipes.AfterConnectionEstablished
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener
-import org.apache.curator.framework.recipes.locks.LockInternals
-import org.apache.curator.framework.recipes.locks.LockInternalsSorter
-import org.apache.curator.framework.recipes.locks.StandardLockInternalsDriver
+import org.apache.curator.framework.recipes.locks.*
 import org.apache.curator.framework.state.ConnectionState
 import org.apache.curator.framework.state.ConnectionStateListener
 import org.apache.curator.utils.ZKPaths
@@ -43,7 +41,7 @@ import java.util.concurrent.atomic.AtomicReference
  * @param nodeId the unique identifier used to link a client to a zNode
  * @param priority an [Int] value that determines this client's priority in the election. The lower the value, the higher the priority
  */
-internal class PrioritizedLeaderLatch(client: CuratorFramework,
+internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
                       private val path: String,
                       private val nodeId: String,
                       private val priority: Int) : Closeable {
@@ -51,18 +49,19 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
     val state = AtomicReference<State>(State.CLOSED)
 
     private val watchedClient = client.newWatcherRemoveCuratorFramework()
+    private val leaderLock = InterProcessSemaphoreMutex(client, "$path$LOCK_PATH_NAME")
     private val hasLeadership = AtomicBoolean(false)
     private val ourPath = AtomicReference<String>()
     private val startTask = AtomicReference<Future<*>>()
 
     private val listeners = ListenerContainer<LeaderLatchListener>()
-
     private val connectionStateListener = ConnectionStateListener { _, newState -> handleStateChange(newState) }
 
     private companion object {
         private val log = contextLogger()
         /** Used to split the zNode path and extract the priority value for sorting and comparison */
         private const val LOCK_NAME = "-latch-"
+        private const val LOCK_PATH_NAME = "-lock"
         private val sorter = LockInternalsSorter { str, lockName -> StandardLockInternalsDriver.standardFixForSorting(str, lockName) }
     }
 
@@ -91,15 +90,14 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
         Preconditions.checkState(state.compareAndSet(State.STARTED, State.CLOSED),
                 "Already closed or has not been started.")
         cancelStartTask()
-
         try {
             watchedClient.removeWatchers()
+            setLeadership(false)
             setNode(null)
         } catch (e: Exception) {
             throw IOException(e)
         } finally {
             watchedClient.connectionStateListenable.removeListener(connectionStateListener)
-            setLeadership(false)
         }
     }
 
@@ -129,7 +127,7 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
             try {
                 reset()
             } catch (e: Exception) {
-                log.error("An error occurred while resetting leadership.", e)
+                log.error("An error occurred while resetting leadership for client $nodeId.", e)
             }
         }
     }
@@ -152,11 +150,11 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
                 try {
                     if (watchedClient.connectionStateErrorPolicy.isErrorState(ConnectionState.SUSPENDED) ||
                             !hasLeadership.get()) {
-                        log.info("Client reconnected. Resetting latch.")
+                        log.info("Client $nodeId reconnected. Resetting latch.")
                         reset()
                     }
                 } catch (e: Exception) {
-                    log.error("Could not reset leader latch.", e)
+                    log.error("Could not reset leader latch for client $nodeId.", e)
                     setLeadership(false)
                 }
             }
@@ -193,18 +191,39 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
         }
 
         val latchName = "$nodeId$LOCK_NAME${"%05d".format(priority)}" // Fixed width priority to ensure numeric sorting
-        watchedClient.create()
-                .creatingParentContainersIfNeeded()
-                .withProtection().withMode(CreateMode.EPHEMERAL)
-                .inBackground(joinElectionCallback).forPath(ZKPaths.makePath(path, latchName), nodeId.toByteArray(Charsets.UTF_8))
+        try {
+            watchedClient.create()
+                    .creatingParentContainersIfNeeded()
+                    .withProtection().withMode(CreateMode.EPHEMERAL)
+                    .inBackground(joinElectionCallback).forPath(ZKPaths.makePath(path, latchName), nodeId.toByteArray(Charsets.UTF_8))
+        } catch (e: IllegalStateException) {
+            log.warn("Trying to join election while client is being closed.")
+        }
     }
 
     private fun setLeadership(newValue: Boolean) {
         val oldValue = hasLeadership.getAndSet(newValue)
-        log.info("Setting leadership to $newValue. Old value was $oldValue.")
+        log.info("Client $nodeId: setting leadership to $newValue; old value was $oldValue.")
         if (oldValue && !newValue) {
             listeners.forEach { listener -> listener?.notLeader(); null }
+            // Release lock after listeners have been notified
+            try {
+                if (leaderLock.isAcquiredInThisProcess) {
+                    leaderLock.release()
+                }
+            } catch (e: IllegalStateException) {
+                log.warn("Client $nodeId: tried to release leader lock without owning it.")
+            }
         } else if (!oldValue && newValue) {
+            // Make sure we're the only leader before invoking listeners. This call will block the current thread until
+            // the lock is acquired
+            try {
+                leaderLock.acquire()
+            } catch (e: IOException) {
+                log.warn("Client closed while trying to acquire leader lock.")
+            } catch (e: IllegalStateException) {
+                log.warn("Client tried to acquire leader lock while closing.")
+            }
             listeners.forEach { listener -> listener?.isLeader(); null }
         }
     }
@@ -273,10 +292,10 @@ internal class PrioritizedLeaderLatch(client: CuratorFramework,
                 latch.watchedClient.children.usingWatcher(ElectionWatcher(latch)).inBackground(NoNodeCallback(latch)).forPath(latch.path)
                 if (Watcher.Event.EventType.NodeChildrenChanged == event.type && latch.ourPath.get() != null) {
                     try {
-                        log.info("Change detected in children nodes of path ${latch.path}. Checking candidates.")
+                        log.info("Client ${latch.nodeId}: change detected in children nodes of path ${latch.path}; checking candidates.")
                         latch.processCandidates()
                     } catch (e: Exception) {
-                        log.error("An error occurred checking the leadership.", e)
+                        log.error("Client ${latch.nodeId}: an error occurred checking the leadership.", e)
                     }
                 }
             }
