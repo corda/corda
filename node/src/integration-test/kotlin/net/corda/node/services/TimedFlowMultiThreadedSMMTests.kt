@@ -27,6 +27,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -53,6 +54,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
 
     @Test
     fun `timed flow is retried`() {
+        assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
         driver(DriverParameters(startNodesInProcess = true)) {
             val configOverrides = mapOf("flowTimeout" to mapOf(
@@ -74,6 +76,7 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
 
     @Test
     fun `progress tracker is preserved after flow is retried`() {
+        assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database
         val user = User("test", "pwd", setOf(Permissions.startFlow<TimedInitiatorFlow>(), Permissions.startFlow<SuperFlow>()))
         driver(DriverParameters(startNodesInProcess = true)) {
 
