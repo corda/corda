@@ -51,7 +51,7 @@ The template has a number of files, but we can ignore most of them. We will only
         cordapp-contracts-states/src/main/java/com/template/TemplateState.java
 
         // 2. The flow
-        cordapp/src/main/java/com/template/TemplateFlow.java
+        cordapp/src/main/java/com/template/Initiator.java
 
     .. code-block:: kotlin
 
@@ -59,7 +59,7 @@ The template has a number of files, but we can ignore most of them. We will only
         cordapp-contracts-states/src/main/kotlin/com/template/StatesAndContracts.kt
 
         // 2. The flow
-        cordapp/src/main/kotlin/com/template/App.kt
+        cordapp/src/main/kotlin/com/template/Flows.kt
 
 Progress so far
 ---------------
