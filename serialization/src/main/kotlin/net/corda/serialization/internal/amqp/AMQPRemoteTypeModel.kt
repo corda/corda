@@ -11,7 +11,7 @@ class AMQPRemoteTypeModel {
     fun interpret(schema: Schema): Map<TypeDescriptor, RemoteTypeInformation> {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
         val byTypeDescriptor = schema.types.associateBy { it.descriptor.name.toString() }
-        return byTypeDescriptor.mapValues { (k, v) -> v.name.typeIdentifier.interpretIdentifier(notationLookup, emptySet()) }
+        return byTypeDescriptor.mapValues { (_, v) -> v.name.typeIdentifier.interpretIdentifier(notationLookup, emptySet()) }
     }
 
     private fun TypeIdentifier.interpretIdentifier(notationLookup: Map<TypeIdentifier, TypeNotation>, seen: Set<TypeIdentifier>): RemoteTypeInformation =

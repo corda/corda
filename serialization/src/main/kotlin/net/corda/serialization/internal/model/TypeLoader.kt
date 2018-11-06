@@ -27,6 +27,8 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
 
     override fun load(remoteTypeInformation: Collection<RemoteTypeInformation>): Map<TypeIdentifier, Type> {
         val remoteInformationByIdentifier = remoteTypeInformation.associateBy { it.typeIdentifier }
+
+        // Grab all the types we can from the cache, or the classloader.
         val noCarpentryRequired = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, _) ->
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
@@ -35,18 +37,24 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
             }
         }.toMap()
 
+        // If we have everything we need, return immediately.
         if (noCarpentryRequired.size == remoteTypeInformation.size) return noCarpentryRequired
 
+        // Identify the types which need carpenting up.
         val requiringCarpentry = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, information) ->
             if (identifier in noCarpentryRequired) null else information
         }.toSet()
 
+        // Build the types requiring carpentry in reverse-dependency order.
+        // Something else might be trying to carpent these types at the same time as us, so we always consult
+        // (and populate) the cache.
         val carpented = CarpentryDependencyGraph.buildInReverseDependencyOrder(requiringCarpentry) { typeToCarpent ->
             cache.computeIfAbsent(typeToCarpent.typeIdentifier) {
                 carpenter.carpent(typeToCarpent)
             }
         }
 
+        // Return the complete map of types.
         return noCarpentryRequired + carpented
     }
 }
