@@ -73,9 +73,7 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
                         legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                         configOverrides = MockNodeConfigOverrides(
                                 flowTimeout = MockNetFlowTimeOut(10.seconds, 3, 1.0)
-                        )
-                )
-        )
+                        )))
 
         // MockNetwork doesn't support notary clusters, so we create all the nodes we need unstarted, and then install the
         // network-parameters in their directories before they're started.

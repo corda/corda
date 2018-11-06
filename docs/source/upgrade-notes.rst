@@ -138,6 +138,5 @@ Upgrading from Corda Enterprise 3
 API Changes
 +++++++++++
 
-
 * MockNetwork: ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration``
   object. Use a ``MockNetworkConfigOverrides`` object instead.
