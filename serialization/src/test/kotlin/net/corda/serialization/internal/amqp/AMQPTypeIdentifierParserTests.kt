@@ -25,6 +25,8 @@ class AMQPTypeIdentifierParserTests {
         assertParseResult<Array<ByteArray>>("binary[]")
         assertParseResult<Array<UnsignedShort>>("ushort[]")
         assertParseResult<Array<Array<String>>>("string[][]")
+        assertParseResult<UUID>("uuid")
+        assertParseResult<Date>("timestamp")
 
         // We set a limit to the depth of arrays-of-arrays-of-arrays...
         assertFailsWith<IllegalTypeNameParserStateException> {

@@ -12,10 +12,13 @@ import java.util.*
  */
 class IllegalTypeNameParserStateException(message: String): NotSerializableException(message)
 
+/**
+ * Provides a state machine which knows how to parse AMQP type strings into [TypeIdentifier]s.
+ */
 object AMQPTypeIdentifierParser {
 
-    internal const val MAX_TYPE_PARAM_DEPTH = 32
-    internal const val MAX_ARRAY_DEPTH = 32
+    private const val MAX_TYPE_PARAM_DEPTH = 32
+    private const val MAX_ARRAY_DEPTH = 32
 
     /**
      * Given a string representing a serialized AMQP type, construct a TypeIdentifier for that string.
@@ -115,7 +118,10 @@ object AMQPTypeIdentifierParser {
                 '[' ->
                     if (parameters.isEmpty()) unexpected(c)
                     else ParsingArray(
+                            // Start adding array-ness to the last parameter we have.
                             parameters[parameters.lastIndex],
+                            // Take a copy of this state, dropping the last parameter which will be added back on
+                            // when array parsing completes.
                             copy(parameters = parameters.subList(0, parameters.lastIndex)))
                 '>' -> parent?.addParameter(getTypeIdentifier()) ?: Complete(getTypeIdentifier())
                 else -> unexpected(c)
