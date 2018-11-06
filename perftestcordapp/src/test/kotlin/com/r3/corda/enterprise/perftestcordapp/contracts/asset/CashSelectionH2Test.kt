@@ -9,6 +9,7 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.MockNodeParameters
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -40,10 +41,9 @@ class CashSelectionH2Test {
 
     @Test
     fun `check does not hold connection over retries`() {
-        val bankA = mockNet.createNode(MockNodeParameters(configOverrides = {
+        val bankA = mockNet.createNode(MockNodeParameters(configOverrides = MockNodeConfigOverrides(
             // Tweak connections to be minimal to make this easier (1 results in a hung node during start up, so use 2 connections).
-            it.dataSourceProperties.setProperty("maximumPoolSize", "2")
-        }))
+                extraDataSourceProperties = mapOf("maximumPoolSize" to "2"))))
         val notary = mockNet.defaultNotaryIdentity
 
         // Start more cash spends than we have connections.  If spend leaks a connection on retry, we will run out of connections.

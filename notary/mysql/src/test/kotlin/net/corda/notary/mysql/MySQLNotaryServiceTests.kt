@@ -32,6 +32,8 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.MockNetNotaryConfig
+import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions
@@ -253,16 +255,12 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                 InternalMockNodeParameters(
                         legalName = notaryNodeName,
                         entropyRoot = BigInteger.valueOf(60L),
-                        configOverrides = {
-                            val notaryConfig = NotaryConfig(
+                        configOverrides = MockNodeConfigOverrides(
+                                notary = MockNetNotaryConfig(
                                     validating = true,
                                     extraConfig = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100).toConfig(),
                                     serviceLegalName = notaryName,
                                     className = MySQLNotaryService::class.java.name
-                            )
-                            doReturn(notaryConfig).whenever(it).notary
-                        }
-                )
-        )
+                                ))))
     }
 }

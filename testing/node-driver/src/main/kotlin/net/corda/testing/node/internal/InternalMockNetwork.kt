@@ -86,7 +86,7 @@ data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: (NodeConfiguration) -> Any? = {},
+        val configOverrides: MockNodeConfigOverrides? = null,
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordapp>? = null,
         val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
@@ -254,7 +254,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary },
+                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating)),
                     version = version
             ))
         }
@@ -461,7 +461,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             doReturn(makeInternalTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
             doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
-            parameters.configOverrides(it)
+            parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 
         val cordapps = (parameters.additionalCordapps ?: emptySet()) + cordappsForAllNodes
@@ -633,3 +633,4 @@ class MockNodeFlowManager : NodeFlowManager() {
         testingRegistrations.put(initiator, factory)
     }
 }
+
