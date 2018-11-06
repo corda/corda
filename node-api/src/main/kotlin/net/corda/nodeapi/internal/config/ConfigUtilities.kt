@@ -222,7 +222,14 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
 /**
  * Convert the receiver object into a [Config]. This does the inverse action of [parseAs].
  */
-fun Any.toConfig(): Config = toConfigValue().toConfig()
+fun Any.toConfig(): Config {
+    val value = toConfigValue()
+    return when (value) {
+        is ConfigObject -> value.toConfig()
+        // Here we picked the same `toConfig()` name for our function, which is a bit unfortunate. The branches look like the same, but they are not.
+        else -> value.toConfig()
+    }
+}
 fun Any.toConfigValue(): ConfigValue = ConfigValueFactory.fromMap(toConfigMap())
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
