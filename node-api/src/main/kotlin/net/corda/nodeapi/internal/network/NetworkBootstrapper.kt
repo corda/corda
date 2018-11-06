@@ -375,7 +375,7 @@ internal constructor(private val initSerEnv: Boolean,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
-                    maxTransactionSize = 10485760,
+                    maxTransactionSize = 104857600,
                     whitelistedContractImplementations = whitelist,
                     epoch = 1,
                     eventHorizon = 30.days
