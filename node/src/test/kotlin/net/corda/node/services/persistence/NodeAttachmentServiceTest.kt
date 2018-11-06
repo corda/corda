@@ -89,8 +89,10 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val jarAndSigner = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val signedJar = jarAndSigner.first
-            val attachmentId = storage.importAttachment(signedJar.inputStream(), "test", null)
-            assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signers.map { it.hash })
+            signedJar.inputStream().use { jarStream ->
+                val attachmentId = storage.importAttachment(jarStream, "test", null)
+                assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signers.map { it.hash })
+            }
         }
     }
 
@@ -98,8 +100,10 @@ class NodeAttachmentServiceTest {
     fun `importing a non-signed jar will save no signers`() {
         SelfCleaningDir().use {
             val jarName = makeTestContractJar(it.path, "com.example.MyContract")
-            val attachmentId = storage.importAttachment(it.path.resolve(jarName).inputStream(), "test", null)
-            assertEquals(0, storage.openAttachment(attachmentId)!!.signers.size)
+            it.path.resolve(jarName).inputStream().use { jarStream ->
+                val attachmentId = storage.importAttachment(jarStream, "test", null)
+                assertEquals(0, storage.openAttachment(attachmentId)!!.signers.size)
+            }
         }
     }
 
@@ -355,21 +359,12 @@ class NodeAttachmentServiceTest {
     }
 
     /**
-     * Class to create an automatically delete a temporary directory. Will ignore file locking issues on Windows
-     * while deleting the directory contents as they might be locked by the process itself (an annoying property of
-     * NTFS). Note that empty directories might be left if an exception gets suppressed.
+     * Class to create an automatically delete a temporary directory.
      */
     class SelfCleaningDir : Closeable {
-        val path = Files.createTempDirectory(NodeAttachmentServiceTest::class.simpleName)
+        val path: Path = Files.createTempDirectory(NodeAttachmentServiceTest::class.simpleName)
         override fun close() {
-            try {
-                path.deleteRecursively()
-            } catch (e: java.nio.file.FileSystemException) {
-                // ignore this on windows - the file may still be locked by us but will be gone once the test finishes.
-                if (!System.getProperty("os.name").contains("Windows")) {
-                    throw e
-                }
-            }
+            path.deleteRecursively()
         }
     }
 
@@ -382,9 +377,9 @@ class NodeAttachmentServiceTest {
                 jar.closeEntry()
                 jar.putNextEntry(JarEntry("test2.txt"))
                 jar.write("Some more useful content".toByteArray())
-                extraEntries.forEach {
-                    jar.putNextEntry(JarEntry(it.first))
-                    jar.write(it.second.toByteArray())
+                extraEntries.forEach { entry ->
+                    jar.putNextEntry(JarEntry(entry.first))
+                    jar.write(entry.second.toByteArray())
                 }
                 jar.closeEntry()
             }
@@ -420,7 +415,7 @@ class NodeAttachmentServiceTest {
                 }
             """.trimIndent()
             val compiler = ToolProvider.getSystemJavaCompiler()
-            val source = object : SimpleJavaFileObject(URI.create("string:///${packages.joinToString("/")}/${className}.java"), JavaFileObject.Kind.SOURCE) {
+            val source = object : SimpleJavaFileObject(URI.create("string:///${packages.joinToString("/")}/$className.java"), JavaFileObject.Kind.SOURCE) {
                 override fun getCharContent(ignoreEncodingErrors: Boolean): CharSequence {
                     return newClass
                 }
@@ -428,7 +423,7 @@ class NodeAttachmentServiceTest {
             val fileManager = compiler.getStandardFileManager(null, null, null)
             fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(workingDir.toFile()))
 
-            val compile = compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
+            compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
             return Paths.get(fileManager.list(StandardLocation.CLASS_OUTPUT, "", setOf(JavaFileObject.Kind.CLASS), true).single().name)
         }
     }
