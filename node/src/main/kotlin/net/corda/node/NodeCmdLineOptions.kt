@@ -8,6 +8,7 @@ import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.internal.div
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.Valid
@@ -18,6 +19,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 open class SharedNodeCmdLineOptions {
+    private companion object {
+        private val logger by lazy { loggerFor<SharedNodeCmdLineOptions>() }
+    }
     @Option(
             names = ["-b", "--base-directory"],
             description = ["The node working directory where all the files are kept."]
@@ -62,6 +66,24 @@ open class SharedNodeCmdLineOptions {
         _configFile = other._configFile
         unknownConfigKeysPolicy= other.unknownConfigKeysPolicy
         devMode = other.devMode
+    }
+
+    fun logRawConfigurationErrors(errors: Iterable<ConfigException>) {
+        errors.forEach { error ->
+            when (error) {
+                is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
+                else -> logger.error("Error while parsing node configuration.", error)
+            }
+        }
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
     }
 }
 

@@ -1,7 +1,6 @@
 package net.corda.node.internal.subcommands
 
 import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.ExitCodes
@@ -12,11 +11,10 @@ import net.corda.node.internal.initLogging
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.nodeapi.internal.config.toConfigValue
 import picocli.CommandLine.Mixin
-import java.nio.file.Path
 
 internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration", "Validate the configuration without starting the node.") {
     internal companion object {
-        internal val logger by lazy { loggerFor<ValidateConfigurationCli>() }
+        private val logger by lazy { loggerFor<ValidateConfigurationCli>() }
 
         private val configRenderingOptions = ConfigRenderOptions.defaults().setFormatted(true).setComments(false).setOriginComments(false)
 
@@ -40,22 +38,4 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
         val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
         return cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional?.let { ExitCodes.SUCCESS } ?: ExitCodes.FAILURE
     }
-}
-
-internal fun SharedNodeCmdLineOptions.logRawConfigurationErrors(errors: Iterable<ConfigException>) {
-    errors.forEach { error ->
-        when (error) {
-            is ConfigException.IO -> ValidateConfigurationCli.logger.error(configFileNotFoundMessage(configFile))
-            else -> ValidateConfigurationCli.logger.error("Error while parsing node configuration.", error)
-        }
-    }
-}
-
-private fun configFileNotFoundMessage(configFile: Path): String {
-    return """
-                Unable to load the node config file from '$configFile'.
-
-                Try setting the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent()
 }
