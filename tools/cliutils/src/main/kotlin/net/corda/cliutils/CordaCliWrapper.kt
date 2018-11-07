@@ -157,16 +157,18 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
 
-    val cmd = CommandLine(this).apply {
-        // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
-        registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
-        commandSpec.name(alias)
-        commandSpec.usageMessage().description(description)
-        subCommands().forEach {
-            val subCommand = CommandLine(it)
-            it.args = args
-            subCommand.commandSpec.usageMessage().description(it.description)
-            commandSpec.addSubcommand(it.alias, subCommand)
+    val cmd by lazy {
+        CommandLine(this).apply {
+            // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+            registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
+            commandSpec.name(alias)
+            commandSpec.usageMessage().description(description)
+            subCommands().forEach {
+                val subCommand = CommandLine(it)
+                it.args = args
+                subCommand.commandSpec.usageMessage().description(it.description)
+                commandSpec.addSubcommand(it.alias, subCommand)
+            }
         }
     }
 
