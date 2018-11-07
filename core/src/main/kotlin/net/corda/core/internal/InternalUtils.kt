@@ -305,7 +305,7 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
 val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
     return try {
         kotlin.objectInstance
-    } catch (_: Throwable) {
+    } catch (_: Exception) {
         val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
         field?.let {
             if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {

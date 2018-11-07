@@ -191,6 +191,7 @@ object QuasarInstrumentationHook : ClassFileTransformer {
         } catch (throwable: Throwable) {
             println("SOMETHING WENT WRONG")
             throwable.printStackTrace(System.out)
+            if (throwable is Error) throw throwable
             classfileBuffer
         }
     }

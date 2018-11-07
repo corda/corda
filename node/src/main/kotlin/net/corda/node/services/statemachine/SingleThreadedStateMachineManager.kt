@@ -618,7 +618,7 @@ class SingleThreadedStateMachineManager(
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
         return try {
             serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext!!)
-        } catch (exception: Throwable) {
+        } catch (exception: Exception) {
             logger.error("Encountered unrestorable checkpoint!", exception)
             null
         }

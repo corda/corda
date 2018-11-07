@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.extractFile
 import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.PublicKey
@@ -36,10 +37,11 @@ interface Attachment : NamedByHash {
     @JvmDefault
     fun openAsJAR(): JarInputStream {
         val stream = open()
-        try {
-            return JarInputStream(stream)
-        } catch (t: Throwable) {
-            stream.use { throw t }
+        return try {
+            JarInputStream(stream)
+        } catch (e: IOException) {
+            stream.close()
+            throw e
         }
     }
 

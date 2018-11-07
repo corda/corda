@@ -219,9 +219,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val result = logic.call()
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
-        } catch (throwable: Throwable) {
-            logger.info("Flow threw exception... sending it to flow hospital", throwable)
-            Try.Failure<R>(throwable)
+        } catch (exception: Exception) {
+            logger.info("Flow threw exception... sending it to flow hospital", exception)
+            Try.Failure<R>(exception)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -373,8 +373,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.checkpointSerialize(context = serializationContext.value)
                 )
-            } catch (throwable: Throwable) {
-                Event.Error(throwable)
+            } catch (exception: java.lang.Exception) {
+                Event.Error(exception)
             }
 
             // We must commit the database transaction before returning from this closure otherwise Quasar may schedule

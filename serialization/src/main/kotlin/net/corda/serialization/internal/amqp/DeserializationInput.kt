@@ -14,6 +14,7 @@ import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
 import java.io.NotSerializableException
+import java.lang.Exception
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -100,7 +101,7 @@ class DeserializationInput constructor(
             throw NotSerializableException(amqp.mitigation)
         } catch (nse: NotSerializableException) {
             throw nse
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
             throw NotSerializableException("Internal deserialization failure: ${t.javaClass.name}: ${t.message}").apply { initCause(t) }
         } finally {
             objectHistory.clear()
