@@ -147,7 +147,7 @@ data class NodeConfigurationImpl(
         @Suppress("DEPRECATION")
         if (certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
-                |Please contact the R3 team on the public slack to discuss your use case.
+                |Please contact the R3 team on the public Slack to discuss your use case.
             """.trimMargin())
         }
 
@@ -209,11 +209,11 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
         if (tlsCertCrlIssuer != null) {
             if (tlsCertCrlDistPoint == null) {
-                errors += "tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL"
+                errors += "'tlsCertCrlDistPoint' is mandatory when 'tlsCertCrlIssuer' is specified"
             }
         }
         if (!crlCheckSoftFail && tlsCertCrlDistPoint == null) {
-            errors += "tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE"
+            errors += "'tlsCertCrlDistPoint' is mandatory when 'crlCheckSoftFail' is false"
         }
         return errors
     }
@@ -221,7 +221,7 @@ data class NodeConfigurationImpl(
     private fun validateH2Settings(): List<String> {
         val errors = mutableListOf<String>()
         if (h2port != null && h2Settings != null) {
-            errors += "Cannot specify both 'h2port' and 'h2Settings' in configuration"
+            errors += "cannot specify both 'h2port' and 'h2Settings'"
         }
         return errors
     }
@@ -229,7 +229,7 @@ data class NodeConfigurationImpl(
     private fun validateCryptoService(): List<String> {
         val errors = mutableListOf<String>()
         if (cryptoServiceName == null && cryptoServiceConf != null) {
-            errors += "cryptoServiceName is null, but cryptoServiceConf is set to $cryptoServiceConf"
+            errors += "'cryptoServiceName' is mandatory when 'cryptoServiceConf' is specified"
         }
         return errors
     }
@@ -237,10 +237,10 @@ data class NodeConfigurationImpl(
     private fun validateRpcSettings(options: NodeRpcSettings): List<String> {
         val errors = mutableListOf<String>()
         if (options.adminAddress == null) {
-            errors += "'rpcSettings.adminAddress': missing"
+            errors += "'rpcSettings.adminAddress' is mandatory"
         }
         if (options.useSsl && options.ssl == null) {
-            errors += "'rpcSettings.ssl': missing (rpcSettings.useSsl was set to true)."
+            errors += "'rpcSettings.ssl' is mandatory when 'rpcSettings.useSsl' is specified"
         }
         return errors
     }
@@ -249,15 +249,15 @@ data class NodeConfigurationImpl(
         if (devMode) {
             compatibilityZoneURL?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'compatibilityZoneURL': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
+                    return listOf("cannot specify 'compatibilityZoneURL' when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true")
                 }
             }
 
-            // if compatibiliZoneURL is set then it will be copied into the networkServices field and thus skipping
+            // if compatibilityZoneURL is set then it will be copied into the networkServices field and thus skipping
             // this check by returning above is fine.
             networkServices?.let {
                 if (devModeOptions?.allowCompatibilityZone != true) {
-                    return listOf("'networkServices': present. Property cannot be set when 'devMode' is true unless devModeOptions.allowCompatibilityZone is also true")
+                    return listOf("cannot specify 'networkServices' when 'devMode' is true, unless 'devModeOptions.allowCompatibilityZone' is also true")
                 }
             }
         }
@@ -268,7 +268,7 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
 
         if (compatibilityZoneURL != null && networkServices != null && !(networkServices!!.inferred)) {
-            errors += "Cannot configure both compatibilityZoneUrl and networkServices simultaneously"
+            errors += "cannot specify both 'compatibilityZoneUrl' and 'networkServices'"
         }
 
         return errors
