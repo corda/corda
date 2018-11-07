@@ -1,5 +1,6 @@
 package net.corda.testing.node
 
+import co.paralleluniverse.fibers.SuspendExecution
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
@@ -126,7 +127,11 @@ open class MockServices private constructor(
                     override fun jdbcSession(): Connection = database.createSession()
 
                     override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-                        return block(contextTransaction.restrictedEntityManager)
+                        return try {
+                            block(contextTransaction.restrictedEntityManager)
+                        } catch (exception: SuspendExecution) {
+                            throw IllegalStateException("You cannot use suspending functions inside a withEntityManager block")
+                        }
                     }
 
                     override fun withEntityManager(block: Consumer<EntityManager>) {
