@@ -294,7 +294,7 @@ object Configuration {
      * A [Configuration.Schema] that is also able to parse a raw [Config] object into a [VALUE].
      * It is an abstract class to allow extension with delegated properties e.g., object Settings: Specification() { val address by string().optional("localhost:8080") }.
      */
-    abstract class Specification<VALUE>(name: String? = null, private val prefix: String? = null) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
+    abstract class Specification<VALUE>(override val name: String, private val prefix: String? = null) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
         private val mutableProperties = mutableSetOf<Property.Definition<*>>()
 
@@ -353,8 +353,6 @@ object Configuration {
          * @see enum
          */
         fun <ENUM : Enum<ENUM>> enum(enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key = null, enumClass = enumClass, sensitive = sensitive)
-
-        override val name: String? get() = schema.name
 
         override fun description() = schema.description()
 
