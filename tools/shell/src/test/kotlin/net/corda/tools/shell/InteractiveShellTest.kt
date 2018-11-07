@@ -29,7 +29,7 @@ class InteractiveShellTest {
 
     @Suppress("UNUSED")
     class FlowA(val a: String) : FlowLogic<String>() {
-        constructor(b: Int) : this(b.toString())
+        constructor(b: Int?) : this(b.toString())
         constructor(b: Int?, c: String) : this(b.toString() + c)
         constructor(amount: Amount<Currency>) : this(amount.toString())
         constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
@@ -115,7 +115,7 @@ class InteractiveShellTest {
                 "[b: String[]]: missing parameter b",
                 "[b: Integer, c: String]: missing parameter b",
                 "[a: String]: missing parameter a",
-                "[b: int]: missing parameter b"
+                "[b: Integer]: missing parameter b"
         )
         val errors = e.errors.toHashSet()
         errors.removeAll(correct)
