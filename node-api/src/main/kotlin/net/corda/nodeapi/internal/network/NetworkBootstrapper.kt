@@ -30,6 +30,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
+import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -96,19 +97,28 @@ internal constructor(private val initSerEnv: Boolean,
 
         private fun generateNodeInfo(nodeDir: Path): Path {
             val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
+            val nodeInfoGenFile = (logsDir / "node-info-gen.log").toFile()
             val process = ProcessBuilder(nodeInfoGenCmd)
                     .directory(nodeDir.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput((logsDir / "node-info-gen.log").toFile())
+                    .redirectOutput(nodeInfoGenFile)
                     .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                     .start()
             if (!process.waitFor(3, TimeUnit.MINUTES)) {
                 process.destroyForcibly()
-                throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
+                printNodeInfoGenLogToConsole(nodeInfoGenFile)
             }
-            check(process.exitValue() == 0) { "Error while generating node info file. Please check the logs in $logsDir." }
+            printNodeInfoGenLogToConsole(nodeInfoGenFile) { process.exitValue() == 0 }
             return nodeDir.list { paths ->
                 paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
+            }
+        }
+
+        private fun printNodeInfoGenLogToConsole(nodeInfoGenFile: File, check: (() -> Boolean) = { true }) {
+            if (!check.invoke()) {
+                System.err.println("Error while generating node info file")
+                nodeInfoGenFile.inputStream().copyTo(System.err)
+                throw IllegalStateException("Error while generating node info file. Please check the logs in ${nodeInfoGenFile.parent}.")
             }
         }
     }
