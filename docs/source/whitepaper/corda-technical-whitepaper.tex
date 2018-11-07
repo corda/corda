@@ -40,7 +40,7 @@
 
 \maketitle
 \begin{center}
-Version 0.5
+Version 1.0
 \end{center}
 
 \vspace{10mm}
@@ -48,28 +48,23 @@ Version 0.5
 \begin{abstract}
 
 A decentralised database with minimal trust between nodes would allow for the creation of a global ledger. Such a ledger
-would have many useful applications in finance, trade, supply chain tracking and more. We present Corda, a decentralised
+would have many useful applications in finance, trade, healthcare and more. We present Corda, a decentralised
 global database, and describe in detail how it achieves the goal of providing a platform for decentralised app
 development. We elaborate on the high level description provided in the paper \emph{Corda: An
 introduction}\cite{CordaIntro} and provide a detailed technical discussion.
 
 \end{abstract}
 \vfill
-\begin{center}
-\scriptsize{
-\textsc{This document describes the Corda design as intended. The reference
-implementation does not implement everything described within at this time.}
-}
-\end{center}
+
 \newpage
 \tableofcontents
 \newpage
 \section{Introduction}
 
-In many industries significant effort is needed to keep organisation specific databases in sync with each
-other. In the financial sector the effort of keeping different databases synchronised, reconciling them to ensure
+In many industries significant effort is needed to keep organisation specific databases in sync with each other.
+In the financial sector the effort of keeping different databases synchronised, reconciling them to ensure
 they actually are synchronised and resolving the `breaks' that occur when they are not represents a significant
-fraction of the total work a bank actually does!
+fraction of the total work a bank actually does.
 
 Why not just use a shared relational database? This would certainly solve a lot of problems using only existing technology,
 but it would also raise more questions than answers:
@@ -79,8 +74,8 @@ but it would also raise more questions than answers:
 \item In which countries would it be hosted? What would stop that country abusing the mountain of sensitive information it would have?
 \item What if it were hacked?
 \item Can you actually scale a relational database to fit the entire financial system?
-\item What happens if The Financial System\texttrademark~needs to go down for maintenance?
-\item What kind of nightmarish IT bureaucracy would guard changes to the database schemas?
+\item What happens if the database needs to go down for maintenance? Does the economy stop?
+\item What kind of nightmarish IT bureaucracy would guard schema changes?
 \item How would you manage access control?
 \end{itemize}
 
@@ -88,7 +83,7 @@ We can imagine many other questions. A decentralised database attempts to answer
 
 In this paper we differentiate between a \emph{decentralised} database and a \emph{distributed} database. A distributed
 database like BigTable\cite{BigTable} scales to large datasets and transaction volumes by spreading the data over many
-computers. However it is assumed that the computers in question are all run by a single homogenous organisation and that
+computers. However it is assumed that the computers in question are all run by a single homogeneous organisation and that
 the nodes comprising the database all trust each other not to misbehave or leak data. In a decentralised database, such
 as the one underpinning Bitcoin\cite{Bitcoin}, the nodes make much weaker trust assumptions and actively cross-check
 each other's work. Such databases trade performance and usability for security and global acceptance.
@@ -96,9 +91,10 @@ each other's work. Such databases trade performance and usability for security a
 \emph{Corda} is a decentralised database platform with the following novel features:
 
 \begin{itemize}
-\item New transaction types can be defined using JVM\cite{JVM} bytecode.
+\item Nodes are arranged in an authenticated peer to peer network. All communication is direct. Gossip is not used.
+\item New transaction types can be defined using JVM\cite{JVM} bytecode. The bytecode is statically analyzed and rewritten
+on the fly to be fully deterministic, and to implement deterministic execution time quotas.
 \item Transactions may execute in parallel, on different nodes, without either node being aware of the other's transactions.
-\item Nodes are arranged in an authenticated peer to peer network. All communication is direct.
 \item There is no block chain\cite{Bitcoin}. Transaction races are deconflicted using pluggable \emph{notaries}. A single
 Corda network may contain multiple notaries that provide their guarantees using a variety of different algorithms. Thus
 Corda is not tied to any particular consensus algorithm. (\cref{sec:notaries})
@@ -108,19 +104,19 @@ another node on demand, but there is no global broadcast of \emph{all} transacti
 \emph{flows} to be modelled as blocking code. The code is transformed into an asynchronous state machine, with
 checkpoints written to the node's backing database when messages are sent and received. A node may potentially have
 millions of flows active at once and they may last days, across node restarts and even upgrades. Flows expose progress
-information to node administrators and users and may interact with people as well as other nodes. A Flow library is provided
-to enable developers to re-use common Flow types such as notarisation, membership broadcast and so on.
+information to node administrators and users and may interact with people as well as other nodes. A library of flows is provided
+to enable developers to re-use common protocols such as notarisation, membership broadcast and so on.
 \item The data model allows for arbitrary object graphs to be stored in the ledger. These graphs are called \emph{states} and are the atomic unit of data.
 \item Nodes are backed by a relational database and data placed in the ledger can be queried using SQL as well as joined
-with private tables, thanks to slots in the state definitions that are reserved for join keys.
+with private tables. States can declare a relational mapping using the JPA standard.
 \item The platform provides a rich type system for the representation of things like dates, currencies, legal entities and
 financial entities such as cash, issuance, deals and so on.
-\item States can declare a relational mapping and can be queried using SQL.
-\item Integration with existing systems is considered from the start. The network can support rapid bulk data imports
-from other database systems without placing load on the network. Events on the ledger are exposed via an embedded JMS
-compatible message broker.
+\item The network can support rapid bulk data imports from other database systems without placing load on the network.
+Events on the ledger are exposed via an embedded JMS compatible message broker.
 \item States can declare scheduled events. For example a bond state may declare an automatic transition to an
 ``in default'' state if it is not repaid in time.
+\item Advanced privacy controls allow users to anonymize identities, and initial support is provided for running
+smart contracts inside memory spaces encrypted and protected by Intel SGX.
 \end{itemize}
 
 Corda follows a general philosophy of reusing existing proven software systems and infrastructure where possible.
@@ -131,11 +127,12 @@ Comparisons with Bitcoin and Ethereum will be provided throughout.
 \section{Overview}
 
 Corda is a platform for the writing of ``CorDapps'': applications that extend the global database with new capabilities.
-Such apps define new data types, new inter-node protocol flows and the ``smart contracts'' that determine allowed changes.
+Such apps define new data types, new inter-node protocol flows and the so-called ``smart contracts'' that determine
+allowed changes.
 
 What is a smart contract? That depends on the model of computation we are talking about. There are two competing
 computational models used in decentralised databases: the virtual computer model and the UTXO model. The virtual
-computer model is used by Ethereum\cite{Ethereum}. It models the database as the in-memory state of a
+computer model is used by Ethereum\cite{Ethereum} and Hyperledger Fabric. It models the database as the in-memory state of a
 global computer with a single thread of execution determined by the block chain. In the UTXO model, as used in
 Bitcoin, the database is a set of immutable rows keyed by \texttt{(hash:output index)}. Transactions define
 outputs that append new rows and inputs which consume existing rows. The term ``smart contract'' has a different
@@ -165,14 +162,16 @@ The Corda transaction format has various other features which are described in l
 A Corda network consists of the following components:
 
 \begin{itemize}
-\item Nodes, communicating using AMQP/1.0 over TLS. Nodes use a relational database for data storage.
-\item A permissioning service that automates the process of provisioning TLS certificates.
-\item A network map service that publishes information about nodes on the network.
-\item One or more notary services. A notary may itself be distributed over multiple nodes.
+\item Nodes, operated by \emph{parties}, communicating using AMQP/1.0 over TLS.
+\item An \emph{doorman} service, that grants parties permission to use the network by provisioning identity certificates.
+\item A network map service that publishes information about how to connect to nodes on the network.
+\item One or more notary services. A notary may itself be distributed over a coalition of different parties.
 \item Zero or more oracle services. An oracle is a well known service that signs transactions if they state a fact
 and that fact is considered to be true. They may also optionally also provide the facts. This is how the ledger can be
 connected to the real world, despite being fully deterministic.
 \end{itemize}
+
+% TODO: Add section on zones and network parameters
 
 A purely in-memory implementation of the messaging subsystem is provided which can inject simulated latency between
 nodes and visualise communications between them. This can be useful for debugging, testing and educational purposes.
@@ -191,39 +190,38 @@ arbitrary self-selected usernames. The permissioning service can implement any p
 identities it signs are globally unique. Thus an entirely anonymous Corda network is possible if a suitable
 IP obfuscation system like Tor\cite{Dingledine:2004:TSO:1251375.1251396} is also used.
 
-Whilst simple string identities are likely sufficient for some networks, the financial industry typically requires some
-level of \emph{know your customer} checking, and differentiation between different legal entities, branches and desks
+Whilst simple string identities are likely sufficient for some networks, industrial deployments typically require some
+level of identity verification, as well as differentiation between different legal entities, branches and desks
 that may share the same brand name. Corda reuses the standard PKIX infrastructure for connecting public keys to
-identities and thus names are actually X.500 names. When a single string is sufficient the \emph{common name} field can
-be used alone, similar to the web PKI. In more complex deployments the additional structure X.500 provides may be useful
-to differentiate between entities with the same name. For example there are at least five different companies called
-\emph{American Bank} and in the past there may have been more than 40 independent banks with that name.
+identities and thus names are actually X.500 names. Because legal names are unique only within a jurisdiction, the
+additional structure X.500 provides is useful  to differentiate between entities with the same name. For example
+there are at least five different companies called \emph{American Bank} and in the past there may have been more
+than 40 independent banks with that name.
 
 More complex notions of identity that may attest to many time-varying attributes are not handled at this layer of the
-system: the base identity is always just an X.500 name. Note that even though messaging is always identified, transactions
-themselves may still contain anonymous public keys.
-
-% TODO: Currently the node only lets you pick the CN and the rest of the X.500 name is dummy data.
+system: the base identity is always just an X.500 name. Note that even though messaging is always identified, ledger data
+itself may contain only anonymised public keys.
 
 \subsection{The network map}
 
-Every network requires a network map service, which may itself be composed of multiple cooperating nodes. This is
-similar to Tor's concept of \emph{directory authorities}. The network map publishes the IP addresses through which
-every node on the network can be reached, along with the identity certificates of those nodes and the services they
-provide. On receiving a connection, nodes check that the connecting node is in the network map.
+Every network requires a network map. This is similar to Tor's concept of \emph{directory authorities}. The network
+map service publishes information about each node such as the set of IP addresses it listens on (multiple IP
+addresses are supported for failover and load balancing purposes), the version of the protocol it speaks, and which
+identity certificates it hosts. Each data structure describing a node is signed by the identity keys it claims to
+host. The network map service is therefore not trusted to specify node data correctly, only to distribute it.
 
-The network map abstracts the underlying IP addresses of the nodes from more useful business concepts like identities
-and services. Each participant on the network, called a \emph{party}, publishes one or more IP addresses in the
-network map. Equivalent domain names may be helpful for debugging but are not required. User interfaces and APIs
-always work in terms of identities -- there is thus no equivalent to Bitcoin's notion of an address (hashed public key),
-and user-facing applications rely on auto-completion and search rather than QRcodes to identify a logical recipient.
+The network map abstracts the underlying network locations of the nodes to more useful business concepts like
+identities and services. Domain names for the underlying IP addresses may be helpful for debugging but are not
+required. User interfaces and APIs always work in terms of identities -- there is thus no equivalent to Bitcoin's
+notion of an address (hashed public key), and user-facing applications rely on auto-completion and search rather
+than QRcodes to identify a counterparty.
 
 It is possible to subscribe to network map changes and registering with the map is the first thing a node does at
-startup. Nodes may optionally advertise their nearest city for load balancing and network visualisation purposes.
+startup.
 
-The map is a document that may be cached and distributed throughout the network. The map is therefore not required
-to be highly available: if the map service becomes unreachable new nodes may not join the network and existing nodes
-may not change their advertised service set, but otherwise things continue as normal.
+The map is a set of files that may be cached and distributed via HTTP based content delivery networks. The
+underlying map infrastructure is therefore not required to be highly available: if the map service becomes
+unreachable nodes may not join the network or change IP addresses, but otherwise things continue as normal.
 
 \subsection{Message delivery}
 
@@ -237,31 +235,65 @@ setups and thus the message routing component of a node can be separated from th
 Being outside the firewall or in the firewall's `de-militarised zone' (DMZ) is required to ensure that nodes can
 connect to anyone on the network, and be connected to in turn. In this way a node can be split into multiple
 sub-services that do not have duplex connectivity yet can still take part in the network as first class citizens.
-Additionally, a single node may have multiple advertised IP addresses.
 
 The reference implementation provides this functionality using the Apache Artemis message broker, through which it
 obtains journalling, load balancing, flow control, high availability clustering, streaming of messages too large to fit
 in RAM and many other useful features. The network uses the \emph{AMQP/1.0}\cite{AMQP} protocol which is a widely
 implemented binary messaging standard, combined with TLS to secure messages in transit and authenticate the endpoints.
 
-\subsection{Serialization, sessioning, deduplication and signing}
+\subsection{Serialization}\label{subsec:serialization}
 
-All messages are encoded using a compact binary format. Each message has a UUID set in an AMQP header which is used
-as a deduplication key, thus accidentally redelivered messages will be ignored.
-
-% TODO: Describe the serialization format in more detail once finalised.
+All messages are encoded using an extended form of the AMQP/1.0 binary format (\emph{Advanced Message Queue
+Protocol}\cite{AMQP}). Each message has a UUID set in an AMQP header which is used as a deduplication key, thus
+accidentally redelivered messages will be ignored.
 
 Messages may also have an associated organising 64-bit \emph{session ID}. Note that this is distinct from the AMQP
-notion of a session. Sessions can be long lived and persist across node restarts and network outages. They exist in order
-to group messages that are part of a \emph{flow}, described in more detail below.
+notion of a session. Sessions can be long lived and persist across node restarts and network outages. They exist in
+order to group messages that are part of a \emph{flow}, described in more detail below.
 
-Messages that are successfully processed by a node generate a signed acknowledgement message called a `receipt'. Note that
-this is distinct from the unsigned acknowledgements that live at the AMQP level and which simply flag that a message was
-successfully downloaded over the wire. A receipt may be generated some time after the message is processed in the case
-where acknowledgements are being batched to amortise signing overhead, and the receipt identifies the message by the hash
-of its content. The purpose of the receipts is to give a node undeniable evidence that a counterparty received a
-notification that would stand up later in a dispute mediation process. Corda does not attempt to support deniable
-messaging.
+Corda uses AMQP and extends it with more advanced types and embedded binary schemas, such that all messages are self
+describing. Because ledger data typically represents business agreements and data, it may persist for years and
+survive many upgrades and infrastructure changes. We require that data is always interpretable in strongly typed
+form, even if that data has been stored to a context-free location like a file, or the clipboard.
+
+Although based on AMQP, Corda's type system is fundamentally the Java type system. Java types are mapped to AMQP/1.0
+types whenever practical, but ledger data will frequently contain business types that the AMQP type system does not
+define. Fortunately, AMQP is extensible and supports standard concepts like polymorphism and interfaces, so it is
+straightforward to define a natural Java mapping. Type schemas are hashed to form a compact `fingerprint' that
+identifies the type, which allows types to be connected to the embedded binary schemas that describe them and which
+are useful for caching. The AMQP type system and schema language supports a form of annotations that we map to Java
+annotations.
+
+Object serialization frameworks must always consider security. Corda requires all types that may appear in
+serialized streams to mark themselves as safe for deserialization, and objects are only created via their
+constructors. Thus any data invariants that are enforced by constructors or setter methods are also enforced for
+deserialized data. Additionally, requests to deserialize an object specify the expected types. These two mechanisms
+block gadget-based attacks\cite{DeserialisingPickles}. Such attacks frequently affect any form of data
+deserialization regardless of format, for example, they have been found not only in Java object serialization
+frameworks but also JSON and XML parsers. They occur when a deserialization framework may instantiate too large a
+space of types which were not written with malicious input in mind.
+
+The serialization framework supports advanced forms of data evolution. When a stream is deserialized Corda attempts
+to map it to the named Java classes. If those classes don't exactly match, a process called `evolution' is
+triggered, which automatically maps the data as smoothly as possible. For example, deserializing an old object will
+attempt to use a constructor that matches the serialized schema, allowing default values in new code to fill in the
+gaps. When old code reads data from the future, new fields will be discarded if safe to do so. Various forms of type
+adaptation are supported, and type-safe enums can have unknown values mapped to a default enum value as well.
+
+If no suitable class is found at all, the framework performs \emph{class synthesis}. The embedded schema data will
+be used to generate the bytecode for a suitable holder type and load it into the JVM on the fly. These new classes
+will then be instantiated to hold the deserialized data. The new classes will implement any interfaces the schema is
+specified as supporting if those interfaces are found on the Java classpath. In this way the framework supports a
+form of generic programming. Tools can work with serialized data without having a copy of the app that generated it.
+The returned objects can be accessed either using reflection, or a simple interface that automates accessing
+properties by name and is just a friendlier way to access fields reflectively. Creating genuine object graphs like
+this is superior to the typical approach of defining a format specific generic data holder type (XML's DOM
+\texttt{Element}, \texttt{JSONObject} etc) because there is already a large ecosystem of tools and technologies that
+know how to work with objects via reflection. Synthesised object graphs can be fed straight into JSON or YaML
+serializers to get back text, inserted into a scripting engine for usage with dynamic languages like JavaScript or
+Python, fed to JPA for database persistence and query or a Bean Validation engine for integrity checking, or even
+used to automatically generate GUIs using a toolkit like MetaWidget\cite{MetaWidget} or
+ReflectionUI\cite{ReflectionUI}.
 
 \section{Flow framework}\label{sec:flows}
 
@@ -273,7 +305,7 @@ counterparty a shared transaction that spends that pot, with extra transactions 
 other fails to terminate properly. Such protocols typically involve reliable private message passing, checkpointing to
 disk, signing of transactions, interaction with the p2p network, reporting progress to the user, maintaining a complex
 state machine with timeouts and error cases, and possibly interaction with internal systems on either side. All
-this can become quite involved. The implementation of Bitcoin payment channels in the bitcoinj library is approximately
+this can become quite involved. The implementation of payment channels in the \texttt{bitcoinj} library is approximately
 9000 lines of Java, very little of which involves cryptography.
 
 As another example, the core Bitcoin protocol only allows you to append transactions to the ledger. Transmitting other
@@ -291,14 +323,14 @@ called flows.
 
 The flow framework presents a programming model that looks to the developer as if they have the ability to run millions
 of long lived threads which can survive node restarts, and even node upgrades. APIs are provided to send and receive
-object graphs to and from other identities on the network, embed sub-flows, and report progress to observers. In this
-way business logic can be expressed at a very high level, with the details of making it reliable and efficient
-abstracted away. This is achieved with the following components.
+serialized object graphs to and from other identities on the network, embed sub-flows, handle version evolution and
+report progress to observers. In this way business logic can be expressed at a very high level, with the details of
+making it reliable and efficient abstracted away. This is achieved with the following components.
 
 \paragraph{Just-in-time state machine compiler.}Code that is written in a blocking manner typically cannot be stopped
 and transparently restarted later. The first time a flow's \texttt{call} method is invoked a bytecode-to-bytecode
 transformation occurs that rewrites the classes into a form that implements a resumable state machine. These state
-machines are sometimes called fibers or coroutines, and the transformation engine Corda uses (Quasar) is capable of rewriting
+machines are sometimes called coroutines, and the transformation engine Corda uses (Quasar) is capable of rewriting
 code arbitrarily deep in the stack on the fly. The developer may thus break his or her logic into multiple methods and
 classes, use loops, and generally structure their program as if it were executing in a single blocking thread. There's only a
 small list of things they should not do: sleeping, directly accessing the network APIs, or doing other tasks that might
@@ -306,11 +338,11 @@ block outside of the framework.
 
 \paragraph{Transparent checkpointing.}When a flow wishes to wait for a message from another party (or input from a
 human being) the underlying stack frames are suspended onto the heap, then crawled and serialized into the node's
-underlying relational database using an object serialization framework. The written objects are prefixed with small
-schema definitions that allow some measure of portability across changes to the layout of objects, although
-portability across changes to the stack layout is left for future work. Flows are resumed and suspended on demand, meaning
-it is feasible to have far more flows active at once than would fit in memory. The checkpointing process is atomic with
-changes to local storage and acknowledgement of network messages.
+underlying relational database (however, the AMQP framework isn't used in this case). The written objects are prefixed
+with small schema definitions that allow some measure of portability across changes to the layout of objects,
+although portability across changes to the stack layout is left for future work. Flows are resumed and suspended on
+demand, meaning it is feasible to have far more flows active at once than would fit in memory. The checkpointing process
+is atomic with respect to changes to the database and acknowledgement of network messages.
 
 \paragraph{Identity to IP address mapping.}Flows are written in terms of identities. The framework takes care of routing
 messages to the right IP address for a given identity, following movements that may take place whilst the flow is active
@@ -325,12 +357,13 @@ steps can have sub-trackers for invoked sub-flows.
 
 \paragraph{Flow hospital.}Flows can pause if they throw exceptions or explicitly request human assistance. A flow that
 has stopped appears in the \emph{flow hospital} where the node's administrator may decide to kill the flow or provide it
-with a solution. The ability to request manual solutions is useful for cases where the other side isn't sure why you
-are contacting them, for example, the specified reason for sending a payment is not recognised, or when the asset used for
-a payment is not considered acceptable.
+with a solution. Some flows that end up in the hospital will be retried automatically by the node itself, for example
+in case of database deadlocks that require a retry. The ability to request manual solutions is useful for cases
+where the other side isn't sure why you are contacting them, for example, the specified reason for sending a payment
+is not recognised, or when the asset used for a payment is not considered acceptable.
 
-Flows are named using reverse DNS notation and several are defined by the base protocol. Note that the framework is
-not required to implement the wire protocols, it is just a development aid.
+Flows are identified using Java class names i.e. reverse DNS notation, and several are defined by the base protocol.
+Note that the framework is not required to implement the wire protocols, it is just a development aid.
 
 % TODO: Revisit this diagram once it matches the text more closely.
 %\begin{figure}[H]
@@ -343,12 +376,13 @@ not required to implement the wire protocols, it is just a development aid.
 When a transaction is presented to a node as part of a flow it may need to be checked. Simply sending you
 a message saying that I am paying you \pounds1000 is only useful if you are sure I own the money I'm using to pay you.
 Checking transaction validity is the responsibility of the \texttt{ResolveTransactions} flow. This flow performs
-a breadth-first search over the transaction graph, downloading any missing transactions into local storage and
-validating them. The search bottoms out at the issuance transactions. A transaction is not considered valid if
-any of its transitive dependencies are invalid.
+a breadth-first search over the transaction graph, downloading any missing transactions into local storage from
+the counterparty, and validating them. The search bottoms out at the issuance transactions. A transaction is not
+considered valid if any of its transitive dependencies are invalid.
 
 It is required that a node be able to present the entire dependency graph for a transaction it is asking another
-node to accept. Thus there is never any confusion about where to find transaction data. Because transactions are
+node to accept. Thus there is never any confusion about where to find transaction data and there is never any
+need to reach out to dozens of nodes which may or may not be currently available. Because transactions are
 always communicated inside a flow, and flows embed the resolution flow, the necessary dependencies are fetched
 and checked automatically from the correct peer. Transactions propagate around the network lazily and there is
 no need for distributed hash tables.
@@ -393,39 +427,57 @@ or not can be identified by the identifier of the creating transaction and the i
 Transactions consist of the following components:
 
 \begin{labeling}{Input references}
-\item [Input references] These are \texttt{(hash, output index)} pairs that point to the states a
+\item [Consuming input references.] These are \texttt{(hash, output index)} pairs that point to the states a
 transaction is consuming.
-\item [Output states] Each state specifies the notary for the new state, the contract(s) that define its allowed
+\item [Output states.] Each state specifies the notary for the new state, the contract(s) that define its allowed
 transition functions and finally the data itself.
-\item [Attachments] Transactions specify an ordered list of zip file hashes. Each zip file may contain
-code, data, certificates or supporting documentation for the transaction. Contract code has access to the contents
-of the attachments when checking the transaction for validity.
-\item [Commands] There may be multiple allowed output states from any given input state. For instance
+\item [Non-consuming input references.] These are also \texttt{(hash, output index)} pairs, however these `reference
+states' are not consumed by the act of referencing them. Reference states are useful for importing data that gives
+context to other states but which is only changed from time to time. Note that the pointed to state must be unconsumed
+at the time the transaction is notarised: if it's been consumed itself as part of a different transaction, the referencing
+transaction will not be notarised.
+\item [Attachments.] Transactions specify an ordered list of zip file hashes. Each zip file may contain
+code, data or supporting documentation for the transaction. Contract code has access to the contents
+of the attachments when checking the transaction for validity. Attachments have no concept of `spentness' and are useful
+for things like holiday calendars, timezone data, bytecode that defines the state objects and so on.
+\item [Commands.] There may be multiple allowed output states from any given input state. For instance
 an asset can be moved to a new owner on the ledger, or issued, or exited from the ledger if the asset has been
 redeemed by the owner and no longer needs to be tracked. A command is essentially a parameter to the contract
 that specifies more information than is obtainable from examination of the states by themselves (e.g. data from an oracle
-service). Each command has an associated list of public keys. Like states, commands are object graphs.
-\item [Signatures] The set of required signatures is equal to the union of the commands' public keys.
-\item [Type] Transactions can either be normal or notary-changing. The validation rules for each are
+service). Each command has an associated list of public keys. Like states, commands are object graphs. Commands therefore
+define what a transaction \emph{does} in a conveniently accessible form.
+\item [Signatures.] The set of required signatures is equal to the union of the commands' public keys. Signatures can use
+a variety of cipher suites - Corda implements cryptographic agility.
+\item [Type.] Transactions can either be normal, notary-changing or explicit upgrades. The validation rules for each are
 different.
-\item [Timestamp] When present, a timestamp defines a time range in which the transaction is considered to
-have occurrred. This is discussed in more detail below.
-\item [Summaries] Textual summaries of what the transaction does, checked by the involved smart contracts. This field
-is useful for secure signing devices (see \cref{sec:secure-signing-devices}).
+\item [Timestamp.] When present, a timestamp defines a time range in which the transaction is considered to
+have occurred. This is discussed in more detail below.
+% \item [Network parameters.] Specifies the hash and epoch of the network parameters that were in force at the time the
+% transaction was notarised. See \cref{sec:network-params} for more details.
+% \item [Summaries] Textual summaries of what the transaction does, checked by the involved smart contracts. This field
+% is useful for secure signing devices (see \cref{sec:secure-signing-devices}).
 \end{labeling}
 
-% TODO: Update this once transaction types are separated.
 % TODO: This description ignores the participants field in states, because it probably needs a rethink.
-% TODO: Specify the elliptic curve used here once we finalise our choice.
 % TODO: Summaries aren't implemented.
 
-Signatures are appended to the end of a transaction and transactions are identified by the hash used for signing, so
-signature malleability is not a problem. There is never a need to identify a transaction including its accompanying
-signatures by hash. Signatures can be both checked and generated in parallel, and they are not directly exposed to
-contract code. Instead contracts check that the set of public keys specified by a command is appropriate, knowing that
-the transaction will not be valid unless every key listed in every command has a matching signature. Public key
-structures are themselves opaque. In this way algorithmic agility is retained: new signature algorithms can be deployed
-without adjusting the code of the smart contracts themselves.
+Transactions are identified by the root of a Merkle tree computed over the components. The transaction format is
+structured so that it's possible to deserialize some components but not others: a \emph{filtered transaction} is one
+in which only some components are retained (e.g. the inputs) and a Merkle branch is provided that proves the
+inclusion of those components in the original full transaction. We say these components have been `torn off'. This
+feature is particularly useful for keeping data private from notaries and oracles. See \cref{sec:tear-offs}.
+
+Signatures are appended to the end of a transaction. Thus signature malleability as seen in the Bitcoin protocol is
+not a problem. There is never a need to identify a transaction with its accompanying signatures by hash. Signatures
+can be both checked and generated in parallel, and they are not directly exposed to contract code. Instead contracts
+check that the set of public keys specified by a command is appropriate, knowing that the transaction will not be
+valid unless every key listed in every command has a matching signature. Public key structures are themselves
+opaque. In this way high performance through parallelism is possible and algorithmic agility is retained. New
+signature algorithms can be deployed without adjusting the code of the smart contracts themselves.
+
+This transaction structure is fairly complex relative to competing systems. The Corda data model is designed for
+richness, evolution over time and high performance. The cost of this is that transactions have more components than
+in simpler systems.
 
 \begin{figure}[H]
 \includegraphics[width=\textwidth]{cash}
@@ -446,14 +498,14 @@ specified on the command(s) are those of the parties whose signatures would be r
 In this case, it means that the verify() function must check that the command has specified a key corresponding to the
 identity of the issuer of the cash state. The Corda framework is responsible for checking that the transaction has been
 signed by all keys listed by all commands in the transaction. In this way, a verify() function only needs to ensure that
-all parties who need to sign the transaction are specified in Commands, with the framework responsible for ensuring that
+all parties who need to sign the transaction are specified in commands, with the framework responsible for ensuring that
 the transaction has been signed by all parties listed in all commands.
 
 \subsection{Composite keys}\label{sec:composite-keys}
 
 The term ``public key'' in the description above actually refers to a \emph{composite key}. Composite keys are trees in
 which leaves are regular cryptographic public keys with an accompanying algorithm identifiers. Nodes in the tree specify
-both the weights of each child and a threshold weight that must be met. The validty of a set of signatures can be
+both the weights of each child and a threshold weight that must be met. The validity of a set of signatures can be
 determined by walking the tree bottom-up, summing the weights of the keys that have a valid signature and comparing
 against the threshold. By using weights and thresholds a variety of conditions can be encoded, including boolean
 formulas with AND and OR.
@@ -467,16 +519,18 @@ Composite keys are useful in multiple scenarios. For example, assets can be plac
 composite key where one leaf key is owned by a user, and the other by an independent risk analysis system. The
 risk analysis system refuses to sign if the transaction seems suspicious, like if too much value has been
 transferred in too short a time window. Another example involves encoding corporate structures into the key,
-allowing a CFO to sign a large transaction alone but his subordinates are required to work together. Composite keys
-are also useful for notaries. Each participant in a distributed notary is represented by a leaf, and the threshold
-is set such that some participants can be offline or refusing to sign yet the signature of the group is still valid.
+allowing a CFO to sign a large transaction alone but his subordinates are required to work together.
+
+Composite keys are also useful for byzantine fault tolerant notaries. Each participant in a distributed notary is
+represented by a leaf, and the threshold is set such that some participants can be offline or refusing to sign
+yet the signature of the group is still valid.
 
 Whilst there are threshold signature schemes in the literature that allow composite keys and signatures to be produced
 mathematically, we choose the less space efficient explicit form in order to allow a mixture of keys using different
 algorithms. In this way old algorithms can be phased out and new algorithms phased in without requiring all
 participants in a group to upgrade simultaneously.
 
-\subsection{Timestamps}\label{sec:timestamps}
+\subsection{Time handling}\label{sec:timestamps}
 
 Transaction timestamps specify a \texttt{[start, end]} time window within which the transaction is asserted to have
 occurred. Timestamps are expressed as windows because in a distributed system there is no true time, only a large number
@@ -503,14 +557,18 @@ to a notary may be unpredictable if submission occurs right on a boundary of the
 perspective of all other observers the notary's signature is decisive: if the signature is present, the transaction
 is assumed to have occurred within that time.
 
-\paragraph{Reference clocks.}In order to allow for relatively tight time windows to be used when transactions are fully
-under the control of a single party, notaries are expected to be synchronised to the atomic clocks at the US Naval
-Observatory. Accurate feeds of this clock can be obtained from GPS satellites. Note that Corda uses the Java
-timeline\cite{JavaTimeScale} which is UTC with leap seconds spread over the last 1000 seconds of the day, thus each day
-always has exactly 86400 seconds. Care should be taken to ensure that changes in the GPS leap second counter are
-correctly smeared in order to stay synchronised with Java time. When setting a transaction time window care must be
-taken to account for network propagation delays between the user and the notary service, and messaging within the notary
-service.
+\paragraph{Reference clocks.}In order to allow for relatively tight time windows to be used when transactions are
+fully under the control of a single party, notaries are expected to be synchronised to international atomic time
+(TIA). Accurate feeds of this clock can be obtained from GPS satellites and long-wave radio. Note that Corda uses
+the Google/Amazon timeline, which is UTC with a leap smear from noon to noon across the leap event, thus each day
+always has exactly 86400 seconds.
+
+\paragraph{Timezones.}Business agreements typically specify times in local time zones rather than offsets from
+midnight UTC on January 1st 1970, although the latter would be more civilised. Because the Corda type system is the
+Java type system, developers can embed \texttt{java.time.ZonedDateTime} in their states to represent a time
+specified in a specific time zone. This allows ensure correct handling of daylight savings transitions and timezone
+definition changes. Future versions of the platform will allow timezone data files to be attached to transactions,
+to make such calculations entirely deterministic.
 
 \subsection{Attachments and contract bytecodes}
 
@@ -518,18 +576,26 @@ Transactions may have a number of \emph{attachments}, identified by the hash of 
 and transmitted separately to transaction data and are fetched by the standard resolution flow only when the
 attachment has not previously been seen before.
 
-Attachments are always zip files\cite{ZipFormat} and cannot be referred to individually by contract code. The files
-within the zips are collapsed together into a single logical file system, with overlapping files being resolved in
-favour of the first mentioned. Not coincidentally, this is the mechanism used by Java classpaths.
+Attachments are always zip files\cite{ZipFormat}. The files within the zips are collapsed together into a single
+logical file system and class path.
 
-Smart contracts in Corda are defined using JVM bytecode as specified in \emph{``The Java Virtual Machine Specification SE 8 Edition''}\cite{JVM},
+Smart contracts in Corda are defined using a restricted form of JVM bytecode as specified in
+\emph{``The Java Virtual Machine Specification SE 8 Edition''}\cite{JVM},
 with some small differences that are described in a later section. A contract is simply a class that implements
 the \texttt{Contract} interface, which in turn exposes a single function called \texttt{verify}. The verify
 function is passed a transaction and either throws an exception if the transaction is considered to be invalid,
 or returns with no result if the transaction is valid. The set of verify functions to use is the union of the contracts
-specified by each state (which may be expressed as constraints, see \cref{sec:contract-constraints}). Embedding the
-JVM specification in the Corda specification enables developers to write code in a variety of languages, use well
-developed toolchains, and to reuse code already authored in Java or other JVM compatible languages.
+specified by each state, which are expressed as a class name combined with a \emph{constraint} (see \cref{sec:contract-constraints}).
+Embedding the JVM specification in the Corda specification enables developers to write code in a variety of
+languages, use well developed toolchains, and to reuse code already authored in Java or other JVM compatible languages.
+A good example of this feature in action is the ability to embed the ISDA Common Domain Model directly into CorDapps.
+The CDM is a large collection of types mapped to Java classes that model derivatives trading in a standardised way.
+It is common for industry groups to define such domain models and for them to have a Java mapping.
+
+Current versions of the platform only execute attachments that have been previously installed (and thus
+whitelisted), or attachments that are signed by the same signer as a previously installed attachment. Thus
+nodes may fail to reach consensus on long transaction chains that involve apps your counterparty has not seen.
+Future versions of the platform will run contract bytecode inside a deterministic JVM. See \cref{sec:djvm}.
 
 The Java standards also specify a comprehensive type system for expressing common business data. Time and calendar
 handling is provided by an implementation of the JSR 310 specification, decimal calculations can be performed either
@@ -537,14 +603,13 @@ using portable (`\texttt{strictfp}') floating point arithmetic or the provided b
 libraries have been carefully engineered by the business Java community over a period of many years and it makes
 sense to build on this investment.
 
-Contract bytecode also defines the states themselves, which may be arbitrary object graphs. Because JVM classes
-are not a convenient form to work with from non-JVM platforms the allowed types are restricted and a standardised
-binary encoding scheme is provided. States may label their properties with a small set of standardised annotations.
-These can be useful for controlling how states are serialised to JSON and XML (using JSR 367 and JSR 222 respectively),
-for expressing static validation constraints (JSR 349) and for controlling how states are inserted into relational
-databases (JSR 338). This feature is discussed later.
+Contract bytecode also defines the states themselves, which may be directed acyclic object graphs. States may label
+their properties with a small set of standardised annotations. These can be useful for controlling how states are
+serialized to JSON and XML (using JSR 367 and JSR 222 respectively), for expressing static validation constraints
+(JSR 349) and for controlling how states are inserted into relational databases (JSR 338). This feature is discussed later.
+Future versions of the platform may additionally support cyclic object graphs.
 
-Attachments may also contain data files that support the contract code. These may be in the same zip as the
+\paragraph{Data files.}Attachments may also contain data files that support the contract code. These may be in the same zip as the
 bytecode files, or in a different zip that must be provided for the transaction to be valid. Examples of such
 data files might include currency definitions, timezone data and public holiday calendars. Any public data may
 be referenced in this way. Attachments are intended for data on the ledger that many parties may wish to reuse
@@ -552,20 +617,97 @@ over and over again. Data files are accessed by contract code using the same API
 would be accessed. The platform imposes some restrictions on what kinds of data can be included in attachments
 along with size limits, to avoid people placing inappropriate files on the global ledger (videos, PowerPoints etc).
 
-% TODO: No such abuse limits are currently in place.
-
 Note that the creator of a transaction gets to choose which files are attached. Therefore, it is typical that
-states place constraints on the data they're willing to accept. Attachments \emph{provide} data but do not
-\emph{authenticate} it, so if there's a risk of someone providing bad data to gain an economic advantage
-there must be a constraints mechanism to prevent that from happening. This is rooted at the contract constraints
-encoded in the states themselves: a state can not only name a class that implements the \texttt{Contract}
-interface but also place constraints on the zip/jar file that provides it. That constraint can in turn be used to
-ensure that the contract checks the authenticity of the data -- either by checking the hash of the data directly,
-or by requiring the data to be signed by some trusted third party.
+states place constraints on the data they're willing to accept. These mechanisms are discussed in
+\cref{sec:contract-constraints}.
 
-% TODO: The code doesn't match this description yet.
+\paragraph{Signing.}Attachments may be signed using the JAR signing standard. No particular certificate is necessary
+for this: Corda accepts self signed certificates for JARs. The signatures are useful for two purposes. Firstly, it
+allows states to express that they can be satisfied by any attachment signed by a particular provider. This allows
+on-ledger code to be upgraded over time. And secondly, signed JARs may provide classes in `\emph{claimed packages}',
+which are discussed below.
 
-\subsection{Hard forks, specifications and dispute resolution}
+\subsection{Contract constraints}\label{sec:contract-constraints}
+
+In Bitcoin contract logic is embedded inside every transaction. Programs are small and data is inlined into the
+bytecode, so upgrading code that's been added to the ledger is neither possible nor necessary. There's no need for a
+mechanism to tie code and data together. In Corda contract logic may be far more complex, it will usually reflect a
+changing business world which means it may need to be upgraded from time to time.
+
+The easiest way of tying states to the contract code that defines them is by hash. This is equivalent to other
+ledger platforms and is referred to as an \emph{hash constraint}. They work well for very simple and stable
+programs, but more complicated contracts may need to be upgraded. In this case it may be preferable for states to
+refer to contracts by the identity of the signer (a \emph{signature constraint}). Because contracts are stored in
+zip files, and because a Java Archive (JAR) file is just a zip with some extra files inside, it is possible to use
+the standard JAR signing infrastructure to identify the source of contract code. Simple constraints such as ``any
+contract of this name signed by these keys'' allow for some upgrade flexibility, at the cost of increased exposure
+to rogue contract developers. Requiring combinations of signatures helps reduce the risk of a rogue or hacked
+developer publishing a bad contract version, at the cost of increased difficulty in releasing new versions. State
+creators may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is
+chosen, the framework can accommodate them.
+
+A contract constraint may use a composite key of the type described in \cref{sec:composite-keys}. The standard JAR
+signing protocol allows for multiple signatures from different private keys, thus being able to satisfy composite
+keys. The allowed signing algorithms are \texttt{SHA256withRSA} and \texttt{SHA256withECDSA}. Note that the
+cryptographic algorithms used for code signing may not always be the same as those used for transaction signing, as
+for code signing we place initial focus on being able to re-use the infrastructure.
+
+\subsection{Precise naming}\label{subsec:precise-naming}
+
+In any system that combines typed data with potentially malicious adversaries, it's important to always ensure
+names are not allowed to become ambiguous or mixed up. Corda achieves this via a combination of different
+features.
+
+\paragraph{No overlap rule.} Within a transaction attachments form a Java classpath. Class names are resolved
+by locating the defining class file within the set of attachments and loading them via the deterministic JVM.
+Unfortunately, out of the box Java allows different JAR files to define the same class name. Whichever JAR
+happens to come first on the classpath is the one that gets used, but conventionally a classpath is not meant
+to have an important ordering. This problem is a frequent source of confusion and bugs in Java software,
+especially when different versions of the same module are combined into one program. On the ledger an adversary
+can craft a malicious transaction that attempts to trick a node or application into thinking it does one thing
+whilst actually doing another. To prevent attackers from building deliberate classpath conflicts to change the
+behaviour of code, a transaction in which two file paths overlap between attachments is invalid. A small number
+of files that are expected to overlap normally, such as files in the \texttt{META-INF} directory, are excluded.
+
+\paragraph{Package namespace ownership.} Corda allows parts of the Java package namespace to be reserved for
+particular developers, identified by a public key (which may or may not be an identity on the node's zone).
+Any JAR that exports a class in an owned package namespace but which is not signed by the owning key is
+considered to be invalid. Reserving a package namespace is optional but can simplify the data model and make
+applications more secure.
+
+The reason for this is related to a mismatch between the way the ledger names code and the way programming
+languages do. In the distributed ledger world a bundle of code is referenced by hash or signing key, but in
+source code English-like module names are used. In the Java ecosystem these names are broken into components
+separated by dots, and there's a strong convention that names are chosen to start with the reversed domain
+name of the developer's website. For example a developer who works for MegaCorp may use
+\texttt{com.megacorp.superproduct.submodule} as a prefix for the names used in that specific product and
+submodule.
+
+However this is only a convention. Nothing prevents anyone from publishing code that uses MegaCorp's package
+namespace. Normally this isn't a problem as developers learn the correct names via some secure means, like
+browsing an encrypted website of good reputation. But on a distributed ledger data can be encountered which
+was crafted by a malicious adversary, usually a trading partner who hasn't been extensively verified or who
+has been compromised. Such an adversary could build a transaction with a custom state and attachment that
+defined classes with the same name as used by a real app. Whilst the core ledger can differentiate between the
+two applications, if data is serialized or otherwise exposed via APIs that rely on ordinary types and class
+names the hash or signer of the original attachment can easily get lost.
+
+For example, if a state is serialized to JSON at any point then \emph{any} type that has the same shape can
+appear legitimate. In Corda serialization types are ultimately identified by class name, as is true for all
+other forms of serialization. Thus deserializing data and assuming the data represents a state only reachable
+by the contract logic would be risky if the developer forgot to check that the original smart contract was the
+intended contract and not one violating the naming convention.
+
+By enforcing the Java naming convention cryptographically and elevating it to the status of a consensus rule,
+developers can assume that a \texttt{com.megacorp.superproduct.DealState} type always obeys the rules enforced
+by the smart contract published by that specific company. They cannot get confused by a mismatch between the
+human readable self-assigned name and the cryptographic but non-human readable hash or key based name the
+ledger really uses.
+
+% TODO: Discuss confidential identities.
+% TODO: Discuss the crypto suites used in Corda.
+
+\subsection{Hard forks, bug fixes and dispute resolution}
 
 Decentralised ledger systems often differ in their underlying political ideology as well as their technical
 choices. The Ethereum project originally promised ``unstoppable apps'' which would implement ``code as law''. After
@@ -574,7 +716,8 @@ as a hack at all given the lack of any non-code specification of what the progra
 eventually led to a split in the community.
 
 As Corda contracts are simply zip files, it is easy to include a PDF or other documents describing what a contract
-is meant to actually do. There is no requirement to use this mechanism, and there is no requirement that these
+is meant to actually do. A \texttt{@LegalProseReference} annotation is provided which by convention contains a URL
+or URI to a specification document. There is no requirement to use this mechanism, and there is no requirement that these
 documents have any legal weight. However in financial use cases it's expected that they would be legal contracts that
 take precedence over the software implementations in case of disagreement.
 
@@ -582,68 +725,7 @@ It is technically possible to write a contract that cannot be upgraded. If such 
 existed only on the ledger, like a cryptocurrency, then that would provide an approximation of ``code as law''. We
 leave discussion of the wisdom of this concept to political scientists and reddit.
 
-\paragraph{Platform logging}There is no direct equivalent in Corda of a block chain ``hard fork'', so the only solution
-to discarding buggy or fraudulent transaction chains would be to mutually agree out of band to discard an entire
-transaction subgraph. As there is no global visibility either this mutual agreement would not need to encompass all
-network participants: only those who may have received and processed such transactions. The flip side of lacking global
-visibility is that there is no single point that records who exactly has seen which transactions. Determining the set
-of entities that'd have to agree to discard a subgraph means correlating node activity logs. Corda nodes log sufficient
-information to ensure this correlation can take place. The platform defines a flow to assist with this, which can be
-used by anyone. A tool is provided that generates an ``investigation request'' and sends it to a seed node. The flow
-signals to the node administrator that a decision is required, and sufficient information is transmitted to the node to
-try and convince the administrator to take part (e.g. a signed court order). If the administrator accepts the request
-through the node explorer interface, the next hops in the transaction chain are returned. In this way the tool can
-semi-automatically crawl the network to find all parties that would be affected by a proposed rollback. The platform
-does not take a position on what types of transaction rollback are justified and provides only minimal support for
-implementing rollbacks beyond locating the parties that would have to agree.
-
-% TODO: DB logging of tx transmits is COR-544.
-
-Once involved parties are identified there are at least two strategies for editing the ledger. One is to extend
-the transaction chain with new transactions that simply correct the database to match the intended reality. For
-this to be possible the smart contract must have been written to allow arbitrary changes outside its normal
-business logic when a sufficient threshold of signatures is present. This strategy is simple and makes the most
-sense when the number of parties involved in a state is small and parties have no incentive to leave bad information
-in the ledger. For asset states that are the result of theft or fraud the only party involved in a state may
-resist attempts to patch things up in this way, as they may be able to benefit in the real world from the time
-lag between the ledger becoming inaccurate and it catching up with reality. In this case a more complex approach
-can be used in which the involved parties minus the uncooperative party agree to mark the relevant states as
-no longer consumed/spent. This is essentially a limited form of database rollback.
-
-\subsection{Identity lookups}\label{sec:identity-lookups}
-
-In all block chain inspired systems there exists a tension between wanting to know who you are dealing with and
-not wanting others to know. A standard technique is to use randomised public keys in the shared data, and keep
-the knowledge of the identity that key maps to private. For instance, it is considered good practice to generate
-a fresh key for every received payment. This technique exploits the fact that verifying the integrity of the ledger
-does not require knowing exactly who took part in the transactions, only that they followed the agreed upon
-rules of the system.
-
-Platforms such as Bitcoin and Ethereum have relatively ad-hoc mechanisms for linking identities and keys. Typically
-it is the user's responsibility to manually label public keys in their wallet software using knowledge gleaned from
-websites, shop signs and so on. Because these mechanisms are ad hoc and tedious many users don't bother, which
-can make it hard to figure out where money went later. It also complicates the deployment of secure signing devices
-and risk analysis engines. Bitcoin has BIP 70\cite{BIP70} which specifies a way of signing a ``payment
-request'' using X.509 certificates linked to the web PKI, giving a cryptographically secured and standardised way
-of knowing who you are dealing with. Identities in this system are the same as used in the web PKI: a domain name,
-email address or EV (extended validation) organisation name.
-
-Corda takes this concept further. States may define fields of type \texttt{Party}, which encapsulates an identity
-and a public key. When a state is deserialised from a transaction in its raw form, the identity field of the
-\texttt{Party} object is null and only the public (composite) key is present. If a transaction is deserialised
-in conjunction with X.509 certificate chains linking the transient public keys to long term identity keys the
-identity field is set. In this way a single data representation can be used for both the anonymised case, such
-as when validating dependencies of a transaction, and the identified case, such as when trading directly with
-a counterparty. Trading flows incorporate sub-flows to transmit certificates for the keys used, which are then
-stored in the local database. However the transaction resolution flow does not transmit such data, keeping the
-transactions in the chain of custody pseudonymous.
-
-\paragraph{Deterministic key derivation} Corda allows for but does not mandate the use of determinstic key
-derivation schemes such as BIP 32\cite{BIP32}. The infrastructure does not assume any mathematical relationship
-between public keys because some cryptographic schemes are not compatible with such systems. Thus we take the
-efficiency hit of always linking transient public keys to longer term keys with X.509 certificates.
-
-% TODO: Discuss the crypto suites used in Corda.
+% TODO: Rewrite the section on confidential identities and move it under a new privacy section.
 
 \subsection{Oracles and tear-offs}\label{sec:tear-offs}
 
@@ -735,26 +817,6 @@ by index alone.
 
 % TODO: Interaction of enumbrances with notary change transactions.
 
-\subsection{Contract constraints}\label{sec:contract-constraints}
-
-The easiest way of tying states to the contract code that defines them is by hash. This works for very simple
-and stable programs, but more complicated contracts may need to be upgraded. In this case it may be preferable
-for states to refer to contracts by the identity of the signer. Because contracts are stored in zip files, and
-because a Java Archive (JAR) file is just a zip with some extra files inside, it is possible to use the standard
-JAR signing infrastructure to identify the source of contract code. Simple constraints such as ``any contract of
-this name signed by these keys'' allow for some upgrade flexibility, at the cost of increased exposure to rogue
-contract developers. Requiring combinations of signatures helps reduce the risk of a rogue or hacked developer
-publishing a bad contract version, at the cost of increased difficulty in releasing new versions. State creators
-may also specify third parties they wish to review contract code. Regardless of which set of tradeoffs is chosen,
-the framework can accomodate them.
-
-A contract constraint may use a composite key of the type described in \cref{sec:composite-keys}. The standard JAR
-signing protocol allows for multiple signatures from different private keys, thus being able to satisfy composite
-keys. The allowed signing algorithms are \texttt{SHA256withRSA} and \texttt{SHA256withECDSA}. Note that the
-cryptographic algorithms used for code signing may not always be the same as those used for transaction signing,
-as for code signing we place initial focus on being able to re-use the infrastructure.
-
-% TODO: Contract constraints aren't implemented yet so this design may change based on feedback.
 
 \subsection{Event scheduling}\label{sec:event-scheduling}
 
@@ -1497,7 +1559,7 @@ a requirement.
 
 % TODO: Nothing related to data distribution groups is implemented.
 
-\section{Deterministic JVM}
+\section{Deterministic JVM}\label{sec:djvm}
 
 It is important that all nodes that process a transaction always agree on whether it is valid or not. Because
 transaction types are defined using JVM bytecode, this means the execution of that bytecode must be fully
