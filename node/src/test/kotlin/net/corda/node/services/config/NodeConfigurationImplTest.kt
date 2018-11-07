@@ -34,14 +34,16 @@ class NodeConfigurationImplTest {
     fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
         val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
         assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlIssuer")
     }
 
     @Test
     fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
         val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
         assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint")
+        assertThat(configValidationResult.first()).contains("crlCheckSoftFail")
     }
 
     @Test
