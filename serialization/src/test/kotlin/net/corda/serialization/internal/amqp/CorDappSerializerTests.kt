@@ -19,7 +19,7 @@ class CorDappSerializerTests {
                 DefaultEvolutionSerializerProvider)
 
         serializers.forEach {
-            factory.registerExternal(CorDappCustomSerializer(it, this))
+            factory.registerExternal(CorDappCustomSerializer(it, factory))
         }
 
         return factory
