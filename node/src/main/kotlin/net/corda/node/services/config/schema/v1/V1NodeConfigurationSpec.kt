@@ -76,6 +76,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
     private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
     private val cryptoServiceConf by string().optional()
+    @Suppress("unused")
+    private val custom by nestedObject().optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
         val myLegalName = configuration[myLegalName]

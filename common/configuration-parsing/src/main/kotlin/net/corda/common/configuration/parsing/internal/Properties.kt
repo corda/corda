@@ -172,13 +172,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
         }
-        return when {
-            delegate.schema != null -> {
-                val elementsDescription = valueIn(configuration).asSequence().map { it as ConfigObject }.map(ConfigObject::toConfig).map { delegate.schema.describe(it, serialiseValue) }.toList()
-                ConfigValueFactory.fromIterable(elementsDescription)
-            }
-            else -> valueDescription(valueIn(configuration), serialiseValue)
-        }
+        return delegate.schema?.let { schema -> valueDescription(valueIn(configuration).asSequence().map { element -> valueDescription(element, serialiseValue) }.map { it as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it, serialiseValue) }.toList(), serialiseValue) } ?: valueDescription(valueIn(configuration), serialiseValue)
     }
 }
 
