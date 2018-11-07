@@ -470,8 +470,7 @@ object Configuration {
                     fun forKey(keyName: String): MissingValue = of("No configuration setting found for key '$keyName'", keyName)
                 }
 
-                override fun withContainingPath(vararg containingPath: String) =
-                        MissingValue(keyName, typeName, message, containingPath.toList())
+                override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): MissingValue = MissingValue.of(message, keyName, typeName, containingPath)
             }
@@ -532,8 +531,6 @@ object Configuration {
 
                     fun of(keyName: String = UNKNOWN, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
                 }
-
-                override val message = message(keyName)
 
                 override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList())
 
