@@ -19,7 +19,7 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
         private val configRenderingOptions = ConfigRenderOptions.defaults().setFormatted(true).setComments(false).setOriginComments(false)
 
         internal fun logConfigurationErrors(errors: Iterable<Configuration.Validation.Error>) {
-            errors.map { "Error while parsing node configuration. ${it.description()}." }.forEach(logger::error)
+            errors.joinToString(System.lineSeparator(), "Error while parsing node configuration:${System.lineSeparator()}") { error -> error.description() }
         }
 
         private fun Configuration.Validation.Error.description(): String {
