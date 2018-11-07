@@ -29,6 +29,8 @@ class AMQPRemoteTypeModel {
         val byTypeDescriptor = schema.types.associateBy { it.typeDescriptor }
 
         return byTypeDescriptor.mapValues { (k, v) ->
+            // Why not `cache.computeIfAbsent(k)`? Because calls to read/populate the cache are made recursively
+            // during interpretation, which would cause `ConcurrentHashMap` to lock up.
             cache[k] ?: v.name.typeIdentifier.interpretIdentifier(notationLookup, emptySet())
                     .also { cache.putIfAbsent(k, it) }
         }
