@@ -2,17 +2,15 @@ package net.corda.cliutils
 
 import net.corda.core.internal.rootMessage
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
-
 import org.fusesource.jansi.AnsiConsole
 import org.slf4j.event.Level
 import picocli.CommandLine
 import picocli.CommandLine.*
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.system.exitProcess
 import java.util.*
 import java.util.concurrent.Callable
+import kotlin.system.exitProcess
 
 /**
  * When we have errors in command line flags that are not handled by picocli (e.g. non existing files), an error is thrown
@@ -64,18 +62,6 @@ fun CordaCliWrapper.start(args: Array<String>) {
     // This line makes sure ANSI escapes work on Windows, where they aren't supported out of the box.
     AnsiConsole.systemInstall()
 
-    val cmd = CommandLine(this)
-    // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
-    cmd.registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
-    cmd.commandSpec.name(alias)
-    cmd.commandSpec.usageMessage().description(description)
-    this.subCommands().forEach {
-        val subCommand = CommandLine(it)
-        it.args = args
-        subCommand.commandSpec.usageMessage().description(it.description)
-        cmd.commandSpec.addSubcommand(it.alias, subCommand)
-    }
-
     try {
         val defaultAnsiMode = if (CordaSystemUtils.isOsWindows()) {
             Help.Ansi.ON
@@ -97,7 +83,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
         exitProcess(ExitCodes.SUCCESS)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
-        if (this.verbose || this.subCommands().any { it.verbose} ) {
+        if (this.verbose || this.subCommands().any { it.verbose }) {
             throwable.printStackTrace()
         } else {
             System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
@@ -171,6 +157,21 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
 
+    val cmd by lazy {
+        CommandLine(this).apply {
+            // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+            registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
+            commandSpec.name(alias)
+            commandSpec.usageMessage().description(description)
+            subCommands().forEach {
+                val subCommand = CommandLine(it)
+                it.args = args
+                subCommand.commandSpec.usageMessage().description(it.description)
+                commandSpec.addSubcommand(it.alias, subCommand)
+            }
+        }
+    }
+
     fun subCommands(): Set<CliWrapperBase> {
         return additionalSubCommands() + installShellExtensionsParser
     }
@@ -181,6 +182,8 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         installShellExtensionsParser.updateShellExtensions()
         return runProgram()
     }
+
+    fun printHelp() = cmd.usage(System.out)
 }
 
 /**
