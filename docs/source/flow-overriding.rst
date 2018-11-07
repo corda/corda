@@ -139,3 +139,62 @@ the ``SubResponder`` with ``BaseResponder``
         }
 
 This will generate the corresponding ``flowOverrides`` section and place it in the configuration for that node.
+
+Modifying the behaviour of @InitiatingFlow(s)
+---------------------------------------------
+
+It is likely that initiating flows will also require changes to reflect the different systems that are likely to be encountered.
+At the moment, corda provides the ability to subclass an Initiator, and ensures that the correct responder will be invoked.
+In the below example, we will change the behaviour of an Initiator from filtering Notaries out from comms, to only communicating with Notaries
+
+    .. code-block:: kotlin
+
+        @InitiatingFlow
+        @StartableByRPC
+        @StartableByService
+        open class BaseInitiator : FlowLogic<String>() {
+            @Suspendable
+            override fun call(): String {
+                val partiesToTalkTo = serviceHub.networkMapCache.allNodes
+                        .filterNot { it.legalIdentities.first() in serviceHub.networkMapCache.notaryIdentities }
+                        .filterNot { it.legalIdentities.first().name == ourIdentity.name }.map { it.legalIdentities.first() }
+                val responses = ArrayList<String>()
+                for (party in partiesToTalkTo) {
+                    val session = initiateFlow(party)
+                    val received = session.receive<String>().unwrap { it }
+                    responses.add(party.name.toString() + " responded with backend: " + received)
+                }
+                return "${getFLowName()} received the following \n" + responses.joinToString("\n") { it }
+            }
+
+            open fun getFLowName(): String {
+                return "Normal Computer"
+            }
+        }
+
+        @StartableByRPC
+        @StartableByService
+        class NotaryOnlyInitiator : BaseInitiator() {
+            @Suspendable
+            override fun call(): String {
+                return "Notary Communicator received:\n" + serviceHub.networkMapCache.notaryIdentities.map {
+                    "Notary: ${it.name.organisation} is using a " + initiateFlow(it).receive<String>().unwrap { it }
+                }.joinToString("\n") { it }
+            }
+
+.. warning:: The subclass must not have the @InitiatingFlow annotation.
+
+Corda will use the first annotation detected in the class hierarchy to determine which responder should be invoked. So for a Responder similar to
+
+    .. code-block:: kotlin
+
+        @InitiatedBy(BaseInitiator::class)
+        class BobbyResponder(othersideSession: FlowSession) : BaseResponder(othersideSession) {
+            override fun getMessageFromBackend(): String {
+                return "Robert'); DROP TABLE STATES;"
+            }
+        }
+
+it would be possible to invoke either ``BaseInitiator`` or ``NotaryOnlyInitiator`` and ``BobbyResponder`` would be used to reply.
+
+.. warning:: You must ensure the sequence of sends/receives/subFlows in a subclass are compatible with the parent.
