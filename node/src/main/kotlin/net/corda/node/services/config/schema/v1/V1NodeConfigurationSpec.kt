@@ -137,7 +137,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
             ))
         } catch (e: Exception) {
             return when (e) {
-                is ConfigException -> invalid(e.toValidationError("", "NodeConfiguration"))
+                is ConfigException -> invalid(e.toValidationError(typeName = "NodeConfiguration"))
                 is IllegalArgumentException -> badValue(e.message!!)
                 else -> throw e
             }

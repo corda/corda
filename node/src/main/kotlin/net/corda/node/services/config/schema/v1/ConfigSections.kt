@@ -73,8 +73,8 @@ internal object SecurityConfigurationSpec : Configuration.Specification<Security
                 val users = configuration[users]
 
                 return when {
-                    type == AuthDataSourceType.INMEMORY && (users == null || connection != null) -> badValue("\"INMEMORY\" datasource type requires \"users\" and cannot specify \"connection\"")
-                    type == AuthDataSourceType.DB && (users != null || connection == null) -> badValue("\"DB\" datasource type requires \"connection\" and cannot specify \"users\"")
+                    type == AuthDataSourceType.INMEMORY && (users == null || connection != null) -> badValue("\"INMEMORY\" data source type requires \"users\" and cannot specify \"connection\"")
+                    type == AuthDataSourceType.DB && (users != null || connection == null) -> badValue("\"DB\" data source type requires \"connection\" and cannot specify \"users\"")
                     else -> valid(SecurityConfiguration.AuthService.DataSource(type, passwordEncryption, connection, users))
                 }
             }

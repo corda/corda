@@ -448,7 +448,7 @@ object Configuration {
 
                 companion object {
 
-                    fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
 
                     fun forKey(keyName: String, expectedTypeName: String, actualTypeName: String): WrongType = of("$keyName has type ${actualTypeName.toUpperCase()} rather than ${expectedTypeName.toUpperCase()}")
                 }
@@ -465,7 +465,7 @@ object Configuration {
 
                 companion object {
 
-                    fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
 
                     fun forKey(keyName: String): MissingValue = of("No configuration setting found for key '$keyName'", keyName)
                 }
@@ -482,7 +482,7 @@ object Configuration {
 
                 companion object {
 
-                    fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList())
@@ -497,7 +497,7 @@ object Configuration {
 
                 companion object {
 
-                    fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList())
@@ -512,7 +512,7 @@ object Configuration {
 
                 companion object {
 
-                    fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
                 }
 
                 override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList())

@@ -218,7 +218,7 @@ private abstract class RequiredDelegatedProperty<TYPE : Any, DELEGATE : Configur
     final override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
 }
 
-fun ConfigException.toValidationError(keyName: String, typeName: String): Configuration.Validation.Error {
+fun ConfigException.toValidationError(keyName: String? = null, typeName: String): Configuration.Validation.Error {
 
     val toError = when (this) {
         is ConfigException.Missing -> Configuration.Validation.Error.MissingValue.Companion::of
