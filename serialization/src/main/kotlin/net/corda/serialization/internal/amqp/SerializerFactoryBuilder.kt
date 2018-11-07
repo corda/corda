@@ -16,13 +16,14 @@ object SerializerFactoryBuilder {
             classCarpenter: ClassCarpenter,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
-            onlyCustomSerializers: Boolean = false) =
-            makeFactory(
-                    whitelist,
-                    classCarpenter,
-                    evolutionSerializerProvider,
-                    fingerPrinterProvider,
-                    onlyCustomSerializers)
+            onlyCustomSerializers: Boolean = false): SerializerFactory {
+        return makeFactory(
+                whitelist,
+                classCarpenter,
+                evolutionSerializerProvider,
+                fingerPrinterProvider,
+                onlyCustomSerializers)
+    }
 
     @JvmStatic
     @JvmOverloads
@@ -33,13 +34,14 @@ object SerializerFactoryBuilder {
             lenientCarpenterEnabled: Boolean = false,
             evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             fingerPrinterProvider: (SerializerFactory) -> FingerPrinter = ::SerializerFingerPrinter,
-            onlyCustomSerializers: Boolean = false) =
-            makeFactory(
-                    whitelist,
-                    ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
-                    evolutionSerializerProvider,
-                    fingerPrinterProvider,
-                    onlyCustomSerializers)
+            onlyCustomSerializers: Boolean = false): SerializerFactory {
+        return makeFactory(
+                whitelist,
+                ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
+                evolutionSerializerProvider,
+                fingerPrinterProvider,
+                onlyCustomSerializers)
+    }
 
     private fun makeFactory(whitelist: ClassWhitelist,
                             classCarpenter: ClassCarpenter,
