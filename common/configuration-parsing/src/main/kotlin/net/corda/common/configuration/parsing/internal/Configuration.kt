@@ -25,7 +25,7 @@ object Configuration {
         /**
          * Describes a [Config] hiding sensitive data.
          */
-        fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString())}): ConfigValue?
+        fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }): ConfigValue?
     }
 
     object Value {
@@ -236,7 +236,7 @@ object Configuration {
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [ENUM].
-                 * This property expects the exact [ENUM] value specified as text for the relevant key.
+                 * This property expects a value in the configuration matching one of the cases of [ENUM], as text, in uppercase.
                  */
                 fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Standard<ENUM> = StandardProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
             }
