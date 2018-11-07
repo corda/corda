@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
@@ -30,6 +31,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
+import java.io.File
 import java.io.InputStream
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -96,19 +98,34 @@ internal constructor(private val initSerEnv: Boolean,
 
         private fun generateNodeInfo(nodeDir: Path): Path {
             val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
+            val nodeInfoGenFile = (logsDir / "node-info-gen.log").toFile()
             val process = ProcessBuilder(nodeInfoGenCmd)
                     .directory(nodeDir.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput((logsDir / "node-info-gen.log").toFile())
+                    .redirectOutput(nodeInfoGenFile)
                     .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                     .start()
             if (!process.waitFor(3, TimeUnit.MINUTES)) {
                 process.destroyForcibly()
-                throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
+                printNodeInfoGenLogToConsole(nodeInfoGenFile)
             }
-            check(process.exitValue() == 0) { "Error while generating node info file. Please check the logs in $logsDir." }
+            printNodeInfoGenLogToConsole(nodeInfoGenFile) { process.exitValue() == 0 }
             return nodeDir.list { paths ->
                 paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
+            }
+        }
+
+        private fun printNodeInfoGenLogToConsole(nodeInfoGenFile: File, check: (() -> Boolean) = { true }) {
+            if (!check.invoke()) {
+                val nodeDir = nodeInfoGenFile.parent
+                val nodeIdentifier = try {
+                    ConfigFactory.parseFile((nodeDir / "node.conf").toFile()).getString("myLegalName")
+                } catch (e: ConfigException) {
+                    nodeDir
+                }
+                System.err.println("#### Error while generating node info file $nodeIdentifier ####")
+                nodeInfoGenFile.inputStream().copyTo(System.err)
+                throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
             }
         }
     }
@@ -142,7 +159,7 @@ internal constructor(private val initSerEnv: Boolean,
     private fun isBFTNotary(config: Config): Boolean {
         // TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map
         //       specifying the notary identities and the type (single-node, CFT, BFT) of each notary to set up.
-        return config.getString ("notary.className").contains("BFT", true)
+        return config.getString("notary.className").contains("BFT", true)
     }
 
     private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
@@ -172,7 +189,7 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()) {
         require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
@@ -188,7 +205,7 @@ internal constructor(private val initSerEnv: Boolean,
             copyCordapps: Boolean,
             fromCordform: Boolean,
             minimumPlatformVersion: Int = PLATFORM_VERSION,
-            packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()
+            packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -361,21 +378,20 @@ internal constructor(private val initSerEnv: Boolean,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
             minimumPlatformVersion: Int,
-            packageOwnership : Map<JavaPackageName, PublicKey?>
+            packageOwnership: Map<JavaPackageName, PublicKey?>
     ): NetworkParameters {
         // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
             if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos &&
-                existingNetParams.packageOwnership.entries.containsAll(packageOwnership.entries)) {
+                    existingNetParams.packageOwnership.entries.containsAll(packageOwnership.entries)) {
                 existingNetParams
             } else {
-                var updatePackageOwnership = mutableMapOf(*existingNetParams.packageOwnership.map { Pair(it.key,it.value) }.toTypedArray())
+                var updatePackageOwnership = mutableMapOf(*existingNetParams.packageOwnership.map { Pair(it.key, it.value) }.toTypedArray())
                 packageOwnership.forEach { key, value ->
                     if (value == null) {
                         if (updatePackageOwnership.remove(key) != null)
                             println("Unregistering package $key")
-                    }
-                    else {
+                    } else {
                         if (updatePackageOwnership.put(key, value) == null)
                             println("Registering package $key for owner ${value.toStringShort()}")
                     }
