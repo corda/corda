@@ -3,7 +3,7 @@
 package net.corda.client.jackson.internal
 
 import com.fasterxml.jackson.annotation.*
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.*
+import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
@@ -327,11 +327,11 @@ private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val right: PartialTreeJson? = null) {
     init {
         if (includedLeaf != null) {
-            require(leaf == null && left == null && right == null)
+            require(leaf == null && left == null && right == null){"Unvalid JSON structure"}
         } else if (leaf != null) {
-            require(left == null && right == null)
+            require(left == null && right == null){"Invalid JSON structure"}
         } else {
-            require(left != null && right != null)
+            require(left != null && right != null){"Invalid JSON structure"}
         }
     }
 }

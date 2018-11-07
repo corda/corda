@@ -18,7 +18,8 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
@@ -165,7 +166,7 @@ class SingleThreadedStateMachineManager(
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
     override fun stop(allowedUnsuspendedFiberCount: Int) {
-        require(allowedUnsuspendedFiberCount >= 0)
+        require(allowedUnsuspendedFiberCount >= 0){"allowedUnsuspendedFiberCount must be greater than or equal to zero"}
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
@@ -780,8 +781,8 @@ class SingleThreadedStateMachineManager(
     ) {
         drainFlowEventQueue(flow)
         // final sanity checks
-        require(lastState.pendingDeduplicationHandlers.isEmpty())
-        require(lastState.isRemoved)
+        require(lastState.pendingDeduplicationHandlers.isEmpty()) {"Flow cannot be removed until all pending deduplications have completed"}
+        require(lastState.isRemoved){"Flow must be in removable state before removal"}
         require(lastState.checkpoint.subFlowStack.size == 1)
         require(flow.fiber.id !in sessionToFlow.values)
         flow.resultFuture.set(removalReason.flowReturnValue)

@@ -40,14 +40,14 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
 
         fun getInstance(asn1: ASN1Primitive): PublicKey {
             val keyInfo = SubjectPublicKeyInfo.getInstance(asn1)
-            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.COMPOSITE_KEY)
+            require(keyInfo.algorithm.algorithm == CordaObjectIdentifier.COMPOSITE_KEY){"Key is not a composite key"}
             val sequence = ASN1Sequence.getInstance(keyInfo.parsePublicKey())
             val threshold = ASN1Integer.getInstance(sequence.getObjectAt(0)).positiveValue.toInt()
             val sequenceOfChildren = ASN1Sequence.getInstance(sequence.getObjectAt(1))
             val builder = Builder()
             val listOfChildren = sequenceOfChildren.objects.toList()
             listOfChildren.forEach { childAsn1 ->
-                require(childAsn1 is ASN1Sequence)
+                require(childAsn1 is ASN1Sequence){"child key is not in ASN1 format"}
                 val childSeq = childAsn1 as ASN1Sequence
                 val key = Crypto.decodePublicKey((childSeq.getObjectAt(0) as DERBitString).bytes)
                 val weight = ASN1Integer.getInstance(childSeq.getObjectAt(1))
@@ -274,7 +274,7 @@ class CompositeKey private constructor(val threshold: Int, children: List<NodeAn
          * is invalid (for example it would contain no keys).
          */
         fun build(threshold: Int? = null): PublicKey {
-            require(threshold == null || threshold > 0)
+            require(threshold == null || threshold > 0){"the threshold value is invalid"}
             val n = children.size
             return when {
                 n > 1 -> CompositeKey(threshold ?: children.map { (_, weight) -> weight }.sum(), children)

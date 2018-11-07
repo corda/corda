@@ -321,7 +321,7 @@ open class BusinessCalendar(val holidayDates: List<LocalDate>) {
      * TODO: Make more efficient if necessary
      */
     fun moveBusinessDays(date: LocalDate, direction: DateRollDirection, i: Int): LocalDate {
-        require(i >= 0)
+        require(i >= 0){"Days to add/subtract must be positive"}
         if (i == 0) return date
         var retDate = date
         var ctr = 0

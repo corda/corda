@@ -14,8 +14,8 @@ interface NamedCacheFactory {
      * the name can be used to create a file name or a metric name.
      */
     fun checkCacheName(name: String) {
-        require(!name.isBlank())
-        require(allowedChars.matches(name))
+        require(!name.isBlank()){"Name must not be empty or only whitespace"}
+        require(allowedChars.matches(name)){"Invalid characters in cache name"}
     }
 
     fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String): Cache<K, V>

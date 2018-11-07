@@ -133,7 +133,7 @@ interface Validated<TARGET, ERROR> {
          */
         class Unsuccessful<TARGET, ERROR>(override val errors: Set<ERROR>) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
             init {
-                require(errors.isNotEmpty())
+                require(errors.isNotEmpty()){"no error encountered during validation"}
             }
 
             override val value: TARGET get() = throw IllegalStateException("Invalid state.")

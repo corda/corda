@@ -9,7 +9,7 @@ class AddressBindingException(val addresses: Set<NetworkHostAndPort>) : CordaRun
 
     private companion object {
         private fun message(addresses: Set<NetworkHostAndPort>): String {
-            require(addresses.isNotEmpty())
+            require(addresses.isNotEmpty()){"Empty address list"}
             return if (addresses.size > 1) {
                 "Failed to bind on an address in ${addresses.joinToString(", ", "[", "]")}."
             } else {

@@ -96,7 +96,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
-        require(rpc.attachmentExists(hash))
+        require(rpc.attachmentExists(hash)){"attachment matching hash: $hash does not exist"}
     }
 
     val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSideFuture.get(), notaryFuture.get(), hash)
@@ -151,7 +151,7 @@ fun recipient(rpc: CordaRPCOps, webPort: Int) {
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
             val state = wtx.outputsOfType<AttachmentContract.State>().single()
-            require(rpc.attachmentExists(state.hash))
+            require(rpc.attachmentExists(state.hash)) {"attachment matching hash: ${state.hash} does not exist"}
 
             // Download the attachment via the Web endpoint.
             val connection = URL("http://localhost:$webPort/attachments/${state.hash}").openConnection() as HttpURLConnection
@@ -199,7 +199,7 @@ class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
         // we check that at least one has the matching hash, the other will be the contract
-        require(tx.attachments.any { it.id == state.hash })
+        require(tx.attachments.any { it.id == state.hash }) {"at least one attachment in transaction must match hash ${state.hash}"}
     }
 
     object Command : TypeOnlyCommandData()

@@ -170,7 +170,7 @@ fun <T> debugCompare(perLeft: Perceivable<T>, perRight: Perceivable<T>) {
 }
 
 fun debugCompare(parLeft: Party, parRight: Party) {
-    require(parLeft == parRight)
+    require(parLeft == parRight){""}
 }
 
 fun debugCompare(left: Frequency, right: Frequency) {

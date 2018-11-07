@@ -5,7 +5,10 @@ package net.corda.core.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.*
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -109,7 +112,7 @@ fun <T> List<T>.randomOrNull(): T? {
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {
     val i = indexOf(item)
-    require(i != -1)
+    require(i != -1){"No such element"}
     return i
 }
 
@@ -219,7 +222,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          */
         @DeleteForDJVM
         fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
-            require(numOfExpectedBytes > 0)
+            require(numOfExpectedBytes > 0){"Expected bytes must be greater than zero"}
             val baos = ByteArrayOutputStream()
             ZipOutputStream(baos).use { zos ->
                 val arraySize = 1024
