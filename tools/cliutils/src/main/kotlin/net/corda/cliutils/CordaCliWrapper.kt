@@ -68,7 +68,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
         } else {
             Help.Ansi.AUTO
         }
-        val results = commandLine().parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
+        val results = cmd.parseWithHandlers(RunLast().useOut(System.out).useAnsi(defaultAnsiMode),
                 DefaultExceptionHandler<List<Any>>().useErr(System.err).useAnsi(defaultAnsiMode),
                 *args)
         // If an error code has been returned, use this and exit
@@ -90,24 +90,6 @@ fun CordaCliWrapper.start(args: Array<String>) {
         }
         exitProcess(ExitCodes.FAILURE)
     }
-}
-
-private fun CordaCliWrapper.commandLine() = CommandLine(this).apply {
-    // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
-    registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
-    commandSpec.name(alias)
-    commandSpec.usageMessage().description(description)
-    subCommands().forEach {
-        val subCommand = CommandLine(it)
-        it.args = args
-        subCommand.commandSpec.usageMessage().description(it.description)
-        commandSpec.addSubcommand(it.alias, subCommand)
-    }
-}
-
-fun CordaCliWrapper.printHelp(): Int {
-    commandLine().usage(System.out)
-    return ExitCodes.SUCCESS
 }
 
 @Command(mixinStandardHelpOptions = true,
@@ -175,6 +157,19 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
     protected open fun additionalSubCommands(): Set<CliWrapperBase> = emptySet()
 
+    val cmd = CommandLine(this).apply {
+        // Make sure any provided paths are absolute. Relative paths have caused issues and are less clear in logs.
+        registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
+        commandSpec.name(alias)
+        commandSpec.usageMessage().description(description)
+        subCommands().forEach {
+            val subCommand = CommandLine(it)
+            it.args = args
+            subCommand.commandSpec.usageMessage().description(it.description)
+            commandSpec.addSubcommand(it.alias, subCommand)
+        }
+    }
+
     fun subCommands(): Set<CliWrapperBase> {
         return additionalSubCommands() + installShellExtensionsParser
     }
@@ -185,6 +180,8 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         installShellExtensionsParser.updateShellExtensions()
         return runProgram()
     }
+
+    fun printHelp() = cmd.usage(System.out)
 }
 
 /**
