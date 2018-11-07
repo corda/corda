@@ -222,7 +222,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
     }
 
     // incrementally build list of root entities (for later use in Sort parsing)
-    private val rootEntities = mutableMapOf<Class<*>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
+    private val rootEntities = mutableMapOf<Class<out PersistentState>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
     private val commonPredicates = mutableMapOf<Pair<String, Operator>, Predicate>()   // schema attribute Name, operator -> predicate
     private val constraintPredicates = mutableSetOf<Predicate>()
@@ -462,7 +462,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return predicateSet
     }
 
-    override fun <L : Any> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate> {
+    override fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate> {
         log.trace { "Parsing VaultCustomQueryCriteria: $criteria" }
 
         val predicateSet = mutableSetOf<Predicate>()
