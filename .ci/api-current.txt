@@ -1259,7 +1259,7 @@ public final class net.corda.core.crypto.Crypto extends java.lang.Object
   @NotNull
   public static final java.security.Provider findProvider(String)
   @NotNull
-  public static final net.corda.core.crypto.SignatureScheme findSignatureScheme(Integer)
+  public static final net.corda.core.crypto.SignatureScheme findSignatureScheme(int)
   @NotNull
   public static final net.corda.core.crypto.SignatureScheme findSignatureScheme(String)
   @NotNull
