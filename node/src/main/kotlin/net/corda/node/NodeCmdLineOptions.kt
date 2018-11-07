@@ -68,11 +68,14 @@ open class SharedNodeCmdLineOptions {
         devMode = other.devMode
     }
 
-    fun logRawConfigurationErrors(errors: Iterable<ConfigException>) {
+    fun logRawConfigurationErrors(errors: Set<ConfigException>) {
+        if (errors.isNotEmpty()) {
+            logger.error("There were errors while reading node config:")
+        }
         errors.forEach { error ->
             when (error) {
                 is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
-                else -> logger.error("Error while parsing node configuration.", error)
+                else -> logger.error(error.message, error)
             }
         }
     }
