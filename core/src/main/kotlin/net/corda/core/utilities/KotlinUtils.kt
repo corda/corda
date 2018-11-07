@@ -6,6 +6,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.concurrent.get
+import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
@@ -149,9 +150,7 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
 fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
 
 private const val MAX_SIZE = 100
-private val warnings = Collections.newSetFromMap(object : LinkedHashMap<String, Boolean>() {
-    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > MAX_SIZE
-})
+private val warnings = Collections.newSetFromMap(createSimpleCache<String, Boolean>(MAX_SIZE))
 
 /**
  * Utility to help log a warning message only once.

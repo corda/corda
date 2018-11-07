@@ -270,7 +270,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
 
         // The final step is to resolve AutomaticPlaceholderConstraint.
-        val automaticConstraintPropagation = contractClassName.contractHasAutomaticConstraintPropagation(serializationContext?.deserializationClassLoader)
+        val automaticConstraintPropagation = contractClassName.contractHasAutomaticConstraintPropagation(inputsAndOutputs.first().data::class.java.classLoader)
 
         // When automaticConstraintPropagation is disabled for a contract, output states must an explicit Constraint.
         require(automaticConstraintPropagation) { "Contract $contractClassName was marked with @NoConstraintPropagation, which means the constraint of the output states has to be set explicitly." }

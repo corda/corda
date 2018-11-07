@@ -69,10 +69,10 @@ class LargeTransactionsTest {
     fun checkCanSendLargeTransactions() {
         // These 4 attachments yield a transaction that's got >10mb attached, so it'd push us over the Artemis
         // max message size.
-        val bigFile1 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 0)
-        val bigFile2 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 1)
-        val bigFile3 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 2)
-        val bigFile4 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 3)
+        val bigFile1 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 0, "a")
+        val bigFile2 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 1, "b")
+        val bigFile3 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 2, "c")
+        val bigFile4 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 3, "d")
         driver(DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
