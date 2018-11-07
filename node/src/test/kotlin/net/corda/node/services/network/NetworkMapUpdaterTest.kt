@@ -11,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
@@ -18,16 +19,17 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.SignedNodeInfo
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
+import net.corda.testing.node.internal.MockKeyManagementService
 import net.corda.testing.node.internal.network.NetworkMapServer
+import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
@@ -37,12 +39,16 @@ import org.junit.Test
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
+import java.security.KeyPair
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -58,12 +64,16 @@ class NetworkMapUpdaterTest {
     private val fileWatcher = NodeInfoWatcher(baseDir, scheduler)
     private val nodeReadyFuture = openFuture<Void?>()
     private val networkMapCache = createMockNetworkMapCache()
+    private lateinit var ourKeyPair: KeyPair
+    private lateinit var ourNodeInfo: SignedNodeInfo
     private lateinit var server: NetworkMapServer
     private lateinit var networkMapClient: NetworkMapClient
     private lateinit var updater: NetworkMapUpdater
 
     @Before
     fun setUp() {
+        ourKeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)
+        ourNodeInfo = createNodeInfoAndSigned("Our info", ourKeyPair).signed
         server = NetworkMapServer(cacheExpiryMs.millis)
         val address = server.start()
         networkMapClient = NetworkMapClient(URL("http://$address"),
@@ -81,8 +91,10 @@ class NetworkMapUpdaterTest {
         updater = NetworkMapUpdater(networkMapCache, fileWatcher, netMapClient, baseDir, extraNetworkMapKeys)
     }
 
-    private fun startUpdater(ourNodeHash: SecureHash = SecureHash.randomSHA256()) {
-        updater.start(DEV_ROOT_CA.certificate, server.networkParameters.serialize().hash, ourNodeHash)
+    private fun startUpdater(ourNodeInfo: SignedNodeInfo = this.ourNodeInfo,
+                             networkParameters: NetworkParameters = server.networkParameters) { // TODO: remove if not needed
+        val keyManagementService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
+        updater.start(DEV_ROOT_CA.certificate, server.networkParameters.serialize().hash, ourNodeInfo, networkParameters, keyManagementService)
     }
 
     @Test
@@ -192,7 +204,7 @@ class NetworkMapUpdaterTest {
         val snapshot = paramsFeed.snapshot
         val updates = paramsFeed.updates.bufferUntilSubscribed()
         assertEquals(null, snapshot)
-        val newParameters = testNetworkParameters(epoch = 2)
+        val newParameters = testNetworkParameters(epoch = 2, maxMessageSize = 10485761)
         val updateDeadline = Instant.now().plus(1, ChronoUnit.DAYS)
         server.scheduleParametersUpdate(newParameters, "Test update", updateDeadline)
         startUpdater()
@@ -211,7 +223,7 @@ class NetworkMapUpdaterTest {
     @Test
     fun `ack network parameters update`() {
         setUpdater()
-        val newParameters = testNetworkParameters(epoch = 314)
+        val newParameters = testNetworkParameters(epoch = 314, maxMessageSize = 10485761)
         server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
         // TODO: Remove sleep in unit test.
@@ -223,6 +235,40 @@ class NetworkMapUpdaterTest {
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
+    }
+
+    @Test
+    fun `network parameters auto-accepted when only update is to whitelist params`() {
+        setUpdater()
+        val networkParameters = server.networkParameters
+        val oldNetworkParameters = networkParameters.copy()
+        val newWhitelistedContractMap = mapOf("key" to listOf(SecureHash.randomSHA256()))
+        val newEpoch = 314
+        val newModifiedTime = Instant.now().plusMillis(1000)
+        val newNetworkParameters = oldNetworkParameters.copy(
+                whitelistedContractImplementations = newWhitelistedContractMap,
+                epoch = newEpoch,
+                modifiedTime = newModifiedTime)
+        server.scheduleParametersUpdate(newNetworkParameters, "Test auto-accept update", Instant.MIN)
+
+        // when network map cache is updated
+        startUpdater()
+        Thread.sleep(3L * cacheExpiryMs) // TODO: Remove sleep in unit test.
+
+        // network parameters object gets automatically updated
+        assertNotEquals(updater.getNetworkParameters(), oldNetworkParameters)
+        assertEquals(oldNetworkParameters.copy(
+                whitelistedContractImplementations = newWhitelistedContractMap,
+                epoch = newEpoch,
+                modifiedTime = newModifiedTime), updater.getNetworkParameters())
+
+        // and no update file has been written to disk
+        val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
+        assertFalse(updateFile.exists())
+
+        // and current network parameter file contains the auto accepted parameters
+        val networkParametersFile = baseDir / NETWORK_PARAMS_FILE_NAME
+        assertTrue(networkParametersFile.exists())
     }
 
     @Test
@@ -306,7 +352,7 @@ class NetworkMapUpdaterTest {
         setUpdater()
         networkMapCache.addNode(myInfo) // Simulate behaviour on node startup when our node info is added to cache
         networkMapClient.publish(signedOtherInfo)
-        startUpdater(ourNodeHash = signedMyInfo.raw.hash)
+        startUpdater(ourNodeInfo = signedMyInfo)
         Thread.sleep(2L * cacheExpiryMs)
         verify(networkMapCache, never()).removeNode(myInfo)
         assertThat(server.networkMapHashes()).containsOnly(signedOtherInfo.raw.hash)
@@ -363,8 +409,12 @@ class NetworkMapUpdaterTest {
         }
     }
 
-    private fun createNodeInfoAndSigned(org: String): NodeInfoAndSigned {
-        return createNodeInfoAndSigned(CordaX500Name(org, "London", "GB"))
+    private fun createNodeInfoAndSigned(org: String, keyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): NodeInfoAndSigned {
+        val serial: Long = 1
+        val platformVersion = 1
+        val nodeInfoBuilder = TestNodeInfoBuilder()
+        nodeInfoBuilder.addLegalIdentity(CordaX500Name(org, "London", "GB"), keyPair, keyPair)
+        return nodeInfoBuilder.buildWithSigned(serial, platformVersion)
     }
 
     private fun advanceTime() {

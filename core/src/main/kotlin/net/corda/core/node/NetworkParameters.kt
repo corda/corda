@@ -29,17 +29,24 @@ import java.time.Instant
  */
 @KeepForDJVM
 @CordaSerializable
-data class NetworkParameters(
+class NetworkParameters(
         val minimumPlatformVersion: Int,
         val notaries: List<NotaryInfo>,
         val maxMessageSize: Int,
         val maxTransactionSize: Int,
-        val modifiedTime: Instant,
-        val epoch: Int,
-        val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+        modifiedTime: Instant,
+        epoch: Int,
+        whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        val packageOwnership: Map<JavaPackageName, PublicKey>
-) {
+        packageOwnership: Map<JavaPackageName, PublicKey>) {
+    // The autoAcceptParameters is a wrapper object around any class variables that might change. Having this wrapper
+    // allows us to restrict the swapping logic to internally within the class.
+    private var autoAcceptParameters: AutoAcceptParameters = AutoAcceptParameters(modifiedTime, epoch, whitelistedContractImplementations, packageOwnership)
+    val modifiedTime: Instant get() = autoAcceptParameters.modifiedTime
+    val epoch: Int get() = autoAcceptParameters.epoch
+    val whitelistedContractImplementations: Map<String, List<AttachmentId>> get() = autoAcceptParameters.whitelistedContractImplementations
+    val packageOwnership: Map<JavaPackageName, PublicKey> get() = autoAcceptParameters.packageOwnership
+
     @DeprecatedConstructorForDeserialization(1)
     constructor (minimumPlatformVersion: Int,
                  notaries: List<NotaryInfo>,
@@ -88,6 +95,29 @@ data class NetworkParameters(
         require(maxTransactionSize <= maxMessageSize) { "maxTransactionSize cannot be bigger than maxMessageSize" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
+    }
+
+    // TODO: revisit - we can remove the data class annotation to get constructor as we want but then need copy
+    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
+             notaries: List<NotaryInfo> = this.notaries,
+             maxMessageSize: Int = this.maxMessageSize,
+             maxTransactionSize: Int = this.maxTransactionSize,
+             modifiedTime: Instant = this.modifiedTime,
+             epoch: Int = this.epoch,
+             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations,
+             eventHorizon: Duration = this.eventHorizon,
+             packageOwnership: Map<JavaPackageName, PublicKey> = this.packageOwnership): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion,
+                notaries,
+                maxMessageSize,
+                maxTransactionSize,
+                modifiedTime,
+                epoch,
+                whitelistedContractImplementations,
+                eventHorizon,
+                packageOwnership
+        )
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -140,7 +170,7 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch,
       packageOwnership= {
-        ${packageOwnership.keys.joinToString()}}
+        ${packageOwnership.keys.joinToString()}
       }
   }"""
     }
@@ -149,6 +179,38 @@ data class NetworkParameters(
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
     fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
+
+    /**
+     * Atomically (?) swaps the modifiedTime, epoch, whitelistedContractImplementations and packageOwnership within the
+     * NetworkParameters object.
+     */
+    fun hotSwap(modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                packageOwnership: Map<JavaPackageName, PublicKey>) {
+        autoAcceptParameters = AutoAcceptParameters(modifiedTime, epoch, whitelistedContractImplementations, packageOwnership)
+    }
+
+    // TODO: revisit - we can remove the data class annotation to get constructor as we want but then need equals and hash code
+    override fun equals(other: Any?): Boolean {
+        if (other is NetworkParameters) {
+            return (this.minimumPlatformVersion == other.minimumPlatformVersion) &&
+            (this.notaries == other.notaries) &&
+            (this.maxMessageSize == other.maxMessageSize) &&
+            (this.maxTransactionSize == other.maxTransactionSize) &&
+            (this.modifiedTime == other.modifiedTime) &&
+            (this.epoch == other.epoch) &&
+            (this.whitelistedContractImplementations == other.whitelistedContractImplementations) &&
+            (this.eventHorizon == other.eventHorizon) &&
+            (this.packageOwnership == other.packageOwnership)
+        }
+        return false
+    }
+
+    private data class AutoAcceptParameters(val modifiedTime: Instant,
+                                            val epoch: Int,
+                                            val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                                            val packageOwnership: Map<JavaPackageName, PublicKey>)
 }
 
 /**

@@ -4,18 +4,18 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readObject
+import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -47,22 +47,36 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private var fileWatcherSubscription: Subscription? = null
     private lateinit var trustRoot: X509Certificate
     private lateinit var currentParametersHash: SecureHash
+    private lateinit var ourNodeInfo: SignedNodeInfo
     private lateinit var ourNodeInfoHash: SecureHash
+    private lateinit var networkParameters: NetworkParameters
+    private lateinit var keyManagementService: KeyManagementService
 
     override fun close() {
         fileWatcherSubscription?.unsubscribe()
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
 
-    fun start(trustRoot: X509Certificate, currentParametersHash: SecureHash, ourNodeInfoHash: SecureHash) {
+    fun start(trustRoot: X509Certificate,
+              currentParametersHash: SecureHash,
+              ourNodeInfo: SignedNodeInfo,
+              networkParameters: NetworkParameters,
+              keyManagementService: KeyManagementService) {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         this.trustRoot = trustRoot
         this.currentParametersHash = currentParametersHash
-        this.ourNodeInfoHash = ourNodeInfoHash
+        this.ourNodeInfo = ourNodeInfo
+        this.ourNodeInfoHash = ourNodeInfo.raw.hash
+        this.networkParameters = networkParameters
+        this.keyManagementService = keyManagementService
         watchForNodeInfoFiles()
         if (networkMapClient != null) {
             watchHttpNetworkMap()
         }
+    }
+
+    fun getNetworkParameters(): NetworkParameters {
+        return networkParameters
     }
 
     private fun watchForNodeInfoFiles() {
@@ -131,7 +145,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
 
-        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
+        // if we have auto accepted an update then our currentParametersHash will have changed to the update
+        // hence we need this additional check
+        if (currentParametersHash != globalNetworkMap.networkParameterHash && currentParametersHash != globalNetworkMap.parametersUpdate?.newParametersHash) {
             exitOnParametersMismatch(globalNetworkMap)
         }
 
@@ -195,7 +211,41 @@ The node will shutdown now.""")
                 newNetParams,
                 update.description,
                 update.updateDeadline)
-        parametersUpdatesTrack.onNext(updateInfo)
+
+        if (autoAcceptParameters(networkParameters, newNetParams)) {
+            networkParameters.hotSwap(
+                    newNetParams.modifiedTime,
+                    newNetParams.epoch,
+                    newNetParams.whitelistedContractImplementations,
+                    newNetParams.packageOwnership)
+
+            // TODO: ackNetworkParametersUpdate. Need to:
+            // - ack network parameters (send response to network map service with signed net params hash)
+            // - replace currentParametersHash with new one
+            // - overwrite the current network parameters file
+            //
+            // for first step we need key management service AND myInfo
+
+            // TODO : we can have the situation where we refresh the network map cache in between acking the parameters update
+            // and updating current parameters hash.
+
+            // update current parameters hash
+            currentParametersHash = update.newParametersHash
+
+            // ack network parameters and overwrite local network params file
+            ackNetworkParametersAndPersist(newSignedNetParams, NETWORK_PARAMS_FILE_NAME) { hash ->
+                hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }
+            }
+            logger.info("Accepted network parameter update $update: $newNetParams")
+
+            // do we need to nullify the newNetworkParametersObject?
+            // the auto accepting of the network parameters should act as though a user has manually
+            // run an accept command then restarted their node
+            newNetworkParameters = null
+
+        } else {
+            parametersUpdatesTrack.onNext(updateInfo)
+        }
     }
 
     fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
@@ -216,5 +266,16 @@ The node will shutdown now.""")
         } else {
             throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
         }
+    }
+
+    private fun ackNetworkParametersAndPersist(signedNetParams: SignedNetworkParameters,
+                                               fileName: String,
+                                               sign: (SecureHash) -> SignedData<SecureHash>) {
+        networkMapClient ?: throw IllegalStateException("Network parameters updates are not supported without compatibility zone configured")
+
+        signedNetParams.serialize()
+                .open()
+                .copyTo(baseDirectory / fileName, StandardCopyOption.REPLACE_EXISTING)
+        networkMapClient.ackNetworkParametersUpdate(sign(signedNetParams.raw.hash))
     }
 }
