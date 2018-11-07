@@ -301,24 +301,21 @@ object X509Utilities {
     /**
      * Create certificate signing request using provided information.
      */
-    private fun createCertificateSigningRequest(subject: X500Principal,
-                                                email: String,
-                                                keyPair: KeyPair,
-                                                signatureScheme: SignatureScheme,
-                                                certRole: CertRole): PKCS10CertificationRequest {
-        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
-        return JcaPKCS10CertificationRequestBuilder(subject, keyPair.public)
+    fun createCertificateSigningRequest(subject: X500Principal, email: String, publicKey: PublicKey, contentSigner: ContentSigner, certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
+        return JcaPKCS10CertificationRequestBuilder(subject, publicKey)
                 .addAttribute(BCStyle.E, DERUTF8String(email))
                 .addAttribute(ASN1ObjectIdentifier(CordaOID.X509_EXTENSION_CORDA_ROLE), certRole)
-                .build(signer).apply {
-            if (!isSignatureValid()) {
-                throw SignatureException("The certificate signing request signature validation failed.")
-            }
-        }
+                .build(contentSigner).apply {
+                    if (!isSignatureValid()) {
+                        throw SignatureException("The certificate signing request signature validation failed.")
+                    }
+                }
     }
 
     fun createCertificateSigningRequest(subject: X500Principal, email: String, keyPair: KeyPair, certRole: CertRole = CertRole.NODE_CA): PKCS10CertificationRequest {
-        return createCertificateSigningRequest(subject, email, keyPair, DEFAULT_TLS_SIGNATURE_SCHEME, certRole)
+        val signatureScheme = Crypto.findSignatureScheme(keyPair.public)
+        val signer = ContentSignerBuilder.build(signatureScheme, keyPair.private, Crypto.findProvider(signatureScheme.providerName))
+        return createCertificateSigningRequest(subject, email, keyPair.public, signer, certRole)
     }
 
     fun buildCertPath(first: X509Certificate, remaining: List<X509Certificate>): CertPath {
@@ -356,7 +353,7 @@ object X509Utilities {
 val CertRole.certificateType: CertificateType get() = CertificateType.values().first { it.role == this }
 
 /**
- * Convert a [X509Certificate] into Bouncycastle's [X509CertificateHolder].
+ * Convert a [X509Certificate] into BouncyCastle's [X509CertificateHolder].
  *
  * NOTE: To avoid unnecessary copying use [X509Certificate] where possible.
  */
@@ -376,7 +373,7 @@ val Certificate.x509: X509Certificate get() = requireNotNull(this as? X509Certif
 val Array<Certificate>.x509: List<X509Certificate> get() = map { it.x509 }
 
 /**
- * Validates the signature of the CSR
+ * Validates the signature of the CSR.
  */
 fun PKCS10CertificationRequest.isSignatureValid(): Boolean {
     return this.isSignatureValid(JcaContentVerifierProviderBuilder().build(this.subjectPublicKeyInfo))

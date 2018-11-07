@@ -95,7 +95,7 @@ class NodeRegistrationTest : IntegrationTest() {
                 cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages("net.corda.finance"),
                 notaryCustomOverrides = mapOf("devMode" to false)
         ) {
-            val (alice, genevieve) = listOf(
+          val (alice, genevieve) = listOf(
                     startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
                     startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
             ).transpose().getOrThrow()

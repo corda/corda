@@ -16,7 +16,6 @@ interface SslConfiguration {
 }
 
 interface MutualSslConfiguration : SslConfiguration {
-
     override val keyStore: FileBasedCertificateStoreSupplier
     override val trustStore: FileBasedCertificateStoreSupplier
 }

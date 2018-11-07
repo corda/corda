@@ -21,18 +21,24 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
+import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
+import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.math.BigInteger
+import java.security.KeyPair
 import java.security.KeyPairGenerator
+import java.security.cert.X509Certificate
 import java.util.*
 import kotlin.test.*
 
@@ -935,5 +941,33 @@ class CryptoUtilsTest {
 
         // Just in case, test that signatures of different messages are not the same.
         assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
+    }
+
+    fun ContentSigner.write(message: ByteArray)  {
+        this.outputStream.write(message)
+        this.outputStream.close()
+    }
+
+    private fun createCert(signer: ContentSigner, keyPair: KeyPair): X509Certificate {
+        val dname = X500Name("CN=TestEntity")
+        val startDate = Calendar.getInstance().let { cal ->
+            cal.time = Date()
+            cal.add(Calendar.HOUR, -1)
+            cal.time
+        }
+        val endDate = Calendar.getInstance().let { cal ->
+            cal.time = startDate
+            cal.add(Calendar.YEAR, 1)
+            cal.time
+        }
+        val certificate = JcaX509v3CertificateBuilder(
+                dname,
+                BigInteger.TEN,
+                startDate,
+                endDate,
+                dname,
+                keyPair.public
+        ).build(signer)
+        return JcaX509CertificateConverter().getCertificate(certificate)
     }
 }
