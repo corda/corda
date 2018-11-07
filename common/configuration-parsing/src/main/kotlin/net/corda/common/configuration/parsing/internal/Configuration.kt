@@ -345,7 +345,7 @@ object Configuration {
 
         /**
          * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [ENUM].
-         * This property expects the exact [ENUM] value specified as text for the relevant key.
+         * This property expects a value in the configuration matching one of the cases of [ENUM], as text, in uppercase.
          */
         fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegate.enum(key, prefix, enumClass, sensitive) { mutableProperties.add(it) }
 
