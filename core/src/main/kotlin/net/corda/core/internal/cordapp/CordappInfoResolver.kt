@@ -36,7 +36,7 @@ object CordappInfoResolver {
         }
     }
 
-    /*
+    /**
      * This should only be used when making a change that would break compatibility with existing CorDapps. The change
      * can then be version-gated, meaning the old behaviour is used if the calling CorDapp's target version is lower
      * than the platform version that introduces the new behaviour.

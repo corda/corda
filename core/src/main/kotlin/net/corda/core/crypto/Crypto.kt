@@ -242,7 +242,7 @@ object Crypto {
      * This function is usually called by key generators and verify signature functions.
      * In case the input is not a key in the supportedSignatureSchemes map, null will be returned.
      * @param schemeCodeName a [String] that should match a supported signature scheme code name (e.g. ECDSA_SECP256K1_SHA256), see [Crypto].
-     * @return a currently supported SignatureScheme.
+     * @return a currently supported [SignatureScheme].
      * @throws IllegalArgumentException if the requested signature scheme is not supported.
      */
     @JvmStatic
@@ -256,7 +256,7 @@ object Crypto {
      * This function is usually called when requiring to verify signatures and the signing schemes must be defined.
      * For the supported signature schemes see [Crypto].
      * @param key either private or public.
-     * @return a currently supported SignatureScheme.
+     * @return a currently supported [SignatureScheme].
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
     @JvmStatic
@@ -270,7 +270,7 @@ object Crypto {
      * This function is usually called when requiring to verify signatures and the signing schemes must be defined.
      * For the supported signature schemes see [Crypto].
      * @param key either private or public.
-     * @return a currently supported SignatureScheme.
+     * @return a currently supported [SignatureScheme].
      * @throws IllegalArgumentException if the requested key type is not supported.
      */
     @JvmStatic
@@ -823,7 +823,7 @@ object Crypto {
     }
 
     /**
-     * Returns a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
+     * Computes a key pair derived from the given [BigInteger] entropy. This is useful for unit tests
      * and other cases where you want hard-coded private keys.
      * Currently, the following schemes are supported: [EDDSA_ED25519_SHA512], [ECDSA_SECP256R1_SHA256] and [ECDSA_SECP256K1_SHA256].
      * @param signatureScheme a supported [SignatureScheme], see [Crypto].

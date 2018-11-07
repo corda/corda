@@ -40,7 +40,7 @@ class CashExitFlow(private val amount: Amount<Currency>,
     }
 
     /**
-     * @return the signed transaction, and a mapping of parties to new anonymous identities generated
+     * Returns the signed transaction, and a mapping of parties to new anonymous identities generated
      * (for this flow this map is always empty).
      */
     @Suspendable

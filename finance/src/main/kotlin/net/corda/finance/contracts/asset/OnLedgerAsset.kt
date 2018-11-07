@@ -47,7 +47,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
          * party.
          * @param deriveState a function to derive an output state based on an input state, amount for the output
          * and public key to pay to.
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
@@ -81,7 +81,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
          * and public key to pay to.
          * @param T A type representing a token
          * @param S A fungible asset state type
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).

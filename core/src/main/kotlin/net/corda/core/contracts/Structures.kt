@@ -144,7 +144,7 @@ interface SchedulableState : ContractState {
      *
      * The state has no reference to it's own StateRef, so supply that for use as input to any FlowLogic constructed.
      *
-     * @return null if there is no activity to schedule.
+     * Returns null if there is no activity to schedule.
      */
     @DeleteForDJVM
     fun nextScheduledActivity(thisStateRef: StateRef, flowLogicRefFactory: FlowLogicRefFactory): ScheduledActivity?

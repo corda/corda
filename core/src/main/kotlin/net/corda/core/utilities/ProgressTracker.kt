@@ -259,7 +259,7 @@ class ProgressTracker(vararg inputSteps: Step) {
 
     /**
      * Iterates the progress tracker. If the current step has a child, the child is iterated instead (recursively).
-     * Returns the latest step at the bottom of the step tree.
+     * @return the latest step at the bottom of the step tree.
      */
     fun nextStep(): Step {
         currentStep = steps[steps.indexOf(currentStep) + 1]

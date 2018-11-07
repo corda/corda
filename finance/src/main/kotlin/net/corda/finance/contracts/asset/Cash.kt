@@ -220,7 +220,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
@@ -249,7 +249,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
@@ -279,7 +279,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).
@@ -306,7 +306,7 @@ class Cash : OnLedgerAsset<Currency, Cash.Commands, Cash.State>() {
          * @param onlyFromParties if non-null, the asset states will be filtered to only include those issued by the set
          *                        of given parties. This can be useful if the party you're trying to pay has expectations
          *                        about which type of asset claims they are willing to accept.
-         * @return A [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
+         * @return a [Pair] of the same transaction builder passed in as [tx], and the list of keys that need to sign
          *         the resulting transaction for it to be valid.
          * @throws InsufficientBalanceException when a cash spending transaction fails because
          *         there is insufficient quantity for a given currency (and optionally set of Issuer Parties).

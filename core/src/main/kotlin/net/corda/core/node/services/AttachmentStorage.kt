@@ -38,35 +38,34 @@ interface AttachmentStorage {
     fun importAttachment(jar: InputStream): AttachmentId
 
     /**
-     * Inserts the given attachment with additional metadata, see [importAttachment] for input stream handling
+     * Inserts the given attachment with additional metadata, see [importAttachment] for input stream handling.
      * Extra parameters:
-     * @param uploader Uploader name
-     * @param filename Name of the file
+     * @param uploader Uploader name.
+     * @param filename Name of the file.
      */
     @Throws(FileAlreadyExistsException::class, IOException::class)
     fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId
 
     /**
      * Inserts or returns Attachment Id of attachment. Does not throw an exception if already uploaded.
-     * @param jar [InputStream] of Jar file
-     * @return [AttachmentId] of uploaded attachment
+     * @param jar [InputStream] of Jar file.
+     * @return [AttachmentId] of uploaded attachment.
      */
     @Deprecated("More attachment information is required", replaceWith = ReplaceWith("importAttachment(jar, uploader, filename)"))
     fun importOrGetAttachment(jar: InputStream): AttachmentId
 
     /**
-     * Searches attachment using given criteria and optional sort rules
-     * @param criteria Query criteria to use as a filter
-     * @param sorting Sorting definition, if not given, order is undefined
-     *
-     * @return List of AttachmentId of attachment matching criteria, sorted according to given sorting parameter
+     * Searches attachment using given criteria and optional sort rules.
+     * @param criteria Query criteria to use as a filter.
+     * @param sorting Sorting definition, if not given, order is undefined.
+     * @return the list of [AttachmentId] of attachment matching criteria, sorted according to given sorting parameter.
      */
     fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<AttachmentId>
 
     /**
-     * Searches for an attachment already in the store
-     * @param attachmentId The attachment Id
-     * @return true if it's in there
+     * Searches for an attachment already in the store.
+     * @param attachmentId The attachment Id.
+     * @return true if it's in there.
      */
     fun hasAttachment(attachmentId: AttachmentId): Boolean
 }

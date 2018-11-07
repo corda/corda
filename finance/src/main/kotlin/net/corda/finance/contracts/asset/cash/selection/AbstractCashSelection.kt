@@ -71,7 +71,7 @@ abstract class AbstractCashSelection {
      * @param withIssuerRefs Optional issuer references to match against.
      * @param withResultSet Function that contains the business logic. The JDBC ResultSet with the matching states that were found. If sufficient funds were found these will be locked,
      * otherwise what is available is returned unlocked for informational purposes.
-     * @return The result of the withResultSet function
+     * @return the result of the [withResultSet] function.
      */
     protected abstract fun executeQuery(connection: Connection, amount: Amount<Currency>, lockId: UUID, notary: Party?,
                               onlyFromIssuerParties: Set<AbstractParty>, withIssuerRefs: Set<OpaqueBytes>, withResultSet: (ResultSet) -> Boolean): Boolean
@@ -89,7 +89,7 @@ abstract class AbstractCashSelection {
      * @param lockId The FlowLogic.runId.uuid of the flow, which is used to soft reserve the states.
      * Also, previous outputs of the flow will be eligible as they are implicitly locked with this id until the flow completes.
      * @param withIssuerRefs If not empty the specific set of issuer references to match against.
-     * @return The matching states that were found. If sufficient funds were found these will be locked,
+     * @return the matching states that were found. If sufficient funds were found these will be locked,
      * otherwise what is available is returned unlocked for informational purposes.
      */
     @Suspendable

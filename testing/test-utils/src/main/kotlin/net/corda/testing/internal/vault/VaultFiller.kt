@@ -182,7 +182,7 @@ class VaultFiller @JvmOverloads constructor(
      * identity key from the storage service.
      *
      * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
-     * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
+     * @return a [Vault] object that represents the generated states (it will NOT be the full vault from the service hub!).
      */
     fun fillWithSomeTestCash(howMuch: Amount<Currency>,
                              issuerServices: ServiceHub,
@@ -233,9 +233,9 @@ class VaultFiller @JvmOverloads constructor(
 
 
     /**
-     *
+     * Fill Vault with issued commodities.
      * @param issuerServices service hub of the issuer node, which will be used to sign the transaction.
-     * @return a vault object that represents the generated states (it will NOT be the full vault from the service hub!).
+     * @return a [Vault] object that represents the generated states (it will NOT be the full vault from the service hub!).
      */
     // TODO: need to make all FungibleAsset commands (issue, move, exit) generic
     fun fillWithSomeTestCommodity(amount: Amount<Commodity>, issuerServices: ServiceHub, issuedBy: PartyAndReference): Vault<CommodityState> {

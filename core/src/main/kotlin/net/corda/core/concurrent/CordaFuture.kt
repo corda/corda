@@ -18,7 +18,7 @@ interface CordaFuture<V> : Future<V> {
     fun <W> then(callback: (CordaFuture<V>) -> W)
 
     /**
-     * @return a new [CompletableFuture] with the same outcome as this Future.
+     * Returns a new [CompletableFuture] with the same outcome as this Future.
      */
     fun toCompletableFuture(): CompletableFuture<V>
 }

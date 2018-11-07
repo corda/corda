@@ -112,13 +112,13 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
         }
     }
 
-    /** An identifier for the node. By default this is allocated sequentially in a [MockNetwork] **/
+    /** An identifier for the node. By default this is allocated sequentially in a [MockNetwork]. **/
     val id get() : Int = node.id
 
     /**
-     * Start the node
+     * Start the node.
      *
-     * @return A [StartedMockNode] object.
+     * @return a [StartedMockNode] object.
      */
     fun start(): StartedMockNode = StartedMockNode.create(node.start())
 
@@ -202,7 +202,7 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
      * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
      * @property flowFactory The flow factory that will create the responding flow.
      * @property responderFlowClass The class of the responder flow.
-     * @return A [CordaFuture] that will complete the first time the responding flow is created.
+     * @return a [CordaFuture] that will complete the first time the responding flow is created.
      */
     fun <F : FlowLogic<*>> registerResponderFlow(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                  flowFactory: ResponderFlowFactory<F>,
@@ -222,7 +222,7 @@ interface ResponderFlowFactory<F : FlowLogic<*>> {
      * Given the provided [FlowSession], create a responder [FlowLogic] of the desired type.
      *
      * @param flowSession The [FlowSession] to use to create the responder flow object.
-     * @return The constructed responder flow object.
+     * @return the constructed responder flow object.
      */
     fun invoke(flowSession: FlowSession): F
 }
@@ -234,7 +234,7 @@ interface ResponderFlowFactory<F : FlowLogic<*>> {
  * @param F The [FlowLogic]-inherited type of the responder to register.
  * @property initiatingFlowClass The [FlowLogic]-inheriting class to register a new responder for.
  * @property flowFactory A lambda converting a [FlowSession] into an instance of the responder class [F].
- * @return A [CordaFuture] that will complete the first time the responding flow is created.
+ * @return a [CordaFuture] that will complete the first time the responding flow is created.
  */
 inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
         initiatingFlowClass: Class<out FlowLogic<*>>,
@@ -310,7 +310,10 @@ open class MockNetwork(
 
     private val internalMockNetwork: InternalMockNetwork = InternalMockNetwork(defaultParameters, networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters = networkParameters, cordappsForAllNodes = cordappsForAllNodes)
 
-    /** In a mock network, nodes have an incrementing integer ID. Real networks do not have this. Returns the next ID that will be used. */
+    /**
+     * In a mock network, nodes have an incrementing integer ID. Real networks do not have this.
+     * @return the next ID that will be used.
+     */
     val nextNodeId get(): Int = internalMockNetwork.nextNodeId
 
     /**

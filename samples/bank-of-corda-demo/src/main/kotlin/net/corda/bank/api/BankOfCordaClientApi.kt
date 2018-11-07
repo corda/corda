@@ -29,7 +29,7 @@ object BankOfCordaClientApi {
     /**
      * RPC API
      *
-     * @return a pair of the issuing and payment transactions.
+     * @return a payment [SignedTransaction], after running a pair of issuing and payment transactions.
      */
     fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction {
         val client = CordaRPCClient(rpcAddress)

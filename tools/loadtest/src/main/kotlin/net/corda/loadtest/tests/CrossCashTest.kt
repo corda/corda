@@ -51,12 +51,12 @@ data class CrossCashCommand(
 }
 
 /**
- * Map from node to (map from issuer to USD quantity)
+ * Map from node to (map from issuer to USD quantity).
  */
 data class CrossCashState(
         val nodeVaults: Map<AbstractParty, Map<AbstractParty, Long>>,
 
-        // node -> (notifying node -> [(issuer, amount)])
+        // node -> (notifying node -> [(issuer, amount)]).
         // This map holds the queues that encode the non-determinism of how tx notifications arrive in the background.
         // Only moves and issues create non-determinism on the receiver side.
         // This together with [nodeVaults] should give the eventually consistent state of all nodes.
@@ -65,7 +65,7 @@ data class CrossCashState(
         // still satisfied, as we don't know which one happened in reality. Most of the time we should find a single
         // pattern where we can cut off the queues, thus collapsing the non-determinism. Note that we should do this
         // frequently, otherwise the search blows up. (for queues of size [A,B,C] (A+1)*(B+1)*(C+1) states need to be
-        // checked)
+        // checked).
         // Alternative: We could track the transactions directly, which would remove the need for searching. However
         // there is a sync issue between the vault's view and the tx db's view about the UTXOs. Furthermore the tracking
         // itself would either require downloading the tx graph on every check or using the Observable stream which
@@ -298,10 +298,11 @@ val crossCashTest = LoadTest<CrossCashCommand, CrossCashState>(
 )
 
 /**
- * @param searchedState The state to search for
- * @param baseState The consistent base knowledge
- * @param diffQueues The queues to interleave
- * @return List of (node -> number of txs consumed) maps, each of which results in [searchedState].
+ * Method to search for a state.
+ * @param searchedState The state to search for.
+ * @param baseState The consistent base knowledge.
+ * @param diffQueues The queues to interleave.
+ * @return a [List] of (node -> number of txs consumed) maps, each of which results in [searchedState].
  */
 private fun <A> searchForState(
         searchedState: Map<A, Long>,
@@ -322,7 +323,7 @@ private fun <A> searchForState(
             var currentState = state
             queue.forEachIndexed { index, (issuer, quantity) ->
                 consumedTxs[originator] = index + 1
-                // Prune search if we exceeded the searched quantity anyway
+                // Prune search if we exceeded the searched quantity anyway.
                 currentState = applyDiff(issuer, quantity, currentState, searchedState) ?: return
                 searchForStateHelper(currentState, diffIx + 1, consumedTxs, matched)
             }

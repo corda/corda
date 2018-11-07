@@ -68,7 +68,7 @@ class FastThreadLocalTest {
         assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
     }
 
-    /** @return the number of times a different expensive object was obtained post-suspend. */
+    /** Returns the number of times a different expensive object was obtained post-suspend. */
     private fun SchedulerContext.runFibers(fiberCount: Int, threadLocalGet: () -> ExpensiveObj): Int {
         val fibers = (0 until fiberCount).map { Fiber(scheduler, FiberTask(threadLocalGet)) }
         val startedFibers = fibers.map { it.start() }

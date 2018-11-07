@@ -69,7 +69,7 @@ interface IdentityService {
      * previously registered with the [IdentityService] either as a well known network map identity,
      * or as a part of flows creating and exchanging the identity.
      * @param key The owning [PublicKey] of the [Party].
-     * @return Returns a [Party] with a matching owningKey if known, else returns null.
+     * @return a [Party] with a matching owningKey if known, else returns null.
      */
     fun partyFromKey(key: PublicKey): Party? = certificateFromKey(key)?.party
 
@@ -79,7 +79,7 @@ interface IdentityService {
      * source of well known identities.
      *
      * @param name The [CordaX500Name] to determine well known identity for.
-     * @return If known the canonical [Party] with that name, else null.
+     * @return the canonical [Party] with that name (if known) or null.
      */
     fun wellKnownPartyFromX500Name(name: CordaX500Name): Party?
 
@@ -88,7 +88,7 @@ interface IdentityService {
      * It transparently handles returning the well known identity back if a well known identity is passed in.
      *
      * @param party identity to determine well known identity for.
-     * @return well known identity, if found.
+     * @return the well known identity, if found.
      */
     fun wellKnownPartyFromAnonymous(party: AbstractParty): Party? {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),

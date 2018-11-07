@@ -87,7 +87,7 @@ class ConnectionManager(private val jSch: JSch) {
  *
  * @param tunnelPortAllocation A local port allocation strategy for creating SSH tunnels.
  * @param withConnections An action to run once we're connected to the nodes.
- * @return The return value of [withConnections]
+ * @return the return value of [withConnections].
  */
 fun <A> connectToNodes(remoteNodes: List<RemoteNode>, tunnelPortAllocation: PortAllocation, withConnections: (List<NodeConnection>) -> A): A {
     val manager = ConnectionManager(setupJSchWithSshAgent())

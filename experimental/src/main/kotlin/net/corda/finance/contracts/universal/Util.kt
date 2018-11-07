@@ -44,7 +44,7 @@ private fun liablePartiesVisitor(action: Action): ImmutableSet<PublicKey> {
         Sets.difference(liablePartiesVisitor(action.arrangement), ImmutableSet.of(actors.single())).immutableCopy()
 }
 
-/** Returns list of potentially liable parties for a given contract */
+/** Returns a list of potentially liable parties for a given contract. */
 fun liableParties(contract: Arrangement): Set<PublicKey> = liablePartiesVisitor(contract)
 
 private fun involvedPartiesVisitor(action: Action): Set<Party> =
@@ -63,7 +63,7 @@ private fun involvedPartiesVisitor(arrangement: Arrangement): ImmutableSet<Party
             else -> throw IllegalArgumentException(arrangement.toString())
         }
 
-/** returns list of involved parties for a given contract */
+/** Returns a list of involved parties for a given contract. */
 fun involvedParties(arrangement: Arrangement): Set<Party> = involvedPartiesVisitor(arrangement)
 
 fun replaceParty(perceivable: Perceivable<Boolean>, from: Party, to: Party): Perceivable<Boolean> =

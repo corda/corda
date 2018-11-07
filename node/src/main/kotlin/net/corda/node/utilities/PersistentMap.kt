@@ -208,7 +208,7 @@ class PersistentMap<K : Any, V, E, out EK>(
 
     /**
      * Associates the specified value with the specified key in this map and persists it.
-     * @return true if added key was unique, otherwise false
+     * @return true if added key was unique, otherwise false.
      */
     override fun put(key: K, value: V): V? {
         val old = cache.get(key)

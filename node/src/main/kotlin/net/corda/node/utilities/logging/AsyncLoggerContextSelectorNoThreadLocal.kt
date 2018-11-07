@@ -15,7 +15,7 @@ class AsyncLoggerContextSelectorNoThreadLocal : ClassLoaderContextSelector() {
          * Returns `true` if the user specified this selector as the Log4jContextSelector, to make all loggers
          * asynchronous.
          *
-         * @return `true` if all loggers are asynchronous, `false` otherwise.
+         * @return true if all loggers are asynchronous, false otherwise.
          */
         @JvmStatic
         fun isSelected(): Boolean {

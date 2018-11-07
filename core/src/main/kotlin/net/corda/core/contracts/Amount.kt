@@ -243,7 +243,7 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
     /**
      * This method provides a token conserving divide mechanism.
      * @param partitions the number of amounts to divide the current quantity into.
-     * @return 'partitions' separate Amount objects which sum to the same quantity as this Amount
+     * @return 'partitions', separate Amount objects which sum to the same quantity as this Amount
      * and differ by no more than a single token in size.
      */
     fun splitEvenly(partitions: Int): List<Amount<T>> {
@@ -445,7 +445,7 @@ class AmountTransfer<T : Any, P : Any>(val quantityDelta: Long,
      * @param balances The source list of [SourceAndAmount] objects containing the funds to satisfy the exchange.
      * @param newRef An optional marker object which is attached to any new [SourceAndAmount] objects created in the output.
      * i.e. To the new payment destination entry and to any residual change output.
-     * @return A copy of the original list, except that funds needed to cover the exchange
+     * @return a copy of the original list, except that funds needed to cover the exchange
      * will have been removed and a new output and possibly residual amount entry will be added at the end of the list.
      * @throws ArithmeticException if there is underflow in the summations.
      */

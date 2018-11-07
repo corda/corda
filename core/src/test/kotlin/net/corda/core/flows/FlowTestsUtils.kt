@@ -62,7 +62,7 @@ infix fun <T : Any> KClass<T>.from(session: FlowSession): Pair<FlowSession, Clas
  * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
  * corrupted data in order to exploit your code.
  *
- * @returns a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
+ * @return a [Map] containing the objects received, wrapped in an [UntrustworthyData], by the [FlowSession]s who sent them.
  */
 @Suspendable
 fun FlowLogic<*>.receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg sessions: Pair<FlowSession, Class<out Any>>): Map<FlowSession, UntrustworthyData<Any>> {
@@ -80,7 +80,7 @@ fun FlowLogic<*>.receiveAll(session: Pair<FlowSession, Class<out Any>>, vararg s
  * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
  * corrupted data in order to exploit your code.
  *
- * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
+ * @return a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
  */
 @Suspendable
 fun <R : Any> FlowLogic<*>.receiveAll(receiveType: Class<R>, session: FlowSession, vararg sessions: FlowSession): List<UntrustworthyData<R>> = receiveAll(receiveType, listOf(session, *sessions))
@@ -94,7 +94,7 @@ fun <R : Any> FlowLogic<*>.receiveAll(receiveType: Class<R>, session: FlowSessio
  * verified for consistency and that all expectations are satisfied, as a malicious peer may send you subtly
  * corrupted data in order to exploit your code.
  *
- * @returns a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
+ * @return a [List] containing the objects received, wrapped in an [UntrustworthyData], with the same order of [sessions].
  */
 @Suspendable
 inline fun <reified R : Any> FlowLogic<*>.receiveAll(session: FlowSession, vararg sessions: FlowSession): List<UntrustworthyData<R>> = receiveAll(R::class.javaObjectType, listOf(session, *sessions))

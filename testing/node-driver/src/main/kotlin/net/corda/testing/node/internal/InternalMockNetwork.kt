@@ -133,7 +133,7 @@ interface TestStartedNode {
     /**
      * Use this method to register your initiated flows in your tests. This is automatically done by the node when it
      * starts up for all [FlowLogic] classes it finds which are annotated with [InitiatedBy].
-     * @return An [Observable] of the initiated flows started by counterparties.
+     * @return an [Observable] of the initiated flows started by counter-parties.
      */
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 

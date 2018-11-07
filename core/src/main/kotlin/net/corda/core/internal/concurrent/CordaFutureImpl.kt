@@ -12,13 +12,13 @@ import java.util.concurrent.Executor
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
-/** @return a fresh [OpenFuture]. */
+/** Returns a fresh [OpenFuture]. */
 fun <V> openFuture(): OpenFuture<V> = CordaFutureImpl()
 
-/** @return a done future with the given value as its outcome. */
+/** Returns a done future with the given value as its outcome. */
 fun <V> doneFuture(value: V): CordaFuture<V> = CordaFutureImpl<V>().apply { set(value) }
 
-/** @return a future that will have the same outcome as the given block, when this executor has finished running it. */
+/** Returns a [CordaFuture] that will have the same outcome as the given block, when this executor has finished running it. */
 fun <V> Executor.fork(block: () -> V): CordaFuture<V> = CordaFutureImpl<V>().also { execute { it.capture(block) } }
 
 /** When this future is done, do [match]. */
@@ -115,10 +115,10 @@ fun <V> Collection<CordaFuture<out V>>.transpose(): CordaFuture<List<V>> {
 
 /** The contravariant members of [OpenFuture]. */
 interface ValueOrException<in V> {
-    /** @return whether this future actually changed. */
+    /** Returns whether this future actually changed. */
     fun set(value: V): Boolean
 
-    /** @return whether this future actually changed. */
+    /** Returns whether this future actually changed. */
     fun setException(t: Throwable): Boolean
 
     /** When the given future has an outcome, make this future have the same outcome. */

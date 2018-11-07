@@ -65,8 +65,8 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
     }
 
     /**
-     * @param function should call [ChannelExec.connect]
-     * @return A pair of (exit code, [function] return value)
+     * @param function should call [ChannelExec.connect].
+     * @return a pair of (exit code, [function] return value).
      */
     private fun <A> withChannelExec(command: String, function: (ChannelExec) -> A): Pair<Int, A> {
         val channel = jSchSession.openChannel("exec") as ChannelExec
@@ -81,7 +81,7 @@ class NodeConnection(val remoteNode: RemoteNode, private val jSchSession: Sessio
     }
 
     /**
-     * @return Pair of (stdout, stderr) of command
+     * Returns the [Pair] of (stdout, stderr) of [command].
      */
     fun runShellCommandGetOutput(command: String): ShellCommandOutput {
         val stdoutStream = ByteArrayOutputStream()

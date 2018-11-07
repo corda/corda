@@ -105,8 +105,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     /**
      * Generates a [WireTransaction] from this builder, resolves any [AutomaticPlaceholderConstraint], and selects the attachments to use for this transaction.
      *
-     * @returns A new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
-     *
+     * @return a new [WireTransaction] that will be unaffected by further changes to this [TransactionBuilder].
      * @throws ZoneVersionTooLowException if there are reference states and the zone minimum platform version is less than 4.
      */
     @Throws(MissingContractAttachments::class)

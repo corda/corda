@@ -326,7 +326,7 @@ interface CordaRPCOps : RPCOps {
      * a well known identity is passed in.
      *
      * @param party identity to determine well known identity for.
-     * @return well known identity, if found.
+     * @return the well known identity, if found.
      */
     fun wellKnownPartyFromAnonymous(party: AbstractParty): Party?
 
@@ -362,7 +362,7 @@ interface CordaRPCOps : RPCOps {
      * Notice that when there are more than one node for a given name (in case of distributed services) first service node
      * found will be returned.
      *
-     * @return the node info if available.
+     * @return the [NodeInfo] if available.
      */
     fun nodeInfoFromParty(party: AbstractParty): NodeInfo?
 

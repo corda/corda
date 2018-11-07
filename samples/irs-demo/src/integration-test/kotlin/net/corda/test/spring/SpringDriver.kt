@@ -34,13 +34,12 @@ data class SpringBootDriverDSL(private val driverDSL: DriverDSLImpl) : InternalD
 
     /**
      * Starts a Spring Boot application, passes the RPC connection data as parameters the process.
-     * Returns future which will complete after (and if) the server passes healthcheck.
      * @param clazz Class with main method which is expected to run Spring application
      * @param handle Corda Node handle this webapp is expected to connect to
      * @param checkUrl URL path to use for server readiness check - uses [okhttp3.Response.isSuccessful] as qualifier
-     *
-     * TODO:  Rather then expecting a given clazz to contain main method which start Spring app our own simple class can do this
+     * @return [CordaFuture] which will complete after (and if) the server passes healthcheck.
      */
+    // TODO: Rather then expecting a given clazz to contain main method which start Spring app our own simple class can do this.
     fun startSpringBootWebapp(clazz: Class<*>, handle: NodeHandle, checkUrl: String): CordaFuture<WebserverHandle> {
         val debugPort = if (driverDSL.isDebug) driverDSL.debugPortAllocation.nextPort() else null
         val process = startApplication(handle, debugPort, clazz)

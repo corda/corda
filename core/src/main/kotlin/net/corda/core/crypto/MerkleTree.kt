@@ -44,9 +44,9 @@ sealed class MerkleTree {
         }
 
         /**
-         * Tailrecursive function for building a tree bottom up.
-         * @param lastNodesList MerkleTree nodes from previous level.
-         * @return Tree root.
+         * Tail-recursive function for building a tree bottom up.
+         * @param lastNodesList [MerkleTree] nodes from previous level.
+         * @return the root [Node] of this [MerkleTree].
          */
         private tailrec fun buildMerkleTree(lastNodesList: List<MerkleTree>): MerkleTree {
             return if (lastNodesList.size == 1) {

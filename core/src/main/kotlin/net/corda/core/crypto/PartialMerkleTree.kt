@@ -65,7 +65,7 @@ class PartialMerkleTree(val root: PartialTree) {
         /**
          * @param merkleRoot Root of full Merkle tree.
          * @param includeHashes Hashes that should be included in a partial tree.
-         * @return Partial Merkle tree root.
+         * @return the root of this [PartialMerkleTree].
          */
         @Throws(IllegalArgumentException::class, MerkleTreeException::class)
         fun build(merkleRoot: MerkleTree, includeHashes: List<SecureHash>): PartialMerkleTree {
@@ -96,7 +96,7 @@ class PartialMerkleTree(val root: PartialTree) {
          * @param root Root of full Merkle tree which is a base for a partial one.
          * @param includeHashes Hashes of leaves to be included in this partial tree.
          * @param usedHashes Hashes actually used to build this partial tree.
-         * @return Pair, first element indicates if in a subtree there is a leaf that is included in that partial tree.
+         * @return a [Pair], where its first element indicates if in a subtree there is a leaf that is included in that partial tree.
          * Second element refers to that subtree.
          */
         private fun buildPartialTree(
@@ -166,7 +166,7 @@ class PartialMerkleTree(val root: PartialTree) {
     /**
      * Method to return the index of the input leaf in the partial Merkle tree structure.
      * @param leaf the component hash to check.
-     * @return leaf-index of this component (starting from zero).
+     * @return the leaf-index of this component (left to right and starting from zero).
      * @throws MerkleTreeException if the provided hash is not in the tree.
      */
     @Throws(MerkleTreeException::class)

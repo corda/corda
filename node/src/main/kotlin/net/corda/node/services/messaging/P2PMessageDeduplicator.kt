@@ -48,7 +48,7 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private fun senderHash(senderKey: SenderKey) = SecureHash.sha256(senderKey.peer.toString() + senderKey.isSessionInit.toString() + senderKey.senderUUID).toString()
 
     /**
-     * @return true if we have seen this message before.
+     * Returns true if we have seen this message before.
      */
     fun isDuplicate(msg: ReceivedMessage): Boolean {
         if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {

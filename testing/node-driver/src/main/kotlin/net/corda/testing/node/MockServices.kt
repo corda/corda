@@ -97,7 +97,7 @@ open class MockServices private constructor(
          * @param identityService An instance of [IdentityService], see [makeTestIdentityService].
          * @param initialIdentity The first (typically sole) identity the services will represent.
          * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
-         * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         * @return a pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
          */
         @JvmStatic
         @JvmOverloads

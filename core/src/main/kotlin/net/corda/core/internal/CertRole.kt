@@ -79,7 +79,7 @@ enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Bo
         /**
          * Get a role from a certificate.
          *
-         * @return the role if the extension is present, or null otherwise.
+         * @return the [CertRole] if the extension is present, or null otherwise.
          * @throws IllegalArgumentException if the extension is present but is invalid.
          */
         fun extract(cert: X509Certificate): CertRole? {

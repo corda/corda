@@ -52,7 +52,7 @@ open class Rate(val ratioUnit: RatioUnit? = null) {
     }
 
     /**
-     * @return the hash code of the ratioUnit or zero if the ratioUnit is null, as is the case for floating rate fixings
+     * Returns the hash code of the ratioUnit or zero if the ratioUnit is null, as is the case for floating rate fixings
      * that have not yet happened.  Yet-to-be fixed floating rates need to be equal such that schedules can be tested
      * for equality.
      */

@@ -345,7 +345,7 @@ interface VaultService {
      * by the [eligibleStatesQuery]. This method accepts both Amount<Issued<*>> and Amount<*>. Amount<Issued<*>> is
      * automatically unwrapped to Amount<*>.
      * @param contractStateType class type of the result set.
-     * @return Returns a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
+     * @return a locked subset of the [eligibleStatesQuery] sufficient to satisfy the requested amount,
      * or else an empty list and no change in the stored lock states when their are insufficient resources available.
      */
     @Suspendable

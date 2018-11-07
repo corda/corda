@@ -16,17 +16,17 @@ interface CordappProvider {
      * is currently running.
      *
      * The calling application is found via stack walking and finding the first class on the stack that matches any class
-     * contained within the automatically resolved [Cordapp]s loaded by the [CordappLoader]
+     * contained within the automatically resolved [Cordapp]s loaded by the [CordappLoader].
      *
-     * @throws IllegalStateException When called from a non-app context
+     * @throws IllegalStateException When called from a non-app context.
      */
     fun getAppContext(): CordappContext
 
     /**
-     * Resolve an attachment ID for a given contract name
+     * Resolve an attachment ID for a given contract name.
      *
      * @param contractClassName The contract to find the attachment for
-     * @return An attachment ID if it exists
+     * @return an attachment ID if it exists.
      */
     fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId?
 }

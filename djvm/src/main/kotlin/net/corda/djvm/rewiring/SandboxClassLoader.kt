@@ -119,8 +119,7 @@ class SandboxClassLoader private constructor(
      *
      * @param name The binary name of the class.
      * @param resolve If `true` then resolve the class.
-     *
-     * @return The resulting <tt>Class</tt> object.
+     * @return the resulting <tt>Class</tt> object.
      */
     @Throws(ClassNotFoundException::class)
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
@@ -194,8 +193,7 @@ class SandboxClassLoader private constructor(
      *
      * @param request The class request, including the binary name of the class.
      * @param context The context in which the analysis is conducted.
-     *
-     * @return The resulting <tt>Class</tt> object and its byte code representation.
+     * @return the resulting <tt>Class</tt> object and its byte code representation.
      */
     private fun loadClassAndBytes(request: ClassSource, context: AnalysisContext): LoadedClass {
         logger.debug("Loading class {}, origin={}...", request.qualifiedClassName, request.origin)

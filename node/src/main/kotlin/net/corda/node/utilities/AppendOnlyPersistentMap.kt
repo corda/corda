@@ -102,7 +102,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Associates the specified value with the specified key in this map and persists it.
      * If the map previously contained a committed mapping for the key, the old value is not replaced.  It may throw an error from the
      * underlying storage if this races with another database transaction to store a value for the same key.
-     * @return true if added key was unique, otherwise false
+     * @return true if added key was unique, otherwise false.
      */
     fun addWithDuplicatesAllowed(key: K, value: V, logWarning: Boolean = true): Boolean =
             set(key, value, logWarning) { k, v ->
@@ -140,7 +140,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Allow checking the cache content without falling back to database if there's a miss.
      *
      * @param key The cache key
-     * @return The value in the cache, or null if not present.
+     * @return the value in the cache, or null if not present.
      */
     fun getIfCached(key: K): V? = cache.getIfPresent(key!!)?.value
 

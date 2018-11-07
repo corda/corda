@@ -13,8 +13,9 @@ import net.corda.core.transactions.LedgerTransaction
 @DeleteForDJVM
 interface TransactionVerifierService {
     /**
+     * Verify a [LedgerTransaction].
      * @param transaction The transaction to be verified.
-     * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
+     * @return a future that completes successfully if the transaction verified, or sets an exception the verifier threw.
      */
     fun verify(transaction: LedgerTransaction): CordaFuture<*>
 }

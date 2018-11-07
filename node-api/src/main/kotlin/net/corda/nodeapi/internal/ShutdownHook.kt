@@ -9,7 +9,7 @@ interface ShutdownHook {
 
 /**
  * The given block will run on most kinds of termination including SIGTERM, but not on SIGKILL.
- * @return An object via which you can cancel the hook.
+ * @return an object via which you can cancel the hook.
  */
 fun addShutdownHook(block: () -> Unit): ShutdownHook {
     val hook = Thread { block() }

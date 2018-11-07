@@ -131,7 +131,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
      * Generates and adds a [CommitRequest] to the request queue. If the request queue is full, this method will block
      * until space is available.
      *
-     * Returns a future that will complete once the request is processed, containing the commit [Result].
+     * @return a future that will complete once the request is processed, containing the commit [Result].
      */
     override fun commit(
             states: List<StateRef>,

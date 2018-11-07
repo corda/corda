@@ -14,8 +14,7 @@ interface MemberDefinitionProvider : DefinitionProvider {
      *
      * @param context The context in which the hook is called.
      * @param member The original member definition.
-     *
-     * @return The updated member definition, or [member] if no changes are desired.
+     * @return the updated member definition, or [member] if no changes are desired.
      */
     fun define(context: AnalysisRuntimeContext, member: Member): Member
 

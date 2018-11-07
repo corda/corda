@@ -325,7 +325,7 @@ data class JmxPolicy(val startJmxHttpServer: Boolean = false,
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.
  * @property dsl The dsl itself.
- * @return The value returned in the [dsl] closure.
+ * @return the value returned in the [dsl] closure.
  */
 fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {
     return genericDriver(

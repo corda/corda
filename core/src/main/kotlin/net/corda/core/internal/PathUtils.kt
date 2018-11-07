@@ -86,7 +86,7 @@ fun Path.isSameAs(other: Path): Boolean = Files.isSameFile(this, other)
 
 /**
  * Same as [Files.list] except it also closes the [Stream].
- * @return the output of [block]
+ * @return the output of [block].
  */
 inline fun <R> Path.list(block: (Stream<Path>) -> R): R = Files.list(this).use(block)
 
@@ -149,14 +149,14 @@ fun Path.writeText(text: String, charset: Charset = UTF_8, vararg options: OpenO
 
 /**
  * Same as [inputStream] except it also closes the [InputStream].
- * @return the output of [block]
+ * @return the output of [block].
  */
 inline fun <R> Path.read(vararg options: OpenOption, block: (InputStream) -> R): R = inputStream(*options).use(block)
 
 /**
  * Same as [outputStream] except it also closes the [OutputStream].
  * @param createDirs if true then the parent directory of this file is created. Defaults to false.
- * @return the output of [block]
+ * @return the output of [block].
  */
 inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = emptyArray(), block: (OutputStream) -> Unit) {
     if (createDirs) {
@@ -166,8 +166,8 @@ inline fun Path.write(createDirs: Boolean = false, vararg options: OpenOption = 
 }
 
 /**
- * Same as [Files.lines] except it also closes the [Stream]
- * @return the output of [block]
+ * Same as [Files.lines] except it also closes the [Stream].
+ * @return the output of [block].
  */
 inline fun <R> Path.readLines(charset: Charset = UTF_8, block: (Stream<String>) -> R): R {
     return Files.lines(this, charset).use(block)

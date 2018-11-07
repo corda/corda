@@ -80,10 +80,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     }
 
     /**
-     * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID
+     * Gets the attachment ID of this CorDapp. Only CorDapps with contracts have an attachment ID.
      *
-     * @param cordapp The cordapp to get the attachment ID
-     * @return An attachment ID if it exists, otherwise nothing
+     * @param cordapp The cordapp to get the attachment ID.
+     * @return an attachment ID if it exists, otherwise nothing.
      */
     fun getCordappAttachmentId(cordapp: Cordapp): SecureHash? = cordappAttachments.inverse()[cordapp.jarPath]
 
@@ -105,10 +105,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
             }.toMap()
 
     /**
-     * Get the current cordapp context for the given CorDapp
+     * Get the current cordapp context for the given CorDapp.
      *
-     * @param cordapp The cordapp to get the context for
-     * @return A cordapp context for the given CorDapp
+     * @param cordapp The cordapp to get the context for.
+     * @return a cordapp context for the given CorDapp.
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
         return contextCache.computeIfAbsent(cordapp) {
@@ -122,10 +122,10 @@ open class CordappProviderImpl(private val cordappLoader: CordappLoader,
     }
 
     /**
-     * Resolves a cordapp for the provided class or null if there isn't one
+     * Resolves a [Cordapp] for the provided class or null if there isn't one.
      *
-     * @param className The class name
-     * @return cordapp A cordapp or null if no cordapp has the given class loaded
+     * @param className The class name.
+     * @return a [Cordapp] or null if no cordapp has the given class loaded.
      */
     fun getCordappForClass(className: String): Cordapp? = cordapps.find { it.cordappClasses.contains(className) }
 

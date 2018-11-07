@@ -184,7 +184,7 @@ open class NetworkRegistrationHelper(
      * Poll Certificate Signing Server for approved certificate,
      * enter a slow polling loop if server return null.
      * @param requestId Certificate signing request ID.
-     * @return List of certificate chain.
+     * @return the list of certificate chain.
      */
     private fun pollServerForCertificates(requestId: String): List<X509Certificate> {
         try {
@@ -222,7 +222,7 @@ open class NetworkRegistrationHelper(
      * New request ID will be stored in requestId.txt
      * @param publicKey public key for which we need a certificate.
      * @param contentSigner the [ContentSigner] that will sign the CSR.
-     * @return Request ID return from the server.
+     * @return request ID return from the server.
      */
     private fun submitOrResumeCertificateSigningRequest(publicKey: PublicKey, contentSigner: ContentSigner): String {
         try {

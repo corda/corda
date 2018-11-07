@@ -132,7 +132,7 @@ object X509Utilities {
     /**
      * Helper method to load back a .pem/.cer format file copy of a certificate.
      * @param file Source file.
-     * @return The X509Certificate that was encoded in the file.
+     * @return the [X509Certificate] that was encoded in the file.
      */
     @JvmStatic
     fun loadCertificateFromPEMFile(file: Path): X509Certificate {
@@ -202,7 +202,7 @@ object X509Utilities {
      * @param nameConstraints any name constraints to impose on certificates signed by the generated certificate.
      * @param crlDistPoint CRL distribution point.
      * @param crlIssuer X500Name of the CRL issuer.
-     * @return A data class is returned containing the new intermediate CA Cert and its KeyPair for signing downstream certificates.
+     * @return a data class is returned containing the new intermediate CA Cert and its [KeyPair] for signing downstream certificates.
      * Note the generated certificate tree is capped at max depth of 1 below this to be in line with commercially available certificates.
      */
     @JvmStatic

@@ -674,7 +674,7 @@ class IRSTests {
 
 
     /**
-     * This returns an example of transactions that are grouped by TradeId and then a fixing applied.
+     * Returns an example of transactions that are grouped by TradeId and then a fixing applied.
      * It's important to make the tradeID different for two reasons, the hashes will be the same and all sorts of confusion will
      * result and the grouping won't work either.
      * In reality, the only fields that should be in common will be the next fixing date and the reference rate.

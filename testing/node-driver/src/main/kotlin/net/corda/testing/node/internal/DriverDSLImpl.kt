@@ -973,7 +973,7 @@ interface InternalDriverDSL : DriverDSL {
      * @param pollInterval The interval of polling.
      * @param warnCount The number of polls after the Driver gives a warning.
      * @param check The function being polled.
-     * @return A future that completes with the non-null value [check] has returned.
+     * @return a [CordaFuture] that completes with the non-null value [check] has returned.
      */
     fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration = DEFAULT_POLL_INTERVAL, warnCount: Int = DEFAULT_WARN_COUNT, check: () -> A?): CordaFuture<A>
 
