@@ -6454,7 +6454,7 @@ public final class net.corda.testing.node.NotarySpec extends java.lang.Object
   public final net.corda.core.identity.CordaX500Name getName()
   @NotNull
   public final java.util.List<net.corda.testing.node.User> getRpcUsers()
-  public fi(nal boolean getValidating()
+  public final boolean getValidating()
   @NotNull
   public final net.corda.testing.driver.VerifierType getVerifierType()
   public int hashCode()
