@@ -25,6 +25,13 @@ Significant Changes in 4.0
   Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
   command on every parameter update. This behaviour can be turned off via the node configuration.
 
+* **CorDapp JAR Signing and Sealing**:
+
+  CorDapps build by corda-gradle-plugins are now signed and sealed JAR files.
+  Signing can be configured or opt-out, and it defaults to use Corda development certificate.
+  Signed CorDapps facilitate signature constraints checks.
+  Sealed JARs require a unique package to be shipped within a single CorDapp JAR.
+
 << MORE TO COME >>
 
 .. _release_notes_v3_3:

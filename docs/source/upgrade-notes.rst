@@ -192,6 +192,25 @@ For H2:
 * MockNetwork: ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration``
   object. Use a ``MockNetworkConfigOverrides`` object instead.
 
+* Finance CorDapp (*corda-finance-XXX.jar*) is now build as a sealed and signed JAR file.
+  This means classes in your CorDapps cannot be placed under the following packages:
+
+  .. sourcecode:: java
+
+     net.corda.finance
+     net.corda.finance.contracts
+     net.corda.finance.contracts.asset.cash.selection
+     net.corda.finance.contracts.asset
+     net.corda.finance.contracts.math
+     net.corda.finance.flows
+     net.corda.finance.internal
+     net.corda.finance.plugin
+     net.corda.finance.schemas
+     net.corda.finance.utils
+
+  Refactor any classes by moving them into a new package, e.g. *net/corda/finance/flows.MyClass.java* can be moved to *net/corda/finance/flows/company/MyClass.java*.
+  Also your classes are no longer able to access non-public members of Finance CorDapp classes.
+
 V3.2 to v3.3
 ------------
 

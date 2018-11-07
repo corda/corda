@@ -282,6 +282,12 @@ and there is no reason for a CorDapp developer to use it. It is just an internal
 * `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
   `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
 
+* CorDapps build by ``corda-gradle-plugins`` are now signed and sealed JAR files.
+  Signing can be configured or opt-out, and it defaults to use Corda development certificate.
+
+* Finance CorDapp is now build as a sealed and signed JAR file.
+  Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
+
 Version 3.3
 -----------
 
