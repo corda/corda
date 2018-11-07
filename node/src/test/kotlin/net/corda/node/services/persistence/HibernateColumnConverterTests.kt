@@ -7,17 +7,12 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.internal.createCordaPersistence
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.node.services.schema.NodeSchemaService
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.core.BOC_NAME
-import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockServices
 import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before

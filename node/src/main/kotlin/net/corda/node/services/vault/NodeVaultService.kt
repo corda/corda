@@ -109,7 +109,7 @@ class NodeVaultService(
 
             val session = currentDBSession()
             producedStateRefsMap.forEach { stateAndRef ->
-                  val stateOnly = stateAndRef.value.state.data
+                val stateOnly = stateAndRef.value.state.data
                 // TODO: Optimise this.
                 //
                 // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
