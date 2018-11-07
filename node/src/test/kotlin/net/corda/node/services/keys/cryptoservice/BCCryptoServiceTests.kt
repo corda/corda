@@ -28,7 +28,6 @@ class BCCryptoServiceTests {
     companion object {
         const val alias = "keyAlias"
         val clearData = "data".toByteArray()
-        val signatureScheme = Crypto.ECDSA_SECP256K1_SHA256
     }
 
     @Rule
