@@ -60,7 +60,7 @@ task copyLauncherLibs(type: Copy, dependsOn: [project(':launcher').jar]) {
     into "$buildDir/tmp/launcher-lib"
 }
 
-if (Os.isFamily(Os.FAMILY_UNIX)) {
+if (Os.isFamily(Os.FAMILY_UNIX) && !Os.isFamily(Os.FAMILY_MAC)) {
     println("Detected *nix system, enabling distribution creation")
 
 
