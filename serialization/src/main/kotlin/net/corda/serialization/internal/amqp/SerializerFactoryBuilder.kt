@@ -16,14 +16,15 @@ object SerializerFactoryBuilder {
 
     @JvmStatic
     // Has to be named differently, otherwise serialization-deterministic:determinise fails.
-    fun buildDeterministic(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter) =
-            makeFactory(
-                    whitelist,
-                    classCarpenter,
-                    DefaultEvolutionSerializerProvider,
-                    DefaultDescriptorBasedSerializerRegistry(),
-                    null,
-                    false)
+    fun buildDeterministic(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
+        return makeFactory(
+                whitelist,
+                classCarpenter,
+                DefaultEvolutionSerializerProvider,
+                DefaultDescriptorBasedSerializerRegistry(),
+                null,
+                false)
+    }
 
     @JvmStatic
     @DeleteForDJVM
@@ -35,14 +36,15 @@ object SerializerFactoryBuilder {
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
             overrideFingerPrinter: FingerPrinter? = null,
-            onlyCustomSerializers: Boolean = false) =
-            makeFactory(
-                    whitelist,
-                    classCarpenter,
-                    evolutionSerializerProvider,
-                    descriptorBasedSerializerRegistry,
-                    overrideFingerPrinter,
-                    onlyCustomSerializers)
+            onlyCustomSerializers: Boolean = false): SerializerFactory {
+        return makeFactory(
+                whitelist,
+                classCarpenter,
+                evolutionSerializerProvider,
+                descriptorBasedSerializerRegistry,
+                overrideFingerPrinter,
+                onlyCustomSerializers)
+    }
 
     @JvmStatic
     @DeleteForDJVM
@@ -55,14 +57,15 @@ object SerializerFactoryBuilder {
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
             overrideFingerPrinter: FingerPrinter? = null,
-            onlyCustomSerializers: Boolean = false) =
-            makeFactory(
-                    whitelist,
-                    ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
-                    evolutionSerializerProvider,
-                    descriptorBasedSerializerRegistry,
-                    overrideFingerPrinter,
-                    onlyCustomSerializers)
+            onlyCustomSerializers: Boolean = false): SerializerFactory {
+        return makeFactory(
+                whitelist,
+                ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
+                evolutionSerializerProvider,
+                descriptorBasedSerializerRegistry,
+                overrideFingerPrinter,
+                onlyCustomSerializers)
+    }
 
     private fun makeFactory(whitelist: ClassWhitelist,
                             classCarpenter: ClassCarpenter,
