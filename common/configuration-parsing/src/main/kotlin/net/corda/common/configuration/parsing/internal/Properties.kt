@@ -1,6 +1,10 @@
 package net.corda.common.configuration.parsing.internal
 
-import com.typesafe.config.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigObject
+import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
@@ -80,7 +84,13 @@ private class ListProperty<TYPE : Any>(delegate: StandardProperty<TYPE>) : Requi
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
         }
-        return delegate.schema?.let { schema -> valueDescription(valueIn(configuration).asSequence().map { element -> valueDescription(element, serialiseValue) }.map { it as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it, serialiseValue) }.toList(), serialiseValue) } ?: valueDescription(valueIn(configuration), serialiseValue)
+        return when {
+            delegate.schema != null -> {
+                val elementsDescription = valueIn(configuration).asSequence().map { it as ConfigObject }.map(ConfigObject::toConfig).map { delegate.schema.describe(it, serialiseValue) }.toList()
+                ConfigValueFactory.fromIterable(elementsDescription)
+            }
+            else -> valueDescription(valueIn(configuration), serialiseValue)
+        }
     }
 
     private fun Configuration.Validation.Error.containingPath(index: Int): List<String> {
@@ -98,7 +108,7 @@ private class OptionalPropertyWithDefault<TYPE : Any>(delegate: Configuration.Pr
 
     override val typeName: String = delegate.typeName.removeSuffix("?")
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = delegate.describe(configuration, serialiseValue) ?: valueDescription(if(isSensitive) Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER else defaultValue, serialiseValue)
+    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = delegate.describe(configuration, serialiseValue) ?: valueDescription(if (isSensitive) Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER else defaultValue, serialiseValue)
 
     override fun valueIn(configuration: Config): TYPE = delegate.valueIn(configuration) ?: defaultValue
 
@@ -162,7 +172,13 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
         }
-        return delegate.schema?.let { schema -> valueDescription(valueIn(configuration).asSequence().map { element -> valueDescription(element, serialiseValue) }.map { it as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it, serialiseValue) }.toList(), serialiseValue) } ?: valueDescription(valueIn(configuration), serialiseValue)
+        return when {
+            delegate.schema != null -> {
+                val elementsDescription = valueIn(configuration).asSequence().map { it as ConfigObject }.map(ConfigObject::toConfig).map { delegate.schema.describe(it, serialiseValue) }.toList()
+                ConfigValueFactory.fromIterable(elementsDescription)
+            }
+            else -> valueDescription(valueIn(configuration), serialiseValue)
+        }
     }
 }
 
@@ -177,7 +193,7 @@ private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Config
 
     override val typeName: String = "${delegate.typeName}?"
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = if(isSpecifiedBy(configuration)) delegate.describe(configuration, serialiseValue) else null
+    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = if (isSpecifiedBy(configuration)) delegate.describe(configuration, serialiseValue) else null
 
     override fun valueIn(configuration: Config): TYPE? {
 
