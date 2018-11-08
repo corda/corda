@@ -27,6 +27,7 @@ interface UniquenessProvider {
     sealed class Result {
         /** Indicates that all input states have been committed successfully. */
         object Success : Result()
+
         /** Indicates that the transaction has not been committed. */
         data class Failure(val error: NotaryError) : Result()
     }

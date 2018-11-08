@@ -82,6 +82,7 @@ sealed class CriteriaExpression<O, out T> {
 class Column<O, out C>(val name: String, val declaringClass: Class<*>) {
     @Deprecated("Does not support fields from a MappedSuperclass. Use the equivalent that accepts a FieldInfo.")
     constructor(field: Field) : this(field.name, field.declaringClass)
+
     constructor(field: FieldInfo) : this(field.name, field.entityClass)
     constructor(property: KProperty1<O, C?>) : this(property.name, declaringClass(property))
 
@@ -246,20 +247,20 @@ object Builder {
 
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R> Field.predicate(predicate: ColumnPredicate<R>) = info().predicate(predicate)
+
     fun <R> FieldInfo.predicate(predicate: ColumnPredicate<R>) = CriteriaExpression.ColumnPredicateExpression(Column<Any, R>(this), predicate)
 
-    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
+    fun <O, R> KProperty1<O, R?>.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<O, R>>? = null, orderBy: Sort.Direction? = null) = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R> Field.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null) = info().functionPredicate(predicate, groupByColumns, orderBy)
 
-    fun <R> FieldInfo.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null)
-            = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
+    fun <R> FieldInfo.functionPredicate(predicate: ColumnPredicate<R>, groupByColumns: List<Column<Any, R>>? = null, orderBy: Sort.Direction? = null) = CriteriaExpression.AggregateFunctionExpression(Column(this), predicate, groupByColumns, orderBy)
 
     fun <O, R : Comparable<R>> KProperty1<O, R?>.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.comparePredicate(operator: BinaryComparisonOperator, value: R) = info().comparePredicate(operator, value)
+
     fun <R : Comparable<R>> FieldInfo.comparePredicate(operator: BinaryComparisonOperator, value: R) = predicate(compare(operator, value))
 
     @JvmOverloads
@@ -305,30 +306,35 @@ object Builder {
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.lessThan(value: R) = info().lessThan(value)
+
     @JvmStatic
     fun <R : Comparable<R>> FieldInfo.lessThan(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN, value)
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.lessThanOrEqual(value: R) = info().lessThanOrEqual(value)
+
     @JvmStatic
     fun <R : Comparable<R>> FieldInfo.lessThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.LESS_THAN_OR_EQUAL, value)
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.greaterThan(value: R) = info().greaterThan(value)
+
     @JvmStatic
     fun <R : Comparable<R>> FieldInfo.greaterThan(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN, value)
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.greaterThanOrEqual(value: R) = info().greaterThanOrEqual(value)
+
     @JvmStatic
     fun <R : Comparable<R>> FieldInfo.greaterThanOrEqual(value: R) = comparePredicate(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, value)
 
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R : Comparable<R>> Field.between(from: R, to: R) = info().between(from, to)
+
     @JvmStatic
     fun <R : Comparable<R>> FieldInfo.between(from: R, to: R) = predicate(ColumnPredicate.Between(from, to))
 
@@ -409,6 +415,7 @@ object Builder {
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun Field.isNull() = info().isNull()
+
     @JvmStatic
     fun FieldInfo.isNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.IS_NULL))
 
@@ -416,6 +423,7 @@ object Builder {
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun Field.notNull() = info().notNull()
+
     @JvmStatic
     fun FieldInfo.notNull() = predicate(ColumnPredicate.NullExpression<Any>(NullOperator.NOT_NULL))
 
@@ -427,6 +435,7 @@ object Builder {
     @JvmOverloads
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun <R> Field.sum(groupByColumns: List<Field>? = null, orderBy: Sort.Direction? = null) = info().sum<R>(groupByColumns?.map { it.info() }, orderBy)
+
     @JvmStatic
     @JvmOverloads
     fun <R> FieldInfo.sum(groupByColumns: List<FieldInfo>? = null, orderBy: Sort.Direction? = null) =
@@ -436,6 +445,7 @@ object Builder {
     @JvmStatic
     @Deprecated("Does not support fields from a MappedSuperclass. Use equivalent on a FieldInfo.")
     fun Field.count() = info().count()
+
     @JvmStatic
     fun FieldInfo.count() = functionPredicate(ColumnPredicate.AggregateFunction<Any>(AggregateFunctionType.COUNT))
 

@@ -77,7 +77,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     }
 
     companion object {
-       val logger = contextLogger()
+        val logger = contextLogger()
     }
 
     // DOCSTART 1
@@ -158,10 +158,10 @@ open class TransactionBuilder @JvmOverloads constructor(
 
     private fun makeAttachmentConstraint(services: ServicesForResolution, state: TransactionState<ContractState>): AttachmentConstraint {
         val attachmentId = services.cordappProvider.getContractAttachmentID(state.contract)
-            ?: throw MissingContractAttachments(listOf(state))
+                ?: throw MissingContractAttachments(listOf(state))
 
         val attachmentSigners = services.attachments.openAttachment(attachmentId)?.signers
-            ?: throw MissingContractAttachments(listOf(state))
+                ?: throw MissingContractAttachments(listOf(state))
 
         return when {
             attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)

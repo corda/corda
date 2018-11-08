@@ -47,7 +47,8 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
-            val whitelist = attachment.whitelistedContractImplementations ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
+            val whitelist = attachment.whitelistedContractImplementations
+                    ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
             attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
         } else false
     }
@@ -81,5 +82,5 @@ data class SignatureAttachmentConstraint(
         val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
-        key.isFulfilledBy(attachment.signers.map { it })
+            key.isFulfilledBy(attachment.signers.map { it })
 }

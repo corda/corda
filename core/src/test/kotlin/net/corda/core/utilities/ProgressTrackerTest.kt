@@ -90,7 +90,7 @@ class ProgressTrackerTest {
         assertEquals(pt2.currentStep, ProgressTracker.UNSTARTED)
         assertEquals(ProgressTracker.STARTING, pt2.nextStep())
         assertEquals(ChildSteps.AYY, pt2.nextStep())
-        assertEquals((stepNotification.last  as ProgressTracker.Change.Position).newStep, ChildSteps.AYY)
+        assertEquals((stepNotification.last as ProgressTracker.Change.Position).newStep, ChildSteps.AYY)
         assertEquals(ChildSteps.BEE, pt2.nextStep())
     }
 
@@ -110,7 +110,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step, allSteps[pt.stepsTreeIndex].second)
         }
@@ -167,7 +167,7 @@ class ProgressTrackerTest {
         assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 4, 8))
         assertThat(stepsTreeNotification).isEmpty()
     }
-    
+
     @Test
     fun `structure changes are pushed down when progress trackers are added`() {
         pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
@@ -185,7 +185,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
         }
@@ -222,7 +222,7 @@ class ProgressTrackerTest {
             stepsTreeNotification += it
         }
 
-        fun assertCurrentStepsTree(index:Int, step: ProgressTracker.Step) {
+        fun assertCurrentStepsTree(index: Int, step: ProgressTracker.Step) {
             assertEquals(index, pt.stepsTreeIndex)
             assertEquals(step.label, stepsTreeNotification.last()[pt.stepsTreeIndex].second)
         }

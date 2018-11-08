@@ -88,7 +88,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
 
         return components.lazyMapped { component, internalIndex ->
             try {
-                factory.deserialize(component, clazz.java , context)
+                factory.deserialize(component, clazz.java, context)
             } catch (e: MissingAttachmentsException) {
                 throw e
             } catch (e: Exception) {

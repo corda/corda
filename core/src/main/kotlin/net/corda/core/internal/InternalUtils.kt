@@ -1,11 +1,15 @@
 @file:JvmName("InternalUtils")
 @file:KeepForDJVM
+
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.*
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -51,17 +55,18 @@ import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
 val Throwable.rootCause: Throwable get() = cause?.rootCause ?: this
-val Throwable.rootMessage: String? get() {
-    var message = this.message
-    var throwable = cause
-    while (throwable != null) {
-        if (throwable.message != null) {
-            message = throwable.message
+val Throwable.rootMessage: String?
+    get() {
+        var message = this.message
+        var throwable = cause
+        while (throwable != null) {
+            if (throwable.message != null) {
+                message = throwable.message
+            }
+            throwable = throwable.cause
         }
-        throwable = throwable.cause
+        return message
     }
-    return message
-}
 
 infix fun Temporal.until(endExclusive: Temporal): Duration = Duration.between(this, endExclusive)
 
@@ -113,7 +118,8 @@ fun <T> List<T>.indexOfOrThrow(item: T): Int {
     return i
 }
 
-@DeleteForDJVM fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
+@DeleteForDJVM
+fun InputStream.copyTo(target: Path, vararg options: CopyOption): Long = Files.copy(this, target, *options)
 
 /** Same as [InputStream.readBytes] but also closes the stream. */
 fun InputStream.readFully(): ByteArray = use { it.readBytes() }
@@ -176,7 +182,6 @@ inline fun elapsedTime(block: () -> Unit): Duration {
     return Duration.ofNanos(end - start)
 }
 
-
 fun <T> Logger.logElapsedTime(label: String, body: () -> T): T = logElapsedTime(label, this, body)
 
 // TODO: Add inline back when a new Kotlin version is released and check if the java.lang.VerifyError
@@ -188,14 +193,12 @@ fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T 
     var failed = false
     try {
         return body()
-    }
-    catch (th: Throwable) {
+    } catch (th: Throwable) {
         failed = true
         throw th
-    }
-    finally {
+    } finally {
         val elapsed = Duration.ofNanos(System.nanoTime() - now).toMillis()
-        val msg = (if(failed) "Failed " else "") + "$label took $elapsed msec"
+        val msg = (if (failed) "Failed " else "") + "$label took $elapsed msec"
         if (logger != null)
             logger.info(msg)
         else
@@ -302,21 +305,26 @@ fun <T : Any> KClass<T>.objectOrNewInstance(): T {
 }
 
 /** Similar to [KClass.objectInstance] but also works on private objects. */
-val <T : Any> Class<T>.kotlinObjectInstance: T? get() {
-    return try {
-        kotlin.objectInstance
-    } catch (_: Throwable) {
-        val field = try { getDeclaredField("INSTANCE") } catch (_: NoSuchFieldException) { null }
-        field?.let {
-            if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
-                it.isAccessible = true
-                uncheckedCast(it.get(null))
-            } else {
+val <T : Any> Class<T>.kotlinObjectInstance: T?
+    get() {
+        return try {
+            kotlin.objectInstance
+        } catch (_: Throwable) {
+            val field = try {
+                getDeclaredField("INSTANCE")
+            } catch (_: NoSuchFieldException) {
                 null
+            }
+            field?.let {
+                if (it.type == this && it.isPublic && it.isStatic && it.isFinal) {
+                    it.isAccessible = true
+                    uncheckedCast(it.get(null))
+                } else {
+                    null
+                }
             }
         }
     }
-}
 
 /**
  * A simple wrapper around a [Field] object providing type safe read and write access using [value], ignoring the field's
@@ -395,9 +403,11 @@ inline val Member.isStatic: Boolean get() = Modifier.isStatic(modifiers)
 
 inline val Member.isFinal: Boolean get() = Modifier.isFinal(modifiers)
 
-@DeleteForDJVM fun URI.toPath(): Path = Paths.get(this)
+@DeleteForDJVM
+fun URI.toPath(): Path = Paths.get(this)
 
-@DeleteForDJVM fun URL.toPath(): Path = toURI().toPath()
+@DeleteForDJVM
+fun URL.toPath(): Path = toURI().toPath()
 
 @DeleteForDJVM
 fun URL.openHttpConnection(): HttpURLConnection = openConnection() as HttpURLConnection
@@ -423,7 +433,8 @@ fun HttpURLConnection.checkOkResponse() {
 }
 
 @DeleteForDJVM
-val HttpURLConnection.errorMessage: String? get() = errorStream?.let { it.use { it.reader().readText() } }
+val HttpURLConnection.errorMessage: String?
+    get() = errorStream?.let { it.use { it.reader().readText() } }
 
 @DeleteForDJVM
 inline fun <reified T : Any> HttpURLConnection.responseAs(): T {

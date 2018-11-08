@@ -67,7 +67,6 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
             return Amount(0L, tokenSize, token)
         }
 
-
         /**
          * Determines the representation of one Token quantity in BigDecimal. For Currency and Issued<Currency>
          * the definitions is taken from Currency defaultFractionDigits property e.g. 2 for USD, or 0 for JPY
@@ -265,7 +264,6 @@ data class Amount<T : Any>(val quantity: Long, val displayTokenSize: BigDecimal,
      * @see Amount.fromDecimal
      */
     fun toDecimal(): BigDecimal = BigDecimal.valueOf(quantity, 0) * displayTokenSize
-
 
     /**
      * Convert a currency [Amount] to a display string representation.

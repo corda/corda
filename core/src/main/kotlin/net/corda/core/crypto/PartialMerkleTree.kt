@@ -56,9 +56,14 @@ class PartialMerkleTree(val root: PartialTree) {
      */
     @CordaSerializable
     sealed class PartialTree {
-        @KeepForDJVM data class IncludedLeaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Leaf(val hash: SecureHash) : PartialTree()
-        @KeepForDJVM data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
+        @KeepForDJVM
+        data class IncludedLeaf(val hash: SecureHash) : PartialTree()
+
+        @KeepForDJVM
+        data class Leaf(val hash: SecureHash) : PartialTree()
+
+        @KeepForDJVM
+        data class Node(val left: PartialTree, val right: PartialTree) : PartialTree()
     }
 
     companion object {

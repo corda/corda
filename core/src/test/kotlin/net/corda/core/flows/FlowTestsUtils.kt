@@ -118,6 +118,6 @@ inline fun <reified P : FlowLogic<*>> TestStartedNode.registerCordappFlowFactory
 
 fun <T : FlowLogic<*>> TestStartedNode.registerCoreFlowFactory(initiatingFlowClass: Class<out FlowLogic<*>>,
                                                                initiatedFlowClass: Class<T>,
-                                                               flowFactory: (FlowSession) -> T , track: Boolean): Observable<T> {
+                                                               flowFactory: (FlowSession) -> T, track: Boolean): Observable<T> {
     return this.internals.registerInitiatedFlowFactory(initiatingFlowClass, initiatedFlowClass, InitiatedFlowFactory.Core(flowFactory), track)
 }

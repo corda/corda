@@ -15,7 +15,7 @@ import java.security.spec.PKCS8EncodedKeySpec
  * [KeyPair] objects without exposing the private key material. Then, whenever we need to sign with the actual private
  * key, we provide the [alias] from this [AliasPrivateKey] to the underlying HSM implementation.
  */
-data class AliasPrivateKey(val alias: String): PrivateKey {
+data class AliasPrivateKey(val alias: String) : PrivateKey {
 
     companion object {
         const val ALIAS_KEY_ALGORITHM = "AliasPrivateKey"

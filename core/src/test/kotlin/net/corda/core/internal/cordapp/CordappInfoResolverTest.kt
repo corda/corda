@@ -21,7 +21,7 @@ class CordappInfoResolverTest {
         assertEquals(defaultTargetVersion, returnCallingTargetVersion())
 
         val expectedTargetVersion = 555
-        CordappInfoResolver.withCordappInfoResolution( { CordappImpl.Info("foo", "bar", "1", 2, expectedTargetVersion) })
+        CordappInfoResolver.withCordappInfoResolution({ CordappImpl.Info("foo", "bar", "1", 2, expectedTargetVersion) })
         {
             val actualTargetVersion = returnCallingTargetVersion()
             assertEquals(expectedTargetVersion, actualTargetVersion)

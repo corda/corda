@@ -11,10 +11,10 @@ import kotlin.annotation.AnnotationTarget.*
  */
 // DOCSTART 01
 @Target(
-    CONSTRUCTOR,
-    FUNCTION,
-    PROPERTY_GETTER,
-    PROPERTY_SETTER
+        CONSTRUCTOR,
+        FUNCTION,
+        PROPERTY_GETTER,
+        PROPERTY_SETTER
 )
 @Retention(BINARY)
 @CordaInternal

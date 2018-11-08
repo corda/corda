@@ -5,8 +5,6 @@ import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -17,6 +15,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -54,7 +54,7 @@ class CollectSignaturesFlowTests : WithContracts {
         aliceNode.verifyAndRegister(bConfidentialIdentity)
 
         assert.that(
-            aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
+                aliceNode.startTestFlow(alice, bConfidentialIdentity.party, charlie),
                 willReturn(requiredSignatures(3))
         )
     }
@@ -96,10 +96,10 @@ class CollectSignaturesFlowTests : WithContracts {
     //region Operators
     private fun TestStartedNode.startTestFlow(vararg party: Party) =
             startFlowAndRunNetwork(
-                TestFlow.Initiator(DummyContract.MultiOwnerState(
-                    MAGIC_NUMBER,
-                    listOf(*party)),
-                    mockNet.defaultNotaryIdentity))
+                    TestFlow.Initiator(DummyContract.MultiOwnerState(
+                            MAGIC_NUMBER,
+                            listOf(*party)),
+                            mockNet.defaultNotaryIdentity))
 
     //region Test Flow
     // With this flow, the initiator starts the "CollectTransactionFlow". It is then the responders responsibility to

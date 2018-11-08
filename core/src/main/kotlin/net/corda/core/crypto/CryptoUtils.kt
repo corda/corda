@@ -116,8 +116,10 @@ val PublicKey.keys: Set<PublicKey> get() = (this as? CompositeKey)?.leafKeys ?: 
 
 /** Return true if [otherKey] fulfils the requirements of this [PublicKey]. */
 fun PublicKey.isFulfilledBy(otherKey: PublicKey): Boolean = isFulfilledBy(setOf(otherKey))
+
 /** Return true if [otherKeys] fulfil the requirements of this [PublicKey]. */
-fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys) ?: (this in otherKeys)
+fun PublicKey.isFulfilledBy(otherKeys: Iterable<PublicKey>): Boolean = (this as? CompositeKey)?.isFulfilledBy(otherKeys)
+        ?: (this in otherKeys)
 
 /**
  * Checks whether any of the given [keys] matches a leaf on the [CompositeKey] tree or a single [PublicKey].
@@ -137,6 +139,7 @@ fun Iterable<TransactionSignature>.byKeys() = map { it.by }.toSet()
 // val (private, public) = keyPair
 /* The [PrivateKey] of this [KeyPair]. */
 operator fun KeyPair.component1(): PrivateKey = this.private
+
 /* The [PublicKey] of this [KeyPair]. */
 operator fun KeyPair.component2(): PublicKey = this.public
 

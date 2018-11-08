@@ -31,5 +31,4 @@ class LazyMappedListTest {
         assertEquals(16, lazyList[3])
         assertEquals(1, callCounter)
     }
-
 }

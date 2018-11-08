@@ -25,7 +25,8 @@ class PartyAndCertificate(val certPath: CertPath) {
         require(certs.size >= 2) { "Certificate path must at least include subject and issuing certificates" }
         certificate = certs[0] as X509Certificate
         val role = CertRole.extract(certificate)
-        require(role?.isIdentity ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
+        require(role?.isIdentity
+                ?: false) { "Party certificate ${certificate.subjectDN} does not have a well known or confidential identity role. Found: $role" }
     }
 
     @Transient

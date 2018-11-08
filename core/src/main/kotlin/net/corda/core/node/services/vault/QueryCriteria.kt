@@ -20,17 +20,17 @@ interface GenericQueryCriteria<Q : GenericQueryCriteria<Q, *>, in P : BaseQueryC
 
     interface ChainableQueryCriteria<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, *>> {
 
-        interface AndVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q,P> {
-            val a:Q
-            val b:Q
+        interface AndVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q, P> {
+            val a: Q
+            val b: Q
             override fun visit(parser: P): Collection<Predicate> {
                 return parser.parseAnd(this.a, this.b)
             }
         }
 
-        interface OrVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q,P> {
-            val a:Q
-            val b:Q
+        interface OrVisitor<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> : GenericQueryCriteria<Q, P> {
+            val a: Q
+            val b: Q
             override fun visit(parser: P): Collection<Predicate> {
                 return parser.parseOr(this.a, this.b)
             }
@@ -262,33 +262,34 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         CONSUMED
     }
 
-    class AndComposition(override val a: QueryCriteria, override val b: QueryCriteria): QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
-    class OrComposition(override val a: QueryCriteria, override val b: QueryCriteria): QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
+    class AndComposition(override val a: QueryCriteria, override val b: QueryCriteria) : QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
+    class OrComposition(override val a: QueryCriteria, override val b: QueryCriteria) : QueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<QueryCriteria, IQueryCriteriaParser, Sort>
 
     override fun and(criteria: QueryCriteria): QueryCriteria = AndComposition(this, criteria)
     override fun or(criteria: QueryCriteria): QueryCriteria = OrComposition(this, criteria)
 }
+
 @CordaSerializable
 sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser>, GenericQueryCriteria.ChainableQueryCriteria<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser> {
     /**
      * AttachmentsQueryCriteria:
      */
-    data class AttachmentsQueryCriteria @JvmOverloads constructor (val uploaderCondition: ColumnPredicate<String>? = null,
-                                                                   val filenameCondition: ColumnPredicate<String>? = null,
-                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+    data class AttachmentsQueryCriteria @JvmOverloads constructor(val uploaderCondition: ColumnPredicate<String>? = null,
+                                                                  val filenameCondition: ColumnPredicate<String>? = null,
+                                                                  val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
     }
 
-    class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
-    class OrComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
+    class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria) : AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
+    class OrComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria) : AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.OrVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
 
     override fun and(criteria: AttachmentQueryCriteria): AttachmentQueryCriteria = AndComposition(this, criteria)
     override fun or(criteria: AttachmentQueryCriteria): AttachmentQueryCriteria = OrComposition(this, criteria)
 }
 
-interface BaseQueryCriteriaParser<Q: GenericQueryCriteria<Q, P>, in P: BaseQueryCriteriaParser<Q,P,S>, in S : BaseSort> {
+interface BaseQueryCriteriaParser<Q : GenericQueryCriteria<Q, P>, in P : BaseQueryCriteriaParser<Q, P, S>, in S : BaseSort> {
     fun parseOr(left: Q, right: Q): Collection<Predicate>
     fun parseAnd(left: Q, right: Q): Collection<Predicate>
     fun parse(criteria: Q, sorting: S? = null): Collection<Predicate>
@@ -303,6 +304,6 @@ interface IQueryCriteriaParser : BaseQueryCriteriaParser<QueryCriteria, IQueryCr
     fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
 }
 
-interface AttachmentsQueryCriteriaParser : BaseQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>{
+interface AttachmentsQueryCriteriaParser : BaseQueryCriteriaParser<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort> {
     fun parseCriteria(criteria: AttachmentQueryCriteria.AttachmentsQueryCriteria): Collection<Predicate>
 }

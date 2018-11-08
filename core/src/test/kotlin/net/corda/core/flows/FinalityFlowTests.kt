@@ -44,7 +44,7 @@ class FinalityFlowTests : WithFinality {
         val stx = aliceNode.signCashTransactionWith(bob)
 
         assert.that(
-            aliceNode.finalise(stx),
+                aliceNode.finalise(stx),
                 willReturn(
                         requiredSignatures(1)
                                 and visibleTo(bobNode)))
@@ -56,7 +56,7 @@ class FinalityFlowTests : WithFinality {
         val stx = aliceNode.signCashTransactionWith(CHARLIE)
 
         assert.that(
-            aliceNode.finalise(stx),
+                aliceNode.finalise(stx),
                 willThrow<IllegalArgumentException>())
     }
 

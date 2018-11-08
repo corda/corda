@@ -1,4 +1,5 @@
 @file:DeleteForDJVM
+
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
@@ -112,6 +113,7 @@ fun Path.deleteRecursively() {
             file.delete()
             return FileVisitResult.CONTINUE
         }
+
         override fun postVisitDirectory(dir: Path, exception: IOException?): FileVisitResult {
             dir.delete()
             return FileVisitResult.CONTINUE

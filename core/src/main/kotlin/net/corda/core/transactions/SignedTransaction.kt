@@ -217,7 +217,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         }
     }
 
-
     /**
      * Resolves the underlying transaction with signatures and then returns it, handling any special case transactions
      * such as [NotaryChangeWireTransaction].

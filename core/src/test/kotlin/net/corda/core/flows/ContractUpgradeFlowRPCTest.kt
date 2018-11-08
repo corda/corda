@@ -8,8 +8,6 @@ import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.testing.internal.matchers.rpc.willReturn
-import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.messaging.CordaRPCOps
@@ -21,6 +19,8 @@ import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.matchers.rpc.willReturn
+import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
@@ -76,7 +76,7 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
 
         // Party A initiates contract upgrade flow, expected to succeed this time.
         assert.that(
-            rpcA.initiateDummyContractUpgrade(atx),
+                rpcA.initiateDummyContractUpgrade(atx),
                 willReturn(
                         aliceNode.hasDummyContractUpgradeTransaction()
                                 and bobNode.hasDummyContractUpgradeTransaction()))
@@ -114,23 +114,23 @@ class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     private fun TestStartedNode.hasDummyContractUpgradeTransaction() =
             hasContractUpgradeTransaction<DummyContract.State, DummyContractV2.State>()
 
-    private inline fun <reified FROM : Any, reified TO: Any> TestStartedNode.hasContractUpgradeTransaction() =
-        has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
-            "a contract upgrade transaction",
-            { getContractUpgradeTransaction(it) },
-            isUpgrade<FROM, TO>())
+    private inline fun <reified FROM : Any, reified TO : Any> TestStartedNode.hasContractUpgradeTransaction() =
+            has<StateAndRef<ContractState>, ContractUpgradeLedgerTransaction>(
+                    "a contract upgrade transaction",
+                    { getContractUpgradeTransaction(it) },
+                    isUpgrade<FROM, TO>())
 
     private fun TestStartedNode.getContractUpgradeTransaction(state: StateAndRef<ContractState>) =
-        services.validatedTransactions.getTransaction(state.ref.txhash)!!
-                .resolveContractUpgradeTransaction(services)
+            services.validatedTransactions.getTransaction(state.ref.txhash)!!
+                    .resolveContractUpgradeTransaction(services)
 
     private inline fun <reified FROM : Any, reified TO : Any> isUpgrade() =
             isUpgradeFrom<FROM>() and isUpgradeTo<TO>()
 
-    private inline fun <reified T: Any> isUpgradeFrom() =
+    private inline fun <reified T : Any> isUpgradeFrom() =
             has<ContractUpgradeLedgerTransaction, Any>("input data", { it.inputs.single().state.data }, isA<T>(anything))
 
-    private inline fun <reified T: Any> isUpgradeTo() =
+    private inline fun <reified T : Any> isUpgradeTo() =
             has<ContractUpgradeLedgerTransaction, Any>("output data", { it.outputs.single().data }, isA<T>(anything))
     //endregion
 }

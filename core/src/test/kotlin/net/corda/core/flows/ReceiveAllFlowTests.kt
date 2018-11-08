@@ -15,7 +15,6 @@ import org.junit.AfterClass
 import org.junit.Test
 import kotlin.reflect.KClass
 
-
 class ReceiveMultipleFlowTests : WithMockNet {
     companion object {
         private val classMockNet = InternalMockNetwork()

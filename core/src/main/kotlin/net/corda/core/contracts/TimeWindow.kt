@@ -68,13 +68,14 @@ abstract class TimeWindow {
     /**
      * Returns the duration between [fromTime] and [untilTime] if both are non-null. Otherwise returns null.
      */
-    val length: Duration? get() {
-        return if (fromTime == null || untilTime == null) {
-            null
-        } else {
-            Duration.between(fromTime, untilTime)
+    val length: Duration?
+        get() {
+            return if (fromTime == null || untilTime == null) {
+                null
+            } else {
+                Duration.between(fromTime, untilTime)
+            }
         }
-    }
 
     /** Returns true iff the given [instant] is within the time interval of this [TimeWindow]. */
     abstract operator fun contains(instant: Instant): Boolean

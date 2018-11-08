@@ -1,5 +1,6 @@
 @file:JvmName("Structures")
 @file:KeepForDJVM
+
 package net.corda.core.contracts
 
 import net.corda.core.DeleteForDJVM
@@ -289,6 +290,7 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
      * Name of the contract this is an upgraded version of, used as part of verification of upgrade transactions.
      */
     val legacyContract: ContractClassName
+
     /**
      * Upgrade contract's state object to a new state object.
      *

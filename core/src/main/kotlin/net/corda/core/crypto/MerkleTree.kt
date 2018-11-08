@@ -15,8 +15,11 @@ import java.util.*
 sealed class MerkleTree {
     abstract val hash: SecureHash
 
-    @KeepForDJVM data class Leaf(override val hash: SecureHash) : MerkleTree()
-    @KeepForDJVM data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
+    @KeepForDJVM
+    data class Leaf(override val hash: SecureHash) : MerkleTree()
+
+    @KeepForDJVM
+    data class Node(override val hash: SecureHash, val left: MerkleTree, val right: MerkleTree) : MerkleTree()
 
     companion object {
         private fun isPow2(num: Int): Boolean = num and (num - 1) == 0

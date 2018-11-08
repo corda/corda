@@ -137,6 +137,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         enum class Type {
             ALWAYS_ACCEPT, HASH, CZ_WHITELISTED, SIGNATURE
         }
+
         fun type(): Type {
             return when (constraint::class.java) {
                 AlwaysAcceptAttachmentConstraint::class.java -> Type.ALWAYS_ACCEPT
@@ -146,6 +147,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 else -> throw IllegalArgumentException("Invalid constraint type: $constraint")
             }
         }
+
         fun data(): ByteArray? {
             return when (type()) {
                 Type.HASH -> (constraint as HashAttachmentConstraint).attachmentId.bytes
@@ -153,6 +155,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
                 else -> null
             }
         }
+
         companion object {
             fun constraintInfo(type: Type, data: ByteArray?): ConstraintInfo {
                 return when (type) {
@@ -215,6 +218,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
         ): StateMetadata {
             return StateMetadata(ref, contractStateClassName, recordedTime, consumedTime, status, notary, lockId, lockUpdateTime, null)
         }
+
         fun copy(
                 ref: StateRef = this.ref,
                 contractStateClassName: String = this.contractStateClassName,

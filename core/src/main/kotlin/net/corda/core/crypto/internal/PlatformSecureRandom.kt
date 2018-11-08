@@ -1,5 +1,6 @@
 @file:JvmName("PlatformSecureRandom")
 @file:DeleteForDJVM
+
 package net.corda.core.crypto.internal
 
 import net.corda.core.DeleteForDJVM

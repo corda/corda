@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.serialization.internal
 
 import net.corda.core.KeepForDJVM
@@ -54,20 +55,24 @@ private class SerializationEnvironmentImpl(
         private val optionalCheckpointContext: CheckpointSerializationContext? = null,
         private val optionalCheckpointSerializer: CheckpointSerializer? = null) : SerializationEnvironment {
 
-    override val rpcServerContext: SerializationContext get() = optionalRpcServerContext ?:
-            throw UnsupportedOperationException("RPC server serialization not supported in this environment")
+    override val rpcServerContext: SerializationContext
+        get() = optionalRpcServerContext
+                ?: throw UnsupportedOperationException("RPC server serialization not supported in this environment")
 
-    override val rpcClientContext: SerializationContext get() = optionalRpcClientContext ?:
-        throw UnsupportedOperationException("RPC client serialization not supported in this environment")
+    override val rpcClientContext: SerializationContext
+        get() = optionalRpcClientContext
+                ?: throw UnsupportedOperationException("RPC client serialization not supported in this environment")
 
-    override val storageContext: SerializationContext get() = optionalStorageContext ?:
-        throw UnsupportedOperationException("Storage serialization not supported in this environment")
+    override val storageContext: SerializationContext
+        get() = optionalStorageContext ?: throw UnsupportedOperationException("Storage serialization not supported in this environment")
 
-    override val checkpointContext: CheckpointSerializationContext get() = optionalCheckpointContext ?:
-        throw UnsupportedOperationException("Checkpoint serialization not supported in this environment")
+    override val checkpointContext: CheckpointSerializationContext
+        get() = optionalCheckpointContext
+                ?: throw UnsupportedOperationException("Checkpoint serialization not supported in this environment")
 
-    override val checkpointSerializer: CheckpointSerializer get() = optionalCheckpointSerializer ?:
-        throw UnsupportedOperationException("Checkpoint serialization not supported in this environment")
+    override val checkpointSerializer: CheckpointSerializer
+        get() = optionalCheckpointSerializer
+                ?: throw UnsupportedOperationException("Checkpoint serialization not supported in this environment")
 }
 
 private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
@@ -88,7 +93,8 @@ val effectiveSerializationEnv: SerializationEnvironment
     get() = serializationEnvProperties.map { Pair(it, it.get()) }.filter { it.second != null }.run {
         singleOrNull()?.run {
             second!!
-        } ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}")
+        }
+                ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}")
     }
 /** Should be set once in main. */
 var nodeSerializationEnv by _nodeSerializationEnv

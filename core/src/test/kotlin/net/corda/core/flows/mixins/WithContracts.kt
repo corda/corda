@@ -50,8 +50,8 @@ interface WithContracts : WithMockNet {
             startFlowAndRunNetwork(ContractUpgradeFlow.Initiate(stateAndRef, toClass.java))
 
     fun <T : UpgradedContract<*, *>> TestStartedNode.authoriseContractUpgrade(
-        tx: SignedTransaction, toClass: KClass<T>) =
-        authoriseContractUpgrade(tx.tx.outRef(0), toClass)
+            tx: SignedTransaction, toClass: KClass<T>) =
+            authoriseContractUpgrade(tx.tx.outRef(0), toClass)
 
     fun <T : UpgradedContract<*, *>> TestStartedNode.authoriseContractUpgrade(
             stateAndRef: StateAndRef<ContractState>, toClass: KClass<T>) =
@@ -60,28 +60,28 @@ interface WithContracts : WithMockNet {
             )
 
     fun TestStartedNode.deauthoriseContractUpgrade(tx: SignedTransaction) = startFlow(
-        ContractUpgradeFlow.Deauthorise(tx.tx.outRef<ContractState>(0).ref)
+            ContractUpgradeFlow.Deauthorise(tx.tx.outRef<ContractState>(0).ref)
     )
 
     // RPC versions of the above
     fun <S : ContractState, T : UpgradedContract<S, *>> CordaRPCOps.initiateContractUpgrade(
-        tx: SignedTransaction, toClass: KClass<T>) =
-        startFlow(
-            { stateAndRef, upgrade -> ContractUpgradeFlow.Initiate(stateAndRef, upgrade) },
-            tx.tx.outRef<S>(0),
-            toClass.java)
-        .andRunNetwork()
+            tx: SignedTransaction, toClass: KClass<T>) =
+            startFlow(
+                    { stateAndRef, upgrade -> ContractUpgradeFlow.Initiate(stateAndRef, upgrade) },
+                    tx.tx.outRef<S>(0),
+                    toClass.java)
+                    .andRunNetwork()
 
     fun <S : ContractState, T : UpgradedContract<S, *>> CordaRPCOps.authoriseContractUpgrade(
-        tx: SignedTransaction, toClass: KClass<T>) =
-        startFlow(
-            { stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
-            tx.tx.outRef<S>(0),
-            toClass.java)
+            tx: SignedTransaction, toClass: KClass<T>) =
+            startFlow(
+                    { stateAndRef, upgrade -> ContractUpgradeFlow.Authorise(stateAndRef, upgrade) },
+                    tx.tx.outRef<S>(0),
+                    toClass.java)
 
     fun CordaRPCOps.deauthoriseContractUpgrade(tx: SignedTransaction) =
-        startFlow(
-            { stateRef -> ContractUpgradeFlow.Deauthorise(stateRef) },
-            tx.tx.outRef<ContractState>(0).ref)
+            startFlow(
+                    { stateRef -> ContractUpgradeFlow.Deauthorise(stateRef) },
+                    tx.tx.outRef<ContractState>(0).ref)
     //region
 }

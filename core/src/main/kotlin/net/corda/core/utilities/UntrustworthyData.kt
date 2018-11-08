@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.utilities
 
 import co.paralleluniverse.fibers.Suspendable

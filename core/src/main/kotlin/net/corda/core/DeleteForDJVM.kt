@@ -8,15 +8,15 @@ import kotlin.annotation.AnnotationTarget.*
  */
 // DOCSTART 01
 @Target(
-    FILE,
-    CLASS,
-    CONSTRUCTOR,
-    FUNCTION,
-    PROPERTY_GETTER,
-    PROPERTY_SETTER,
-    PROPERTY,
-    FIELD,
-    TYPEALIAS
+        FILE,
+        CLASS,
+        CONSTRUCTOR,
+        FUNCTION,
+        PROPERTY_GETTER,
+        PROPERTY_SETTER,
+        PROPERTY,
+        FIELD,
+        TYPEALIAS
 )
 @Retention(BINARY)
 @CordaInternal

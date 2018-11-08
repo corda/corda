@@ -54,10 +54,12 @@ object JarSignatureCollector {
         return firstSignerSet
     }
 
-    private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>> get() =
+    private val JarInputStream.fileSignerSets: List<Pair<String, Set<CodeSigner>>>
+        get() =
             entries.thatAreSignable.shreddedFrom(this).toFileSignerSet().toList()
 
-    private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry> get() =
+    private val Sequence<JarEntry>.thatAreSignable: Sequence<JarEntry>
+        get() =
             filterNot { entry -> entry.isDirectory || unsignableEntryName.matches(entry.name) }
 
     private fun Sequence<JarEntry>.shreddedFrom(jar: JarInputStream): Sequence<JarEntry> = map { entry ->
@@ -78,10 +80,10 @@ object JarSignatureCollector {
 
     private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
         (it.signerCertPath.certificates[0] as X509Certificate).publicKey
-    }.sortedBy { it.hash} // Sorted for determinism.
+    }.sortedBy { it.hash } // Sorted for determinism.
 
     private fun Set<CodeSigner>.toCertificates(): List<X509Certificate> = map {
-       it.signerCertPath.certificates[0] as X509Certificate
+        it.signerCertPath.certificates[0] as X509Certificate
     }.sortedBy { it.toString() } // Sorted for determinism.
 
     private val JarInputStream.entries get(): Sequence<JarEntry> = generateSequence(nextJarEntry) { nextJarEntry }

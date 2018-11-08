@@ -9,10 +9,10 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.sequence
 import java.io.NotSerializableException
 
-
 object CheckpointSerializationDefaults {
     @DeleteForDJVM
-    val CHECKPOINT_CONTEXT get() = effectiveSerializationEnv.checkpointContext
+    val CHECKPOINT_CONTEXT
+        get() = effectiveSerializationEnv.checkpointContext
     val CHECKPOINT_SERIALIZER get() = effectiveSerializationEnv.checkpointSerializer
 }
 

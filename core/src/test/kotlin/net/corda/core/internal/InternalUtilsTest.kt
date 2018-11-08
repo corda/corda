@@ -105,7 +105,7 @@ open class InternalUtilsTest {
     fun `test SHA-256 hash for InputStream`() {
         val contents = arrayOfJunk(DEFAULT_BUFFER_SIZE * 2 + DEFAULT_BUFFER_SIZE / 2)
         assertThat(contents.inputStream().hash())
-            .isEqualTo(SecureHash.parse("A4759E7AA20338328866A2EA17EAF8C7FE4EC6BBE3BB71CEE7DF7C0461B3C22F"))
+                .isEqualTo(SecureHash.parse("A4759E7AA20338328866A2EA17EAF8C7FE4EC6BBE3BB71CEE7DF7C0461B3C22F"))
     }
 
     private fun arrayOfJunk(size: Int) = ByteArray(size).apply {

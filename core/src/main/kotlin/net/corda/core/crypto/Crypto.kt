@@ -194,8 +194,7 @@ object Crypto {
      * Map of X.509 algorithm identifiers to signature schemes Corda recognises. See RFC 2459 for the format of
      * algorithm identifiers.
      */
-    private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme>
-            = (signatureSchemeMap.values.flatMap { scheme -> scheme.alternativeOIDs.map { Pair(it, scheme) } }
+    private val algorithmMap: Map<AlgorithmIdentifier, SignatureScheme> = (signatureSchemeMap.values.flatMap { scheme -> scheme.alternativeOIDs.map { Pair(it, scheme) } }
             + signatureSchemeMap.values.map { Pair(it.signatureOID, it) })
             .toMap()
 

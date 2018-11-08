@@ -219,7 +219,6 @@ class ResolveTransactionsFlowTest {
     }
     // DOCEND 2
 
-
     @InitiatingFlow
     private open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
@@ -233,6 +232,7 @@ class ResolveTransactionsFlowTest {
             subFlow(resolveTransactionsFlow)
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
     private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
@@ -250,6 +250,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, toVend))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestNoRightsVendingFlow::class)
     private open class TestResponseResolveNoRightsFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -271,6 +272,7 @@ class ResolveTransactionsFlowTest {
             subFlow(DataVendingFlow(session, tx))
         }
     }
+
     @Suppress("unused")
     @InitiatedBy(TestResolveTwiceVendingFlow::class)
     private open class TestResponseResolveTwiceFlow(val otherSideSession: FlowSession) : FlowLogic<Unit>() {

@@ -120,7 +120,7 @@ object LegalNameValidator {
             override fun validate(legalName: String) {
                 val illegalChars = legalName.toCharArray().filter { Character.UnicodeBlock.of(it) !in supportScriptsSet }.size
                 // We don't expose the characters or the legal name, for security reasons
-                require (illegalChars == 0) { "$illegalChars forbidden characters in legal name." }
+                require(illegalChars == 0) { "$illegalChars forbidden characters in legal name." }
             }
         }
 

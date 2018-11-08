@@ -1,5 +1,6 @@
 @file:JvmName("ContractsDSL")
 @file:KeepForDJVM
+
 package net.corda.core.contracts
 
 import net.corda.core.KeepForDJVM
@@ -40,10 +41,7 @@ inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: Class<C>,
                                                                          signer: PublicKey? = null,
                                                                          party: AbstractParty? = null) =
-        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.
-                filter { if (signer == null) true else signer in it.signers }.
-                filter { if (party == null) true else party in it.signingParties }.
-                map { CommandWithParties(it.signers, it.signingParties, it.value) }
+        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.filter { if (signer == null) true else signer in it.signers }.filter { if (party == null) true else party in it.signingParties }.map { CommandWithParties(it.signers, it.signingParties, it.value) }
 
 /** Filters the command list by type, parties and public keys all at once. */
 inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.select(signers: Collection<PublicKey>?,
@@ -54,10 +52,7 @@ inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>
 fun <C : CommandData> Collection<CommandWithParties<CommandData>>.select(klass: Class<C>,
                                                                          signers: Collection<PublicKey>?,
                                                                          parties: Collection<Party>?) =
-        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.
-                filter { if (signers == null) true else it.signers.containsAll(signers) }.
-                filter { if (parties == null) true else it.signingParties.containsAll(parties) }.
-                map { CommandWithParties(it.signers, it.signingParties, it.value) }
+        mapNotNull { if (klass.isInstance(it.value)) uncheckedCast<CommandWithParties<CommandData>, CommandWithParties<C>>(it) else null }.filter { if (signers == null) true else it.signers.containsAll(signers) }.filter { if (parties == null) true else it.signingParties.containsAll(parties) }.map { CommandWithParties(it.signers, it.signingParties, it.value) }
 
 /** Ensures that a transaction has only one command that is of the given type, otherwise throws an exception. */
 inline fun <reified T : CommandData> Collection<CommandWithParties<CommandData>>.requireSingleCommand() = requireSingleCommand(T::class.java)

@@ -117,7 +117,7 @@ dependencies {
 task copyQuasarJar(type: Copy) {
     from configurations.quasar
     into "$project.rootProject.projectDir/lib"
-    rename { filename -> "quasar.jar"}
+    rename { filename -> "quasar.jar" }
 }
 
 jar {
@@ -156,8 +156,8 @@ artifacts {
 
 scanApi {
     excludeClasses = [
-        // Kotlin should probably have declared this class as "synthetic".
-        "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
+            // Kotlin should probably have declared this class as "synthetic".
+            "net.corda.core.Utils\$toFuture\$1\$subscription\$1"
     ]
 }
 

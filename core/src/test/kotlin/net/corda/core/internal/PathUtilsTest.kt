@@ -74,9 +74,9 @@ class PathUtilsTest {
             val dir = fs.getPath("dir").createDirectories()
             val result = source.copyToDirectory(dir)
             assertThat(result)
-                .isRegularFile()
-                .hasParent(dir)
-                .hasSameContentAs(source)
+                    .isRegularFile()
+                    .hasParent(dir)
+                    .hasSameContentAs(source)
         }
     }
 }

@@ -53,6 +53,7 @@ interface ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
+
     /**
      * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
      *

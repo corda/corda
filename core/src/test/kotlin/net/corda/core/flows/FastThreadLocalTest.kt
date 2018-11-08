@@ -61,12 +61,12 @@ class FastThreadLocalTest {
     @Test
     fun `FastThreadLocal with FastThreadLocalThread is not fiber-local`() =
             scheduled(3, ::FastThreadLocalThread) {
-        val threadLocal = object : FastThreadLocal<ExpensiveObj>() {
-            override fun initialValue() = ExpensiveObj()
-        }
-        runFibers(100, threadLocal::get) // Return value could be anything.
-        assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
-    }
+                val threadLocal = object : FastThreadLocal<ExpensiveObj>() {
+                    override fun initialValue() = ExpensiveObj()
+                }
+                runFibers(100, threadLocal::get) // Return value could be anything.
+                assertThat(expensiveObjCount.get(), lessThanOrEqualTo(3))
+            }
 
     /** @return the number of times a different expensive object was obtained post-suspend. */
     private fun SchedulerContext.runFibers(fiberCount: Int, threadLocalGet: () -> ExpensiveObj): Int {

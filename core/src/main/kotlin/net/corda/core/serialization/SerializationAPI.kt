@@ -1,4 +1,5 @@
 @file:KeepForDJVM
+
 package net.corda.core.serialization
 
 import net.corda.core.CordaInternal
@@ -104,6 +105,7 @@ abstract class SerializationFactory {
     }
 }
 typealias SerializationMagic = ByteSequence
+
 @DoNotImplement
 interface SerializationEncoding
 
@@ -233,9 +235,15 @@ enum class ContextPropertyKeys {
 object SerializationDefaults {
     val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
     val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
-    @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext
-    @DeleteForDJVM val RPC_CLIENT_CONTEXT get() = effectiveSerializationEnv.rpcClientContext
-    @DeleteForDJVM val STORAGE_CONTEXT get() = effectiveSerializationEnv.storageContext
+    @DeleteForDJVM
+    val RPC_SERVER_CONTEXT
+        get() = effectiveSerializationEnv.rpcServerContext
+    @DeleteForDJVM
+    val RPC_CLIENT_CONTEXT
+        get() = effectiveSerializationEnv.rpcClientContext
+    @DeleteForDJVM
+    val STORAGE_CONTEXT
+        get() = effectiveSerializationEnv.storageContext
 }
 
 /**

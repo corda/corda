@@ -99,8 +99,8 @@ class CordaX500NameTest {
 
     @Test
     fun `accepts attributes starting with numeric character`() {
-            CordaX500Name.parse("O=8Bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name")
-            validateLocalityAndOrganisationalUnitAndCommonName("8bank")
+        CordaX500Name.parse("O=8Bank A, L=New York, C=DE, OU=Org Unit, CN=Service Name")
+        validateLocalityAndOrganisationalUnitAndCommonName("8bank")
     }
 
     @Test
@@ -133,6 +133,7 @@ class CordaX500NameTest {
         CordaX500Name.parse("O=VA\$LID, L=VALID, C=DE, OU=VALID, CN=VALID")
         validateLocalityAndOrganisationalUnitAndCommonName("VA\$LID")
     }
+
     @Test
     fun `rejects attributes with double quotation mark`() {
         assertFailsWith(IllegalArgumentException::class) {
@@ -146,6 +147,7 @@ class CordaX500NameTest {
         CordaX500Name.parse("O=VA'LID, L=VALID, C=DE, OU=VALID, CN=VALID")
         validateLocalityAndOrganisationalUnitAndCommonName("VA'LID")
     }
+
     @Test
     fun `rejects organisation with backslash`() {
         assertFailsWith(IllegalArgumentException::class) {
@@ -161,6 +163,7 @@ class CordaX500NameTest {
         }
         validateLocalityAndOrganisationalUnitAndCommonName("VA  LID")
     }
+
     @Test
     fun `rejects organisation (but not other attributes) containing the null character`() {
         assertFailsWith(IllegalArgumentException::class) {

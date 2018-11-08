@@ -115,7 +115,6 @@ internal class UseRefState(private val linearId: UniqueIdentifier) : FlowLogic<S
     }
 }
 
-
 class WithReferencedStatesFlowTests {
     companion object {
         @JvmStatic

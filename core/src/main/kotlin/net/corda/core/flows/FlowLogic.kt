@@ -247,7 +247,6 @@ abstract class FlowLogic<out T> {
         return sendAndReceiveWithRetry(R::class.java, payload)
     }
 
-
     /** Suspends until a message has been received for each session in the specified [sessions].
      *
      * Consider [receiveAll(receiveType: Class<R>, sessions: List<FlowSession>): List<UntrustworthyData<R>>] when the same type is expected from all sessions.

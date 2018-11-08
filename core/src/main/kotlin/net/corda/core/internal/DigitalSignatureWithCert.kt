@@ -37,7 +37,6 @@ Cert path: $fullCertPath
 """, e)
             }
         }
-
     }
 }
 

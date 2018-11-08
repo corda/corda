@@ -123,7 +123,6 @@ class ProgressTracker(vararg inputSteps: Step) {
             }
         }
 
-
     init {
         steps.forEach {
             configureChildTrackerForStep(it)

@@ -21,7 +21,6 @@ import java.lang.annotation.Inherited
 @Inherited
 annotation class CordaSerializable
 
-
 /**
  * Used to annotate methods which expose calculated values that we want to be serialized for use by the class carpenter.
  */

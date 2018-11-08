@@ -71,7 +71,6 @@ class PackageOwnershipVerificationTests {
             }
         }
     }
-
 }
 
 class DummyContractState : ContractState {

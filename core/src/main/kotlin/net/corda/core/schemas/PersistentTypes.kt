@@ -107,28 +107,28 @@ data class PersistentStateRef(
 interface StatePersistable
 
 object MappedSchemaValidator {
-    fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+    fun fieldsFromOtherMappedSchema(schema: MappedSchema): List<SchemaCrossReferenceReport> =
             schema.mappedTypes.map { entity ->
                 entity.declaredFields.filter { field ->
                     field.type.enclosingClass != null
                             && MappedSchema::class.java.isAssignableFrom(field.type.enclosingClass)
                             && hasJpaAnnotation(field.declaredAnnotations)
                             && field.type.enclosingClass != schema.javaClass
-                }.map { field -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, field.type.enclosingClass.name, field.name, field.type.simpleName)}
+                }.map { field -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, field.type.enclosingClass.name, field.name, field.type.simpleName) }
             }.flatMap { it.toSet() }
 
-    fun methodsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
+    fun methodsFromOtherMappedSchema(schema: MappedSchema): List<SchemaCrossReferenceReport> =
             schema.mappedTypes.map { entity ->
                 entity.declaredMethods.filter { method ->
                     method.returnType.enclosingClass != null
                             && MappedSchema::class.java.isAssignableFrom(method.returnType.enclosingClass)
                             && method.returnType.enclosingClass != schema.javaClass
                             && hasJpaAnnotation(method.declaredAnnotations)
-                }.map { method -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, method.returnType.enclosingClass.name, method.name, method.returnType.simpleName)}
+                }.map { method -> SchemaCrossReferenceReport(schema.javaClass.name, entity.simpleName, method.returnType.enclosingClass.name, method.name, method.returnType.simpleName) }
             }.flatMap { it.toSet() }
 
-    fun crossReferencesToOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =
-         fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
+    fun crossReferencesToOtherMappedSchema(schema: MappedSchema): List<SchemaCrossReferenceReport> =
+            fieldsFromOtherMappedSchema(schema) + methodsFromOtherMappedSchema(schema)
 
     /** Returns true if [javax.persistence] annotation expect [javax.persistence.Transient] is found. */
     private fun hasJpaAnnotation(annotations: Array<Annotation>) =

@@ -3,6 +3,8 @@ package net.corda.core.utilities
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Try.Failure
+import net.corda.core.utilities.Try.Success
 
 /**
  * Representation of an operation that has either succeeded with a result (represented by [Success]) or failed with an
@@ -62,7 +64,8 @@ sealed class Try<out A> {
     fun doOnSuccess(action: (A) -> Unit): Try<A> {
         when (this) {
             is Success -> action.invoke(value)
-            is Failure -> {}
+            is Failure -> {
+            }
         }
         return this
     }
@@ -70,7 +73,8 @@ sealed class Try<out A> {
     /** Applies the given action to the error if [Failure], or does nothing if [Success]. Returns `this` for chaining. */
     fun doOnFailure(action: (Throwable) -> Unit): Try<A> {
         when (this) {
-            is Success -> {}
+            is Success -> {
+            }
             is Failure -> action.invoke(exception)
         }
         return this

@@ -929,7 +929,7 @@ class CryptoUtilsTest {
         assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
     }
 
-    fun ContentSigner.write(message: ByteArray)  {
+    fun ContentSigner.write(message: ByteArray) {
         this.outputStream.write(message)
         this.outputStream.close()
     }

@@ -52,7 +52,6 @@ class TransactionEncumbranceTests {
         val FIVE_PM: Instant = FOUR_PM.plus(1, ChronoUnit.HOURS)
         val timeLock = DummyTimeLock.State(FIVE_PM)
 
-
         val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), MEGA_CORP.name,
                 rigorousMock<IdentityServiceInternal>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
@@ -256,7 +255,7 @@ class TransactionEncumbranceTests {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1, contractState = state)
-                output(TEST_TIMELOCK_ID, "5pm time-lock",0, timeLock)
+                output(TEST_TIMELOCK_ID, "5pm time-lock", 0, timeLock)
             }
             transaction {
                 attachments(Cash.PROGRAM_ID)
