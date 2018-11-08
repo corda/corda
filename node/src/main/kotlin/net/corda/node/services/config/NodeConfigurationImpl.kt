@@ -14,6 +14,7 @@ import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
@@ -154,6 +155,31 @@ data class NodeConfigurationImpl(
         require(security == null || rpcUsers.isEmpty()) {
             "Cannot specify both 'rpcUsers' and 'security' in configuration"
         }
+
+        // ensure our datasource configuration is sane
+        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
+        dataSourceProperties.set("autoCommit", false)
+        if (dataSourceProperties.get("transactionIsolation") == null) {
+            dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
+        }
+
+        // TODO sollecitom check if you need to add these to validation
+        // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
+        val dataSourceUrl = dataSourceProperties.getProperty(CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL, "")
+        if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
+            dataSourceProperties[CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL] = "$dataSourceUrl;sendStringParametersAsUnicode=false"
+        }
+
+        // Adjust connection pool size depending on N=flow thread pool size.
+        // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
+        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
+        val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
+        if (maxConnectionPoolSize == null) {
+            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
+        } else {
+            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
+        }
+
         @Suppress("DEPRECATION")
         if (certificateChainCheckPolicies.isNotEmpty()) {
             logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
@@ -283,53 +309,6 @@ data class NodeConfigurationImpl(
             h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
             else -> h2Settings
         }
-
-    // TODO sollecitom check these lines
-//    init {
-//        // This is a sanity feature do not remove.
-//        require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
-//        require(devModeOptions == null || devMode) { "Cannot use devModeOptions outside of dev mode" }
-//        require(security == null || rpcUsers.isEmpty()) {
-//            "Cannot specify both 'rpcUsers' and 'security' in configuration"
-//        }
-//
-//        // ensure our datasource configuration is sane
-//        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
-//        dataSourceProperties.set("autoCommit", false)
-//        if (dataSourceProperties.get("transactionIsolation") == null) {
-//            dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
-//        }
-//
-//        // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
-//        val dataSourceUrl = dataSourceProperties.getProperty(DataSourceConfigTag.DATA_SOURCE_URL, "")
-//        if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
-//            dataSourceProperties[DataSourceConfigTag.DATA_SOURCE_URL] = dataSourceUrl + ";sendStringParametersAsUnicode=false"
-//        }
-//
-//        // Adjust connection pool size depending on N=flow thread pool size.
-//        // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
-//        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
-//        val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
-//        if (maxConnectionPoolSize == null) {
-//            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
-//        } else {
-//            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
-//        }
-//
-//        // Check for usage of deprecated config
-//        @Suppress("DEPRECATION")
-//        if (certificateChainCheckPolicies.isNotEmpty()) {
-//            logger.warn("""You are configuring certificateChainCheckPolicies. This is a setting that is not used, and will be removed in a future version.
-//                |Please contact the R3 team on the public slack to discuss your use case.
-//            """.trimMargin())
-//        }
-//
-//        // Support the deprecated method of configuring network services with a single compatibilityZoneURL option
-//        if (compatibilityZoneURL != null && networkServices == null) {
-//            networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, inferred = true)
-//        }
-//        require(h2port == null || h2Settings == null) { "Cannot specify both 'h2port' and 'h2Settings' in configuration" }
-//    }
 }
 
 data class NodeRpcSettings(
