@@ -82,6 +82,9 @@ Here are some guidelines for Corda dependencies:
 * When building an RPC client that communicates with a node (e.g. a webserver), you should include
   ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
 
+* When you need to use the network bootstrapper to bootstrap a local network (e.g. by running `deployNodes`), you 
+  should include ``net.corda:corda-node-api:$corda_release_version`` as a ``cordaCompile`` dependency
+
 * To use Corda's test frameworks, add ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile``
   dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency
 
@@ -102,7 +105,7 @@ Here is an overview of the various Corda dependencies:
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
   frameworks
-* ``corda-node-api`` - The node API. Used for Cordapps. Depend on when writing a Cordapp
+* ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-notary-bft-smart`` - A Corda notary implementation
 * ``corda-notary-raft`` - A Corda notary implementation
