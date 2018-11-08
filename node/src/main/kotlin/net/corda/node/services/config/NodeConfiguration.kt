@@ -281,6 +281,10 @@ data class NodeConfigurationImpl(
                 rpcSettings
             }
         }
+
+        if (messagingServerExternal && messagingServerAddress != null) {
+            require(enterpriseConfiguration.messagingServerSslConfiguration != null) {"Missing SSL configuration required by broker connection."}
+        }
     }
 
     override val certificatesDirectory = baseDirectory / "certificates"

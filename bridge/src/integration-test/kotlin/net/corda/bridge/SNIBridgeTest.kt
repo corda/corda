@@ -124,7 +124,14 @@ class SNIBridgeTest : IntegrationTest() {
                             "p2pAddress" to "localhost:$advertisedP2PPort",
                             "messagingServerAddress" to "0.0.0.0:$artemisPort",
                             "messagingServerExternal" to true,
-                            "enterpriseConfiguration" to mapOf("externalBridge" to true)
+                            "enterpriseConfiguration" to mapOf(
+                                    "externalBridge" to true,
+                                    "messagingServerSslConfiguration" to mapOf(
+                                            "sslKeystore" to "${bankAPath}/certificates/sslkeystore.jks",
+                                            "keyStorePassword" to "cordacadevpass",
+                                            "trustStoreFile" to "${bankAPath}/certificates/truststore.jks",
+                                            "trustStorePassword" to "trustpass"
+                                    ))
                     )
             )
 
@@ -138,14 +145,21 @@ class SNIBridgeTest : IntegrationTest() {
                             "p2pAddress" to "localhost:$advertisedP2PPort",
                             "messagingServerAddress" to "0.0.0.0:$artemisPort",
                             "messagingServerExternal" to true,
-                            "enterpriseConfiguration" to mapOf("externalBridge" to true)
+                            "enterpriseConfiguration" to mapOf(
+                                    "externalBridge" to true,
+                                    "messagingServerSslConfiguration" to mapOf(
+                                            "sslKeystore" to "${bankBPath}/certificates/sslkeystore.jks",
+                                            "keyStorePassword" to "cordacadevpass",
+                                            "trustStoreFile" to "${bankBPath}/certificates/truststore.jks",
+                                            "trustStorePassword" to "trustpass"
+                                    )
+                            )
                     )
             )
 
             val b = bFuture.getOrThrow()
 
-            val bridge = startBridge(ALICE_NAME, advertisedP2PPort, artemisPort, emptyMap(
-            )).getOrThrow()
+            startBridge(ALICE_NAME, advertisedP2PPort, artemisPort, emptyMap()).getOrThrow()
 
             // Start a node on the other side of the bridge
             val c = startNode(providedName = DUMMY_BANK_C_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${portAllocation.nextPort()}")).getOrThrow()

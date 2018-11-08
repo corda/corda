@@ -5,17 +5,30 @@ import java.io.File
 import java.net.InetAddress
 import java.nio.file.Path
 import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
         val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = ExternalBrokerConnectionConfiguration.DEFAULT,
         val externalBrokerBackupAddresses: List<NetworkHostAndPort> = emptyList(),
+        val messagingServerSslConfiguration: MessagingServerSslConfiguration? = null,
         val useMultiThreadedSMM: Boolean = true,
         val tuning: PerformanceTuning = PerformanceTuning.default,
         val externalBridge: Boolean? = null,
         val enableCacheTracing: Boolean = false,
         val traceTargetDirectory: Path = File(".").toPath()
 )
+
+data class MessagingServerSslConfiguration(private val sslKeystore: Path,
+                                           private val keyStorePassword: String,
+                                           private val trustStoreFile: Path,
+                                           private val trustStorePassword: String,
+                                           override val useOpenSsl: Boolean = false) : MutualSslConfiguration {
+
+    override val keyStore = FileBasedCertificateStoreSupplier(sslKeystore, keyStorePassword, keyStorePassword)
+    override val trustStore = FileBasedCertificateStoreSupplier(trustStoreFile, trustStorePassword, trustStorePassword)
+}
 
 data class MutualExclusionConfiguration(val on: Boolean = false,
                                         val machineName: String = defaultMachineName,

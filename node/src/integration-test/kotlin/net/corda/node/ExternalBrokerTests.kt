@@ -52,11 +52,19 @@ class ExternalBrokertests : IntegrationTest() {
         val p2pPort = portAllocator.nextPort()
         val rpcPort = portAllocator.nextPort()
         val broker = createArtemis(p2pPort)
+        val nodeBaseDir = tempFolder.root.toPath()
         val nodeConfiguration  = mapOf(
-                "baseDirectory" to tempFolder.root.toPath().toString() + "/",
+                "baseDirectory" to "$nodeBaseDir",
                 "devMode" to false, "messagingServerExternal" to true,
                 "messagingServerAddress" to NetworkHostAndPort("localhost", p2pPort).toString(),
-                "enterpriseConfiguration" to mapOf("externalBridge" to true),
+                "enterpriseConfiguration" to mapOf(
+                        "externalBridge" to true,
+                        "messagingServerSslConfiguration" to mapOf(
+                                "sslKeystore" to "${nodeBaseDir}/certificates/sslkeystore.jks",
+                                "keyStorePassword" to "cordacadevpass",
+                                "trustStoreFile" to "${nodeBaseDir}/certificates/truststore.jks",
+                                "trustStorePassword" to "trustpass"
+                        )),
                 "keyStorePassword" to "cordacadevpass",
                 "trustStorePassword" to "trustpass",
                 "rpcSettings.address" to NetworkHostAndPort("localhost", rpcPort).toString())
@@ -100,11 +108,19 @@ class ExternalBrokertests : IntegrationTest() {
         val p2pPort = portAllocator.nextPort()
         val broker = createArtemis(p2pPort)
         broker.start()
+        val nodeBaseDir = tempFolder.root.toPath()
         val nodeConfiguration  = mapOf(
-                "baseDirectory" to tempFolder.root.toPath().toString() + "/",
+                "baseDirectory" to "$nodeBaseDir",
                 "devMode" to false, "messagingServerExternal" to true,
                 "messagingServerAddress" to NetworkHostAndPort("localhost", p2pPort).toString(),
-                "enterpriseConfiguration" to mapOf("externalBrokerConnectionConfiguration" to "FAIL_FAST"),
+                "enterpriseConfiguration" to mapOf(
+                        "externalBrokerConnectionConfiguration" to "FAIL_FAST",
+                        "messagingServerSslConfiguration" to mapOf(
+                                "sslKeystore" to "${nodeBaseDir}/certificates/sslkeystore.jks",
+                                "keyStorePassword" to "cordacadevpass",
+                                "trustStoreFile" to "${nodeBaseDir}/certificates/truststore.jks",
+                                "trustStorePassword" to "trustpass"
+                        )),
                 "keyStorePassword" to "cordacadevpass",
                 "trustStorePassword" to "trustpass")
         driver(DriverParameters(startNodesInProcess = false, notarySpecs = emptyList())) {

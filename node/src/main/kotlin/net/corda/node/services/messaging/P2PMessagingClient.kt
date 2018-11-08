@@ -185,8 +185,13 @@ class P2PMessagingClient(val config: NodeConfiguration,
         this.maxMessageSize = maxMessageSize
         state.locked {
             started = true
-            val tcpTransport = p2pConnectorTcpTransport(serverAddress, config.p2pSslOptions)
-            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.externalBrokerBackupAddresses, config.p2pSslOptions)
+            val sslOptions = if (config.messagingServerExternal) {
+                config.enterpriseConfiguration.messagingServerSslConfiguration
+            } else {
+                config.p2pSslOptions
+            }
+            val tcpTransport = p2pConnectorTcpTransport(serverAddress, sslOptions)
+            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.externalBrokerBackupAddresses, sslOptions)
             log.info("Connecting to message broker: $serverAddress")
             if (backupTransports.isNotEmpty()) {
                 log.info("Back-up message broker addresses: ${config.enterpriseConfiguration.externalBrokerBackupAddresses}")
