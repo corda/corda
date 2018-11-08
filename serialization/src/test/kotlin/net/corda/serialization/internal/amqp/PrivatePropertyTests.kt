@@ -4,8 +4,10 @@ import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.assertEquals
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.serialization.internal.amqp.testutils.*
+import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
 import org.junit.Test
-import org.apache.qpid.proton.amqp.Symbol
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
 import java.util.*
@@ -14,6 +16,7 @@ class PrivatePropertyTests {
 
     private val registry = TestDescriptorBasedSerializerRegistry()
     private val factory = testDefaultFactoryNoEvolution(registry)
+    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, factory))
 
     @Test
     fun testWithOnePrivateProperty() {
@@ -123,18 +126,13 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = registry.contents
+        val typeInformation = typeModel.inspect(C::class.java)
+        assertTrue(typeInformation is LocalTypeInformation.Composable)
+        typeInformation as LocalTypeInformation.Composable
 
-        val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
-        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
-        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
-        assertEquals(2, propertySerializers.size)
-        // a was public so should have a synthesised getter
-        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
-
-        // b is private and thus won't have teh getter so we'll have reverted
-        // to using reflection to remove the inaccessible property
-        assertTrue(propertySerializers[1].propertyReader is PrivatePropertyReader)
+        assertEquals(2, typeInformation.properties.size)
+        assertTrue(typeInformation.properties["a"] is LocalPropertyInformation.ConstructorPairedProperty)
+        assertTrue(typeInformation.properties["b"] is LocalPropertyInformation.PrivateConstructorPairedProperty)
     }
 
     @Test
@@ -148,19 +146,14 @@ class PrivatePropertyTests {
         val schemaAndBlob = SerializationOutput(factory).serializeAndReturnSchema(c1)
         assertEquals(1, schemaAndBlob.schema.types.size)
 
-        val serializersByDescriptor = registry.contents
 
-        val schemaDescriptor = schemaAndBlob.schema.types.first().descriptor.name
-        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
-        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
-            assertEquals(2, propertySerializers.size)
+        val typeInformation = typeModel.inspect(C::class.java)
+        assertTrue(typeInformation is LocalTypeInformation.Composable)
+        typeInformation as LocalTypeInformation.Composable
 
-        // as before, a is public so we'll use the getter method
-        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
-
-        // the getB() getter explicitly added means we should use the "normal" public
-        // method reader rather than the private oen
-        assertTrue(propertySerializers[1].propertyReader is PublicPropertyReader)
+        assertEquals(2, typeInformation.properties.size)
+        assertTrue(typeInformation.properties["a"] is LocalPropertyInformation.ConstructorPairedProperty)
+        assertTrue(typeInformation.properties["b"] is LocalPropertyInformation.ConstructorPairedProperty)
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -171,7 +164,6 @@ class PrivatePropertyTests {
 
         val c1 = Outer(Inner(1010101))
         val output = SerializationOutput(factory).serializeAndReturnSchema(c1)
-        println (output.schema)
 
         val serializersByDescriptor = registry.contents
 
@@ -190,20 +182,13 @@ class PrivatePropertyTests {
     @Test
     fun allCapsProprtyNotPrivate() {
         data class C (val CCC: String)
+        val typeInformation = typeModel.inspect(C::class.java)
 
-        val output = SerializationOutput(factory).serializeAndReturnSchema(C("this is nice"))
+        assertTrue(typeInformation is LocalTypeInformation.Composable)
+        typeInformation as LocalTypeInformation.Composable
 
-        val serializersByDescriptor = registry.contents
-
-        val schemaDescriptor = output.schema.types.first().descriptor.name
-        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
-        val propertySerializers = serializer.propertySerializers.serializationOrder.map { it.serializer }
-
-        // CCC is the only property to be serialised
-        assertEquals(1, propertySerializers.size)
-
-        // and despite being all caps it should still be a public getter
-        assertTrue(propertySerializers[0].propertyReader is PublicPropertyReader)
+        assertEquals(1, typeInformation.properties.size)
+        assertTrue(typeInformation.properties["CCC"] is LocalPropertyInformation.ConstructorPairedProperty)
     }
 
 }

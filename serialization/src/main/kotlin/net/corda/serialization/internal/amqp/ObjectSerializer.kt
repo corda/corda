@@ -5,12 +5,101 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
+import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
+
+class ComposableSerializer(
+        private val typeInformation: LocalTypeInformation,
+        override val typeDescriptor: Symbol,
+        private val typeNotation: TypeNotation,
+        private val interfaces: List<LocalTypeInformation>,
+        private val propertySerializers: Map<String, ComposableTypePropertySerializer>): AMQPSerializer<Any> {
+
+    companion object {
+        fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): AMQPSerializer<Any> {
+            val typeDescriptor = factory.createDescriptor(typeInformation.observedType)
+            val typeNotation = TypeNotationGenerator(factory).getTypeNotation(typeInformation)
+
+            return when (typeInformation) {
+                is LocalTypeInformation.Composable ->
+                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
+                            typeInformation.properties, factory)
+                is LocalTypeInformation.AnInterface ->
+                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
+                            typeInformation.properties, factory)
+                is LocalTypeInformation.Abstract ->
+                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
+                            typeInformation.properties, factory)
+                else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
+            }
+        }
+
+        private fun make(typeInformation: LocalTypeInformation, typeDescriptor: Symbol, typeNotation: TypeNotation,
+                         interfaces: List<LocalTypeInformation>, properties: Map<String, LocalPropertyInformation>,
+                         factory: LocalSerializerFactory): AMQPSerializer<Any> {
+            val propertySerializers = properties.mapValues { (name, property) ->
+                ComposableTypePropertySerializer.make(name, property, factory)
+            }
+
+            return ComposableSerializer(typeInformation, typeDescriptor, typeNotation, interfaces, propertySerializers)
+        }
+    }
+
+    override val type: Type get() = typeInformation.observedType
+
+    private val objectBuilderProvider by lazy {
+        ObjectBuilder.makeProvider(typeInformation as? LocalTypeInformation.Composable
+                ?: throw NotSerializableException("Cannot make ObjectBuilder for $typeInformation"))
+    }
+
+    override fun writeClassInfo(output: SerializationOutput) {
+        if (output.writeTypeNotations(typeNotation)) {
+            for (iface in interfaces) {
+                output.requireSerializer(iface.observedType)
+            }
+
+            propertySerializers.values.forEach { serializer ->
+                serializer.writeClassInfo(output)
+            }
+        }
+    }
+
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
+        data.withDescribed(typeNotation.descriptor) {
+            withList {
+                propertySerializers.values.forEach { propertySerializer ->
+                    propertySerializer.writeProperty(obj, this, output, context, debugIndent + 1)
+                }
+            }
+        }
+    }
+
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            ifThrowsAppend({ type.typeName }) {
+                if (obj !is List<*>) throw AMQPNotSerializableException(type, "Body of described type is unexpected $obj")
+                if (obj.size != propertySerializers.size) {
+                    throw AMQPNotSerializableException(type, "${obj.size} objects to deserialize, but " +
+                            "${propertySerializers.size} properties in described type ${type.typeName}")
+                }
+
+                val builder = objectBuilderProvider()
+                builder.initialize()
+                obj.asSequence().zip(propertySerializers.values.asSequence())
+                        // Read _all_ properties from the stream
+                        .map { (item, property) -> property to property.readProperty(item, schemas, input, context) }
+                        // Throw away any calculated properties
+                        .filter { (property, _) -> !property.propertyInformation.isCalculated }
+                        // Write the rest into the builder
+                        .forEachIndexed { slot, (_, propertyValue) -> builder.populate(slot, propertyValue) }
+                return builder.build()
+            }
+}
 
 /**
  * Responsible for serializing and deserializing a regular object instance via a series of properties

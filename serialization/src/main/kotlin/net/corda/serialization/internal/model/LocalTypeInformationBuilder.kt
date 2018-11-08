@@ -4,15 +4,13 @@ import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.serialization.internal.amqp.asClass
-import net.corda.serialization.internal.amqp.calculatedPropertyDescriptors
-import net.corda.serialization.internal.amqp.componentType
-import net.corda.serialization.internal.amqp.propertyDescriptors
+import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.util.*
+import kotlin.collections.LinkedHashMap
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
@@ -153,13 +151,32 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         val constructorInformation = buildConstructorInformation(type, observedConstructor)
         val properties = buildObjectProperties(rawType, constructorInformation)
 
-        if (properties.values.any { it.type is LocalTypeInformation.NonComposable }) {
+        val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
+
+        if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
             return LocalTypeInformation.NonComposable(type, typeIdentifier, properties, superclassInformation,
                     interfaceInformation, typeParameterInformation)
         }
 
         return LocalTypeInformation.Composable(rawType, typeIdentifier, constructorInformation, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
+    }
+
+    // Can we supply all of the mandatory constructor parameters using values addressed by readable properties?
+    private fun propertiesSatisfyConstructor(constructorInformation: LocalConstructorInformation, properties: Map<PropertyName, LocalPropertyInformation>): Boolean {
+        if (!constructorInformation.hasParameters) return true
+
+        val indicesAddressedByProperties = properties.values.asSequence().mapNotNull {
+            when (it) {
+                is LocalPropertyInformation.ConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                is LocalPropertyInformation.PrivateConstructorPairedProperty -> it.constructorSlot.parameterIndex
+                else -> null
+            }
+        }.toSet()
+
+        return (0 until constructorInformation.parameters.size).none { index ->
+            constructorInformation.parameters[index].isMandatory && index !in indicesAddressedByProperties
+        }
     }
 
     private fun buildSuperclassInformation(type: Type): LocalTypeInformation =
@@ -182,9 +199,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             else interfaces += type
         }
 
-        (clazz.genericInterfaces.asSequence() + clazz.genericSuperclass)
-                .filterNotNull()
-                .forEach { exploreType(it.resolveAgainstContext(), interfaces) }
+        clazz.genericInterfaces.forEach { exploreType(it.resolveAgainstContext(), interfaces) }
+        if (clazz.genericSuperclass != null) exploreType(clazz.genericSuperclass.resolveAgainstContext(), interfaces)
 
         return interfaces
     }
@@ -199,37 +215,58 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
                     name to LocalPropertyInformation.ReadOnlyProperty(descriptor.getter, paramTypeInformation, isMandatory)
                 }
-            }.toMap()
+            }.sortedBy { (name, _) -> name }.toMap(LinkedHashMap())
 
     private fun buildObjectProperties(rawType: Class<*>, constructorInformation: LocalConstructorInformation): Map<PropertyName, LocalPropertyInformation> =
-            calculatedProperties(rawType) + nonCalculatedProperties(rawType, constructorInformation)
+            (calculatedProperties(rawType) + nonCalculatedProperties(rawType, constructorInformation))
+                    .sortedBy { (name, _) -> name }
+                    .toMap(LinkedHashMap())
 
-    private fun nonCalculatedProperties(rawType: Class<*>, constructorInformation: LocalConstructorInformation): Map<String, LocalPropertyInformation> =
-            if (constructorInformation.parameters.isEmpty()) getterSetterProperties(rawType)
-            else getConstructorPairedProperties(constructorInformation, rawType)
+    private fun nonCalculatedProperties(rawType: Class<*>, constructorInformation: LocalConstructorInformation): Sequence<Pair<String, LocalPropertyInformation>> =
+            if (constructorInformation.hasParameters) getConstructorPairedProperties(constructorInformation, rawType)
+            else getterSetterProperties(rawType)
 
-    private fun getConstructorPairedProperties(constructorInformation: LocalConstructorInformation, rawType: Class<*>): Map<String, LocalPropertyInformation.ConstructorPairedProperty> {
+    private fun getConstructorPairedProperties(constructorInformation: LocalConstructorInformation, rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> {
         val constructorParameterIndices = constructorInformation.parameters.asSequence().mapIndexed { index, parameter ->
             parameter.name to index
         }.toMap()
 
         return rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
-            val constructorIndex = constructorParameterIndices[name] ?: return@mapNotNull null
-            if (descriptor.field == null || descriptor.getter == null) return@mapNotNull null
+            val property = makeConstructorPairedProperty(constructorParameterIndices, name, descriptor, constructorInformation)
+            if (property == null) null else name to property
+        }
+    }
 
-            val paramType = descriptor.getter.genericReturnType
+    private fun makeConstructorPairedProperty(constructorParameterIndices: Map<String, Int>,
+                                              name: String,
+                                              descriptor: PropertyDescriptor,
+                                              constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
+        val constructorIndex = constructorParameterIndices[name] ?: return null
+        val isMandatory = constructorInformation.parameters[constructorIndex].isMandatory
+        if (descriptor.field == null) return null
+
+        if (descriptor.getter == null) {
+            val paramType = descriptor.field.genericType
             val paramTypeInformation = resolveAndBuild(paramType)
-            val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
 
-            name to LocalPropertyInformation.ConstructorPairedProperty(
-                    descriptor.getter,
+            return LocalPropertyInformation.PrivateConstructorPairedProperty(
+                    descriptor.field,
                     ConstructorSlot(constructorIndex, constructorInformation),
                     paramTypeInformation,
                     isMandatory)
-        }.toMap()
+        }
+
+        val paramType = descriptor.getter.genericReturnType
+        val paramTypeInformation = resolveAndBuild(paramType)
+
+        return LocalPropertyInformation.ConstructorPairedProperty(
+                descriptor.getter,
+                ConstructorSlot(constructorIndex, constructorInformation),
+                paramTypeInformation,
+                isMandatory)
     }
 
-    private fun getterSetterProperties(rawType: Class<*>): Map<String, LocalPropertyInformation> =
+    private fun getterSetterProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =
             rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
                 if (descriptor.getter == null || descriptor.setter == null || descriptor.field == null) null
                 else {
@@ -243,15 +280,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                             paramTypeInformation,
                             isMandatory)
                 }
-            }.toMap()
+            }
 
-    private fun calculatedProperties(rawType: Class<*>): Map<String, LocalPropertyInformation> =
-            rawType.calculatedPropertyDescriptors().mapValues { (_, v) ->
+    private fun calculatedProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =
+            rawType.calculatedPropertyDescriptors().asSequence().map { (name, v) ->
                 val paramType = v.getter!!.genericReturnType
                 val paramTypeInformation = resolveAndBuild(paramType)
                 val isMandatory = paramType.asClass().isPrimitive || !v.getter.returnsNullable()
 
-                LocalPropertyInformation.CalculatedProperty(v.getter, paramTypeInformation, isMandatory)
+                name to LocalPropertyInformation.CalculatedProperty(v.getter, paramTypeInformation, isMandatory)
             }
 
     private fun buildTypeParameterInformation(type: ParameterizedType): List<LocalTypeInformation> =
@@ -303,18 +340,18 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val kotlinCtors = clazz.kotlin.constructors
 
     val annotatedCtors = kotlinCtors.filter { it.findAnnotation<ConstructorForDeserialization>() != null }
-    if (annotatedCtors.size > 1) return null // TODO: we should probably log a warning if this is the case.
+    if (annotatedCtors.size > 1) return null
+    if (annotatedCtors.size == 1) return annotatedCtors.first().apply { isAccessible = true }
 
     val defaultCtor = kotlinCtors.firstOrNull { it.parameters.isEmpty() }
     val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
 
-    val preferredCandidate = annotatedCtors.firstOrNull() ?:
-    clazz.kotlin.primaryConstructor ?:
-    when(nonDefaultCtors.size) {
-        1 -> nonDefaultCtors.first()
-        0 -> defaultCtor
-        else -> null
-    }
+    val preferredCandidate = clazz.kotlin.primaryConstructor ?:
+        when(nonDefaultCtors.size) {
+            1 -> nonDefaultCtors.first()
+            0 -> defaultCtor
+            else -> null
+        }
 
     return preferredCandidate?.apply { isAccessible = true }
 }

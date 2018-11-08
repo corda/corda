@@ -17,7 +17,7 @@ class IllegalTypeNameParserStateException(message: String): NotSerializableExcep
  */
 object AMQPTypeIdentifierParser {
 
-    private const val MAX_TYPE_PARAM_DEPTH = 32
+    internal const val MAX_TYPE_PARAM_DEPTH = 32
     private const val MAX_ARRAY_DEPTH = 32
 
     /**

@@ -2,8 +2,6 @@ package net.corda.serialization.internal.model
 
 import java.lang.reflect.*
 import kotlin.reflect.KFunction
-import net.corda.core.serialization.SerializableCalculatedProperty
-import net.corda.serialization.internal.amqp.asClass
 import java.util.*
 
 typealias PropertyName = String
@@ -253,10 +251,12 @@ sealed class LocalTypeInformation {
     }
 
     /**
-     * Represents a type whose underlying class is a collection class such as [List] with a single type parameter.
+     * Represents a type whose underlying class is a map class such as [Map] with two type parameters.
      *
-     * @param elementType [LocalTypeInformation] for the resolved type parameter of the type, i.e. the type of its
-     * elements. [Unknown] if the type is erased.
+     * @param keyType [LocalTypeInformation] for the first resolved type parameter of the type, i.e. the type of its
+     * keys. [Unknown] if the type is erased.
+     * @param valueType [LocalTypeInformation] for the second resolved type parameter of the type, i.e. the type of its
+     * values. [Unknown] if the type is erased.
      */
     data class AMap(override val observedType: Type, override val typeIdentifier: TypeIdentifier,
                     val keyType: LocalTypeInformation, val valueType: LocalTypeInformation) : LocalTypeInformation() {
@@ -284,57 +284,13 @@ sealed class LocalTypeInformation {
 }
 
 /**
- * Represents the information we have about a property of a type.
- */
-sealed class LocalPropertyInformation(val isCalculated: Boolean) {
-
-    /**
-     * [LocalTypeInformation] for the type of the property.
-     */
-    abstract val type: LocalTypeInformation
-
-    /**
-     * True if the property is a primitive type or is flagged as non-nullable, false otherwise.
-     */
-    abstract val isMandatory: Boolean
-
-    /**
-     * A property of an interface, for which we have only a getter method.
-     *
-     * @param observedGetter The method which can be used to obtain the value of this property from an instance of its owning type.
-     */
-    data class ReadOnlyProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
-
-    /**
-     * A property for which we have both a getter, and a matching slot in an array of constructor parameters.
-     *
-     * @param observedGetter The method which can be used to obtain the value of this property from an instance of its owning type.
-     * @param constructorSlot The [ConstructorSlot] to which the property corresponds, used to populate an array of
-     * constructor arguments when creating instances of its owning type.
-     */
-    data class ConstructorPairedProperty(val observedGetter: Method, val constructorSlot: ConstructorSlot, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
-
-    /**
-     * A property for which we have both getter and setter methods (usually belonging to a POJO which is initialised
-     * with the default no-argument constructor and then configured via setters).
-     *
-     * @param observedGetter The method which can be used to obtain the value of this property from an instance of its owning type.
-     * @param observedSetter The method which can be used to set the value of this property on an instance of its owning type.
-     */
-    data class GetterSetterProperty(val observedGetter: Method, val observedSetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
-
-    /**
-     * A property for which we have only a getter method, which is annotated with [SerializableCalculatedProperty].
-     */
-    data class CalculatedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(true)
-}
-
-/**
  * Represents information about a constructor.
  */
 data class LocalConstructorInformation(
         val observedMethod: KFunction<Any>,
-        val parameters: List<LocalConstructorParameterInformation>)
+        val parameters: List<LocalConstructorParameterInformation>) {
+    val hasParameters: Boolean get() = parameters.isNotEmpty()
+}
 
 /**
  * Represents information about a constructor parameter
@@ -343,16 +299,6 @@ data class LocalConstructorParameterInformation(
         val name: String,
         val type: LocalTypeInformation,
         val isMandatory: Boolean)
-
-/**
- * References a slot in an array of constructor parameters.
- */
-data class ConstructorSlot(val parameterIndex: Int, val constructorInformation: LocalConstructorInformation) {
-    val parameterInformation get() = constructorInformation.parameters.getOrNull(parameterIndex) ?:
-    throw IllegalStateException("Constructor slot refers to parameter #$parameterIndex " +
-            "of constructor $constructorInformation, " +
-            "but constructor has only ${constructorInformation.parameters.size} parameters")
-}
 
 private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNames: Boolean, private val indent: Int = 0) {
 

@@ -22,7 +22,8 @@ interface LocalTypeLookup {
     fun lookup(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation): LocalTypeInformation
 
     /**
-     * Indicates whether a type should be excluded from lists of interfaces associated with inspected types.
+     * Indicates whether a type should be excluded from lists of interfaces associated with inspected types, i.e.
+     * because it is not whitelisted.
      */
     fun isExcluded(type: Type): Boolean
 }
@@ -31,7 +32,7 @@ interface LocalTypeLookup {
  * A [LocalTypeModel] maintains a registry of [LocalTypeInformation] for all [Type]s which have been observed within a
  * given classloader context.
  */
-interface LocalTypeModel : LocalTypeLookup {
+interface LocalTypeModel {
     /**
      * Look for a [Type] in the registry, and return its associated [LocalTypeInformation] if found. If the [Type] is
      * not in the registry, build [LocalTypeInformation] for that type, using this [LocalTypeModel] as the [LocalTypeLookup]
@@ -54,7 +55,7 @@ interface LocalTypeModel : LocalTypeLookup {
  *
  * @param typeModelConfiguration Configuration controlling the behaviour of the [LocalTypeModel]'s type inspection.
  */
-class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration): LocalTypeModel {
+class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration): LocalTypeModel, LocalTypeLookup {
 
     private val typeInformationCache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
 

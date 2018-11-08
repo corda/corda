@@ -164,11 +164,11 @@ class DefaultLocalSerializerFactory(
                         "Serializer does not support synthetic classes")
             SerializerFactory.isPrimitive(clazz) -> AMQPPrimitiveSerializer(clazz)
             else -> customSerializerRegistry.findCustomSerializer(clazz, declaredType) ?:
-                makeNonCustomSerializer(type, clazz)
+                makeNonCustomSerializer(type, typeInformation, clazz)
         }
     }
 
-    private fun makeNonCustomSerializer(type: Type, clazz: Class<*>): AMQPSerializer<Any> = when {
+    private fun makeNonCustomSerializer(type: Type, typeInformation: LocalTypeInformation, clazz: Class<*>): AMQPSerializer<Any> = when {
         onlyCustomSerializers -> throw AMQPNotSerializableException(type, "Only allowing custom serializers")
         type.isArray() ->
             if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
@@ -180,7 +180,7 @@ class DefaultLocalSerializerFactory(
                 SingletonSerializer(clazz, singleton, this)
             } else {
                 whitelist.requireWhitelisted(type)
-                ObjectSerializer(type, this)
+                ComposableSerializer.make(typeInformation, this)
             }
         }
     }
