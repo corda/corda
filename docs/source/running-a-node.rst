@@ -51,7 +51,7 @@ The node can optionally be started with the following command-line options:
 * ``--config-file``, ``-f``: The path to the config file. Defaults to ``node.conf``.
 * ``--dev-mode``, ``-d``: Runs the node in development mode. Unsafe in production. Defaults to true on MacOS and desktop versions of Windows. False otherwise.
 * ``--no-local-shell``, ``-n``: Do not start the embedded shell locally.
-* ``--on-unknown-config-keys <[FAIL,WARN,INFO]>``: How to behave on unknown node configuration. Defaults to FAIL.
+* ``--on-unknown-config-keys <[FAIL,INFO]>``: How to behave on unknown node configuration. Defaults to FAIL.
 * ``--sshd``: Enables SSH server for node administration.
 * ``--sshd-port``: Sets the port for the SSH server. If not supplied and SSH server is enabled, the port defaults to 2222.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.

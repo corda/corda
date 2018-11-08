@@ -15,6 +15,10 @@ operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>
 
 inline fun <reified NESTED : Any> Configuration.Specification<*>.nested(specification: Configuration.Specification<NESTED>, key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<NESTED> = nestedObject(schema = specification, key = key, sensitive = sensitive).map(ConfigObject::toConfig).mapValid { value -> specification.parse(value) }
 
+fun <TYPE> Configuration.Property.Definition.Single<TYPE>.listOrEmpty(): Configuration.Property.Definition<List<TYPE>> = list().optional().withDefaultValue(emptyList())
+
+fun <TYPE> PropertyDelegate.Single<TYPE>.listOrEmpty(): PropertyDelegate<List<TYPE>> = list().optional().withDefaultValue(emptyList())
+
 @Suppress("UNCHECKED_CAST")
 internal fun configObject(vararg entries: Pair<String, Any?>): ConfigObject {
 

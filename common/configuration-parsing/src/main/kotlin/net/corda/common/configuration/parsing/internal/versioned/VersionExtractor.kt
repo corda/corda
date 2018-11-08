@@ -5,18 +5,21 @@ import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.configuration.parsing.internal.Valid
 import net.corda.common.configuration.parsing.internal.valid
 
-internal class VersionExtractor(versionKey: String, versionDefaultValue: Int?) : Configuration.Version.Extractor {
+internal class VersionExtractor(versionPath: String, versionDefaultValue: Int) : Configuration.Version.Extractor {
 
-    private val spec = Spec(versionKey, versionDefaultValue)
+    private val containingPath = versionPath.split(".").let { if (it.size > 1) it.subList(0, it.size - 1) else null }
+    private val key = versionPath.split(".").last()
 
-    override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<Int?> {
+    private val spec = Spec(key, versionDefaultValue, containingPath?.joinToString("."))
+
+    override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<Int> {
 
         return spec.parse(configuration)
     }
 
-    private class Spec(versionKey: String, versionDefaultValue: Int?) : Configuration.Specification<Int?>("Version") {
+    private class Spec(key: String, versionDefaultValue: Int, prefix: String?) : Configuration.Specification<Int>("Version", prefix) {
 
-        private val version by int(key = versionKey).optional(versionDefaultValue)
+        private val version by int(key = key).optional().withDefaultValue(versionDefaultValue)
 
         override fun parseValid(configuration: Config) = valid(version.valueIn(configuration))
     }

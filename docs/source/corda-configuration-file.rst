@@ -30,7 +30,8 @@ when it finds double quotes around keys.
 This prevents configuration errors when mixing keys that are wrapped in double quotes and contain a dot (.) with keys that don't, e.g.:
 If there was a property ``"dataSourceProperties.dataSourceClassName" = "val1"`` in ``node.conf``, it would not overwrite the property ``dataSourceProperties.dataSourceClassName = "val2"`` in ``reference.conf``, potentially leading to an error that would be hard to spot.
 
-By default the node will fail to start in presence of unknown property keys. To alter this behaviour, the command line argument ``on-unknown-config-keys`` can be set to ``WARN`` or ``IGNORE``. Default is ``FAIL`` if unspecified.
+By default the node will fail to start in presence of unknown property keys. To alter this behaviour, program line argument
+``on-unknown-config-keys`` can be set to ``IGNORE``. Default is ``FAIL`` if unspecified.
 
 Defaults
 --------
