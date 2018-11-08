@@ -236,13 +236,13 @@ The node will shutdown now.""")
             ackNetworkParametersAndPersist(newSignedNetParams, NETWORK_PARAMS_FILE_NAME) { hash ->
                 hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }
             }
-            logger.info("Accepted network parameter update $update: $newNetParams")
+            logger.info("Auto-accepted network parameter update $update: $newNetParams")
 
-            // do we need to nullify the newNetworkParametersObject?
             // the auto accepting of the network parameters should act as though a user has manually
             // run an accept command then restarted their node
-            newNetworkParameters = null
 
+            // do we need to nullify the newNetworkParametersObject?
+            // no as this will cause repeated log lines, and also break the network parameters feed
         } else {
             parametersUpdatesTrack.onNext(updateInfo)
         }
