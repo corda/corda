@@ -1,10 +1,17 @@
 package net.corda.node
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.internal.div
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
@@ -12,6 +19,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 open class SharedNodeCmdLineOptions {
+    private companion object {
+        private val logger by lazy { loggerFor<SharedNodeCmdLineOptions>() }
+    }
     @Option(
             names = ["-b", "--base-directory"],
             description = ["The node working directory where all the files are kept."]
@@ -37,9 +47,19 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
-    open fun parseConfiguration(configuration: Config): NodeConfiguration = configuration.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
+    open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
 
-    open fun rawConfiguration(): Config = ConfigHelper.loadConfig(baseDirectory, configFile)
+        val option = Configuration.Validation.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
+        return configuration.parseAsNodeConfiguration(option)
+    }
+
+    open fun rawConfiguration(): Validated<Config, ConfigException> {
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile))
+        } catch (e: ConfigException) {
+            return invalid(e)
+        }
+    }
 
     fun copyFrom(other: SharedNodeCmdLineOptions) {
         baseDirectory = other.baseDirectory
@@ -47,11 +67,32 @@ open class SharedNodeCmdLineOptions {
         unknownConfigKeysPolicy= other.unknownConfigKeysPolicy
         devMode = other.devMode
     }
+
+    fun logRawConfigurationErrors(errors: Set<ConfigException>) {
+        if (errors.isNotEmpty()) {
+            logger.error("There were error(s) while attempting to load the node configuration:")
+        }
+        errors.forEach { error ->
+            when (error) {
+                is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
+                else -> logger.error(error.message, error)
+            }
+        }
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+    }
 }
 
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
-    override fun parseConfiguration(configuration: Config): NodeConfiguration {
-        return super.parseConfiguration(configuration).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             require(!config.devMode) { "Registration cannot occur in development mode" }
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
@@ -121,8 +162,8 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     )
     var networkRootTrustStorePassword: String? = null
 
-    override fun parseConfiguration(configuration: Config): NodeConfiguration {
-        return super.parseConfiguration(configuration).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             if (isRegistration) {
                 require(!config.devMode) { "Registration cannot occur in development mode" }
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {
@@ -132,7 +173,7 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         }
     }
 
-    override fun rawConfiguration(): Config {
+    override fun rawConfiguration(): Validated<Config, ConfigException> {
         val configOverrides = mutableMapOf<String, Any>()
         configOverrides += "noLocalShell" to noLocalShell
         if (sshdServer) {
@@ -141,7 +182,11 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
         devMode?.let {
             configOverrides += "devMode" to it
         }
-        return ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides))
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
+        } catch (e: ConfigException) {
+            return invalid(e)
+        }
     }
 }
 

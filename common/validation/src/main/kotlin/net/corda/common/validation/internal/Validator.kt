@@ -8,5 +8,5 @@ interface Validator<TARGET : Any, ERROR : Any, OPTIONS> {
     /**
      * Validates [target] using given [options], producing a [Validated] monad wrapping either a valid [target] or a set of [ERROR]s.
      */
-    fun validate(target: TARGET, options: OPTIONS? = null): Validated<TARGET, ERROR>
+    fun validate(target: TARGET, options: OPTIONS): Validated<TARGET, ERROR>
 }
