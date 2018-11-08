@@ -84,12 +84,6 @@ data class NodeConfigurationImpl(
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
         override val cryptoServiceConf: String? = Defaults.cryptoServiceConf
 ) : NodeConfiguration {
-    companion object {
-        private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
-        private val logger = loggerFor<NodeConfigurationImpl>()
-        // private val supportedCryptoServiceNames = setOf("BC", "UTIMACO", "GEMALTO-LUNA", "AZURE-KEY-VAULT")
-    }
-
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
         val compatibilityZoneURL: URL? = null
@@ -133,6 +127,14 @@ data class NodeConfigurationImpl(
         fun database(devMode: Boolean) = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode)
     }
 
+    companion object {
+        private const val CORDAPPS_DIR_NAME_DEFAULT = "cordapps"
+
+        private val logger = loggerFor<NodeConfigurationImpl>()
+
+        // private val supportedCryptoServiceNames = setOf("BC", "UTIMACO", "GEMALTO-LUNA", "AZURE-KEY-VAULT")
+    }
+
     private val actualRpcSettings: NodeRpcSettings
 
     init {
@@ -157,9 +159,9 @@ data class NodeConfigurationImpl(
         }
 
         // ensure our datasource configuration is sane
-        require(dataSourceProperties.get("autoCommit") != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
-        dataSourceProperties.set("autoCommit", false)
-        if (dataSourceProperties.get("transactionIsolation") == null) {
+        require(dataSourceProperties["autoCommit"] != true) { "Datbase auto commit cannot be enabled, Corda requires transactional behaviour" }
+        dataSourceProperties["autoCommit"] = false
+        if (dataSourceProperties["transactionIsolation"] == null) {
             dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
         }
 
@@ -212,6 +214,17 @@ data class NodeConfigurationImpl(
     override val rpcOptions: NodeRpcOptions
         get() {
             return actualRpcSettings.asOptions()
+        }
+
+    override val transactionCacheSizeBytes: Long
+        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
+    override val attachmentContentCacheSizeBytes: Long
+        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
+
+    override val effectiveH2Settings: NodeH2Settings?
+        get() = when {
+            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
+            else -> h2Settings
         }
 
     fun validate(): List<String> {
@@ -298,17 +311,6 @@ data class NodeConfigurationImpl(
 
         return errors
     }
-
-    override val transactionCacheSizeBytes: Long
-        get() = transactionCacheSizeMegaBytes?.MB ?: super.transactionCacheSizeBytes
-    override val attachmentContentCacheSizeBytes: Long
-        get() = attachmentContentCacheSizeMegaBytes?.MB ?: super.attachmentContentCacheSizeBytes
-
-    override val effectiveH2Settings: NodeH2Settings?
-        get() = when {
-            h2port != null -> NodeH2Settings(address = NetworkHostAndPort(host = "localhost", port = h2port))
-            else -> h2Settings
-        }
 }
 
 data class NodeRpcSettings(
