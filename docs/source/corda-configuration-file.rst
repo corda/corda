@@ -320,6 +320,8 @@ absolute path to the node's base directory.
             Valid values for this property are between 4 (that is the number used for the single threaded state machine in
             open source) and the number of flow threads.
 
+.. _corda_configuration_file_signer_blacklist:
+
 :cordappSignerKeyFingerprintBlacklist: List of public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
                                        Node will not load Cordapps signed by those keys.
                                        The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367",
