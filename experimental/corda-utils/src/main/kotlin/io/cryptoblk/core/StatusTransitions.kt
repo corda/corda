@@ -32,14 +32,14 @@ data class PrintedTransitionGraph(val stateClassName: String, val printedPUML: S
  * Shorthand for defining transitions directly from the command class
  */
 fun <S, R> CommandData.txDef(signer: R? = null, from: S?, to: List<S?>):
-    TransitionDef<S, R> = TransitionDef(this::class.java, signer, from, to)
+        TransitionDef<S, R> = TransitionDef(this::class.java, signer, from, to)
 
 /**
  * For a given [stateClass] that tracks a status, it holds all possible transitions in [ts].
  * This can be used for generic [verify] in contract code as well as for visualizing the state transition graph in PUML ([printGraph]).
  */
 class StatusTransitions<out S, in R, T : StatusTrackingContractState<S, R>>(private val stateClass: KClass<T>,
-    private vararg val ts: TransitionDef<S, R>) {
+                                                                            private vararg val ts: TransitionDef<S, R>) {
 
     private val allowedCmds = ts.map { it.cmd }.toSet()
 
@@ -67,11 +67,11 @@ class StatusTransitions<out S, in R, T : StatusTrackingContractState<S, R>>(priv
             // for each combination of in x out which should normally be at most 1...
             inputStates.forEach { inp ->
                 outputStates.forEach { outp ->
-                    require(inp != null || outp != null){"input and output states are both null"}
+                    require(inp != null || outp != null) { "Input and output states cannot be both left unspecified" }
                     val options = matchingTransitions(inp?.status, outp?.status, cmd.value)
 
                     val signerGroup = options.groupBy { it.signer }.entries.singleOrNull()
-                        ?: throw IllegalStateException("Cannot have different signers in StatusTransitions for the same command.")
+                            ?: throw IllegalStateException("Cannot have different signers in StatusTransitions for the same command.")
                     val signer = signerGroup.key
                     if (signer != null) {
                         // which state determines who is the signer? by default the input, unless it's the initial transition

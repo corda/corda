@@ -499,8 +499,8 @@ data class SecurityConfiguration(val authService: SecurityConfiguration.AuthServ
                               val users: List<User>? = null) {
             init {
                 when (type) {
-                    AuthDataSourceType.INMEMORY -> require(users != null && connection == null){"InMemory authentication must specify a user list, and must not configure a database"}
-                    AuthDataSourceType.DB -> require(users == null && connection != null){"Database backed authentication must not specify a user list, and must configure a database"}
+                    AuthDataSourceType.INMEMORY -> require(users != null && connection == null) { "In-memory authentication must specify a user list, and must not configure a database" }
+                    AuthDataSourceType.DB -> require(users == null && connection != null) { "Database-backed authentication must not specify a user list, and must configure a database" }
                 }
             }
         }

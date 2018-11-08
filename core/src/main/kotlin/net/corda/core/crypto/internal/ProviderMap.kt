@@ -39,7 +39,7 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     Security.addProvider(it)
 }
 internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
-    require(name == "BCPQC"){"Invalid PQCProvider name detected"}
+    require(name == "BCPQC") { "Invalid PQCProvider name" }
 }.also {
     Security.addProvider(it)
 }
