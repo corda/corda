@@ -4,6 +4,7 @@ import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.Method
@@ -31,6 +32,10 @@ import kotlin.reflect.jvm.javaType
  * will find it useful to revert to earlier states of knowledge about which types have been visited on a given branch.
  */
 internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val resolutionContext: Type? = null, val visited: Set<TypeIdentifier> = emptySet()) {
+
+    companion object {
+        private val logger = contextLogger()
+    }
 
     /**
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
@@ -145,8 +150,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         val superclassInformation = buildSuperclassInformation(type)
         val interfaceInformation = buildInterfaceInformation(type)
         val observedConstructor = constructorForDeserialization(type)
-                ?: return LocalTypeInformation.NonComposable(type, typeIdentifier, buildReadOnlyProperties(rawType),
-                        superclassInformation, interfaceInformation, typeParameterInformation)
+
+        if (observedConstructor == null) {
+            logger.warn("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, buildReadOnlyProperties(rawType),
+                    superclassInformation, interfaceInformation, typeParameterInformation)
+        }
 
         val constructorInformation = buildConstructorInformation(type, observedConstructor)
         val properties = buildObjectProperties(rawType, constructorInformation)
@@ -154,6 +163,11 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
 
         if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
+            if (hasNonComposableProperties) {
+                logger.warn("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
+            } else {
+                logger.warn("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
+            }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, properties, superclassInformation,
                     interfaceInformation, typeParameterInformation)
         }
