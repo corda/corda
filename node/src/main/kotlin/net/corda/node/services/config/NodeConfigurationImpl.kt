@@ -173,7 +173,6 @@ data class NodeConfigurationImpl(
 
         // Adjust connection pool size depending on N=flow thread pool size.
         // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
-        // TODO sollecitom add these to validation
         val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
         val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
         if (maxConnectionPoolSize == null) {
