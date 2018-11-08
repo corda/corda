@@ -44,7 +44,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
             LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
         }
-        else lookup.lookup(type, typeIdentifier) {
+        else lookup.findOrBuild(type, typeIdentifier) {
             copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
         }
 
