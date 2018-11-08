@@ -22,6 +22,7 @@ import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.GraphiteOptions
+import net.corda.node.services.config.MessagingServerSslConfiguration
 import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.node.services.config.NodeH2Settings
@@ -278,18 +279,32 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
     private val externalBridge by boolean().optional()
     private val enableCacheTracing by boolean().optional().withDefaultValue(EnterpriseConfiguration.Defaults.enableCacheTracing)
     private val traceTargetDirectory by string().mapValid(::toPath).optional().withDefaultValue(EnterpriseConfiguration.Defaults.traceTargetDirectory)
+    private val messagingServerSslConfiguration by nested(MessagingServerSslConfigurationSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<EnterpriseConfiguration> {
         return valid(EnterpriseConfiguration(
                 configuration[mutualExclusionConfiguration],
                 configuration[externalBrokerConnectionConfiguration],
                 configuration[externalBrokerBackupAddresses],
+                configuration[messagingServerSslConfiguration],
                 configuration[useMultiThreadedSMM],
                 configuration[tuning],
                 configuration[externalBridge],
                 configuration[enableCacheTracing],
                 configuration[traceTargetDirectory])
         )
+    }
+}
+
+internal object MessagingServerSslConfigurationSpec : Configuration.Specification<MessagingServerSslConfiguration>("MessagingServerSslConfiguration") {
+    private val sslKeystore by string().mapValid(::toPath)
+    private val keyStorePassword by string(sensitive = true)
+    private val trustStoreFile by string().mapValid(::toPath)
+    private val trustStorePassword by string(sensitive = true)
+    private val useOpenSsl by boolean().optional().withDefaultValue(MessagingServerSslConfiguration.Defaults.useOpenSsl)
+
+    override fun parseValid(configuration: Config): Valid<MessagingServerSslConfiguration> {
+        return valid(MessagingServerSslConfiguration(configuration[sslKeystore], configuration[keyStorePassword], configuration[trustStoreFile], configuration[trustStorePassword], configuration[useOpenSsl]))
     }
 }
 

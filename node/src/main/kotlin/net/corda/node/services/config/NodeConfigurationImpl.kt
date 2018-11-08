@@ -188,6 +188,10 @@ data class NodeConfigurationImpl(
             """.trimMargin())
         }
 
+        if (messagingServerExternal && messagingServerAddress != null) {
+            require(enterpriseConfiguration.messagingServerSslConfiguration != null) { "Missing SSL configuration required by broker connection." }
+        }
+
         // Support the deprecated method of configuring network services with a single compatibilityZoneURL option
         if (compatibilityZoneURL != null && networkServices == null) {
             networkServices = NetworkServicesConfig(compatibilityZoneURL, compatibilityZoneURL, inferred = true)
