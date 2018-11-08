@@ -1,28 +1,33 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.*
-import net.corda.common.configuration.parsing.internal.Configuration
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigValueFactory
 import com.zaxxer.hikari.HikariConfig
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
+import net.corda.nodeapi.internal.persistence.CordaPersistence.DataSourceConfigTag
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.net.InetAddress
-import java.net.URL
 import java.net.URI
+import java.net.URL
 import java.nio.file.Paths
-import javax.security.auth.x500.X500Principal
 import java.util.*
-import kotlin.test.*
+import javax.security.auth.x500.X500Principal
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NodeConfigurationImplTest {
     @Test
@@ -173,7 +178,7 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `mutual exclusion machineName set to default if not explicitly set`() {
-        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(UnknownConfigKeysPolicy.IGNORE::handle)
+        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(options = Configuration.Validation.Options(strict = false)).orThrow()
         assertEquals(InetAddress.getLocalHost().hostName, config.enterpriseConfiguration.mutualExclusionConfiguration.machineName)
     }
 
