@@ -2,19 +2,16 @@ package net.corda.node.services.transactions
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
 import net.corda.core.flows.NotaryError
 import net.corda.core.internal.ResolveTransactionsFlow
-import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionWithSignatures
 import net.corda.core.transactions.WireTransaction
-import java.security.SignatureException
 
 /**
  * A notary commit flow that makes sure a given transaction is valid before committing it. This does mean that the calling
@@ -22,29 +19,26 @@ import java.security.SignatureException
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService) : NotaryServiceFlow(otherSideSession, service) {
+open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService) : NotaryServiceFlow(otherSideSession, service) {
+    override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
+        val stx = requestPayload.signedTransaction
+        val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
+        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references)
+    }
+
     /**
      * Fully resolves the received transaction and its dependencies, runs contract verification logic and checks that
      * the transaction in question has all required signatures apart from the notary's.
      */
     @Suspendable
-    override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
+    override fun verifyTransaction(requestPayload: NotarisationPayload) {
         try {
             val stx = requestPayload.signedTransaction
-            checkInputs(stx.inputs + stx.references)
-            validateRequestSignature(NotarisationRequest(stx.inputs, stx.id), requestPayload.requestSignature)
-            val notary = stx.notary
-            checkNotary(notary)
             resolveAndContractVerify(stx)
             verifySignatures(stx)
-            val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
-            return TransactionParts(stx.id, stx.inputs, timeWindow, notary!!, stx.references)
         } catch (e: Exception) {
-            throw when (e) {
-                is TransactionVerificationException,
-                is SignatureException -> NotaryInternalException(NotaryError.TransactionInvalid(e))
-                else -> e
-            }
+            logger.error("Transaction verification failed", e)
+            throw  NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
 
@@ -60,10 +54,6 @@ class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNo
     }
 
     private fun checkSignatures(tx: TransactionWithSignatures) {
-        try {
-            tx.verifySignaturesExcept(service.notaryIdentityKey)
-        } catch (e: SignatureException) {
-            throw NotaryInternalException(NotaryError.TransactionInvalid(e))
-        }
+        tx.verifySignaturesExcept(service.notaryIdentityKey)
     }
 }

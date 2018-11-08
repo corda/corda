@@ -174,11 +174,12 @@ class TimedFlowTests {
         override val uniquenessProvider = object : UniquenessProvider {
             /** A dummy commit method that immediately returns a success message. */
             override fun commit(states: List<StateRef>, txId: SecureHash, callerIdentity: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>): CordaFuture<UniquenessProvider.Result> {
-                return openFuture<UniquenessProvider.Result>(). apply {
+                return openFuture<UniquenessProvider.Result>().apply {
                     set(UniquenessProvider.Result.Success)
                 }
             }
         }
+
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = TestNotaryFlow(otherPartySession, this)
         override fun start() {}
         override fun stop() {}
@@ -187,7 +188,7 @@ class TimedFlowTests {
     /** A notary flow that will yield without returning a response on the very first received request. */
     private class TestNotaryFlow(otherSide: FlowSession, service: TestNotaryService) : NotaryServiceFlow(otherSide, service) {
         @Suspendable
-        override fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
+        override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
             val myIdentity = serviceHub.myInfo.legalIdentities.first()
             MDC.put("name", myIdentity.name.toString())
             logger.info("Received a request from ${otherSideSession.counterparty.name}")
@@ -203,5 +204,6 @@ class TimedFlowTests {
             }
             return TransactionParts(stx.id, stx.inputs, stx.tx.timeWindow, stx.notary)
         }
+
     }
 }

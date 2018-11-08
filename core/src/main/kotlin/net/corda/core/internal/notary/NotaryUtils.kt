@@ -2,42 +2,30 @@ package net.corda.core.internal.notary
 
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
-import java.security.InvalidKeyException
-import java.security.SignatureException
 import java.time.Instant
 
 /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
 fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
-    val signature = requestSignature.digitalSignature
-    if (intendedSigner.owningKey != signature.by) {
-        val errorMessage = "Expected a signature by ${intendedSigner.owningKey}, but received by ${signature.by}}"
-        throw NotaryInternalException(NotaryError.RequestSignatureInvalid(IllegalArgumentException(errorMessage)))
-    }
-    // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to
-    // reserialize it in that version to get the exact same bytes. Modify the serialization logic once that's
-    // available.
-    val expectedSignedBytes = this.serialize().bytes
-    verifyCorrectBytesSigned(signature, expectedSignedBytes)
-}
-
-private fun verifyCorrectBytesSigned(signature: DigitalSignature.WithKey, bytes: ByteArray) {
     try {
-        signature.verify(bytes)
-    } catch (e: Exception) {
-        when (e) {
-            is InvalidKeyException, is SignatureException -> {
-                val error = NotaryError.RequestSignatureInvalid(e)
-                throw NotaryInternalException(error)
-            }
-            else -> throw e
+        val signature = requestSignature.digitalSignature
+        require(intendedSigner.owningKey != signature.by) {
+            "Expected a signature by ${intendedSigner.owningKey}, but received by ${signature.by}}"
         }
+
+        // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to
+        // reserialize it in that version to get the exact same bytes. Modify the serialization logic once that's
+        // available.
+        val expectedSignedBytes = this.serialize().bytes
+        signature.verify(expectedSignedBytes)
+    } catch (e: Exception) {
+        val error = NotaryError.RequestSignatureInvalid(e)
+        throw NotaryInternalException(error)
     }
 }
 

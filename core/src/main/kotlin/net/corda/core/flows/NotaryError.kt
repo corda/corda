@@ -49,6 +49,7 @@ sealed class NotaryError {
     }
 
     /** Occurs when the transaction sent for notarisation is assigned to a different notary identity. */
+    @Deprecated("Deprecated since version 4. This object is no longer used, [TransactionInvalid] will be reported in case of notary mismatch")
     object WrongNotary : NotaryError()
 
     /** Occurs when the notarisation request signature does not verify for the provided transaction. */

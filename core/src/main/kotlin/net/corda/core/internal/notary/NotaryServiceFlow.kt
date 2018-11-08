@@ -23,61 +23,84 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
         private const val maxAllowedInputsAndReferences = 10_000
     }
 
+    private var transactionId: SecureHash? = null
+
     @Suspendable
     override fun call(): Void? {
         check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
             "We are not a notary on the network"
         }
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
-        var txId: SecureHash? = null
+
         try {
-            val parts = validateRequest(requestPayload)
-            txId = parts.id
-            checkNotary(parts.notary)
+            val tx: TransactionParts = validateRequest(requestPayload)
+            val request = NotarisationRequest(tx.inputs, tx.id)
+            validateRequestSignature(request, requestPayload.requestSignature)
+
+            verifyTransaction(requestPayload)
+
             service.commitInputStates(
-                    parts.inputs,
-                    txId,
+                    tx.inputs,
+                    tx.id,
                     otherSideSession.counterparty,
                     requestPayload.requestSignature,
-                    parts.timestamp,
-                    parts.references
-            )
-            signTransactionAndSendResponse(txId)
+                    tx.timeWindow,
+                    tx.references)
+
         } catch (e: NotaryInternalException) {
-            throw NotaryException(e.error, txId)
+            // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
+            // that is not relayed back to the client.
+            throw NotaryException(e.error, transactionId)
         }
+
+        signTransactionAndSendResponse(transactionId!!)
         return null
     }
 
-    /** Checks whether the number of input states is too large. */
-    protected fun checkInputs(inputs: List<StateRef>) {
-        if (inputs.size > maxAllowedInputsAndReferences) {
-            val error = NotaryError.TransactionInvalid(
-                    IllegalArgumentException("A transaction cannot have more than $maxAllowedInputsAndReferences " +
-                            "inputs or references, received: ${inputs.size}")
-            )
+    private fun validateRequest(requestPayload: NotarisationPayload): TransactionParts {
+        try {
+            val transaction = extractParts(requestPayload)
+            transactionId = transaction.id
+            checkNotary(transaction.notary)
+            checkInputs(transaction.inputs + transaction.references)
+            return transaction
+        } catch (e: Exception) {
+            logger.error("Transaction invalid", e)
+            val error = NotaryError.TransactionInvalid(e)
             throw NotaryInternalException(error)
         }
     }
 
-    /**
-     * Implement custom logic to perform transaction verification based on validity and privacy requirements.
-     */
+    /** Extract the common transaction components required for notarisation. */
+    protected abstract fun extractParts(requestPayload: NotarisationPayload): TransactionParts
+
+    /** Check if transaction is intended to be signed by this notary. */
     @Suspendable
-    protected abstract fun validateRequest(requestPayload: NotarisationPayload): TransactionParts
+    private fun checkNotary(notary: Party?) {
+        require(notary?.owningKey == service.notaryIdentityKey) {
+            "The notary specified on the transaction: [$notary] does not match the notary service's identity: [${service.notaryIdentityKey}] "
+        }
+    }
+
+    /** Checks whether the number of input states is too large. */
+    private fun checkInputs(inputs: List<StateRef>) {
+        require(inputs.size < maxAllowedInputsAndReferences) {
+            "A transaction cannot have more than $maxAllowedInputsAndReferences " +
+                    "inputs or references, received: ${inputs.size}"
+        }
+    }
 
     /** Verifies that the correct notarisation request was signed by the counterparty. */
-    protected fun validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
+    private fun validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
         val requestingParty = otherSideSession.counterparty
         request.verifySignature(signature, requestingParty)
     }
 
-    /** Check if transaction is intended to be signed by this notary. */
+    /**
+     * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
+     */
     @Suspendable
-    protected fun checkNotary(notary: Party?) {
-        if (notary?.owningKey != service.notaryIdentityKey) {
-            throw NotaryInternalException(NotaryError.WrongNotary)
-        }
+    protected open fun verifyTransaction(requestPayload: NotarisationPayload) {
     }
 
     @Suspendable
@@ -90,17 +113,13 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * The minimum amount of information needed to notarise a transaction. Note that this does not include
      * any sensitive transaction details.
      */
-    protected data class TransactionParts @JvmOverloads constructor(
+    protected data class TransactionParts(
             val id: SecureHash,
             val inputs: List<StateRef>,
-            val timestamp: TimeWindow?,
+            val timeWindow: TimeWindow?,
             val notary: Party?,
             val references: List<StateRef> = emptyList()
-    ) {
-        fun copy(id: SecureHash, inputs: List<StateRef>, timestamp: TimeWindow?, notary: Party?): TransactionParts {
-            return TransactionParts(id, inputs, timestamp, notary, references)
-        }
-    }
+    )
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */
