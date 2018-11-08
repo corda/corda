@@ -53,7 +53,7 @@ public class IOUFlow extends FlowLogic<Void> {
 
         // We create a transaction builder and add the components.
         final TransactionBuilder txBuilder = new TransactionBuilder(notary)
-                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
+                .addOutputState(outputState, TemplateContract.ID)
                 .addCommand(cmd);
 
         // Signing the transaction.
