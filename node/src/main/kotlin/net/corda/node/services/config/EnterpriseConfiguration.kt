@@ -8,22 +8,32 @@ import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
-        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = ExternalBrokerConnectionConfiguration.DEFAULT,
-        val externalBrokerBackupAddresses: List<NetworkHostAndPort> = emptyList(),
-        val useMultiThreadedSMM: Boolean = true,
-        val tuning: PerformanceTuning = PerformanceTuning.default,
+        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = Defaults.externalBrokerConnectionConfiguration,
+        val externalBrokerBackupAddresses: List<NetworkHostAndPort> = Defaults.externalBrokerBackupAddresses,
+        val useMultiThreadedSMM: Boolean = Defaults.useMultiThreadedSMM,
+        val tuning: PerformanceTuning = Defaults.tuning,
         val externalBridge: Boolean? = null,
-        val enableCacheTracing: Boolean = false,
+        val enableCacheTracing: Boolean = Defaults.enableCacheTracing,
+        val traceTargetDirectory: Path = Defaults.traceTargetDirectory
+) {
+    internal object Defaults {
+        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = ExternalBrokerConnectionConfiguration.DEFAULT
+        val externalBrokerBackupAddresses: List<NetworkHostAndPort> = emptyList()
+        val useMultiThreadedSMM: Boolean = true
+        val tuning: PerformanceTuning = PerformanceTuning.default
+        val enableCacheTracing: Boolean = false
         val traceTargetDirectory: Path = File(".").toPath()
-)
+    }
+}
 
-data class MutualExclusionConfiguration(val on: Boolean = false,
-                                        val machineName: String = defaultMachineName,
+data class MutualExclusionConfiguration(val on: Boolean = Defaults.on,
+                                        val machineName: String = Defaults.machineName,
                                         val updateInterval: Long,
                                         val waitInterval: Long
 ) {
-    companion object {
-        private val defaultMachineName = InetAddress.getLocalHost().hostName
+    internal object Defaults {
+        val machineName = InetAddress.getLocalHost().hostName
+        val on: Boolean = false
     }
 }
 

@@ -17,15 +17,18 @@ import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
 import net.corda.node.services.config.DevModeOptions
+import net.corda.node.services.config.EnterpriseConfiguration
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.node.services.config.GraphiteOptions
+import net.corda.node.services.config.MutualExclusionConfiguration
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.node.services.config.PerformanceTuning
 import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
@@ -40,6 +43,7 @@ import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
 import net.corda.node.services.config.schema.parsers.validValue
 import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
@@ -257,9 +261,57 @@ internal object GraphiteOptionsSpec : Configuration.Specification<GraphiteOption
     private val server by string()
     private val port by int()
     private val prefix by string().optional()
+    // TODO fix this typo, even if it means breaking the config schema
     private val sampleInvervallSeconds by long().optional().withDefaultValue(GraphiteOptions.Defaults.sampleInvervallSeconds)
 
     override fun parseValid(configuration: Config): Valid<GraphiteOptions> {
         return valid(GraphiteOptions(configuration[server], configuration[port], configuration[prefix], configuration[sampleInvervallSeconds]))
+    }
+}
+
+internal object EnterpriseConfigurationSpec : Configuration.Specification<EnterpriseConfiguration>("EnterpriseConfiguration") {
+    private val mutualExclusionConfiguration by nested(MutualExclusionConfigurationSpec)
+    private val externalBrokerConnectionConfiguration by enum(ExternalBrokerConnectionConfiguration::class).optional().withDefaultValue(EnterpriseConfiguration.Defaults.externalBrokerConnectionConfiguration)
+    private val externalBrokerBackupAddresses by string().mapValid(::toNetworkHostAndPort).list().optional().withDefaultValue(EnterpriseConfiguration.Defaults.externalBrokerBackupAddresses)
+    private val useMultiThreadedSMM by boolean().optional().withDefaultValue(EnterpriseConfiguration.Defaults.useMultiThreadedSMM)
+    private val tuning by nested(PerformanceTuningSpec).optional().withDefaultValue(EnterpriseConfiguration.Defaults.tuning)
+    private val externalBridge by boolean().optional()
+    private val enableCacheTracing by boolean().optional().withDefaultValue(EnterpriseConfiguration.Defaults.enableCacheTracing)
+    private val traceTargetDirectory by string().mapValid(::toPath).optional().withDefaultValue(EnterpriseConfiguration.Defaults.traceTargetDirectory)
+
+    override fun parseValid(configuration: Config): Valid<EnterpriseConfiguration> {
+        return valid(EnterpriseConfiguration(
+                configuration[mutualExclusionConfiguration],
+                configuration[externalBrokerConnectionConfiguration],
+                configuration[externalBrokerBackupAddresses],
+                configuration[useMultiThreadedSMM],
+                configuration[tuning],
+                configuration[externalBridge],
+                configuration[enableCacheTracing],
+                configuration[traceTargetDirectory])
+        )
+    }
+}
+
+internal object MutualExclusionConfigurationSpec : Configuration.Specification<MutualExclusionConfiguration>("MutualExclusionConfiguration") {
+    private val on by boolean().optional().withDefaultValue(MutualExclusionConfiguration.Defaults.on)
+    private val machineName by string().optional().withDefaultValue(MutualExclusionConfiguration.Defaults.machineName)
+    private val updateInterval by long()
+    private val waitInterval by long()
+
+    override fun parseValid(configuration: Config): Valid<MutualExclusionConfiguration> {
+        return valid(MutualExclusionConfiguration(configuration[on], configuration[machineName], configuration[updateInterval], configuration[waitInterval]))
+    }
+}
+
+internal object PerformanceTuningSpec : Configuration.Specification<PerformanceTuning>("PerformanceTuning") {
+    private val flowThreadPoolSize by int()
+    private val maximumMessagingBatchSize by int()
+    private val rpcThreadPoolSize by int()
+    private val p2pConfirmationWindowSize by int()
+    private val brokerConnectionTtlCheckIntervalMs by long()
+
+    override fun parseValid(configuration: Config): Valid<PerformanceTuning> {
+        return valid(PerformanceTuning(configuration[flowThreadPoolSize], configuration[maximumMessagingBatchSize], configuration[rpcThreadPoolSize], configuration[p2pConfirmationWindowSize], configuration[brokerConnectionTtlCheckIntervalMs]))
     }
 }
