@@ -1,7 +1,7 @@
 # {{{ Dependencies
 
 from __future__ import print_function
-import sys
+import sys, os
 
 try:
     from getpass import getpass
@@ -41,9 +41,13 @@ def confirm(message, auto_yes=False):
 # {{{ login(account, user, password, use_keyring) - Present user with login prompt and return the provided username and password. If use_keyring is true, use previously provided password (if any)
 def login(account, user=None, password=None, use_keyring=True):
     if not user:
-        user = prompt('Username: ')
-        user = u'{}@r3.com'.format(user) if '@' not in user else user
-        if not user: return (None, None)
+        if 'JIRA_USER' not in os.environ:
+            user = prompt('Username: ')
+            user = u'{}@r3.com'.format(user) if '@' not in user else user
+            if not user: return (None, None)
+        else:
+            user = os.environ['JIRA_USER']
+            print('Username: {}'.format(user))
     else:
         user = u'{}@r3.com'.format(user) if '@' not in user else user
         print('Username: {}'.format(user))
