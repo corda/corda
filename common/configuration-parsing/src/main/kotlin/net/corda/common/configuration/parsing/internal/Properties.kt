@@ -200,9 +200,10 @@ private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Config
     override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val result = delegate.validate(target, options)
-        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
+        val errors = result.errors
+        val missingValueError = errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().filter { it.pathAsString == key }.singleOrNull()
         return when {
-            error != null -> if (result.errors.size > 1) result else valid(target)
+            missingValueError != null -> if (errors.size > 1) result else valid(target)
             else -> result
         }
     }

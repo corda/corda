@@ -564,9 +564,9 @@ object Configuration {
                 const val DEFAULT_VERSION_VALUE = 1
 
                 /**
-                 * Returns a [Configuration.Version.Extractor] that reads the value from given [versionKey], defaulting to [versionDefaultValue] when [versionKey] is unspecified.
+                 * Returns a [Configuration.Version.Extractor] that reads the value from given [versionPath], defaulting to [versionDefaultValue] when [versionPath] is unspecified.
                  */
-                fun fromKey(versionKey: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
+                fun fromPath(versionPath: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionPath, versionDefaultValue)
             }
         }
     }

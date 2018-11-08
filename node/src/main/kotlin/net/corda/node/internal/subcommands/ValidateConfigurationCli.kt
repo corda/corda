@@ -19,11 +19,11 @@ internal class ValidateConfigurationCli : CliWrapperBase("validate-configuration
         private val configRenderingOptions = ConfigRenderOptions.defaults().setFormatted(true).setComments(false).setOriginComments(false)
 
         internal fun logConfigurationErrors(errors: Iterable<Configuration.Validation.Error>) {
-            errors.joinToString(System.lineSeparator(), "Error while parsing node configuration:${System.lineSeparator()}") { error -> error.description() }
+            logger.error(errors.joinToString(System.lineSeparator(), "Error(s) while parsing node configuration:${System.lineSeparator()}") { error -> "\t- ${error.description()}" })
         }
 
         private fun Configuration.Validation.Error.description(): String {
-            return "key: $pathAsString, message: $message"
+            return "for path: \"$pathAsString\": $message"
         }
 
         internal fun logRawConfig(config: Config) = logger.debug("Actual configuration:\n${V1NodeConfigurationSpec.describe(config, Any::toConfigValue).render(configRenderingOptions)}")
