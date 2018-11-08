@@ -36,7 +36,7 @@ class IOUFlow(val iouValue: Int,
 
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
-        val outputContractAndState = StateAndContract(outputState, IOU_CONTRACT_ID)
+        val outputContractAndState = StateAndContract(outputState, IOUContract.ID)
         val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
 
         // We add the items to the builder.
