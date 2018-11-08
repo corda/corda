@@ -5,8 +5,10 @@ import net.corda.bridge.services.api.FirewallMode
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.testing.core.SerializationEnvironmentRule
+import org.assertj.core.api.Assertions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -173,5 +175,14 @@ class ConfigTest {
         assertEquals(NetworkHostAndPort("proxyHost", 12345), config.outboundConfig!!.proxyConfig!!.proxyAddress)
         assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
         assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
+    }
+
+    @Test
+    fun `Load invalid option config`() {
+        val configResource = "/net/corda/bridge/invalidoption/firewall.conf"
+
+        Assertions.assertThatThrownBy { createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource) }
+                .isInstanceOf(UnknownConfigurationKeysException::class.java)
+                .hasMessageContaining("invalidOption")
     }
 }

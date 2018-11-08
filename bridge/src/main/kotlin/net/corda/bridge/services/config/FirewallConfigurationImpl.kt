@@ -1,6 +1,7 @@
 package net.corda.bridge.services.config
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
@@ -16,6 +17,8 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
     return try {
         parseAs<FirewallConfigurationImpl>()
     } catch (ex: UnknownConfigurationKeysException) {
+
+        FirewallCmdLineOptions.logger.info("Attempting to parse using old format")
 
         // Previously `proxyConfig` was known as `socksProxyConfig`
         data class Version3BridgeOutboundConfigurationImpl(val artemisBrokerAddress: NetworkHostAndPort,
@@ -80,14 +83,20 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
             }
         }
 
-        // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to V3 configuration
-        val oldStyleConfig = parseAs<Version3BridgeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
-        val newStyleConfig = oldStyleConfig.toConfig()
 
-        val configAsString = newStyleConfig.toConfig().root().render(ConfigRenderOptions.defaults())
-        FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
-                "New style config will look as follows:\n$configAsString")
-        newStyleConfig
+        try {
+            // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to V3 configuration
+            val oldStyleConfig = parseAs<Version3BridgeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
+            val newStyleConfig = oldStyleConfig.toConfig()
+
+            val configAsString = newStyleConfig.toConfig().root().render(ConfigRenderOptions.defaults())
+            FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
+                    "New style config will look as follows:\n$configAsString")
+            newStyleConfig
+        } catch (oldFormatEx: ConfigException) {
+            FirewallCmdLineOptions.logger.error("Old format parsing failed as well.")
+            throw ex
+        }
     }
 }
 
