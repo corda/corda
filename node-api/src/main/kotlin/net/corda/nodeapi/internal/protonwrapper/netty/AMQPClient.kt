@@ -7,8 +7,10 @@ import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
+import io.netty.handler.proxy.HttpProxyHandler
 import io.netty.handler.proxy.Socks4ProxyHandler
 import io.netty.handler.proxy.Socks5ProxyHandler
+import io.netty.resolver.NoopAddressResolverGroup
 import io.netty.util.internal.logging.InternalLoggerFactory
 import io.netty.util.internal.logging.Slf4JLoggerFactory
 import net.corda.core.identity.CordaX500Name
@@ -17,6 +19,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.SendableMessage
 import net.corda.nodeapi.internal.protonwrapper.messages.impl.SendableMessageImpl
+import net.corda.nodeapi.internal.protonwrapper.netty.AMQPChannelHandler.Companion.PROXY_LOGGER_NAME
 import net.corda.nodeapi.internal.requireMessageSize
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -30,7 +33,8 @@ import kotlin.concurrent.withLock
 
 enum class ProxyVersion {
     SOCKS4,
-    SOCKS5
+    SOCKS5,
+    HTTP
 }
 
 data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null) {
@@ -136,18 +140,28 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
 
         override fun initChannel(ch: SocketChannel) {
             val pipeline = ch.pipeline()
-            val socksConfig = conf.proxyConfig
-            if (socksConfig != null) {
-                val proxyAddress = InetSocketAddress(socksConfig.proxyAddress.host, socksConfig.proxyAddress.port)
+            val proxyConfig = conf.proxyConfig
+            if (proxyConfig != null) {
+                if (conf.trace) pipeline.addLast(PROXY_LOGGER_NAME, LoggingHandler(LogLevel.INFO))
+                val proxyAddress = InetSocketAddress(proxyConfig.proxyAddress.host, proxyConfig.proxyAddress.port)
                 val proxy = when (conf.proxyConfig!!.version) {
                     ProxyVersion.SOCKS4 -> {
-                        Socks4ProxyHandler(proxyAddress, socksConfig.userName)
+                        Socks4ProxyHandler(proxyAddress, proxyConfig.userName)
                     }
                     ProxyVersion.SOCKS5 -> {
-                        Socks5ProxyHandler(proxyAddress, socksConfig.userName, socksConfig.password)
+                        Socks5ProxyHandler(proxyAddress, proxyConfig.userName, proxyConfig.password)
+                    }
+                    ProxyVersion.HTTP -> {
+                        val httpProxyHandler = if(proxyConfig.userName == null || proxyConfig.password == null) {
+                            HttpProxyHandler(proxyAddress)
+                        } else {
+                            HttpProxyHandler(proxyAddress, proxyConfig.userName, proxyConfig.password)
+                        }
+                        //httpProxyHandler.setConnectTimeoutMillis(3600000) // 1hr for debugging purposes
+                        httpProxyHandler
                     }
                 }
-                pipeline.addLast("SocksPoxy", proxy)
+                pipeline.addLast("Proxy", proxy)
                 proxy.connectFuture().addListener {
                     if (!it.isSuccess) {
                         ch.disconnect()
@@ -201,6 +215,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
         val bootstrap = Bootstrap()
         // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
         bootstrap.group(workerGroup).channel(NioSocketChannel::class.java).handler(ClientChannelInitializer(this))
+        // Delegate DNS Resolution to the proxy side, if we are using proxy.
+        if (configuration.proxyConfig != null) {
+            bootstrap.resolver(NoopAddressResolverGroup.INSTANCE)
+        }
         currentTarget = targets[targetIndex]
         val clientFuture = bootstrap.connect(currentTarget.host, currentTarget.port)
         clientFuture.addListener(connectListener)

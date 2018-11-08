@@ -33,7 +33,8 @@ class DirectBridgeSenderService(val conf: FirewallConfiguration,
             maxMessageSize,
             conf.bridgeInnerConfig?.enableSNI ?: true,
             { ForwardingArtemisMessageClient(artemisConnectionService) },
-            BridgeAuditServiceAdaptor(auditService))
+            BridgeAuditServiceAdaptor(auditService),
+            conf.enableAMQPPacketTrace)
 
     private class ForwardingArtemisMessageClient(val artemisConnectionService: BridgeArtemisConnectionService) : ArtemisSessionProvider {
         override fun start(): ArtemisMessagingClient.Started {

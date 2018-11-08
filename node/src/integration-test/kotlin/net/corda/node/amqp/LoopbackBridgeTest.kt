@@ -211,7 +211,8 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
                 artemisConfig.enableSNI,
                 { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize) },
                 null,
-                { true })
+                { true },
+                false)
         bridgeManager.start()
 
         val artemis = artemisClient.started!!

@@ -173,6 +173,7 @@ dependencies {
     // Web stuff: for HTTP[S] servlets
     testCompile "org.eclipse.jetty:jetty-servlet:${jetty_version}"
     testCompile "org.eclipse.jetty:jetty-webapp:${jetty_version}"
+    testCompile "org.eclipse.jetty:jetty-proxy:${jetty_version}"
     testCompile "javax.servlet:javax.servlet-api:3.1.0"
 
     // Jersey for JAX-RS implementation for use in Jetty
@@ -210,10 +211,9 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     // Allow access to simple SOCKS Server for integration testing
-    testCompile("io.netty:netty-example:$netty_version") {
+    integrationTestCompile("io.netty:netty-example:$netty_version") {
         exclude group: "io.netty", module: "netty-tcnative"
         exclude group: "ch.qos.logback", module: "logback-classic"
-
     }
 
     // Adding native SSL library to allow using native SSL with Artemis and AMQP

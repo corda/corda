@@ -117,15 +117,15 @@ absolute path to the firewall's base directory.
 
         :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
-   :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, or SOCKS5 proxy:
+   :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, SOCKS5, or HTTP CONNECT tunnelling proxy:
 
-        :version: Either SOCKS4, or SOCKS5 to define the protocol version used in connecting to the SOCKS proxy.
+        :version: Either SOCKS4, SOCKS5, or HTTP to define the protocol version used in connecting to the SOCKS proxy.
 
-        :proxyAddress: Host and port of the SOCKS proxy.
+        :proxyAddress: Host and port of the proxy.
 
-        :userName: Optionally a user name that will be presented to the SOCKS proxy after connect.
+        :userName: Optionally a user name that will be presented to the proxy after connect.
 
-        :password: Optionally, a password to present to the SOCKS5 Proxy. It is not valid for SOCKS4 proxies and it should always be combined with [userName].
+        :password: Optionally, a password to present to the SOCKS5 or HTTP Proxy. It is not valid for SOCKS4 proxies and it should always be combined with [userName].
 
 :inboundConfig:  This section is used to configure the properties of the listening port. It is required for ``SenderReceiver`` and ``FloatOuter`` modes and must be absent for ``BridgeInner`` mode:
 

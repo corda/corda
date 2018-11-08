@@ -46,6 +46,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
     companion object {
         private val log = contextLogger()
+        const val PROXY_LOGGER_NAME = "preProxyLogger"
     }
 
     private lateinit var remoteAddress: InetSocketAddress
@@ -123,6 +124,14 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
         when (evt) {
             is ProxyConnectionEvent -> {
+                if(trace) {
+                    log.info("ProxyConnectionEvent received: $evt")
+                    try {
+                        ctx.pipeline().remove(PROXY_LOGGER_NAME)
+                    } catch (ex: NoSuchElementException) {
+                        // ignore
+                    }
+                }
                 // update address to the real target address
                 remoteAddress = evt.destinationAddress()
             }

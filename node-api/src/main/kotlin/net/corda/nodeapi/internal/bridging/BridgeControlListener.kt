@@ -28,15 +28,16 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                             maxMessageSize: Int,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
-                            bridgeMetricsService: BridgeMetricsService? = null) : AutoCloseable {
+                            bridgeMetricsService: BridgeMetricsService? = null,
+                            trace: Boolean = false) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
     private val bridgeControlQueue = "$BRIDGE_CONTROL.$bridgeId"
     private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic)
+        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
     } else {
-        AMQPBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService)
+        AMQPBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null

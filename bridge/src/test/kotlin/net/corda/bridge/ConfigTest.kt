@@ -164,4 +164,14 @@ class ConfigTest {
         assertEquals("HelloCorda!", config.healthCheckPhrase)
         assertEquals("proxyUser", config.outboundConfig?.proxyConfig?.userName)
     }
+
+    @Test
+    fun `Load config with HTTP proxy support`() {
+        val configResource = "/net/corda/bridge/withhttpproxy/firewall.conf"
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(ProxyVersion.HTTP, config.outboundConfig!!.proxyConfig!!.version)
+        assertEquals(NetworkHostAndPort("proxyHost", 12345), config.outboundConfig!!.proxyConfig!!.proxyAddress)
+        assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
+        assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
+    }
 }
