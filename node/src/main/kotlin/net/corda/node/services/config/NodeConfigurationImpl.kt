@@ -165,7 +165,6 @@ data class NodeConfigurationImpl(
             dataSourceProperties["transactionIsolation"] = database.transactionIsolationLevel.jdbcString
         }
 
-        // TODO sollecitom check if you need to add these to validation
         // enforce that SQLServer does not get sent all strings as Unicode - hibernate handles this "cleverly"
         val dataSourceUrl = dataSourceProperties.getProperty(CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL, "")
         if (dataSourceUrl.contains(":sqlserver:") && !dataSourceUrl.contains("sendStringParametersAsUnicode", true)) {
@@ -174,6 +173,7 @@ data class NodeConfigurationImpl(
 
         // Adjust connection pool size depending on N=flow thread pool size.
         // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
+        // TODO sollecitom add these to validation
         val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
         val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
         if (maxConnectionPoolSize == null) {

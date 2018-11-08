@@ -25,6 +25,7 @@ import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.config.PasswordEncryption
+import net.corda.node.services.config.RelayConfiguration
 import net.corda.node.services.config.SecurityConfiguration
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
@@ -204,9 +205,12 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
+    private val runMigration by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.runMigration)
+    private val hibernateDialect by string().optional()
+    private val schema by string().optional()
 
     override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
-        return valid(DatabaseConfig(configuration[initialiseSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(configuration[runMigration], configuration[initialiseSchema], configuration[transactionIsolationLevel], configuration[schema], configuration[exportHibernateJMXStatistics], configuration[hibernateDialect], configuration[mappedSchemaCacheSize]))
     }
 }
 
@@ -232,5 +236,18 @@ internal object FlowOverridesConfigSpec : Configuration.Specification<FlowOverri
 
     override fun parseValid(configuration: Config): Valid<FlowOverrideConfig> {
         return valid(FlowOverrideConfig(configuration[overrides]))
+    }
+}
+
+internal object RelayConfigurationSpec : Configuration.Specification<RelayConfiguration>("RelayConfiguration") {
+    private val relayHost by string()
+    private val remoteInboundPort by int()
+    private val username by string()
+    private val privateKeyFile by string().mapValid(::toPath)
+    private val publicKeyFile by string().mapValid(::toPath)
+    private val sshPort by int().optional().withDefaultValue(RelayConfiguration.Defaults.sshPort)
+
+    override fun parseValid(configuration: Config): Valid<RelayConfiguration> {
+        return valid(RelayConfiguration(configuration[relayHost], configuration[remoteInboundPort], configuration[username], configuration[privateKeyFile], configuration[publicKeyFile], configuration[sshPort]))
     }
 }

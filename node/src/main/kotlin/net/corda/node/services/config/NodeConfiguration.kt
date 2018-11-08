@@ -312,4 +312,8 @@ data class RelayConfiguration(val relayHost: String,
                               val username: String,
                               val privateKeyFile: Path,
                               val publicKeyFile: Path,
-                              val sshPort: Int = 22)
+                              val sshPort: Int = Defaults.sshPort) {
+    internal object Defaults {
+        val sshPort = 22
+    }
+}

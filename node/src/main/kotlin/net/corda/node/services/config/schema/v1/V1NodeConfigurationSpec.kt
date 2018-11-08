@@ -78,6 +78,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val cryptoServiceConf by string().optional()
     @Suppress("unused")
     private val custom by nestedObject().optional()
+    private val relay by nested(RelayConfigurationSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
@@ -133,7 +134,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappDirectories = cordappDirectories,
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = configuration[cryptoServiceName],
-                    cryptoServiceConf = configuration[cryptoServiceConf]
+                    cryptoServiceConf = configuration[cryptoServiceConf],
+                    relay = configuration[relay]
             ))
         } catch (e: Exception) {
             return when (e) {
