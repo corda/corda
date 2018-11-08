@@ -52,7 +52,7 @@ public class IOUFlow extends FlowLogic<Void> {
 
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
-        StateAndContract outputContractAndState = new StateAndContract(outputState, IOUContract.IOU_CONTRACT_ID);
+        StateAndContract outputContractAndState = new StateAndContract(outputState, IOUContract.ID);
         List<PublicKey> requiredSigners = ImmutableList.of(getOurIdentity().getOwningKey(), otherParty.getOwningKey());
         Command cmd = new Command<>(new IOUContract.Create(), requiredSigners);
 
