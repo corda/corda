@@ -41,7 +41,8 @@ class BCCryptoServiceTests {
     @Test
     fun `BCCryptoService generate key pair and sign both data and cert`() {
         val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
-        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY}.forEach { generateKeyAndSignForScheme(cryptoService, it) }
+        // Testing every supported scheme.
+        Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY }.forEach { generateKeyAndSignForScheme(cryptoService, it) }
     }
 
     private fun generateKeyAndSignForScheme(cryptoService: BCCryptoService, signatureScheme: SignatureScheme) {
