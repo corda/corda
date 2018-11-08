@@ -70,7 +70,7 @@ open class SharedNodeCmdLineOptions {
 
     fun logRawConfigurationErrors(errors: Set<ConfigException>) {
         if (errors.isNotEmpty()) {
-            logger.error("There were errors while reading node config:")
+            logger.error("There were error(s) while reading node config:")
         }
         errors.forEach { error ->
             when (error) {
