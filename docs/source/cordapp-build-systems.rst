@@ -162,6 +162,9 @@ without need to create a keystore and configure the ``cordapp`` plugin.
 For production deployment ensure to sign the CorDapp using your own certificate e.g. by setting system properties to point to an external keystore
 or by disabling signing in ``cordapp`` plugin and signing the CordDapp JAR downstream in your build pipeline.
 CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
+In case CordDapp signed by the (default) development key is run on node in the production mode (e.g. for testing),
+the node may be set to accept the development key by adding the ``cordappSignerKeyFingerprintBlacklist = []`` property set to empty list
+(see :ref:`Configuring a node <corda_configuration_file_signer_blacklist>`).
 
 Signing options can be contextually overwritten by the relevant system properties as described above.
 This allows the single ``build.gradle`` file to be used for a development build (defaulting to the Corda development keystore)

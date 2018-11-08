@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class TemplateContract implements Contract {
     // This is used to identify our contract when building a transaction.
-    public static final String TEMPLATE_CONTRACT_ID = "com.template.TemplateContract";
+    public static final String ID = "com.template.TemplateContract";
 
     /**
      * A transaction is considered valid if the verify() function of the contract of each of the transaction's input

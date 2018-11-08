@@ -13,7 +13,7 @@ fun testNetworkParameters(
         modifiedTime: Instant = Instant.now(),
         maxMessageSize: Int = 10485760,
         // TODO: Make this configurable and consistence across driver, bootstrapper, demobench and NetworkMapServer
-        maxTransactionSize: Int = maxMessageSize,
+        maxTransactionSize: Int = maxMessageSize * 50,
         whitelistedContractImplementations: Map<String, List<AttachmentId>> = emptyMap(),
         epoch: Int = 1,
         eventHorizon: Duration = 30.days

@@ -160,6 +160,9 @@ allprojects {
         suppressionFile = '.ci/dependency-checker/suppressedLibraries.xml'
         cveValidForHours = 1
         format = 'ALL'
+        failOnError = project.getProperty('owasp.failOnError')
+        // by default CVSS is '11' which passes everything. Set between 0-10 to catch vulnerable deps
+        failBuildOnCVSS = project.getProperty('owasp.failBuildOnCVSS').toFloat()
     }
     sourceCompatibility = 1.8
     targetCompatibility = 1.8

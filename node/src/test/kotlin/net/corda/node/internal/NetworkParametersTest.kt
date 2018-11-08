@@ -77,19 +77,6 @@ class NetworkParametersTest {
     }
 
     @Test
-    fun `maxTransactionSize must be bigger than maxMesssageSize`() {
-        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
-            NetworkParameters(1,
-                    emptyList(),
-                    2000,
-                    2001,
-                    Instant.now(),
-                    1,
-                    emptyMap())
-        }.withMessage("maxTransactionSize cannot be bigger than maxMessageSize")
-    }
-
-    @Test
     fun `package ownership checks are correct`() {
         val key1 = generateKeyPair().public
         val key2 = generateKeyPair().public

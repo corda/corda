@@ -8,10 +8,11 @@ import net.corda.core.transactions.LedgerTransaction
 // Add these imports:
 import net.corda.core.contracts.*
 
-// Replace IOUContract's contract ID and definition with:
-const val IOU_CONTRACT_ID = "com.template.IOUContract"
-
 class IOUContract : Contract {
+    companion object {
+        const val ID = "com.template.IOUContract"
+    }
+
     // Our Create command.
     class Create : CommandData
 

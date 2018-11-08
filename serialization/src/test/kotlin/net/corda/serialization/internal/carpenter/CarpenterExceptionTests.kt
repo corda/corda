@@ -5,7 +5,6 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import org.assertj.core.api.Assertions
 import org.junit.Test
@@ -33,8 +32,8 @@ interface TestInterface {
 // Create a custom serialization factory where we need to be able to both specify a carpenter
 // but also have the class loader used by the carpenter be substantially different from the
 // one used by the factory so as to ensure we can control their behaviour independently.
-class TestFactory(classCarpenter: ClassCarpenter)
-    : SerializerFactory(classCarpenter.whitelist, classCarpenter)
+private fun testFactory(classCarpenter: ClassCarpenter)
+    = SerializerFactoryBuilder.build(classCarpenter.whitelist, classCarpenter)
 
 class CarpenterExceptionTests {
     companion object {
@@ -90,7 +89,7 @@ class CarpenterExceptionTests {
         // we set the class loader of the ClassCarpenter to reject one of them, resulting in a CarpentryError
         // which we then  want the code to wrap in a NotSerializeableException
         val cc = ClassCarpenterImpl(AllWhitelist, TestClassLoader(listOf(C2::class.jvmName)))
-        val factory = TestFactory(cc)
+        val factory = testFactory(cc)
 
         Assertions.assertThatThrownBy {
             DeserializationInput(factory).deserialize(ser)
