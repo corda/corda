@@ -5,6 +5,7 @@ import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -13,17 +14,18 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.KeyStore
 import java.security.PublicKey
+import javax.security.auth.x500.X500Principal
 
 /**
  * Basic implementation of a [CryptoService] that uses BouncyCastle for cryptographic operations
  * and a Java KeyStore in the form of [CertificateStore] to store private keys.
  * This service reuses the [NodeConfiguration.signingCertificateStore] to store keys.
  */
-class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
+class BCCryptoService(private val legalName: X500Principal, private val certificateStoreSupplier: CertificateStoreSupplier) : CryptoService {
 
     // TODO check if keyStore exists.
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
-    internal var certificateStore: CertificateStore = nodeConf.signingCertificateStore.get(true)
+    internal var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
 
     override fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey {
         try {
@@ -71,7 +73,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
      * loaded [certificateStore] in memory with the contents of the corresponding [KeyStore] file.
      */
     fun resyncKeystore() {
-        certificateStore = nodeConf.signingCertificateStore.get(true)
+        certificateStore = certificateStoreSupplier.get(true)
     }
 
     /** Import an already existing [KeyPair] to this [CryptoService]. */
@@ -79,7 +81,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
         try {
             // Store a self-signed certificate, as Keystore requires to store certificates instead of public keys.
             // We could probably add a null cert, but we store a self-signed cert that will be used to retrieve the public key.
-            val cert = X509Utilities.createSelfSignedCACertificate(nodeConf.myLegalName.x500Principal, keyPair)
+            val cert = X509Utilities.createSelfSignedCACertificate(legalName, keyPair)
             certificateStore.query { setPrivateKey(alias, keyPair.private, listOf(cert), certificateStore.entryPassword) }
         } catch (e: Exception) {
             throw detailedCryptoServiceException("Cannot import key with alias $alias", e)

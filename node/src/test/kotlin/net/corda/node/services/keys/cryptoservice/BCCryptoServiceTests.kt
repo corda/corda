@@ -1,17 +1,14 @@
 package net.corda.node.services.keys.cryptoservice
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.core.internal.div
 import net.corda.core.utilities.days
-import net.corda.node.services.config.NodeConfiguration
+import net.corda.nodeapi.internal.config.CertificateStoreSupplier
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.junit.Before
 import org.junit.Rule
@@ -32,26 +29,18 @@ class BCCryptoServiceTests {
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
-
-    private lateinit var config: NodeConfiguration
+    private lateinit var signingCertificateStore: CertificateStoreSupplier
 
     @Before
     fun setUp() {
-        abstract class AbstractNodeConfiguration : NodeConfiguration
-
         val baseDirectory = temporaryFolder.root.toPath()
         val certificatesDirectory = baseDirectory / "certificates"
-        val signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
-
-        config = rigorousMock<AbstractNodeConfiguration>().also {
-            doReturn(signingCertificateStore).whenever(it).signingCertificateStore
-            doReturn(ALICE_NAME).whenever(it).myLegalName
-        }
+        signingCertificateStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
     }
 
     @Test
     fun `BCCryptoService generate key pair and sign both data and cert`() {
-        val cryptoService = BCCryptoService(config)
+        val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
         Crypto.supportedSignatureSchemes().filter { it != Crypto.COMPOSITE_KEY}.forEach { generateKeyAndSignForScheme(cryptoService, it) }
     }
 
@@ -67,7 +56,7 @@ class BCCryptoServiceTests {
         // Test that getSigner can indeed sign a certificate.
         val signer = cryptoService.getSigner(alias)
         val x500Principal = X500Principal("CN=Test")
-        val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 3650.days)
+        val window = X509Utilities.getCertificateValidityWindow(Duration.ZERO, 365.days)
         val certificate = X509Utilities.createCertificate(
                 CertificateType.CONFIDENTIAL_LEGAL_IDENTITY,
                 x500Principal,
@@ -84,7 +73,7 @@ class BCCryptoServiceTests {
     @Test
     fun `When key does not exist getPublicKey, sign and getSigner should throw`() {
         val nonExistingAlias = "nonExistingAlias"
-        val cryptoService = BCCryptoService(config)
+        val cryptoService = BCCryptoService(ALICE_NAME.x500Principal, signingCertificateStore)
         assertFalse { cryptoService.containsKey(nonExistingAlias) }
         assertFailsWith<CryptoServiceException> { cryptoService.getPublicKey(nonExistingAlias) }
         assertFailsWith<CryptoServiceException> { cryptoService.sign(nonExistingAlias, clearData) }
