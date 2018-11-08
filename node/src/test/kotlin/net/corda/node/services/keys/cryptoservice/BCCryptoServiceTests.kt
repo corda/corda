@@ -26,7 +26,6 @@ import kotlin.test.assertTrue
 class BCCryptoServiceTests {
 
     companion object {
-        const val alias = "keyAlias"
         val clearData = "data".toByteArray()
     }
 

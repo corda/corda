@@ -31,7 +31,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
             importKey(alias, keyPair)
             return keyPair.public
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme with id $schemeNumberID -- (${e.message})", e.cause)
+            throw detailedCryptoServiceException("Cannot generate key for alias $alias and signature scheme with id $schemeNumberID", e)
         }
     }
 
@@ -43,7 +43,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
         try {
             return certificateStore.query { getPublicKey(alias) }
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot get public key for alias $alias -- (${e.message})", e.cause)
+            throw detailedCryptoServiceException("Cannot get public key for alias $alias", e)
         }
     }
 
@@ -51,7 +51,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
         try {
             return Crypto.doSign(certificateStore.query { getPrivateKey(alias, certificateStore.entryPassword) }, data)
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot sign using the key with alias $alias. SHA256 of data to be signed: ${data.sha256()} -- (${e.message})", e.cause)
+            throw detailedCryptoServiceException("Cannot sign using the key with alias $alias. SHA256 of data to be signed: ${data.sha256()}", e)
         }
     }
 
@@ -61,7 +61,7 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
             val signatureScheme = Crypto.findSignatureScheme(privateKey)
             return ContentSignerBuilder.build(signatureScheme, privateKey, Crypto.findProvider(signatureScheme.providerName), newSecureRandom())
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot get Signer for key with alias $alias -- (${e.message})", e.cause)
+            throw detailedCryptoServiceException("Cannot get Signer for key with alias $alias", e)
         }
     }
 
@@ -82,7 +82,13 @@ class BCCryptoService(private val nodeConf: NodeConfiguration) : CryptoService {
             val cert = X509Utilities.createSelfSignedCACertificate(nodeConf.myLegalName.x500Principal, keyPair)
             certificateStore.query { setPrivateKey(alias, keyPair.private, listOf(cert), certificateStore.entryPassword) }
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot import key with alias $alias -- (${e.message})", e.cause)
+            throw detailedCryptoServiceException("Cannot import key with alias $alias", e)
         }
+    }
+
+    // Include causing [e.message] in the message as well for easier debugging.
+    private fun detailedCryptoServiceException(message: String, e: Exception): CryptoServiceException {
+        val finalMessage = e.message?.let { "$message -- ($it)" } ?: message
+        return CryptoServiceException(finalMessage, e.cause)
     }
 }
