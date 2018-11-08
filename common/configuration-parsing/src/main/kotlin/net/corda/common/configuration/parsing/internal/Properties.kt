@@ -155,7 +155,11 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
                 throw e
             }
         }
-        val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value -> delegate.validate(value.toConfig(), options).errors.map { error -> error.withContainingPath(*error.containingPath(index).toTypedArray()) } }.fold(emptyList<Configuration.Validation.Error>()) { one, other -> one + other }.toSet()
+        val errors = list.asSequence().map { configObject(key to ConfigValueFactory.fromAnyRef(it)) }.mapIndexed { index, value ->
+            delegate.validate(value.toConfig(), options)
+                    .errors
+                    .map { error -> error.withContainingPath(*error.containingPath(index).toTypedArray()) } }
+                .fold(emptyList<Configuration.Validation.Error>()) { one, other -> one + other }.toSet()
         return Validated.withResult(target, errors)
     }
 
@@ -200,7 +204,7 @@ private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Config
     override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
 
         val result = delegate.validate(target, options)
-        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().singleOrNull()
+        val error = result.errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().filter { it.keyName == key }.singleOrNull()
         return when {
             error != null -> if (result.errors.size > 1) result else valid(target)
             else -> result
