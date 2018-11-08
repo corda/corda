@@ -81,6 +81,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val relay by nested(RelayConfigurationSpec).optional()
     private val enableSNI by boolean().optional().withDefaultValue(Defaults.enableSNI)
     private val useOpenSsl by boolean().optional().withDefaultValue(Defaults.useOpenSsl)
+    private val graphiteOptions by nested(GraphiteOptionsSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
@@ -139,7 +140,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cryptoServiceConf = configuration[cryptoServiceConf],
                     relay = configuration[relay],
                     enableSNI = configuration[enableSNI],
-                    useOpenSsl = configuration[useOpenSsl]
+                    useOpenSsl = configuration[useOpenSsl],
+                    graphiteOptions = configuration[graphiteOptions]
             ))
         } catch (e: Exception) {
             return when (e) {

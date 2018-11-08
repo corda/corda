@@ -141,9 +141,15 @@ data class DevModeOptions(val disableCheckpointChecker: Boolean = Defaults.disab
 data class GraphiteOptions(
         val server: String,
         val port: Int,
-        val prefix: String? = null, // defaults to org name and ip address when null
+        val prefix: String? = Defaults.prefix, // defaults to org name and ip address when null
+        // This typo leaking in the node.conf is brilliant
+        val sampleInvervallSeconds: Long = Defaults.sampleInvervallSeconds
+) {
+    internal object Defaults {
+        val prefix: String? = null
         val sampleInvervallSeconds: Long = 60
-)
+    }
+}
 
 fun NodeConfiguration.shouldCheckCheckpoints(): Boolean {
     return this.devMode && this.devModeOptions?.disableCheckpointChecker != true

@@ -20,6 +20,7 @@ import net.corda.node.services.config.DevModeOptions
 import net.corda.node.services.config.FlowOverride
 import net.corda.node.services.config.FlowOverrideConfig
 import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.GraphiteOptions
 import net.corda.node.services.config.NetworkServicesConfig
 import net.corda.node.services.config.NodeH2Settings
 import net.corda.node.services.config.NodeRpcSettings
@@ -249,5 +250,16 @@ internal object RelayConfigurationSpec : Configuration.Specification<RelayConfig
 
     override fun parseValid(configuration: Config): Valid<RelayConfiguration> {
         return valid(RelayConfiguration(configuration[relayHost], configuration[remoteInboundPort], configuration[username], configuration[privateKeyFile], configuration[publicKeyFile], configuration[sshPort]))
+    }
+}
+
+internal object GraphiteOptionsSpec : Configuration.Specification<GraphiteOptions>("GraphiteOptions") {
+    private val server by string()
+    private val port by int()
+    private val prefix by string().optional()
+    private val sampleInvervallSeconds by long().optional().withDefaultValue(GraphiteOptions.Defaults.sampleInvervallSeconds)
+
+    override fun parseValid(configuration: Config): Valid<GraphiteOptions> {
+        return valid(GraphiteOptions(configuration[server], configuration[port], configuration[prefix], configuration[sampleInvervallSeconds]))
     }
 }
