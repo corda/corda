@@ -74,32 +74,34 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val p
         }
     }
 
-    override fun list(): PropertyDelegate.Required<List<TYPE>> = ListPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).list() })
+    override fun list(): PropertyDelegate.Required<List<TYPE>> = ListPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).list() })
 
-    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
+    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
 
     override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
 }
 
-private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Optional<TYPE>) : PropertyDelegate.Optional<TYPE> {
+private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Optional<TYPE>) : PropertyDelegate.Optional<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Optional<TYPE>> {
 
-        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+        val shortName = key ?: property.name
+        val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Optional<TYPE>> {
 
             override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Optional<TYPE> = prop
         }
     }
 
-    override fun withDefaultValue(defaultValue: TYPE): PropertyDelegate<TYPE> = OptionalWithDefaultPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).withDefaultValue(defaultValue) })
+    override fun withDefaultValue(defaultValue: TYPE): PropertyDelegate<TYPE> = OptionalWithDefaultPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).withDefaultValue(defaultValue) })
 }
 
-private class OptionalWithDefaultPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE>) : PropertyDelegate<TYPE> {
+private class OptionalWithDefaultPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition<TYPE>) : PropertyDelegate<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition<TYPE>> {
 
-        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+        val shortName = key ?: property.name
+        val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, Configuration.Property.Definition<TYPE>> {
 
             override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition<TYPE> = prop
@@ -107,16 +109,17 @@ private class OptionalWithDefaultPropertyDelegateImpl<TYPE>(private val key: Str
     }
 }
 
-private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
+private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
 
-        val prop = construct.invoke(key ?: property.name, sensitive).also(addToProperties)
+        val shortName = key ?: property.name
+        val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
         return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
 
             override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Required<TYPE> = prop
         }
     }
 
-    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
+    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
 }

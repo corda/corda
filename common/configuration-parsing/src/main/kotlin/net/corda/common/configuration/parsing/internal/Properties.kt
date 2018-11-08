@@ -201,7 +201,7 @@ private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Config
 
         val result = delegate.validate(target, options)
         val errors = result.errors
-        val missingValueError = errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().filter { it.keyName == key }.singleOrNull()
+        val missingValueError = errors.asSequence().filterIsInstance<Configuration.Validation.Error.MissingValue>().filter { it.pathAsString == key }.singleOrNull()
         return when {
             missingValueError != null -> if (errors.size > 1) result else valid(target)
             else -> result
