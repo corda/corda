@@ -79,6 +79,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     @Suppress("unused")
     private val custom by nestedObject().optional()
     private val relay by nested(RelayConfigurationSpec).optional()
+    private val enableSNI by boolean().optional().withDefaultValue(Defaults.enableSNI)
+    private val useOpenSsl by boolean().optional().withDefaultValue(Defaults.useOpenSsl)
 
     override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
 
@@ -135,7 +137,9 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
                     cryptoServiceName = configuration[cryptoServiceName],
                     cryptoServiceConf = configuration[cryptoServiceConf],
-                    relay = configuration[relay]
+                    relay = configuration[relay],
+                    enableSNI = configuration[enableSNI],
+                    useOpenSsl = configuration[useOpenSsl]
             ))
         } catch (e: Exception) {
             return when (e) {
