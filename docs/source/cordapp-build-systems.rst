@@ -82,7 +82,7 @@ Here are some guidelines for Corda dependencies:
 * When building an RPC client that communicates with a node (e.g. a webserver), you should include
   ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
 
-* When you need to use the network bootstrapper to bootstrap a local network (e.g. by running `deployNodes`), you 
+* When you need to use the network bootstrapper to bootstrap a local network (e.g. when using ``Cordformation``), you
   should include ``net.corda:corda-node-api:$corda_release_version`` as a ``cordaCompile`` dependency
 
 * To use Corda's test frameworks, add ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile``
@@ -92,14 +92,16 @@ Here are some guidelines for Corda dependencies:
 
 Here is an overview of the various Corda dependencies:
 
-* ``corda`` - The Corda fat JAR. Do not use as a compile dependency
+* ``corda`` - The Corda fat JAR. Do not use as a compile dependency. Required as a ``cordaRuntime`` dependency when
+  using ``Cordformation``
 * ``corda-confidential-identities`` - A part of the core Corda libraries. Automatically pulled in by other libraries
 * ``corda-core`` - Usually automatically included by another dependency, contains core Corda utilities, model, and
   functionality. Include manually if the utilities are useful or you are writing a library for Corda
 * ``corda-core-deterministic`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
 * ``corda-djvm`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
-* ``corda-finance`` - The Corda finance CorDapp. Only depend on if using as a dependent Cordapp or if you need access
-  to the Corda finance types
+* ``corda-finance`` - The Corda finance CorDapp. Only include as a ``cordaCompile`` dependency if using as a dependent
+  Cordapp or if you need access to the Corda finance types. Use as a ``cordapp`` dependency if using as a CorDapp
+  dependency (see below)
 * ``corda-jackson`` - Corda Jackson support. Use if you plan to serialise Corda objects to and/or from JSON
 * ``corda-jfx`` - JavaFX utilities with some Corda-specific models and utilities. Only use with JavaFX apps
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
