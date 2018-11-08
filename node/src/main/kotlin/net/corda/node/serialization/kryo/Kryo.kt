@@ -72,8 +72,9 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     val constructor = klass.primaryConstructor!!
 
     init {
-        // Verify that this class is immutable (all properties are final)
-        require(props.none { it is KMutableProperty<*> })
+        props.forEach {
+            require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
+        }
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.

@@ -377,7 +377,7 @@ class NodeRegistrationHelper(
 private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
 
     init {
-        require(times > 0)
+        require(times > 0){"Retry attempts must be larger than zero"}
     }
 
     private var counter = times

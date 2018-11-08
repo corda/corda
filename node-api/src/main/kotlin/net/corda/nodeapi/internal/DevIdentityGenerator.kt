@@ -44,7 +44,7 @@ object DevIdentityGenerator {
     }
 
     fun generateDistributedNotaryCompositeIdentity(dirs: List<Path>, notaryName: CordaX500Name, threshold: Int = 1): Party {
-        require(dirs.isNotEmpty())
+        require(dirs.isNotEmpty()){"At least one directory to generate identity for must be specified"}
 
         log.trace { "Generating composite identity \"$notaryName\" for nodes: ${dirs.joinToString()}" }
         val keyPairs = (1..dirs.size).map { generateKeyPair() }
@@ -56,7 +56,7 @@ object DevIdentityGenerator {
     }
 
     fun generateDistributedNotarySingularIdentity(dirs: List<Path>, notaryName: CordaX500Name): Party {
-        require(dirs.isNotEmpty())
+        require(dirs.isNotEmpty()){"At least one directory to generate identity for must be specified"}
 
         log.trace { "Generating singular identity \"$notaryName\" for nodes: ${dirs.joinToString()}" }
         val keyPair = generateKeyPair()

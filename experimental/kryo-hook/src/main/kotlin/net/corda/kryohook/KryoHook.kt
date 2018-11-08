@@ -133,7 +133,7 @@ fun readTree(events: List<StatsEvent>, index: Int): Pair<Int, StatsTree> {
         is StatsEvent.Enter -> {
             val (nextIndex, children) = readTrees(events, index + 1)
             val exit = events[nextIndex] as StatsEvent.Exit
-            require(event.className == exit.className)
+            require(event.className == exit.className){"Expected class ${exit.className}, received ${event.className}"}
             return Pair(nextIndex + 1, StatsTree.Object(event.className, exit.offset - event.offset, children))
         }
         is StatsEvent.Exit -> {

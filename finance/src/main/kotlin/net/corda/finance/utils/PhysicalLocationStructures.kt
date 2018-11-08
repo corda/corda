@@ -10,7 +10,7 @@ data class ScreenCoordinate(val screenX: Double, val screenY: Double)
 data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     init {
         require(latitude in -90..90){"Latitude must be between -90 and +90"}
-        require(longitude in -180..180){"Longditude must be between -180 and +180"}
+        require(longitude in -180..180){"Longitude must be between -180 and +180"}
     }
 
     /**
@@ -24,8 +24,8 @@ data class WorldCoordinate(val latitude: Double, val longitude: Double) {
     @Suppress("unused") // Used from the visualiser GUI.
     fun project(screenWidth: Double, screenHeight: Double, topLatitude: Double, bottomLatitude: Double,
                 leftLongitude: Double, rightLongitude: Double): ScreenCoordinate {
-        require(latitude in bottomLatitude..topLatitude)
-        require(longitude in leftLongitude..rightLongitude)
+        require(latitude in bottomLatitude..topLatitude){"Latitude must be between $bottomLatitude and $topLatitude"}
+        require(longitude in leftLongitude..rightLongitude){"Longitude must be between $leftLongitude and $rightLongitude"}
 
         fun deg2rad(deg: Double) = deg * Math.PI / 180.0
         val leftLngRad = deg2rad(leftLongitude)
