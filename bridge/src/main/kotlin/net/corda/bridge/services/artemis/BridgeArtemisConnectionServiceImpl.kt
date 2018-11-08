@@ -66,6 +66,8 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
+                callFailoverTimeout = 1000
+                callTimeout = 1000
                 minLargeMessageSize = maxMessageSize
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = conf.p2pConfirmationWindowSize

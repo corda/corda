@@ -8,7 +8,6 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpT
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
 import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import org.apache.activemq.artemis.api.core.client.ActiveMQClient
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
 
@@ -51,6 +50,8 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             // would be the default and the two lines below can be deleted.
             connectionTTL = 60000
             clientFailureCheckPeriod = 30000
+            callFailoverTimeout = 1000
+            callTimeout = 1000
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
@@ -81,7 +82,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
         started?.run {
             producer.close()
             // Since we are leaking the session outside of this class it may well be already closed.
-            if(!session.isClosed) {
+            if (session.stillOpen()) {
                 // Ensure any trailing messages are committed to the journal
                 session.commit()
             }
