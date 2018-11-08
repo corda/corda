@@ -1,0 +1,77 @@
+plugins {
+    id 'com.cisco.external-build' version '1.10'
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile project(':tools:cliutils')
+    compile project(':serialization')
+    compile project(':core')
+    compile project(':node-api')
+    compile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+task generateCppHeaders(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "net.corda.tools.serialization.GenerateCPPHeadersKt"
+    args = ['include', 'net.corda.core.transactions.SignedTransaction', 'net.corda.core.transactions.WireTransaction']
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+jar {
+    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+    baseName = "corda-cpp"
+    manifest {
+        attributes(
+                'Main-Class': 'net.corda.tools.serialization.GenerateCPPHeadersKt'
+        )
+    }
+}
+
+publish {
+    name 'corda-cpp'
+}
+
+
+task cmake(type: Exec) {
+    commandLine "cmake", "."
+    workingDir "${projectDir}"
+}
+
+task make(type: Exec) {
+    dependsOn generateCppHeaders
+    commandLine 'make'
+    workingDir "${projectDir}/cmake-build-debug"
+}
+
+task cordacpp(type: Exec) {
+    dependsOn make
+    workingDir "${projectDir}/cmake-build-debug"
+    commandLine "./CordaCPP"
+}

@@ -73,6 +73,8 @@
       <module name="corda-webserver_test" target="1.8" />
       <module name="cordapp-configuration-workflows_main" target="1.8" />
       <module name="cordapp-configuration-workflows_test" target="1.8" />
+      <module name="cordacpp_main" target="1.8" />
+      <module name="cordacpp_test" target="1.8" />
       <module name="cordapp-configuration_main" target="1.8" />
       <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
@@ -133,6 +135,8 @@
       <module name="flows_integrationTest" target="1.8" />
       <module name="flows_main" target="1.8" />
       <module name="flows_test" target="1.8" />
+      <module name="gen-serialization-libs_main" target="1.8" />
+      <module name="gen-serialization-libs_test" target="1.8" />
       <module name="gradle-plugins-cordapp_main" target="1.8" />
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
@@ -171,6 +175,8 @@
       <module name="net.corda-finance-contracts-states_test" target="1.8" />
       <module name="net.corda-isolated_main" target="1.8" />
       <module name="net.corda-isolated_test" target="1.8" />
+      <module name="net.corda-cordacpp_main" target="1.8" />
+      <module name="net.corda-cordacpp_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />
       <module name="net.corda-verifier_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />
