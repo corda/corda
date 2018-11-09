@@ -14,6 +14,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.Try
 import java.util.*
 import java.util.function.Predicate
+import kotlin.collections.HashSet
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -232,10 +233,39 @@ data class LedgerTransaction @JvmOverloads constructor(
         // Check that in the outputs,
         // a) an encumbered state does not refer to itself as the encumbrance
         // b) the number of outputs can contain the encumbrance
-        // c) the bi-directionality (full cycle) property is satisfied.
+        // c) the bi-directionality (full cycle) property is satisfied
+        // d) encumbered output states are assigned to the same notary.
         val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
         if (!statesAndEncumbrance.isEmpty()) {
-            checkOutputEncumbrances(statesAndEncumbrance)
+            checkBidirectionalOutputEncumbrances(statesAndEncumbrance)
+            checkNotariesOutputEncumbrance(statesAndEncumbrance)
+        }
+    }
+
+    // Method to check if all encumbered states are assigned to the same notary Party.
+    // This method should be invoked after [checkBidirectionalOutputEncumbrances], because it assumes that the
+    // bi-directionality property is already satisfied.
+    private fun checkNotariesOutputEncumbrance(statesAndEncumbrance: List<Pair<Int, Int>>) {
+        // We only check for transactions in which notary is null (i.e., issuing transactions).
+        // Note that if a notary is defined for a transaction, we already check if all outputs are assigned
+        // to the same notary (transaction's notary) in [checkNoNotaryChange()].
+        if (notary == null) {
+            // indicesAlreadyChecked is used to bypass already checked indices and to avoid cycles.
+            val indicesAlreadyChecked = HashSet<Int>()
+            statesAndEncumbrance.forEach {
+                checkNotary(it.first, indicesAlreadyChecked)
+            }
+        }
+    }
+
+    private tailrec fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
+        if (indicesAlreadyChecked.add(index)) {
+            val encumbranceIndex = outputs[index].encumbrance!!
+            if (outputs[index].notary != outputs[encumbranceIndex].notary) {
+                throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(id, index, encumbranceIndex, outputs[index].notary, outputs[encumbranceIndex].notary)
+            } else {
+                checkNotary(encumbranceIndex, indicesAlreadyChecked)
+            }
         }
     }
 
@@ -273,7 +303,7 @@ data class LedgerTransaction @JvmOverloads constructor(
     // b -> c    and     c -> b
     // c -> a            b -> a
     // and form a full cycle, meaning that the bi-directionality property is satisfied.
-    private fun checkOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
+    private fun checkBidirectionalOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
         // [Set] of "from" (encumbered states).
         val encumberedSet = mutableSetOf<Int>()
         // [Set] of "to" (encumbrance states).
