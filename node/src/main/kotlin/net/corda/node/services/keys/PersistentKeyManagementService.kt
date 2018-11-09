@@ -45,7 +45,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
     }
 
     @Entity
-    @Table(name = "public_key_hash_to_external_id_mapping", indexes = [Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")])
+    @Table(name = "pk_hash_to_ext_id_map", indexes = [Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")])
     class PublicKeyHashToExternalId(
             @Id
             @GeneratedValue

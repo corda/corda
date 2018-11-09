@@ -13,12 +13,12 @@
         <createIndex indexName="state_pk_hash_idx" tableName="state_party">
             <column name="public_key_hash"/>
         </createIndex>
-        <createTable tableName="public_key_hash_to_external_id_mapping">
+        <createTable tableName="pk_hash_to_ext_id_map">
             <column name="id" type="INT"/>
             <column name="external_id" type="NVARCHAR(255)"/>
             <column name="public_key_hash" type="NVARCHAR(255)"/>
         </createTable>
-        <createIndex indexName="pk_hash_to_xid_idx" tableName="public_key_hash_to_external_id_mapping">
+        <createIndex indexName="pk_hash_to_xid_idx" tableName="pk_hash_to_ext_id_map">
             <column name="public_key_hash"/>
         </createIndex>
         <createView viewName="v_pkey_hash_ex_id_map">
@@ -26,10 +26,10 @@
                 state_party.public_key_hash,
                 state_party.transaction_id,
                 state_party.output_index,
-                public_key_hash_to_external_id_mapping.external_id
+                pk_hash_to_ext_id_map.external_id
             from state_party
-            join public_key_hash_to_external_id_mapping
-            on state_party.public_key_hash = public_key_hash_to_external_id_mapping.public_key_hash
+            join pk_hash_to_ext_id_map
+            on state_party.public_key_hash = pk_hash_to_ext_id_map.public_key_hash
         </createView>
     </changeSet>
 </databaseChangeLog>
