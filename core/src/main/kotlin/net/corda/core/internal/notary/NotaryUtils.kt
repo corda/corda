@@ -8,14 +8,15 @@ import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.toBase58String
 import java.time.Instant
 
 /** Verifies the signature against this notarisation request. Checks that the signature is issued by the right party. */
 fun NotarisationRequest.verifySignature(requestSignature: NotarisationRequestSignature, intendedSigner: Party) {
     try {
         val signature = requestSignature.digitalSignature
-        require(intendedSigner.owningKey != signature.by) {
-            "Expected a signature by ${intendedSigner.owningKey}, but received by ${signature.by}}"
+        require(intendedSigner.owningKey == signature.by) {
+            "Expected a signature by ${intendedSigner.owningKey.toBase58String()}, but received by ${signature.by.toBase58String()}}"
         }
 
         // TODO: if requestSignature was generated over an old version of NotarisationRequest, we need to be able to

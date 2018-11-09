@@ -48,6 +48,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     tx.references)
 
         } catch (e: NotaryInternalException) {
+            logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
             // that is not relayed back to the client.
             throw NotaryException(e.error, transactionId)
@@ -120,6 +121,18 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val notary: Party?,
             val references: List<StateRef> = emptyList()
     )
+
+    private fun logError(error: NotaryError) {
+        val errorCause = when (error) {
+            is NotaryError.RequestSignatureInvalid -> error.cause
+            is NotaryError.TransactionInvalid ->  error.cause
+            is NotaryError.General -> error.cause
+            else -> null
+        }
+        if (errorCause != null) {
+            logger.error("Error notarising transaction $transactionId", errorCause)
+        }
+    }
 }
 
 /** Exception internal to the notary service. Does not get exposed to CorDapps and flows calling [NotaryFlow.Client]. */

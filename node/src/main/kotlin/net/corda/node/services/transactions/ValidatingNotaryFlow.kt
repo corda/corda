@@ -37,7 +37,6 @@ open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePa
             resolveAndContractVerify(stx)
             verifySignatures(stx)
         } catch (e: Exception) {
-            logger.error("Transaction verification failed", e)
             throw  NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
