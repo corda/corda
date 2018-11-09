@@ -18,6 +18,7 @@ import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
+import java.util.function.Consumer
 import javax.persistence.EntityManager
 
 /**
@@ -369,6 +370,17 @@ interface ServiceHub : ServicesForResolution {
      * @param block a lambda function with access to an [EntityManager].
      */
     fun <T : Any> withEntityManager(block: EntityManager.() -> T): T
+
+    /**
+     * Exposes the Java Persistence API (JPA) to flows via a restricted [EntityManager]. This method can be used to
+     * persist and query entities which inherit from [MappedSchema]. This is particularly useful if off-ledger data
+     * needs to be kept in conjunction with on-ledger state data.
+     *
+     * NOTE: Suspendable flow operations such as send, receive, subFlow and sleep, cannot be called within the lambda.
+     *
+     * @param block a lambda function with access to an [EntityManager].
+     */
+    fun withEntityManager(block: Consumer<EntityManager>)
 
     /**
      * Allows the registration of a callback that may inform services when the app is shutting down.

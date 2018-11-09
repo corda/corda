@@ -106,6 +106,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.function.Consumer
 import javax.persistence.EntityManager
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
@@ -907,6 +908,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
             return block(contextTransaction.restrictedEntityManager)
+        }
+
+        override fun withEntityManager(block: Consumer<EntityManager>) {
+            block.accept(contextTransaction.restrictedEntityManager)
         }
 
         // allows services to register handlers to be informed when the node stop method is called

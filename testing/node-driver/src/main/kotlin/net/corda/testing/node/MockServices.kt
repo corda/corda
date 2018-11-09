@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import co.paralleluniverse.fibers.SuspendExecution
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
@@ -42,6 +41,7 @@ import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
 import java.util.*
+import java.util.function.Consumer
 import javax.persistence.EntityManager
 
 /**
@@ -127,6 +127,10 @@ open class MockServices private constructor(
 
                     override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
                         return block(contextTransaction.restrictedEntityManager)
+                    }
+
+                    override fun withEntityManager(block: Consumer<EntityManager>) {
+                        return block.accept(contextTransaction.restrictedEntityManager)
                     }
                 }
             }
@@ -276,6 +280,10 @@ open class MockServices private constructor(
     override fun jdbcSession(): Connection = throw UnsupportedOperationException()
 
     override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+        throw UnsupportedOperationException()
+    }
+
+    override fun withEntityManager(block: Consumer<EntityManager>) {
         throw UnsupportedOperationException()
     }
 
