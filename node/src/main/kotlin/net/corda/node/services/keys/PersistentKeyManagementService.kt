@@ -14,10 +14,8 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
+import java.util.*
+import javax.persistence.*
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -29,7 +27,7 @@ import javax.persistence.Lob
 class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
+    @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
@@ -44,6 +42,24 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
     ) {
         constructor(publicKey: PublicKey, privateKey: PrivateKey)
             : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
+    }
+
+    @Entity
+    @Table(name = "public_key_hash_to_external_id_mapping", indexes = [Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")])
+    class PublicKeyHashToExternalId(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            var key: Long? = null,
+
+            @Column(name = "external_id", nullable = false)
+            var externalId: UUID,
+
+            @Column(name = "public_key_hash", nullable = false)
+            var publicKeyHash: String
+    ) {
+        constructor(accountId: UUID, publicKey: PublicKey)
+                : this(null, accountId, publicKey.toStringShort())
     }
 
     private companion object {

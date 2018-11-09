@@ -2268,7 +2268,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(resultsFASC.states).hasSize(2)
             // composite query for both linear and fungible asset states by participants
             val resultsComposite = vaultService.queryBy<ContractState>(linearStateCriteria.or(fungibleAssetStateCriteria))
-            assertThat(resultsComposite.states).hasSize(4)
+            assertThat(resultsComposite.states).hasSize(5)
         }
     }
 
