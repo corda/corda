@@ -347,12 +347,7 @@ class NodeRegistrationHelper(
         if (principalMatchesCertificatePrincipal(tlsCertCrlIssuer, rootCert)) {
             return rootCert
         }
-        val trustStore = config.p2pSslOptions.trustStore.getOptional()
-        return if (trustStore != null) {
-            findMatchingCertificate(tlsCertCrlIssuer, trustStore.value)
-        } else {
-            null
-        }
+        return findMatchingCertificate(tlsCertCrlIssuer, rootTrustStore)
     }
 
     override fun isTlsCrlIssuerCertRequired(): Boolean {
