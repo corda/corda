@@ -39,4 +39,4 @@ interface CryptoService {
     fun getSigner(alias: String): ContentSigner
 }
 
-open class CryptoServiceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)
