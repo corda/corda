@@ -56,6 +56,10 @@ open class TransactionBuilder @JvmOverloads constructor(
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
+    companion object {
+        private val log = contextLogger()
+    }
+
     /**
      * Creates a copy of the builder.
      */
@@ -165,7 +169,21 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         return when {
             attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)
-            else -> makeSignatureAttachmentConstraint(attachmentSigners)
+            else -> {
+                // Auto downgrade: signature constraints only available with a corda network minimum platform version of >= 4
+                if (services.networkParameters.minimumPlatformVersion < 4) {
+                    log.warn("Signature constraints not available on network requiring a minimum platform version of ${services.networkParameters.minimumPlatformVersion}")
+                    if (useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters)) {
+                        log.warn("Reverting back to using whitelisted zone constraints")
+                        WhitelistedByZoneAttachmentConstraint
+                    }
+                    else {
+                        log.warn("Reverting back to using hash constraints")
+                        HashAttachmentConstraint(attachmentId)
+                    }
+                }
+                else makeSignatureAttachmentConstraint(attachmentSigners)
+            }
         }
     }
 

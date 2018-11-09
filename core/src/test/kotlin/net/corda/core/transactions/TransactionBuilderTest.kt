@@ -8,6 +8,7 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -40,7 +41,7 @@ class TransactionBuilderTest {
         val cordappProvider = rigorousMock<CordappProvider>()
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        doReturn(testNetworkParameters()).whenever(services).networkParameters
+        doReturn(testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)).whenever(services).networkParameters
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
