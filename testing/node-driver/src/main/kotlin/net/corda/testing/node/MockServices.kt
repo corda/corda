@@ -127,11 +127,7 @@ open class MockServices private constructor(
                     override fun jdbcSession(): Connection = database.createSession()
 
                     override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-                        return try {
-                            block(contextTransaction.restrictedEntityManager)
-                        } catch (exception: SuspendExecution) {
-                            throw IllegalStateException("You cannot use suspending functions inside a withEntityManager block")
-                        }
+                        return block(contextTransaction.restrictedEntityManager)
                     }
 
                     override fun withEntityManager(block: Consumer<EntityManager>) {

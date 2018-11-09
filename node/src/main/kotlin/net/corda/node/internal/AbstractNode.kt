@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import co.paralleluniverse.fibers.SuspendExecution
 import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
@@ -1014,11 +1013,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun jdbcSession(): Connection = database.createSession()
 
         override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-            return try {
-                block(contextTransaction.restrictedEntityManager)
-            } catch (exception: SuspendExecution) {
-                throw IllegalStateException("You cannot use suspending functions inside a withEntityManager block")
-            }
+            return block(contextTransaction.restrictedEntityManager)
         }
 
         override fun withEntityManager(block: Consumer<EntityManager>) {
