@@ -13,7 +13,6 @@ import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.node.NotaryInfo
@@ -22,6 +21,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.transactions.ValidatingNotaryFlow
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -186,9 +186,9 @@ class TimedFlowTests {
     }
 
     /** A notary flow that will yield without returning a response on the very first received request. */
-    private class TestNotaryFlow(otherSide: FlowSession, service: TestNotaryService) : NotaryServiceFlow(otherSide, service) {
+    private class TestNotaryFlow(otherSide: FlowSession, service: TestNotaryService) : ValidatingNotaryFlow(otherSide, service) {
         @Suspendable
-        override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
+        override fun verifyTransaction(requestPayload: NotarisationPayload) {
             val myIdentity = serviceHub.myInfo.legalIdentities.first()
             MDC.put("name", myIdentity.name.toString())
             logger.info("Received a request from ${otherSideSession.counterparty.name}")
@@ -202,8 +202,6 @@ class TimedFlowTests {
             } else {
                 logger.info("Processing")
             }
-            return TransactionParts(stx.id, stx.inputs, stx.tx.timeWindow, stx.notary)
         }
-
     }
 }
