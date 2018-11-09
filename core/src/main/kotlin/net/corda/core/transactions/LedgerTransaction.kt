@@ -255,7 +255,7 @@ data class LedgerTransaction @JvmOverloads constructor(
         }
     }
 
-    private fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
+    private tailrec fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
         if (indicesAlreadyChecked.add(index)) {
             val encumbranceIndex = outputs[index].encumbrance!!
             if (outputs[index].notary != outputs[encumbranceIndex].notary) {

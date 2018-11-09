@@ -15,6 +15,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
+import org.assertj.core.api.AssertionsForClassTypes
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
@@ -328,7 +329,8 @@ class TransactionEncumbranceTests {
 
         // More complex encumbrance (full cycle of size 4) where one of the encumbered states is assigned to a different notary.
         // 0 -> 1, 1 -> 3, 3 -> 2, 2 -> 0
-        assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
+        // We expect that state at index 3 cannot be encumbered with the state at index 2, due to mismatched notaries.
+        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java).isThrownBy {
             TransactionBuilder()
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
@@ -336,12 +338,12 @@ class TransactionEncumbranceTests {
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 2, AutomaticHashConstraint)
                     .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
                     .toLedgerTransaction(ledgerServices)
-        }
+        }.withMessageContaining("index 3 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 2 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
 
         // Two different encumbrance chains, where only one fails due to mismatched notary.
         // 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2 where encumbered states with indices 2 and 3, respectively, are assigned
         // to different notaries.
-        assertFailsWith<TransactionVerificationException.TransactionNotaryMismatchEncumbranceException> {
+        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java).isThrownBy {
             TransactionBuilder()
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 0, AutomaticHashConstraint)
@@ -349,6 +351,6 @@ class TransactionEncumbranceTests {
                     .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 2, AutomaticHashConstraint)
                     .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
                     .toLedgerTransaction(ledgerServices)
-        }
+        }.withMessageContaining("index 2 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 3 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
     }
 }
