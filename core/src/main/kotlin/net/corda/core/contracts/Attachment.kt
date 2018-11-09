@@ -40,8 +40,7 @@ interface Attachment : NamedByHash {
         return try {
             JarInputStream(stream)
         } catch (e: IOException) {
-            stream.close()
-            throw e
+            stream.use { throw e }
         }
     }
 
