@@ -66,7 +66,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             checkInputs(transaction.inputs + transaction.references)
             return transaction
         } catch (e: Exception) {
-            logger.error("Transaction invalid", e)
             val error = NotaryError.TransactionInvalid(e)
             throw NotaryInternalException(error)
         }
