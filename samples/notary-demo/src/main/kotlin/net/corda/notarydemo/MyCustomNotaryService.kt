@@ -42,7 +42,6 @@ class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidating
             verifySignatures(stx)
             customVerify(stx)
         } catch (e: Exception) {
-            logger.error("Transaction verification failed", e)
             throw  NotaryInternalException(NotaryError.TransactionInvalid(e))
         }
     }
