@@ -18,7 +18,8 @@ import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.DataFeed
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
@@ -32,7 +33,6 @@ import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
-import net.corda.node.services.messaging.ReceivedMessage
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
 import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
@@ -92,8 +92,6 @@ class SingleThreadedStateMachineManager(
         val timedFlows = HashMap<StateMachineRunId, ScheduledTimeout>()
     }
 
-    override val flowHospital: StaffedFlowHospital = StaffedFlowHospital()
-
     private val mutex = ThreadBox(InnerState())
     private val scheduler = FiberExecutorScheduler("Same thread scheduler", executor)
     private val timeoutScheduler = Executors.newScheduledThreadPool(1)
@@ -104,11 +102,13 @@ class SingleThreadedStateMachineManager(
     private val sessionToFlow = ConcurrentHashMap<SessionId, StateMachineRunId>()
     private val flowMessaging: FlowMessaging = FlowMessagingImpl(serviceHub)
     private val fiberDeserializationChecker = if (serviceHub.configuration.shouldCheckCheckpoints()) FiberDeserializationChecker() else null
-    private val transitionExecutor = makeTransitionExecutor()
     private val ourSenderUUID = serviceHub.networkService.ourSenderUUID
 
     private var checkpointSerializationContext: CheckpointSerializationContext? = null
     private var actionExecutor: ActionExecutor? = null
+
+    override val flowHospital: StaffedFlowHospital = StaffedFlowHospital(flowMessaging, ourSenderUUID)
+    private val transitionExecutor = makeTransitionExecutor()
 
     override val allStateMachines: List<FlowLogic<*>>
         get() = mutex.locked { flows.values.map { it.fiber.logic } }
@@ -204,7 +204,7 @@ class SingleThreadedStateMachineManager(
                 invocationContext = context,
                 flowLogic = flowLogic,
                 flowStart = FlowStart.Explicit,
-                ourIdentity = ourIdentity ?: getOurFirstIdentity(),
+                ourIdentity = ourIdentity ?: ourFirstIdentity,
                 deduplicationHandler = deduplicationHandler,
                 isStartIdempotent = false
         )
@@ -402,23 +402,23 @@ class SingleThreadedStateMachineManager(
     }
 
     private fun onSessionMessage(event: ExternalEvent.ExternalMessageEvent) {
-        val message: ReceivedMessage = event.receivedMessage
-        val deduplicationHandler: DeduplicationHandler = event.deduplicationHandler
-        val peer = message.peer
+        val peer = event.receivedMessage.peer
         val sessionMessage = try {
-            message.data.deserialize<SessionMessage>()
+            event.receivedMessage.data.deserialize<SessionMessage>()
         } catch (ex: Exception) {
             logger.error("Received corrupt SessionMessage data from $peer")
-            deduplicationHandler.afterDatabaseTransaction()
+            event.deduplicationHandler.afterDatabaseTransaction()
             return
         }
         val sender = serviceHub.networkMapCache.getPeerByLegalName(peer)
         if (sender != null) {
             when (sessionMessage) {
-                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, deduplicationHandler, sender)
-                is InitialSessionMessage -> onSessionInit(sessionMessage, message.platformVersion, deduplicationHandler, sender)
+                is ExistingSessionMessage -> onExistingSessionMessage(sessionMessage, event.deduplicationHandler, sender)
+                is InitialSessionMessage -> onSessionInit(sessionMessage, sender, event)
             }
         } else {
+            // TODO Send the event to the flow hospital to be retried on network map update
+            // TODO Test that restarting the node attempts to retry
             logger.error("Unknown peer $peer in $sessionMessage")
         }
     }
@@ -448,14 +448,8 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    private fun onSessionInit(sessionMessage: InitialSessionMessage, senderPlatformVersion: Int, deduplicationHandler: DeduplicationHandler, sender: Party) {
-        fun createErrorMessage(initiatorSessionId: SessionId, message: String): ExistingSessionMessage {
-            val errorId = secureRandom.nextLong()
-            val payload = RejectSessionMessage(message, errorId)
-            return ExistingSessionMessage(initiatorSessionId, payload)
-        }
-
-        val replyError = try {
+    private fun onSessionInit(sessionMessage: InitialSessionMessage, sender: Party, event: ExternalEvent.ExternalMessageEvent) {
+        try {
             val initiatedFlowFactory = getInitiatedFlowFactory(sessionMessage)
             val initiatedSessionId = SessionId.createRandom(secureRandom)
             val senderSession = FlowSessionImpl(sender, initiatedSessionId)
@@ -465,40 +459,34 @@ class SingleThreadedStateMachineManager(
                 is InitiatedFlowFactory.CorDapp -> FlowInfo(initiatedFlowFactory.flowVersion, initiatedFlowFactory.appName)
             }
             val senderCoreFlowVersion = when (initiatedFlowFactory) {
-                is InitiatedFlowFactory.Core -> senderPlatformVersion
+                is InitiatedFlowFactory.Core -> event.receivedMessage.platformVersion
                 is InitiatedFlowFactory.CorDapp -> null
             }
-            startInitiatedFlow(flowLogic, deduplicationHandler, senderSession, initiatedSessionId, sessionMessage, senderCoreFlowVersion, initiatedFlowInfo)
-            null
-        } catch (exception: Exception) {
-            logger.warn("Exception while creating initiated flow", exception)
-            createErrorMessage(
-                    sessionMessage.initiatorSessionId,
-                    (exception as? SessionRejectException)?.message ?: "Unable to establish session"
-            )
-        }
-
-        if (replyError != null) {
-            flowMessaging.sendSessionMessage(sender, replyError, SenderDeduplicationId(DeduplicationId.createRandom(secureRandom), ourSenderUUID))
-            deduplicationHandler.afterDatabaseTransaction()
+            startInitiatedFlow(flowLogic, event.deduplicationHandler, senderSession, initiatedSessionId, sessionMessage, senderCoreFlowVersion, initiatedFlowInfo)
+        } catch (t: Throwable) {
+            logger.warn("Unable to initiate flow from $sender (appName=${sessionMessage.appName} " +
+                    "flowVersion=${sessionMessage.flowVersion}), sending to the flow hospital", t)
+            flowHospital.sessionInitErrored(sessionMessage, sender, event, t)
         }
     }
 
     // TODO this is a temporary hack until we figure out multiple identities
-    private fun getOurFirstIdentity(): Party {
-        return serviceHub.myInfo.legalIdentities[0]
-    }
+    private val ourFirstIdentity: Party get() = serviceHub.myInfo.legalIdentities[0]
 
     private fun getInitiatedFlowFactory(message: InitialSessionMessage): InitiatedFlowFactory<*> {
-        val initiatingFlowClass = try {
-            Class.forName(message.initiatorFlowClassName, true, classloader).asSubclass(FlowLogic::class.java)
+        val initiatorClass = try {
+            Class.forName(message.initiatorFlowClassName, true, classloader)
         } catch (e: ClassNotFoundException) {
-            throw SessionRejectException("Don't know ${message.initiatorFlowClassName}")
-        } catch (e: ClassCastException) {
-            throw SessionRejectException("${message.initiatorFlowClassName} is not a flow")
+            throw SessionRejectException.UnknownClass(message.initiatorFlowClassName)
         }
-        return serviceHub.getFlowFactory(initiatingFlowClass)
-                ?: throw SessionRejectException("$initiatingFlowClass is not registered")
+
+        val initiatorFlowClass = try {
+            initiatorClass.asSubclass(FlowLogic::class.java)
+        } catch (e: ClassCastException) {
+            throw SessionRejectException.NotAFlow(initiatorClass)
+        }
+
+        return serviceHub.getFlowFactory(initiatorFlowClass) ?: throw SessionRejectException.NotRegistered(initiatorFlowClass)
     }
 
     private fun <A> startInitiatedFlow(
@@ -511,7 +499,7 @@ class SingleThreadedStateMachineManager(
             initiatedFlowInfo: FlowInfo
     ) {
         val flowStart = FlowStart.Initiated(peerSession, initiatedSessionId, initiatingMessage, senderCoreFlowVersion, initiatedFlowInfo)
-        val ourIdentity = getOurFirstIdentity()
+        val ourIdentity = ourFirstIdentity
         startFlowInternal(
                 InvocationContext.peer(peerSession.counterparty.name), flowLogic, flowStart, ourIdentity,
                 initiatingMessageDeduplicationHandler,
