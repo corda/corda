@@ -9,6 +9,7 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import java.time.Instant
@@ -99,8 +100,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val participants: List<AbstractParty>? = null
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            super.visit(parser)
-            return parser.parseCriteria(this)
+            val predicates = super.visit(parser)
+            return parser.parseCriteria(this) + predicates
         }
 
         fun copy(
@@ -149,8 +150,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            super.visit(parser)
-            return parser.parseCriteria(this)
+            val predicates = super.visit(parser)
+            return parser.parseCriteria(this) + predicates
         }
 
         fun copy(
@@ -181,8 +182,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            super.visit(parser)
-            return parser.parseCriteria(this)
+            val predicates = super.visit(parser)
+            return parser.parseCriteria(this) + predicates
         }
     }
 
@@ -200,8 +201,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            super.visit(parser)
-            return parser.parseCriteria(this)
+            val predicates = super.visit(parser)
+            return parser.parseCriteria(this) + predicates
         }
 
         fun copy(
@@ -233,15 +234,15 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
      */
-    data class VaultCustomQueryCriteria<L : PersistentState> @JvmOverloads constructor(
+    data class VaultCustomQueryCriteria<L : StatePersistable> @JvmOverloads constructor(
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
-            super.visit(parser)
-            return parser.parseCriteria(this)
+            val predicates = super.visit(parser)
+            return parser.parseCriteria(this) + predicates
         }
 
         fun copy(
@@ -301,7 +302,7 @@ interface IQueryCriteriaParser : BaseQueryCriteriaParser<QueryCriteria, IQueryCr
     fun parseCriteria(criteria: QueryCriteria.CommonQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.FungibleAssetQueryCriteria): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.LinearStateQueryCriteria): Collection<Predicate>
-    fun <L : PersistentState> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
+    fun <L : StatePersistable> parseCriteria(criteria: QueryCriteria.VaultCustomQueryCriteria<L>): Collection<Predicate>
     fun parseCriteria(criteria: QueryCriteria.VaultQueryCriteria): Collection<Predicate>
 }
 

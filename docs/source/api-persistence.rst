@@ -208,7 +208,7 @@ Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
     .. sourcecode:: java
 
         PersistentFoo foo = new PersistentFoo(new UniqueIdentifier().getId().toString(), "Bar");
-        node.getServices().withEntityManager(entityManager -> {
+        serviceHub.withEntityManager(entityManager -> {
             entityManager.persist(foo);
             return null;
         });

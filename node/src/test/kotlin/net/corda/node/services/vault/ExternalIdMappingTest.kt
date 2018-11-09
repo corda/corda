@@ -72,10 +72,10 @@ class ExternalIdMappingTest {
         return anonymousParty
     }
 
-    private fun createDummyState(participant: AbstractParty): DummyState {
+    private fun createDummyState(participants: List<AbstractParty>): DummyState {
         val tx = TransactionBuilder(notary = notary.party).apply {
-            addOutputState(DummyState(1, listOf(participant)), DummyContract.PROGRAM_ID)
-            addCommand(DummyContract.Commands.Create(), listOf(participant.owningKey))
+            addOutputState(DummyState(1, participants), DummyContract.PROGRAM_ID)
+            addCommand(DummyContract.Commands.Create(), participants.map { it.owningKey })
         }
         val stx = services.signInitialTransaction(tx)
         database.transaction { services.recordTransactions(stx) }
@@ -83,37 +83,49 @@ class ExternalIdMappingTest {
     }
 
     @Test
-    fun `states can be queried by external ID`() {
+    fun `Two states can be mapped to a single externalId`() {
         val vaultService = services.vaultService
-        // Create new external ID.
-        val newExternalId = UUID.randomUUID()
-        // Create key for account.
-        val anonymousMe = freshKeyForExternalId(newExternalId)
-        // Create state with a public key assigned to the new external ID.
-        val dummyStateForExternalId = createDummyState(anonymousMe)
-        // Create a state with a public key not assigned to the new external ID.
-        val anonymousMeTwo = freshKey()
-        createDummyState(anonymousMeTwo)
-        // Create another state linked to the external ID via the public key.
-        val anonymousMeThree = freshKeyForExternalId(newExternalId)
-        val dummyStateForExternalIdTwo = createDummyState(anonymousMeThree)
+        // Create new external ID and two keys mapped to it.
+        val id = UUID.randomUUID()
+        val keyOne = freshKeyForExternalId(id)
+        val keyTwo = freshKeyForExternalId(id)
+        // Create states with a public key assigned to the new external ID.
+        val dummyStateOne = createDummyState(listOf(keyOne))
+        val dummyStateTwo = createDummyState(listOf(keyTwo))
         // This query should return two states!
-        database.transaction {
-            services.withEntityManager {
-                val builder = criteriaBuilder.createQuery(VaultSchemaV1.ExtIdToPubKeyView::class.java)
-                builder.from(VaultSchemaV1.ExtIdToPubKeyView::class.java)
-                val result = createQuery(builder).resultList.forEach {
-                    println("${it.externalId} ${it.publicKeyHash}")
-                }
-
-            }
-        }
         val result = database.transaction {
-            val externalId = builder { VaultSchemaV1.ExtIdToPubKeyView::externalId.equal(newExternalId) }
+            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(id)) }
             val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
             vaultService.queryBy<DummyState>(queryCriteria).states
         }
-        assertEquals(setOf(dummyStateForExternalId, dummyStateForExternalIdTwo), result.map { it.state.data }.toSet())
+        assertEquals(setOf(dummyStateOne, dummyStateTwo), result.map { it.state.data }.toSet())
+
+        // This query should return two states!
+        val resultTwo = database.transaction {
+            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.equal(id) }
+            val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
+            vaultService.queryBy<DummyState>(queryCriteria).states
+        }
+        assertEquals(setOf(dummyStateOne, dummyStateTwo), resultTwo.map { it.state.data }.toSet())
+    }
+
+    @Test
+    fun `One state can be mapped to multiple externalIds`() {
+        val vaultService = services.vaultService
+        // Create new external ID.
+        val idOne = UUID.randomUUID()
+        val keyOne = freshKeyForExternalId(idOne)
+        val idTwo = UUID.randomUUID()
+        val keyTwo = freshKeyForExternalId(idTwo)
+        // Create state with a public key assigned to the new external ID.
+        val dummyState = createDummyState(listOf(keyOne, keyTwo))
+        // This query should return one state!
+        val result = database.transaction {
+            val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(idOne, idTwo)) }
+            val queryCriteria = QueryCriteria.VaultCustomQueryCriteria(externalId)
+            vaultService.queryBy<DummyState>(queryCriteria).states
+        }
+        assertEquals(dummyState, result.single().state.data)
     }
 
 }

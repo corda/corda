@@ -9,8 +9,8 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
-import net.corda.testing.core.BOC_NAME
 import net.corda.testing.internal.TestingNamedCacheFactory
+import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode

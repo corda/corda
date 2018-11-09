@@ -2,9 +2,7 @@ package net.corda.node.services.vault
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
-import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.crypto.CompositeSignature
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -13,13 +11,11 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
-import org.hibernate.annotations.Cascade
-import org.hibernate.annotations.CascadeType
 import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.Type
-import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -42,7 +38,7 @@ object VaultSchemaV1 : MappedSchema(
                 VaultFungibleStates::class.java,
                 VaultTxnNote::class.java,
                 PersistentParty::class.java,
-                ExtIdToPubKeyView::class.java
+                StateToExternalId::class.java
         )
 ) {
 
@@ -182,29 +178,29 @@ object VaultSchemaV1 : MappedSchema(
 
             @Column(name = "x500_name", nullable = true)
             var x500Name: AbstractParty? = null
-    ) {
+    ) : StatePersistable {
         constructor(stateRef: PersistentStateRef, abstractParty: AbstractParty)
                 : this(null, stateRef, abstractParty.owningKey.toStringShort(), abstractParty)
     }
 
-    // TODO: as the primary key is state ref we can only have one state ref in the tables!!
-    // So change this to not sub-class persistent state.
-    // Actually it must sub class persistent state OR we need to relax the type parameter for the query criteria classes.
-
     @Entity
     @Immutable
     @Table(name = "v_pkey_hash_ex_id_map")
-    class ExtIdToPubKeyView(
+    class StateToExternalId(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            var id: Long? = null,
+
+            // Foreign key.
+            @Column(name = "state_ref")
+            var stateRef: PersistentStateRef,
+
             @Column(name = "public_key_hash")
             var publicKeyHash: String,
 
             @Column(name = "external_id")
             var externalId: UUID
-    ) : PersistentState()
+    ) : StatePersistable
 }
-
-// TODO: Use a liquibase script to migrate all the old records in the element collection tables to this table.
-// TODO: Make the fungible state and linear state participants point to the new table.
-//            @CollectionTable(name = "vault_fungible_states_parts",
-//            @CollectionTable(name = "vault_linear_states_parts",
 
