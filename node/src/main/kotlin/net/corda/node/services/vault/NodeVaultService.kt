@@ -132,10 +132,14 @@ class NodeVaultService(
                 //
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
+                val persistentStateRef = PersistentStateRef(stateAndRef.key)
                 val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
-                val persistentKeys = keys.map { VaultSchemaV1.PersistentPublicKey(it) }
-                persistentKeys.forEach { session.save(it) }
+                // Save a row for each party in the state_party table.
+                stateOnly.participants.forEach { participant ->
+                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participant)
+                    session.save(persistentParty)
+                }
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
@@ -143,10 +147,9 @@ class NodeVaultService(
                         recordedTime = clock.instant(),
                         relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
                         constraintType = constraintInfo.type(),
-                        constraintData = constraintInfo.data(),
-                        participants = persistentKeys.toMutableSet()
+                        constraintData = constraintInfo.data()
                 )
-                stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
+                stateToAdd.stateRef = persistentStateRef
                 session.save(stateToAdd)
             }
             consumedStateRefs.forEach { stateRef ->

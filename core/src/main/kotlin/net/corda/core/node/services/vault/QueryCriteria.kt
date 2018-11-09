@@ -76,6 +76,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
         open val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
         open val constraints: Set<Vault.ConstraintInfo> = emptySet()
+        open val participants: List<AbstractParty>? = null
         abstract val contractStateTypes: Set<Class<out ContractState>>?
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -94,7 +95,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val timeCondition: TimeCondition? = null,
             override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
             override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
-            override val constraints: Set<Vault.ConstraintInfo> = emptySet()
+            override val constraints: Set<Vault.ConstraintInfo> = emptySet(),
+            override val participants: List<AbstractParty>? = null
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -124,7 +126,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
     data class LinearStateQueryCriteria @JvmOverloads constructor(
-            val participants: List<AbstractParty>? = null,
+            override val participants: List<AbstractParty>? = null,
             val uuid: List<UUID>? = null,
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
@@ -172,7 +174,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
     data class FungibleStateQueryCriteria(
-            val participants: List<AbstractParty>? = null,
+            override val participants: List<AbstractParty>? = null,
             val quantity: ColumnPredicate<Long>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
@@ -188,7 +190,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
-            val participants: List<AbstractParty>? = null,
+            override val participants: List<AbstractParty>? = null,
             val owner: List<AbstractParty>? = null,
             val quantity: ColumnPredicate<Long>? = null,
             val issuer: List<AbstractParty>? = null,

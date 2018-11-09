@@ -2,14 +2,15 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="R3.Corda" id="create-external-id-to-public-key-hash-view">
-        <createTable tableName="state_public_key_hash">
+    <changeSet author="R3.Corda" id="create-external-id-to-state-party-view">
+        <createTable tableName="state_party">
             <column name="output_index" type="INT"/>
             <column name="transaction_id" type="NVARCHAR(64)"/>
             <column name="id" type="INT"/>
             <column name="public_key_hash" type="NVARCHAR(255)"/>
+            <column name="x500_name" type="NVARCHAR(255)"/>
         </createTable>
-        <createIndex indexName="state_pk_hash_idx" tableName="state_public_key_hash">
+        <createIndex indexName="state_pk_hash_idx" tableName="state_party">
             <column name="public_key_hash"/>
         </createIndex>
         <createTable tableName="public_key_hash_to_external_id_mapping">
@@ -22,13 +23,13 @@
         </createIndex>
         <createView viewName="v_pkey_hash_ex_id_map">
             select
-                state_public_key_hash.public_key_hash,
-                state_public_key_hash.transaction_id,
-                state_public_key_hash.output_index,
+                state_party.public_key_hash,
+                state_party.transaction_id,
+                state_party.output_index,
                 public_key_hash_to_external_id_mapping.external_id
-            from state_public_key_hash
+            from state_party
             join public_key_hash_to_external_id_mapping
-            on state_public_key_hash.public_key_hash = public_key_hash_to_external_id_mapping.public_key_hash
+            on state_party.public_key_hash = public_key_hash_to_external_id_mapping.public_key_hash
         </createView>
     </changeSet>
 </databaseChangeLog>
