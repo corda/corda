@@ -373,7 +373,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.checkpointSerialize(context = serializationContext.value)
                 )
-            } catch (exception: java.lang.Exception) {
+            } catch (exception: Exception) {
                 Event.Error(exception)
             }
 

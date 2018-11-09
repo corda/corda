@@ -65,7 +65,8 @@ class SingleThreadedStateMachineManager(
         val database: CordaPersistence,
         private val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
-        private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
+        private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader,
+        private val initiateNodeShutdown: () -> Unit
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
@@ -136,6 +137,11 @@ class SingleThreadedStateMachineManager(
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
             (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
+            if (throwable is VirtualMachineError) {
+                // TODO sollecitom this work if there's 1 flow, but what if there are more than 1? Kill all?
+                killFlow(fiber.id)
+                initiateNodeShutdown.invoke()
+            }
         }
         serviceHub.networkMapCache.nodeReady.then {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
