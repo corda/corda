@@ -31,7 +31,6 @@ class ExposeJpaToFlowsTests {
 
     object FooSchema
 
-    @CordaSerializable
     object FooSchemaV1 : MappedSchema(schemaFamily = FooSchema.javaClass, version = 1, mappedTypes = listOf(PersistentFoo::class.java)) {
         @Entity
         @Table(name = "foos")
@@ -55,18 +54,11 @@ class ExposeJpaToFlowsTests {
         val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
 
         // Persist the foo.
-        database.transaction {
-            services.withEntityManager {
-                // Persist the foo.
-                persist(foo)
-                // Sync.
-                flush()
-            }
-        }
-
-        // Query for the foo.
         val result: MutableList<FooSchemaV1.PersistentFoo> = database.transaction {
             services.withEntityManager {
+                // Persist.
+                persist(foo)
+                // Query.
                 val query = criteriaBuilder.createQuery(FooSchemaV1.PersistentFoo::class.java)
                 val type = query.from(FooSchemaV1.PersistentFoo::class.java)
                 query.select(type)

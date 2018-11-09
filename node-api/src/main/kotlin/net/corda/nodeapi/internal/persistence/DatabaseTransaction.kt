@@ -62,7 +62,7 @@ class DatabaseTransaction(
 
     // Returns a delegate which overrides certain operations that we do not want CorDapp developers to call.
     val restrictedEntityManager: RestrictedEntityManager by lazy {
-        val entityManager = database.entityManagerFactory.withOptions().connection(connection).openSession() as EntityManager
+        val entityManager = session as EntityManager
         RestrictedEntityManager(entityManager)
     }
 

@@ -18,7 +18,6 @@ import net.corda.core.transactions.TransactionBuilder
 import java.security.PublicKey
 import java.sql.Connection
 import java.time.Clock
-import java.util.function.Consumer
 import javax.persistence.EntityManager
 
 /**
