@@ -53,6 +53,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
                         references
                 )
         )
+
         if (result is UniquenessProvider.Result.Failure) {
             throw NotaryInternalException(result.error)
         }
