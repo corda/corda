@@ -20,8 +20,7 @@ public class CordaCaplet extends Capsule {
     }
 
     private Config parseConfigFile(List<String> args) {
-        String baseDirOption = getOption(args, "--base-directory");
-        this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
+        this.baseDir = getBaseDirectory(args);
         String config = getOption(args, "--config-file");
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
@@ -36,6 +35,34 @@ public class CordaCaplet extends Capsule {
         }
     }
 
+    File getConfigFile(List<String> args, String baseDir) {
+        String config = getOptionMultiple(args, Arrays.asList("--config-file", "-f"));
+        return (config == null || config.equals("")) ? new File(baseDir, "node.conf") : new File(config);
+    }
+
+    String getBaseDirectory(List<String> args) {
+        String baseDir = getOptionMultiple(args, Arrays.asList("--base-directory", "-b"));
+        return Paths.get((baseDir == null) ? "." : baseDir).toAbsolutePath().normalize().toString();
+    }
+
+    String getOptionMultiple(List<String> args, List<String> possibleOptions) {
+        String result = null;
+        for(String option: possibleOptions) {
+            result = getOption(args, option);
+            if (result != null) break;
+//            result = getOptionThatStartsWith(args, option);
+//            if (result != null) break;
+        }
+        return result;
+    }
+//
+//    private String getOptionThatStartsWith(List<String> args, String option) {
+//        final String lowerCaseOption = option.toLowerCase();
+//        for (String arg : args) {
+//        }
+//        return null;
+//    }
+//
     private String getOption(List<String> args, String option) {
         final String lowerCaseOption = option.toLowerCase();
         int index = 0;
@@ -43,6 +70,14 @@ public class CordaCaplet extends Capsule {
             if (arg.toLowerCase().equals(lowerCaseOption)) {
                 if (index < args.size() - 1) {
                     return args.get(index + 1);
+                } else {
+                    return null;
+                }
+            }
+
+            if (arg.toLowerCase().startsWith(lowerCaseOption)) {
+                if (arg.length() > option.length() && arg.substring(option.length(), option.length() + 1).equals("=")) {
+                    return arg.substring(option.length() + 1);
                 } else {
                     return null;
                 }
