@@ -255,7 +255,7 @@ absolute path to the node's base directory.
             :port: Port the graphite instance is listening at.
             :prefix: Optional prefix string to identify metrics from this node, will default to a string made up
                     from Organisation Name and ip address.
-            :sampleIntervallSeconds: optional wait time between pushing metrics. This will default to 60 seconds.
+            :sampleIntervalSeconds: optional wait time between pushing metrics. This will default to 60 seconds.
 
 :extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
                 these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.

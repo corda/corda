@@ -150,7 +150,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
     private fun failoverCallback(event: FailoverEventType) {
         when (event) {
             FailoverEventType.FAILURE_DETECTED -> {
-                log.warn("Connection to the broker was lost. Starting ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} reconnect attempts.")
+                log.warn("Connection to the broker was lost. Trying to reconnect.")
             }
             FailoverEventType.FAILOVER_COMPLETED -> {
                 log.info("Connection to broker re-established.")
@@ -160,8 +160,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
             FailoverEventType.FAILOVER_FAILED -> state.locked {
                 if (running) {
-                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
-                    Thread.sleep(config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis())
+                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
+                    Thread.sleep(config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval.toMillis())
                     Runtime.getRuntime().halt(1)
                 }
             }
@@ -192,10 +192,10 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 config.p2pSslOptions
             }
             val tcpTransport = p2pConnectorTcpTransport(serverAddress, sslOptions)
-            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.externalBrokerBackupAddresses, sslOptions)
+            val backupTransports = p2pConnectorTcpTransportFromList(config.enterpriseConfiguration.messagingServerBackupAddresses, sslOptions)
             log.info("Connecting to message broker: $serverAddress")
             if (backupTransports.isNotEmpty()) {
-                log.info("Back-up message broker addresses: ${config.enterpriseConfiguration.externalBrokerBackupAddresses}")
+                log.info("Back-up message broker addresses: ${config.enterpriseConfiguration.messagingServerBackupAddresses}")
             }
             // If back-up artemis addresses are configured, the locator will be created using HA mode.
             locator = ActiveMQClient.createServerLocator(backupTransports.isNotEmpty(), *(listOf(tcpTransport) + backupTransports).toTypedArray()).apply {
@@ -211,12 +211,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 // Configuration for dealing with external broker failover
                 if (config.messagingServerExternal) {
                     connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
-                    reconnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.reconnectAttempts
-                    retryInterval = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryInterval.toMillis()
-                    retryIntervalMultiplier = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.retryIntervalMultiplier
-                    maxRetryInterval = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.maxRetryInterval.toMillis()
-                    isFailoverOnInitialConnection = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.failoverOnInitialAttempt
-                    initialConnectAttempts = config.enterpriseConfiguration.externalBrokerConnectionConfiguration.initialConnectAttempts
+                    reconnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts
+                    retryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval.toMillis()
+                    retryIntervalMultiplier = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryIntervalMultiplier
+                    maxRetryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.maxRetryInterval.toMillis()
+                    isFailoverOnInitialConnection = config.enterpriseConfiguration.messagingServerConnectionConfiguration.failoverOnInitialAttempt
+                    initialConnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.initialConnectAttempts
                 }
             }
 

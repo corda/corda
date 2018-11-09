@@ -262,8 +262,8 @@ open class Node(configuration: NodeConfiguration,
                         true,
                         true,
                         -1,
-                        configuration.enterpriseConfiguration.externalBrokerConnectionConfiguration,
-                        configuration.enterpriseConfiguration.externalBrokerBackupAddresses)
+                        configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
+                        configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
             BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.enableSNI, artemisClient)
         } else {

@@ -44,7 +44,7 @@ import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
 import net.corda.node.services.config.schema.parsers.validValue
 import net.corda.nodeapi.BrokerRpcSslOptions
-import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
@@ -272,8 +272,8 @@ internal object GraphiteOptionsSpec : Configuration.Specification<GraphiteOption
 
 internal object EnterpriseConfigurationSpec : Configuration.Specification<EnterpriseConfiguration>("EnterpriseConfiguration") {
     private val mutualExclusionConfiguration by nested(MutualExclusionConfigurationSpec)
-    private val externalBrokerConnectionConfiguration by enum(ExternalBrokerConnectionConfiguration::class).optional().withDefaultValue(EnterpriseConfiguration.Defaults.externalBrokerConnectionConfiguration)
-    private val externalBrokerBackupAddresses by string().mapValid(::toNetworkHostAndPort).list().optional().withDefaultValue(EnterpriseConfiguration.Defaults.externalBrokerBackupAddresses)
+    private val messagingServerConnectionConfiguration by enum(MessagingServerConnectionConfiguration::class).optional().withDefaultValue(EnterpriseConfiguration.Defaults.messagingServerConnectionConfiguration)
+    private val messagingServerBackupAddresses by string().mapValid(::toNetworkHostAndPort).list().optional().withDefaultValue(EnterpriseConfiguration.Defaults.messagingServerBackupAddresses)
     private val useMultiThreadedSMM by boolean().optional().withDefaultValue(EnterpriseConfiguration.Defaults.useMultiThreadedSMM)
     private val tuning by nested(PerformanceTuningSpec).optional().withDefaultValue(EnterpriseConfiguration.Defaults.tuning)
     private val externalBridge by boolean().optional()
@@ -284,8 +284,8 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
     override fun parseValid(configuration: Config): Valid<EnterpriseConfiguration> {
         return valid(EnterpriseConfiguration(
                 configuration[mutualExclusionConfiguration],
-                configuration[externalBrokerConnectionConfiguration],
-                configuration[externalBrokerBackupAddresses],
+                configuration[messagingServerConnectionConfiguration],
+                configuration[messagingServerBackupAddresses],
                 configuration[messagingServerSslConfiguration],
                 configuration[useMultiThreadedSMM],
                 configuration[tuning],

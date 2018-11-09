@@ -24,7 +24,7 @@ import java.time.Duration
  * @param retryIntervalMultiplier Value used in the reconnection back-off process.
  * @param maxRetryInterval Determines the maximum duration between reconnection attempts. Useful when using infinite retries.
  */
-enum class ExternalBrokerConnectionConfiguration(
+enum class MessagingServerConnectionConfiguration(
         val failoverOnInitialAttempt: Boolean,
         val initialConnectAttempts: Int,
         val reconnectAttempts: Int,

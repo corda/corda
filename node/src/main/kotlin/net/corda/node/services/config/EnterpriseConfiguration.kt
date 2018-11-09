@@ -4,14 +4,14 @@ import net.corda.core.utilities.NetworkHostAndPort
 import java.io.File
 import java.net.InetAddress
 import java.nio.file.Path
-import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 
 data class EnterpriseConfiguration(
         val mutualExclusionConfiguration: MutualExclusionConfiguration,
-        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = Defaults.externalBrokerConnectionConfiguration,
-        val externalBrokerBackupAddresses: List<NetworkHostAndPort> = Defaults.externalBrokerBackupAddresses,
+        val messagingServerConnectionConfiguration: MessagingServerConnectionConfiguration = Defaults.messagingServerConnectionConfiguration,
+        val messagingServerBackupAddresses: List<NetworkHostAndPort> = Defaults.messagingServerBackupAddresses,
         val messagingServerSslConfiguration: MessagingServerSslConfiguration? = null,
         val useMultiThreadedSMM: Boolean = Defaults.useMultiThreadedSMM,
         val tuning: PerformanceTuning = Defaults.tuning,
@@ -20,8 +20,8 @@ data class EnterpriseConfiguration(
         val traceTargetDirectory: Path = Defaults.traceTargetDirectory
 ) {
     internal object Defaults {
-        val externalBrokerConnectionConfiguration: ExternalBrokerConnectionConfiguration = ExternalBrokerConnectionConfiguration.DEFAULT
-        val externalBrokerBackupAddresses: List<NetworkHostAndPort> = emptyList()
+        val messagingServerConnectionConfiguration: MessagingServerConnectionConfiguration = MessagingServerConnectionConfiguration.DEFAULT
+        val messagingServerBackupAddresses: List<NetworkHostAndPort> = emptyList()
         val useMultiThreadedSMM: Boolean = true
         val tuning: PerformanceTuning = PerformanceTuning.default
         val enableCacheTracing: Boolean = false

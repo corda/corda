@@ -6,7 +6,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransport
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpTransportFromList
-import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import org.apache.activemq.artemis.api.core.client.*
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BATCH_SIZE
@@ -23,7 +23,7 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
                              private val autoCommitSends: Boolean = true,
                              private val autoCommitAcks: Boolean = true,
                              private val confirmationWindowSize: Int = -1,
-                             private val externalBrokerConnectionConfig: ExternalBrokerConnectionConfiguration? = null,
+                             private val messagingServerConnectionConfig: MessagingServerConnectionConfiguration? = null,
                              private val backupServerAddressPool: List<NetworkHostAndPort> = emptyList()
 )  : ArtemisSessionProvider {
     companion object {
@@ -55,14 +55,14 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             minLargeMessageSize = maxMessageSize
             isUseGlobalPools = nodeSerializationEnv != null
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
-            externalBrokerConnectionConfig?.let {
+            messagingServerConnectionConfig?.let {
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
-                reconnectAttempts = externalBrokerConnectionConfig.reconnectAttempts
-                retryInterval = externalBrokerConnectionConfig.retryInterval.toMillis()
-                retryIntervalMultiplier = externalBrokerConnectionConfig.retryIntervalMultiplier
-                maxRetryInterval = externalBrokerConnectionConfig.maxRetryInterval.toMillis()
-                isFailoverOnInitialConnection = externalBrokerConnectionConfig.failoverOnInitialAttempt
-                initialConnectAttempts = externalBrokerConnectionConfig.initialConnectAttempts
+                reconnectAttempts = messagingServerConnectionConfig.reconnectAttempts
+                retryInterval = messagingServerConnectionConfig.retryInterval.toMillis()
+                retryIntervalMultiplier = messagingServerConnectionConfig.retryIntervalMultiplier
+                maxRetryInterval = messagingServerConnectionConfig.maxRetryInterval.toMillis()
+                isFailoverOnInitialConnection = messagingServerConnectionConfig.failoverOnInitialAttempt
+                initialConnectAttempts = messagingServerConnectionConfig.initialConnectAttempts
             }
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }

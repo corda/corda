@@ -9,7 +9,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
-import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -114,7 +114,7 @@ class ExternalBrokertests : IntegrationTest() {
                 "devMode" to false, "messagingServerExternal" to true,
                 "messagingServerAddress" to NetworkHostAndPort("localhost", p2pPort).toString(),
                 "enterpriseConfiguration" to mapOf(
-                        "externalBrokerConnectionConfiguration" to "FAIL_FAST",
+                        "messagingServerConnectionConfiguration" to "FAIL_FAST",
                         "messagingServerSslConfiguration" to mapOf(
                                 "sslKeystore" to "${nodeBaseDir}/certificates/sslkeystore.jks",
                                 "keyStorePassword" to "cordacadevpass",
@@ -137,7 +137,7 @@ class ExternalBrokertests : IntegrationTest() {
             }
 
             broker.stop()
-            val defaultConfig = ExternalBrokerConnectionConfiguration.FAIL_FAST
+            val defaultConfig = MessagingServerConnectionConfiguration.FAIL_FAST
             var reconnectTimeout = 0.0
             (1..defaultConfig.reconnectAttempts).forEach {
                 reconnectTimeout += defaultConfig.retryInterval.toMillis() * defaultConfig.retryIntervalMultiplier.pow(it - 1)
