@@ -18,7 +18,7 @@ import static net.corda.core.contracts.ContractsDSL.requireThat;
 
 // Replace TemplateContract's definition with:
 public class IOUContract implements Contract {
-    public static final String IOU_CONTRACT_ID = "com.template.IOUContract";
+    public static final String ID = "com.template.IOUContract";
 
     // Our Create command.
     public static class Create implements CommandData {

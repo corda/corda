@@ -40,7 +40,7 @@ FlowLogic
 ---------
 All flows must subclass ``FlowLogic``. You then define the steps taken by the flow by overriding ``FlowLogic.call``.
 
-Let's define our ``IOUFlow`` in either ``TemplateFlow.java`` or ``App.kt``. Delete the two existing flows in the
+Let's define our ``IOUFlow`` in either ``Initiator.java`` or ``Flows.kt``. Delete the two existing flows in the
 template (``Initiator`` and ``Responder``), and replace them with the following:
 
 .. container:: codeset
@@ -55,7 +55,7 @@ template (``Initiator`` and ``Responder``), and replace them with the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-If you're following along in Java, you'll also need to rename ``TemplateFlow.java`` to ``IOUFlow.java``. Let's walk
+If you're following along in Java, you'll also need to rename ``Initiator.java`` to ``IOUFlow.java``. Let's walk
 through this code step-by-step.
 
 We've defined our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. ``FlowLogic.call`` has a return type

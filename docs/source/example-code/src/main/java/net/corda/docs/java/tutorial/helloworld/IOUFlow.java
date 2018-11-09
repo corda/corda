@@ -13,8 +13,6 @@ import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
 
-import static com.template.TemplateContract.TEMPLATE_CONTRACT_ID;
-
 // Replace Initiator's definition with:
 @InitiatingFlow
 @StartableByRPC
@@ -53,7 +51,7 @@ public class IOUFlow extends FlowLogic<Void> {
 
         // We create a transaction builder and add the components.
         TransactionBuilder txBuilder = new TransactionBuilder(notary)
-                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
+                .addOutputState(outputState, TemplateContract.ID)
                 .addCommand(cmd);
 
         // Signing the transaction.

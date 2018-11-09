@@ -22,14 +22,22 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val runMigration: Boolean = false,
-        val initialiseSchema: Boolean = true,
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
+        val runMigration: Boolean = Defaults.runMigration,
+        val initialiseSchema: Boolean = Defaults.initialiseSchema,
+        val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val schema: String? = null,
-        val exportHibernateJMXStatistics: Boolean = false,
+        val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
         val hibernateDialect: String? = null,
-        val mappedSchemaCacheSize: Long = 100
-)
+        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
+) {
+    object Defaults {
+        val runMigration = false
+        val initialiseSchema = true
+        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
+        val exportHibernateJMXStatistics = false
+        val mappedSchemaCacheSize = 100L
+    }
+}
 
 // This class forms part of the node config and so any changes to it must be handled with care
 enum class TransactionIsolationLevel {
