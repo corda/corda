@@ -43,6 +43,7 @@ import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
@@ -65,8 +66,7 @@ class SingleThreadedStateMachineManager(
         val database: CordaPersistence,
         private val secureRandom: SecureRandom,
         private val unfinishedFibers: ReusableLatch = ReusableLatch(),
-        private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader,
-        private val initiateNodeShutdown: () -> Unit
+        private val classloader: ClassLoader = SingleThreadedStateMachineManager::class.java.classLoader
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
@@ -136,11 +136,12 @@ class SingleThreadedStateMachineManager(
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
             if (throwable is VirtualMachineError) {
-                // TODO sollecitom this work if there's 1 flow, but what if there are more than 1? Kill all?
-                killFlow(fiber.id)
-                initiateNodeShutdown.invoke()
+                (fiber as FlowStateMachineImpl<*>).logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
+                LogManager.shutdown(true)
+                Runtime.getRuntime().halt(1)
+            } else {
+                (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
             }
         }
         serviceHub.networkMapCache.nodeReady.then {

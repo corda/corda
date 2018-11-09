@@ -512,7 +512,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 newSecureRandom(),
                 busyNodeLatch,
                 cordappLoader.appClassLoader
-        ) { shutdownExecutor.submit { stop() } }
+        )
     }
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
