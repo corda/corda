@@ -1,6 +1,5 @@
 package net.corda.testing.node
 
-import co.paralleluniverse.fibers.SuspendExecution
 import com.google.common.collect.MutableClassToInstanceMap
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
