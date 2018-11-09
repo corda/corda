@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.nodeapi.internal
 
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.apache.activemq.artemis.core.client.impl.ClientSessionInternal

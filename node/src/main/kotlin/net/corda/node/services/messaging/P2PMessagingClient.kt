@@ -44,6 +44,7 @@ import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
+import net.corda.nodeapi.internal.stillOpen
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
 import org.apache.activemq.artemis.api.core.ActiveMQObjectClosedException
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -202,6 +203,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 // would be the default and the two lines below can be deleted.
                 connectionTTL = 60000
                 clientFailureCheckPeriod = 30000
+                callFailoverTimeout = 1000
+                callTimeout = 1000
                 minLargeMessageSize = maxMessageSize + JOURNAL_HEADER_SIZE
                 isUseGlobalPools = nodeSerializationEnv != null
                 confirmationWindowSize = config.enterpriseConfiguration.tuning.p2pConfirmationWindowSize

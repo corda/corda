@@ -13,6 +13,7 @@ import net.corda.node.VersionInfo
 import net.corda.node.services.statemachine.FlowMessagingImpl
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2PMessagingHeaders
+import net.corda.nodeapi.internal.stillOpen
 import org.apache.activemq.artemis.api.core.ActiveMQDuplicateIdException
 import org.apache.activemq.artemis.api.core.Message.*
 import org.apache.activemq.artemis.api.core.SimpleString
