@@ -80,10 +80,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         return t
     }
 
-    companion object {
-       val logger = contextLogger()
-    }
-
     // DOCSTART 1
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
     fun withItems(vararg items: Any): TransactionBuilder {
@@ -265,7 +261,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                     addReferenceState(resolvedStateAndRef.referenced())
                 }
             } else {
-                logger.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
                         "state pointers outside of flows. If you are writing a unit test then pass in a " +
                         "MockServices instance.")
                 return
