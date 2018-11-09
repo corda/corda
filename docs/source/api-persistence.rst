@@ -191,7 +191,6 @@ the entity in this case should not subclass ``PersistentState`` (as it is not a 
 
         object FooSchema
 
-        @CordaSerializable
         object FooSchemaV1 : MappedSchema(schemaFamily = FooSchema.javaClass, version = 1, mappedTypes = listOf(PersistentFoo::class.java)) {
             @Entity
             @Table(name = "foos")
@@ -216,7 +215,6 @@ Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
         val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
         serviceHub.withEntityManager {
             persist(foo)
-            flush()
         }
 
 And retrieved via a query, as follows:
