@@ -143,7 +143,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         val key = mapToKey(identity)
         if (isNewRandomIdentity) {
             // Because this is supposed to be new and random, there's no way we have it in the database already, so skip the pessimistic check.
-            keyToParties.set(key, identity)
+            keyToParties[key] = identity
         } else {
             keyToParties.addWithDuplicatesAllowed(key, identity)
         }
