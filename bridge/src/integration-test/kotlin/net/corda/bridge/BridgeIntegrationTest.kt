@@ -22,6 +22,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
+import net.corda.nodeapi.internal.bully.BullyLeaderClient
 import net.corda.nodeapi.internal.zookeeper.ZkClient
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -296,6 +297,52 @@ class BridgeIntegrationTest {
             artemisClient.stop()
             artemisServer.stop()
             zkServer.stop()
+        }
+    }
+
+    @Test
+    fun `Run HA using Bully algorithm`() {
+        val configResource = "/net/corda/bridge/habullysingleprocess/firewall.conf"
+        createNetworkParams(tempFolder.root.toPath())
+        val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
+        assertEquals(BridgeHAConfigImpl("bully://localhost", 10), config.haConfig)
+        config.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        val (artemisServer, artemisClient) = createArtemis()
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = FirewallInstance(config, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val stateFollower = bridge.activeChange.toBlocking().iterator
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            bridge.start()
+            assertEquals(false, bridge.active) // Starting the bridge insufficient to go active
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            val higherPriorityClient = BullyLeaderClient(artemisClient, "/bridge/ha", "Test", 5)
+            higherPriorityClient.start()
+            higherPriorityClient.requestLeadership() // should win leadership and kick out our bridge
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            var socketState = true
+            for (i in 0 until 5) { // The event signalling bridge down is pretty immediate, but the cascade of events leading to socket close can take a while
+                socketState = serverListening("localhost", 10005)
+                if (!socketState) break
+                Thread.sleep(100)
+            }
+            assertEquals(false, socketState)
+            higherPriorityClient.relinquishLeadership() // let our bridge back as leader
+            higherPriorityClient.close()
+            assertEquals(true, stateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, serverListening("localhost", 10005))
+            bridge.stop() // Finally check shutdown
+            assertEquals(false, stateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, serverListening("localhost", 10005))
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
         }
     }
 
