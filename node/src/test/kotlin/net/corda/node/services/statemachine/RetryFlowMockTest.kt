@@ -174,7 +174,7 @@ class RetryFlowMockTest {
             override fun send(payload: Any) {
                 TODO("not implemented")
             }
-        }), nodeA.services.newContext()).getOrThrow()
+        }), nodeA.services.newContext()).get()
         // Should be 2 records, one for admission and one for keep in.
         records.next()
         records.next()
