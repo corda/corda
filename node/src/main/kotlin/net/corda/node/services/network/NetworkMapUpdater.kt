@@ -149,7 +149,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
 
         if (currentParametersHash != globalNetworkMap.networkParameterHash) {
-            handleParametersMismatch(globalNetworkMap)
+            exitOnParametersMismatch(globalNetworkMap)
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes
@@ -180,24 +180,22 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         return cacheTimeout
     }
 
-    private fun handleParametersMismatch(networkMap: NetworkMap) {
-        val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val acceptedNetworkParameters = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>() else null
-        if (acceptedNetworkParameters != null && networkMap.networkParameterHash == acceptedNetworkParameters.raw.hash) {
-            networkParameters.hotSwap(acceptedNetworkParameters.verified())
-            logger.info("Flag day occurred. Network map switched to the new network parameters: " +
-                    "${networkMap.networkParameterHash}. Now using network parameters: $networkParameters")
-        } else {
-            exitOnParametersMismatch(networkMap)
-        }
-    }
-
     private fun exitOnParametersMismatch(networkMap: NetworkMap) {
-        logger.error(
-                """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
+        val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
+        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
+        val exitCode = if (acceptedHash == networkMap.networkParameterHash) {
+            logger.info("Flag day occurred. Network map switched to the new network parameters: " +
+                    "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
+            0
+        } else {
+            // TODO This needs special handling (node omitted update process or didn't accept new parameters)
+            logger.error(
+                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
 To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
 The node will shutdown now.""")
-        exitProcess(1)
+            1
+        }
+        exitProcess(exitCode)
     }
 
     private fun handleUpdateNetworkParameters(networkMapClient: NetworkMapClient, update: ParametersUpdate) {

@@ -34,38 +34,16 @@ import kotlin.reflect.jvm.javaGetter
  */
 @KeepForDJVM
 @CordaSerializable
-class NetworkParameters(
-        minimumPlatformVersion: Int,
-        notaries: List<NotaryInfo>,
-        maxMessageSize: Int,
-        maxTransactionSize: Int,
-        modifiedTime: Instant,
-        epoch: Int,
-        whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-        eventHorizon: Duration,
-        packageOwnership: Map<JavaPackageName, PublicKey>) {
-    val minimumPlatformVersion: Int get() = networkParameterValues.minimumPlatformVersion
-    val notaries: List<NotaryInfo> get() = networkParameterValues.notaries
-    val maxMessageSize: Int get() = networkParameterValues.maxMessageSize
-    val maxTransactionSize: Int get() = networkParameterValues.maxTransactionSize
-    @AutoAcceptable val modifiedTime: Instant get() = networkParameterValues.modifiedTime
-    @AutoAcceptable val epoch: Int get() = networkParameterValues.epoch
-    @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>> get() = networkParameterValues.whitelistedContractImplementations
-    val eventHorizon: Duration get() = networkParameterValues.eventHorizon
-    @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey> get() = networkParameterValues.packageOwnership
-
-    // This is a wrapper around all class variables to enable atomic hot swapping of network parameters.
-    // Having it private restricts the swapping logic to within this class and enables the use of the @AutoAcceptable param.
-    private var networkParameterValues: NetworkParameterValues = NetworkParameterValues(
-            minimumPlatformVersion,
-            notaries,
-            maxMessageSize,
-            maxTransactionSize,
-            modifiedTime,
-            epoch,
-            whitelistedContractImplementations,
-            eventHorizon,
-            packageOwnership)
+data class NetworkParameters(
+        val minimumPlatformVersion: Int,
+        val notaries: List<NotaryInfo>,
+        val maxMessageSize: Int,
+        val maxTransactionSize: Int,
+        @AutoAcceptable val modifiedTime: Instant,
+        @AutoAcceptable val epoch: Int,
+        @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+        val eventHorizon: Duration,
+        @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>) {
 
     @DeprecatedConstructorForDeserialization(1)
     constructor (minimumPlatformVersion: Int,
@@ -115,28 +93,6 @@ class NetworkParameters(
         require(maxTransactionSize <= maxMessageSize) { "maxTransactionSize cannot be bigger than maxMessageSize" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
-    }
-
-    fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
-             notaries: List<NotaryInfo> = this.notaries,
-             maxMessageSize: Int = this.maxMessageSize,
-             maxTransactionSize: Int = this.maxTransactionSize,
-             modifiedTime: Instant = this.modifiedTime,
-             epoch: Int = this.epoch,
-             whitelistedContractImplementations: Map<String, List<AttachmentId>> = this.whitelistedContractImplementations,
-             eventHorizon: Duration = this.eventHorizon,
-             packageOwnership: Map<JavaPackageName, PublicKey> = this.packageOwnership): NetworkParameters {
-        return NetworkParameters(
-                minimumPlatformVersion,
-                notaries,
-                maxMessageSize,
-                maxTransactionSize,
-                modifiedTime,
-                epoch,
-                whitelistedContractImplementations,
-                eventHorizon,
-                packageOwnership
-        )
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -200,14 +156,6 @@ class NetworkParameters(
     fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
 
     /**
-     * Atomically swaps all changed parameters, provided they have the @AutoAcceptable annotation
-     * Throws an illegal argument exception if one of the changed values is not auto acceptable
-     */
-    fun hotSwap(newNetworkParameters: NetworkParameters) {
-        networkParameterValues = newNetworkParameters.networkParameterValues.copy()
-    }
-
-    /**
      * Returns true if all non-matching variables have the annotation @AutoAcceptable
      */
     fun canAutoAccept(newNetworkParameters: NetworkParameters): Boolean {
@@ -228,27 +176,6 @@ class NetworkParameters(
                 .map { it.name }
                 .toList()
     }
-
-    override fun equals(other: Any?): Boolean {
-        if (other is NetworkParameters) {
-            return (this.networkParameterValues == other.networkParameterValues)
-        }
-        return false
-    }
-
-    override fun hashCode(): Int {
-        return networkParameterValues.hashCode()
-    }
-
-    private data class NetworkParameterValues(val minimumPlatformVersion: Int,
-                                              val notaries: List<NotaryInfo>,
-                                              val maxMessageSize: Int,
-                                              val maxTransactionSize: Int,
-                                              val modifiedTime: Instant,
-                                              val epoch: Int,
-                                              val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-                                              val eventHorizon: Duration,
-                                              val packageOwnership: Map<JavaPackageName, PublicKey>)
 }
 
 /**
