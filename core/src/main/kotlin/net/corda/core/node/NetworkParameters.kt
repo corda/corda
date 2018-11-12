@@ -161,10 +161,10 @@ data class NetworkParameters(
      */
     fun canAutoAccept(newNetworkParameters: NetworkParameters): Boolean {
         for (property in this::class.declaredMemberProperties) {
-            val propertyVal = property.javaGetter?.invoke(this)
-            val matchingPropertyVal = property.javaGetter?.invoke(newNetworkParameters)
+            val propertyValue = property.javaGetter?.invoke(this)
+            val newPropertyValue = property.javaGetter?.invoke(newNetworkParameters)
 
-            if (propertyVal != matchingPropertyVal && !property.isAutoAcceptable()) {
+            if (propertyValue != newPropertyValue && !property.isAutoAcceptable()) {
                 return false
             }
         }
