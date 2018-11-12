@@ -219,9 +219,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val result = logic.call()
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
-        } catch (exception: Exception) {
-            logger.info("Flow threw exception... sending it to flow hospital", exception)
-            Try.Failure<R>(exception)
+        } catch (t: Throwable) {
+            if(t is VirtualMachineError) {
+                logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
+                Runtime.getRuntime().halt(1)
+            }
+            logger.info("Flow raised an error... sending it to flow hospital", t)
+            Try.Failure<R>(t)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
