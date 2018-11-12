@@ -11,7 +11,7 @@ import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisSessionProvider
-import net.corda.nodeapi.internal.config.ExternalBrokerConnectionConfiguration
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.zookeeper.CordaLeaderListener
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
@@ -413,7 +413,7 @@ class BullyLeaderTest {
         val CLIENTS_NUMBER = 10
         val ACTIONS_NUMBER = 10
         val artemisServer = createArtemisServer()
-        artemisServer.use { server ->
+        artemisServer.use { _ ->
             val countDownLatch = CountDownLatch(CLIENTS_NUMBER)
             val leaderCount = AtomicInteger(0)
             val failureRef = AtomicBoolean(false)
@@ -492,7 +492,7 @@ class BullyLeaderTest {
                 NetworkHostAndPort("localhost", port),
                 MAX_MESSAGE_SIZE,
                 confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize,
-                externalBrokerConnectionConfig = ExternalBrokerConnectionConfiguration.CONTINUOUS_RETRY)
+                messagingServerConnectionConfig = MessagingServerConnectionConfiguration.CONTINUOUS_RETRY)
         if (started) {
             artemisClient.start()
         }
