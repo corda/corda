@@ -1,0 +1,41 @@
+evaluationDependsOn(":node:capsule")
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-docker-plugin:3.4.4'
+    }
+}
+
+
+import com.bmuschko.gradle.docker.DockerRemoteApiPlugin
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+
+
+apply plugin: DockerRemoteApiPlugin
+
+
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR"]) {
+    doLast {
+        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
+        project.copy{
+            into new File(project.buildDir, "docker-temp")
+            from cordaJar
+            from "src/config/node.conf"
+            from "src/bash/start.sh"
+            from "src/docker/Dockerfile"
+            rename(cordaJar.name, "corda.jar")
+        }
+    }
+}
+
+docker 
+
+task buildOfficialDockerImage(type: DockerBuildImage, dependsOn: buildDockerFolder){
+    inputDir = new File(project.buildDir, "docker-temp")
+    tag = "corda/corda-${corda_platform_version}:latest"
+}
