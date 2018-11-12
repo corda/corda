@@ -174,8 +174,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         return database.transaction {
             val results = LinkedHashSet<Party>()
-            for ((x500name, partyId) in principalToParties.allPersisted()) {
-                partiesFromName(query, exactMatch, x500name, results, keyToParties[partyId]!!.party)
+            principalToParties.allPersisted().forEach { (x500name, partyId) ->
+                if (x500matches(query, exactMatch, x500name)) {
+                    results += keyToParties[partyId]!!.party
+                }
             }
             results
         }

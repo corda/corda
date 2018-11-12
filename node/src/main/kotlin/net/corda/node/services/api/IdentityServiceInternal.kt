@@ -42,11 +42,11 @@ interface IdentityServiceInternal : IdentityService {
     // strings such as entity/company names, and to detect small typos. We can also apply it for city
     // or any keyword related search in lists of records (not raw text - for raw text we need indexing)
     // and we can return results in hierarchical order (based on normalised String similarity 0.0-1.0).
-    fun partiesFromName(query: String, exactMatch: Boolean, x500name: CordaX500Name, results: LinkedHashSet<Party>, party: Party) {
+    /** Check if [x500name] matches the [query]. */
+    fun x500matches(query: String, exactMatch: Boolean, x500name: CordaX500Name): Boolean {
         val components = listOfNotNull(x500name.commonName, x500name.organisationUnit, x500name.organisation, x500name.locality, x500name.state, x500name.country)
-        val haveAMatch = components.any { (exactMatch && it == query)
+        return components.any { (exactMatch && it == query)
                 || (!exactMatch && it.contains(query, ignoreCase = true)) }
-        if (haveAMatch) results += party
     }
 
     /**
