@@ -39,7 +39,7 @@ class TransitionExecutorImpl(
         for (action in transition.actions) {
             try {
                 actionExecutor.executeAction(fiber, action)
-            } catch (exception: Throwable) {
+            } catch (exception: Exception) {
                 contextTransactionOrNull?.close()
                 if (transition.newState.checkpoint.errorState is ErrorState.Errored) {
                     // If we errored while transitioning to an error state then we cannot record the additional

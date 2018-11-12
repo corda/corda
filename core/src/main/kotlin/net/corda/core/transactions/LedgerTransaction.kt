@@ -189,7 +189,7 @@ data class LedgerTransaction @JvmOverloads constructor(
                 is Try.Success -> {
                     try {
                         contractInstances.add(result.value.newInstance())
-                    } catch (e: Throwable) {
+                    } catch (e: Exception) {
                         throw TransactionVerificationException.ContractCreationError(id, result.value.name, e)
                     }
                 }
@@ -198,7 +198,7 @@ data class LedgerTransaction @JvmOverloads constructor(
         contractInstances.forEach { contract ->
             try {
                 contract.verify(this)
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 throw TransactionVerificationException.ContractRejection(id, contract, e)
             }
         }

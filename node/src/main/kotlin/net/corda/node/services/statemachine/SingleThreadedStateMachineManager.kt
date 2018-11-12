@@ -43,6 +43,7 @@ import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
+import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
@@ -135,7 +136,13 @@ class SingleThreadedStateMachineManager(
         val fibers = restoreFlowsFromCheckpoints()
         metrics.register("Flows.InFlight", Gauge<Int> { mutex.content.flows.size })
         Fiber.setDefaultUncaughtExceptionHandler { fiber, throwable ->
-            (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
+            if (throwable is VirtualMachineError) {
+                (fiber as FlowStateMachineImpl<*>).logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", throwable)
+                LogManager.shutdown(true)
+                Runtime.getRuntime().halt(1)
+            } else {
+                (fiber as FlowStateMachineImpl<*>).logger.warn("Caught exception from flow", throwable)
+            }
         }
         serviceHub.networkMapCache.nodeReady.then {
             logger.info("Node ready, info: ${serviceHub.myInfo}")
@@ -618,7 +625,7 @@ class SingleThreadedStateMachineManager(
     private fun deserializeCheckpoint(serializedCheckpoint: SerializedBytes<Checkpoint>): Checkpoint? {
         return try {
             serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext!!)
-        } catch (exception: Throwable) {
+        } catch (exception: Exception) {
             logger.error("Encountered unrestorable checkpoint!", exception)
             null
         }
