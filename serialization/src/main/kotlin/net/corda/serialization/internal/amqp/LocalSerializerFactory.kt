@@ -1,9 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.kotlinObjectInstance
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
-import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
@@ -26,6 +24,8 @@ interface LocalSerializerFactory {
 
     fun get(declaredType: Type): AMQPSerializer<Any>
     fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any>
+
+    fun getTypeInformation(type: Type): LocalTypeInformation
 
     fun createDescriptor(type: Type): Symbol
     fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
@@ -51,6 +51,8 @@ class DefaultLocalSerializerFactory(
 
     override fun createDescriptor(type: Type): Symbol =
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeModel.inspect(type))}")
+
+    override fun getTypeInformation(type: Type): LocalTypeInformation = typeModel.inspect(type)
 
     override fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>> =
@@ -180,7 +182,7 @@ class DefaultLocalSerializerFactory(
                 SingletonSerializer(clazz, singleton, this)
             } else {
                 whitelist.requireWhitelisted(type)
-                ComposableSerializer.make(typeInformation, this)
+                ObjectSerializer.make(typeInformation, this)
             }
         }
     }

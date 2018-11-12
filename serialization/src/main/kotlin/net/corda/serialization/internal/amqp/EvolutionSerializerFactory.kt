@@ -199,7 +199,7 @@ class DefaultEvolutionSerializerFactory(
             constructor: LocalConstructorInformation,
             properties: Map<String, LocalPropertyInformation>): AMQPSerializer<Any> =
         descriptorBasedSerializerRegistry.getOrBuild(remoteTypeInformation.typeDescriptor) {
-            EvolutionComposableSerializer.make(
+            EvolutionObjectSerializer.make(
                     localTypeInformation,
                     remoteTypeInformation,
                     constructor,

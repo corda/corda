@@ -132,7 +132,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                                            withInheritance: Boolean = true) : CustomSerializerImp<T>(clazz, withInheritance) {
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
 
-        private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer(proxyClass, factory) }
+        private val proxySerializer: ObjectSerializer by lazy { ObjectSerializer.make(factory.getTypeInformation(proxyClass), factory) }
 
         override val schemaForDocumentation: Schema by lazy {
             val typeNotations = mutableSetOf<TypeNotation>(
@@ -140,7 +140,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
                             nameForType(type),
                             null,
                             emptyList(),
-                            descriptor, (proxySerializer.typeNotation as CompositeType).fields))
+                            descriptor, proxySerializer.fields))
             for (additional in additionalSerializers) {
                 typeNotations.addAll(additional.schemaForDocumentation.types)
             }
@@ -159,8 +159,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         ) {
             val proxy = toProxy(obj)
             data.withList {
-                proxySerializer.propertySerializers.serializationOrder.forEach {
-                    it.serializer.writeProperty(proxy, this, output, context)
+                proxySerializer.propertySerializers.forEach { (_, serializer) ->
+                    serializer.writeProperty(proxy, this, output, context, 0)
                 }
             }
         }

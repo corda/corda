@@ -49,7 +49,7 @@ fun testDefaultFactoryNoEvolution(descriptorBasedSerializerRegistry: DescriptorB
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry,
-            evolutionSerializerProvider = FailIfEvolutionAttempted)
+            allowEvolution = false)
 
 @JvmOverloads
 fun testDefaultFactoryWithWhitelist(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =

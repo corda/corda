@@ -210,7 +210,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
     private fun defaultFactory(): SerializerFactory {
         return SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-                evolutionSerializerProvider = FailIfEvolutionAttempted
+                allowEvolution = false
         )
     }
 

@@ -8,6 +8,7 @@ import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.*
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.util.*
 
@@ -20,8 +21,8 @@ object SerializerFactoryBuilder {
         return makeFactory(
                 whitelist,
                 classCarpenter,
-                DefaultEvolutionSerializerProvider,
                 DefaultDescriptorBasedSerializerRegistry(),
+                true,
                 null,
                 false)
     }
@@ -32,16 +33,16 @@ object SerializerFactoryBuilder {
     fun build(
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
-            evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
+            allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 classCarpenter,
-                evolutionSerializerProvider,
                 descriptorBasedSerializerRegistry,
+                allowEvolution,
                 overrideFingerPrinter,
                 onlyCustomSerializers)
     }
@@ -53,24 +54,24 @@ object SerializerFactoryBuilder {
             whitelist: ClassWhitelist,
             carpenterClassLoader: ClassLoader,
             lenientCarpenterEnabled: Boolean = false,
-            evolutionSerializerProvider: EvolutionSerializerProvider = DefaultEvolutionSerializerProvider,
             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
                     DefaultDescriptorBasedSerializerRegistry(),
+            allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
-                evolutionSerializerProvider,
                 descriptorBasedSerializerRegistry,
+                allowEvolution,
                 overrideFingerPrinter,
                 onlyCustomSerializers)
     }
 
     private fun makeFactory(whitelist: ClassWhitelist,
                             classCarpenter: ClassCarpenter,
-                            evolutionSerializerProvider: EvolutionSerializerProvider,
                             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
+                            allowEvolution: Boolean,
                             overrideFingerPrinter: FingerPrinter?,
                             onlyCustomSerializers: Boolean): SerializerFactory {
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
@@ -100,13 +101,13 @@ object SerializerFactoryBuilder {
                 typeLoader,
                 localTypeModel)
 
-        val evolutionSerializerFactory = DefaultEvolutionSerializerFactory(
+        val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 descriptorBasedSerializerRegistry,
                 remoteTypeReflector,
                 classCarpenter.classloader,
                 false
-        )
+        ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
                 classCarpenter.classloader,
@@ -157,3 +158,15 @@ private val opaqueTypes = setOf(
         String::class.java,
         Symbol::class.java
 )
+
+object NoEvolutionSerializerFactory : EvolutionSerializerFactory {
+    override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
+        throw NotSerializableException("""
+            Evolution not permitted.
+
+            ${remoteTypeInformation.prettyPrint(false)}
+            ===
+            ${localTypeInformation.prettyPrint(false)}
+        """.trimIndent())
+    }
+}

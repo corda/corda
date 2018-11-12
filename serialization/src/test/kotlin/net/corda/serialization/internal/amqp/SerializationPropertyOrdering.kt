@@ -97,22 +97,6 @@ class SerializationPropertyOrdering {
             assertEquals("e", this.fields[4].name)
         }
 
-        // Test needs to look at a bunch of private variables, change the access semantics for them
-        val fields : Map<String, java.lang.reflect.Field> = mapOf (
-                "setter" to PropertyAccessorGetterSetter::class.java.getDeclaredField("setter")).apply {
-            this.values.forEach {
-                it.isAccessible = true
-            }
-        }
-
-        val serializersByDescriptor = registry.contents
-        val schemaDescriptor = output.schema.types.first().descriptor.name
-
-        // make sure that each property accessor has a setter to ensure we're using getter / setter instantiation
-        val serializer = serializersByDescriptor[schemaDescriptor.toString()] as ObjectSerializer
-        val propertyAccessors =serializer.propertySerializers.serializationOrder as List<PropertyAccessorGetterSetter>
-        propertyAccessors.forEach { property -> assertNotNull(fields["setter"]!!.get(property) as Method?) }
-
         val input = DeserializationInput(sf).deserialize(output.obj)
         assertEquals(100, input.a)
         assertEquals(200, input.b)

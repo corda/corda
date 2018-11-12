@@ -16,8 +16,7 @@ class CorDappSerializerTests {
     private fun proxyFactory(
             serializers: List<SerializationCustomSerializer<*, *>>
     ) = SerializerFactoryBuilder.build(AllWhitelist,
-            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-            DefaultEvolutionSerializerProvider).apply {
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())).apply {
         serializers.forEach {
             registerExternal(CorDappCustomSerializer(it, this))
         }
