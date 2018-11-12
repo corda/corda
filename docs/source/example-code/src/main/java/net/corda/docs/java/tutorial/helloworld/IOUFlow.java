@@ -11,7 +11,6 @@ import net.corda.core.utilities.ProgressTracker;
 // DOCSTART 01
 // Add these imports:
 import net.corda.core.contracts.Command;
-import net.corda.core.contracts.CommandData;
 import net.corda.core.flows.FinalityFlow;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;

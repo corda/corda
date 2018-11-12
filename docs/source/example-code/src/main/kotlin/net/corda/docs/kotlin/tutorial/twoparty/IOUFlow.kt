@@ -5,7 +5,6 @@ package net.corda.docs.kotlin.tutorial.twoparty
 // DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic

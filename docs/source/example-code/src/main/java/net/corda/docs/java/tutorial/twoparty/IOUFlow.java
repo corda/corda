@@ -1,10 +1,8 @@
 package net.corda.docs.java.tutorial.twoparty;
 
 // DOCSTART 01
-
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.contracts.Command;
-import net.corda.core.contracts.StateAndContract;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
