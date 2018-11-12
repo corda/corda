@@ -324,8 +324,24 @@ Take a simple node config that wishes to protect the node cryptographic stores:
     devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
 
-By delegating to a password store, and using bash ``Command substitution`` it is possible to ensure that sensitive passwords never appear in plain text.
+On linux By delegating to a password store, and using bash `Command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
+Below is an example of loading corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
+
+This method of launching corda also supported in windows PowerShell.
 
 .. sourcecode:: shell
 
     KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword) TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword) java -jar corda.jar
+
+
+For non PowerShell launching on windows, it is not possible to perform Command substitution, and so the variables must be specified manually.
+
+.. sourcecode:: shell
+
+    SET KEY_PASS=mypassword
+    SET TRUST_PASS=mypassword
+    java -jar corda.jar
+
+.. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
+
+
