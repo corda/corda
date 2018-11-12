@@ -235,7 +235,7 @@ class NetworkMapUpdaterTest {
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameter should not be auto accepted" }
+        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
         updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
@@ -272,7 +272,7 @@ class NetworkMapUpdaterTest {
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assert(!updateFile.exists()) { "network parameter should not be auto accepted" }
+        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
     }
 
     @Test

@@ -16,6 +16,7 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.jvm.javaGetter
 
+// DOCSTART 1
 /**
  * Network parameters are a set of values that every node participating in the zone needs to agree on and use to
  * correctly interoperate with each other.
@@ -44,7 +45,7 @@ data class NetworkParameters(
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
         @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>) {
-
+    // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
     constructor (minimumPlatformVersion: Int,
                  notaries: List<NotaryInfo>,

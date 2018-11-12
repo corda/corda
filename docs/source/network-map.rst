@@ -157,14 +157,23 @@ The fact a new set of parameters is being advertised shows up in the node logs w
 the ``CordaRPCOps.networkParametersFeed`` method. Typically a zone operator would also email node operators to let them
 know about the details of the impending change, along with the justification, how to object, deadlines and so on.
 
-.. container:: codeset
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
-        :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
+The following parameters with the ``@AutoAcceptable`` are, unless configured otherwise, accepted without user input.
 
-The node administrator can review the change and decide if they are going to accept it. The approval should be do
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/NetworkParameters.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
+
+This behaviour can be turned off by setting the optional node configuration property ``autoAcceptNetworkParameterChanges`` to false. If
+this behaviour is turned off or the network parameters change involves parameters that are not auto acceptable then manual approval is
+required.
+
+In this case the node administrator can review the change and decide if they are going to accept it. The approval should be do
 before the update Deadline. Nodes that don't approve before the deadline will likely be removed from the network map by
 the zone operator, but that is a decision that is left to the operator's discretion. For example the operator might also
 choose to change the deadline instead.
