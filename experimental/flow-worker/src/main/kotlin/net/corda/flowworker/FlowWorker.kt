@@ -56,7 +56,10 @@ class FlowWorker(flowWorkerId: String, private val flowWorkerServiceHub: FlowWor
         val consumer = session.createConsumer(queueName)
         val producer = session.createProducer()
 
-        consumer.setMessageHandler { message -> handleFlowWorkerMessage(message, session, producer) }
+        consumer.setMessageHandler { message ->
+            handleFlowWorkerMessage(message, session, producer)
+            message.acknowledge()
+        }
 
         thread {
             (flowWorkerServiceHub.networkService as P2PMessagingClient).run()
