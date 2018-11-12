@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 fun <V, W> Future<V>.match(success: (V) -> W, failure: (Throwable) -> W): W {
     val value = try {
         getOrThrow()
-    } catch (e: Exception) {
-        return failure(e)
+    } catch (t: Throwable) {
+        return failure(t)
     }
     return success(value)
 }
