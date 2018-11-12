@@ -162,7 +162,8 @@ know about the details of the impending change, along with the justification, ho
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-The following parameters with the ``@AutoAcceptable`` are, unless configured otherwise, accepted without user input.
+If the only changes between the new and old parameters are for auto-acceptable parameters then, unless configured otherwise, the new
+parameters will be accepted without user input. The following parameters with the @AutoAcceptable annotation are auto-acceptable:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/NetworkParameters.kt
     :language: kotlin
@@ -170,7 +171,7 @@ The following parameters with the ``@AutoAcceptable`` are, unless configured oth
     :end-before: DOCEND 1
 
 This behaviour can be turned off by setting the optional node configuration property ``autoAcceptNetworkParameterChanges`` to false. If
-this behaviour is turned off or the network parameters change involves parameters that are not auto acceptable then manual approval is
+this behaviour is turned off or the network parameters change involves parameters that are not auto-acceptable then manual approval is
 required.
 
 In this case the node administrator can review the change and decide if they are going to accept it. The approval should be do
