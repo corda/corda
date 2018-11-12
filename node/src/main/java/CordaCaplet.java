@@ -59,7 +59,7 @@ public class CordaCaplet extends Capsule {
         int index = 0;
         for (String arg : args) {
             if (arg.toLowerCase().equals(lowerCaseOption)) {
-                if (index < args.size() - 1) {
+                if (index < args.size() - 1 && !args.get(index + 1).startsWith("-")) {
                     return args.get(index + 1);
                 } else {
                     return null;
