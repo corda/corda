@@ -107,8 +107,8 @@ interface NodeConfiguration {
 
     fun makeCryptoService(): CryptoService {
         return when(cryptoServiceName) {
-            SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this)
-            null -> BCCryptoService(this) // Pick default BCCryptoService when null.
+            // Pick default BCCryptoService when null.
+            SupportedCryptoServices.BC_SIMPLE, null -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
         }
     }
 }
@@ -117,7 +117,7 @@ data class FlowOverrideConfig(val overrides: List<FlowOverride> = listOf())
 data class FlowOverride(val initiator: String, val responder: String)
 
 /**
- * Currently registered JMX Reporters
+ * Currently registered JMX Reporters.
  */
 enum class JmxReporterType {
     JOLOKIA, NEW_RELIC

@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.crypto
 
+import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.SignatureScheme
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
 import org.bouncycastle.operator.ContentSigner
@@ -17,7 +18,9 @@ object ContentSignerBuilder {
     fun build(signatureScheme: SignatureScheme, privateKey: PrivateKey, provider: Provider, random: SecureRandom? = null): ContentSigner {
         val sigAlgId = signatureScheme.signatureOID
         val sig = Signature.getInstance(signatureScheme.signatureName, provider).apply {
-            if (random != null) {
+            // TODO special handling for Sphincs due to a known BouncyCastle's Sphincs bug we reported.
+            //      It is fixed in BC 161b12, so consider updating the below if-statement after updating BouncyCastle.
+            if (random != null && signatureScheme != SPHINCS256_SHA256) {
                 initSign(privateKey, random)
             } else {
                 initSign(privateKey)
