@@ -64,7 +64,7 @@ class InMemoryIdentityService(identities: List<PartyAndCertificate> = emptyList(
     override fun partiesFromName(query: String, exactMatch: Boolean): Set<Party> {
         val results = LinkedHashSet<Party>()
         principalToParties.forEach { (x500name, partyAndCertificate) ->
-            if (x500matches(query, exactMatch, x500name)) {
+            if (x500Matches(query, exactMatch, x500name)) {
                 results +=  partyAndCertificate.party
             }
         }

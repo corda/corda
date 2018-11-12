@@ -175,7 +175,7 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
         return database.transaction {
             val results = LinkedHashSet<Party>()
             principalToParties.allPersisted().forEach { (x500name, partyId) ->
-                if (x500matches(query, exactMatch, x500name)) {
+                if (x500Matches(query, exactMatch, x500name)) {
                     results += keyToParties[partyId]!!.party
                 }
             }
