@@ -337,7 +337,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         services.start(nodeInfo, netParams)
         networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo, netParams, keyManagementService, configuration.autoAcceptNetworkParameterChanges)
         if (configuration.autoAcceptNetworkParameterChanges) {
-            log.info("Auto accepting any network parameter changes which only contain: ${netParams.getAutoAcceptableParamNames()}")
+            log.info("Auto-accept enabled for network parameter changes which modify only: ${netParams.getAutoAcceptableParamNames()}")
         }
         startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
 
