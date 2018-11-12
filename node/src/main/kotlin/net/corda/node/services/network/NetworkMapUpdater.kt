@@ -45,6 +45,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private var fileWatcherSubscription: Subscription? = null
+    private var autoAcceptNetworkParameters: Boolean = true
     private lateinit var trustRoot: X509Certificate
     private lateinit var currentParametersHash: SecureHash
     private lateinit var ourNodeInfo: SignedNodeInfo
@@ -61,7 +62,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
               currentParametersHash: SecureHash,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,
-              keyManagementService: KeyManagementService) {
+              keyManagementService: KeyManagementService,
+              autoAcceptNetworkParameters: Boolean) {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         this.trustRoot = trustRoot
         this.currentParametersHash = currentParametersHash
@@ -69,6 +71,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         this.ourNodeInfoHash = ourNodeInfo.raw.hash
         this.networkParameters = networkParameters
         this.keyManagementService = keyManagementService
+        this.autoAcceptNetworkParameters = autoAcceptNetworkParameters
         watchForNodeInfoFiles()
         if (networkMapClient != null) {
             watchHttpNetworkMap()
@@ -212,7 +215,7 @@ The node will shutdown now.""")
                 update.description,
                 update.updateDeadline)
 
-        if (networkParameters.canAutoAccept(newNetParams)) {
+        if (autoAcceptNetworkParameters && networkParameters.canAutoAccept(newNetParams)) {
             logger.info("Auto-accepting network parameter update ${update.newParametersHash}")
             acceptNewNetworkParameters(update.newParametersHash) { hash ->
                 hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }

@@ -81,6 +81,8 @@ interface NodeConfiguration {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
+    val autoAcceptNetworkParameterChanges: Boolean get() = true
+
     fun validate(): List<String>
 
     companion object {

@@ -222,6 +222,13 @@ class NetworkParameters(
         return true
     }
 
+    fun getAutoAcceptableParamNames(): List<String> {
+        return this::class.declaredMemberProperties
+                .filter { it.isAutoAcceptable() }
+                .map { it.name }
+                .toList()
+    }
+
     override fun equals(other: Any?): Boolean {
         if (other is NetworkParameters) {
             return (this.networkParameterValues == other.networkParameterValues)

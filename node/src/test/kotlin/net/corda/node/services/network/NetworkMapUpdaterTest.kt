@@ -92,9 +92,14 @@ class NetworkMapUpdaterTest {
     }
 
     private fun startUpdater(ourNodeInfo: SignedNodeInfo = this.ourNodeInfo,
-                             networkParameters: NetworkParameters = server.networkParameters) {
-        val keyManagementService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
-        updater.start(DEV_ROOT_CA.certificate, server.networkParameters.serialize().hash, ourNodeInfo, networkParameters, keyManagementService)
+                             networkParameters: NetworkParameters = server.networkParameters,
+                             autoAcceptNetworkParameters: Boolean = true) {
+        updater.start(DEV_ROOT_CA.certificate,
+                      server.networkParameters.serialize().hash,
+                      ourNodeInfo,
+                      networkParameters,
+                      MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
+                      autoAcceptNetworkParameters)
     }
 
     @Test
@@ -239,7 +244,7 @@ class NetworkMapUpdaterTest {
     }
 
     @Test
-    fun `network parameters auto-accepted when only update is to whitelist params`() {
+    fun `network parameters auto-accepted when update only changes whitelist`() {
         setUpdater()
         val newParameters = testNetworkParameters(
                 epoch = 314,
@@ -254,6 +259,20 @@ class NetworkMapUpdaterTest {
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
+    }
+
+    @Test
+    fun `network parameters not auto-accepted when update only changes whitelist but auto accept configured to be false`() {
+        setUpdater()
+        val newParameters = testNetworkParameters(
+                epoch = 314,
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+        server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
+        startUpdater(autoAcceptNetworkParameters = false)
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
+        assert(!updateFile.exists()) { "network parameter should not be auto accepted" }
     }
 
     @Test
