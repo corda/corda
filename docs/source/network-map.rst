@@ -174,7 +174,7 @@ This behaviour can be turned off by setting the optional node configuration prop
 this behaviour is turned off or the network parameters change involves parameters that are not auto-acceptable then manual approval is
 required.
 
-In this case the node administrator can review the change and decide if they are going to accept it. The approval should be do
+In this case the node administrator can review the change and decide if they are going to accept it. The approval should be done
 before the update Deadline. Nodes that don't approve before the deadline will likely be removed from the network map by
 the zone operator, but that is a decision that is left to the operator's discretion. For example the operator might also
 choose to change the deadline instead.
