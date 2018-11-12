@@ -351,7 +351,11 @@ object JacksonSupport {
             val nameMatches = mapper.partiesFromName(parser.text)
             return when {
                 nameMatches.isEmpty() -> {
-                    val publicKey = parser.readValueAs<PublicKey>()
+                    val publicKey = try {
+                        parser.readValueAs<PublicKey>()
+                    } catch (e: Exception) {
+                        throw JsonParseException(parser, "No matching Party found, then tried to directly deserialise ${parser.text} as a PublicKey with no success", e)
+                    }
                     mapper.partyFromKey(publicKey)
                             ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
                 }
