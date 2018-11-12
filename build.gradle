@@ -367,8 +367,8 @@ bintrayConfig {
             'corda-tools-cliutils',
             'corda-notary-raft',
             'corda-notary-bft-smart',
-            'common-configuration-parsing',
-            'common-validation'
+            'corda-common-configuration-parsing',
+            'corda-common-validation'
     ]
     license {
         name = 'Apache-2.0'
