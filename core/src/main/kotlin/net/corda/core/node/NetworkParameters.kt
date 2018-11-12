@@ -146,7 +146,7 @@ data class NetworkParameters(
       modifiedTime=$modifiedTime
       epoch=$epoch,
       packageOwnership= {
-        ${packageOwnership.keys.joinToString()}
+        ${packageOwnership.keys.joinToString()}}
       }
   }"""
     }
