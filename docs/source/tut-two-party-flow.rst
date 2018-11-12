@@ -31,8 +31,7 @@ In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-And update ``IOUFlow.call`` by changing the code following the retrieval of the notary's identity from the network as
-follows:
+And update ``IOUFlow.call`` to the following:
 
 .. container:: codeset
 

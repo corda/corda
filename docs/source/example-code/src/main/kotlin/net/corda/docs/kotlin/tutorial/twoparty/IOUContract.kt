@@ -5,7 +5,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.transactions.LedgerTransaction
 
 // DOCSTART 01
-// Add these imports:
+// Add this import:
 import net.corda.core.contracts.*
 
 class IOUContract : Contract {

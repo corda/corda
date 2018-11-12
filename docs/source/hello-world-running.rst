@@ -107,11 +107,9 @@ commands.
 
 We want to create an IOU of 99 with PartyB. We start the ``IOUFlow`` by typing:
 
-.. container:: codeset
+.. code-block:: bash
 
-    .. code-block:: kotlin
-
-        start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
+    start IOUFlow iouValue: 99, otherParty: "O=PartyB,L=New York,C=US"
 
 This single command will cause PartyA and PartyB to automatically agree an IOU. This is one of the great advantages of
 the flow framework - it allows you to reduce complex negotiation and update processes into a single function call.
@@ -122,7 +120,7 @@ We can check the contents of each node's vault by running:
 
 .. code-block:: bash
 
-        run vaultQuery contractStateType: com.template.IOUState
+    run vaultQuery contractStateType: com.template.IOUState
 
 The vaults of PartyA and PartyB should both display the following output:
 
@@ -161,6 +159,21 @@ The vaults of PartyA and PartyB should both display the following output:
     otherResults: []
 
 This is the transaction issuing our ``IOUState`` onto a ledger.
+
+However, if we run the same command on the other node (the notary), we will see the following:
+
+.. code:: bash
+
+    {
+      "states" : [ ],
+      "statesMetadata" : [ ],
+      "totalStatesAvailable" : -1,
+      "stateTypes" : "UNCONSUMED",
+      "otherResults" : [ ]
+    }
+
+This is the result of Corda's privacy model. Because the notary was not involved in the transaction and had no need to see the data, the
+transaction was not distributed to them.
 
 Conclusion
 ----------
