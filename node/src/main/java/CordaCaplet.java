@@ -45,24 +45,15 @@ public class CordaCaplet extends Capsule {
         return Paths.get((baseDir == null) ? "." : baseDir).toAbsolutePath().normalize().toString();
     }
 
-    String getOptionMultiple(List<String> args, List<String> possibleOptions) {
+    private String getOptionMultiple(List<String> args, List<String> possibleOptions) {
         String result = null;
         for(String option: possibleOptions) {
             result = getOption(args, option);
             if (result != null) break;
-//            result = getOptionThatStartsWith(args, option);
-//            if (result != null) break;
         }
         return result;
     }
-//
-//    private String getOptionThatStartsWith(List<String> args, String option) {
-//        final String lowerCaseOption = option.toLowerCase();
-//        for (String arg : args) {
-//        }
-//        return null;
-//    }
-//
+
     private String getOption(List<String> args, String option) {
         final String lowerCaseOption = option.toLowerCase();
         int index = 0;
@@ -117,7 +108,10 @@ public class CordaCaplet extends Capsule {
 
             File cordappsDir = new File(baseDir, "cordapps");
             // Create cordapps directory if it doesn't exist.
-            requireCordappsDirExists(cordappsDir);
+            if (!checkIfCordappDirExists(cordappsDir)) {
+                // If it fails, just return the existing class path. The main Corda jar will detect the error and fail gracefully.
+                return cp;
+            }
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
             augmentClasspath((List<Path>) cp, cordappsDir);
             try {
@@ -187,17 +181,20 @@ public class CordaCaplet extends Capsule {
         }
     }
 
-    private void requireCordappsDirExists(File dir) {
+    private Boolean checkIfCordappDirExists(File dir) {
         try {
             if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
                 logOnFailedCordappDir();
-                throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
+                //throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
+                return false;
             }
         }
         catch (SecurityException | NullPointerException e) {
             logOnFailedCordappDir();
-            throw e; // Let Capsule handle the error (log error, clean up, die).
+            //throw e; // Let Capsule handle the error (log error, clean up, die).
+            return false;
         }
+        return true;
     }
 
     private void logOnFailedCordappDir() {
