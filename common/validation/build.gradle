@@ -11,7 +11,7 @@ dependencies {
 }
 
 jar {
-    baseName 'common-validation'
+    baseName 'corda-common-validation'
 }
 
 publish {

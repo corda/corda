@@ -17,7 +17,7 @@ dependencies {
 }
 
 jar {
-    baseName 'common-configuration-parsing'
+    baseName 'corda-common-configuration-parsing'
 }
 
 publish {
