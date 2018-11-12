@@ -185,13 +185,11 @@ public class CordaCaplet extends Capsule {
         try {
             if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
                 logOnFailedCordappDir();
-                //throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
                 return false;
             }
         }
         catch (SecurityException | NullPointerException e) {
             logOnFailedCordappDir();
-            //throw e; // Let Capsule handle the error (log error, clean up, die).
             return false;
         }
         return true;
