@@ -100,6 +100,8 @@ class RPCClientProxyHandler(
         private val log = contextLogger()
         // To check whether toString() is being invoked
         val toStringMethod: Method = Object::toString.javaMethod!!
+        val equalsMethod: Method = Object::equals.javaMethod!!
+        val hashCodeMethod: Method = Object::hashCode.javaMethod!!
 
         private fun addRpcCallSiteToThrowable(throwable: Throwable, callSite: CallSite) {
             var currentThrowable = throwable
@@ -234,7 +236,13 @@ class RPCClientProxyHandler(
         lifeCycle.requireState { it == State.STARTED || it == State.SERVER_VERSION_NOT_SET }
         checkProtocolVersion(method)
         if (method == toStringMethod) {
-            return "Client RPC proxy for $rpcOpsClass"
+            return toString()
+        }
+        if (method == equalsMethod) {
+            return equals(arguments?.getOrNull(0))
+        }
+        if (method == hashCodeMethod) {
+            return hashCode()
         }
         if (consumerSession!!.isClosed) {
             throw RPCException("RPC Proxy is closed")
@@ -363,6 +371,8 @@ class RPCClientProxyHandler(
     fun forceClose() {
         close(false)
     }
+
+
 
     /**
      * Closes this handler and sends notifications to all observables, so it can immediately clean up resources.
@@ -567,6 +577,32 @@ class RPCClientProxyHandler(
 
         rpcReplyMap.clear()
         callSiteMap?.clear()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as RPCClientProxyHandler
+
+        if (rpcUsername != other.rpcUsername) return false
+        if (clientAddress != other.clientAddress) return false
+        if (sessionId != other.sessionId) return false
+        if (targetLegalIdentity != other.targetLegalIdentity) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = rpcUsername.hashCode()
+        result = 31 * result + clientAddress.hashCode()
+        result = 31 * result + sessionId.hashCode()
+        result = 31 * result + (targetLegalIdentity?.hashCode() ?: 0)
+        return result
+    }
+
+    override fun toString(): String {
+        return "{rpcUsername='$rpcUsername', clientAddress=$clientAddress, sessionId=$sessionId, targetLegalIdentity=$targetLegalIdentity}"
     }
 }
 
