@@ -49,6 +49,10 @@
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
       <module name="cliutils_test" target="1.8" />
+      <module name="com.r3.corda_buildSrc_main" target="1.8" />
+      <module name="com.r3.corda_buildSrc_test" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_main" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_test" target="1.8" />
       <module name="common-configuration-parsing_main" target="1.8" />
       <module name="common-configuration-parsing_test" target="1.8" />
       <module name="common-validation_main" target="1.8" />
@@ -318,6 +322,8 @@
       <module name="testing-test-utils_test" target="1.8" />
       <module name="testing_main" target="1.8" />
       <module name="testing_test" target="1.8" />
+      <module name="tools-blobinspector_main" target="1.8" />
+      <module name="tools-blobinspector_test" target="1.8" />
       <module name="tools_main" target="1.8" />
       <module name="tools_test" target="1.8" />
       <module name="trader-demo_integrationTest" target="1.8" />

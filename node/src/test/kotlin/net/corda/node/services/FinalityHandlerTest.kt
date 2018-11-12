@@ -10,8 +10,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
-import net.corda.node.services.statemachine.StaffedFlowHospital
-import net.corda.node.services.statemachine.StaffedFlowHospital.MedicalRecord.KeptInForObservation
+import net.corda.node.services.statemachine.StaffedFlowHospital.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -72,11 +71,11 @@ class FinalityHandlerTest {
         val keptInForObservation = smm.flowHospital
                 .track()
                 .let { it.updates.startWith(it.snapshot) }
-                .filter { it.flowId == runId }
-                .ofType(KeptInForObservation::class.java)
+                .ofType(MedicalRecord.Flow::class.java)
+                .filter { it.flowId == runId && it.outcome == Outcome.OVERNIGHT_OBSERVATION }
                 .toBlocking()
                 .first()
-        assertThat(keptInForObservation.by).contains(StaffedFlowHospital.FinalityDoctor)
+        assertThat(keptInForObservation.by).contains(FinalityDoctor)
     }
 
     private fun TestStartedNode.getTransaction(id: SecureHash): SignedTransaction? {
