@@ -100,9 +100,17 @@ object SerializerFactoryBuilder {
                 typeLoader,
                 localTypeModel)
 
+        val evolutionSerializerFactory = DefaultEvolutionSerializerFactory(
+                localSerializerFactory,
+                descriptorBasedSerializerRegistry,
+                remoteTypeReflector,
+                classCarpenter.classloader,
+                false
+        )
+
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
                 classCarpenter.classloader,
-                evolutionSerializerProvider,
+                evolutionSerializerFactory,
                 descriptorBasedSerializerRegistry,
                 AMQPRemoteTypeModel(),
                 remoteTypeReflector,

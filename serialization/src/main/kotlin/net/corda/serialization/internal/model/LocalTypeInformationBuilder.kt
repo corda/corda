@@ -4,6 +4,7 @@ import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
@@ -172,7 +173,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     interfaceInformation, typeParameterInformation)
         }
 
-        return LocalTypeInformation.Composable(rawType, typeIdentifier, constructorInformation, properties,
+        val evolverConstructors = evolverConstructors(type).map { ctor ->
+            val constructorInformation = buildConstructorInformation(type, ctor)
+            val evolverProperties = buildObjectProperties(rawType, constructorInformation)
+            EvolverConstructorInformation(constructorInformation, evolverProperties)
+        }
+
+        return LocalTypeInformation.Composable(rawType, typeIdentifier, constructorInformation, evolverConstructors, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
     }
 
@@ -368,4 +375,18 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
         }
 
     return preferredCandidate?.apply { isAccessible = true }
+}
+
+private fun evolverConstructors(type: Type): List<KFunction<Any>> {
+    val clazz = type.asClass()
+    if (!clazz.isConcreteClass || clazz.isSynthetic) return emptyList()
+
+    return clazz.kotlin.constructors.asSequence()
+            .mapNotNull {
+                val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version
+                if (version == null) null else version to it
+            }
+            .sortedBy { (version, ctor) -> version }
+            .map { (version, ctor) -> ctor.apply { isAccessible = true} }
+            .toList()
 }

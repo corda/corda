@@ -13,6 +13,9 @@ data class ReflectedTypeInformation(
  * the remote type.
  */
  interface RemoteTypeReflector {
+    fun reflect(remoteInformation: RemoteTypeInformation): LocalTypeInformation =
+            reflect(mapOf(remoteInformation.typeDescriptor to remoteInformation))[remoteInformation.typeDescriptor]!!.localTypeInformation
+
      fun reflect(remoteInformation: Map<TypeDescriptor, RemoteTypeInformation>): Map<TypeDescriptor, ReflectedTypeInformation>
  }
 

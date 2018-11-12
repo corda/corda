@@ -1,12 +1,37 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.model.LocalPropertyInformation
-import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Method
 import java.lang.reflect.Field
+import java.lang.reflect.Type
+
+class ComposableTypePropertySerializer(
+        val name: String,
+        val isCalculated: Boolean,
+        private val readStrategy: PropertyReadStrategy,
+        private val writeStrategy: PropertyWriteStrategy) :
+            PropertyReadStrategy by readStrategy,
+            PropertyWriteStrategy by writeStrategy {
+
+    companion object {
+        fun make(name: String, propertyInformation: LocalPropertyInformation, factory: LocalSerializerFactory): ComposableTypePropertySerializer =
+                ComposableTypePropertySerializer(
+                        name,
+                        propertyInformation.isCalculated,
+                        PropertyReadStrategy.make(name, propertyInformation.type.typeIdentifier, propertyInformation.type.observedType),
+                        PropertyWriteStrategy.make(name, propertyInformation, factory))
+
+        fun makeForEvolution(name: String, isCalculated: Boolean, typeIdentifier: TypeIdentifier, type: Type): ComposableTypePropertySerializer =
+                ComposableTypePropertySerializer(
+                        name,
+                        isCalculated,
+                        PropertyReadStrategy.make(name, typeIdentifier, type),
+                        EvolutionPropertyWriteStrategy)
+    }
+}
 
 sealed class TypeModellingPropertyReader {
 
@@ -32,110 +57,123 @@ sealed class TypeModellingPropertyReader {
     }
 }
 
-sealed class ComposableTypePropertySerializer {
-
-    abstract val name: String
-    abstract val propertyInformation: LocalPropertyInformation
-    abstract val reader: TypeModellingPropertyReader
-
-    abstract fun writeClassInfo(output: SerializationOutput)
-    abstract fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext, debugIndent: Int = 0)
-    abstract fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any?
+interface PropertyReadStrategy {
 
     companion object {
-        fun make(name: String, propertyInformation: LocalPropertyInformation, factory: LocalSerializerFactory): ComposableTypePropertySerializer {
+        fun make(name: String, typeIdentifier: TypeIdentifier, type: Type): PropertyReadStrategy =
+                if (SerializerFactory.isPrimitive(type)) {
+                    when (type) {
+                        Char::class.java, Character::class.java -> AMQPCharPropertyReadStrategy
+                        else -> AMQPPropertyReadStrategy
+                    }
+                } else {
+                    DescribedTypeReadStrategy(name, typeIdentifier, type)
+                }
+    }
+
+    fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any?
+
+}
+
+interface PropertyWriteStrategy {
+
+    companion object {
+        fun make(name: String, propertyInformation: LocalPropertyInformation, factory: LocalSerializerFactory): PropertyWriteStrategy {
             val reader = TypeModellingPropertyReader.make(propertyInformation)
             val type = propertyInformation.type.observedType
             return if (SerializerFactory.isPrimitive(type)) {
                 when (type) {
-                    Char::class.java, Character::class.java -> AMQPCharPropertySerializer(name, propertyInformation, reader)
-                    else -> AMQPPrimitivePropertySerializer(name, propertyInformation, reader)
+                    Char::class.java, Character::class.java -> AMQPCharPropertyWriteStategy(reader)
+                    else -> AMQPPropertyWriteStrategy(reader)
                 }
             } else {
-                DescribedTypePropertySerializer(name, propertyInformation, reader) { factory.get(propertyInformation.type) }
+                DescribedTypeWriteStrategy(name, propertyInformation, reader) { factory.get(propertyInformation.type) }
             }
         }
     }
 
-    class DescribedTypePropertySerializer(
-            override val name: String,
-            override val propertyInformation: LocalPropertyInformation,
-            override val reader: TypeModellingPropertyReader,
-            val serializerProvider: () -> AMQPSerializer<Any>) : ComposableTypePropertySerializer() {
+    fun writeClassInfo(output: SerializationOutput)
 
-        private val serializer by lazy { serializerProvider() }
+    fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext, debugIndent: Int)
+}
 
-        private val nameForDebug = "$name(${propertyInformation.type.typeIdentifier.prettyPrint(false)})"
+object EvolutionPropertyWriteStrategy : PropertyWriteStrategy {
+    override fun writeClassInfo(output: SerializationOutput) =
+            throw UnsupportedOperationException("Evolution serializers cannot write values")
 
-        override fun writeClassInfo(output: SerializationOutput) {
-            if (propertyInformation.type !is LocalTypeInformation.Top) {
-                serializer.writeClassInfo(output)
+    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+            throw UnsupportedOperationException("Evolution serializers cannot write values")
+}
+
+class DescribedTypeReadStrategy(name: String,
+                                typeIdentifier: TypeIdentifier,
+                                private val type: Type): PropertyReadStrategy {
+
+    private val nameForDebug = "$name(${typeIdentifier.prettyPrint(false)})"
+
+    override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any? =
+            ifThrowsAppend({ nameForDebug }) {
+                input.readObjectOrNull(obj, schemas, type, context)
             }
-        }
+}
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext,
-                                   debugIndent: Int) = ifThrowsAppend({ nameForDebug }) {
-            val propertyValue = reader.read(obj)
-            output.writeObjectOrNull(propertyValue, data, propertyInformation.type.observedType, context, debugIndent)
-        }
+class DescribedTypeWriteStrategy(name: String,
+                                 private val propertyInformation: LocalPropertyInformation,
+                                 private val reader: TypeModellingPropertyReader,
+                                 private val serializerProvider: () -> AMQPSerializer<Any>) : PropertyWriteStrategy {
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any? =
-                ifThrowsAppend({ nameForDebug }) {
-                    input.readObjectOrNull(obj, schemas, propertyInformation.type.observedType, context)
-                }
-    }
+    private val serializer by lazy { serializerProvider() }
 
-    /**
-     * A property serializer for most AMQP primitive type (Int, String, etc).
-     */
-    class AMQPPrimitivePropertySerializer(
-            override val name: String,
-            override val propertyInformation: LocalPropertyInformation,
-            override val reader: TypeModellingPropertyReader) : ComposableTypePropertySerializer() {
-        override fun writeClassInfo(output: SerializationOutput) {}
+    private val nameForDebug = "$name(${propertyInformation.type.typeIdentifier.prettyPrint(false)})"
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas,
-                                  input: DeserializationInput, context: SerializationContext
-        ): Any? {
-            return if (obj is Binary) obj.array else obj
-        }
-
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
-                                   context: SerializationContext, debugIndent: Int
-        ) {
-            val value = reader.read(obj)
-            if (value is ByteArray) {
-                data.putObject(Binary(value))
-            } else {
-                data.putObject(value)
-            }
+    override fun writeClassInfo(output: SerializationOutput) {
+        if (propertyInformation.type !is LocalTypeInformation.Top) {
+            serializer.writeClassInfo(output)
         }
     }
 
-    /**
-     * A property serializer for the AMQP char type, needed as a specialisation as the underlying
-     * value of the character is stored in numeric UTF-16 form and on deserialization requires explicit
-     * casting back to a char otherwise it's treated as an Integer and a TypeMismatch occurs
-     */
-    class AMQPCharPropertySerializer(
-            override val name: String,
-            override val propertyInformation: LocalPropertyInformation,
-            override val reader: TypeModellingPropertyReader) :
-            ComposableTypePropertySerializer() {
+    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext,
+                               debugIndent: Int) = ifThrowsAppend({ nameForDebug }) {
+        val propertyValue = reader.read(obj)
+        output.writeObjectOrNull(propertyValue, data, propertyInformation.type.observedType, context, debugIndent)
+    }
+}
 
-        override fun writeClassInfo(output: SerializationOutput) {}
+object AMQPPropertyReadStrategy : PropertyReadStrategy {
+    override fun readProperty(obj: Any?, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any? =
+            if (obj is Binary) obj.array else obj
+}
 
-        override fun readProperty(obj: Any?, schemas: SerializationSchemas,
-                                  input: DeserializationInput, context: SerializationContext
-        ): Any? {
-            return if (obj == null) null else (obj as Short).toChar()
+class AMQPPropertyWriteStrategy(private val reader: TypeModellingPropertyReader) : PropertyWriteStrategy {
+    override fun writeClassInfo(output: SerializationOutput) {}
+
+    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
+                               context: SerializationContext, debugIndent: Int
+    ) {
+        val value = reader.read(obj)
+        if (value is ByteArray) {
+            data.putObject(Binary(value))
+        } else {
+            data.putObject(value)
         }
+    }
+}
 
-        override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
-                                   context: SerializationContext, debugIndent: Int
-        ) {
-            val input = reader.read(obj)
-            if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
-        }
+object AMQPCharPropertyReadStrategy : PropertyReadStrategy {
+    override fun readProperty(obj: Any?, schemas: SerializationSchemas,
+                              input: DeserializationInput, context: SerializationContext
+    ): Any? {
+        return if (obj == null) null else (obj as Short).toChar()
+    }
+}
+
+class AMQPCharPropertyWriteStategy(private val reader: TypeModellingPropertyReader) : PropertyWriteStrategy {
+    override fun writeClassInfo(output: SerializationOutput) {}
+
+    override fun writeProperty(obj: Any?, data: Data, output: SerializationOutput,
+                               context: SerializationContext, debugIndent: Int
+    ) {
+        val input = reader.read(obj)
+        if (input != null) data.putShort((input as Char).toShort()) else data.putNull()
     }
 }

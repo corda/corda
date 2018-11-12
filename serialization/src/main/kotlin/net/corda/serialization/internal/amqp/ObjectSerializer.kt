@@ -15,11 +15,10 @@ import java.lang.reflect.Type
 import kotlin.reflect.jvm.javaConstructor
 
 class ComposableSerializer(
-        private val typeInformation: LocalTypeInformation,
+        override val type: Type,
         override val typeDescriptor: Symbol,
-        private val typeNotation: TypeNotation,
-        private val interfaces: List<LocalTypeInformation>,
-        private val propertySerializers: Map<String, ComposableTypePropertySerializer>): AMQPSerializer<Any> {
+        private val reader: ComposableObjectReader,
+        private val writer: ComposableObjectWriter): AMQPSerializer<Any> {
 
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): AMQPSerializer<Any> {
@@ -28,37 +27,69 @@ class ComposableSerializer(
 
             return when (typeInformation) {
                 is LocalTypeInformation.Composable ->
-                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
-                            typeInformation.properties, factory)
+                    makeForComposable(typeInformation, typeNotation, typeDescriptor, factory)
                 is LocalTypeInformation.AnInterface ->
-                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
-                            typeInformation.properties, factory)
+                    makeForAbstract(typeNotation, typeInformation.interfaces, typeInformation.properties, typeInformation, typeDescriptor, factory)
                 is LocalTypeInformation.Abstract ->
-                    make(typeInformation, typeDescriptor, typeNotation, typeInformation.interfaces,
-                            typeInformation.properties, factory)
+                    makeForAbstract(typeNotation, typeInformation.interfaces, typeInformation.properties, typeInformation, typeDescriptor, factory)
                 else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
             }
         }
 
-        private fun make(typeInformation: LocalTypeInformation, typeDescriptor: Symbol, typeNotation: TypeNotation,
-                         interfaces: List<LocalTypeInformation>, properties: Map<String, LocalPropertyInformation>,
-                         factory: LocalSerializerFactory): AMQPSerializer<Any> {
-            val propertySerializers = properties.mapValues { (name, property) ->
+        private fun makeForAbstract(typeNotation: CompositeType,
+                                    interfaces: List<LocalTypeInformation>,
+                                    properties: Map<String, LocalPropertyInformation>,
+                                    typeInformation: LocalTypeInformation,
+                                    typeDescriptor: Symbol,
+                                    factory: LocalSerializerFactory): AbstractComposableSerializer {
+            val writer = ComposableObjectWriter(typeNotation, interfaces, makePropertySerializers(properties, factory))
+            return AbstractComposableSerializer(typeInformation.observedType, typeDescriptor, writer)
+        }
+
+        private fun makeForComposable(typeInformation: LocalTypeInformation.Composable,
+                                      typeNotation: CompositeType,
+                                      typeDescriptor: Symbol,
+                                      factory: LocalSerializerFactory): ComposableSerializer {
+            val propertySerializers = makePropertySerializers(typeInformation.properties, factory)
+            val reader = ComposableObjectReader(
+                    typeInformation.typeIdentifier,
+                    propertySerializers,
+                    ObjectBuilder.makeProvider(typeInformation))
+
+            val writer = ComposableObjectWriter(
+                    typeNotation,
+                    typeInformation.interfaces,
+                    propertySerializers)
+
+            return ComposableSerializer(
+                    typeInformation.observedType,
+                    typeDescriptor,
+                    reader,
+                    writer)
+        }
+
+        private fun makePropertySerializers(properties: Map<String, LocalPropertyInformation>,
+                                            factory: LocalSerializerFactory): Map<String, ComposableTypePropertySerializer> =
+            properties.mapValues { (name, property) ->
                 ComposableTypePropertySerializer.make(name, property, factory)
             }
-
-            return ComposableSerializer(typeInformation, typeDescriptor, typeNotation, interfaces, propertySerializers)
-        }
     }
 
-    override val type: Type get() = typeInformation.observedType
+    override fun writeClassInfo(output: SerializationOutput) = writer.writeClassInfo(output)
 
-    private val objectBuilderProvider by lazy {
-        ObjectBuilder.makeProvider(typeInformation as? LocalTypeInformation.Composable
-                ?: throw NotSerializableException("Cannot make ObjectBuilder for $typeInformation"))
-    }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+            writer.writeObject(obj, data, type, output, context, debugIndent)
 
-    override fun writeClassInfo(output: SerializationOutput) {
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            reader.readObject(obj, schemas, input, context)
+}
+
+class ComposableObjectWriter(
+        private val typeNotation: TypeNotation,
+        private val interfaces: List<LocalTypeInformation>,
+        private val propertySerializers: Map<String, ComposableTypePropertySerializer>
+) {
+    fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
             for (iface in interfaces) {
                 output.requireSerializer(iface.observedType)
@@ -70,7 +101,7 @@ class ComposableSerializer(
         }
     }
 
-    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
+    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         data.withDescribed(typeNotation.descriptor) {
             withList {
                 propertySerializers.values.forEach { propertySerializer ->
@@ -79,13 +110,20 @@ class ComposableSerializer(
             }
         }
     }
+}
 
-    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
-            ifThrowsAppend({ type.typeName }) {
-                if (obj !is List<*>) throw AMQPNotSerializableException(type, "Body of described type is unexpected $obj")
-                if (obj.size != propertySerializers.size) {
-                    throw AMQPNotSerializableException(type, "${obj.size} objects to deserialize, but " +
-                            "${propertySerializers.size} properties in described type ${type.typeName}")
+class ComposableObjectReader(
+        val typeIdentifier: TypeIdentifier,
+        private val propertySerializers: Map<String, ComposableTypePropertySerializer>,
+        private val objectBuilderProvider: () -> ObjectBuilder
+) {
+
+    fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            ifThrowsAppend({ typeIdentifier.prettyPrint(false) }) {
+                if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
+                if (obj.size < propertySerializers.size) {
+                    throw NotSerializableException("${obj.size} objects to deserialize, but " +
+                            "${propertySerializers.size} properties in described type ${typeIdentifier.prettyPrint(false)}")
                 }
 
                 val builder = objectBuilderProvider()
@@ -94,11 +132,66 @@ class ComposableSerializer(
                         // Read _all_ properties from the stream
                         .map { (item, property) -> property to property.readProperty(item, schemas, input, context) }
                         // Throw away any calculated properties
-                        .filter { (property, _) -> !property.propertyInformation.isCalculated }
+                        .filter { (property, _) -> !property.isCalculated }
                         // Write the rest into the builder
                         .forEachIndexed { slot, (_, propertyValue) -> builder.populate(slot, propertyValue) }
                 return builder.build()
             }
+}
+
+class AbstractComposableSerializer(
+        override val type: Type,
+        override val typeDescriptor: Symbol,
+        private val writer: ComposableObjectWriter): AMQPSerializer<Any> {
+    override fun writeClassInfo(output: SerializationOutput) =
+        writer.writeClassInfo(output)
+
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+        writer.writeObject(obj, data, type, output, context, debugIndent)
+
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+        throw UnsupportedOperationException("Cannot deserialize abstract type ${type.typeName}")
+}
+
+class EvolutionComposableSerializer(
+        override val type: Type,
+        override val typeDescriptor: Symbol,
+        private val reader: ComposableObjectReader): AMQPSerializer<Any> {
+
+    companion object {
+        fun make(localTypeInformation: LocalTypeInformation.Composable, remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
+                 properties: Map<String, LocalPropertyInformation>, classLoader: ClassLoader): EvolutionComposableSerializer {
+            val reader = ComposableObjectReader(
+                    localTypeInformation.typeIdentifier,
+                    makePropertySerializers(properties, remoteTypeInformation.properties, classLoader),
+                    EvolutionObjectBuilder.makeProvider(localTypeInformation.typeIdentifier, constructor, properties, remoteTypeInformation.properties.keys.sorted()))
+
+            return EvolutionComposableSerializer(
+                    localTypeInformation.observedType,
+                    Symbol.valueOf(remoteTypeInformation.typeDescriptor),
+                    reader)
+        }
+
+        private fun makePropertySerializers(localProperties: Map<String, LocalPropertyInformation>,
+                                            remoteProperties: Map<String, RemotePropertyInformation>,
+                                            classLoader: ClassLoader): Map<String, ComposableTypePropertySerializer> =
+                remoteProperties.mapValues { (name, property) ->
+                    val localProperty = localProperties[name]
+                    val isCalculated = localProperty?.isCalculated ?: false
+                    val type = localProperty?.type?.observedType ?: property.type.typeIdentifier.getLocalType(classLoader)
+                    ComposableTypePropertySerializer.makeForEvolution(name, isCalculated, property.type.typeIdentifier, type)
+                }
+    }
+
+    override fun writeClassInfo(output: SerializationOutput) =
+            throw UnsupportedOperationException("Evolved types cannot be written")
+
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+            throw UnsupportedOperationException("Evolved types cannot be written")
+
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            reader.readObject(obj, schemas, input, context)
+
 }
 
 /**

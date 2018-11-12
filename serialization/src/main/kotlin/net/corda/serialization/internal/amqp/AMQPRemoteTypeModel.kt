@@ -99,7 +99,13 @@ class AMQPRemoteTypeModel {
                         typeDescriptor,
                         identifier,
                         identifier.componentType.interpretIdentifier(notationLookup, seen))
-            else -> RemoteTypeInformation.AnEnum(typeDescriptor, identifier, choices.map { it.name })
+            is TypeIdentifier.Unparameterised ->
+                if (choices.isEmpty()) {
+                    RemoteTypeInformation.Unparameterised(
+                            typeDescriptor,
+                            identifier)
+                } else RemoteTypeInformation.AnEnum(typeDescriptor, identifier, choices.map { it.name })
+            else -> throw NotSerializableException("Cannot interpret restricted type $this")
         }
 
     /**

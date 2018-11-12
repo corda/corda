@@ -198,6 +198,7 @@ sealed class LocalTypeInformation {
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
             val constructor: LocalConstructorInformation,
+            val evolverConstructors: List<EvolverConstructorInformation>,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
@@ -291,6 +292,14 @@ data class LocalConstructorInformation(
         val parameters: List<LocalConstructorParameterInformation>) {
     val hasParameters: Boolean get() = parameters.isNotEmpty()
 }
+
+/**
+ * Represents information about a constructor that is specifically to be used for evolution, and is potentially matched
+ * with a different set of properties to the regular constructor.
+ */
+data class EvolverConstructorInformation(
+        val constructor: LocalConstructorInformation,
+        val properties: Map<String, LocalPropertyInformation>)
 
 /**
  * Represents information about a constructor parameter
