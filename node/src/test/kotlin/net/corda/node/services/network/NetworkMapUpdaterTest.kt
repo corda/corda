@@ -92,7 +92,7 @@ class NetworkMapUpdaterTest {
     }
 
     private fun startUpdater(ourNodeInfo: SignedNodeInfo = this.ourNodeInfo,
-                             networkParameters: NetworkParameters = server.networkParameters) { // TODO: remove if not needed
+                             networkParameters: NetworkParameters = server.networkParameters) {
         val keyManagementService = MockKeyManagementService(makeTestIdentityService(), ourKeyPair)
         updater.start(DEV_ROOT_CA.certificate, server.networkParameters.serialize().hash, ourNodeInfo, networkParameters, keyManagementService)
     }

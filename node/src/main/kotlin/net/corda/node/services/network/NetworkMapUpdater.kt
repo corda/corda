@@ -179,9 +179,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
     private fun handleParametersMismatch(networkMap: NetworkMap) {
         val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val signedNetworkParameters = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>() else null
-        if (signedNetworkParameters != null && networkMap.networkParameterHash == signedNetworkParameters.raw.hash) {
-            networkParameters.hotSwap(signedNetworkParameters.verified())
+        val acceptedNetworkParameters = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>() else null
+        if (acceptedNetworkParameters != null && networkMap.networkParameterHash == acceptedNetworkParameters.raw.hash) {
+            networkParameters.hotSwap(acceptedNetworkParameters.verified())
             logger.info("Flag day occurred. Network map switched to the new network parameters: " +
                     "${networkMap.networkParameterHash}. Now using network parameters: $networkParameters")
         } else {

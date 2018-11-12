@@ -117,7 +117,6 @@ class NetworkParameters(
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
     }
 
-    // TODO: revisit - we can remove the data class annotation to get constructor as we want but then need copy
     fun copy(minimumPlatformVersion: Int = this.minimumPlatformVersion,
              notaries: List<NotaryInfo> = this.notaries,
              maxMessageSize: Int = this.maxMessageSize,
