@@ -318,6 +318,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val (netParams, signedNetParams) = NetworkParametersReader(trustRoot, networkMapClient, configuration.baseDirectory).read()
         log.info("Loaded network parameters: $netParams")
+        // TODO: add log line for which parameters are auto acceptable
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }

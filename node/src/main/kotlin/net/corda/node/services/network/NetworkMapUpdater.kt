@@ -145,10 +145,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         val allHashesFromNetworkMap = (globalNetworkMap.nodeInfoHashes + additionalHashes).toSet()
 
-        // if we have auto accepted an update then our currentParametersHash will have changed to the update
-        // hence we need this additional check
-        if (currentParametersHash != globalNetworkMap.networkParameterHash && currentParametersHash != globalNetworkMap.parametersUpdate?.newParametersHash) {
-            exitOnParametersMismatch(globalNetworkMap)
+        if (currentParametersHash != globalNetworkMap.networkParameterHash) {
+            handleParametersMismatch(globalNetworkMap)
         }
 
         val currentNodeHashes = networkMapCache.allNodeHashes
@@ -179,22 +177,24 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         return cacheTimeout
     }
 
-    private fun exitOnParametersMismatch(networkMap: NetworkMap) {
+    private fun handleParametersMismatch(networkMap: NetworkMap) {
         val updatesFile = baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME
-        val acceptedHash = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>().raw.hash else null
-        val exitCode = if (acceptedHash == networkMap.networkParameterHash) {
+        val signedNetworkParameters = if (updatesFile.exists()) updatesFile.readObject<SignedNetworkParameters>() else null
+        if (signedNetworkParameters != null && networkMap.networkParameterHash == signedNetworkParameters.raw.hash) {
+            networkParameters.hotSwap(signedNetworkParameters.verified())
             logger.info("Flag day occurred. Network map switched to the new network parameters: " +
-                    "${networkMap.networkParameterHash}. Node will shutdown now and needs to be started again.")
-            0
+                    "${networkMap.networkParameterHash}. Now using network parameters: $networkParameters")
         } else {
-            // TODO This needs special handling (node omitted update process or didn't accept new parameters)
-            logger.error(
-                    """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
+            exitOnParametersMismatch(networkMap)
+        }
+    }
+
+    private fun exitOnParametersMismatch(networkMap: NetworkMap) {
+        logger.error(
+                """Node is using network parameters with hash $currentParametersHash but the network map is advertising ${networkMap.networkParameterHash}.
 To resolve this mismatch, and move to the current parameters, delete the $NETWORK_PARAMS_FILE_NAME file from the node's directory and restart.
 The node will shutdown now.""")
-            1
-        }
-        exitProcess(exitCode)
+        exitProcess(1)
     }
 
     private fun handleUpdateNetworkParameters(networkMapClient: NetworkMapClient, update: ParametersUpdate) {
@@ -212,37 +212,11 @@ The node will shutdown now.""")
                 update.description,
                 update.updateDeadline)
 
-        if (autoAcceptParameters(networkParameters, newNetParams)) {
-            networkParameters.hotSwap(
-                    newNetParams.modifiedTime,
-                    newNetParams.epoch,
-                    newNetParams.whitelistedContractImplementations,
-                    newNetParams.packageOwnership)
-
-            // TODO: ackNetworkParametersUpdate. Need to:
-            // - ack network parameters (send response to network map service with signed net params hash)
-            // - replace currentParametersHash with new one
-            // - overwrite the current network parameters file
-            //
-            // for first step we need key management service AND myInfo
-
-            // TODO : we can have the situation where we refresh the network map cache in between acking the parameters update
-            // and updating current parameters hash.
-
-            // update current parameters hash
-            currentParametersHash = update.newParametersHash
-
-            // ack network parameters and overwrite local network params file
-            ackNetworkParametersAndPersist(newSignedNetParams, NETWORK_PARAMS_FILE_NAME) { hash ->
+        if (networkParameters.canAutoAccept(newNetParams)) {
+            logger.info("Auto-accepting network parameter update ${update.newParametersHash}")
+            acceptNewNetworkParameters(update.newParametersHash) { hash ->
                 hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }
             }
-            logger.info("Auto-accepted network parameter update $update: $newNetParams")
-
-            // the auto accepting of the network parameters should act as though a user has manually
-            // run an accept command then restarted their node
-
-            // do we need to nullify the newNetworkParametersObject?
-            // no as this will cause repeated log lines, and also break the network parameters feed
         } else {
             parametersUpdatesTrack.onNext(updateInfo)
         }
@@ -266,16 +240,5 @@ The node will shutdown now.""")
         } else {
             throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
         }
-    }
-
-    private fun ackNetworkParametersAndPersist(signedNetParams: SignedNetworkParameters,
-                                               fileName: String,
-                                               sign: (SecureHash) -> SignedData<SecureHash>) {
-        networkMapClient ?: throw IllegalStateException("Network parameters updates are not supported without compatibility zone configured")
-
-        signedNetParams.serialize()
-                .open()
-                .copyTo(baseDirectory / fileName, StandardCopyOption.REPLACE_EXISTING)
-        networkMapClient.ackNetworkParametersUpdate(sign(signedNetParams.raw.hash))
     }
 }

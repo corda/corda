@@ -1,9 +1,14 @@
 package net.corda.node.internal
 
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -29,6 +34,8 @@ import org.junit.Test
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.assertFails
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
@@ -142,7 +149,27 @@ class NetworkParametersTest {
         assert(JavaPackageName("com.example").owns("com.example.something.MyClass"))
         assert(!JavaPackageName("com.example").owns("com.examplesomething.MyClass"))
         assert(!JavaPackageName("com.exam").owns("com.example.something.MyClass"))
+    }
 
+    @Test
+    fun `auto acceptance checks are correct`() {
+        val packageOwnership = mapOf(
+                JavaPackageName("com.example1") to generateKeyPair().public,
+                JavaPackageName("com.example2") to generateKeyPair().public)
+        val whitelistedContractImplementations = mapOf(
+                "example1" to listOf(AttachmentId.randomSHA256()),
+                "example2" to listOf(AttachmentId.randomSHA256()))
+
+        val netParams = testNetworkParameters()
+        val netParamsAutoAcceptable = netParams.copy(
+                packageOwnership = packageOwnership,
+                whitelistedContractImplementations = whitelistedContractImplementations)
+        val netParamsNotAutoAcceptable = netParamsAutoAcceptable.copy(
+                maxMessageSize = netParams.maxMessageSize + 1)
+
+        assertTrue(netParams.canAutoAccept(netParams))
+        assertTrue(netParams.canAutoAccept(netParamsAutoAcceptable))
+        assertFalse(netParams.canAutoAccept(netParamsNotAutoAcceptable))
     }
 
     // Helpers

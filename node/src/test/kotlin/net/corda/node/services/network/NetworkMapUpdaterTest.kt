@@ -229,46 +229,31 @@ class NetworkMapUpdaterTest {
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         val newHash = newParameters.serialize().hash
-        val keyPair = Crypto.generateKeyPair()
-        updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(keyPair) }
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
+        assert(!updateFile.exists()) { "network parameter should not be auto accepted" }
+        updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
+        assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
 
     @Test
     fun `network parameters auto-accepted when only update is to whitelist params`() {
         setUpdater()
-        val networkParameters = server.networkParameters
-        val oldNetworkParameters = networkParameters.copy()
-        val newWhitelistedContractMap = mapOf("key" to listOf(SecureHash.randomSHA256()))
-        val newEpoch = 314
-        val newModifiedTime = Instant.now().plusMillis(1000)
-        val newNetworkParameters = oldNetworkParameters.copy(
-                whitelistedContractImplementations = newWhitelistedContractMap,
-                epoch = newEpoch,
-                modifiedTime = newModifiedTime)
-        server.scheduleParametersUpdate(newNetworkParameters, "Test auto-accept update", Instant.MIN)
-
-        // when network map cache is updated
+        val newParameters = testNetworkParameters(
+                epoch = 314,
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+        server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
         startUpdater()
-        Thread.sleep(3L * cacheExpiryMs) // TODO: Remove sleep in unit test.
-
-        // network parameters object gets automatically updated
-        assertNotEquals(updater.getNetworkParameters(), oldNetworkParameters)
-        assertEquals(oldNetworkParameters.copy(
-                whitelistedContractImplementations = newWhitelistedContractMap,
-                epoch = newEpoch,
-                modifiedTime = newModifiedTime), updater.getNetworkParameters())
-
-        // and no update file has been written to disk
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
-        assertFalse(updateFile.exists())
-
-        // and current network parameter file contains the auto accepted parameters
-        val networkParametersFile = baseDir / NETWORK_PARAMS_FILE_NAME
-        assertTrue(networkParametersFile.exists())
+        val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
+        val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+        assertEquals(newParameters, paramsFromFile)
+        assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
 
     @Test

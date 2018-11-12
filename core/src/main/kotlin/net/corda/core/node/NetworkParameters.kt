@@ -7,9 +7,14 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
+import java.lang.annotation.Inherited
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.jvm.javaGetter
 
 /**
  * Network parameters are a set of values that every node participating in the zone needs to agree on and use to
@@ -30,22 +35,37 @@ import java.time.Instant
 @KeepForDJVM
 @CordaSerializable
 class NetworkParameters(
-        val minimumPlatformVersion: Int,
-        val notaries: List<NotaryInfo>,
-        val maxMessageSize: Int,
-        val maxTransactionSize: Int,
+        minimumPlatformVersion: Int,
+        notaries: List<NotaryInfo>,
+        maxMessageSize: Int,
+        maxTransactionSize: Int,
         modifiedTime: Instant,
         epoch: Int,
         whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-        val eventHorizon: Duration,
+        eventHorizon: Duration,
         packageOwnership: Map<JavaPackageName, PublicKey>) {
-    // The autoAcceptParameters is a wrapper object around any class variables that might change. Having this wrapper
-    // allows us to restrict the swapping logic to internally within the class.
-    private var autoAcceptParameters: AutoAcceptParameters = AutoAcceptParameters(modifiedTime, epoch, whitelistedContractImplementations, packageOwnership)
-    val modifiedTime: Instant get() = autoAcceptParameters.modifiedTime
-    val epoch: Int get() = autoAcceptParameters.epoch
-    val whitelistedContractImplementations: Map<String, List<AttachmentId>> get() = autoAcceptParameters.whitelistedContractImplementations
-    val packageOwnership: Map<JavaPackageName, PublicKey> get() = autoAcceptParameters.packageOwnership
+    val minimumPlatformVersion: Int get() = networkParameterValues.minimumPlatformVersion
+    val notaries: List<NotaryInfo> get() = networkParameterValues.notaries
+    val maxMessageSize: Int get() = networkParameterValues.maxMessageSize
+    val maxTransactionSize: Int get() = networkParameterValues.maxTransactionSize
+    @AutoAcceptable val modifiedTime: Instant get() = networkParameterValues.modifiedTime
+    @AutoAcceptable val epoch: Int get() = networkParameterValues.epoch
+    @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>> get() = networkParameterValues.whitelistedContractImplementations
+    val eventHorizon: Duration get() = networkParameterValues.eventHorizon
+    @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey> get() = networkParameterValues.packageOwnership
+
+    // This is a wrapper around all class variables to enable atomic hot swapping of network parameters.
+    // Having it private restricts the swapping logic to within this class and enables the use of the @AutoAcceptable param.
+    private var networkParameterValues: NetworkParameterValues = NetworkParameterValues(
+            minimumPlatformVersion,
+            notaries,
+            maxMessageSize,
+            maxTransactionSize,
+            modifiedTime,
+            epoch,
+            whitelistedContractImplementations,
+            eventHorizon,
+            packageOwnership)
 
     @DeprecatedConstructorForDeserialization(1)
     constructor (minimumPlatformVersion: Int,
@@ -181,36 +201,48 @@ class NetworkParameters(
     fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
 
     /**
-     * Atomically (?) swaps the modifiedTime, epoch, whitelistedContractImplementations and packageOwnership within the
-     * NetworkParameters object.
+     * Atomically swaps all changed parameters, provided they have the @AutoAcceptable annotation
+     * Throws an illegal argument exception if one of the changed values is not auto acceptable
      */
-    fun hotSwap(modifiedTime: Instant,
-                epoch: Int,
-                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-                packageOwnership: Map<JavaPackageName, PublicKey>) {
-        autoAcceptParameters = AutoAcceptParameters(modifiedTime, epoch, whitelistedContractImplementations, packageOwnership)
+    fun hotSwap(newNetworkParameters: NetworkParameters) {
+        networkParameterValues = newNetworkParameters.networkParameterValues.copy()
     }
 
-    // TODO: revisit - we can remove the data class annotation to get constructor as we want but then need equals and hash code
+    /**
+     * Returns true if all non-matching variables have the annotation @AutoAcceptable
+     */
+    fun canAutoAccept(newNetworkParameters: NetworkParameters): Boolean {
+        for (property in this::class.declaredMemberProperties) {
+            val propertyVal = property.javaGetter?.invoke(this)
+            val matchingPropertyVal = property.javaGetter?.invoke(newNetworkParameters)
+
+            if (propertyVal != matchingPropertyVal && !property.isAutoAcceptable()) {
+                return false
+            }
+        }
+        return true
+    }
+
     override fun equals(other: Any?): Boolean {
         if (other is NetworkParameters) {
-            return (this.minimumPlatformVersion == other.minimumPlatformVersion) &&
-            (this.notaries == other.notaries) &&
-            (this.maxMessageSize == other.maxMessageSize) &&
-            (this.maxTransactionSize == other.maxTransactionSize) &&
-            (this.modifiedTime == other.modifiedTime) &&
-            (this.epoch == other.epoch) &&
-            (this.whitelistedContractImplementations == other.whitelistedContractImplementations) &&
-            (this.eventHorizon == other.eventHorizon) &&
-            (this.packageOwnership == other.packageOwnership)
+            return (this.networkParameterValues == other.networkParameterValues)
         }
         return false
     }
 
-    private data class AutoAcceptParameters(val modifiedTime: Instant,
-                                            val epoch: Int,
-                                            val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-                                            val packageOwnership: Map<JavaPackageName, PublicKey>)
+    override fun hashCode(): Int {
+        return networkParameterValues.hashCode()
+    }
+
+    private data class NetworkParameterValues(val minimumPlatformVersion: Int,
+                                              val notaries: List<NotaryInfo>,
+                                              val maxMessageSize: Int,
+                                              val maxTransactionSize: Int,
+                                              val modifiedTime: Instant,
+                                              val epoch: Int,
+                                              val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                                              val eventHorizon: Duration,
+                                              val packageOwnership: Map<JavaPackageName, PublicKey>)
 }
 
 /**
@@ -256,3 +288,12 @@ private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpt
 private fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { currentPackage ->
     packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.name.startsWith("${currentPackage.name}.") }
 }
+
+private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
+    return this.findAnnotation<AutoAcceptable>() != null
+}
+
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
+@Inherited
+private annotation class AutoAcceptable
