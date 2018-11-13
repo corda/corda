@@ -292,6 +292,7 @@ class RPCServer<OPS : RPCOps>(
         val clientAddress = artemisMessage.getStringProperty(ManagementHelper.HDR_ROUTING_NAME)
         log.warn("Detected RPC client disconnect on address $clientAddress, scheduling for reaping")
         invalidateClient(SimpleString(clientAddress))
+        artemisMessage.acknowledge()
     }
 
     private fun bindingAdditionArtemisMessageHandler(artemisMessage: ClientMessage) {
@@ -303,6 +304,7 @@ class RPCServer<OPS : RPCOps>(
 
         val buffer = stopBuffering(clientAddress)
         buffer?.let { drainBuffer(it) }
+        artemisMessage.acknowledge()
     }
 
     /**

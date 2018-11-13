@@ -91,6 +91,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
             } catch (ex: Exception) {
                 log.error("Unable to process bridge control message", ex)
             }
+            msg.acknowledge()
         }
     }
 
@@ -113,6 +114,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
             } catch (ex: Exception) {
                 log.error("Unable to process bridge notification message", ex)
             }
+            msg.acknowledge()
         }
     }
 

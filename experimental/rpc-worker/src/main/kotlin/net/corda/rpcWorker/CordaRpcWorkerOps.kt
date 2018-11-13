@@ -84,7 +84,10 @@ class CordaRpcWorkerOps(
         }
 
         val consumer = session.createConsumer(rpcWorkerQueueName)
-        consumer.setMessageHandler { message -> handleFlowWorkerMessage(message) }
+        consumer.setMessageHandler { message ->
+            handleFlowWorkerMessage(message)
+            message.acknowledge()
+        }
 
         networkMapFeed().updates.subscribe { mapChange: NetworkMapCache.MapChange? ->
             val networkMapUpdateMessage = NetworkMapUpdate(services.myInfo.legalIdentities.first().name, mapChange!!)
