@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.*
@@ -75,6 +76,26 @@ interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, C
                 ByteArray::class.java to "binary",
                 String::class.java to "string",
                 Symbol::class.java to "symbol")
+
+        private val primitiveTypeNamesByName = primitiveTypeNames.map { (javaClass, name) -> javaClass.name to name}.toMap()
+
+        fun nameForType(typeIdentifier: TypeIdentifier): String = when(typeIdentifier) {
+            is TypeIdentifier.Erased -> nameForUnparameterised(typeIdentifier.name)
+            is TypeIdentifier.Unparameterised -> nameForUnparameterised(typeIdentifier.name)
+            is TypeIdentifier.UnknownType,
+            is TypeIdentifier.TopType -> "?"
+            is TypeIdentifier.ArrayOf ->
+                nameForType(typeIdentifier.componentType) +
+                        if (typeIdentifier.componentType is TypeIdentifier.Unparameterised &&
+                                typeIdentifier.componentType.isPrimitive) "[p]"
+                        else "[]"
+            is TypeIdentifier.Parameterised -> nameForUnparameterised(typeIdentifier.name) + typeIdentifier.parameters.joinToString(", ", "<", ">") {
+                nameForType(it)
+            }
+        }
+
+        private fun nameForUnparameterised(unparameterisedName: String) =
+                primitiveTypeNamesByName[unparameterisedName] ?: unparameterisedName
 
         fun nameForType(type: Type): String = when (type) {
             is Class<*> -> {

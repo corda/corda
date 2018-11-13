@@ -32,7 +32,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 
         private fun makeForAbstract(typeNotation: CompositeType,
                                     interfaces: List<LocalTypeInformation>,
-                                    properties: Map<String, LocalPropertyInformation>,
+                                    properties: Map<PropertyName, LocalPropertyInformation>,
                                     typeInformation: LocalTypeInformation,
                                     typeDescriptor: Symbol,
                                     factory: LocalSerializerFactory): AbstractObjectSerializer {
@@ -66,7 +66,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
                     writer)
         }
 
-        private fun makePropertySerializers(properties: Map<String, LocalPropertyInformation>,
+        private fun makePropertySerializers(properties: Map<PropertyName, LocalPropertyInformation>,
                                             factory: LocalSerializerFactory): Map<String, ComposableTypePropertySerializer> =
                 properties.mapValues { (name, property) ->
                     ComposableTypePropertySerializer.make(name, property, factory)
@@ -77,7 +77,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 class ComposableObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<String, ComposableTypePropertySerializer>,
+        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
         override val fields: List<Field>,
         private val reader: ComposableObjectReader,
         private val writer: ComposableObjectWriter): ObjectSerializer {
@@ -94,7 +94,7 @@ class ComposableObjectSerializer(
 class ComposableObjectWriter(
         private val typeNotation: TypeNotation,
         private val interfaces: List<LocalTypeInformation>,
-        private val propertySerializers: Map<String, ComposableTypePropertySerializer>
+        private val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>
 ) {
     fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -121,7 +121,7 @@ class ComposableObjectWriter(
 
 class ComposableObjectReader(
         val typeIdentifier: TypeIdentifier,
-        private val propertySerializers: Map<String, ComposableTypePropertySerializer>,
+        private val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
         private val objectBuilderProvider: () -> ObjectBuilder
 ) {
 
@@ -149,7 +149,7 @@ class ComposableObjectReader(
 class AbstractObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<String, ComposableTypePropertySerializer>,
+        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
         override val fields: List<Field>,
         private val writer: ComposableObjectWriter): ObjectSerializer {
     override fun writeClassInfo(output: SerializationOutput) =
@@ -165,8 +165,7 @@ class AbstractObjectSerializer(
 class EvolutionObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<String, ComposableTypePropertySerializer>,
-        override val fields: List<Field>,
+        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
         private val reader: ComposableObjectReader): ObjectSerializer {
 
     companion object {
@@ -182,7 +181,6 @@ class EvolutionObjectSerializer(
                     localTypeInformation.observedType,
                     Symbol.valueOf(remoteTypeInformation.typeDescriptor),
                     propertySerializers,
-                    emptyList(),
                     reader)
         }
 
@@ -196,6 +194,8 @@ class EvolutionObjectSerializer(
                     ComposableTypePropertySerializer.makeForEvolution(name, isCalculated, property.type.typeIdentifier, type)
                 }
     }
+
+    override val fields: List<Field> get() = emptyList()
 
     override fun writeClassInfo(output: SerializationOutput) =
             throw UnsupportedOperationException("Evolved types cannot be written")

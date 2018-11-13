@@ -262,11 +262,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                                               name: String,
                                               descriptor: PropertyDescriptor,
                                               constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
-        val constructorIndex = constructorParameterIndices[name] ?: return null
-        val isMandatory = constructorInformation.parameters[constructorIndex].isMandatory
-        if (descriptor.field == null) return null
+        val constructorIndex = constructorParameterIndices[name] ?:
+            // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
+            // and cannot infer whether the property name should be capitalised or not.
+            constructorParameterIndices[name.decapitalize()] ?: return null
 
         if (descriptor.getter == null) {
+            if (descriptor.field == null) return null
             val paramType = descriptor.field.genericType
             val paramTypeInformation = resolveAndBuild(paramType)
 
@@ -274,7 +276,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     descriptor.field,
                     ConstructorSlot(constructorIndex, constructorInformation),
                     paramTypeInformation,
-                    isMandatory)
+                    constructorInformation.parameters[constructorIndex].isMandatory)
         }
 
         val paramType = descriptor.getter.genericReturnType
@@ -284,7 +286,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                 descriptor.getter,
                 ConstructorSlot(constructorIndex, constructorInformation),
                 paramTypeInformation,
-                isMandatory)
+                descriptor.getter.returnType.isPrimitive ||
+                        !descriptor.getter.returnsNullable())
     }
 
     private fun getterSetterProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =

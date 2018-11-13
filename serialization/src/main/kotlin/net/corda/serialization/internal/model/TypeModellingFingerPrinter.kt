@@ -29,7 +29,7 @@ interface FingerPrinter {
  */
 class CustomisableLocalTypeInformationFingerPrinter(
         private val customTypeDescriptorLookup: CustomSerializerRegistry,
-        private val debugEnabled: Boolean = false) : FingerPrinter {
+        private val debugEnabled: Boolean = true) : FingerPrinter {
 
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
 

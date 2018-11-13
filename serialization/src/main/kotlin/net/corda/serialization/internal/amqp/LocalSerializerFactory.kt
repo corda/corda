@@ -74,9 +74,7 @@ class DefaultLocalSerializerFactory(
             make(typeInformation.typeIdentifier, build)
 
     private fun make(typeIdentifier: TypeIdentifier, build: () -> AMQPSerializer<Any>) =
-            serializersByType.computeIfAbsent(typeIdentifier) { _ ->
-                build()
-            }
+            serializersByType.computeIfAbsent(typeIdentifier) { _ -> build() }
 
     private fun get(declaredType: Type, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
         val declaredClass = declaredType.asClass()
@@ -107,14 +105,14 @@ class DefaultLocalSerializerFactory(
     private fun makeDeclaredCollection(localTypeInformation: LocalTypeInformation.ACollection): AMQPSerializer<Any> {
         val resolved = CollectionSerializer.resolveDeclared(localTypeInformation)
         return make(resolved) {
-            CollectionSerializer(resolved.observedType as ParameterizedType, this)
+            CollectionSerializer(resolved.typeIdentifier.getLocalType(classloader) as ParameterizedType, this)
         }
     }
 
     private fun makeDeclaredMap(localTypeInformation: LocalTypeInformation.AMap): AMQPSerializer<Any> {
         val resolved = MapSerializer.resolveDeclared(localTypeInformation)
         return make(resolved) {
-            MapSerializer(resolved.observedType as ParameterizedType, this)
+            MapSerializer(resolved.typeIdentifier.getLocalType(classloader) as ParameterizedType, this)
         }
     }
 
@@ -139,7 +137,7 @@ class DefaultLocalSerializerFactory(
         declaredType.asClass().checkSupportedMapType()
         val resolved = MapSerializer.resolveActual(actualClass, typeInformation)
         return make(resolved) {
-            MapSerializer(resolved.observedType as ParameterizedType, this)
+            MapSerializer(resolved.typeIdentifier.getLocalType(classloader) as ParameterizedType, this)
         }
     }
 
@@ -147,7 +145,7 @@ class DefaultLocalSerializerFactory(
         val resolved = CollectionSerializer.resolveActual(actualClass, typeInformation)
 
         return serializersByType.computeIfAbsent(resolved.typeIdentifier) {
-            CollectionSerializer(resolved.observedType as ParameterizedType, this)
+            CollectionSerializer(resolved.typeIdentifier.getLocalType(classloader) as ParameterizedType, this)
         }
     }
 

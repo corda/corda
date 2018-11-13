@@ -62,14 +62,21 @@ class SetterBasedObjectBuilder(
 
 class ConstructorBasedObjectBuilder(
         val constructor: LocalConstructorInformation,
-        val propertyIndices: IntArray): ObjectBuilder {
+        val parameterIndices: IntArray): ObjectBuilder {
 
-    private val params = arrayOfNulls<Any>(propertyIndices.size)
+    private val params = arrayOfNulls<Any>(parameterIndices.size)
 
     override fun initialize() {}
 
     override fun populate(slot: Int, value: Any?) {
-        params[propertyIndices[slot]] = value
+        if (slot >= parameterIndices.size) {
+            assert(false)
+        }
+        val parameterIndex = parameterIndices[slot]
+        if (parameterIndex >= params.size) {
+            assert(false)
+        }
+        params[parameterIndex] = value
     }
 
     override fun build(): Any = constructor.observedMethod.call(*params)
@@ -80,8 +87,9 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder, val slotAs
     companion object {
         fun makeProvider(typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation, localProperties: Map<String, LocalPropertyInformation>, providedProperties: List<String>): () -> ObjectBuilder {
             val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties)
-            val localPropertyIndices = localProperties.keys.asSequence()
-                    .mapIndexed { slot, name -> name to slot }
+            val localPropertyIndices = localProperties.asSequence()
+                    .filter { (_, property) -> !property.isCalculated }
+                    .mapIndexed { slot, (name, _) -> name to slot }
                     .toMap()
 
             val reroutedIndices = providedProperties.map { propertyName -> localPropertyIndices[propertyName] ?: -1 }

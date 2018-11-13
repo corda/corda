@@ -104,13 +104,11 @@ object SerializerFactoryBuilder {
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 descriptorBasedSerializerRegistry,
-                remoteTypeReflector,
                 classCarpenter.classloader,
                 false
         ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(
-                classCarpenter.classloader,
                 evolutionSerializerFactory,
                 descriptorBasedSerializerRegistry,
                 AMQPRemoteTypeModel(),
@@ -162,11 +160,13 @@ private val opaqueTypes = setOf(
 object NoEvolutionSerializerFactory : EvolutionSerializerFactory {
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
         throw NotSerializableException("""
-            Evolution not permitted.
+Evolution not permitted.
 
-            ${remoteTypeInformation.prettyPrint(false)}
-            ===
-            ${localTypeInformation.prettyPrint(false)}
-        """.trimIndent())
+Remote:
+${remoteTypeInformation.prettyPrint(false)}
+
+Local:
+${localTypeInformation.prettyPrint(false)}
+        """)
     }
 }

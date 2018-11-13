@@ -41,18 +41,21 @@ sealed class TypeModellingPropertyReader {
             is LocalPropertyInformation.ConstructorPairedProperty -> GetterReader(propertyInformation.observedGetter)
             is LocalPropertyInformation.ReadOnlyProperty -> GetterReader(propertyInformation.observedGetter)
             is LocalPropertyInformation.CalculatedProperty -> GetterReader(propertyInformation.observedGetter)
-            is LocalPropertyInformation.PrivateConstructorPairedProperty -> FieldReader(
-                    propertyInformation.observedField.also { it.isAccessible = true })
+            is LocalPropertyInformation.PrivateConstructorPairedProperty -> FieldReader(propertyInformation.observedField)
         }
     }
 
     abstract fun read(obj: Any?): Any?
 
-    class GetterReader(val getter: Method): TypeModellingPropertyReader() {
+    class GetterReader(_getter: Method): TypeModellingPropertyReader() {
+        val getter = _getter.also { it.isAccessible = true }
+
         override fun read(obj: Any?): Any? = if (obj == null) null else getter.invoke(obj)
     }
 
-    class FieldReader(val field: Field): TypeModellingPropertyReader() {
+    class FieldReader(_field: Field): TypeModellingPropertyReader() {
+        val field = _field.also { it.isAccessible = true }
+
         override fun read(obj: Any?): Any? = if (obj == null) null else field.get(obj)
     }
 }

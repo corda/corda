@@ -107,7 +107,9 @@ class ListsSerializationTest {
         val container = CovariantContainer(payload)
 
         fun verifyEnvelopeBody(envelope: Envelope) {
-            envelope.schema.types.single { typeNotation -> typeNotation.name == java.util.List::class.java.name + "<?>" }
+            envelope.schema.types.single { typeNotation ->
+                typeNotation.name == "java.util.List<${Parent::class.java.name}>"
+            }
         }
 
         assertEqualAfterRoundTripSerialization(container, { bytes -> verifyEnvelope(bytes, ::verifyEnvelopeBody) })

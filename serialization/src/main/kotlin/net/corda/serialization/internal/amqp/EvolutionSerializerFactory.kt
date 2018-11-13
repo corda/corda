@@ -9,99 +9,88 @@ interface EvolutionSerializerFactory {
             localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>
 }
 
-class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, path: List<String>, reason: String)
+class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, reason: String)
     : NotSerializableException(
         """
-            Cannot construct evolution serializer for remote type $remoteTypeInformation.
+            Cannot construct evolution serializer for remote type ${remoteTypeInformation.prettyPrint(false)}
 
-            $path: $reason
+            $reason
         """.trimIndent()
 )
 
 class DefaultEvolutionSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
-        private val reflector: RemoteTypeReflector,
         private val classLoader: ClassLoader,
         private val mustPreserveData: Boolean): EvolutionSerializerFactory {
 
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
                                         localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
-        val classified = getClassifiedSerializer(remoteTypeInformation, localTypeInformation, emptyList())
-        return classified.serializer
+        return getClassifiedSerializer(remoteTypeInformation, localTypeInformation)
     }
     
     private fun getClassifiedSerializer(
             remoteTypeInformation: RemoteTypeInformation,
-            localTypeInformation: LocalTypeInformation,
-            path: List<String>): ClassifiedSerializer {
+            localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
         val local = (localTypeInformation as? LocalTypeInformation.Cycle)?.follow ?: localTypeInformation
 
-        val classified = when(remoteTypeInformation) {
-            is RemoteTypeInformation.Composable -> when(local) {
-                is LocalTypeInformation.Composable -> classifyComposable(remoteTypeInformation, local, path)
-                else -> throw EvolutionSerializationException(remoteTypeInformation, path, "Local type ${local.typeIdentifier.prettyPrint(false)} is not composable")
-            }
-            is RemoteTypeInformation.AnEnum -> when(local) {
-                is LocalTypeInformation.AnEnum -> classifyEnum(remoteTypeInformation, local, path)
-                else -> throw EvolutionSerializationException(remoteTypeInformation, path, "Local type ${local.typeIdentifier.prettyPrint(false)} is not an enum")
-            }
-            is RemoteTypeInformation.AnInterface -> when(local) {
-                is LocalTypeInformation.AnInterface -> compatible(local)
-                else -> throw EvolutionSerializationException(remoteTypeInformation, path, "Local type ${local.typeIdentifier.prettyPrint(false)} is not an interface")
-            }
-            is RemoteTypeInformation.Parameterised -> compatible(local)
-            is RemoteTypeInformation.Unparameterised -> when(local) {
-                is LocalTypeInformation.Atomic,
-                is LocalTypeInformation.Opaque -> compatible(local)
-                else -> throw EvolutionSerializationException(remoteTypeInformation, path, "Local type ${local.typeIdentifier.prettyPrint(false)} is not unparameterised")
-            }
-            is RemoteTypeInformation.AnArray -> when(local) {
-                is LocalTypeInformation.AnArray -> getClassifiedSerializer(remoteTypeInformation.componentType, local.componentType, path)
-                else -> throw EvolutionSerializationException(remoteTypeInformation, path, "Local type ${local.typeIdentifier.prettyPrint(false)} is not an array")
-            }
-            is RemoteTypeInformation.Cycle ->
-                throw EvolutionSerializationException(remoteTypeInformation, path, "Remote type contains reference cycles")
-            is RemoteTypeInformation.Top,
-            is RemoteTypeInformation.Unknown -> ClassifiedSerializer.CompatibleNoSerializer
+        val serializerForTypeDescriptor = when(remoteTypeInformation) {
+            is RemoteTypeInformation.Composable ->
+                if (local is LocalTypeInformation.Composable) classifyComposable(remoteTypeInformation, local)
+                else throw EvolutionSerializationException(remoteTypeInformation,
+                        "Local type ${local.typeIdentifier.prettyPrint(false)} is not composable")
+            is RemoteTypeInformation.AnEnum ->
+                if (local is LocalTypeInformation.AnEnum) classifyEnum(remoteTypeInformation, local)
+                else throw EvolutionSerializationException(remoteTypeInformation,
+                        "Local type ${local.typeIdentifier.prettyPrint(false)} is not an enum")
+            else -> null
         }
 
-        if (classified !is ClassifiedSerializer.CompatibleNoSerializer) {
-            descriptorBasedSerializerRegistry[remoteTypeInformation.typeDescriptor] = classified.serializer
+        if (serializerForTypeDescriptor != null) {
+            descriptorBasedSerializerRegistry[remoteTypeInformation.typeDescriptor] = serializerForTypeDescriptor
         }
 
-        return classified
+        return serializerForTypeDescriptor ?: localSerializerFactory.get(localTypeInformation)
     }
-    
-    private fun compatible(localTypeInformation: LocalTypeInformation) =
-            ClassifiedSerializer.Compatible(localSerializerFactory.get(localTypeInformation))
     
     private fun classifyComposable(
             remoteTypeInformation: RemoteTypeInformation.Composable,
-            localTypeInformation: LocalTypeInformation.Composable,
-            path: List<String>): ClassifiedSerializer {
-        val remoteProperties = remoteTypeInformation.properties
-        val evolverConstructor = findEvolverConstructor(localTypeInformation.evolverConstructors, remoteProperties)
-        val localProperties = evolverConstructor?.properties ?: localTypeInformation.properties
-
-        val classifiedPropertySerializers = classifyProperties(remoteTypeInformation, remoteProperties, localProperties, path)
-
-        // The no-op case: all properties match compatibly, we don't need no evolution.
-        if (classifiedPropertySerializers.values.all { it is ClassifiedSerializer.Compatible } &&
-                remoteTypeInformation.properties.size == localTypeInformation.properties.size &&
-                classifiedPropertySerializers.size == localProperties.size ) {
-            return compatible(localTypeInformation)
+            localTypeInformation: LocalTypeInformation.Composable): AMQPSerializer<Any> {
+        // The no-op case: although the fingerprints don't match for some reason, we have compatible signatures.
+        if (remoteTypeInformation.propertyNamesMatch(localTypeInformation)) {
+            // Make sure types are assignment-compatible, and return the local serializer for the type.
+            remoteTypeInformation.validateCompatibility(localTypeInformation)
+            return localSerializerFactory.get(localTypeInformation)
         }
 
-        // We have to create an evolution serializer.
-        // At this point, evolution serializers for all property types that need to evolve should have been built
-        // and registered.
-        return ClassifiedSerializer.Evolvable(
-                buildComposableEvolutionSerializer(
+        // Failing that, we have to create an evolution serializer.
+        val bestMatchEvolutionConstructor = findEvolverConstructor(localTypeInformation.evolverConstructors, remoteTypeInformation.properties)
+        val constructorForEvolution = bestMatchEvolutionConstructor?.constructor ?: localTypeInformation.constructor
+        val evolverProperties = bestMatchEvolutionConstructor?.properties ?: localTypeInformation.properties
+
+        remoteTypeInformation.validateEvolvability(evolverProperties)
+
+        return buildComposableEvolutionSerializer(
                         remoteTypeInformation,
                         localTypeInformation,
-                        evolverConstructor?.constructor ?: localTypeInformation.constructor,
-                        localProperties))
+                        constructorForEvolution,
+                        evolverProperties)
+    }
+
+    private fun RemoteTypeInformation.Composable.propertyNamesMatch(localTypeInformation: LocalTypeInformation.Composable): Boolean =
+            properties.keys == localTypeInformation.properties.keys
+
+    private fun RemoteTypeInformation.Composable.validateCompatibility(localTypeInformation: LocalTypeInformation.Composable) {
+        properties.asSequence().zip(localTypeInformation.properties.values.asSequence()).forEach { (remote, localProperty) ->
+            val (name, remoteProperty) = remote
+            val localClass = localProperty.type.observedType.asClass()
+            val remoteClass = remoteProperty.type.typeIdentifier.getLocalType(classLoader).asClass()
+
+            if (!localClass.isAssignableFrom(remoteClass)) {
+                throw EvolutionSerializationException(this,
+                        "Local type $localClass of property $name is not assignable from remote type $remoteClass")
+            }
+        }
     }
 
     // Find the evolution constructor with the highest version number whose parameters are all assignable from the
@@ -121,76 +110,60 @@ class DefaultEvolutionSerializerFactory(
         }
     }
 
-    private fun classifyProperties(remoteTypeInformation: RemoteTypeInformation,
-                                   remoteProperties: Map<String, RemotePropertyInformation>,
-                                   localProperties: Map<PropertyName, LocalPropertyInformation>,
-                                   path: List<String>): Map<PropertyName, ClassifiedSerializer> {
-        val remotePropertyNames = remoteProperties.keys
+    private fun RemoteTypeInformation.Composable.validateEvolvability(
+                                   localProperties: Map<PropertyName, LocalPropertyInformation>) {
+        val remotePropertyNames = properties.keys
         val localPropertyNames = localProperties.keys
         val deletedProperties = remotePropertyNames - localPropertyNames
         val newProperties = localPropertyNames - remotePropertyNames
 
+        // Here is where we can exercise a veto on evolutions that remove properties.
         if (deletedProperties.isNotEmpty() && mustPreserveData)
-            throw EvolutionSerializationException(remoteTypeInformation, path,
+            throw EvolutionSerializationException(this,
                     "Property ${deletedProperties.first()} of remote type is not present in local type")
 
+        // Check mandatory-ness of constructor-set properties.
         newProperties.forEach { propertyName ->
-            val localProperty = localProperties[propertyName]!!
-            if ((localProperty is LocalPropertyInformation.PrivateConstructorPairedProperty ||
-                            localProperty is LocalPropertyInformation.PrivateConstructorPairedProperty) &&
-                    localProperty.isMandatory) throw EvolutionSerializationException(
-                    remoteTypeInformation,
-                    path + propertyName,
+            if (localProperties[propertyName]!!.mustBeProvided) throw EvolutionSerializationException(
+                    this,
                     "Mandatory property $propertyName of local type is not present in remote type")
         }
-
-        val classifiedPropertySerializers = remotePropertyNames.associate { propertyName ->
-            val remoteProperty = remoteProperties[propertyName]!!
-            val localProperty = localProperties[propertyName]
-            val serializer = if (localProperty == null) {
-                getClassifiedSerializer(remoteProperty.type, reflector.reflect(remoteProperty.type), path + propertyName)
-            } else {
-                classifyProperty(
-                        remoteTypeInformation,
-                        propertyName,
-                        remoteProperty,
-                        localProperty,
-                        path)
-            }
-            propertyName to serializer
-        }
-
-        return classifiedPropertySerializers
     }
 
-    private fun classifyProperty(remoteTypeInformation: RemoteTypeInformation,
-                                 propertyName: String,
-                                 remoteProperty: RemotePropertyInformation,
-                                 localProperty: LocalPropertyInformation,
-                                 path: List<String>): ClassifiedSerializer {
-
-        if (localProperty.isMandatory && !remoteProperty.isMandatory) {
-            throw EvolutionSerializationException(remoteTypeInformation, path + propertyName,
-                    "Mandatory property $propertyName of local type is not mandatory in remote type")
-        }
-        val remotePropertyType = remoteProperty.type
-        val localPropertyType = localProperty.type
-
-        val remotePropertyClass = remotePropertyType.typeIdentifier.getLocalType(classLoader).asClass()
-        val localPropertyClass = localPropertyType.typeIdentifier.getLocalType(classLoader).asClass()
-        if (!localPropertyClass.isAssignableFrom(remotePropertyClass)) {
-                    throw EvolutionSerializationException(remoteTypeInformation, path + propertyName,
-                            "Type $remotePropertyClass of property $propertyName is not assignable to $localPropertyClass")
-                }
-
-        return getClassifiedSerializer(remotePropertyType, localPropertyType, path + propertyName)
+    private val LocalPropertyInformation.mustBeProvided: Boolean get() = when(this) {
+        is LocalPropertyInformation.ConstructorPairedProperty -> isMandatory
+        is LocalPropertyInformation.PrivateConstructorPairedProperty -> isMandatory
+        else -> false
     }
 
     private fun classifyEnum(
             remoteTypeInformation: RemoteTypeInformation.AnEnum,
-            localTypeInformation: LocalTypeInformation.AnEnum,
-            path: List<String>): ClassifiedSerializer {
-        throw UnsupportedOperationException()
+            localTypeInformation: LocalTypeInformation.AnEnum): AMQPSerializer<Any> {
+        if (remoteTypeInformation.members == localTypeInformation.members) return localSerializerFactory.get(localTypeInformation)
+        val remoteTransforms = remoteTypeInformation.transforms
+        val localTransforms = localTypeInformation.getEnumTransforms(localSerializerFactory)
+        val transforms = if (remoteTransforms.size > localTransforms.size) remoteTransforms else localTransforms
+
+        val localOrdinals = localTypeInformation.members.asSequence().mapIndexed { ord, member -> member to ord }.toMap()
+        val remoteOrdinals = remoteTypeInformation.members.asSequence().mapIndexed { ord, member -> member to ord }.toMap()
+        val rules = transforms.defaults + transforms.renames
+
+        // We just trust our transformation rules not to contain cycles here.
+        tailrec fun findLocal(remote: String): String =
+            if (remote in localOrdinals) remote
+            else findLocal(rules[remote] ?: throw EvolutionSerializationException(
+                    remoteTypeInformation,
+                    "Cannot resolve local enum member $remote to a member of ${localOrdinals.keys} using rules $rules"
+            ))
+
+        val conversions = remoteTypeInformation.members.associate { it to findLocal(it) }
+        val convertedOrdinals = remoteOrdinals.asSequence().map { (member, ord) -> ord to conversions[member]!! }.toMap()
+        if (localOrdinals.any { (name, ordinal) -> convertedOrdinals[ordinal] != name })
+            throw EvolutionSerializationException(
+                    remoteTypeInformation,
+                    "Constants have been reordered, additions must be appended to the end")
+
+        return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, conversions, localOrdinals)
     }
 
     private fun buildComposableEvolutionSerializer(
@@ -206,19 +179,4 @@ class DefaultEvolutionSerializerFactory(
                     properties,
                     classLoader)
         }
-
-}
-
-
-sealed class ClassifiedSerializer {
-
-    abstract val serializer: AMQPSerializer<Any>
-
-    object CompatibleNoSerializer: ClassifiedSerializer() {
-        override val serializer: AMQPSerializer<Any> get() =
-                throw UnsupportedOperationException()
-    }
-
-    data class Compatible(override val serializer: AMQPSerializer<Any>): ClassifiedSerializer()
-    data class Evolvable(override val serializer: AMQPSerializer<Any>): ClassifiedSerializer()
 }

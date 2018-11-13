@@ -1,17 +1,8 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.StubOutForDJVM
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.trace
-import net.corda.serialization.internal.carpenter.CarpenterMetaSchema
-import net.corda.serialization.internal.carpenter.ClassCarpenter
-import net.corda.serialization.internal.carpenter.MetaCarpenter
-import net.corda.serialization.internal.carpenter.MetaCarpenterException
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
-import java.lang.UnsupportedOperationException
-import java.lang.reflect.Type
 
 /**
  * A factory that knows how to create serializers to deserialize values sent to us by remote parties.
@@ -26,7 +17,6 @@ interface RemoteSerializerFactory {
 }
 
 class DefaultRemoteSerializerFactory(
-        private val classloader: ClassLoader,
         private val evolutionSerializerFactory: EvolutionSerializerFactory,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val remoteTypeModel: AMQPRemoteTypeModel,
@@ -42,7 +32,7 @@ class DefaultRemoteSerializerFactory(
         descriptorBasedSerializerRegistry[typeDescriptor.toString()] ?: {
             logger.trace("get Serializer descriptor=${typeDescriptor}")
 
-            val remoteTypeInformationMap = remoteTypeModel.interpret(schema.schema)
+            val remoteTypeInformationMap = remoteTypeModel.interpret(schema)
             val reflected = typeReflector.reflect(remoteTypeInformationMap)
 
             val (remoteTypeInformation, localTypeInformation) = reflected[typeDescriptor.toString()] ?: throw NotSerializableException(

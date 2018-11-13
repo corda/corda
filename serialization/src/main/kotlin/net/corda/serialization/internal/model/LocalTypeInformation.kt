@@ -351,7 +351,7 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     (if (value.isCalculated) " (calculated)" else "") +
-                    ": " + value.type.prettyPrint()
+                    ": " + value.type.prettyPrint(simplifyClassNames)
 
     private inline fun indentAnd(block: LocalTypeInformationPrettyPrinter.() -> String) =
             copy(indent = indent + 1).block()

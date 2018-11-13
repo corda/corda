@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -42,94 +43,15 @@ class EnumEvolutionSerializer(
         private val ordinals: Map<String, Int>) : AMQPSerializer<Any> {
     override val typeDescriptor = factory.createDescriptor(type)
 
-    companion object {
-        private fun MutableMap<String, String>.mapInPlace(f: (String) -> String) {
-            val i = iterator()
-            while (i.hasNext()) {
-                val curr = i.next()
-                curr.setValue(f(curr.value))
-            }
-        }
-
-        /**
-         * Builds an Enum Evolver serializer.
-         *
-         * @param old The description of the enum as it existed at the time of serialisation taken from the
-         * received AMQP header
-         * @param new The Serializer object we built based on the current state of the enum class on our classpath
-         * @param factory the [LocalSerializerFactory] that is building this serialization object.
-         * @param schemas the transforms attached to the class in the AMQP header, i.e. the transforms
-         * known at serialization time
-         */
-        fun make(old: RestrictedType,
-                 new: AMQPSerializer<Any>,
-                 factory: LocalSerializerFactory,
-                 schemas: SerializationSchemas): AMQPSerializer<Any> {
-            val wireTransforms = schemas.transforms.types[old.name]
-                    ?: EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
-            val localTransforms = TransformsSchema.get(old.name, factory)
-
-            // remember, the longer the list the newer we're assuming the transform set it as we assume
-            // evolution annotations are never removed, only added to
-            val transforms = if (wireTransforms.size > localTransforms.size) wireTransforms else localTransforms
-
-            // if either of these isn't of the cast type then something has gone terribly wrong
-            // elsewhere in the code
-            val defaultRules: List<EnumDefaultSchemaTransform>? = uncheckedCast(transforms[TransformTypes.EnumDefault])
-            val renameRules: List<RenameSchemaTransform>? = uncheckedCast(transforms[TransformTypes.Rename])
-
-            // What values exist on the enum as it exists on the class path
-            val localValues = new.type.asClass().enumConstants.map { it.toString() }
-
-            val conversions: MutableMap<String, String> = localValues
-                    .union(defaultRules?.map { it.new }?.toSet() ?: emptySet())
-                    .union(renameRules?.map { it.to } ?: emptySet())
-                    .associateBy({ it }, { it })
-                    .toMutableMap()
-
-            val rules: MutableMap<String, String> = mutableMapOf()
-            rules.putAll(defaultRules?.associateBy({ it.new }, { it.old }) ?: emptyMap())
-            val renameRulesMap = renameRules?.associateBy({ it.to }, { it.from }) ?: emptyMap()
-            rules.putAll(renameRulesMap)
-
-            // take out set of all possible constants and build a map from those to the
-            // existing constants applying the rename and defaulting rules as defined
-            // in the schema
-            while (conversions.filterNot { it.value in localValues }.isNotEmpty()) {
-                conversions.mapInPlace { rules[it] ?: it }
-            }
-
-            // you'd think this was overkill to get access to the ordinal values for each constant but it's actually
-            // rather tricky when you don't have access to the actual type, so this is a nice way to be able
-            // to precompute and pass to the actual object
-            val ordinals = localValues.mapIndexed { i, s -> Pair(s, i) }.toMap()
-
-            // create a mapping between the ordinal value and the name as it was serialised converted
-            // to the name as it exists. We want to test any new constants have been added to the end
-            // of the enum class
-            val serialisedOrds = ((schemas.schema.types.find { it.name == old.name } as RestrictedType).choices
-                    .associateBy({ it.value.toInt() }, { conversions[it.name] }))
-
-            if (ordinals.filterNot { serialisedOrds[it.value] == it.key }.isNotEmpty()) {
-                throw AMQPNotSerializableException(
-                        new.type,
-                        "Constants have been reordered, additions must be appended to the end")
-            }
-
-            return EnumEvolutionSerializer(new.type, factory, conversions, ordinals)
-        }
-    }
-
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
     ): Any {
         val enumName = (obj as List<*>)[0] as String
 
-        if (enumName !in conversions) {
-            throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")
-        }
+        val converted = conversions[enumName] ?: throw AMQPNotSerializableException(type, "No rule to evolve enum constant $type::$enumName")
+        val ordinal = ordinals[converted] ?: throw AMQPNotSerializableException(type, "Ordinal not found for enum value $type::$converted")
 
-        return type.asClass().enumConstants[ordinals[conversions[enumName]]!!]
+        return type.asClass().enumConstants[ordinal]
     }
 
     override fun writeClassInfo(output: SerializationOutput) {
