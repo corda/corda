@@ -837,11 +837,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     private fun obtainIdentity(): Pair<PartyAndCertificate, KeyPair> {
         val legalIdentityPrivateKeyAlias = "$NODE_IDENTITY_ALIAS_PREFIX-private-key"
 
-        if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias)) {
+        var signingCertificateStore = configuration.signingCertificateStore.get()
+        if (!cryptoService.containsKey(legalIdentityPrivateKeyAlias) && !signingCertificateStore.contains(legalIdentityPrivateKeyAlias)) {
             log.info("$legalIdentityPrivateKeyAlias not found in key store, generating fresh key!")
-            storeLegalIdentity(legalIdentityPrivateKeyAlias)
+            createAndStoreLegalIdentity(legalIdentityPrivateKeyAlias)
+            signingCertificateStore = configuration.signingCertificateStore.get() // We need to resync after [createAndStoreLegalIdentity].
+        } else {
+            checkAliasMismatch(legalIdentityPrivateKeyAlias, signingCertificateStore)
         }
-        val signingCertificateStore = configuration.signingCertificateStore.get()
         val x509Cert = signingCertificateStore.query { getCertificate(legalIdentityPrivateKeyAlias) }
 
         // TODO: Use configuration to indicate composite key should be used instead of public key for the identity.
@@ -859,6 +862,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return getPartyAndCertificatePlusAliasKeyPair(certificates, legalIdentityPrivateKeyAlias)
     }
 
+    // Check if a key alias exists only in one of the cryptoService and certSigningStore.
+    private fun checkAliasMismatch(alias: String, certificateStore: CertificateStore) {
+        if (cryptoService.containsKey(alias) != certificateStore.contains(alias)) {
+            val keyExistsIn: String = if (cryptoService.containsKey(alias)) "CryptoService" else "signingCertificateStore"
+            throw IllegalStateException("CryptoService and signingCertificateStore are not aligned, the entry for key-alias: $alias is only found in $keyExistsIn")
+        }
+    }
+
     /** Loads pre-generated notary service cluster identity. */
     private fun loadNotaryClusterIdentity(serviceLegalName: CordaX500Name): Pair<PartyAndCertificate, KeyPair> {
         val privateKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-private-key"
@@ -866,7 +877,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         val signingCertificateStore = configuration.signingCertificateStore.get()
         // A composite key is only required for BFT notaries.
-        val certificates = if (cryptoService.containsKey(compositeKeyAlias)) {
+        val certificates = if (cryptoService.containsKey(compositeKeyAlias) && signingCertificateStore.contains(compositeKeyAlias)) {
             val certificate = signingCertificateStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
@@ -875,6 +886,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             // We assume the notary is CFT, and each cluster member shares the same notary key pair.
             signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
+            checkAliasMismatch(compositeKeyAlias, signingCertificateStore)
+            throw IllegalStateException("The identity key entry for the notary service $serviceLegalName cannot be found (in both CryptoService and signingCertificateStore).")
         }
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
@@ -892,12 +905,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return Pair(PartyAndCertificate(certPath), keyPair)
     }
 
-    private fun storeLegalIdentity(alias: String): PartyAndCertificate {
+    private fun createAndStoreLegalIdentity(alias: String): PartyAndCertificate {
         val legalIdentityPublicKey = generateKeyPair(alias)
         val signingCertificateStore = configuration.signingCertificateStore.get()
 
         val nodeCaCertPath = signingCertificateStore.value.getCertificateChain(X509Utilities.CORDA_CLIENT_CA)
-        val nodeCaCert = nodeCaCertPath[0] // This should be the same with signingCertificateStore[alias]
+        val nodeCaCert = nodeCaCertPath[0] // This should be the same with signingCertificateStore[alias].
 
         val identityCert = X509Utilities.createCertificate(
                 CertificateType.LEGAL_IDENTITY,
