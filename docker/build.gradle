@@ -13,29 +13,51 @@ buildscript {
 
 import com.bmuschko.gradle.docker.DockerRemoteApiPlugin
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
+apply plugin: 'kotlin'
 apply plugin: DockerRemoteApiPlugin
+apply plugin: 'application'
+// We need to set mainClassName before applying the shadow plugin.
+mainClassName = 'net.corda.core.ConfigExporterMain'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR"]) {
+dependencies{
+    compile project(':node')
+}
+
+shadowJar {
+    baseName = 'config-exporter'
+    classifier = null
+    version = null
+    zip64 true
+}
+
+
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
     doLast {
         def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
-        project.copy{
+        project.copy {
             into new File(project.buildDir, "docker-temp")
             from cordaJar
-            from "src/config/node.conf"
+            from shadowJar.archivePath
+            from "src/config/starting-node.conf"
             from "src/bash/start.sh"
             from "src/docker/Dockerfile"
             rename(cordaJar.name, "corda.jar")
+            rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
     }
 }
 
-docker 
-
-task buildOfficialDockerImage(type: DockerBuildImage, dependsOn: buildDockerFolder){
+task buildOfficialDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
+    final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+    //if we are a snapshot, append a timestamp
+    //if we are a release, append RELEASE
+    final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
     inputDir = new File(project.buildDir, "docker-temp")
-    tag = "corda/corda-${corda_platform_version}:latest"
+    tags = ["corda/corda-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-${project.version.toString().toLowerCase()}:latest"]
 }
