@@ -6,10 +6,10 @@ Hello, World! Pt.2 - Contract constraints
 In the Hello, World tutorial, we built a CorDapp allowing us to model IOUs on ledger. Our CorDapp was made up of two
 elements:
 
-* An ``IOUState``, representing IOUs on the ledger
+* An ``IOUState``, representing IOUs on the blockchain
 * An ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
-However, our CorDapp did not impose any constraints on the evolution of IOUs on the ledger over time. Anyone was free
+However, our CorDapp did not impose any constraints on the evolution of IOUs on the blockchain over time. Anyone was free
 to create IOUs of any value, between any party.
 
 In this tutorial, we'll write a contract to imposes rules on how an ``IOUState`` can change over time. In turn, this
