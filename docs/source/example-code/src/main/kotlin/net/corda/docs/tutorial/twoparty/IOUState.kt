@@ -1,4 +1,4 @@
-package net.corda.docs.tutorial.twoparty
+package net.corda.docs.kotlin.tutorial.twoparty
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party

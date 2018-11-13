@@ -1,19 +1,18 @@
-package net.corda.docs.tutorial.twoparty
+package net.corda.docs.kotlin.tutorial.twoparty
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.transactions.LedgerTransaction
 
 // DOCSTART 01
-// Add these imports:
+// Add this import:
 import net.corda.core.contracts.*
 
-// Replace IOUContract's contract ID and definition with:
 class IOUContract : Contract {
     companion object {
-        val ID = "com.template.IOUContract"
+        const val ID = "com.template.IOUContract"
     }
-    
+
     // Our Create command.
     class Create : CommandData
 
@@ -26,14 +25,14 @@ class IOUContract : Contract {
             "There should be one output state of type IOUState." using (tx.outputs.size == 1)
 
             // IOU-specific constraints.
-            val out = tx.outputsOfType<IOUState>().single()
-            "The IOU's value must be non-negative." using (out.value > 0)
-            "The lender and the borrower cannot be the same entity." using (out.lender != out.borrower)
+            val output = tx.outputsOfType<IOUState>().single()
+            "The IOU's value must be non-negative." using (output.value > 0)
+            "The lender and the borrower cannot be the same entity." using (output.lender != output.borrower)
 
             // Constraints on the signers.
+            val expectedSigners = listOf(output.borrower.owningKey, output.lender.owningKey)
             "There must be two signers." using (command.signers.toSet().size == 2)
-            "The borrower and lender must be signers." using (command.signers.containsAll(listOf(
-                    out.borrower.owningKey, out.lender.owningKey)))
+            "The borrower and lender must be signers." using (command.signers.containsAll(expectedSigners))
         }
     }
 }
