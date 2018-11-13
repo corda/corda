@@ -194,7 +194,9 @@ internal constructor(private val initSerEnv: Boolean,
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
+            paths.filter { it.toString().endsWith(".jar") &&
+                           !it.isSameAs(bootstrapperJar) &&
+                           it.fileName.toString() !in listOf("corda.jar", "runnodes.jar") }.toList()
         }
         bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion, packageOwnership = packageOwnership)
     }
