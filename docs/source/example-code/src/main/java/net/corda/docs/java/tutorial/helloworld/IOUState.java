@@ -2,13 +2,12 @@ package net.corda.docs.java.tutorial.helloworld;
 
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
-import net.corda.core.identity.Party;
-
 import java.util.Arrays;
 import java.util.List;
 
 // DOCSTART 01
 // Add this import:
+import net.corda.core.identity.Party;
 
 // Replace TemplateState's definition with:
 public class IOUState implements ContractState {

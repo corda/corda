@@ -1,6 +1,6 @@
 @file:Suppress("MemberVisibilityCanBePrivate")
 
-package net.corda.docs.kotlin.tutorial.helloworld
+package net.corda.docs.tutorial.helloworld
 
 import net.corda.core.contracts.ContractState
 

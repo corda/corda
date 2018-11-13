@@ -44,7 +44,7 @@ Let's define our ``IOUFlow``. Delete the existing ``Responder`` flow. Then repla
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/helloworld/IOUFlow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/helloworld/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01

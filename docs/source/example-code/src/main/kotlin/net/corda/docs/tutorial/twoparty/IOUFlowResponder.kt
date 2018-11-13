@@ -1,11 +1,11 @@
 @file:Suppress("unused")
 
-package net.corda.docs.kotlin.tutorial.twoparty
+package net.corda.docs.tutorial.twoparty
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
-import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
-import net.corda.docs.kotlin.tutorial.helloworld.IOUState
+import net.corda.docs.tutorial.helloworld.IOUFlow
+import net.corda.docs.tutorial.helloworld.IOUState
 
 // DOCSTART 01
 // Add these imports:

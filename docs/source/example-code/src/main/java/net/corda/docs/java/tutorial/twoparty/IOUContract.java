@@ -1,19 +1,19 @@
 package net.corda.docs.java.tutorial.twoparty;
 
 import net.corda.core.contracts.CommandData;
-import net.corda.core.contracts.CommandWithParties;
 import net.corda.core.contracts.Contract;
-import net.corda.core.identity.Party;
 import net.corda.core.transactions.LedgerTransaction;
+
+// DOCSTART 01
+// Add these imports:
+import net.corda.core.contracts.CommandWithParties;
+import net.corda.core.identity.Party;
 
 import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.List;
 
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
-
-// DOCSTART 01
-// Add these imports:
 
 // Replace TemplateContract's definition with:
 public class IOUContract implements Contract {
@@ -25,7 +25,7 @@ public class IOUContract implements Contract {
 
     @Override
     public void verify(LedgerTransaction tx) {
-        final CommandWithParties<Create> command = requireSingleCommand(tx.getCommands(), IOUContract.Create.class);
+        final CommandWithParties<IOUContract.Create> command = requireSingleCommand(tx.getCommands(), IOUContract.Create.class);
 
         // Constraints on the shape of the transaction.
         if (!tx.getInputs().isEmpty())

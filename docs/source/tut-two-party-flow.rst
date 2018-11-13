@@ -21,7 +21,7 @@ In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/twoparty/IOUFlow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
@@ -35,7 +35,7 @@ And update ``IOUFlow.call`` to the following:
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/twoparty/IOUFlow.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlow.kt
         :language: kotlin
         :start-after: DOCSTART 02
         :end-before: DOCEND 02

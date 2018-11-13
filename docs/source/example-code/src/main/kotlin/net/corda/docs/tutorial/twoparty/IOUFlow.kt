@@ -1,6 +1,6 @@
 @file:Suppress("MemberVisibilityCanBePrivate")
 
-package net.corda.docs.kotlin.tutorial.twoparty
+package net.corda.docs.tutorial.twoparty
 
 // DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable
