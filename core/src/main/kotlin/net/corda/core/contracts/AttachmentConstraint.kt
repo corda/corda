@@ -8,6 +8,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.node.JavaPackageName
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.warnOnce
 import org.slf4j.LoggerFactory
@@ -39,13 +40,15 @@ interface AttachmentConstraint {
      * Rules:
      *  * It is allowed for output states to inherit the exact same constraint as the input states.
      *  * The [AlwaysAcceptAttachmentConstraint] is not allowed to transition to a different constraint, as that could be used to hide malicious behaviour.
-     *  * Nothing can be migrated from the [HashAttachmentConstraint] except a [HashAttachmentConstraint] with the same hash.
      *  * Anything (except the [AlwaysAcceptAttachmentConstraint]) can be transitioned to a [HashAttachmentConstraint].
      *  * You can transition from the [WhitelistedByZoneAttachmentConstraint] to the [SignatureAttachmentConstraint] only if all signers of the JAR are required to sign in the future.
+     *  * You can transition from a [HashAttachmentConstraint] to a [SignatureAttachmentConstraint] when the following conditions are met:
+     *      1. Both original "hash-constrained" contract jar and signed "signature-constrained" contract jar are whitelisted in the CZ network map
+     *      2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
      *
      * TODO - SignatureConstraint third party signers.
      */
-    fun canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
+    fun canBeTransitionedFrom(input: AttachmentConstraint, attachment: AttachmentWithContext): Boolean {
         val output = this
         return when {
             // These branches should not happen, as this has been already checked.
@@ -59,9 +62,7 @@ interface AttachmentConstraint {
             input is AlwaysAcceptAttachmentConstraint && output !is AlwaysAcceptAttachmentConstraint -> false
 
             // Nothing can be migrated from the HashConstraint except a HashConstraint with the same Hash. (This check is redundant, but added for clarity)
-            // TODO - this might change if we decide to allow migration to the SignatureConstraint.
             input is HashAttachmentConstraint && output is HashAttachmentConstraint -> input == output
-            input is HashAttachmentConstraint && output !is HashAttachmentConstraint -> false
 
             // Anything (except the AlwaysAcceptAttachmentConstraint) can be transformed to a HashAttachmentConstraint.
             input !is HashAttachmentConstraint && output is HashAttachmentConstraint -> true
@@ -73,6 +74,32 @@ interface AttachmentConstraint {
             // You can transition from the WhitelistConstraint to the SignatureConstraint only if all signers of the JAR are required to sign in the future.
             input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
                 attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
+
+            // Transition from Hash to Signature constraint (via CZ whitelisting) requires
+            // 1. Hashcode of both original (unsigned) and signed contract JARS are registered in the NP CZ whitelist
+            // 2. Signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
+            // 3. Signer(s) associated with signature constraint match those of signed contract JAR.
+            input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
+                val signedAttachment = attachment.signedContractAttachment
+                signedAttachment?.let {
+                    // rule 1
+                    val attachmentIdsToVerify = listOf(input.attachmentId, signedAttachment.attachment.id)
+                    val attachmentClassName = signedAttachment.contract
+                    val czAttachmentIdsForContractClass = attachment.networkParameters.whitelistedContractImplementations[attachmentClassName] ?: return false
+                    attachmentIdsToVerify.forEach { attachmentId ->
+                        if (!czAttachmentIdsForContractClass.contains(attachmentId)) return false
+                    }
+                    // rule 2
+                    val signedAttachmentSigners = signedAttachment.signers
+                    if (signedAttachmentSigners.isEmpty()) return false
+                    signedAttachmentSigners.forEach { signer ->
+                        if (attachment.networkParameters.packageOwnership[JavaPackageName(attachmentClassName)] != signer) return false
+                    }
+                    // rule 3
+                    if (output.key.keys.containsAll(signedAttachment.signers)) return true
+                    return false
+                } ?: false
+            }
 
             else -> false
         }
@@ -108,9 +135,8 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
-            val whitelist = attachment.whitelistedContractImplementations
-                    ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
-            attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
+            val whitelist = attachment.networkParameters.whitelistedContractImplementations
+            attachment.id in (whitelist[attachment.contract] ?: emptyList())
         } else false
     }
 }

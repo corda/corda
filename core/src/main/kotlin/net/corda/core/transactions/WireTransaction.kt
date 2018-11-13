@@ -15,6 +15,9 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -157,7 +160,23 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
 
-        val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
+        // HashConstraint -> SignatureConstraint migration
+        val signatureConstrainedOutputs = outputs.filter { it.constraint is SignatureAttachmentConstraint }
+        val hashConstrainedInputs = resolvedInputs.filter { it.state.constraint is HashAttachmentConstraint }
+        val extraAttachmentIds =
+                if (hashConstrainedInputs.isNotEmpty() && signatureConstrainedOutputs.isNotEmpty()) {
+                    val contractClassNames = hashConstrainedInputs.map { it.state.contract }
+                    println("Ledger txn: contractClassNames = $contractClassNames")
+                    // TODO: query by Contract Class AND VERSION
+                    checkNotNull(attachmentStorage)
+                    val extraAttachmentIds = attachmentStorage!!.queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(contractClassNames)))
+                    println("Ledger txn: extraAttachmentIds = $extraAttachmentIds")
+                    extraAttachmentIds
+                } else emptyList()
+
+        val resolvedAttachments = (attachments + extraAttachmentIds).lazyMapped { att, _ ->
+            resolveAttachment(att) ?: throw AttachmentResolutionException(att)
+        }
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 

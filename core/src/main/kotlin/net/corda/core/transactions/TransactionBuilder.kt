@@ -275,7 +275,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters)
         require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) { "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachmentId" }
 
         val resolvedOutputStates = outputStates.map {
@@ -285,7 +285,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             } else {
                 // If the constraint on the output state is already set, and is not a valid transition or can't be transitioned, then fail early.
                 inputStates?.forEach { input ->
-                    require(outputConstraint.canBeTransitionedFrom(input.constraint, attachmentToUse)) { "Output state constraint $outputConstraint cannot be transitions from ${input.constraint}" }
+                    require(outputConstraint.canBeTransitionedFrom(input.constraint, constraintAttachment)) { "Output state constraint $outputConstraint cannot be transitioned from ${input.constraint}" }
                 }
                 require(outputConstraint.isSatisfiedBy(constraintAttachment)) { "Output state constraint check fails. $outputConstraint" }
                 it

@@ -1,21 +1,21 @@
 package net.corda.core.internal
 
-import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.node.services.AttachmentId
+import net.corda.core.contracts.*
+import net.corda.core.node.NetworkParameters
 
 /**
  * Used only for passing to the Attachment constraint verification.
  */
 class AttachmentWithContext(
         val contractAttachment: ContractAttachment,
-        val stateContract: ContractClassName,
-        /** Required for verifying [WhitelistedByZoneAttachmentConstraint] */
-        val whitelistedContractImplementations: Map<String, List<AttachmentId>>?
+        val contract: ContractClassName,
+        /** Required for verifying [WhitelistedByZoneAttachmentConstraint] and [HashAttachmentConstraint] migration to [SignatureAttachmentConstraint] */
+        val networkParameters: NetworkParameters,
+        /** Required for Hash constraints migration to Signature constraints */
+        val signedContractAttachment: ContractAttachment? = null
 ) : Attachment by contractAttachment {
     init {
-        require(stateContract in contractAttachment.allContracts) {
+        require(contract in contractAttachment.allContracts) {
             "This AttachmentWithContext was not initialised properly"
         }
     }
