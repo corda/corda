@@ -180,7 +180,7 @@ Conclusion
 We have written a simple CorDapp that allows IOUs to be issued onto the ledger. Our CorDapp is made up of two key
 parts:
 
-* The ``IOUState``, representing IOUs on the ledger
+* The ``IOUState``, representing IOUs on the blockchain
 * The ``IOUFlow``, orchestrating the process of agreeing the creation of an IOU on-ledger
 
 After completing this tutorial, your CorDapp should look like this:

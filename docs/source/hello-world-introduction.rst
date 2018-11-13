@@ -19,7 +19,7 @@ issuing a debt instrument to making a restaurant booking.
 
 Our use-case
 ------------
-We will write a CorDapp to model IOUs on the ledger. Each IOU – short for “I O(we) (yo)U” – will record the fact that one node owes
+We will write a CorDapp to model IOUs on the blockchain. Each IOU – short for “I O(we) (yo)U” – will record the fact that one node owes
 another node a certain amount. This simple CorDapp will showcase several key benefits of Corda as a blockchain platform:
 
 * **Privacy** - Since IOUs represent sensitive information, we will be taking advantage of Corda's ability to only share
@@ -66,6 +66,6 @@ tutorial.
 
 Progress so far
 ---------------
-We've designed a simple CorDapp that will allow nodes to agree new IOUs on the ledger.
+We've designed a simple CorDapp that will allow nodes to agree new IOUs on the blockchain.
 
 Next, we'll take a look at the template project we'll be using as the basis for our CorDapp.

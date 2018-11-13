@@ -180,7 +180,7 @@ Finally, we require both the lender and the borrower to be required signers on t
 required signers is equal to the union of all the signers listed on the commands. We therefore extract the signers from
 the ``Create`` command we retrieved earlier.
 
-This is an absolutely essential constraint - it ensures that no ``IOUState`` can ever be created on the ledger without
+This is an absolutely essential constraint - it ensures that no ``IOUState`` can ever be created on the blockchain without
 the express agreement of both the lender and borrower nodes.
 
 Progress so far
