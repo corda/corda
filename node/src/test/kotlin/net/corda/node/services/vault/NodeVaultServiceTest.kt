@@ -571,7 +571,6 @@ class NodeVaultServiceTest {
     }
 
     // TODO: Unit test linear state relevancy checks
-
     @Test
     fun `correct updates are generated for general transactions`() {
         val notary = identity.party
@@ -647,7 +646,7 @@ class NodeVaultServiceTest {
         // Change notary
         services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
-        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary).build()
+        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary, services.networkParametersStorage.currentParametersHash).build()
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {

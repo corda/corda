@@ -39,6 +39,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
+            // TODO Should it commit all parts?
             service.commitInputStates(
                     tx.inputs,
                     tx.id,
@@ -46,7 +47,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     requestPayload.requestSignature,
                     tx.timeWindow,
                     tx.references)
-
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
@@ -63,6 +63,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val transaction = extractParts(requestPayload)
             transactionId = transaction.id
             checkNotary(transaction.notary)
+            checkParametersHash(transaction.networkParametersHash)
             checkInputs(transaction.inputs + transaction.references)
             return transaction
         } catch (e: Exception) {
@@ -87,6 +88,21 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
         require(inputs.size < maxAllowedInputsAndReferences) {
             "A transaction cannot have more than $maxAllowedInputsAndReferences " +
                     "inputs or references, received: ${inputs.size}"
+        }
+    }
+
+    /**
+     * Check that network parameters hash on this transaction is the current hash for the network.
+     */
+     // TODO  ENT-2666 Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
+     //     We will never end up in perfect synchronization with all the nodes. However, network parameters update process
+     //     lets us predict what is the reasonable time window for changing parameters on most of the nodes.
+    @Suspendable
+    protected fun checkParametersHash(networkParametersHash: SecureHash?) {
+        if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        val notaryParametersHash = serviceHub.networkParametersStorage.currentParametersHash
+        require (notaryParametersHash == networkParametersHash) {
+            "Transaction for notarisation was tagged with parameters with hash: $networkParametersHash, but current network parameters are: $notaryParametersHash"
         }
     }
 
@@ -118,7 +134,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val inputs: List<StateRef>,
             val timeWindow: TimeWindow?,
             val notary: Party?,
-            val references: List<StateRef> = emptyList()
+            val references: List<StateRef> = emptyList(),
+            val networkParametersHash: SecureHash?
     )
 
     private fun logError(error: NotaryError) {

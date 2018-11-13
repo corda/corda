@@ -2,6 +2,7 @@ package net.corda.node.services.transactions
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
@@ -14,16 +15,19 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.InitialSessionMessage
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
@@ -46,7 +50,8 @@ class ValidatingNotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
@@ -94,6 +99,41 @@ class ValidatingNotaryServiceTests {
         }
         val missingKeys = ex.missing
         assertEquals(setOf(expectedMissingKey), missingKeys)
+    }
+
+    @Test
+    fun `should sign transaction with valid network parameters`() {
+        val stx = run {
+            val inputState = issueState(aliceNode.services, alice)
+            val tx = TransactionBuilder(notary)
+                    .addInputState(inputState)
+                    .addCommand(dummyCommand(alice.owningKey))
+            aliceNode.services.signInitialTransaction(tx)
+        }
+        val future = runNotaryClient(stx)
+        val signatures = future.getOrThrow()
+        signatures.forEach { it.verify(stx.id) }
+    }
+
+    @Test
+    fun `should reject transaction without network parameters`() {
+        val inputState = issueState(aliceNode.services, alice).ref
+        val wtx = createWireTransaction(inputs = listOf(inputState),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(alice.owningKey)),
+                notary = notary,
+                timeWindow = null)
+        assertThat(wtx.networkParametersHash).isNull()
+        val sig = aliceNode.services.keyManagementService.sign(
+                SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(alice.owningKey).schemeNumberID)), alice.owningKey
+        )
+        val stx = SignedTransaction(wtx, listOf(sig))
+        assertThat(stx.networkParametersHash).isNull()
+        val future = runNotaryClient(stx)
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
+        val notaryError = ex.error as NotaryError.TransactionInvalid
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: null")
     }
 
     @Test
@@ -173,7 +213,7 @@ class ValidatingNotaryServiceTests {
     fun `notarise issue tx with time-window`() {
         val stx = run {
             val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
-                        .setTimeWindow(Instant.now(), 30.seconds)
+                    .setTimeWindow(Instant.now(), 30.seconds)
             aliceNode.services.signInitialTransaction(tx)
         }
 

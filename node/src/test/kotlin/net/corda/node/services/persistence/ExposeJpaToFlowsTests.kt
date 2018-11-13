@@ -4,28 +4,24 @@ import co.paralleluniverse.fibers.Suspendable
 import com.esotericsoftware.kryo.KryoException
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogic.Companion.sleep
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
-import net.corda.core.serialization.CordaSerializable
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.BeforeClass
-import org.junit.ClassRule
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.io.Serializable
-import java.time.Duration
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import javax.persistence.Table
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-
 
 class ExposeJpaToFlowsTests {
 
@@ -39,15 +35,28 @@ class ExposeJpaToFlowsTests {
 
     val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     val cordapps = listOf("net.corda.node.services.persistence")
-    val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
-            cordappPackages = cordapps,
-            identityService = makeTestIdentityService(myself.identity),
-            initialIdentity = myself,
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-    )
+    lateinit var mockNet: MockNetwork
+    lateinit var services: MockServices
+    lateinit var database: CordaPersistence
 
-    val services: MockServices = databaseAndServices.second
-    val database: CordaPersistence = databaseAndServices.first
+    @Before
+    fun setUp() {
+        mockNet = MockNetwork(cordapps)
+        val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
+                cordappPackages = cordapps,
+                identityService = makeTestIdentityService(myself.identity),
+                initialIdentity = myself,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+        )
+
+        services = mockServices
+        database = db
+    }
+
+    @After
+    fun cleanUp() {
+        mockNet.stopNodes()
+    }
 
     @Test
     fun `can persist and query custom entities`() {
@@ -71,7 +80,6 @@ class ExposeJpaToFlowsTests {
 
     @Test
     fun `can't perform suspendable operations inside withEntityManager`() {
-        val mockNet = MockNetwork(cordapps)
         val mockNode = mockNet.createNode()
         assertFailsWith(KryoException::class) {
             mockNode.startFlow(object : FlowLogic<Unit>() {
@@ -84,6 +92,5 @@ class ExposeJpaToFlowsTests {
                 }
             })
         }
-        mockNet.stopNodes()
     }
 }

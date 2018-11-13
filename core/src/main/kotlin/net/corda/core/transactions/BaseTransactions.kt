@@ -3,6 +3,8 @@ package net.corda.core.transactions
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -16,12 +18,18 @@ abstract class CoreTransaction : BaseTransaction() {
     abstract override val inputs: List<StateRef>
     /** The reference inputs of this transaction, containing the state references only. **/
     abstract override val references: List<StateRef>
+    /**
+     * Hash of the network parameters that were in force when the transaction was notarised. Null means, that the transaction
+     * was created on older version of Corda (before 4), resolution will default to initial parameters.
+     */
+    abstract val networkParametersHash: SecureHash?
 }
 
 /** A transaction with fully resolved components, such as input states. */
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
     abstract override val references: List<StateAndRef<ContractState>>
+    abstract val networkParameters: NetworkParameters?
 
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()
@@ -29,6 +37,7 @@ abstract class FullTransaction : BaseTransaction() {
     }
 
     private fun checkInputsAndReferencesHaveSameNotary() {
+        // TODO Add check for the notary in whitelist.
         if (inputs.isEmpty() && references.isEmpty()) return
         val notaries = (inputs + references).map { it.state.notary }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }

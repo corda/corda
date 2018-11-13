@@ -48,6 +48,8 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         timeWindows.firstOrNull()
     }
 
+    override val networkParametersHash: SecureHash? = deserialiseComponentGroup(SecureHash::class, PARAMETERS_GROUP).firstOrNull()
+
     /**
      * Returns a list of all the component groups that are present in the transaction, excluding the privacySalt,
      * in the following order (which is the same with the order in [ComponentGroupEnum]:
@@ -58,12 +60,14 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
      * - list of each reference input that is present
+     * - network parameters hash if present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
             val result = mutableListOf(inputs, outputs, commands, attachments, references)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
+            networkParametersHash?.let { result += listOf(it) }
             return result
         }
 }
@@ -148,6 +152,7 @@ class FilteredTransaction internal constructor(
                 if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
                 wtx.references.forEachIndexed { internalIndex, it -> filter(it, REFERENCES_GROUP.ordinal, internalIndex) }
+                wtx.networkParametersHash?.let { filter(Pair(it, PARAMETERS_GROUP.ordinal), PARAMETERS_GROUP.ordinal, 0) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one

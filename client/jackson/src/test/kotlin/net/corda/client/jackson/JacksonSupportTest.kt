@@ -24,6 +24,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -92,9 +93,14 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         }
         services = rigorousMock()
         cordappProvider = rigorousMock()
+        val networkParameters = testNetworkParameters()
+        val networkParametersStorage = rigorousMock<NetworkParametersStorage>().also {
+            doReturn(networkParameters.serialize().hash).whenever(it).currentParametersHash
+        }
         doReturn(cordappProvider).whenever(services).cordappProvider
-        doReturn(testNetworkParameters()).whenever(services).networkParameters
+        doReturn(networkParameters).whenever(services).networkParameters
         doReturn(attachments).whenever(services).attachments
+        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
     }
 
     @Test
@@ -253,7 +259,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         println(mapper.writeValueAsString(json))
         val (wtxJson, signaturesJson) = json.assertHasOnlyFields("wire", "signatures")
         assertThat(signaturesJson.childrenAs<TransactionSignature>(mapper)).isEqualTo(stx.sigs)
-        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "privacySalt")
+        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "privacySalt", "networkParametersHash")
         assertThat(wtxFields[0].valueAs<SecureHash>(mapper)).isEqualTo(wtx.id)
         assertThat(wtxFields[1].valueAs<Party>(mapper)).isEqualTo(wtx.notary)
         assertThat(wtxFields[2].childrenAs<StateRef>(mapper)).isEqualTo(wtx.inputs)

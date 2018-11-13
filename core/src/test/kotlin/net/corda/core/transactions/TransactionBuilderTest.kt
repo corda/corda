@@ -12,6 +12,8 @@ import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.serialization.serialize
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -35,13 +37,17 @@ class TransactionBuilderTest {
     private val services = rigorousMock<ServicesForResolution>()
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
+    private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
 
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()
+        val networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
+        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
+        doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentParametersHash
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        doReturn(testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)).whenever(services).networkParameters
+        doReturn(networkParameters).whenever(services).networkParameters
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -67,6 +73,7 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
+        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersStorage.currentParametersHash)
     }
 
     @Test

@@ -38,6 +38,7 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     @JvmField
     val rollbackRule = VaultQueryRollbackRule(this)
 
+    // TODO fix serialization env in this test
     @Test
     fun `query attempting to use unregistered schema`() {
         database.transaction {

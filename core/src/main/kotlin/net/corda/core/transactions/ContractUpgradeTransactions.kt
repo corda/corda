@@ -66,6 +66,13 @@ data class ContractUpgradeWireTransaction(
 
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
+    override val networkParametersHash: SecureHash? by lazy {
+        try {
+            serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
+        } catch (e: IndexOutOfBoundsException) {
+            null
+        }
+    }
     val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
     val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
     val upgradedContractAttachmentId: SecureHash by lazy { serializedComponents[UPGRADED_ATTACHMENT.ordinal].deserialize<SecureHash>() }
@@ -106,6 +113,9 @@ data class ContractUpgradeWireTransaction(
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw AttachmentResolutionException(upgradedContractAttachmentId)
+        val resolvedNetworkParameters: NetworkParameters = networkParametersHash?.let {
+            services.networkParametersStorage.readParametersFromHash(it)
+        } ?: services.networkParametersStorage.defaultParameters
         return ContractUpgradeLedgerTransaction(
                 resolvedInputs,
                 notary,
@@ -115,7 +125,7 @@ data class ContractUpgradeWireTransaction(
                 id,
                 privacySalt,
                 sigs,
-                services.networkParameters
+                resolvedNetworkParameters
         )
     }
 
@@ -145,12 +155,13 @@ data class ContractUpgradeWireTransaction(
         }
     }
 
-    /** Constructs a filtered transaction: the inputs and the notary party are always visible, while the rest are hidden. */
+    /** Constructs a filtered transaction: the inputs, the notary party and network parameters hash are always visible, while the rest are hidden. */
     fun buildFilteredTransaction(): ContractUpgradeFilteredTransaction {
         val totalComponents = (0 until serializedComponents.size).toSet()
         val visibleComponents = mapOf(
                 INPUTS.ordinal to FilteredComponent(serializedComponents[INPUTS.ordinal], nonces[INPUTS.ordinal]),
-                NOTARY.ordinal to FilteredComponent(serializedComponents[NOTARY.ordinal], nonces[NOTARY.ordinal])
+                NOTARY.ordinal to FilteredComponent(serializedComponents[NOTARY.ordinal], nonces[NOTARY.ordinal]),
+                PARAMETERS_HASH.ordinal to FilteredComponent(serializedComponents[PARAMETERS_HASH.ordinal], nonces[PARAMETERS_HASH.ordinal])
         )
         val hiddenComponents = (totalComponents - visibleComponents.keys).map { index ->
             val hash = componentHash(nonces[index], serializedComponents[index])
@@ -161,13 +172,13 @@ data class ContractUpgradeWireTransaction(
     }
 
     enum class Component {
-        INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT
+        INPUTS, NOTARY, LEGACY_ATTACHMENT, UPGRADED_CONTRACT, UPGRADED_ATTACHMENT, PARAMETERS_HASH
     }
 }
 
 /**
  * A filtered version of the [ContractUpgradeWireTransaction]. In comparison with a regular [FilteredTransaction], there
- * is no flexibility on what parts of the transaction to reveal – the inputs and notary field are always visible and the
+ * is no flexibility on what parts of the transaction to reveal – the inputs, notary and network parameters hash fields are always visible and the
  * rest of the transaction is always hidden. Its only purpose is to hide transaction data when using a non-validating notary.
  */
 @KeepForDJVM
@@ -188,6 +199,12 @@ data class ContractUpgradeFilteredTransaction(
     override val notary: Party by lazy {
         visibleComponents[NOTARY.ordinal]?.component?.deserialize<Party>()
                 ?: throw IllegalArgumentException("Notary not specified")
+    }
+    // TODO Do we ever store filteredTransactions anywhere? Or is it safe to assume that apart from checkpoints it won't break wire compat.
+    //  We need to increase platform version in this case to 4.
+    override val networkParametersHash: SecureHash by lazy {
+        visibleComponents[PARAMETERS_HASH.ordinal]?.component?.deserialize<SecureHash>()
+                ?: throw IllegalArgumentException("Network parameters hash not specified")
     }
     override val id: SecureHash by lazy {
         val totalComponents = visibleComponents.size + hiddenComponents.size
@@ -230,9 +247,9 @@ data class ContractUpgradeLedgerTransaction(
         override val id: SecureHash,
         val privacySalt: PrivacySalt,
         override val sigs: List<TransactionSignature>,
-        private val networkParameters: NetworkParameters
+        override val networkParameters: NetworkParameters
 ) : FullTransaction(), TransactionWithSignatures {
-    /** ContractUpgradeLEdgerTransactions do not contain reference input states. */
+    /** ContractUpgradeLedgerTransactions do not contain reference input states. */
     override val references: List<StateAndRef<ContractState>> = emptyList()
     /** The legacy contract class name is determined by the first input state. */
     private val legacyContractClassName = inputs.first().state.contract

@@ -27,11 +27,12 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
+                    if(serviceHub.networkParameters.minimumPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
                 }
-                TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references)
+                TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
             }
             is ContractUpgradeFilteredTransaction,
-            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary)
+            is NotaryChangeWireTransaction -> TransactionParts(tx.id, tx.inputs, null, tx.notary, networkParametersHash = tx.networkParametersHash)
             else -> {
                 throw IllegalArgumentException("Received unexpected transaction type: ${tx::class.java.simpleName}," +
                         "expected either ${FilteredTransaction::class.java.simpleName} or ${NotaryChangeWireTransaction::class.java.simpleName}")

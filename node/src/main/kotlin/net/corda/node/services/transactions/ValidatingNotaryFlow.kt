@@ -23,7 +23,7 @@ open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePa
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val stx = requestPayload.signedTransaction
         val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
-        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references)
+        return TransactionParts(stx.id, stx.inputs, timeWindow, stx.notary, stx.references, stx.networkParametersHash)
     }
 
     /**

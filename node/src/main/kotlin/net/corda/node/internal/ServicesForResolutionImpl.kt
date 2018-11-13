@@ -5,6 +5,7 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionStorage
 
@@ -12,14 +13,10 @@ data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
+        override val networkParametersStorage: NetworkParametersStorage,
         private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
-    private lateinit var _networkParameters: NetworkParameters
-    override val networkParameters: NetworkParameters get() = _networkParameters
-
-    fun start(networkParameters: NetworkParameters) {
-        _networkParameters = networkParameters
-    }
+    override val networkParameters: NetworkParameters get() = networkParametersStorage.currentParameters
 
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {
