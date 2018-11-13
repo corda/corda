@@ -1,0 +1,51 @@
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+mainClassName = 'net.corda.healthsurvey.ProgramKt'
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Health survey tool for Corda installations'
+
+ext.gson_version = '2.8.5'
+ext.jira_version = '0.5'
+ext.commons_logging_version = '1.2'
+
+configurations {
+    runtimeDependency
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "com.typesafe:config:$typesafe_config_version"
+    compile "com.google.code.gson:gson:$gson_version"
+    compile "net.rcarz:jira-client:$jira_version"
+    runtimeDependency "commons-logging:commons-logging:$commons_logging_version"
+}
+
+shadowJar.configurations = [configurations.compile, configurations.runtimeDependency]
+
+shadowJar {
+    baseName = 'corda-tools-health-survey'
+}
+
+task buildSupportTool(dependsOn: shadowJar)
+assemble.dependsOn buildSupportTool
+
+artifacts {
+    publish shadowJar {
+        classifier = ''
+    }
+}
+
+jar {
+    classifier 'ignore'
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name 'corda-tools-health-survey'
+}
