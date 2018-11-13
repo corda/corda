@@ -13,6 +13,9 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -104,7 +107,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefComponent = { resolveStateRefBinaryComponent(it, services) },
-                networkParameters = services.networkParameters
+                networkParameters = services.networkParameters,
+                attachmentStorage = services.attachments
         )
     }
 
@@ -127,11 +131,13 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, null)
     }
 
+
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefComponent: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
-            networkParameters: NetworkParameters?
+            networkParameters: NetworkParameters?,
+            attachmentStorage: AttachmentStorage?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedArgs = commands.lazyMapped { cmd, _ ->
@@ -155,14 +161,26 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             StateAndRef(serialized.deserialize(), ref)
         }
 
-        val attachments = attachments.lazyMapped { att, _ ->
+        // HashConstraint -> SignatureConstraint migration
+        val signatureConstrainedOutputs = outputs.filter { it.constraint is SignatureAttachmentConstraint }
+        val hashConstrainedInputs = resolvedInputs.filter { it.state.constraint is HashAttachmentConstraint }
+        val extraAttachmentIds =
+                if (hashConstrainedInputs.isNotEmpty() && signatureConstrainedOutputs.isNotEmpty()) {
+                    val contractClassNames = hashConstrainedInputs.map { it.state.contract }
+                    println("Ledger txn: contractClassNames = $contractClassNames")
+                    // TODO: query by Contract Class AND VERSION
+                    checkNotNull(attachmentStorage)
+                    val extraAttachmentIds = attachmentStorage!!.queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(contractClassNames)))
+                    println("Ledger txn: extraAttachmentIds = $extraAttachmentIds")
+                    extraAttachmentIds
+                } else emptyList()
+
+        val resolvedAttachments = (attachments + extraAttachmentIds).lazyMapped { att, _ ->
             resolveAttachment(att) ?: throw AttachmentResolutionException(att)
         }
 
-        val ltx = LedgerTransaction.makeLedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
-
+        val ltx = LedgerTransaction.makeLedgerTransaction(resolvedInputs, outputs, authenticatedArgs, resolvedAttachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
         checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: DEFAULT_MAX_TX_SIZE)
-
         return ltx
     }
 

@@ -250,12 +250,12 @@ data class ContractUpgradeLedgerTransaction(
     }
 
     private fun verifyConstraints() {
+        checkNotNull(networkParameters)
         val attachmentForConstraintVerification = AttachmentWithContext(
                 legacyContractAttachment as? ContractAttachment
                         ?: ContractAttachment(legacyContractAttachment, legacyContractClassName, signers = legacyContractAttachment.signers),
                 upgradedContract.legacyContract,
-                networkParameters.whitelistedContractImplementations
-        )
+                networkParameters)
 
         // TODO: exclude encumbrance states from this check
         check(inputs.all { it.state.constraint.isSatisfiedBy(attachmentForConstraintVerification) }) {

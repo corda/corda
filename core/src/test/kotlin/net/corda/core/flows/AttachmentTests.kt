@@ -89,7 +89,7 @@ class AttachmentTests : WithMockNet {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment)
+        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment, version = "1.0")
         badAliceNode.updateAttachment(corruptAttachment)
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.
