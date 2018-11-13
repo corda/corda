@@ -837,13 +837,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
 
         val signingCertificateStore = configuration.signingCertificateStore.get()
+        // A composite key is only required for BFT notaries.
         val certificates = if (cryptoService.containsKey(compositeKeyAlias)) {
             val certificate = signingCertificateStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + signingCertificateStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
-        } else throw IllegalStateException("The identity public key for the notary service $serviceLegalName was not found in the key store.")
+        } else {
+            // We assume the notary is CFT, and each cluster member shares the same notary key pair.
+            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
+        }
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
         if (subject != serviceLegalName) {
