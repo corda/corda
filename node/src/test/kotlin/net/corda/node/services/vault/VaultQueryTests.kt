@@ -99,6 +99,9 @@ interface VaultQueryParties {
 }
 
 open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     override val alice = TestIdentity(ALICE_NAME, 70)
     override val bankOfCorda = TestIdentity(BOC_NAME)

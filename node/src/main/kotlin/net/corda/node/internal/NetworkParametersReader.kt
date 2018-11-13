@@ -14,6 +14,7 @@ import net.corda.core.utilities.trace
 import net.corda.node.services.network.NetworkMapClient
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
@@ -142,7 +143,8 @@ class NodeParametersStorage(
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: SignedDataWithCert<NetworkParameters> ->
-                        PersistentNetworkParameters(key.toString(), value.raw.bytes, value.sig.bytes, value.sig.by.encoded)
+                        PersistentNetworkParameters(key.toString(), value.raw.bytes, value.sig.bytes, value.sig.by.encoded,
+                                X509Utilities.buildCertPath(value.sig.parentCertsChain).encoded)
                     },
                     persistentEntityClass = PersistentNetworkParameters::class.java
             )
@@ -220,15 +222,22 @@ class NodeParametersStorage(
             @Column(name = "signature_bytes", nullable = false)
             private val signature: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY,
 
+            // First certificate in the certificate chain.
             @Lob
             @Column(name = "cert", nullable = false)
-            private val certificate: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
+            private val certificate: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY,
+
+            // Parent certificate path (the first one is stored separately), so node is agnostic to certificate hierarchy.
+            @Lob
+            @Column(name = "parent_cert_path", nullable = false)
+            private val certPath: ByteArray = ArrayUtils.EMPTY_BYTE_ARRAY
     ) {
         val networkParameters: NetworkParameters get() = networkParametersBytes.deserialize()
         val signedNetworkParameters: SignedDataWithCert<NetworkParameters>
             get() {
-                // TODO Change the structure so it is alligned with recent certificate hierarchy change.
-                val signWithCert = DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), signature)
+                val certChain = X509CertificateFactory().delegate.generateCertPath(certPath.inputStream())
+                        .certificates.map { it as X509Certificate }
+                val signWithCert = DigitalSignatureWithCert(X509CertificateFactory().generateCertificate(certificate.inputStream()), certChain, signature)
                 return SignedDataWithCert(SerializedBytes(networkParametersBytes), signWithCert)
             }
     }
