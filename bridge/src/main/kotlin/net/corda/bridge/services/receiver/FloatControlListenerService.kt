@@ -38,8 +38,8 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlServer: AMQPServer? = null
-    private val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.customSSLConfiguration
-            ?: conf.p2pSslOptions
+    private val sslConfiguration: MutualSslConfiguration = conf.floatOuterConfig?.tunnelSSLConfiguration
+            ?: conf.publicSSLConfiguration
     private val floatControlAddress = conf.floatOuterConfig!!.floatAddress
     private val floatClientName = conf.floatOuterConfig!!.expectedCertificateSubject
     private var activeConnectionInfo: ConnectionChange? = null

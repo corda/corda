@@ -135,14 +135,14 @@ class BridgeIntegrationTest {
         val bridgeFolder = tempFolder.root.toPath()
         val bridgeConfigResource = "/net/corda/bridge/withfloatdiffpasswords/bridge/firewall.conf"
         val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
-        listOf(bridgeConfig.p2pSslOptions, bridgeConfig.bridgeInnerConfig?.customSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
+        listOf(bridgeConfig.publicSSLConfiguration, bridgeConfig.bridgeInnerConfig?.tunnelSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
         createNetworkParams(bridgeFolder)
         assertEquals(FirewallMode.BridgeInner, bridgeConfig.firewallMode)
         assertEquals(NetworkHostAndPort("localhost", 11005), bridgeConfig.outboundConfig!!.artemisBrokerAddress)
         val floatFolder = tempFolder.root.toPath() / "float"
         val floatConfigResource = "/net/corda/bridge/withfloatdiffpasswords/float/firewall.conf"
         val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
-        listOf(floatConfig.p2pSslOptions, floatConfig.inboundConfig?.customSSLConfiguration, floatConfig.floatOuterConfig?.customSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
+        listOf(floatConfig.publicSSLConfiguration, floatConfig.inboundConfig?.customSSLConfiguration, floatConfig.floatOuterConfig?.tunnelSSLConfiguration).forEach { it?.createBridgeKeyStores(DUMMY_BANK_A_NAME) }
         createNetworkParams(floatFolder)
         assertEquals(FirewallMode.FloatOuter, floatConfig.firewallMode)
         assertEquals(NetworkHostAndPort("0.0.0.0", 10005), floatConfig.inboundConfig!!.listeningAddress)

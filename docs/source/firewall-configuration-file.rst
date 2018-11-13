@@ -74,6 +74,12 @@ Fields
 The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the
 absolute path to the firewall's base directory.
 
+:certificatesDirectory: An optional parameter which specifies directory from which SSL keys and Trust store keys will be loaded from. If missing the value is defaulted to ``baseDirectory/certificates``.
+
+:sslKeystore: An optional parameter which specifies the file from which SSL keys stores will be loaded from. If missing the value is defaulted to ``certificatesDirectory/sslkeystore.jks``.
+
+:trustStoreFile: An optional parameter which specifies the file from which Trust store keys will be loaded from. If missing the value is defaulted to ``certificatesDirectory/truststore.jks``.
+
 :firewallMode: Determines operating mode of the firewall. See above.
 
 :keyStorePassword: The password to unlock the TLS KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
@@ -101,7 +107,7 @@ absolute path to the firewall's base directory.
 
    :alternateArtemisBrokerAddresses: Optionally if there are multiple Artemis broker address e.g. for hot-cold node deployment, then additional hosts and ports may be included in a list.
 
-   :customSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
+   :artemisSSLConfiguration:  The default behaviour is that the outgoing ``TLS 1.2/AMQP 1.0`` connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
         and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, distinct KeyStores may be configured in this section:
 
         :keyStorePassword: The password for the TLS KeyStore.
@@ -155,7 +161,7 @@ absolute path to the firewall's base directory.
 
         :expectedCertificateSubject: The X500 Subject name that will be presented in client certificates from the remote ``FloatOuter`` instances.
         
-        :customSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
+        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connections present certificate details from (``<workspace>/certificates/sslkeystore.jks``)
                                              and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
@@ -171,23 +177,6 @@ absolute path to the firewall's base directory.
             :trustStoreFile: The path to the TrustStore file to use in control tunnel connections.
 
             :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
-            
-        :customFloatOuterSSLConfiguration: The keys and certificates for the ``FloatOuter`` are provisioned dynamically from the ``BridgeInner`` over the control tunnel and are not loaded from disk in the DMZ.
-            By default, they are taken from (``<workspace>/certificates/sslkeystore.jks``)
-            and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config. However, alternate sources may be defined in this section.
-
-            :keyStorePassword: The password for the TLS KeyStore.
-
-            :keyStorePrivateKeyPassword: Optional parameter to lock the private keys within the KeyStore. If it is missing, it will be assumed that the private keys password is the same as
-                ``keyStorePassword`` above.
-
-            :trustStorePassword: The password for TLS TrustStore.
-
-            :sslKeystore: The path to the KeyStore file to use in the ``FloatOuter`` when it activates the peer listening socket.
-
-            :trustStoreFile: The path to the TrustStore file to use in the ``FloatOuter`` when it activates the peer listening socket.
-
-            :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
 :floatOuterConfig:   This section is required for ``FloatOuter`` mode and configures the control tunnel listening socket. It should be absent for ``SenderReceiver`` and ``BridgeInner`` modes:
 
@@ -195,7 +184,7 @@ absolute path to the firewall's base directory.
 
         :expectedCertificateSubject: The X500 Subject name that will be presented in client certificates from the ``BridgeInner`` when it connects to this ``FloatOuter`` instance.
 
-        :customSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connection presents certificate details from (``<workspace>/certificates/sslkeystore.jks``)
+        :tunnelSSLConfiguration:   .. note:: For ease of use the TLS default control tunnel connection presents certificate details from (``<workspace>/certificates/sslkeystore.jks``)
                                              and validate against (``<workspace>/certificates/truststore.jks``), using the passwords defined in the root config.
                                              However, it is strongly recommended that distinct KeyStores should be configured in this section to use locally valid certificates only, so that compromise of the DMZ machines does not give access to the node's primary TLS keys.
 
@@ -412,7 +401,7 @@ Configuration in ``firewall.conf`` for ``bridgeserver1``:
     bridgeInnerConfig { // Required section
         floatAddresses = ["dmzinternal1:12005", "dmzinternal2:12005"] // The BridgeInner initiates a connection to one of this pool of FloatOuter and round-robins
         expectedCertificateSubject = "CN=Float Local,O=Tunnel,L=London,C=GB" // This must align with the certificate subject used by the FloatOuter control.
-        customSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
+        tunnelSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
                keyStorePassword = "bridgepass"
                trustStorePassword = "trustpass"
                sslKeystore = "./bridgecerts/bridge.jks"
@@ -443,7 +432,7 @@ Configuration in ``firewall.conf`` for ``bridgeserver2``:
     bridgeInnerConfig { // Required section
         floatAddresses = ["dmzinternal2:12005", "dmzinternal1:12005"] // The BridgeInner initiates a connection to one of this pool of FloatOuter and round-robins
         expectedCertificateSubject = "CN=Float Local,O=Tunnel,L=London,C=GB" // This must align with the certificate subject used by the FloatOuter control.
-        customSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
+        tunnelSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
                keyStorePassword = "bridgepass"
                trustStorePassword = "trustpass"
                sslKeystore = "./bridgecerts/bridge.jks"
@@ -468,7 +457,7 @@ Configuration in ``firewall.conf`` for ``floatserver1``:
     floatOuterConfig { // Required section
         floatAddress = "dmzinternal1:12005" // await control instructions on inner NIC
         expectedCertificateSubject = "CN=Bridge Local,O=Tunnel,L=London,C=GB" // Must line up with X500 Subject of certificates on BridgeInner
-        customSSLConfiguration {
+        tunnelSSLConfiguration {
                keyStorePassword = "floatpass"
                trustStorePassword = "trustpass"
                sslKeystore = "./floatcerts/float.jks"
@@ -489,7 +478,7 @@ Configuration in ``firewall.conf`` for ``floatserver2``:
     floatOuterConfig { // Required section
         floatAddress = "dmzinternal2:12005" // await control instructions on inner NIC
         expectedCertificateSubject = "CN=Bridge Local,O=Tunnel,L=London,C=GB" // Must line up with X500 Subject of certificates on BridgeInner
-        customSSLConfiguration {
+        tunnelSSLConfiguration {
                keyStorePassword = "floatpass"
                trustStorePassword = "trustpass"
                sslKeystore = "./floatcerts/float.jks"

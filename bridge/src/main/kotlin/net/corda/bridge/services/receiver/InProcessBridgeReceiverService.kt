@@ -26,7 +26,7 @@ class InProcessBridgeReceiverService(val conf: FirewallConfiguration,
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService, haService, amqpListenerService, filterService))
-        sslConfiguration = conf.inboundConfig?.customSSLConfiguration ?: conf.p2pSslOptions
+        sslConfiguration = conf.inboundConfig?.customSSLConfiguration ?: conf.publicSSLConfiguration
     }
 
     override fun start() {

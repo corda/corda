@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
+import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -19,70 +20,6 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
     } catch (ex: UnknownConfigurationKeysException) {
 
         FirewallCmdLineOptions.logger.info("Attempting to parse using old format")
-
-        // Previously `proxyConfig` was known as `socksProxyConfig`
-        data class Version3BridgeOutboundConfigurationImpl(val artemisBrokerAddress: NetworkHostAndPort,
-                                                   val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
-                                                   val customSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                                   val socksProxyConfig: ProxyConfig? = null) {
-
-            fun toConfig(): BridgeOutboundConfigurationImpl {
-                return BridgeOutboundConfigurationImpl(artemisBrokerAddress, alternateArtemisBrokerAddresses,
-                        customSSLConfiguration, socksProxyConfig)
-            }
-        }
-
-        data class Version3BridgeConfigurationImpl(
-                val baseDirectory: Path,
-                val certificatesDirectory: Path = baseDirectory / "certificates",
-                val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
-                val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
-                val crlCheckSoftFail: Boolean,
-                val keyStorePassword: String,
-                val trustStorePassword: String,
-                val bridgeMode: FirewallMode,
-                val networkParametersPath: Path,
-                val outboundConfig: Version3BridgeOutboundConfigurationImpl?,
-                val inboundConfig: BridgeInboundConfigurationImpl?,
-                val bridgeInnerConfig: BridgeInnerConfigurationImpl?,
-                val floatOuterConfig: FloatOuterConfigurationImpl?,
-                val haConfig: BridgeHAConfigImpl?,
-                val enableAMQPPacketTrace: Boolean,
-                val artemisReconnectionIntervalMin: Int = 5000,
-                val artemisReconnectionIntervalMax: Int = 60000,
-                val politeShutdownPeriod: Int = 1000,
-                val p2pConfirmationWindowSize: Int = 1048576,
-                val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
-                val healthCheckPhrase: String? = null
-        ) {
-            fun toConfig(): FirewallConfiguration {
-                return FirewallConfigurationImpl(
-                        baseDirectory,
-                        certificatesDirectory,
-                        sslKeystore,
-                        trustStoreFile,
-                        crlCheckSoftFail,
-                        keyStorePassword,
-                        trustStorePassword,
-                        bridgeMode,
-                        networkParametersPath,
-                        outboundConfig?.toConfig(),
-                        inboundConfig,
-                        bridgeInnerConfig,
-                        floatOuterConfig,
-                        haConfig,
-                        enableAMQPPacketTrace,
-                        artemisReconnectionIntervalMin,
-                        artemisReconnectionIntervalMax,
-                        politeShutdownPeriod,
-                        p2pConfirmationWindowSize,
-                        whitelistedHeaders,
-                        AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
-                        healthCheckPhrase
-                )
-            }
-        }
-
 
         try {
             // Note: "Ignore" is needed to disregard any default properties from "firewalldefault.conf" that are not applicable to V3 configuration
@@ -115,7 +52,7 @@ data class BridgeSSLConfigurationImpl(private val sslKeystore: Path,
 
 data class BridgeOutboundConfigurationImpl(override val artemisBrokerAddress: NetworkHostAndPort,
                                            override val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>,
-                                           override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                           override val artemisSSLConfiguration: BridgeSSLConfigurationImpl?,
                                            override val proxyConfig: ProxyConfig? = null) : BridgeOutboundConfiguration
 
 data class BridgeInboundConfigurationImpl(override val listeningAddress: NetworkHostAndPort,
@@ -123,13 +60,12 @@ data class BridgeInboundConfigurationImpl(override val listeningAddress: Network
 
 data class BridgeInnerConfigurationImpl(override val floatAddresses: List<NetworkHostAndPort>,
                                         override val expectedCertificateSubject: CordaX500Name,
-                                        override val customSSLConfiguration: BridgeSSLConfigurationImpl?,
-                                        override val customFloatOuterSSLConfiguration: BridgeSSLConfigurationImpl?,
+                                        override val tunnelSSLConfiguration: BridgeSSLConfigurationImpl?,
                                         override val enableSNI: Boolean = true) : BridgeInnerConfiguration
 
 data class FloatOuterConfigurationImpl(override val floatAddress: NetworkHostAndPort,
                                        override val expectedCertificateSubject: CordaX500Name,
-                                       override val customSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatOuterConfiguration
+                                       override val tunnelSSLConfiguration: BridgeSSLConfigurationImpl?) : FloatOuterConfiguration
 
 data class BridgeHAConfigImpl(override val haConnectionString: String, override val haPriority: Int = 10, override val haTopic: String = "/bridge/ha") : BridgeHAConfig
 
@@ -137,9 +73,9 @@ data class AuditServiceConfigurationImpl(override val loggingIntervalSec: Long) 
 
 data class FirewallConfigurationImpl(
         override val baseDirectory: Path,
-        private val certificatesDirectory: Path = baseDirectory / "certificates",
-        private val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
-        private val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
+        override val certificatesDirectory: Path = baseDirectory / "certificates",
+        override val sslKeystore: Path = certificatesDirectory / "sslkeystore.jks",
+        override val trustStoreFile: Path = certificatesDirectory / "truststore.jks",
         override val crlCheckSoftFail: Boolean,
         private val keyStorePassword: String,
         private val trustStorePassword: String,
@@ -172,7 +108,7 @@ data class FirewallConfigurationImpl(
     private val p2pTrustStoreFilePath = trustStoreFile
     // Due to Artemis limitations setting private key password same as key store password.
     private val p2pTrustStore = FileBasedCertificateStoreSupplier(p2pTrustStoreFilePath, trustStorePassword, entryPassword = trustStorePassword)
-    override val p2pSslOptions: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
+    override val publicSSLConfiguration: MutualSslConfiguration = SslConfiguration.mutual(p2pKeyStore, p2pTrustStore)
 }
 
 

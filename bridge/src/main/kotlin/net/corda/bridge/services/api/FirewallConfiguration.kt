@@ -38,7 +38,7 @@ interface BridgeOutboundConfiguration {
     val artemisBrokerAddress: NetworkHostAndPort
     val alternateArtemisBrokerAddresses: List<NetworkHostAndPort>
     // Allows override of [KeyStore] details for the artemis connection, otherwise the general top level details are used.
-    val customSSLConfiguration: BridgeSSLConfiguration?
+    val artemisSSLConfiguration: BridgeSSLConfiguration?
     // Allows use of a SOCKS 4/5 proxy
     val proxyConfig: ProxyConfig?
 }
@@ -63,9 +63,7 @@ interface BridgeInnerConfiguration {
     val expectedCertificateSubject: CordaX500Name
     // Allows override of [KeyStore] details for the control port, otherwise the general top level details are used.
     // Used for connection to Float in DMZ
-    val customSSLConfiguration: BridgeSSLConfiguration?
-    // The SSL keystores to provision into the Float in DMZ
-    val customFloatOuterSSLConfiguration: BridgeSSLConfiguration?
+    val tunnelSSLConfiguration: BridgeSSLConfiguration?
     val enableSNI: Boolean
 }
 
@@ -83,7 +81,7 @@ interface FloatOuterConfiguration {
     val floatAddress: NetworkHostAndPort
     val expectedCertificateSubject: CordaX500Name
     // Allows override of [KeyStore] details for the control port, otherwise the general top level details are used.
-    val customSSLConfiguration: BridgeSSLConfiguration?
+    val tunnelSSLConfiguration: BridgeSSLConfiguration?
 }
 
 interface AuditServiceConfiguration {
@@ -92,6 +90,9 @@ interface AuditServiceConfiguration {
 
 interface FirewallConfiguration {
     val baseDirectory: Path
+    val certificatesDirectory: Path
+    val sslKeystore: Path
+    val trustStoreFile: Path
     val firewallMode: FirewallMode
     val outboundConfig: BridgeOutboundConfiguration?
     val inboundConfig: BridgeInboundConfiguration?
@@ -116,7 +117,7 @@ interface FirewallConfiguration {
     val p2pConfirmationWindowSize: Int
     val whitelistedHeaders: List<String>
     val crlCheckSoftFail: Boolean
-    val p2pSslOptions: MutualSslConfiguration
+    val publicSSLConfiguration: MutualSslConfiguration
     val auditServiceConfiguration: AuditServiceConfiguration
     // An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing
     val healthCheckPhrase: String?

@@ -56,7 +56,7 @@ fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String)
 
 fun FirewallConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
                                                 rootCert: X509Certificate = DEV_ROOT_CA.certificate,
-                                                intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) = p2pSslOptions.createBridgeKeyStores(legalName, rootCert, intermediateCa)
+                                                intermediateCa: CertificateAndKeyPair = DEV_INTERMEDIATE_CA) = publicSSLConfiguration.createBridgeKeyStores(legalName, rootCert, intermediateCa)
 
 fun MutualSslConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
                                                  rootCert: X509Certificate = DEV_ROOT_CA.certificate,

@@ -40,8 +40,8 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
     private var connectSubscriber: Subscription? = null
     private var receiveSubscriber: Subscription? = null
     private var amqpControlClient: AMQPClient? = null
-    private val controlLinkSSLConfiguration: MutualSslConfiguration = conf.bridgeInnerConfig?.customSSLConfiguration ?: conf.p2pSslOptions
-    private val floatListenerSSLConfiguration: MutualSslConfiguration = conf.bridgeInnerConfig?.customFloatOuterSSLConfiguration ?: conf.p2pSslOptions
+    private val controlLinkSSLConfiguration: MutualSslConfiguration = conf.bridgeInnerConfig?.tunnelSSLConfiguration ?: conf.publicSSLConfiguration
+    private val floatListenerSSLConfiguration: MutualSslConfiguration = conf.publicSSLConfiguration
     private val expectedCertificateSubject: CordaX500Name = conf.bridgeInnerConfig!!.expectedCertificateSubject
     private val secureRandom: SecureRandom = newSecureRandom()
 

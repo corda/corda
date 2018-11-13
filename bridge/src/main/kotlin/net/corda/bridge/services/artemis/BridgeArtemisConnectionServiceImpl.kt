@@ -40,7 +40,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
 
     init {
         statusFollower = ServiceStateCombiner(listOf(auditService))
-        sslConfiguration = conf.outboundConfig?.customSSLConfiguration ?: conf.p2pSslOptions
+        sslConfiguration = conf.outboundConfig?.artemisSSLConfiguration ?: conf.publicSSLConfiguration
     }
 
     override fun start() {

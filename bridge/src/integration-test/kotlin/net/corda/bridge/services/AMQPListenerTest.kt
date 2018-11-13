@@ -58,14 +58,14 @@ class AMQPListenerTest {
         assertEquals(true, stateFollower.next())
         assertEquals(true, amqpListenerService.active)
         assertEquals(false, serverListening("localhost", 10005))
-        val keyStoreBytes = bridgeConfig.p2pSslOptions.keyStore.path.readAll()
-        val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
+        val keyStoreBytes = bridgeConfig.publicSSLConfiguration.keyStore.path.readAll()
+        val trustStoreBytes = bridgeConfig.publicSSLConfiguration.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.p2pSslOptions.keyStore.storePassword.toCharArray(),
-                bridgeConfig.p2pSslOptions.keyStore.entryPassword.toCharArray(),
+                bridgeConfig.publicSSLConfiguration.keyStore.storePassword.toCharArray(),
+                bridgeConfig.publicSSLConfiguration.keyStore.entryPassword.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.p2pSslOptions.trustStore.storePassword.toCharArray())
+                bridgeConfig.publicSSLConfiguration.trustStore.storePassword.toCharArray())
         // Fire lots of activity to prove we are good
         assertEquals(TestAuditService.AuditEvent.STATUS_CHANGE, auditFollower.next())
         assertEquals(true, amqpListenerService.active)
@@ -76,8 +76,8 @@ class AMQPListenerTest {
         assertEquals(TestAuditService.AuditEvent.FAILED_CONNECTION, auditFollower.next())
         val clientConfig = createAndLoadConfigFromResource(tempFolder.root.toPath() / "client", configResource)
         clientConfig.createBridgeKeyStores(DUMMY_BANK_B_NAME)
-        val clientKeyStore = clientConfig.p2pSslOptions.keyStore.get()
-        val clientTrustStore = clientConfig.p2pSslOptions.trustStore.get()
+        val clientKeyStore = clientConfig.publicSSLConfiguration.keyStore.get()
+        val clientTrustStore = clientConfig.publicSSLConfiguration.trustStore.get()
         val amqpConfig = object : AMQPConfiguration {
             override val keyStore = clientKeyStore
             override val trustStore = clientTrustStore
@@ -134,14 +134,14 @@ class AMQPListenerTest {
         val amqpListenerService = BridgeAMQPListenerServiceImpl(bridgeConfig, maxMessageSize, auditService)
         amqpListenerService.start()
         auditService.start()
-        val keyStoreBytes = bridgeConfig.p2pSslOptions.keyStore.path.readAll()
-        val trustStoreBytes = bridgeConfig.p2pSslOptions.trustStore.path.readAll()
+        val keyStoreBytes = bridgeConfig.publicSSLConfiguration.keyStore.path.readAll()
+        val trustStoreBytes = bridgeConfig.publicSSLConfiguration.trustStore.path.readAll()
         // start listening
         amqpListenerService.provisionKeysAndActivate(keyStoreBytes,
-                bridgeConfig.p2pSslOptions.keyStore.storePassword.toCharArray(),
-                bridgeConfig.p2pSslOptions.keyStore.entryPassword.toCharArray(),
+                bridgeConfig.publicSSLConfiguration.keyStore.storePassword.toCharArray(),
+                bridgeConfig.publicSSLConfiguration.keyStore.entryPassword.toCharArray(),
                 trustStoreBytes,
-                bridgeConfig.p2pSslOptions.trustStore.storePassword.toCharArray())
+                bridgeConfig.publicSSLConfiguration.trustStore.storePassword.toCharArray())
         val connectionFollower = amqpListenerService.onConnection.toBlocking().iterator
         val auditFollower = auditService.onAuditEvent.toBlocking().iterator
         val clientKeys = Crypto.generateKeyPair(ECDSA_SECP256R1_SHA256)
