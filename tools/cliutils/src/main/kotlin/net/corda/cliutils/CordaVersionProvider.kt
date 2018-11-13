@@ -10,7 +10,7 @@ import picocli.CommandLine
 class CordaVersionProvider : CommandLine.IVersionProvider {
     companion object {
         const val current_major_release = "4.0"
-        const val source_edition = "OS"
+        const val source_edition = "Open Source"
         private val editionCodes = mapOf("Open Source" to "OS", "Enterprise" to "ENT")
 
         private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
