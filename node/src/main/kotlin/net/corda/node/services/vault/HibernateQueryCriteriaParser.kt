@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.identity.AbstractParty
@@ -26,6 +27,7 @@ import org.hibernate.query.criteria.internal.expression.LiteralExpression
 import org.hibernate.query.criteria.internal.path.SingularAttributePath
 import org.hibernate.query.criteria.internal.predicate.ComparisonPredicate
 import org.hibernate.query.criteria.internal.predicate.InPredicate
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.Tuple
@@ -206,7 +208,37 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
         }
 
         criteria.uploadDateCondition?.let {
-            predicateSet.add(columnPredicateToPredicate(root.get<Instant>("upload_date"), it))
+            predicateSet.add(columnPredicateToPredicate(root.get<Instant>("insertionDate"), it))
+        }
+
+        criteria.contractClassNamesCondition?.let {
+            val contractClassNames =
+                if (criteria.contractClassNamesCondition is EqualityComparison)
+                    (criteria.contractClassNamesCondition as EqualityComparison<List<ContractClassName>>).rightLiteral
+                else emptyList()
+            val joinDBAttachmentToContractClassNames = root.joinList<NodeAttachmentService.DBAttachment, ContractClassName>("contractClassNames")
+            predicateSet.add(criteriaBuilder.and(joinDBAttachmentToContractClassNames.`in`(contractClassNames)))
+        }
+
+        criteria.signersCondition?.let {
+            val signers =
+                    if (criteria.signersCondition is EqualityComparison)
+                        (criteria.signersCondition as EqualityComparison<List<PublicKey>>).rightLiteral
+                    else emptyList()
+            val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
+            predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.`in`(signers)))
+        }
+
+        criteria.isSignedCondition?.let { isSigned ->
+            val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
+            if (isSigned == Builder.equal(true))
+                predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNotNull))
+            else
+                predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNull))
+        }
+
+        criteria.versionCondition?.let {
+            predicateSet.add(columnPredicateToPredicate(root.get<String>("version"), it))
         }
 
         return predicateSet

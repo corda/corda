@@ -223,7 +223,9 @@ private constructor(
                 val outputConstraints = outputContractGroups[contractClassName]?.map { it.constraint }?.toSet()
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
-                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachmentsByContract[contractClassName]!!))) {
+                        checkNotNull(networkParameters)
+                        val constraintAttachment = AttachmentWithContext(contractAttachmentsByContract[contractClassName]!!, contractClassName, networkParameters!!)
+                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
                     }
@@ -246,17 +248,28 @@ private constructor(
             val contractAttachment = contractAttachmentsByContract[state.contract]
                     ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
-            val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
-                    networkParameters?.whitelistedContractImplementations)
+            checkNotNull(networkParameters)
+            val constraintAttachment =
+                if (state.constraint is HashAttachmentConstraint) {
+                    // locate signed attachment hash
+                    val signedContractAttachment = contractAttachmentsByContract[state.contract]
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+                    AttachmentWithContext(signedContractAttachment, state.contract, networkParameters!!)
+                }
+                else {
+                    AttachmentWithContext(contractAttachment, state.contract, networkParameters!!)
+                }
 
             if (state.constraint is SignatureAttachmentConstraint)
-                checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
+                checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, 4, "Signature constraints")
+
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
     }
 
+    // TODO: revisit to include contract version information
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
         val result = mutableMapOf<ContractClassName, ContractAttachment>()
 

@@ -3465,22 +3465,45 @@ public static final class net.corda.core.node.services.vault.AttachmentQueryCrit
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>)
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>)
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>)
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> component1()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> component2()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant> component3()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> component4()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>> component5()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Boolean> component6()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> component7()
   @NotNull
   public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>)
+  @NotNull
+  public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>)
   public boolean equals(Object)
   @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> getContractClassNamesCondition()
+  @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> getFilenameCondition()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>> getSignersCondition()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant> getUploadDateCondition()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> getUploaderCondition()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> getVersionCondition()
   public int hashCode()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Boolean> isSignedCondition()
+  @NotNull
   public String toString()
   @NotNull
   public java.util.Collection<javax.persistence.criteria.Predicate> visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)

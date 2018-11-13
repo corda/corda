@@ -3,6 +3,7 @@
 package net.corda.core.node.services.vault
 
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
@@ -11,6 +12,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import javax.persistence.criteria.Predicate
@@ -275,11 +277,23 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
     /**
      * AttachmentsQueryCriteria:
      */
-    data class AttachmentsQueryCriteria @JvmOverloads constructor (val uploaderCondition: ColumnPredicate<String>? = null,
-                                                                   val filenameCondition: ColumnPredicate<String>? = null,
-                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+    data class AttachmentsQueryCriteria @JvmOverloads constructor(val uploaderCondition: ColumnPredicate<String>? = null,
+                                                                  val filenameCondition: ColumnPredicate<String>? = null,
+                                                                  val uploadDateCondition: ColumnPredicate<Instant>? = null,
+                                                                  val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
+                                                                  val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
+                                                                  val isSignedCondition: ColumnPredicate<Boolean>? = null,
+                                                                  val versionCondition: ColumnPredicate<List<String>>? = null) : AttachmentQueryCriteria() {
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
+        }
+
+        fun copy(
+                uploaderCondition: ColumnPredicate<String>? = this.uploaderCondition,
+                filenameCondition: ColumnPredicate<String>? = this.filenameCondition,
+                uploadDateCondition: ColumnPredicate<Instant>? = this.uploadDateCondition
+        ): AttachmentsQueryCriteria {
+            return AttachmentsQueryCriteria(uploaderCondition, filenameCondition, uploadDateCondition)
         }
     }
 

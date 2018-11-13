@@ -4,13 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import net.corda.testing.core.ContractJarTestUtils.makeTestContractJar
+import net.corda.testing.core.ContractJarTestUtils.makeTestJar
+import net.corda.testing.core.ContractJarTestUtils.makeTestSignedContractJar
+import net.corda.testing.core.SelfCleaningDir
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
@@ -18,10 +22,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.JarSignatureTestUtils.createJar
-import net.corda.testing.core.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.JarSignatureTestUtils.signJar
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -35,18 +35,10 @@ import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.Closeable
-import java.io.OutputStream
-import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.nio.file.*
-import java.security.PublicKey
-import java.util.jar.JarEntry
-import java.util.jar.JarOutputStream
-import javax.tools.JavaFileObject
-import javax.tools.SimpleJavaFileObject
-import javax.tools.StandardLocation
-import javax.tools.ToolProvider
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileSystem
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -201,13 +193,63 @@ class NodeAttachmentServiceTest {
 
         assertEquals(
                 listOf(hashB),
-                storage.queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(Builder.equal("uploaderB")))
+                storage.queryAttachments(AttachmentsQueryCriteria(Builder.equal("uploaderB")))
         )
 
         assertEquals(
                 listOf(hashB, hashC),
-                storage.queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(Builder.like("%uploader%")))
+                storage.queryAttachments(AttachmentsQueryCriteria(Builder.like("%uploader%")))
         )
+    }
+
+    @Test
+    fun `contract class, versioning and signing metadata can be used to search`() {
+        SelfCleaningDir().use { file ->
+            val (sampleJar, _) = makeTestJar()
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val (anotherSignedContractJar, _) = makeTestSignedContractJar(file.path,"com.example.AnotherContract")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = "2.0")
+            val (signedContractJarV2, publicKeyV2) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = "2.0")
+
+            sampleJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
+            contractJar.read { storage.importAttachment(it, "uploaderB", "contract.jar") }
+            signedContractJar.read { storage.importAttachment(it, "uploaderC", "contract-signed.jar") }
+            anotherSignedContractJar.read { storage.importAttachment(it, "uploaderD", "another-contract-signed.jar") }
+            contractJarV2.read { storage.importAttachment(it, "uploaderB", "contract-V2.jar") }
+            signedContractJarV2.read { storage.importAttachment(it, "uploaderC", "contract-signed-V2.jar") }
+
+            assertEquals(
+                    4,
+                    storage.queryAttachmentsFully(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")))).size
+            )
+
+            assertEquals(
+                    1,
+                    storage.queryAttachments(AttachmentsQueryCriteria(signersCondition = Builder.equal(listOf(publicKey)))).size
+            )
+
+            assertEquals(
+                    3,
+                    storage.queryAttachments(AttachmentsQueryCriteria(isSignedCondition = Builder.equal(true))).size
+            )
+
+            assertEquals(
+                    1,
+                    storage.queryAttachmentsFully(AttachmentsQueryCriteria(
+                            contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                            versionCondition = Builder.equal(listOf("2.0")),
+                            isSignedCondition = Builder.equal(true))).size
+            )
+
+            assertEquals(
+                    2,
+                    storage.queryAttachmentsFully(AttachmentsQueryCriteria(
+                            contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract", "com.example.AnotherContract")),
+                            versionCondition = Builder.equal(listOf("1.0")),
+                            isSignedCondition = Builder.equal(true))).size
+            )
+        }
     }
 
     @Test
@@ -216,8 +258,8 @@ class NodeAttachmentServiceTest {
         val (jarB, hashB) = makeTestJar(listOf(Pair("b", "b")))
         val (jarC, hashC) = makeTestJar(listOf(Pair("c", "c")))
 
-        fun uploaderCondition(s: String) = AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal(s))
-        fun filenamerCondition(s: String) = AttachmentQueryCriteria.AttachmentsQueryCriteria(filenameCondition = Builder.equal(s))
+        fun uploaderCondition(s: String) = AttachmentsQueryCriteria(uploaderCondition = Builder.equal(s))
+        fun filenamerCondition(s: String) = AttachmentsQueryCriteria(filenameCondition = Builder.equal(s))
 
         fun filenameSort(direction: Sort.Direction) = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.FILENAME, direction)))
 
@@ -230,16 +272,15 @@ class NodeAttachmentServiceTest {
         assertEquals(
                 emptyList(),
                 storage.queryAttachments(
-                        AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
-                                .and(AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
+                        AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
+                                .and(AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
         )
 
         assertEquals(
                 listOf(hashA, hashB),
                 storage.queryAttachments(
-
-                        AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
-                                .or(AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
+                        AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexA"))
+                                .or(AttachmentsQueryCriteria(uploaderCondition = Builder.equal("complexB"))))
         )
 
         val complexCondition =
@@ -281,7 +322,7 @@ class NodeAttachmentServiceTest {
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes)
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = "1.0")
             session.merge(corruptAttachment)
             id
         }
@@ -353,75 +394,5 @@ class NodeAttachmentServiceTest {
         val file = fs.getPath("$counter.jar")
         makeTestJar(file.outputStream(), extraEntries)
         return Pair(file, file.readAll().sha256())
-    }
-
-    /**
-     * Class to create an automatically delete a temporary directory.
-     */
-    class SelfCleaningDir : Closeable {
-        val path: Path = Files.createTempDirectory(NodeAttachmentServiceTest::class.simpleName)
-        override fun close() {
-            path.deleteRecursively()
-        }
-    }
-
-    companion object {
-        private fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
-            output.use {
-                val jar = JarOutputStream(it)
-                jar.putNextEntry(JarEntry("test1.txt"))
-                jar.write("This is some useful content".toByteArray())
-                jar.closeEntry()
-                jar.putNextEntry(JarEntry("test2.txt"))
-                jar.write("Some more useful content".toByteArray())
-                extraEntries.forEach { entry ->
-                    jar.putNextEntry(JarEntry(entry.first))
-                    jar.write(entry.second.toByteArray())
-                }
-                jar.closeEntry()
-            }
-        }
-
-        private fun makeTestSignedContractJar(workingDir: Path, contractName: String): Pair<Path, PublicKey> {
-            val alias = "testAlias"
-            val pwd = "testPassword"
-            workingDir.generateKey(alias, pwd, ALICE_NAME.toString())
-            val jarName = makeTestContractJar(workingDir, contractName)
-            val signer = workingDir.signJar(jarName, alias, pwd)
-            return workingDir.resolve(jarName) to signer
-        }
-
-        private fun makeTestContractJar(workingDir: Path, contractName: String): String {
-            val packages = contractName.split(".")
-            val jarName = "testattachment.jar"
-            val className = packages.last()
-            createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
-            workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
-            return jarName
-        }
-
-        private fun createTestClass(workingDir: Path, className: String, packages: List<String>): Path {
-            val newClass = """package ${packages.joinToString(".")};
-                import net.corda.core.contracts.*;
-                import net.corda.core.transactions.*;
-
-                public class $className implements Contract {
-                    @Override
-                    public void verify(LedgerTransaction tx) throws IllegalArgumentException {
-                    }
-                }
-            """.trimIndent()
-            val compiler = ToolProvider.getSystemJavaCompiler()
-            val source = object : SimpleJavaFileObject(URI.create("string:///${packages.joinToString("/")}/$className.java"), JavaFileObject.Kind.SOURCE) {
-                override fun getCharContent(ignoreEncodingErrors: Boolean): CharSequence {
-                    return newClass
-                }
-            }
-            val fileManager = compiler.getStandardFileManager(null, null, null)
-            fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(workingDir.toFile()))
-
-            compiler.getTask(System.out.writer(), fileManager, null, null, null, listOf(source)).call()
-            return Paths.get(fileManager.list(StandardLocation.CLASS_OUTPUT, "", setOf(JavaFileObject.Kind.CLASS), true).single().name)
-        }
     }
 }
