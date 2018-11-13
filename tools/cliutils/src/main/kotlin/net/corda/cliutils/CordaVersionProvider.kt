@@ -9,12 +9,29 @@ import picocli.CommandLine
  */
 class CordaVersionProvider : CommandLine.IVersionProvider {
     companion object {
+        const val current_major_release = "4.0"
+        const val source_edition = "OS"
+        private val editionCodes = mapOf("Open Source" to "OS", "Enterprise" to "ENT")
+
         private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
-        val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: "Unknown" }
+        val releaseVersion: String by lazy { manifestValue("Corda-Release-Version") ?: current_major_release }
+        val edition: String by lazy { manifestValue("Corda-Edition") ?: source_edition }
         val revision: String by lazy { manifestValue("Corda-Revision") ?: "Unknown" }
         val vendor: String by lazy { manifestValue("Corda-Vendor") ?: "Unknown" }
         val platformVersion: Int by lazy { manifestValue("Corda-Platform-Version")?.toInt() ?: 1 }
+
+        internal val semanticVersion: String by lazy {
+            val raw = releaseVersion
+            val parts = raw.removeSuffix("-SNAPSHOT").split(".")
+            try {
+                "${parts[0]}.${parts[1]}${parts.getOrNull(2)?.let { ".$it" } ?: ""}"
+            } catch (e: Exception) {
+                current_major_release
+            }
+        }
+
+        internal val platformEditionCode: String by lazy { editionCodes[edition] ?: source_edition }
     }
 
     override fun getVersion(): Array<String> {
