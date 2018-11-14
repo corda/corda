@@ -8,8 +8,6 @@ import javafx.beans.InvalidationListener
 import javafx.collections.ListChangeListener
 import javafx.geometry.Pos
 import javafx.scene.control.ComboBox
-import javafx.scene.control.RadioButton
-import javafx.scene.control.ToggleGroup
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.input.KeyCode
