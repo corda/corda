@@ -336,9 +336,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         identityService.ourNames = nodeInfo.legalIdentities.map { it.name }.toSet()
         services.start(nodeInfo, netParams)
         networkMapUpdater.start(trustRoot, signedNetParams.raw.hash, signedNodeInfo, netParams, keyManagementService, configuration.autoAcceptNetworkParameterChanges)
-        if (configuration.autoAcceptNetworkParameterChanges) {
-            log.info("Auto-accept enabled for network parameter changes which modify only: ${netParams.getAutoAcceptableParamNames()}")
-        }
         startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
 
         // Do all of this in a database transaction so anything that might need a connection has one.

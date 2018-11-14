@@ -72,14 +72,13 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         this.networkParameters = networkParameters
         this.keyManagementService = keyManagementService
         this.autoAcceptNetworkParameters = autoAcceptNetworkParameters
+        if (autoAcceptNetworkParameters) {
+            logger.info("Auto-accept enabled for network parameter changes which modify only: ${NetworkParameters.autoAcceptablePropertyNames}")
+        }
         watchForNodeInfoFiles()
         if (networkMapClient != null) {
             watchHttpNetworkMap()
         }
-    }
-
-    fun getNetworkParameters(): NetworkParameters {
-        return networkParameters
     }
 
     private fun watchForNodeInfoFiles() {

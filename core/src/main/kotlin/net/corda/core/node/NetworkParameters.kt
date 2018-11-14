@@ -7,7 +7,6 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
-import java.lang.annotation.Inherited
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -24,12 +23,14 @@ import kotlin.reflect.jvm.javaGetter
  * @property notaries List of well known and trusted notary identities with information on validation type.
  * @property maxMessageSize This is currently ignored. However, it will be wired up in a future release.
  * @property maxTransactionSize Maximum permitted transaction size in bytes.
- * @property modifiedTime Last modification time of network parameters set.
- * @property epoch Version number of the network parameters. Starting from 1, this will always increment on each new set
+ * @property modifiedTime ([AutoAcceptable]) Last modification time of network parameters set.
+ * @property epoch ([AutoAcceptable]) Version number of the network parameters. Starting from 1, this will always increment on each new set
  * of parameters.
- * @property whitelistedContractImplementations List of whitelisted jars containing contract code for each contract class.
- *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint]. [You can learn more about contract constraints here](https://docs.corda.net/api-contract-constraints.html).
- * @property packageOwnership List of the network-wide java packages that were successfully claimed by their owners. Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
+ * @property whitelistedContractImplementations ([AutoAcceptable]) List of whitelisted jars containing contract code for each contract class.
+ *  This will be used by [net.corda.core.contracts.WhitelistedByZoneAttachmentConstraint].
+ *  [You can learn more about contract constraints here](https://docs.corda.net/api-contract-constraints.html).
+ * @property packageOwnership ([AutoAcceptable]) List of the network-wide java packages that were successfully claimed by their owners.
+ * Any CorDapp JAR that offers contracts and states in any of these packages must be signed by the owner.
  * @property eventHorizon Time after which nodes will be removed from the network map if they have not been seen
  * during this period
  */
@@ -44,7 +45,8 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>) {
+        @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>
+) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
     constructor (minimumPlatformVersion: Int,
@@ -84,6 +86,12 @@ data class NetworkParameters(
             eventHorizon,
             emptyMap()
     )
+
+    companion object {
+        private val memberProperties = NetworkParameters::class.declaredMemberProperties.asSequence()
+        private val nonAutoAcceptableGetters = memberProperties.filter { !it.isAutoAcceptable() }.map { it.javaGetter }
+        val autoAcceptablePropertyNames = memberProperties.filter { it.isAutoAcceptable() }.map { it.name }
+    }
 
     init {
         require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
@@ -157,25 +165,17 @@ data class NetworkParameters(
     fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
 
     /**
-     * Returns true if all non-matching variables have the annotation @AutoAcceptable
+     * Returns true if the changes in [newNetworkParameters] are only for [AutoAcceptable] properties
      */
     fun canAutoAccept(newNetworkParameters: NetworkParameters): Boolean {
-        for (property in this::class.declaredMemberProperties) {
-            val propertyValue = property.javaGetter?.invoke(this)
-            val newPropertyValue = property.javaGetter?.invoke(newNetworkParameters)
-
-            if (propertyValue != newPropertyValue && !property.isAutoAcceptable()) {
+        nonAutoAcceptableGetters.forEach {
+            val propertyValue = it?.invoke(this)
+            val newPropertyValue = it?.invoke(newNetworkParameters)
+            if (propertyValue != newPropertyValue) {
                 return false
             }
         }
         return true
-    }
-
-    fun getAutoAcceptableParamNames(): List<String> {
-        return this::class.declaredMemberProperties
-                .filter { it.isAutoAcceptable() }
-                .map { it.name }
-                .toList()
     }
 }
 
@@ -226,8 +226,3 @@ private fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { cu
 private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
     return this.findAnnotation<AutoAcceptable>() != null
 }
-
-@Target(AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-@Inherited
-private annotation class AutoAcceptable
