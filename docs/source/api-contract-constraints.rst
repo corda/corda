@@ -97,6 +97,10 @@ and the smoothest to deploy: no restarts or contract upgrade transactions are ne
 When CorDapp is build using :ref:`corda-gradle-plugin <cordapp_build_system_signing_cordapp_jar_ref>` the JAR is signed
 by Corda development key by default, an external keystore can be configured or signing can be disabled.
 
+.. warning:: CorDapps can only use signature constraints when participating in a Corda network using a minimum platform version of 4.
+    An auto downgrade rule applies to signed CorDapps built and tested with Corda 4 but running on a Corda network of a lower version:
+    if the associated contract class is whitelisted in the network parameters then zone constraints are applied, otherwise hash constraints are used.
+
 **Defaults.** Currently, the default constraint type is either a zone constraint, if the network parameters in effect when the
 transaction is built contain an entry for that contract class, or a hash constraint if not. Once the Signature Constraints are introduced,
 the default constraint will be the Signature Constraint if the jar is signed.

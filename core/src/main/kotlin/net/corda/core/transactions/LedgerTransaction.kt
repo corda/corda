@@ -7,6 +7,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.castIfPossible
+import net.corda.core.internal.checkMinimumPlatformVersion
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable

@@ -95,6 +95,10 @@ open class TransactionBuilder @JvmOverloads constructor(
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
+    companion object {
+        private val log = contextLogger()
+    }
+
     /**
      * Creates a copy of the builder.
      */
