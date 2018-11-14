@@ -93,20 +93,6 @@ class PrivatePropertyReader(val field: Field, parentType: Type) : PropertyReader
 }
 
 /**
- * Special instance of a [PropertyReader] for use only by [EvolutionSerializer]s to make
- * it explicit that no properties are ever actually read from an object as the evolution
- * serializer should only be accessing the already serialized form.
- */
-class EvolutionPropertyReader : PropertyReader() {
-    override fun read(obj: Any?): Any? {
-        throw UnsupportedOperationException("It should be impossible for an evolution serializer to "
-                + "be reading from an object")
-    }
-
-    override fun isNullable() = true
-}
-
-/**
  * Represents a generic interface to a serializable property of an object.
  *
  * @property initialPosition where in the constructor used for serialization the property occurs.

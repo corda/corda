@@ -19,7 +19,7 @@ interface LocalTypeLookup {
      * no such information is registered, call the supplied builder to construct the type information, add it to the
      * registry and then return it.
      */
-    fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation): LocalTypeInformation
+    fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: (Boolean) -> LocalTypeInformation): LocalTypeInformation
 
     /**
      * Indicates whether a type should be excluded from lists of interfaces associated with inspected types, i.e.
@@ -63,14 +63,10 @@ class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeMo
 
     override fun inspect(type: Type): LocalTypeInformation = LocalTypeInformation.forType(type, this)
 
-    override fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation): LocalTypeInformation =
-            this[typeIdentifier] ?: buildIfNotOpaque(type, typeIdentifier, builder).apply {
+    override fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: (Boolean) -> LocalTypeInformation): LocalTypeInformation =
+            this[typeIdentifier] ?: builder(typeModelConfiguration.isOpaque(type)).apply {
                 typeInformationCache.putIfAbsent(typeIdentifier, this)
             }
-
-    private fun buildIfNotOpaque(type: Type, typeIdentifier: TypeIdentifier, builder: () -> LocalTypeInformation) =
-            if (typeModelConfiguration.isOpaque(type)) LocalTypeInformation.Opaque(type.asClass(), typeIdentifier)
-            else builder()
 
     override operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation? = typeInformationCache[typeIdentifier]
 }

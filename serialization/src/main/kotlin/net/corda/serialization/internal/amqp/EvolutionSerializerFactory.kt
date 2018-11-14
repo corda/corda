@@ -26,12 +26,6 @@ class DefaultEvolutionSerializerFactory(
 
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
                                         localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
-        return getClassifiedSerializer(remoteTypeInformation, localTypeInformation)
-    }
-    
-    private fun getClassifiedSerializer(
-            remoteTypeInformation: RemoteTypeInformation,
-            localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
         val local = (localTypeInformation as? LocalTypeInformation.Cycle)?.follow ?: localTypeInformation
 
         val serializerForTypeDescriptor = when(remoteTypeInformation) {

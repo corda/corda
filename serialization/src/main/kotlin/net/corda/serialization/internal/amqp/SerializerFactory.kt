@@ -85,7 +85,7 @@ interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, C
             is TypeIdentifier.UnknownType,
             is TypeIdentifier.TopType -> "?"
             is TypeIdentifier.ArrayOf ->
-                nameForType(typeIdentifier.componentType) +
+                if (typeIdentifier.componentType.name == "byte") "binary" else nameForType(typeIdentifier.componentType) +
                         if (typeIdentifier.componentType is TypeIdentifier.Unparameterised &&
                                 typeIdentifier.componentType.isPrimitive) "[p]"
                         else "[]"

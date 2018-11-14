@@ -45,8 +45,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
             LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
         }
-        else lookup.findOrBuild(type, typeIdentifier) {
-            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
+        else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
+            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
         }
 
     private fun resolveAndBuild(type: Type): LocalTypeInformation {
@@ -58,49 +58,53 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
     private fun Type.resolveAgainstContext(): Type =
             if (resolutionContext == null) this else resolveAgainst(resolutionContext)
 
-    private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
+    private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation {
         val rawType = type.asClass()
         return when (typeIdentifier) {
             is TypeIdentifier.TopType -> LocalTypeInformation.Top
             is TypeIdentifier.UnknownType -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
-            is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier)
+            is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier, isOpaque)
             is TypeIdentifier.ArrayOf -> {
                 LocalTypeInformation.AnArray(
                         type,
                         typeIdentifier,
                         resolveAndBuild(type.componentType()))
             }
-            is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier)
+            is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier, isOpaque)
         }
     }
 
-    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier): LocalTypeInformation = withContext(type) {
+    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(type) &&
             !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
             Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
-            type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isPrimitive -> LocalTypeInformation.Atomic(type, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
                     type,
                     typeIdentifier,
                     type.enumConstants.map { it.toString() },
                     buildInterfaceInformation(type))
-            type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
             type.kotlinObjectInstance != null -> LocalTypeInformation.Singleton(
                     type,
                     typeIdentifier,
                     buildSuperclassInformation(type),
                     buildInterfaceInformation(type))
-            else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
+            type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
+            type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
+            else -> when {
+                isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier)
+                else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
+            }
         }
     }
 
     private fun buildForParameterised(
             rawType: Class<*>,
             type: ParameterizedType,
-            typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation = withContext(type) {
+            typeIdentifier: TypeIdentifier.Parameterised,
+            isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(rawType) &&
             !EnumSet::class.java.isAssignableFrom(rawType) ->
@@ -111,7 +115,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+            else -> when {
+                isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier)
+                else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+            }
         }
     }
 

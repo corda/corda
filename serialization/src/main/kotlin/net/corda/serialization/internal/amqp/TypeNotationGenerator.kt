@@ -44,14 +44,16 @@ class TypeNotationGenerator(private val factory: LocalSerializerFactory) {
     }
 
     private fun LocalPropertyInformation.getField(name: String): Field {
-        val requires = when (type) {
-            is LocalTypeInformation.AnInterface -> listOf(type.amqpTypeName)
-            else -> emptyList()
+        val (typeName, requires) = when(type) {
+            is LocalTypeInformation.AnInterface,
+            is LocalTypeInformation.ACollection,
+            is LocalTypeInformation.AMap -> "*" to listOf(type.amqpTypeName)
+            else -> type.amqpTypeName to emptyList()
         }
 
         val defaultValue: String? = defaultValues[type.typeIdentifier]
 
-        return Field(name, type.amqpTypeName, requires, defaultValue, null, isMandatory, false)
+        return Field(name, typeName, requires, defaultValue, null, isMandatory, false)
     }
 
     companion object {
