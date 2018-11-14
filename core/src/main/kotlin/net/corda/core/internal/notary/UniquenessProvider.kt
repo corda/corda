@@ -7,6 +7,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
+import net.corda.core.utilities.minutes
+import java.time.Duration
 
 /**
  * A service that records input states of the given transaction and provides conflict information
@@ -22,6 +24,11 @@ interface UniquenessProvider {
             timeWindow: TimeWindow? = null,
             references: List<StateRef> = emptyList()
     ): CordaFuture<Result>
+
+    // Estimated time of request processing.
+    fun eta(): Duration {
+       return 1.minutes
+    }
 
     /** The outcome of committing a transaction. */
     sealed class Result {

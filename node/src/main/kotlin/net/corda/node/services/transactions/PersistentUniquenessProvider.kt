@@ -22,11 +22,13 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import net.corda.core.utilities.millis
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -86,6 +88,12 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val commitLog = createMap(cacheFactory)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
+
+    // Estimated time of request processing.
+    override fun eta(): Duration {
+        // TODO: Refine
+        return (requestQueue.size * 50).millis
+    }
 
     /** A request processor thread. */
     private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {

@@ -45,7 +45,8 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     otherSideSession.counterparty,
                     requestPayload.requestSignature,
                     tx.timeWindow,
-                    tx.references)
+                    tx.references,
+                    otherSideSession)
 
         } catch (e: NotaryInternalException) {
             logError(e.error)

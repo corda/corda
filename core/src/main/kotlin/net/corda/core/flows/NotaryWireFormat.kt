@@ -81,3 +81,7 @@ data class NotarisationPayload(val transaction: Any, val requestSignature: Notar
 /** Payload returned by the notary service flow to the client. */
 @CordaSerializable
 data class NotarisationResponse(val signatures: List<TransactionSignature>)
+
+/** Sent by the notary when the notary detects it will unlikely respond before the client retries. */
+@CordaSerializable
+data class WaitTimeUpdate(val waitTimeSeconds: Long)

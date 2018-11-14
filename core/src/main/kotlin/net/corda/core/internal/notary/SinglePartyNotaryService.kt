@@ -6,13 +6,16 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.executeAsync
 import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.minutes
 import org.slf4j.Logger
 
 /** Base implementation for a notary service operated by a singe party. */
@@ -34,7 +37,8 @@ abstract class SinglePartyNotaryService : NotaryService() {
             caller: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>
+            references: List<StateRef>,
+            otherSideSession: FlowSession? = null
     ) {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the
@@ -42,6 +46,11 @@ abstract class SinglePartyNotaryService : NotaryService() {
 
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
+
+        if (uniquenessProvider.eta() > 5.minutes) {
+           otherSideSession?.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis()/1000))
+        }
+
         val result = callingFlow.executeAsync(
                 CommitOperation(
                         this,
