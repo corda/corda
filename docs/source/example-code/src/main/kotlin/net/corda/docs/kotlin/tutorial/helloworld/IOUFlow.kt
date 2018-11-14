@@ -8,13 +8,13 @@ import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.utilities.ProgressTracker
 
 // DOCSTART 01
 // Add these imports:
 import net.corda.core.contracts.Command
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
 
 // Replace Initiator's definition with:
 @InitiatingFlow
@@ -33,12 +33,12 @@ class IOUFlow(val iouValue: Int,
 
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
-        val cmd = Command(TemplateContract.Commands.Action(), ourIdentity.owningKey)
+        val command = Command(TemplateContract.Commands.Action(), ourIdentity.owningKey)
 
         // We create a transaction builder and add the components.
         val txBuilder = TransactionBuilder(notary = notary)
                 .addOutputState(outputState, TemplateContract.ID)
-                .addCommand(cmd)
+                .addCommand(command)
 
         // We sign the transaction.
         val signedTx = serviceHub.signInitialTransaction(txBuilder)

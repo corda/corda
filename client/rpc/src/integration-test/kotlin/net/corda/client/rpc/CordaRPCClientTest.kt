@@ -124,7 +124,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
                     nodeIsShut.onCompleted()
                 } catch (e: ActiveMQSecurityException) {
                     // nothing here - this happens if trying to connect before the node is started
-                } catch (e: Throwable) {
+                } catch (e: Exception) {
                     nodeIsShut.onError(e)
                 }
             }, 1, 1, TimeUnit.SECONDS)

@@ -179,8 +179,8 @@ class DriverTests : IntegrationTest() {
     fun `driver waits for in-process nodes to finish`() {
         fun NodeHandle.stopQuietly() = try {
             stop()
-        } catch (t: Throwable) {
-            t.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
         val handlesFuture = openFuture<List<NodeHandle>>()

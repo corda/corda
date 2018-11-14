@@ -106,8 +106,8 @@ fun <A> poll(
                 } else {
                     executorService.schedule(this, pollInterval.toMillis(), TimeUnit.MILLISECONDS)
                 }
-            } catch (t: Throwable) {
-                resultFuture.setException(t)
+            } catch (e: Exception) {
+                resultFuture.setException(e)
             }
         }
     }

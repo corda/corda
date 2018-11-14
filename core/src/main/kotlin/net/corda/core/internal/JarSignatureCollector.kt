@@ -72,9 +72,9 @@ object JarSignatureCollector {
     private fun Sequence<JarEntry>.toFileSignerSet(): Sequence<Pair<String, Set<CodeSigner>>> =
             map { entry -> entry.name to (entry.codeSigners?.toSet() ?: emptySet()) }
 
-    private fun Set<CodeSigner>.toOrderedPublicKeys(): List<PublicKey> = map {
-        (it.signerCertPath.certificates[0] as X509Certificate).publicKey
-    }.sortedBy { it.hash} // Sorted for determinism.
+    private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
+        Party(it.signerCertPath.certificates[0] as X509Certificate)
+    }.sortedBy { it.name.toString() } // Sorted for determinism.
 
     private fun Set<CodeSigner>.toPartiesOrderedByName(): List<Party> = map {
         Party(it.signerCertPath.certificates[0] as X509Certificate)

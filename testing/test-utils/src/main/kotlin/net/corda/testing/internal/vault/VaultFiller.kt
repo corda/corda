@@ -134,12 +134,12 @@ class VaultFiller @JvmOverloads constructor(
 
     @JvmOverloads
     fun fillWithSomeTestLinearAndDealStates(numberToCreate: Int,
-                                     externalId: String? = null,
-                                     participants: List<AbstractParty> = emptyList(),
-                                     linearString: String = "",
-                                     linearNumber: Long = 0L,
-                                     linearBoolean: Boolean = false,
-                                     linearTimestamp: Instant = now()): Vault<LinearState> {
+                                            externalId: String? = null,
+                                            participants: List<AbstractParty> = emptyList(),
+                                            linearString: String = "",
+                                            linearNumber: Long = 0L,
+                                            linearBoolean: Boolean = false,
+                                            linearTimestamp: Instant = now()): Vault<LinearState> {
         val myKey: PublicKey = services.myInfo.chooseIdentity().owningKey
         val me = AnonymousParty(myKey)
         val issuerKey = defaultNotary.keyPair

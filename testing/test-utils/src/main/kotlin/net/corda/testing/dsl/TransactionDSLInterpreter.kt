@@ -1,6 +1,15 @@
 package net.corda.testing.dsl
 
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.AutomaticPlaceholderConstraint
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party

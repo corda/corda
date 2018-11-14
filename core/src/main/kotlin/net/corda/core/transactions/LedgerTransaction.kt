@@ -11,9 +11,11 @@ import net.corda.core.internal.checkMinimumPlatformVersion
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.Try
 import net.corda.core.utilities.loggerFor
 import java.util.*
 import java.util.function.Predicate
+import kotlin.collections.HashSet
 import net.corda.core.utilities.warnOnce
 
 /**
@@ -58,6 +60,17 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     private companion object {
         val logger = loggerFor<LedgerTransaction>()
+        private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
+            return Try.on {
+                (classLoader ?: this::class.java.classLoader)
+                        .loadClass(className)
+                        .asSubclass(Contract::class.java)
+            }
+        }
+
+        private fun stateToContractClass(state: TransactionState<ContractState>): Try<Class<out Contract>> {
+            return contractClassFor(state.contract, state.data::class.java.classLoader)
+        }
     }
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
@@ -91,25 +104,7 @@ data class LedgerTransaction @JvmOverloads constructor(
     }
 
     /**
-     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
-     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
-     *
-     * A warning will be written to the log if any mismatch is detected.
-     */
-    private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
-
-    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        state.data.requiredContractClassName?.let { requiredContractClassName ->
-            if (state.contract != requiredContractClassName)
-                logger.warnOnce("""
-                State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
-                is bundled in TransactionState with ${state.contract}.
-                """.trimIndent().replace('\n', ' '))
-        }
-    }
-
-    /**
-     * Verify that for each contract the network wide package owner is respected.
+     * Verify that package ownership is respected.
      *
      * TODO - revisit once transaction contains network parameters.
      */
@@ -129,6 +124,24 @@ data class LedgerTransaction @JvmOverloads constructor(
             if (!owner.isFulfilledBy(attachment.signers)) {
                 throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
             }
+        }
+    }
+
+    /**
+     * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
+     * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
+     *
+     * A warning will be written to the log if any mismatch is detected.
+     */
+    private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
+
+    private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
+        state.data.requiredContractClassName?.let { requiredContractClassName ->
+            if (state.contract != requiredContractClassName)
+                logger.warnOnce("""
+                State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+                is bundled in TransactionState with ${state.contract}.
+                """.trimIndent().replace('\n', ' '))
         }
     }
 
@@ -180,6 +193,9 @@ data class LedgerTransaction @JvmOverloads constructor(
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
                     networkParameters?.whitelistedContractImplementations)
+
+            if (state.constraint is SignatureAttachmentConstraint)
+                checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
 
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
@@ -268,10 +284,39 @@ data class LedgerTransaction @JvmOverloads constructor(
         // Check that in the outputs,
         // a) an encumbered state does not refer to itself as the encumbrance
         // b) the number of outputs can contain the encumbrance
-        // c) the bi-directionality (full cycle) property is satisfied.
+        // c) the bi-directionality (full cycle) property is satisfied
+        // d) encumbered output states are assigned to the same notary.
         val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
         if (!statesAndEncumbrance.isEmpty()) {
-            checkOutputEncumbrances(statesAndEncumbrance)
+            checkBidirectionalOutputEncumbrances(statesAndEncumbrance)
+            checkNotariesOutputEncumbrance(statesAndEncumbrance)
+        }
+    }
+
+    // Method to check if all encumbered states are assigned to the same notary Party.
+    // This method should be invoked after [checkBidirectionalOutputEncumbrances], because it assumes that the
+    // bi-directionality property is already satisfied.
+    private fun checkNotariesOutputEncumbrance(statesAndEncumbrance: List<Pair<Int, Int>>) {
+        // We only check for transactions in which notary is null (i.e., issuing transactions).
+        // Note that if a notary is defined for a transaction, we already check if all outputs are assigned
+        // to the same notary (transaction's notary) in [checkNoNotaryChange()].
+        if (notary == null) {
+            // indicesAlreadyChecked is used to bypass already checked indices and to avoid cycles.
+            val indicesAlreadyChecked = HashSet<Int>()
+            statesAndEncumbrance.forEach {
+                checkNotary(it.first, indicesAlreadyChecked)
+            }
+        }
+    }
+
+    private tailrec fun checkNotary(index: Int, indicesAlreadyChecked: HashSet<Int>) {
+        if (indicesAlreadyChecked.add(index)) {
+            val encumbranceIndex = outputs[index].encumbrance!!
+            if (outputs[index].notary != outputs[encumbranceIndex].notary) {
+                throw TransactionVerificationException.TransactionNotaryMismatchEncumbranceException(id, index, encumbranceIndex, outputs[index].notary, outputs[encumbranceIndex].notary)
+            } else {
+                checkNotary(encumbranceIndex, indicesAlreadyChecked)
+            }
         }
     }
 
@@ -309,7 +354,7 @@ data class LedgerTransaction @JvmOverloads constructor(
     // b -> c    and     c -> b
     // c -> a            b -> a
     // and form a full cycle, meaning that the bi-directionality property is satisfied.
-    private fun checkOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
+    private fun checkBidirectionalOutputEncumbrances(statesAndEncumbrance: List<Pair<Int, Int>>) {
         // [Set] of "from" (encumbered states).
         val encumberedSet = mutableSetOf<Int>()
         // [Set] of "to" (encumbrance states).

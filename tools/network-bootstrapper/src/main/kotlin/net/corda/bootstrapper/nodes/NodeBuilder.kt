@@ -32,7 +32,7 @@ open class NodeBuilder {
                 .withBaseDirectory(nodeDir)
                 .exec(BuildImageResultCallback()).awaitImageId()
         LOG.info("finished building docker image for: $nodeDir with id: $nodeImageId")
-        val config = nodeConfig.parseAsNodeConfigWithFallback(ConfigFactory.parseFile(copiedNode.configFile)).orThrow()
+        val config = nodeConfig.parseAsNodeConfigWithFallback(ConfigFactory.parseFile(copiedNode.configFile)).value()
         return copiedNode.builtNode(config, nodeImageId)
     }
 

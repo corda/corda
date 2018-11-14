@@ -9,10 +9,10 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isCRLDistributionPointBlacklisted
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -105,6 +105,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.function.Consumer
+import javax.persistence.EntityManager
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -505,8 +507,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 val republishInterval = try {
                     networkMapClient.publish(signedNodeInfo)
                     heartbeatInterval
-                } catch (t: Throwable) {
-                    log.warn("Error encountered while publishing node info, will retry again", t)
+                } catch (e: Exception) {
+                    log.warn("Error encountered while publishing node info, will retry again", e)
                     // TODO: Exponential backoff? It should reach max interval of eventHorizon/2.
                     1.minutes
                 }
@@ -802,7 +804,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory,identityService, database, cryptoService)
+        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
     }
 
     open fun stop() {
@@ -988,6 +990,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         override fun jdbcSession(): Connection = database.createSession()
 
+        override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+            return block(contextTransaction.restrictedEntityManager)
+        }
+
+        override fun withEntityManager(block: Consumer<EntityManager>) {
+            block.accept(contextTransaction.restrictedEntityManager)
+        }
+
         // allows services to register handlers to be informed when the node stop method is called
         override fun registerUnloadHandler(runOnStop: () -> Unit) {
             this@AbstractNode.runOnStop += runOnStop
@@ -1032,7 +1042,6 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             private val _future = openFuture<FlowStateMachine<T>>()
             override val future: CordaFuture<FlowStateMachine<T>>
                 get() = _future
-
         }
         return startFlow(startFlowEvent)
     }

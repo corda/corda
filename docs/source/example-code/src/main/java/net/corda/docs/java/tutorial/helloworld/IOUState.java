@@ -2,11 +2,11 @@ package net.corda.docs.java.tutorial.helloworld;
 
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
+import java.util.Arrays;
 import java.util.List;
 
 // DOCSTART 01
-// Add these imports:
-import com.google.common.collect.ImmutableList;
+// Add this import:
 import net.corda.core.identity.Party;
 
 // Replace TemplateState's definition with:
@@ -35,7 +35,7 @@ public class IOUState implements ContractState {
 
     @Override
     public List<AbstractParty> getParticipants() {
-        return ImmutableList.of(lender, borrower);
+        return Arrays.asList(lender, borrower);
     }
 }
 // DOCEND 01

@@ -5,7 +5,6 @@ package net.corda.docs.kotlin.tutorial.twoparty
 // DOCSTART 01
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndContract
 import net.corda.core.flows.CollectSignaturesFlow
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
@@ -27,20 +26,18 @@ class IOUFlow(val iouValue: Int,
     /** The flow logic is encapsulated within the call() method. */
     @Suspendable
     override fun call() {
+        // DOCSTART 02
         // We retrieve the notary identity from the network map.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
-        // DOCSTART 02
-        // We create a transaction builder.
-        val txBuilder = TransactionBuilder(notary = notary)
-
         // We create the transaction components.
         val outputState = IOUState(iouValue, ourIdentity, otherParty)
-        val outputContractAndState = StateAndContract(outputState, IOUContract.ID)
-        val cmd = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
+        val command = Command(IOUContract.Create(), listOf(ourIdentity.owningKey, otherParty.owningKey))
 
-        // We add the items to the builder.
-        txBuilder.withItems(outputContractAndState, cmd)
+        // We create a transaction builder and add the components.
+        val txBuilder = TransactionBuilder(notary = notary)
+                .addOutputState(outputState, IOUContract.ID)
+                .addCommand(command)
 
         // Verifying the transaction.
         txBuilder.verify(serviceHub)

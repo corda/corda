@@ -94,8 +94,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
             override fun run() {
                 val nextScheduleDelay = try {
                     updateNetworkMapCache()
-                } catch (t: Throwable) {
-                    logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", t)
+                } catch (e: Exception) {
+                    logger.warn("Error encountered while updating network map, will retry in $defaultRetryInterval", e)
                     defaultRetryInterval
                 }
                 // Schedule the next update.

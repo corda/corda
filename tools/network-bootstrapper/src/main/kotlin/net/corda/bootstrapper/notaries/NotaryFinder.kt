@@ -1,5 +1,6 @@
 package net.corda.bootstrapper.notaries
 
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.bootstrapper.Constants
 import net.corda.bootstrapper.nodes.FoundNode
@@ -12,7 +13,7 @@ class NotaryFinder(private val dirToSearch: File) {
                 .map {
                     try {
                         ConfigFactory.parseFile(it) to it
-                    } catch (t: Throwable) {
+                    } catch (e: ConfigException) {
                         null
                     }
                 }.filterNotNull()

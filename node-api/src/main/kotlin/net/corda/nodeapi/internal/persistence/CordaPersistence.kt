@@ -169,8 +169,8 @@ class CordaPersistence(
         var recoverableFailureCount = 0
         fun <T> quietly(task: () -> T) = try {
             task()
-        } catch (t: Throwable) {
-            log.warn("Cleanup task failed:", t)
+        } catch (e: Exception) {
+            log.warn("Cleanup task failed:", e)
         }
         while (true) {
             val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?
@@ -178,7 +178,7 @@ class CordaPersistence(
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 quietly(transaction::rollback)
                 if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause())) {
                     if (++recoverableFailureCount > recoverableFailureTolerance) throw e
