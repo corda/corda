@@ -3292,8 +3292,12 @@ public static final class net.corda.core.node.services.Vault$Page extends java.l
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$StateMetadata extends java.lang.Object
   public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant)
+  public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus)
+  public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus, net.corda.core.node.services.Vault$ConstraintInfo)
   @NotNull
   public final net.corda.core.contracts.StateRef component1()
+  @Nullable
+  public final net.corda.core.node.services.Vault$ConstraintInfo component10()
   @NotNull
   public final String component2()
   @NotNull
@@ -3308,9 +3312,17 @@ public static final class net.corda.core.node.services.Vault$StateMetadata exten
   public final String component7()
   @Nullable
   public final java.time.Instant component8()
+  @Nullable
+  public final net.corda.core.node.services.Vault$RelevancyStatus component9()
   @NotNull
   public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant)
+  @NotNull
+  public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus)
+  @NotNull
+  public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus, net.corda.core.node.services.Vault$ConstraintInfo)
   public boolean equals(Object)
+  @Nullable
+  public final net.corda.core.node.services.Vault$ConstraintInfo getConstraintInfo()
   @Nullable
   public final java.time.Instant getConsumedTime()
   @NotNull
@@ -3325,9 +3337,12 @@ public static final class net.corda.core.node.services.Vault$StateMetadata exten
   public final java.time.Instant getRecordedTime()
   @NotNull
   public final net.corda.core.contracts.StateRef getRef()
+  @Nullable
+  public final net.corda.core.node.services.Vault$RelevancyStatus getRelevancyStatus()
   @NotNull
   public final net.corda.core.node.services.Vault$StateStatus getStatus()
   public int hashCode()
+  @NotNull
   public String toString()
 ##
 @CordaSerializable
