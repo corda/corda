@@ -42,10 +42,11 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
         def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
         project.copy {
             into new File(project.buildDir, "docker-temp")
+            from "src/bash/run-corda.sh"
             from cordaJar
             from shadowJar.archivePath
             from "src/config/starting-node.conf"
-            from "src/bash/start.sh"
+            from "src/bash/generate-config.sh"
             from "src/docker/Dockerfile"
             rename(cordaJar.name, "corda.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")

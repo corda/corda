@@ -16,14 +16,21 @@ import java.io.File
 class ConfigExporter {
     fun combineTestNetWithOurConfig(testNetConf: String, ourConf: String, outputFile: String) {
         var ourParsedConfig = ConfigFactory.parseFile(File(ourConf))
-        println(ourParsedConfig.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
         val testNetParsedConfig = ConfigFactory.parseFile(File(testNetConf))
+        println(testNetParsedConfig.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
         ourParsedConfig = ourParsedConfig.withValue("keyStorePassword", testNetParsedConfig.getValue("keyStorePassword"))
         ourParsedConfig = ourParsedConfig.withValue("myLegalName", testNetParsedConfig.getValue("myLegalName"))
         ourParsedConfig = ourParsedConfig.withValue("trustStorePassword", testNetParsedConfig.getValue("trustStorePassword"))
-        File(outputFile).writer().use {
-            it.write(ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig().root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
-            it.flush()
+        File(outputFile).writer().use { fileWriter ->
+            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig()
+            println(finalConfig.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
+            var configToWrite = ConfigFactory.empty()
+            ourParsedConfig.entrySet().forEach { configEntry ->
+                //use all keys present in "ourConfig" but get values from "finalConfig"
+                val keyWithoutQuotes = configEntry.key.replace("\"", "")
+                configToWrite = configToWrite.withValue(keyWithoutQuotes, finalConfig.getValue(keyWithoutQuotes))
+            }
+            fileWriter.write(configToWrite.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
         }
     }
 }
