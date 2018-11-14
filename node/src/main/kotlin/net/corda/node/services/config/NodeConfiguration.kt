@@ -82,6 +82,7 @@ interface NodeConfiguration {
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
     val autoAcceptNetworkParameterChanges: Boolean get() = true
+    val excludedAutoAcceptNetworkParameters: Set<String>
 
     fun validate(): List<String>
 
@@ -221,7 +222,9 @@ data class NodeConfigurationImpl(
         override val cordappDirectories: List<Path> = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT),
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
         override val flowOverrides: FlowOverrideConfig?,
-        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
+        override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() },
+        override val autoAcceptNetworkParameterChanges: Boolean = true,
+        override val excludedAutoAcceptNetworkParameters: Set<String> = emptySet()
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

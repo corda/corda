@@ -162,6 +162,9 @@ know about the details of the impending change, along with the justification, ho
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
+Auto Acceptance
+```````````````
+
 If the only changes between the new and old parameters are for auto-acceptable parameters then, unless configured otherwise, the new
 parameters will be accepted without user input. The following parameters with the @AutoAcceptable annotation are auto-acceptable:
 
@@ -170,9 +173,24 @@ parameters will be accepted without user input. The following parameters with th
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-This behaviour can be turned off by setting the optional node configuration property ``autoAcceptNetworkParameterChanges`` to false. If
-this behaviour is turned off or the network parameters change involves parameters that are not auto-acceptable then manual approval is
-required.
+This behaviour can be turned off by setting the optional node configuration property ``autoAcceptNetworkParameterChanges`` to false. It
+is also possible to switch off this behaviour at a more granular parameter level by specifying the set of @AutoAcceptable parameters that
+should not be auto-acceptable in the optional ``excludedAutoAcceptNetworkParameters`` node configuration property.
+
+For example, auto-acceptance can be switched off for any updates that change the ``packageOwnership`` map by adding the following to the
+node configuration:
+
+.. sourcecode:: guess
+
+    ...
+    excludedAutoAcceptNetworkParameters: ["packageOwnership"]
+    ...
+
+Manual Acceptance
+`````````````````
+
+If the auto-acceptance behaviour is turned off via the configuration or the network parameters change involves parameters that are
+not auto-acceptable then manual approval is required.
 
 In this case the node administrator can review the change and decide if they are going to accept it. The approval should be done
 before the update Deadline. Nodes that don't approve before the deadline will likely be removed from the network map by

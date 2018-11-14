@@ -7,6 +7,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
+import java.lang.reflect.Method
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -88,9 +89,11 @@ data class NetworkParameters(
     )
 
     companion object {
-        private val memberProperties = NetworkParameters::class.declaredMemberProperties.asSequence()
-        private val nonAutoAcceptableGetters = memberProperties.filter { !it.isAutoAcceptable() }.map { it.javaGetter }
-        val autoAcceptablePropertyNames = memberProperties.filter { it.isAutoAcceptable() }.map { it.name }
+        private val memberPropertyPartition = NetworkParameters::class.declaredMemberProperties.asSequence()
+                .partition { it.isAutoAcceptable() }
+        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({it.name}, {it.javaGetter})
+        private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
+        val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
     }
 
     init {
@@ -165,17 +168,18 @@ data class NetworkParameters(
     fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
 
     /**
-     * Returns true if the changes in [newNetworkParameters] are only for [AutoAcceptable] properties
+     * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
+     * included in the [excludedParameterNames]
      */
-    fun canAutoAccept(newNetworkParameters: NetworkParameters): Boolean {
-        nonAutoAcceptableGetters.forEach {
-            val propertyValue = it?.invoke(this)
-            val newPropertyValue = it?.invoke(newNetworkParameters)
-            if (propertyValue != newPropertyValue) {
-                return false
-            }
-        }
-        return true
+    fun canAutoAccept(newNetworkParameters: NetworkParameters, excludedParameterNames: Set<String>): Boolean {
+        return nonAutoAcceptableGetters.none { valueChanged(newNetworkParameters, it) } &&
+               autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
+    }
+
+    private fun valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
+        val propertyValue = getter?.invoke(this)
+        val newPropertyValue = getter?.invoke(newNetworkParameters)
+        return propertyValue != newPropertyValue
     }
 }
 

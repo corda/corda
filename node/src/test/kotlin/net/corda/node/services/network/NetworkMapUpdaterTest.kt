@@ -21,7 +21,10 @@ import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -46,9 +49,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -93,13 +93,15 @@ class NetworkMapUpdaterTest {
 
     private fun startUpdater(ourNodeInfo: SignedNodeInfo = this.ourNodeInfo,
                              networkParameters: NetworkParameters = server.networkParameters,
-                             autoAcceptNetworkParameters: Boolean = true) {
+                             autoAcceptNetworkParameters: Boolean = true,
+                             excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
         updater.start(DEV_ROOT_CA.certificate,
                       server.networkParameters.serialize().hash,
                       ourNodeInfo,
                       networkParameters,
                       MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
-                      autoAcceptNetworkParameters)
+                      autoAcceptNetworkParameters,
+                      excludedAutoAcceptNetworkParameters)
     }
 
     @Test
@@ -259,6 +261,20 @@ class NetworkMapUpdaterTest {
         val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
+    }
+
+    @Test
+    fun `network parameters not auto-accepted when update only changes whitelist but parameter included in exclusion`() {
+        setUpdater()
+        val newParameters = testNetworkParameters(
+                epoch = 314,
+                whitelistedContractImplementations = mapOf("key" to listOf(SecureHash.randomSHA256())))
+        server.scheduleParametersUpdate(newParameters, "Test update", Instant.MIN)
+        startUpdater(excludedAutoAcceptNetworkParameters = setOf("whitelistedContractImplementations"))
+        // TODO: Remove sleep in unit test.
+        Thread.sleep(2L * cacheExpiryMs)
+        val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
+        assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
     }
 
     @Test

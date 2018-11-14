@@ -1,12 +1,8 @@
 package net.corda.node.internal
 
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
@@ -34,8 +30,6 @@ import org.junit.Test
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.test.assertFails
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
@@ -167,9 +161,24 @@ class NetworkParametersTest {
         val netParamsNotAutoAcceptable = netParamsAutoAcceptable.copy(
                 maxMessageSize = netParams.maxMessageSize + 1)
 
-        assertTrue(netParams.canAutoAccept(netParams))
-        assertTrue(netParams.canAutoAccept(netParamsAutoAcceptable))
-        assertFalse(netParams.canAutoAccept(netParamsNotAutoAcceptable))
+        assert(netParams.canAutoAccept(netParams, emptySet())) {
+            "auto-acceptable if identical"
+        }
+        assert(netParams.canAutoAccept(netParams, NetworkParameters.autoAcceptablePropertyNames)) {
+            "auto acceptable if identical regardless of exclusions"
+        }
+        assert(netParams.canAutoAccept(netParamsAutoAcceptable, emptySet())) {
+            "auto-acceptable if only AutoAcceptable params have changed"
+        }
+        assert(netParams.canAutoAccept(netParamsAutoAcceptable, setOf("modifiedTime"))) {
+            "auto-acceptable if only AutoAcceptable params have changed and excluded param has not changed"
+        }
+        assert(!netParams.canAutoAccept(netParamsNotAutoAcceptable, emptySet())) {
+            "not auto-acceptable if non-AutoAcceptable param has changed"
+        }
+        assert(!netParams.canAutoAccept(netParamsAutoAcceptable, setOf("whitelistedContractImplementations"))) {
+            "not auto-acceptable if only AutoAcceptable params have changed but one has been added to the exclusion set"
+        }
     }
 
     // Helpers

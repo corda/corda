@@ -52,6 +52,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     private lateinit var ourNodeInfoHash: SecureHash
     private lateinit var networkParameters: NetworkParameters
     private lateinit var keyManagementService: KeyManagementService
+    private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
 
     override fun close() {
         fileWatcherSubscription?.unsubscribe()
@@ -63,7 +64,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,
               keyManagementService: KeyManagementService,
-              autoAcceptNetworkParameters: Boolean) {
+              autoAcceptNetworkParameters: Boolean,
+              excludedAutoAcceptNetworkParameters: Set<String>) {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         this.trustRoot = trustRoot
         this.currentParametersHash = currentParametersHash
@@ -72,8 +74,11 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         this.networkParameters = networkParameters
         this.keyManagementService = keyManagementService
         this.autoAcceptNetworkParameters = autoAcceptNetworkParameters
-        if (autoAcceptNetworkParameters) {
-            logger.info("Auto-accept enabled for network parameter changes which modify only: ${NetworkParameters.autoAcceptablePropertyNames}")
+        this.excludedAutoAcceptNetworkParameters = excludedAutoAcceptNetworkParameters
+
+        val autoAcceptNetworkParametersNames = NetworkParameters.autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
+        if (autoAcceptNetworkParameters && autoAcceptNetworkParametersNames.isNotEmpty()) {
+            logger.info("Auto-accept enabled for network parameter changes which modify only: $autoAcceptNetworkParametersNames")
         }
         watchForNodeInfoFiles()
         if (networkMapClient != null) {
@@ -212,7 +217,7 @@ The node will shutdown now.""")
                 update.description,
                 update.updateDeadline)
 
-        if (autoAcceptNetworkParameters && networkParameters.canAutoAccept(newNetParams)) {
+        if (autoAcceptNetworkParameters && networkParameters.canAutoAccept(newNetParams, excludedAutoAcceptNetworkParameters)) {
             logger.info("Auto-accepting network parameter update ${update.newParametersHash}")
             acceptNewNetworkParameters(update.newParametersHash) { hash ->
                 hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }
