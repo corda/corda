@@ -104,7 +104,7 @@ sealed class TypeIdentifier {
      */
     object TopType : TypeIdentifier() {
         override val name get() = "*"
-        override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass("java.lang.Object")
+        override fun getLocalType(classLoader: ClassLoader): Type = Any::class.java
         override fun toString() = "TopType"
     }
 

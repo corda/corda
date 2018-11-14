@@ -80,7 +80,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             Collection::class.java.isAssignableFrom(type) &&
             !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
             Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
-            type.isPrimitive -> LocalTypeInformation.Atomic(type, typeIdentifier)
+            type.kotlin.javaPrimitiveType != null -> LocalTypeInformation.Atomic(type.kotlin.javaPrimitiveType!!, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
                     type,
                     typeIdentifier,
@@ -94,7 +94,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
             else -> when {
-                isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier)
+                isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier) {
+                    buildNonAtomic(type, type, typeIdentifier, emptyList())
+                }
                 else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
             }
         }
@@ -116,7 +118,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
             else -> when {
-                isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier)
+                isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier) {
+                        buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+                    }
                 else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
             }
         }
@@ -161,7 +165,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
 
         if (observedConstructor == null) {
             logger.warn("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, buildReadOnlyProperties(rawType),
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
                     superclassInformation, interfaceInformation, typeParameterInformation)
         }
 
@@ -176,7 +180,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             } else {
                 logger.warn("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, properties, superclassInformation,
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
                     interfaceInformation, typeParameterInformation)
         }
 
@@ -378,13 +382,17 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
 
     val preferredCandidate = clazz.kotlin.primaryConstructor ?:
-        when(nonDefaultCtors.size) {
-            1 -> nonDefaultCtors.first()
-            0 -> defaultCtor
-            else -> null
-        }
+    when(nonDefaultCtors.size) {
+        1 -> nonDefaultCtors.first()
+        0 -> defaultCtor
+        else -> null
+    } ?: return null
 
-    return preferredCandidate?.apply { isAccessible = true }
+    return try {
+        preferredCandidate.apply { isAccessible = true }
+    } catch (e: SecurityException) {
+        null
+    }
 }
 
 private fun evolverConstructors(type: Type): List<KFunction<Any>> {

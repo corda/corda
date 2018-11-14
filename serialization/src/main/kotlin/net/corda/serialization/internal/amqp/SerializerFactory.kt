@@ -11,8 +11,6 @@ import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
-@KeepForDJVM
-data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.

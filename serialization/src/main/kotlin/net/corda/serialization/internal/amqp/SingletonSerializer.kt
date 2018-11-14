@@ -1,6 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
+import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -13,9 +14,9 @@ import java.lang.reflect.Type
 class SingletonSerializer(override val type: Class<*>, val singleton: Any, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val typeDescriptor = factory.createDescriptor(type)
 
-    private val interfaces = interfacesForSerialization(type, factory)
+    private val interfaces = (factory.getTypeInformation(type) as LocalTypeInformation.Singleton).interfaces
 
-    private fun generateProvides(): List<String> = interfaces.map { it.typeName }
+    private fun generateProvides(): List<String> = interfaces.map { it.typeIdentifier.name }
 
     internal val typeNotation: TypeNotation = RestrictedType(type.typeName, "Singleton", generateProvides(), "boolean", Descriptor(typeDescriptor), emptyList())
 

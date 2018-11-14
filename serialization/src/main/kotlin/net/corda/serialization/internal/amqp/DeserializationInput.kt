@@ -8,6 +8,7 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.*
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedInteger
@@ -169,7 +170,7 @@ class DeserializationInput constructor(
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
-                        if (type.typeName != "?" && SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
+                        if (type != TypeIdentifier.UnknownType.getLocalType() && serializer.type != type && with(serializer.type) {
                                     !isSubClassOf(type) && !materiallyEquivalentTo(type)
                                 }
                         ) {
