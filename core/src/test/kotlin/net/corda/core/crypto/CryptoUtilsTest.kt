@@ -6,7 +6,6 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
-import net.corda.core.crypto.internal.providerMap
 import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -31,6 +30,7 @@ import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
+import java.security.Security
 import java.util.*
 import kotlin.test.*
 
@@ -933,12 +933,23 @@ class CryptoUtilsTest {
 
     @Test
     fun `test default SecureRandom uses platformSecureRandom`() {
-        // Try before we register Corda Providers.
-        val secureRandomBeforeRegisteringCordaProviders = SecureRandom()
-        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomBeforeRegisteringCordaProviders.algorithm)
-        // Now register all Providers.
-        providerMap
-        val secureRandomAfterRegisteringCordaProviders = SecureRandom()
-        assertEquals(PlatformSecureRandomService.algorithm, secureRandomAfterRegisteringCordaProviders.algorithm)
+        // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
+
+        // Remove [CordaSecurityProvider] in case it is already registered.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        // Try after removing CordaSecurityProvider.
+        val secureRandomNotRegisteredCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+
+        // Now register CordaSecurityProvider as last Provider.
+        Security.addProvider(CordaSecurityProvider())
+        val secureRandomRegisteredLastCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+
+        // Remove Corda Provider again and add it as the first Provider entry.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
+        val secureRandomRegisteredFirstCordaProvider = SecureRandom()
+        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
 }
