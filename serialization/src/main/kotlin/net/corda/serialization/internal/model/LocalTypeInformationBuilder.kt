@@ -186,7 +186,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             EvolverConstructorInformation(constructorInformation, evolverProperties)
         }
 
-        return LocalTypeInformation.Composable(rawType, typeIdentifier, constructorInformation, evolverConstructors, properties,
+        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolverConstructors, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
     }
 

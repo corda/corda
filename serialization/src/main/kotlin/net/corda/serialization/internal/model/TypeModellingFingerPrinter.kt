@@ -78,8 +78,9 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
     }
 
     val fingerprint: String get() {
-        if (debugBuffer != null) logger.info(debugBuffer.toString())
-        return hasher.hash().asBytes().toBase64()
+        val fingerprint = hasher.hash().asBytes().toBase64()
+        if (debugBuffer != null) logger.info("$fingerprint from $debugBuffer")
+        return fingerprint
     }
 }
 

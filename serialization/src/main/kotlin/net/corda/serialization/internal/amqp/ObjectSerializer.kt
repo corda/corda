@@ -14,8 +14,8 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 
     companion object {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
-            val typeDescriptor = factory.createDescriptor(typeInformation.observedType)
-            val typeNotation = TypeNotationGenerator(factory).getTypeNotation(typeInformation)
+            val typeDescriptor = factory.createDescriptor(typeInformation)
+            val typeNotation = TypeNotationGenerator.getTypeNotation(typeInformation, typeDescriptor)
 
             return when (typeInformation) {
                 is LocalTypeInformation.Composable ->

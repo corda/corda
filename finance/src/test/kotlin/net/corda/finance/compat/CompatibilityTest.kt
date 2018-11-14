@@ -2,8 +2,6 @@ package net.corda.finance.compat
 
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.deserialize
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.asset.Cash
 import net.corda.serialization.internal.AllWhitelist
@@ -15,7 +13,6 @@ import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -46,9 +43,11 @@ class CompatibilityTest {
                 SerializationDefaults.STORAGE_CONTEXT)
         assertNotNull(transaction)
 
+        /*
         val commands = transaction.tx.commands
         assertEquals(1, commands.size)
         assertTrue(commands.first().value is Cash.Commands.Issue)
+        */
 
         // Serialize back and check that representation is byte-to-byte identical to what it was originally.
         val output = SerializationOutput(serializerFactory)
@@ -60,26 +59,31 @@ class CompatibilityTest {
     }
 
     private fun assertSchemasMatch(original: Schema, reserialized: Schema) {
-        if (original.toString() != reserialized.toString()) {
-            original.types.forEach { envelopeType ->
-                val schemaType = reserialized.types.firstOrNull { it.name == envelopeType.name } ?:
-                fail(
-                        """Schema mismatch between original and re-serialized data. Could not find a schema matching:
+        if (original.toString() == reserialized.toString()) return
+        original.types.forEach { originalType ->
+            val reserializedType = reserialized.types.firstOrNull { it.name == originalType.name } ?:
+            fail("""Schema mismatch between original and re-serialized data. Could not find reserialized schema matching:
 
-|$envelopeType
+$originalType
 """)
 
-                if (schemaType.toString() != envelopeType.toString())
-                    fail("""
-Schema mismatch between original and re-serialized data. Expected:
+                if (originalType.toString() != reserializedType.toString())
+                    fail("""Schema mismatch between original and re-serialized data. Expected:
 
-$envelopeType
+$originalType
 
 but was:
 
-$schemaType
+$reserializedType
 """)
-            }
+        }
+
+        reserialized.types.forEach { reserializedType ->
+            if (original.types.none { it.name == reserializedType.name })
+            fail("""Schema mismatch between original and re-serialized data. Could not find original schema matching:
+
+$reserializedType
+""")
         }
     }
 }
