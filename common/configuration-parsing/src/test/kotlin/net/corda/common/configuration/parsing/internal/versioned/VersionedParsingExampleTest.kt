@@ -52,7 +52,7 @@ class VersionedParsingExampleTest {
     private fun assertResult(result: Valid<RpcSettings>, principalAddressValue: Address, adminAddressValue: Address) {
 
         assertThat(result.isValid).isTrue()
-        assertThat(result.orThrow()).satisfies { value ->
+        assertThat(result.value()).satisfies { value ->
 
             assertThat(value.principal).isEqualTo(principalAddressValue)
             assertThat(value.admin).isEqualTo(adminAddressValue)
@@ -94,7 +94,7 @@ class VersionedParsingExampleTest {
                 val adminAddress = addressFor(adminHost, adminPort)
 
                 return if (principalAddress.isValid && adminAddress.isValid) {
-                    return valid(RpcSettings(principalAddress.value, adminAddress.value))
+                    return valid(RpcSettings(principalAddress.value(), adminAddress.value()))
                 } else {
                     invalid(principalAddress.errors + adminAddress.errors)
                 }
@@ -128,4 +128,4 @@ class VersionedParsingExampleTest {
     }
 }
 
-private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
+private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it }

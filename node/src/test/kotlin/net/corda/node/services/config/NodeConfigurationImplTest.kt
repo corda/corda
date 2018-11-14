@@ -234,7 +234,7 @@ class NodeConfigurationImplTest {
     @Test
     fun `jmxReporterType is null and defaults to Jokolia`() {
         val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }
 
@@ -242,7 +242,7 @@ class NodeConfigurationImplTest {
     fun `jmxReporterType is not null and is set to New Relic`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("NEW_RELIC"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.NEW_RELIC.toString() == nodeConfig.jmxReporterType.toString())
     }
 
@@ -250,7 +250,7 @@ class NodeConfigurationImplTest {
     fun `jmxReporterType is not null and set to Jokolia`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }
 
