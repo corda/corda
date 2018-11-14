@@ -21,6 +21,7 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -54,15 +55,11 @@ open class TransactionBuilder @JvmOverloads constructor(
 ) {
 
     private companion object {
-        val logger = loggerFor<TransactionBuilder>()
+        private val log = contextLogger()
     }
 
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
-
-    companion object {
-        private val log = contextLogger()
-    }
 
     /**
      * Creates a copy of the builder.
@@ -182,14 +179,16 @@ open class TransactionBuilder @JvmOverloads constructor(
                 }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
-        val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet().map { ctr ->
-            handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
-        }
+        val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
+                .map { ctr ->
+                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
+                }
 
-        val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }.flatten()
+        val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
+                .flatten()
 
         // The output states need to preserve the order in which they were added.
-        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance}!! }
+        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance }!! }
 
         val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.map { it.first } + refStateContractAttachments
 
@@ -311,22 +310,18 @@ open class TransactionBuilder @JvmOverloads constructor(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
-        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
-        attachmentToUse.signers.isNotEmpty() -> {
-            // Auto downgrade: signature constraints only available with a corda network minimum platform version of >= 4
-            if (services.networkParameters.minimumPlatformVersion < 4) {
-                log.warn("Signature constraints not available on network requiring a minimum platform version of ${services.networkParameters.minimumPlatformVersion}")
-                if (useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters)) {
-                    log.warn("Reverting back to using whitelisted zone constraints")
-                    WhitelistedByZoneAttachmentConstraint
-                }
-                else {
-                    log.warn("Reverting back to using hash constraints")
-                    HashAttachmentConstraint(attachmentId)
-                }
+        attachmentToUse.signers.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
+            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
+            if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
+                log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
+                WhitelistedByZoneAttachmentConstraint
+            } else {
+                log.warnOnce("Reverting back to using hash constraints for contract $contractClassName")
+                HashAttachmentConstraint(attachmentToUse.id)
             }
-            else makeSignatureAttachmentConstraint(attachmentSigners)
         }
+        attachmentToUse.signers.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signers)
+        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
         else -> HashAttachmentConstraint(attachmentToUse.id)
     }
 
