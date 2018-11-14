@@ -47,8 +47,11 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
-        if (uniquenessProvider.eta() > 5.minutes) {
-           otherSideSession?.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis()/1000))
+        if (otherSideSession != null) {
+            log.info("otherSideSession.flowInfo.flowVersion = ${otherSideSession.getCounterpartyFlowInfo().flowVersion}")
+            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && uniquenessProvider.eta() > 5.minutes) {
+                otherSideSession.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis() / 1000))
+            }
         }
 
         val result = callingFlow.executeAsync(
