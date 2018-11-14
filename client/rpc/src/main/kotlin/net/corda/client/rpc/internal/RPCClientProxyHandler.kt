@@ -17,6 +17,7 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.serialize
@@ -35,6 +36,7 @@ import org.apache.activemq.artemis.api.core.client.ActiveMQClient.DEFAULT_ACK_BA
 import rx.Notification
 import rx.Observable
 import rx.subjects.UnicastSubject
+import java.io.InputStream
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.util.*
@@ -254,16 +256,13 @@ class RPCClientProxyHandler(
         val replyId = InvocationId.newInstance()
         callSiteMap?.set(replyId, CallSite(method.name))
         try {
-            val serialisedArguments = (arguments?.toList() ?: emptyList()).serialize(context = serializationContextWithObservableContext)
-            val request = RPCApi.ClientToServer.RpcRequest(
-                    clientAddress,
-                    method.name,
-                    serialisedArguments,
-                    replyId,
-                    sessionId,
-                    externalTrace,
-                    impersonatedActor
-            )
+            val request: RPCApi.ClientToServer = if (method in methodsToUploadAttachment) {
+                val rpcRequest = rpcRequest(replyId, method, arguments?.toList()?.let { args -> if(args.size > 1) args.subList(1, args.size) else emptyList() })
+                val attachmentInputStream = arguments?.first()?.let { arg -> arg as? InputStream } ?: throw RPCException("The first argument of a function to upload an attachment must be an InputStream.")
+                RPCApi.ClientToServer.AttachmentUploadRpcRequest(rpcRequest, attachmentInputStream)
+            } else {
+                rpcRequest(replyId, method, arguments?.toList())
+            }
             val replyFuture = SettableFuture.create<Any>()
             require(rpcReplyMap.put(replyId, replyFuture) == null) {
                 "Generated several RPC requests with same ID $replyId"
@@ -280,6 +279,13 @@ class RPCClientProxyHandler(
         } finally {
             callSiteMap?.remove(replyId)
         }
+    }
+
+    private val methodsToUploadAttachment: Set<Method> = setOf(CordaRPCOps::uploadAttachment.javaMethod!!, CordaRPCOps::uploadAttachmentWithMetadata.javaMethod!!)
+
+    private fun rpcRequest(replyId: InvocationId, method: Method, arguments: List<Any?>?): RPCApi.ClientToServer.RpcRequest {
+        val serialisedArguments = (arguments ?: emptyList()).serialize(context = serializationContextWithObservableContext)
+        return RPCApi.ClientToServer.RpcRequest(clientAddress, method.name, serialisedArguments, replyId, sessionId, externalTrace, impersonatedActor)
     }
 
     private fun sendMessage(message: RPCApi.ClientToServer) {

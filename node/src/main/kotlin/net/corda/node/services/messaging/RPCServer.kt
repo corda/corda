@@ -305,6 +305,11 @@ class RPCServer(
                     // Don't print the whole object because most of the data is useless.
                     log.debug { "-> RPC by $username -> ${clientToServer.methodName}" }
                 }
+                is RPCApi.ClientToServer.AttachmentUploadRpcRequest -> {
+                    val username = artemisMessage.getStringProperty("_AMQ_VALIDATED_USER") ?: "(unknown)"
+                    // Don't print the whole object because most of the data is useless.
+                    log.debug { "-> RPC by $username -> ${clientToServer.rpcRequest.methodName}" }
+                }
                 is RPCApi.ClientToServer.ObservablesClosed -> {
                     log.debug { "-> RPC observable closed -> $clientToServer"}
                 }
@@ -312,41 +317,40 @@ class RPCServer(
         }
         try {
             when (clientToServer) {
-                is RPCApi.ClientToServer.RpcRequest -> {
-                    val deduplicationSequenceNumber = artemisMessage.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
-                    if (deduplicationChecker.checkDuplicateMessageId(
-                            identity = clientToServer.clientAddress,
-                            sequenceNumber = deduplicationSequenceNumber
-                    )) {
-                        log.info("Message duplication detected, discarding message")
-                        return
-                    }
-                    val arguments = Try.on {
-                        clientToServer.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT)
-                    }
-                    val context = artemisMessage.context(clientToServer.sessionId)
-                    context.invocation.pushToLoggingContext()
-                    when (arguments) {
-                        is Try.Success -> {
-                            log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
-                            rpcExecutor!!.submit {
-                                val result = invokeRpc(context, clientToServer.methodName, arguments.value)
-                                sendReply(clientToServer.replyId, clientToServer.clientAddress, result)
-                            }
-                        }
-                        is Try.Failure -> {
-                            // We failed to deserialise the arguments, route back the error
-                            log.warn("Inbound RPC failed", arguments.exception)
-                            sendReply(clientToServer.replyId, clientToServer.clientAddress, arguments)
-                        }
-                    }
-                }
+                is RPCApi.ClientToServer.RpcRequest -> clientToServer.handleIncoming(artemisMessage) { clientToServer.serialisedArguments.deserialize(context = RPC_SERVER_CONTEXT) }
+                // TODO sollecitom check
+                is RPCApi.ClientToServer.AttachmentUploadRpcRequest -> clientToServer.rpcRequest.handleIncoming(artemisMessage) { listOf<Any?>(clientToServer.attachmentInputStream) + clientToServer.rpcRequest.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT) }
                 is RPCApi.ClientToServer.ObservablesClosed -> {
                     observableMap.invalidateAll(clientToServer.ids)
                 }
             }
         } finally {
             artemisMessage.acknowledge()
+        }
+    }
+
+    private fun RPCApi.ClientToServer.RpcRequest.handleIncoming(artemisMessage: ClientMessage, extractArguments: () -> List<Any?>) {
+        val deduplicationSequenceNumber = artemisMessage.getLongProperty(RPCApi.DEDUPLICATION_SEQUENCE_NUMBER_FIELD_NAME)
+        if (deduplicationChecker.checkDuplicateMessageId(identity = clientAddress, sequenceNumber = deduplicationSequenceNumber)) {
+            log.info("Message duplication detected, discarding message")
+            return
+        }
+        val context = artemisMessage.context(sessionId)
+        context.invocation.pushToLoggingContext()
+        val arguments = Try.on { extractArguments.invoke() }
+        when (arguments) {
+            is Try.Success -> {
+                log.debug { "Arguments: ${arguments.value.toTypedArray().contentDeepToString()}" }
+                rpcExecutor!!.submit {
+                    val result = invokeRpc(context, methodName, arguments.value)
+                    sendReply(replyId, clientAddress, result)
+                }
+            }
+            is Try.Failure -> {
+                // We failed to deserialise the arguments, route back the error
+                log.warn("Inbound RPC failed", arguments.exception)
+                sendReply(replyId, clientAddress, arguments)
+            }
         }
     }
 

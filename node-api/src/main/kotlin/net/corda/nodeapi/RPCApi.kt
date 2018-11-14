@@ -19,6 +19,9 @@ import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
 import rx.Notification
+import java.io.InputStream
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
 import java.time.Instant
 import java.util.*
 
@@ -94,7 +97,8 @@ object RPCApi {
     sealed class ClientToServer {
         private enum class Tag {
             RPC_REQUEST,
-            OBSERVABLES_CLOSED
+            OBSERVABLES_CLOSED,
+            RPC_ATTACHMENT_UPLOAD_REQUEST
         }
 
         abstract fun writeToClientMessage(message: ClientMessage)
@@ -131,6 +135,14 @@ object RPCApi {
             }
         }
 
+        data class AttachmentUploadRpcRequest(val rpcRequest: RpcRequest, val attachmentInputStream: InputStream) : ClientToServer() {
+            override fun writeToClientMessage(message: ClientMessage) {
+                rpcRequest.writeToClientMessage(message)
+                message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_ATTACHMENT_UPLOAD_REQUEST.ordinal)
+                message.bodyInputStream = attachmentInputStream
+            }
+        }
+
         data class ObservablesClosed(val ids: List<InvocationId>) : ClientToServer() {
             override fun writeToClientMessage(message: ClientMessage) {
                 message.putIntProperty(TAG_FIELD_NAME, Tag.OBSERVABLES_CLOSED.ordinal)
@@ -146,15 +158,15 @@ object RPCApi {
             fun fromClientMessage(message: ClientMessage): ClientToServer {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
-                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> RpcRequest(
-                            clientAddress = MessageUtil.getJMSReplyTo(message),
-                            methodName = message.getStringProperty(METHOD_NAME_FIELD_NAME),
-                            serialisedArguments = OpaqueBytes(message.getBodyAsByteArray()),
-                            replyId = message.replyId(),
-                            sessionId = message.sessionId(),
-                            externalTrace = message.externalTrace(),
-                            impersonatedActor = message.impersonatedActor()
-                    )
+                    RPCApi.ClientToServer.Tag.RPC_REQUEST -> message.toRpcRequest()
+                    RPCApi.ClientToServer.Tag.RPC_ATTACHMENT_UPLOAD_REQUEST -> {
+                        // TODO sollecitom check here
+                        val rpcRequest = message.toRpcRequest()
+                        val output = PipedOutputStream()
+                        val input = PipedInputStream(output)
+                        message.setOutputStream(output)
+                        ClientToServer.AttachmentUploadRpcRequest(rpcRequest, input)
+                    }
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<InvocationId>()
                         val buffer = message.bodyBuffer
@@ -167,6 +179,10 @@ object RPCApi {
                 }
             }
         }
+    }
+
+    private fun ClientMessage.toRpcRequest(): ClientToServer.RpcRequest {
+       return ClientToServer.RpcRequest(MessageUtil.getJMSReplyTo(this), getStringProperty(METHOD_NAME_FIELD_NAME), OpaqueBytes(getBodyAsByteArray()), replyId(), sessionId(), externalTrace(), impersonatedActor())
     }
 
     /**
