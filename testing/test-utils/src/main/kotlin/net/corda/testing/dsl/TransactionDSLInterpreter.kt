@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.AutomaticPlaceholderConstraint
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
@@ -147,37 +148,37 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, notary: Party, contractState: ContractState) =
-            output(contractClassName, label, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, label, notary, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, encumbrance, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, contractState: ContractState) =
-            output(contractClassName, label, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, notary: Party, contractState: ContractState) =
-            output(contractClassName, null, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, null, notary, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, encumbrance, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, contractState: ContractState) =
-            output(contractClassName, null, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a command to the transaction.

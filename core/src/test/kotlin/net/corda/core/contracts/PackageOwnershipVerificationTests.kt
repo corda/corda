@@ -8,6 +8,9 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.JavaPackageName
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.finance.POUNDS
+import net.corda.finance.`issued by`
+import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -74,6 +77,7 @@ class PackageOwnershipVerificationTests {
 
 }
 
+@BelongsToContract(DummyContract::class)
 class DummyContractState : ContractState {
     override val participants: List<AbstractParty>
         get() = emptyList()
