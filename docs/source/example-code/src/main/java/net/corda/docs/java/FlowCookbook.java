@@ -28,8 +28,8 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Collections.*;
@@ -578,13 +578,13 @@ public class FlowCookbook {
             // We notarise the transaction and get it recorded in the vault of
             // the participants of all the transaction's states.
             // DOCSTART 09
-            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, FINALISATION.childProgressTracker()));
+            SignedTransaction notarisedTx1 = subFlow(new FinalityFlow(fullySignedTx, singleton(counterpartySession), FINALISATION.childProgressTracker()));
             // DOCEND 09
             // We can also choose to send it to additional parties who aren't one
             // of the state's participants.
             // DOCSTART 10
-            Set<Party> additionalParties = singleton(regulator);
-            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, additionalParties, FINALISATION.childProgressTracker()));
+            List<FlowSession> partySessions = Arrays.asList(counterpartySession, initiateFlow(regulator));
+            SignedTransaction notarisedTx2 = subFlow(new FinalityFlow(fullySignedTx, partySessions, FINALISATION.childProgressTracker()));
             // DOCEND 10
 
             // DOCSTART FlowSession porting
@@ -673,7 +673,7 @@ public class FlowCookbook {
                 }
             }
 
-            subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.tracker()));
+            SecureHash idOfTxWeSigned = subFlow(new SignTxFlow(counterpartySession, SignTransactionFlow.tracker())).getId();
             // DOCEND 16
 
             /*------------------------------
@@ -681,9 +681,12 @@ public class FlowCookbook {
             ------------------------------*/
             progressTracker.setCurrentStep(FINALISATION);
 
-            // Nothing to do here! As long as some other party calls
-            // ``FinalityFlow``, the recording of the transaction on our node
-            // we be handled automatically.
+            // As the final step the responder waits to receive the notarised transaction from the sending party
+            // Since it knows the ID of the transaction it just signed, the transaction ID is specified to ensure the correct
+            // transaction is received and recorded.
+            // DOCSTART ReceiveFinalityFlow
+            subFlow(new ReceiveFinalityFlow(counterpartySession, idOfTxWeSigned));
+            // DOCEND ReceiveFinalityFlow
 
             return null;
         }
