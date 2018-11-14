@@ -20,6 +20,7 @@ val platformSecureRandom: () -> SecureRandom = when {
     else -> SecureRandom::getInstanceStrong
 }
 
+@DeleteForDJVM
 class PlatformSecureRandomService(provider: Provider)
     : Provider.Service(provider, "SecureRandom", algorithm, PlatformSecureRandomSpi::javaClass.name, null, null) {
 
@@ -31,6 +32,7 @@ class PlatformSecureRandomService(provider: Provider)
     override fun newInstance(constructorParameter: Any?) = instance
 }
 
+@DeleteForDJVM
 private class PlatformSecureRandomSpi : SecureRandomSpi() {
     private val secureRandom: SecureRandom = newSecureRandom()
 
