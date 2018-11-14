@@ -92,7 +92,7 @@ dependencies {
     compile "com.google.guava:guava:$guava_version"
 
     // For caches rather than guava
-    compile "com.github.corda.caffeine:caffeine:cfca283c984d93d520bfcde234920ea0840402ee"
+    compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"
 
     // For async logging
     compile "com.lmax:disruptor:$disruptor_version"
