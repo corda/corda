@@ -19,6 +19,12 @@ import java.security.SecureRandom
 import java.security.Security
 
 internal val cordaSecurityProvider = CordaSecurityProvider().also {
+    // Among the others, we should register [CordaSecurityProvider] as the first provider, to ensure that when invoking [SecureRandom()]
+    // the [platformSecureRandom] is returned (which is registered in CordaSecurityProvider).
+    // Note that internally, [SecureRandom()] will look through all registered providers.
+    // Then it returns the first PRNG algorithm of the first provider that has registered a SecureRandom
+    // implementation (in our case [CordaSecurityProvider]), or null if none of the registered providers supplies
+    // a SecureRandom implementation.
     Security.insertProviderAt(it, 1) // The position is 1-based.
 }
 // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00

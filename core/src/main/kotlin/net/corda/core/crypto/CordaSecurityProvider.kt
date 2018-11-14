@@ -4,8 +4,11 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
+import net.corda.core.crypto.internal.platformSecureRandom
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.Provider
+import java.security.SecureRandom
+import java.security.SecureRandomSpi
 
 @KeepForDJVM
 class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME security provider wrapper") {
@@ -18,7 +21,28 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", CompositeSignature::class.java.name)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
+        putService(PlatformSecureRandomService(this))
     }
+}
+
+
+class PlatformSecureRandomService(provider: Provider)
+    : Provider.Service(provider, "SecureRandom", algorithm, PlatformSecureRandomSpi::javaClass.name, null, null) {
+
+    companion object {
+        const val algorithm = "platformPRNG"
+    }
+
+    private val instance: SecureRandomSpi = PlatformSecureRandomSpi()
+    override fun newInstance(constructorParameter: Any?) = instance
+}
+
+private class PlatformSecureRandomSpi : SecureRandomSpi() {
+    private val secureRandom: SecureRandom = platformSecureRandom()
+
+    override fun engineSetSeed(seed: ByteArray) = secureRandom.setSeed(seed)
+    override fun engineNextBytes(bytes: ByteArray) = secureRandom.nextBytes(bytes)
+    override fun engineGenerateSeed(numBytes: Int): ByteArray = secureRandom.generateSeed(numBytes)
 }
 
 /**
