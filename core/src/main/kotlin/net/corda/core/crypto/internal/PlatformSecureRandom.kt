@@ -13,7 +13,7 @@ import java.security.SecureRandomSpi
  * This has been migrated into a separate class so that it
  * is easier to delete from the core-deterministic module.
  */
-internal val platformSecureRandom: () -> SecureRandom = when {
+val platformSecureRandom: () -> SecureRandom = when {
     SystemUtils.IS_OS_LINUX -> {
         { SecureRandom.getInstance("NativePRNGNonBlocking") }
     }
