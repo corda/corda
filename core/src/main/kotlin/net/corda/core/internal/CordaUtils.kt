@@ -20,12 +20,15 @@ import org.slf4j.MDC
 const val PLATFORM_VERSION = 4
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
-    val currentMinPlatformVersion = networkParameters.minimumPlatformVersion
-    if (currentMinPlatformVersion < requiredMinPlatformVersion) {
+    checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
+}
+
+fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatformVersion: Int, feature: String) {
+    if (minimumPlatformVersion < requiredMinPlatformVersion) {
         throw ZoneVersionTooLowException(
                 "$feature requires all nodes on the Corda compatibility zone to be running at least platform version " +
                         "$requiredMinPlatformVersion. The current zone is only enforcing a minimum platform version of " +
-                        "$currentMinPlatformVersion. Please contact your zone operator."
+                        "$minimumPlatformVersion. Please contact your zone operator."
         )
     }
 }
