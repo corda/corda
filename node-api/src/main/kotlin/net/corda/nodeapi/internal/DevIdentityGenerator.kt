@@ -79,7 +79,7 @@ object DevIdentityGenerator {
     }
 
     private fun getKeyStore(nodeDir: Path): X509KeyStore {
-        val distServKeyStoreFile = (nodeDir / "certificates").createDirectories() / "distributedService.jks"
+        val distServKeyStoreFile = nodeDir / "certificates/distributedService.jks"
         return X509KeyStore.fromFile(distServKeyStoreFile, DEV_CA_KEY_STORE_PASS, createNew = true)
     }
 
