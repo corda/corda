@@ -27,7 +27,6 @@ import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
-import org.junit.Assume.assumeTrue
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*

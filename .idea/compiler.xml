@@ -165,6 +165,8 @@
       <module name="ha-testing_integrationTest" target="1.8" />
       <module name="ha-testing_main" target="1.8" />
       <module name="ha-testing_test" target="1.8" />
+      <module name="health-survey_main" target="1.8" />
+      <module name="health-survey_test" target="1.8" />
       <module name="hsm-tool_main" target="1.8" />
       <module name="hsm-tool_test" target="1.8" />
       <module name="intellij-plugin_main" target="1.8" />

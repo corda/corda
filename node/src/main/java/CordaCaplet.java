@@ -124,7 +124,7 @@ public class CordaCaplet extends Capsule {
             // Create cordapps directory if it doesn't exist.
             if (!checkIfCordappDirExists(cordappsDir)) {
                 // If it fails, just return the existing class path. The main Corda jar will detect the error and fail gracefully.
-                return cp;
+                return (T) cp;
             }
             // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
             augmentClasspath(cp, new File(baseDir, "drivers"));

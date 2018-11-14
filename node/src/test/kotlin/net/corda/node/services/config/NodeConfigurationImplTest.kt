@@ -178,7 +178,7 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `mutual exclusion machineName set to default if not explicitly set`() {
-        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(options = Configuration.Validation.Options(strict = false)).orThrow()
+        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(options = Configuration.Validation.Options(strict = false)).value()
         assertEquals(InetAddress.getLocalHost().hostName, config.enterpriseConfiguration.mutualExclusionConfiguration.machineName)
     }
 

@@ -22,7 +22,9 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.node.CordaClock
@@ -62,6 +64,7 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -78,10 +81,15 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
+import javax.persistence.EntityManager
 import kotlin.reflect.KClass
 
-class FlowWorkerServiceHub(override val configuration: NodeConfiguration, override val myInfo: NodeInfo,
-                           private val ourKeyPair: KeyPair, private val trustRoot: X509Certificate, private val nodeCa: X509Certificate,
+class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
+                           override val myInfo: NodeInfo,
+                           private val ourKeyPair: KeyPair,
+                           private val trustRoot: X509Certificate,
+                           private val nodeCa: X509Certificate,
                            private val signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned) : ServiceHubInternal, SingletonSerializeAsToken() {
 
     override val networkParameters: NetworkParameters = signedNetworkParameters.networkParameters
@@ -235,6 +243,14 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration, overri
     }
 
     override fun jdbcSession(): Connection = database.createSession()
+
+    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+        throw NotImplementedError()
+    }
+
+    override fun withEntityManager(block: Consumer<EntityManager>) {
+        throw NotImplementedError()
+    }
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) {
         this.runOnStop += runOnStop

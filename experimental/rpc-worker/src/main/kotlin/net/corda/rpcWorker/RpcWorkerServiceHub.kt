@@ -49,6 +49,7 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.slf4j.Logger
@@ -59,8 +60,15 @@ import java.sql.Connection
 import java.time.Clock
 import java.time.Duration
 import java.util.*
+import java.util.function.Consumer
+import javax.persistence.EntityManager
 
-class RpcWorkerServiceHub(override val configuration: NodeConfiguration, override val myInfo: NodeInfo, private val signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned, private val ourKeyPair: KeyPair, private val trustRoot: X509Certificate, private val nodeCa: X509Certificate) : ServiceHubInternal, SingletonSerializeAsToken() {
+class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
+                          override val myInfo: NodeInfo,
+                          private val signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned,
+                          private val ourKeyPair: KeyPair,
+                          private val trustRoot: X509Certificate,
+                          private val nodeCa: X509Certificate) : ServiceHubInternal, SingletonSerializeAsToken() {
 
     override val clock: CordaClock = SimpleClock(Clock.systemUTC())
     private val versionInfo = getVersionInfo()
@@ -166,6 +174,14 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration, overrid
     }
 
     override fun jdbcSession(): Connection {
+        throw NotImplementedError()
+    }
+
+    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+        throw NotImplementedError()
+    }
+
+    override fun withEntityManager(block: Consumer<EntityManager>) {
         throw NotImplementedError()
     }
 
