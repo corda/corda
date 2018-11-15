@@ -57,7 +57,6 @@ class TimedFlowTests {
 
         private var waitETA: Duration = 10.seconds
 
-
         init {
             LogHelper.setLevel("+net.corda.flow", "+net.corda.testing.node", "+net.corda.node.services.messaging")
         }
