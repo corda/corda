@@ -12,6 +12,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.Id
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.Try
+import net.corda.core.utilities.getOrThrow
 import org.apache.activemq.artemis.api.core.ActiveMQBuffer
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.client.ClientMessage
@@ -22,6 +23,7 @@ import rx.Notification
 import java.io.*
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 // The RPC protocol:
 //
@@ -188,17 +190,18 @@ object RPCApi {
     }
 
     private class ArgsAwareOutputStream(private val knownArgsSize: Int, private val delegate: OutputStream) : OutputStream() {
-        private val serialisedArgs = ByteArray(knownArgsSize)
+        private val serialisedArgsArray = ByteArray(knownArgsSize)
         private var cursor = 0
 
-        fun haveArgsReady(): Boolean = cursor == knownArgsSize
-
-        fun serialisedArgs(): ByteArray = serialisedArgs
+        val serialisedArgs = CompletableFuture<ByteArray>()
 
         override fun write(byte: Int) {
             if (cursor < knownArgsSize) {
-                serialisedArgs[cursor] = byte.toByte()
+                serialisedArgsArray[cursor] = byte.toByte()
                 cursor++
+                if (cursor == knownArgsSize) {
+                    serialisedArgs.complete(serialisedArgsArray)
+                }
             } else {
                 delegate.write(byte)
             }
@@ -216,10 +219,8 @@ object RPCApi {
         val input = PipedInputStream(output)
 
         setOutputStream(outputWithArgs)
-        while(!outputWithArgs.haveArgsReady()) {
-            Thread.sleep(50)
-        }
-        val rpcRequest = toRpcRequest(outputWithArgs.serialisedArgs())
+        val serialisedArgs = outputWithArgs.serialisedArgs.getOrThrow()
+        val rpcRequest = toRpcRequest(serialisedArgs)
 
         return ClientToServer.AttachmentUploadRpcRequest(rpcRequest, input)
     }

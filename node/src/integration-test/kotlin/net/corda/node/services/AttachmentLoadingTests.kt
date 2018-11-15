@@ -111,10 +111,9 @@ class AttachmentLoadingTests {
         val largeAttachment = InputStreamAndHash.createInMemoryTestZip(15.MB.toInt(), 0)
         withoutTestSerialization {
             driver(DriverParameters(startNodesInProcess = true)) {
-                startNode().getOrThrow().use { node ->
-                    val hash = node.rpc.uploadAttachment(largeAttachment.inputStream)
-                    assertThat(hash).isEqualTo(largeAttachment.sha256)
-                }
+                val node = startNode().getOrThrow()
+                val hash = node.rpc.uploadAttachment(largeAttachment.inputStream)
+                assertThat(hash).isEqualTo(largeAttachment.sha256)
             }
         }
     }
@@ -126,14 +125,13 @@ class AttachmentLoadingTests {
         val fileName = "death_note.txt"
         withoutTestSerialization {
             driver(DriverParameters(startNodesInProcess = true)) {
-                startNode().getOrThrow().use { node ->
-                    val hash = node.rpc.uploadAttachmentWithMetadata(largeAttachment.inputStream, uploader, fileName)
-                    assertThat(hash).isEqualTo(largeAttachment.sha256)
+                val node = startNode().getOrThrow()
+                val hash = node.rpc.uploadAttachmentWithMetadata(largeAttachment.inputStream, uploader, fileName)
+                assertThat(hash).isEqualTo(largeAttachment.sha256)
 
-                    val hashesForCriteria = node.rpc.queryAttachments(criteriaFor(uploader, fileName), null)
-                    assertThat(hashesForCriteria).hasSize(1)
-                    assertThat(hashesForCriteria.single()).isEqualTo(largeAttachment.sha256)
-                }
+                val hashesForCriteria = node.rpc.queryAttachments(criteriaFor(uploader, fileName), null)
+                assertThat(hashesForCriteria).hasSize(1)
+                assertThat(hashesForCriteria.single()).isEqualTo(largeAttachment.sha256)
             }
         }
     }
