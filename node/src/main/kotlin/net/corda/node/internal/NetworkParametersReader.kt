@@ -143,7 +143,7 @@ class NodeParametersStorage(
                         )
                     },
                     toPersistentEntity = { key: SecureHash, value: SignedDataWithCert<NetworkParameters> ->
-                        PersistentNetworkParameters(key.toString(), value.raw.bytes, value.sig.bytes, value.sig.by.encoded,
+                        PersistentNetworkParameters(key.toString(), value.verified().epoch, value.raw.bytes, value.sig.bytes, value.sig.by.encoded,
                                 X509Utilities.buildCertPath(value.sig.parentCertsChain).encoded)
                     },
                     persistentEntityClass = PersistentNetworkParameters::class.java
@@ -175,6 +175,8 @@ class NodeParametersStorage(
             hashToParameters[hash]?.raw?.deserialize() ?: tryDownloadUnknownParameters(hash)
         }
     }
+
+    override fun getEpochFromHash(hash: SecureHash): Int? = readParametersFromHash(hash)?.epoch
 
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }
@@ -208,6 +210,10 @@ class NodeParametersStorage(
             @Id
             @Column(name = "hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             val hash: String = "",
+
+            // TODO For notary change transaction needed for Andrius work
+            @Column(name = "epoch", nullable = false)
+            val epoch: Int = 0,
 
             // Stored as serialized bytes because network parameters structure evolves over time.
             @Lob
