@@ -9,6 +9,7 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.MB
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -88,6 +89,19 @@ class LargeTransactionsTest {
                 assertEquals(hash1, bigFile1.sha256)
                 // Should not throw any exceptions.
                 it.proxy.startFlow(::SendLargeTransactionFlow, hash1, hash2, hash3, hash4).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun upload_attachment() {
+        val rpcUser = User("admin", "admin", setOf(all()))
+        val bigFile1 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 0)
+        driver(DriverParameters(startNodesInProcess = true)) {
+            val (alice, _) = listOf(ALICE_NAME, BOB_NAME).map { startNode(providedName = it, rpcUsers = listOf(rpcUser)) }.transpose().getOrThrow()
+            CordaRPCClient(alice.rpcAddress).use(rpcUser.username, rpcUser.password) {
+                val hash1 = it.proxy.uploadAttachment(bigFile1.inputStream)
+                assertEquals(hash1, bigFile1.sha256)
             }
         }
     }

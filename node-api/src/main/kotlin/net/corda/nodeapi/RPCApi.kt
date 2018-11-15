@@ -19,9 +19,7 @@ import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
 import rx.Notification
-import java.io.InputStream
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
+import java.io.*
 import java.time.Instant
 import java.util.*
 
@@ -121,6 +119,11 @@ object RPCApi {
                 val impersonatedActor: Actor? = null
         ) : ClientToServer() {
             override fun writeToClientMessage(message: ClientMessage) {
+                writeMetadataTo(message)
+                writeBodyTo(message)
+            }
+
+            internal fun writeMetadataTo(message: ClientMessage) {
                 MessageUtil.setJMSReplyTo(message, clientAddress)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_REQUEST.ordinal)
 
@@ -131,15 +134,22 @@ object RPCApi {
                 impersonatedActor?.mapToImpersonated(message)
 
                 message.putStringProperty(METHOD_NAME_FIELD_NAME, methodName)
+            }
+
+            private fun writeBodyTo(message: ClientMessage) {
                 message.bodyBuffer.writeBytes(serialisedArguments.bytes)
             }
         }
 
         data class AttachmentUploadRpcRequest(val rpcRequest: RpcRequest, val attachmentInputStream: InputStream) : ClientToServer() {
             override fun writeToClientMessage(message: ClientMessage) {
-                rpcRequest.writeToClientMessage(message)
+                rpcRequest.writeMetadataTo(message)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_ATTACHMENT_UPLOAD_REQUEST.ordinal)
-                message.bodyInputStream = attachmentInputStream
+                // TODO sollecitom here
+                val knownArgs = rpcRequest.serialisedArguments.bytes
+                message.putIntProperty("KNOWN_ARGS_SIZE", knownArgs.size)
+                val concatenatedInput = SequenceInputStream(knownArgs.inputStream(), attachmentInputStream)
+                message.bodyInputStream = concatenatedInput
             }
         }
 
@@ -160,11 +170,24 @@ object RPCApi {
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> message.toRpcRequest()
                     RPCApi.ClientToServer.Tag.RPC_ATTACHMENT_UPLOAD_REQUEST -> {
-                        // TODO sollecitom check here
-                        val rpcRequest = message.toRpcRequest()
-                        val output = PipedOutputStream()
-                        val input = PipedInputStream(output)
-                        message.setOutputStream(output)
+                        // TODO sollecitom make this work without buffering in memory
+                        val bytesOutput = ByteArrayOutputStream()
+                        message.saveToOutputStream(bytesOutput)
+                        val bytes = bytesOutput.toByteArray()
+
+                        val knownArgsSize = message.getIntProperty("KNOWN_ARGS_SIZE")
+                        val rpcRequest = message.toRpcRequest(bytes.sliceArray(0 until knownArgsSize))
+                        val input = ByteArrayInputStream(bytes.sliceArray(knownArgsSize until bytes.size))
+
+                        // TODO sollecitom try piping
+//                        val output = PipedOutputStream()
+//                        val input = PipedInputStream(output)
+//                        message.setOutputStream(output)
+
+//                        val output = ByteArrayOutputStream()
+//                        message.saveToOutputStream(output)
+//                        val input = BufferedInputStream(ByteArrayInputStream(output.toByteArray()))
+
                         ClientToServer.AttachmentUploadRpcRequest(rpcRequest, input)
                     }
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
@@ -181,8 +204,8 @@ object RPCApi {
         }
     }
 
-    private fun ClientMessage.toRpcRequest(): ClientToServer.RpcRequest {
-       return ClientToServer.RpcRequest(MessageUtil.getJMSReplyTo(this), getStringProperty(METHOD_NAME_FIELD_NAME), OpaqueBytes(getBodyAsByteArray()), replyId(), sessionId(), externalTrace(), impersonatedActor())
+    private fun ClientMessage.toRpcRequest(body: ByteArray = getBodyAsByteArray()): ClientToServer.RpcRequest {
+        return ClientToServer.RpcRequest(MessageUtil.getJMSReplyTo(this), getStringProperty(METHOD_NAME_FIELD_NAME), OpaqueBytes(body), replyId(), sessionId(), externalTrace(), impersonatedActor())
     }
 
     /**
