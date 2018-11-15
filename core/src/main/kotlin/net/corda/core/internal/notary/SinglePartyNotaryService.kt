@@ -49,7 +49,9 @@ abstract class SinglePartyNotaryService : NotaryService() {
 
         if (otherSideSession != null) {
             log.info("otherSideSession.flowInfo.flowVersion = ${otherSideSession.getCounterpartyFlowInfo().flowVersion}")
-            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && uniquenessProvider.eta() > 5.minutes) {
+            val eta = uniquenessProvider.eta()
+            log.info("eta: $eta")
+            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && eta > 5.minutes) {
                 otherSideSession.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis() / 1000))
             }
         }
