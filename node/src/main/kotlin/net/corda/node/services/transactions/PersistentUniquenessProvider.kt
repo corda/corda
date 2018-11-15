@@ -23,7 +23,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -97,11 +97,12 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     // Estimated time of request processing.
     override fun eta(): Duration {
         val rate = throughputMeter.oneMinuteRate
-        log.info("rate: $rate, queueSize: ${nrQueuedStates.get()}")
-        if (rate > 1e-5) {
-            return Duration.ofSeconds((1.5 * nrQueuedStates.get() / rate).toLong())
+        val nrStates = nrQueuedStates.get()
+        log.info("rate: $rate, queueSize: $nrStates")
+        if (rate > 1e-5 && nrStates > 20) {
+            return Duration.ofSeconds((1.5 * nrStates / rate).toLong())
         }
-        return 1.minutes
+        return 25.seconds
     }
 
     /** A request processor thread. */
