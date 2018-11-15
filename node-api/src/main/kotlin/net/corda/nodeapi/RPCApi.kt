@@ -214,11 +214,13 @@ object RPCApi {
 
     private fun ClientMessage.toAttachmentUploadRpcRequest(): ClientToServer.AttachmentUploadRpcRequest {
         val knownArgsSize = getIntProperty(ClientToServer.AttachmentUploadRpcRequest.KNOWN_ARGUMENTS_SIZE)
+        // TODO sollecitom try to save the entire message to file `setOutputStream(FileOutputStream(File(etc.)))`, read the first KNOWN_ARGUMENTS_SIZE, then pass the FileInputStream to import, then remove the file
         val output = PipedOutputStream()
         val outputWithArgs = ArgsAwareOutputStream(knownArgsSize, output)
         val input = PipedInputStream(output)
-
-        setOutputStream(outputWithArgs)
+        Thread {
+            setOutputStream(outputWithArgs)
+        }.start()
         val serialisedArgs = outputWithArgs.serialisedArgs.getOrThrow()
         val rpcRequest = toRpcRequest(serialisedArgs)
 

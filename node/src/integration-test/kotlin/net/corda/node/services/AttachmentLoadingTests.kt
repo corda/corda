@@ -2,6 +2,7 @@ package net.corda.node.services
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
@@ -23,6 +24,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.config.MB
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
@@ -31,13 +33,18 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import java.io.InputStream
 import java.net.URLClassLoader
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
@@ -118,6 +125,70 @@ class AttachmentLoadingTests {
         }
     }
 
+    // TODO sollecitom remove
+    @Test
+    fun upload_huge_attachment() {
+        val largeAttachment = RepeatingBytesInputStream("Michele".toByteArray(), 2_000_000_000)
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = true)) {
+                val node = startNode().getOrThrow()
+                val hash = node.rpc.uploadAttachment(largeAttachment)
+                println(hash)
+            }
+        }
+    }
+
+    // TODO sollecitom remove
+    @Test
+    fun upload_huge_attachments() {
+        val attachments = (1..10).map { index -> RepeatingBytesInputStream("Michele - $index".toByteArray(), 2_000_000_000) }
+        val rpcUser = User("admin", "admin", setOf(all()))
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = false)) {
+                val executor = Executors.newFixedThreadPool(attachments.size)
+                val node = startNode(rpcUsers = listOf(rpcUser)).getOrThrow()
+                val latch = CountDownLatch(attachments.size)
+                attachments.forEach { attachment ->
+                    executor.submit {
+                        CordaRPCClient(node.rpcAddress).use(rpcUser.username, rpcUser.password) { connection ->
+                            val hash = connection.proxy.uploadAttachment(attachment)
+                            println("MICHELE - HASH: $hash")
+                            latch.countDown()
+//                            assertThat(hash).isEqualTo(attachment.sha256).also { latch.countDown() }
+                        }
+                    }
+                }
+                latch.await()
+            }
+        }
+    }
+
+    @Test
+    fun concurrent_large_attachments_uploading() {
+        val attachments = (1..10).map { index -> InputStreamAndHash.createInMemoryTestZip(15.MB.toInt(), index.toByte()) }
+        val rpcUser = User("admin", "admin", setOf(all()))
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = false)) {
+                val executor = Executors.newFixedThreadPool(attachments.size)
+                try {
+                    val node = startNode(rpcUsers = listOf(rpcUser)).getOrThrow()
+                    val latch = CountDownLatch(attachments.size)
+                    attachments.forEach { attachment ->
+                        executor.submit {
+                            CordaRPCClient(node.rpcAddress).use(rpcUser.username, rpcUser.password) { connection ->
+                                val hash = connection.proxy.uploadAttachment(attachment.inputStream)
+                                assertThat(hash).isEqualTo(attachment.sha256).also { latch.countDown() }
+                            }
+                        }
+                    }
+                    latch.await()
+                } finally {
+                    executor.shutdown()
+                }
+            }
+        }
+    }
+
     @Test
     fun upload_large_attachment_with_metadata() {
         val largeAttachment = InputStreamAndHash.createInMemoryTestZip(15.MB.toInt(), 0)
@@ -138,5 +209,28 @@ class AttachmentLoadingTests {
 
     private fun criteriaFor(uploader: String, fileName: String): AttachmentQueryCriteria {
         return AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, uploader), filenameCondition = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, fileName))
+    }
+}
+
+class RepeatingBytesInputStream(val bytesToRepeat: ByteArray, val numberOfBytes: Int) : InputStream() {
+    private var bytesLeft = numberOfBytes
+    override fun available() = bytesLeft
+    override fun read(): Int {
+        return if (bytesLeft == 0) {
+            -1
+        } else {
+            bytesLeft--
+            bytesToRepeat[(numberOfBytes - bytesLeft) % bytesToRepeat.size].toInt()
+        }
+    }
+
+    override fun read(byteArray: ByteArray, offset: Int, length: Int): Int {
+        val lastIdx = Math.min(Math.min(offset + length, byteArray.size), offset + bytesLeft)
+        for (i in offset until lastIdx) {
+            byteArray[i] = bytesToRepeat[(numberOfBytes - bytesLeft + i - offset) % bytesToRepeat.size]
+        }
+        val bytesRead = lastIdx - offset
+        bytesLeft -= bytesRead
+        return if (bytesRead == 0 && bytesLeft == 0) -1 else bytesRead
     }
 }
