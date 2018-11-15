@@ -5,13 +5,12 @@ import net.corda.serialization.internal.carpenter.*
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 
+typealias PropertyName = String
+
 /**
  * Constructs [Type]s using [RemoteTypeInformation].
  */
 interface RemoteTypeCarpenter {
-    /**
-     * Build a [Type] from the provided [RemoteTypeInformation].
-     */
     fun carpent(typeInformation: RemoteTypeInformation): Type
 }
 
@@ -40,28 +39,44 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
     private val RemoteTypeInformation.erasedLocalClass get() = typeIdentifier.getLocalType(classLoader).asClass()
 
     private fun RemoteTypeInformation.AnInterface.carpentInterface() {
-        val fields = properties.mapValues { (name, property) ->
-            FieldFactory.newInstance(property.isMandatory, name, property.type.erasedLocalClass)
-        }
+        val fields = getFields(typeIdentifier.name, properties)
+
         val schema = CarpenterSchemaFactory.newInstance(
                 name = typeIdentifier.name,
                 fields = fields,
-                interfaces = interfaces.map { it.erasedLocalClass },
+                interfaces = getInterfaces(typeIdentifier.name, interfaces),
                 isInterface = true)
         carpenter.build(schema)
     }
 
     private fun RemoteTypeInformation.Composable.carpentComposable() {
-        val fields = properties.mapValues { (name, property) ->
-            FieldFactory.newInstance(property.isMandatory, name, property.type.erasedLocalClass)
-        }
+        val fields = getFields(typeIdentifier.name, properties)
+
         val schema = CarpenterSchemaFactory.newInstance(
                 name = typeIdentifier.name,
                 fields = fields,
-                interfaces = interfaces.map { it.erasedLocalClass },
+                interfaces = getInterfaces(typeIdentifier.name, interfaces),
                 isInterface = false)
         carpenter.build(schema)
     }
+
+    private fun getFields(ownerName: String, properties: Map<PropertyName, RemotePropertyInformation>) =
+            properties.mapValues { (name, property) ->
+                try {
+                    FieldFactory.newInstance(property.isMandatory, name, property.type.erasedLocalClass)
+                } catch (e: ClassNotFoundException) {
+                    throw UncarpentableException(ownerName, name, property.type.typeIdentifier.name)
+                }
+            }
+
+    private fun getInterfaces(ownerName: String, interfaces: List<RemoteTypeInformation>): List<Class<*>> =
+            interfaces.map {
+                try {
+                    it.erasedLocalClass
+                } catch (e: ClassNotFoundException) {
+                    throw UncarpentableException(ownerName, "[interface]", it.typeIdentifier.name)
+                }
+            }
 
     private fun RemoteTypeInformation.AnEnum.carpentEnum() {
         carpenter.build(EnumSchema(name = typeIdentifier.name, fields = members.associate { it to EnumField() }))

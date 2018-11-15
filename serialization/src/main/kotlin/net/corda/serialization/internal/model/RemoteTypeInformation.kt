@@ -1,5 +1,9 @@
 package net.corda.serialization.internal.model
 
+import net.corda.serialization.internal.amqp.Transform
+import net.corda.serialization.internal.amqp.TransformTypes
+import java.util.*
+
 typealias TypeDescriptor = String
 
 /**
@@ -117,8 +121,10 @@ sealed class RemoteTypeInformation {
      *
      * @param members The members of the enum.
      */
-    data class AnEnum(override val typeDescriptor: TypeDescriptor, override val typeIdentifier: TypeIdentifier, val members: List<String>)
-        : RemoteTypeInformation()
+    data class AnEnum(override val typeDescriptor: TypeDescriptor,
+                      override val typeIdentifier: TypeIdentifier,
+                      val members: List<String>,
+                      val transforms: EnumTransforms) : RemoteTypeInformation()
 
     /**
      * Representation of an interface.
@@ -178,4 +184,13 @@ private data class RemoteTypeInformationPrettyPrinter(private val simplifyClassN
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     ": " + value.type.prettyPrint(simplifyClassNames)
+}
+
+data class EnumTransforms(val defaults: Map<String, String>, val renames: Map<String, String>) {
+
+    val size: Int get() = defaults.size + renames.size
+
+    companion object {
+        val empty = EnumTransforms(emptyMap(), emptyMap())
+    }
 }

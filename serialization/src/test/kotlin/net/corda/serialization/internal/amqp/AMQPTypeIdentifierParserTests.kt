@@ -5,7 +5,6 @@ import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.UnsignedShort
 import org.junit.Test
 import java.io.NotSerializableException
-import java.lang.IllegalArgumentException
 import java.lang.reflect.Type
 import java.time.LocalDateTime
 import java.util.*
@@ -25,6 +24,8 @@ class AMQPTypeIdentifierParserTests {
         assertParseResult<Array<ByteArray>>("binary[]")
         assertParseResult<Array<UnsignedShort>>("ushort[]")
         assertParseResult<Array<Array<String>>>("string[][]")
+        assertParseResult<UUID>("uuid")
+        assertParseResult<Date>("timestamp")
 
         // We set a limit to the depth of arrays-of-arrays-of-arrays...
         assertFailsWith<IllegalTypeNameParserStateException> {
@@ -65,10 +66,7 @@ class AMQPTypeIdentifierParserTests {
         assertParsesCompatibly<Int>()
         assertParsesCompatibly<IntArray>()
         assertParsesCompatibly<Array<Int>>()
-        // List<Int> is treated as List<? extends Int>,
-        // and typeForName resolves wildcards to ? rather than their upper bounds
-        assertParsesTo<List<Int>>("List<?>")
-        // No idea
+        assertParsesCompatibly<List<Int>>()
         assertParsesTo<WithParameter<*>>("WithParameter<?>")
         assertParsesCompatibly<WithParameter<Int>>()
         assertParsesCompatibly<Array<out WithParameter<Int>>>()
@@ -182,9 +180,9 @@ class AMQPTypeIdentifierParserTests {
     }
 
     private fun assertParsesTo(type: Type, expectedIdentifierPrettyPrint: String) {
-        val nameAccordingToSerializerFactory = SerializerFactory.nameForType(type)
-        val actualIdentifier = AMQPTypeIdentifierParser.parse(nameAccordingToSerializerFactory)
-        assertEquals(expectedIdentifierPrettyPrint, actualIdentifier.prettyPrint())
+        val nameForType = AMQPTypeIdentifiers.nameForType(type)
+        val parsedIdentifier = AMQPTypeIdentifierParser.parse(nameForType)
+        assertEquals(expectedIdentifierPrettyPrint, parsedIdentifier.prettyPrint())
     }
 
 

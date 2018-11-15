@@ -39,7 +39,7 @@ class AMQPRemoteTypeModelTests {
     class C<V>(array: Array<out String>, list: List<UUID>, map: Map<UUID, V>, val enum: Enum): Superclass<UUID, V>(array, list, map)
 
     @Test
-    fun primitives() {
+    fun `round-trip some types through AMQP serialisations`() {
         arrayOf("").assertRemoteType("String[]")
         listOf(1).assertRemoteType("List<?>")
         arrayOf(listOf(1)).assertRemoteType("List[]")
@@ -59,8 +59,8 @@ class AMQPRemoteTypeModelTests {
 
     private fun getRemoteType(obj: Any): RemoteTypeInformation {
         val output = SerializationOutput(factory)
-        val schema = output.serializeAndReturnSchema(obj).schema
-        val values = typeModel.interpret(schema).values
+        val schema = output.serializeAndReturnSchema(obj)
+        val values = typeModel.interpret(SerializationSchemas(schema.schema, schema.transformsSchema)).values
         return values.find { it.typeIdentifier.getLocalType().asClass().isAssignableFrom(obj::class.java) } ?:
         throw IllegalArgumentException(
                 "Can't find ${obj::class.java.name} in ${values.map { it.typeIdentifier.name}}")
