@@ -8,22 +8,24 @@ import net.corda.core.cordapp.CordappProvider
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.internal.toLedgerTransaction
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.EqualityComparisonOperator
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.node.services.config.MB
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.MockCordappConfigProvider
@@ -31,6 +33,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.withoutTestSerialization
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.services.MockAttachmentStorage
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -101,5 +104,41 @@ class AttachmentLoadingTests {
             }
             Unit
         }
+    }
+
+    @Test
+    fun upload_large_attachment() {
+        val largeAttachment = InputStreamAndHash.createInMemoryTestZip(15.MB.toInt(), 0)
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = true)) {
+                startNode().getOrThrow().use { node ->
+                    val hash = node.rpc.uploadAttachment(largeAttachment.inputStream)
+                    assertThat(hash).isEqualTo(largeAttachment.sha256)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun upload_large_attachment_with_metadata() {
+        val largeAttachment = InputStreamAndHash.createInMemoryTestZip(15.MB.toInt(), 0)
+        val uploader = "Light"
+        val fileName = "death_note.txt"
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = true)) {
+                startNode().getOrThrow().use { node ->
+                    val hash = node.rpc.uploadAttachmentWithMetadata(largeAttachment.inputStream, uploader, fileName)
+                    assertThat(hash).isEqualTo(largeAttachment.sha256)
+
+                    val hashesForCriteria = node.rpc.queryAttachments(criteriaFor(uploader, fileName), null)
+                    assertThat(hashesForCriteria).hasSize(1)
+                    assertThat(hashesForCriteria.single()).isEqualTo(largeAttachment.sha256)
+                }
+            }
+        }
+    }
+
+    private fun criteriaFor(uploader: String, fileName: String): AttachmentQueryCriteria {
+        return AttachmentQueryCriteria.AttachmentsQueryCriteria(uploaderCondition = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, uploader), filenameCondition = ColumnPredicate.EqualityComparison(EqualityComparisonOperator.EQUAL, fileName))
     }
 }
