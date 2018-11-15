@@ -6,6 +6,10 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.utilities.UntrustworthyData
 
+/**
+ * Implementation of TimedFlow that can handle WaitTimeUpdate messages. Any flow talking to the notary should implement this and use
+ * explicit send and this class's receiveResultOrTiming to receive the response to handle cases where the notary sends a timeout update.
+ */
 abstract class BackpressureAwareTimedFlow<ResultType, ReceiveType>(val receiveType: Class<ReceiveType>) : FlowLogic<ResultType>(), TimedFlow {
     @Suspendable
     fun <T> receiveResultOrTiming(session: FlowSession): UntrustworthyData<ReceiveType> {
