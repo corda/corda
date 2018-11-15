@@ -11,13 +11,9 @@ RUN mkdir -p /opt/corda/logs
 RUN mkdir -p /opt/corda/bin
 RUN mkdir -p /etc/corda
 
-
-
 # Create corda user
 RUN addgroup corda && \
     useradd corda -g corda -m -d /opt/corda
-
-
 
 WORKDIR /opt/corda
 

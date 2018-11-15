@@ -11,23 +11,38 @@ import net.corda.common.validation.internal.Validated
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.config.toConfigValue
 import java.io.File
 
 class ConfigExporter {
     fun combineTestNetWithOurConfig(testNetConf: String, ourConf: String, outputFile: String) {
         var ourParsedConfig = ConfigFactory.parseFile(File(ourConf))
         val testNetParsedConfig = ConfigFactory.parseFile(File(testNetConf))
-        println(testNetParsedConfig.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
         ourParsedConfig = ourParsedConfig.withValue("keyStorePassword", testNetParsedConfig.getValue("keyStorePassword"))
         ourParsedConfig = ourParsedConfig.withValue("myLegalName", testNetParsedConfig.getValue("myLegalName"))
         ourParsedConfig = ourParsedConfig.withValue("trustStorePassword", testNetParsedConfig.getValue("trustStorePassword"))
         File(outputFile).writer().use { fileWriter ->
             val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig()
-            println(finalConfig.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
             var configToWrite = ConfigFactory.empty()
-            ourParsedConfig.entrySet().forEach { configEntry ->
+            ourParsedConfig.entrySet().sortedBy { it.key }.forEach { configEntry ->
                 //use all keys present in "ourConfig" but get values from "finalConfig"
                 val keyWithoutQuotes = configEntry.key.replace("\"", "")
+                println("creating config key: $keyWithoutQuotes with value: ${finalConfig.getValue(keyWithoutQuotes)}")
+                configToWrite = configToWrite.withValue(keyWithoutQuotes, finalConfig.getValue(keyWithoutQuotes))
+            }
+            fileWriter.write(configToWrite.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
+        }
+    }
+
+    fun buildGenericCZConfig(ourConf: String, outputFile: String){
+        val ourParsedConfig = ConfigFactory.parseFile(File(ourConf))
+        File(outputFile).writer().use { fileWriter ->
+            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig()
+            var configToWrite = ConfigFactory.empty()
+            ourParsedConfig.entrySet().sortedBy { it.key }.forEach { configEntry ->
+                //use all keys present in "ourConfig" but get values from "finalConfig"
+                val keyWithoutQuotes = configEntry.key.replace("\"", "")
+                println("creating config key: $keyWithoutQuotes with value: ${finalConfig.getValue(keyWithoutQuotes)}")
                 configToWrite = configToWrite.withValue(keyWithoutQuotes, finalConfig.getValue(keyWithoutQuotes))
             }
             fileWriter.write(configToWrite.root().render(ConfigRenderOptions.concise().setFormatted(true).setJson(false)))
@@ -40,7 +55,6 @@ fun Config.parseAsNodeConfigWithFallback(): Validated<NodeConfiguration, Configu
     val nodeConfig = this
             .withValue("baseDirectory", ConfigValueFactory.fromAnyRef("/opt/corda"))
             .withFallback(referenceConfig)
-            .withValue(NodeConfiguration::dataSourceProperties.name, referenceConfig.getValue(NodeConfiguration::dataSourceProperties.name))
             .resolve()
     return nodeConfig.parseAsNodeConfiguration()
 }
@@ -56,6 +70,11 @@ fun main(args: Array<String>) {
             val ourConf = args[2]
             val outputFile = args[3]
             configExporter.combineTestNetWithOurConfig(testNetConf, ourConf, outputFile)
+        }
+        "GENERIC-CZ" -> {
+            val ourConf = args[1]
+            val outputFile = args[2]
+            configExporter.buildGenericCZConfig(ourConf, outputFile)
         }
         else -> {
             throw IllegalArgumentException("Unknown command: $command")

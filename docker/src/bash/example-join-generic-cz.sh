@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 
-docker run -ti \
-        -e MY_PUBLIC_ADDRESS=stefano.azure.io \
-        -e ONE_TIME_DOWNLOAD_KEY="694c0a8f-b91c-4718-a9a2-c25e1eca490d" \
-        -e LOCALITY="London" -e COUNTRY="GB" \
-        -v $(pwd)/docker/config:/etc/corda \
+docker run -ti --net="host" \
+        -e  MY_LEGAL_NAME="O=ALL,L=Berlin,C=DE"     \
+        -e MY_PUBLIC_ADDRESS=stefano.azure.io       \
+        -e COMPATIBILITY_ZONE="http://corda.net"    \
+        -e DOORMAN_URL="http://localhost:8080"      \
+        -e NETWORK_TRUST_PASSWORD="password"       \
+        -v $(pwd)/docker/config:/etc/corda          \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
-        corda/corda-4.0-snapshot:latest config-generator --testnet
+        corda/corda-4.0-snapshot:latest config-generator --generic
 
 docker run -ti \
         -e JVM_ARGS="-Xmx5g -Xms2g -XX:+UseG1GC" \
