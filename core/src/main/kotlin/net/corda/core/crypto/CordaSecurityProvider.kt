@@ -4,6 +4,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_KEY
 import net.corda.core.crypto.CordaObjectIdentifier.COMPOSITE_SIGNATURE
+import net.corda.core.crypto.internal.PlatformSecureRandomService
 import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import java.security.Provider
 
@@ -18,6 +19,12 @@ class CordaSecurityProvider : Provider(PROVIDER_NAME, 0.1, "$PROVIDER_NAME secur
         put("Signature.${CompositeSignature.SIGNATURE_ALGORITHM}", CompositeSignature::class.java.name)
         put("Alg.Alias.Signature.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
         put("Alg.Alias.Signature.OID.$COMPOSITE_SIGNATURE", CompositeSignature.SIGNATURE_ALGORITHM)
+        putPlatformSecureRandomService()
+    }
+
+    @StubOutForDJVM
+    private fun putPlatformSecureRandomService() {
+        putService(PlatformSecureRandomService(this))
     }
 }
 
