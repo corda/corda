@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.Meter
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -22,7 +23,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.millis
+import net.corda.core.utilities.seconds
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -91,10 +92,18 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
     private val nrQueuedStates = AtomicInteger(0)
 
+    private val throughputMeter = Meter()
+
     // Estimated time of request processing.
     override fun eta(): Duration {
-        // TODO: Refine
-        return (requestQueue.size * 50).millis
+        // TODO: config
+        val rate = throughputMeter.oneMinuteRate
+        val nrStates = nrQueuedStates.get()
+        log.info("rate: $rate, queueSize: $nrStates")
+        if (rate > 1e-5 && nrStates > 5) {
+            return Duration.ofSeconds((1.5 * nrStates / rate).toLong())
+        }
+        return 1.seconds
     }
 
     /** A request processor thread. */
@@ -232,7 +241,9 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun processRequest(request: CommitRequest) {
-        nrQueuedStates.addAndGet(-(request.states.size + request.references.size))
+        val nrStates = request.states.size + request.references.size
+        throughputMeter.mark(nrStates.toLong())
+        nrQueuedStates.addAndGet(-nrStates)
         try {
             commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
             respondWithSuccess(request)

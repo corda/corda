@@ -15,7 +15,7 @@ import net.corda.core.internal.executeAsync
 import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import org.slf4j.Logger
 
 /** Base implementation for a notary service operated by a singe party. */
@@ -48,9 +48,10 @@ abstract class SinglePartyNotaryService : NotaryService() {
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
         if (otherSideSession != null) {
-            log.info("otherSideSession.flowInfo.flowVersion = ${otherSideSession.getCounterpartyFlowInfo().flowVersion}")
-            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && uniquenessProvider.eta() > 5.minutes) {
-                otherSideSession.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis() / 1000))
+            val eta = uniquenessProvider.eta()
+            if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= 4) {
+                log.info("eta: $eta")
+                otherSideSession.send(WaitTimeUpdate(eta.toMillis()/1000))
             }
         }
 
