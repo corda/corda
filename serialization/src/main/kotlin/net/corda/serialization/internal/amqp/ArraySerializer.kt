@@ -41,8 +41,8 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
             // Special case handler for primitive byte arrays. This is needed because we can silently
             // coerce a byte[] to our own binary type. Normally, if the component type was itself an
             // array we'd keep walking down the chain but for byte[] stop here and use binary instead
-            val typeName =  if (SerializerFactory.isPrimitive(type.componentType())) {
-                SerializerFactory.nameForType(type.componentType())
+            val typeName =  if (AMQPTypeIdentifiers.isPrimitive(type.componentType())) {
+                AMQPTypeIdentifiers.nameForType(type.componentType())
             } else {
                 calcTypeName(type.componentType(), debugOffset + 4)
             }

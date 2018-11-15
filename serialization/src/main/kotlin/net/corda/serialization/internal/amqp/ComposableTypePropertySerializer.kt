@@ -64,9 +64,9 @@ interface PropertyReadStrategy {
 
     companion object {
         fun make(name: String, typeIdentifier: TypeIdentifier, type: Type): PropertyReadStrategy =
-                if (SerializerFactory.isPrimitive(type)) {
-                    when (type) {
-                        Char::class.java, Character::class.java -> AMQPCharPropertyReadStrategy
+                if (AMQPTypeIdentifiers.isPrimitive(typeIdentifier)) {
+                    when (typeIdentifier) {
+                        in characterTypes -> AMQPCharPropertyReadStrategy
                         else -> AMQPPropertyReadStrategy
                     }
                 } else {
@@ -83,10 +83,10 @@ interface PropertyWriteStrategy {
     companion object {
         fun make(name: String, propertyInformation: LocalPropertyInformation, factory: LocalSerializerFactory): PropertyWriteStrategy {
             val reader = TypeModellingPropertyReader.make(propertyInformation)
-            val type = propertyInformation.type.observedType
-            return if (SerializerFactory.isPrimitive(type)) {
-                when (type) {
-                    Char::class.java, Character::class.java -> AMQPCharPropertyWriteStategy(reader)
+            val type = propertyInformation.type
+            return if (AMQPTypeIdentifiers.isPrimitive(type.typeIdentifier)) {
+                when (type.typeIdentifier) {
+                    in characterTypes -> AMQPCharPropertyWriteStategy(reader)
                     else -> AMQPPropertyWriteStrategy(reader)
                 }
             } else {
@@ -99,6 +99,11 @@ interface PropertyWriteStrategy {
 
     fun writeProperty(obj: Any?, data: Data, output: SerializationOutput, context: SerializationContext, debugIndent: Int)
 }
+
+private val characterTypes = setOf(
+        TypeIdentifier.forClass(Char::class.javaObjectType),
+        TypeIdentifier.forClass(Char::class.javaPrimitiveType!!)
+)
 
 object EvolutionPropertyWriteStrategy : PropertyWriteStrategy {
     override fun writeClassInfo(output: SerializationOutput) =

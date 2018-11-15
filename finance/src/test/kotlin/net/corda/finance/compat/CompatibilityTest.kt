@@ -13,6 +13,7 @@ import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -43,11 +44,9 @@ class CompatibilityTest {
                 SerializationDefaults.STORAGE_CONTEXT)
         assertNotNull(transaction)
 
-        /*
         val commands = transaction.tx.commands
         assertEquals(1, commands.size)
         assertTrue(commands.first().value is Cash.Commands.Issue)
-        */
 
         // Serialize back and check that representation is byte-to-byte identical to what it was originally.
         val output = SerializationOutput(serializerFactory)

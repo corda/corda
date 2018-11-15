@@ -1,12 +1,7 @@
 package net.corda.serialization.internal.amqp
 
-import com.google.common.primitives.Primitives
 import net.corda.core.KeepForDJVM
-import net.corda.serialization.internal.model.TypeIdentifier
-import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.*
-import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 
 @KeepForDJVM
@@ -34,83 +29,7 @@ data class SerializationSchemas(val schema: Schema, val transforms: TransformsSc
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @KeepForDJVM
 @ThreadSafe
-interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, CustomSerializerRegistry {
-
-    object AnyType : WildcardType {
-        override fun getUpperBounds(): Array<Type> = arrayOf(Object::class.java)
-
-        override fun getLowerBounds(): Array<Type> = emptyArray()
-
-        override fun toString(): String = "?"
-    }
-
-    companion object {
-        fun isPrimitive(type: Type): Boolean = primitiveTypeName(type) != null
-
-        fun primitiveTypeName(type: Type): String? {
-            val clazz = type as? Class<*> ?: return null
-            return primitiveTypeNames[Primitives.unwrap(clazz)]
-        }
-
-        private val primitiveTypeNames: Map<Class<*>, String> = mapOf(
-                Character::class.java to "char",
-                Char::class.java to "char",
-                Boolean::class.java to "boolean",
-                Byte::class.java to "byte",
-                UnsignedByte::class.java to "ubyte",
-                Short::class.java to "short",
-                UnsignedShort::class.java to "ushort",
-                Int::class.java to "int",
-                UnsignedInteger::class.java to "uint",
-                Long::class.java to "long",
-                UnsignedLong::class.java to "ulong",
-                Float::class.java to "float",
-                Double::class.java to "double",
-                Decimal32::class.java to "decimal32",
-                Decimal64::class.java to "decimal62",
-                Decimal128::class.java to "decimal128",
-                Date::class.java to "timestamp",
-                UUID::class.java to "uuid",
-                ByteArray::class.java to "binary",
-                String::class.java to "string",
-                Symbol::class.java to "symbol")
-
-        private val primitiveTypeNamesByName = primitiveTypeNames.map { (javaClass, name) -> javaClass.name to name}.toMap()
-
-        fun nameForType(typeIdentifier: TypeIdentifier): String = when(typeIdentifier) {
-            is TypeIdentifier.Erased -> nameForUnparameterised(typeIdentifier.name)
-            is TypeIdentifier.Unparameterised -> nameForUnparameterised(typeIdentifier.name)
-            is TypeIdentifier.UnknownType,
-            is TypeIdentifier.TopType -> "?"
-            is TypeIdentifier.ArrayOf ->
-                if (typeIdentifier.componentType.name == "byte") "binary" else nameForType(typeIdentifier.componentType) +
-                        if (typeIdentifier.componentType is TypeIdentifier.Unparameterised &&
-                                typeIdentifier.componentType.isPrimitive) "[p]"
-                        else "[]"
-            is TypeIdentifier.Parameterised -> nameForUnparameterised(typeIdentifier.name) + typeIdentifier.parameters.joinToString(", ", "<", ">") {
-                nameForType(it)
-            }
-        }
-
-        private fun nameForUnparameterised(unparameterisedName: String) =
-                primitiveTypeNamesByName[unparameterisedName] ?: unparameterisedName
-
-        fun nameForType(type: Type): String = when (type) {
-            is Class<*> -> {
-                primitiveTypeName(type) ?: if (type.isArray) {
-                    "${nameForType(type.componentType)}${if (type.componentType.isPrimitive) "[p]" else "[]"}"
-                } else type.name
-            }
-            is ParameterizedType -> {
-                "${nameForType(type.rawType)}<${type.actualTypeArguments.joinToString { nameForType(it) }}>"
-            }
-            is GenericArrayType -> "${nameForType(type.genericComponentType)}[]"
-            is WildcardType -> "?"
-            is TypeVariable<*> -> "?"
-            else -> throw AMQPNotSerializableException(type, "Unable to render type $type to a string.")
-        }
-    }
-}
+interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, CustomSerializerRegistry
 
 class ComposedSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,

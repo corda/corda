@@ -1,7 +1,6 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.NonEmptySet
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -11,8 +10,6 @@ import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
-import java.lang.reflect.TypeVariable
-import java.lang.reflect.WildcardType
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -87,7 +84,7 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
     private val concreteBuilder: (List<*>) -> Collection<*> = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "list", Descriptor(typeDescriptor), emptyList())
 
     private val outboundType = resolveTypeVariables(declaredType.actualTypeArguments[0], null)
     private val inboundType = declaredType.actualTypeArguments[0]

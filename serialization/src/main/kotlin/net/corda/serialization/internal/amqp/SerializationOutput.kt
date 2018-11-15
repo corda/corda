@@ -7,6 +7,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.byteArrayOutput
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.io.OutputStream
@@ -119,7 +120,7 @@ open class SerializationOutput constructor(
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, if (type.typeName == "?" || type == SerializerFactory.AnyType) obj.javaClass else type, context, debugIndent)
+            writeObject(obj, data, if (type == TypeIdentifier.UnknownType.getLocalType()) obj.javaClass else type, context, debugIndent)
         }
     }
 

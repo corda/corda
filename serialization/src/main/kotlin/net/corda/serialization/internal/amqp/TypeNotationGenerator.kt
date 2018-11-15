@@ -15,7 +15,7 @@ object TypeNotationGenerator {
         else -> throw NotSerializableException("Cannot generate type notation for $typeInformation")
     }
 
-    private val LocalTypeInformation.amqpTypeName get() = SerializerFactory.nameForType(typeIdentifier)
+    private val LocalTypeInformation.amqpTypeName get() = AMQPTypeIdentifiers.nameForType(typeIdentifier)
 
     private fun LocalTypeInformation.AnInterface.getTypeNotation(typeDescriptor: Symbol): CompositeType =
             makeCompositeType(

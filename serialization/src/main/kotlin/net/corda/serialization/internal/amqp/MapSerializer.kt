@@ -84,7 +84,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
 
     private val concreteBuilder: MapCreationFunction = findConcreteType(declaredType.rawType as Class<*>)
 
-    private val typeNotation: TypeNotation = RestrictedType(SerializerFactory.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
+    private val typeNotation: TypeNotation = RestrictedType(AMQPTypeIdentifiers.nameForType(declaredType), null, emptyList(), "map", Descriptor(typeDescriptor), emptyList())
 
     private val inboundKeyType = declaredType.actualTypeArguments[0]
     private val outboundKeyType = resolveTypeVariables(inboundKeyType, null)

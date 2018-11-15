@@ -1,9 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 /**
@@ -17,7 +15,7 @@ class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: Local
 
     init {
         typeNotation = RestrictedType(
-                SerializerFactory.nameForType(declaredType),
+                AMQPTypeIdentifiers.nameForType(declaredType),
                 null, emptyList(), "list", Descriptor(typeDescriptor),
                 declaredClass.enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
                     Choice(it.first.toString(), it.second.toString())

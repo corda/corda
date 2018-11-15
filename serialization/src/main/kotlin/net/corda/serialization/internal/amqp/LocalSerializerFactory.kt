@@ -164,7 +164,7 @@ class DefaultLocalSerializerFactory(
                 throw AMQPNotSerializableException(
                         type,
                         "Serializer does not support synthetic classes")
-            SerializerFactory.isPrimitive(clazz) -> AMQPPrimitiveSerializer(clazz)
+            AMQPTypeIdentifiers.isPrimitive(typeInformation.typeIdentifier) -> AMQPPrimitiveSerializer(clazz)
             else -> customSerializerRegistry.findCustomSerializer(clazz, declaredType) ?:
                 makeNonCustomSerializer(type, typeInformation, clazz)
         }

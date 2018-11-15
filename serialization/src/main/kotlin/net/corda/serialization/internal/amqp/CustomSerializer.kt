@@ -3,7 +3,6 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
 import net.corda.serialization.internal.model.fingerprintForDescriptors
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
@@ -68,13 +67,13 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
         override val typeDescriptor: Symbol by lazy {
-            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), nameForType(clazz))}")
+            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), AMQPTypeIdentifiers.nameForType(clazz))}")
         }
         private val typeNotation: TypeNotation = RestrictedType(
-                SerializerFactory.nameForType(clazz),
+                AMQPTypeIdentifiers.nameForType(clazz),
                 null,
                 emptyList(),
-                SerializerFactory.nameForType(superClassSerializer.type),
+                AMQPTypeIdentifiers.nameForType(superClassSerializer.type),
                 Descriptor(typeDescriptor),
                 emptyList())
 
@@ -103,7 +102,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
      */
     abstract class CustomSerializerImp<T : Any>(protected val clazz: Class<T>, protected val withInheritance: Boolean) : CustomSerializer<T>() {
         override val type: Type get() = clazz
-        override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${nameForType(clazz)}")
+        override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${AMQPTypeIdentifiers.nameForType(clazz)}")
         override fun writeClassInfo(output: SerializationOutput) {}
         override val descriptor: Descriptor = Descriptor(typeDescriptor)
         override fun isSerializerFor(clazz: Class<*>): Boolean = if (withInheritance) this.clazz.isAssignableFrom(clazz) else this.clazz == clazz
@@ -137,7 +136,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override val schemaForDocumentation: Schema by lazy {
             val typeNotations = mutableSetOf<TypeNotation>(
                     CompositeType(
-                            nameForType(type),
+                            AMQPTypeIdentifiers.nameForType(type),
                             null,
                             emptyList(),
                             descriptor, proxySerializer.fields))
@@ -192,8 +191,8 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         : CustomSerializerImp<T>(clazz, withInheritance) {
 
         override val schemaForDocumentation = Schema(
-                listOf(RestrictedType(nameForType(type), "", listOf(nameForType(type)),
-                        SerializerFactory.primitiveTypeName(String::class.java)!!,
+                listOf(RestrictedType(AMQPTypeIdentifiers.nameForType(type), "", listOf(AMQPTypeIdentifiers.nameForType(type)),
+                        AMQPTypeIdentifiers.primitiveTypeName(String::class.java)!!,
                         descriptor, emptyList())))
 
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,

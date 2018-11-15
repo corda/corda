@@ -12,7 +12,7 @@ object X509CRLSerializer : CustomSerializer.Implements<X509CRL>(X509CRL::class.j
             type.toString(),
             "",
             listOf(type.toString()),
-            SerializerFactory.primitiveTypeName(ByteArray::class.java)!!,
+            AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java)!!,
             descriptor,
             emptyList()
     )))

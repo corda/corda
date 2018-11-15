@@ -17,6 +17,7 @@ import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.te
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+/*
 public class JavaCalculatedValuesToClassCarpenterTest extends AmqpCarpenterBase {
     public JavaCalculatedValuesToClassCarpenterTest() {
         super(AllWhitelist.INSTANCE);
@@ -105,3 +106,4 @@ public class JavaCalculatedValuesToClassCarpenterTest extends AmqpCarpenterBase 
         assertEquals(upcast.getDoubled(), amqpObj.getDoubled());
     }
 }
+*/

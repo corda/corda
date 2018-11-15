@@ -7,7 +7,6 @@ import java.lang.reflect.*
  * Try and infer concrete types for any generics type variables for the actual class encountered,
  * based on the declared type.
  */
-// TODO: test GenericArrayType
 fun inferTypeVariables(actualClass: Class<*>,
                        declaredClass: Class<*>,
                        declaredType: Type): Type? = when (declaredType) {
@@ -17,10 +16,7 @@ fun inferTypeVariables(actualClass: Class<*>,
         inferTypeVariables(actualClass.componentType, declaredComponent.asClass(), declaredComponent)?.asArray()
     }
     // Nothing to infer, otherwise we'd have ParameterizedType
-    is Class<*> -> actualClass
-    is TypeVariable<*> -> actualClass
-    is WildcardType -> actualClass
-    else -> throw UnsupportedOperationException("Cannot infer type variables for type $declaredType")
+    else -> actualClass
 }
 
 /**
@@ -30,12 +26,6 @@ fun inferTypeVariables(actualClass: Class<*>,
 private fun inferTypeVariables(actualClass: Class<*>, declaredClass: Class<*>, declaredType: ParameterizedType): Type? {
     if (declaredClass == actualClass) {
         return null
-    }
-
-    if (!declaredClass.isAssignableFrom(actualClass)) {
-        throw AMQPNotSerializableException(
-                declaredType,
-                "Found object of type $actualClass in a property expecting $declaredType")
     }
 
     if (actualClass.typeParameters.isEmpty()) {

@@ -8,11 +8,10 @@ import net.corda.serialization.internal.checkUseCase
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 import java.security.PrivateKey
-import java.util.*
 
 object PrivateKeySerializer : CustomSerializer.Implements<PrivateKey>(PrivateKey::class.java) {
 
-    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
+    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PrivateKey, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext

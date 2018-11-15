@@ -1,41 +1,17 @@
 package net.corda.serialization.internal.carpenter
 
+import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.*
-import net.corda.serialization.internal.amqp.Field
-import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testName
-
-fun mangleName(name: String) = "${name}__carpenter"
-
-/**
- * given a list of class names work through the amqp envelope schema and alter any that
- * match in the fashion defined above
- */
-fun Schema.mangleNames(names: List<String>): Schema {
-    val newTypes: MutableList<TypeNotation> = mutableListOf()
-
-    for (type in types) {
-        val newName = if (type.name in names) mangleName(type.name) else type.name
-        val newProvides = type.provides.map { if (it in names) mangleName(it) else it }
-        val newFields = mutableListOf<Field>()
-
-        (type as CompositeType).fields.forEach {
-            val fieldType = if (it.type in names) mangleName(it.type) else it.type
-            val requires =
-                    if (it.requires.isNotEmpty() && (it.requires[0] in names)) listOf(mangleName(it.requires[0]))
-                    else it.requires
-
-            newFields.add(it.copy(type = fieldType, requires = requires))
-        }
-
-        newTypes.add(type.copy(name = newName, provides = newProvides, fields = newFields))
-    }
-
-    return Schema(types = newTypes)
-}
+import net.corda.serialization.internal.model.ClassCarpentingTypeLoader
+import net.corda.serialization.internal.model.RemoteTypeInformation
+import net.corda.serialization.internal.model.SchemaBuildingRemoteTypeCarpenter
+import net.corda.serialization.internal.model.TypeIdentifier
+import org.junit.Assert.assertTrue
 
 /**
  * Custom implementation of a [SerializerFactory] where we need to give it a class carpenter
@@ -48,7 +24,75 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var cc = ClassCarpenterImpl(whitelist = whitelist)
     var factory = serializerFactoryExternalCarpenter(cc)
 
-    fun <T: Any> serialise(obj: T): SerializedBytes<T> = SerializationOutput(factory).serialize(obj)
-    @Suppress("NOTHING_TO_INLINE")
-    inline fun classTestName(clazz: String) = "${this.javaClass.name}\$${testName()}\$$clazz"
+    protected val remoteTypeModel = AMQPRemoteTypeModel()
+    protected val typeLoader = ClassCarpentingTypeLoader(SchemaBuildingRemoteTypeCarpenter(cc), cc.classloader)
+
+    protected inline fun <reified T: Any> T.roundTrip(): ObjectAndEnvelope<T> =
+        DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(this))
+
+    protected inline fun <reified T: Any> Envelope.typeInformationFor(): RemoteTypeInformation {
+        val interpreted = remoteTypeModel.interpret(SerializationSchemas(schema, transformsSchema))
+        val type = object : TypeToken<T>() {}.type
+        return interpreted.values.find { it.typeIdentifier == TypeIdentifier.forGenericType(type) }
+                as RemoteTypeInformation
+    }
+
+    protected inline fun <reified T: Any> Envelope.getMangled(): RemoteTypeInformation =
+            typeInformationFor<T>().mangle<T>()
+
+    protected fun <T: Any> serialise(obj: T): SerializedBytes<T> = SerializationOutput(factory).serialize(obj)
+
+    protected inline fun <reified T: Any>  RemoteTypeInformation.mangle(): RemoteTypeInformation {
+        val from = TypeIdentifier.forGenericType(object : TypeToken<T>() {}.type)
+        return rename(from, from.mangle())
+    }
+
+    protected fun TypeIdentifier.mangle(): TypeIdentifier = when(this) {
+        is TypeIdentifier.Unparameterised -> copy(name = name + "_carpenter")
+        is TypeIdentifier.Parameterised -> copy(name = name + "_carpenter")
+        is TypeIdentifier.Erased -> copy(name = name + "_carpenter")
+        is TypeIdentifier.ArrayOf -> copy(componentType = componentType.mangle())
+        else -> this
+    }
+
+    protected fun TypeIdentifier.rename(from: TypeIdentifier, to: TypeIdentifier): TypeIdentifier = when(this) {
+        from -> to.rename(from, to)
+        is TypeIdentifier.Parameterised -> copy(parameters = parameters.map { it.rename(from, to) })
+        is TypeIdentifier.ArrayOf -> copy(componentType = componentType.rename(from, to))
+        else -> this
+    }
+
+    protected fun RemoteTypeInformation.rename(from: TypeIdentifier, to: TypeIdentifier): RemoteTypeInformation = when(this) {
+        is RemoteTypeInformation.Composable -> copy(
+                typeIdentifier = typeIdentifier.rename(from, to),
+                properties = properties.mapValues { (_, property) -> property.copy(type = property.type.rename(from, to)) },
+                interfaces = interfaces.map { it.rename(from, to) },
+                typeParameters = typeParameters.map { it.rename(from, to) })
+        is RemoteTypeInformation.Unparameterised -> copy(typeIdentifier = typeIdentifier.rename(from, to))
+        is RemoteTypeInformation.Parameterised -> copy(
+                typeIdentifier = typeIdentifier.rename(from, to),
+                typeParameters = typeParameters.map { it.rename(from, to) })
+        is RemoteTypeInformation.AnInterface -> copy(
+                typeIdentifier = typeIdentifier.rename(from, to),
+                properties = properties.mapValues { (_, property) -> property.copy(type = property.type.rename(from, to)) },
+                interfaces = interfaces.map { it.rename(from, to) },
+                typeParameters = typeParameters.map { it.rename(from, to) })
+        is RemoteTypeInformation.AnArray -> copy(componentType = componentType.rename(from, to))
+        is RemoteTypeInformation.AnEnum -> copy(
+                typeIdentifier = typeIdentifier.rename(from, to))
+        else -> this
+    }
+
+    protected fun RemoteTypeInformation.load(): Class<*> =
+            typeLoader.load(listOf(this))[typeIdentifier]!!.asClass()
+
+    protected fun assertCanLoadAll(vararg types: RemoteTypeInformation) {
+        assertTrue(typeLoader.load(types.asList()).keys.containsAll(types.map { it.typeIdentifier }))
+    }
+
+    protected fun Class<*>.new(vararg constructorParams: Any?) =
+            constructors[0].newInstance(*constructorParams)!!
+
+    protected fun Any.get(propertyName: String): Any =
+            this::class.java.getMethod("get${propertyName.capitalize()}").invoke(this)
 }

@@ -11,7 +11,7 @@ import java.security.PublicKey
  * A serializer that writes out a public key in X.509 format.
  */
 object PublicKeySerializer : CustomSerializer.Implements<PublicKey>(PublicKey::class.java) {
-    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), SerializerFactory.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
+    override val schemaForDocumentation = Schema(listOf(RestrictedType(type.toString(), "", listOf(type.toString()), AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java)!!, descriptor, emptyList())))
 
     override fun writeDescribedObject(obj: PublicKey, data: Data, type: Type, output: SerializationOutput,
                                       context: SerializationContext

@@ -21,7 +21,6 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.nodeapi.internal.crypto.ContentSignerBuilder
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.amqp.SerializerFactory.Companion.isPrimitive
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.testing.contracts.DummyContract
@@ -258,27 +257,27 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
 
     @Test
     fun isPrimitive() {
-        assertTrue(isPrimitive(Character::class.java))
-        assertTrue(isPrimitive(Boolean::class.java))
-        assertTrue(isPrimitive(Byte::class.java))
-        assertTrue(isPrimitive(UnsignedByte::class.java))
-        assertTrue(isPrimitive(Short::class.java))
-        assertTrue(isPrimitive(UnsignedShort::class.java))
-        assertTrue(isPrimitive(Int::class.java))
-        assertTrue(isPrimitive(UnsignedInteger::class.java))
-        assertTrue(isPrimitive(Long::class.java))
-        assertTrue(isPrimitive(UnsignedLong::class.java))
-        assertTrue(isPrimitive(Float::class.java))
-        assertTrue(isPrimitive(Double::class.java))
-        assertTrue(isPrimitive(Decimal32::class.java))
-        assertTrue(isPrimitive(Decimal64::class.java))
-        assertTrue(isPrimitive(Decimal128::class.java))
-        assertTrue(isPrimitive(Char::class.java))
-        assertTrue(isPrimitive(Date::class.java))
-        assertTrue(isPrimitive(UUID::class.java))
-        assertTrue(isPrimitive(ByteArray::class.java))
-        assertTrue(isPrimitive(String::class.java))
-        assertTrue(isPrimitive(Symbol::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Character::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Boolean::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Byte::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(UnsignedByte::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Short::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(UnsignedShort::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Int::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(UnsignedInteger::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Long::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(UnsignedLong::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Float::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Double::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Decimal32::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Decimal64::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Decimal128::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Char::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Date::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(UUID::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(ByteArray::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(String::class.java))
+        assertTrue(AMQPTypeIdentifiers.isPrimitive(Symbol::class.java))
     }
 
     @Test
