@@ -6,6 +6,8 @@ import net.corda.core.context.Trace
 import net.corda.core.context.Trace.InvocationId
 import net.corda.core.context.Trace.SessionId
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.inputStream
+import net.corda.core.internal.outputStream
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -19,11 +21,15 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.management.CoreNotificationType
 import org.apache.activemq.artemis.api.core.management.ManagementHelper
 import org.apache.activemq.artemis.reader.MessageUtil
+import org.apache.commons.io.input.AutoCloseInputStream
 import rx.Notification
 import java.io.*
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 
 // The RPC protocol:
 //
@@ -212,15 +218,14 @@ object RPCApi {
         }
     }
 
+    private val attachmentsExecutor = Executors.newCachedThreadPool()
+
     private fun ClientMessage.toAttachmentUploadRpcRequest(): ClientToServer.AttachmentUploadRpcRequest {
         val knownArgsSize = getIntProperty(ClientToServer.AttachmentUploadRpcRequest.KNOWN_ARGUMENTS_SIZE)
-        // TODO sollecitom try to save the entire message to file `setOutputStream(FileOutputStream(File(etc.)))`, read the first KNOWN_ARGUMENTS_SIZE, then pass the FileInputStream to import, then remove the file
         val output = PipedOutputStream()
         val outputWithArgs = ArgsAwareOutputStream(knownArgsSize, output)
         val input = PipedInputStream(output)
-        Thread {
-            setOutputStream(outputWithArgs)
-        }.start()
+        attachmentsExecutor.submit { setOutputStream(outputWithArgs) }
         val serialisedArgs = outputWithArgs.serialisedArgs.getOrThrow()
         val rpcRequest = toRpcRequest(serialisedArgs)
 

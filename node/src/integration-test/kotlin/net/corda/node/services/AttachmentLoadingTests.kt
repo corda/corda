@@ -141,7 +141,7 @@ class AttachmentLoadingTests {
     // TODO sollecitom remove
     @Test
     fun upload_huge_attachments() {
-        val attachments = (1..10).map { index -> RepeatingBytesInputStream("Michele - $index".toByteArray(), 2_000_000_000) }
+        val attachments = (1..2).map { index -> RepeatingBytesInputStream("Michele - $index".toByteArray(), 2_000_000_000) }
         val rpcUser = User("admin", "admin", setOf(all()))
         withoutTestSerialization {
             driver(DriverParameters(startNodesInProcess = false)) {
@@ -151,6 +151,32 @@ class AttachmentLoadingTests {
                 attachments.forEach { attachment ->
                     executor.submit {
                         CordaRPCClient(node.rpcAddress).use(rpcUser.username, rpcUser.password) { connection ->
+                            val hash = connection.proxy.uploadAttachment(attachment)
+                            println("MICHELE - HASH: $hash")
+                            latch.countDown()
+//                            assertThat(hash).isEqualTo(attachment.sha256).also { latch.countDown() }
+                        }
+                    }
+                }
+                latch.await()
+            }
+        }
+    }
+
+    // TODO sollecitom remove
+    @Test
+    fun upload_huge_attachments_with_the_same_client() {
+        val attachments = (1..2).map { index -> RepeatingBytesInputStream("Michele - $index".toByteArray(), 2_000_000_000) }
+        val rpcUser = User("admin", "admin", setOf(all()))
+        withoutTestSerialization {
+            driver(DriverParameters(startNodesInProcess = false)) {
+                val executor = Executors.newFixedThreadPool(attachments.size)
+                val node = startNode(rpcUsers = listOf(rpcUser)).getOrThrow()
+                val latch = CountDownLatch(attachments.size)
+                val client = CordaRPCClient(node.rpcAddress)
+                attachments.forEach { attachment ->
+                    executor.submit {
+                        client.use(rpcUser.username, rpcUser.password) { connection ->
                             val hash = connection.proxy.uploadAttachment(attachment)
                             println("MICHELE - HASH: $hash")
                             latch.countDown()
