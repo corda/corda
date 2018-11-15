@@ -6,6 +6,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 
 /**
@@ -38,6 +39,14 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             validateRequestSignature(request, requestPayload.requestSignature)
 
             verifyTransaction(requestPayload)
+
+            val flowVersion = otherSideSession.getCounterpartyFlowInfo().flowVersion
+            logger.info("otherSideSession.flowInfo.flowVersion = $flowVersion")
+            val eta = service.getEstimatedWaitTime()
+            logger.info("eta: $eta")
+            if (flowVersion >= 4 && eta > 30.seconds) {
+                otherSideSession.send(WaitTimeUpdate(eta.toMillis() / 1000))
+            }
 
             service.commitInputStates(
                     tx.inputs,

@@ -8,16 +8,14 @@ import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
 import net.corda.core.internal.executeAsync
 import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.minutes
-import net.corda.core.utilities.seconds
 import org.slf4j.Logger
+import java.time.Duration
 
 /** Base implementation for a notary service operated by a singe party. */
 abstract class SinglePartyNotaryService : NotaryService() {
@@ -48,15 +46,6 @@ abstract class SinglePartyNotaryService : NotaryService() {
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
-        if (otherSideSession != null) {
-            log.info("otherSideSession.flowInfo.flowVersion = ${otherSideSession.getCounterpartyFlowInfo().flowVersion}")
-            val eta = uniquenessProvider.eta()
-            log.info("eta: $eta")
-            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && eta > 30.seconds) {
-                otherSideSession.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis() / 1000))
-            }
-        }
-
         val result = callingFlow.executeAsync(
                 CommitOperation(
                         this,
@@ -73,6 +62,9 @@ abstract class SinglePartyNotaryService : NotaryService() {
             throw NotaryInternalException(result.error)
         }
     }
+
+    override fun getEstimatedWaitTime(): Duration = uniquenessProvider.eta()
+
 
     /**
      * Required for the flow to be able to suspend until the commit is complete.

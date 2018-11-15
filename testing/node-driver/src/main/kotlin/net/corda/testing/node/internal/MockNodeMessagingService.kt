@@ -243,7 +243,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         return InMemoryReceivedMessage(
                 message.topic,
                 OpaqueBytes(message.data.bytes.copyOf()), // Kryo messes with the buffer so give each client a unique copy
-                1,
+                4,
                 message.uniqueMessageId,
                 message.debugTimestamp,
                 sender.name
