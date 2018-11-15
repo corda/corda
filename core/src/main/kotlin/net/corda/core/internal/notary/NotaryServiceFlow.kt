@@ -40,11 +40,9 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
-            val flowVersion = otherSideSession.getCounterpartyFlowInfo().flowVersion
-            logger.info("otherSideSession.flowInfo.flowVersion = $flowVersion")
             val eta = service.getEstimatedWaitTime()
-            logger.info("eta: $eta")
-            if (flowVersion >= 4 && eta > 30.seconds) {
+            if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= 4) {
+                logger.info("eta: $eta")
                 otherSideSession.send(WaitTimeUpdate(eta.toMillis() / 1000))
             }
 

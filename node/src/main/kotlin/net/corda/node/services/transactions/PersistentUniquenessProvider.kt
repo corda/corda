@@ -145,6 +145,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                 )
     }
 
+
     /**
      * Generates and adds a [CommitRequest] to the request queue. If the request queue is full, this method will block
      * until space is available.

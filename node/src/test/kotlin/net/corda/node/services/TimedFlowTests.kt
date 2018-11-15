@@ -55,7 +55,7 @@ class TimedFlowTests {
         private lateinit var notary: Party
         private lateinit var node: TestStartedNode
 
-        private var waitETA: Duration = 20.seconds
+        private var waitETA: Duration = 10.seconds
 
 
         init {
@@ -188,7 +188,7 @@ class TimedFlowTests {
                 progressTrackerDone.get()
             }
         } finally {
-            waitETA = 20.seconds
+            waitETA = 10.seconds
         }
     }
 
