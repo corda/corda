@@ -579,22 +579,49 @@ class SingleThreadedStateMachineManager(
                 if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
                 scheduledTimeout.retryCount
             } else 0
-            val scheduledFuture = scheduleTimeoutException(flow, retryCount)
+            val scheduledFuture = scheduleTimeoutException(flow, calculateDefaultTimeoutSeconds(retryCount))
             timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount + 1)
         } else {
             logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
         }
     }
 
+    public fun setCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+        mutex.locked {
+            setCustomTimeout(flowId, timeoutSeconds)
+        }
+    }
+
+    private fun InnerState.setCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+        val flow = flows[flowId]
+        if (flow != null) {
+            val scheduledTimeout = timedFlows[flowId]
+            val retryCount = if (scheduledTimeout != null) {
+                val timeoutFuture = scheduledTimeout.scheduledFuture
+                if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
+                scheduledTimeout.retryCount
+            } else 0
+            val scheduledFuture = scheduleTimeoutException(flow, timeoutSeconds)
+            timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount)
+        } else {
+            logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
+        }
+    }
+
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
-    private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
+    private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
-            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
-            val jitteredDelaySeconds = maxOf(1L, timeoutDelaySeconds/2 + (Math.random() * timeoutDelaySeconds/2).toLong())
             timeoutScheduler.schedule({
                 val event = Event.Error(FlowTimeoutException(maxRestartCount))
                 flow.fiber.scheduleEvent(event)
-            }, jitteredDelaySeconds, TimeUnit.SECONDS)
+            }, delay, TimeUnit.SECONDS)
+        }
+    }
+
+    private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
+        return with(serviceHub.configuration.flowTimeout) {
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            maxOf(1L, timeoutDelaySeconds / 2 + (Math.random() * timeoutDelaySeconds / 2).toLong())
         }
     }
 
@@ -642,7 +669,8 @@ class SingleThreadedStateMachineManager(
                 stateMachine = StateMachine(id, secureRandom),
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!,
-                unfinishedFibers = unfinishedFibers
+                unfinishedFibers = unfinishedFibers,
+                waitTimeUpdateHook = { flowId, timeout -> setCustomTimeout(flowId, timeout) }
         )
     }
 
