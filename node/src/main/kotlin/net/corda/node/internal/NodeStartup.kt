@@ -191,7 +191,7 @@ open class NodeStartup : NodeStartupLogging {
                 node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(node::stop)
-                    } catch (e: Throwable) {
+                    } catch (e: Exception) {
                         logger.error("Shell failed to start", e)
                     }
                 }

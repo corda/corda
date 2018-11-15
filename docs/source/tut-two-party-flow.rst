@@ -31,8 +31,7 @@ In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-And update ``IOUFlow.call`` by changing the code following the retrieval of the notary's identity from the network as
-follows:
+And update ``IOUFlow.call`` to the following:
 
 .. container:: codeset
 
@@ -136,7 +135,7 @@ defined in ``IOUContract``. We can now re-run our updated CorDapp, using the
 :doc:`same instructions as before <hello-world-running>`.
 
 Our CorDapp now imposes restrictions on the issuance of IOUs. Most importantly, IOU issuance now requires agreement
-from both the lender and the borrower before an IOU can be created on the ledger. This prevents either the lender or
+from both the lender and the borrower before an IOU can be created on the blockchain. This prevents either the lender or
 the borrower from unilaterally updating the ledger in a way that only benefits themselves.
 
 After completing this tutorial, your CorDapp should look like this:

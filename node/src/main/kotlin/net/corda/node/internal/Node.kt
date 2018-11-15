@@ -362,7 +362,7 @@ open class Node(configuration: NodeConfiguration,
                         log.info("Retrieved public IP from Network Map Service: $this. This will be used instead of the provided \"$host\" as the advertised address.")
                     }
                     retrievedHostName
-                } catch (ignore: Throwable) {
+                } catch (ignore: Exception) {
                     // Cannot reach the network map service, ignore the exception and use provided P2P address instead.
                     log.warn("Cannot connect to the network map service for public IP detection.")
                     null

@@ -411,7 +411,9 @@ bintrayConfig {
             'corda-notary-raft',
             'corda-notary-bft-smart',
             'corda-notary-jpa',
-            'corda-notary-mysql'
+            'corda-notary-mysql',
+            'corda-common-configuration-parsing',
+            'corda-common-validation'
     ]
     license {
         name = 'Apache-2.0'

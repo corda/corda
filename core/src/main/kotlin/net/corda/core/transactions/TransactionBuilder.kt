@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.keys
+import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.FlowStateMachine
@@ -24,6 +25,8 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -89,7 +92,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 ) {
 
     private companion object {
-        val logger = loggerFor<TransactionBuilder>()
+        private val log = contextLogger()
     }
 
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -213,14 +216,16 @@ open class TransactionBuilder @JvmOverloads constructor(
                 }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
-        val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet().map { ctr ->
-            handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
-        }
+        val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
+                .map { ctr ->
+                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
+                }
 
-        val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }.flatten()
+        val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
+                .flatten()
 
         // The output states need to preserve the order in which they were added.
-        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance}!! }
+        val resolvedOutputStatesInTheOriginalOrder: List<TransactionState<ContractState>> = outputStates().map { os -> resolvedStates.find { rs -> rs.data == os.data && rs.encumbrance == os.encumbrance }!! }
 
         val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.map { it.first } + refStateContractAttachments
 
@@ -342,8 +347,18 @@ open class TransactionBuilder @JvmOverloads constructor(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
-        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
+        attachmentToUse.signers.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
+            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
+            if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
+                log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
+                WhitelistedByZoneAttachmentConstraint
+            } else {
+                log.warnOnce("Reverting back to using hash constraints for contract $contractClassName")
+                HashAttachmentConstraint(attachmentToUse.id)
+            }
+        }
         attachmentToUse.signers.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signers)
+        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
         else -> HashAttachmentConstraint(attachmentToUse.id)
     }
 
@@ -469,7 +484,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                     addReferenceState(resolvedStateAndRef.referenced())
                 }
             } else {
-                logger.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
                         "state pointers outside of flows. If you are writing a unit test then pass in a " +
                         "MockServices instance.")
                 return
@@ -539,7 +554,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
                 //TODO: add link to docsite page, when there is one.
-"""
+                """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
 with @BelongsToContract, or supply an explicit contract parameter to addOutputState().
@@ -555,7 +570,7 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
             state: ContractState,
             contract: ContractClassName = requireNotNull(state.requiredContractClassName) {
                 //TODO: add link to docsite page, when there is one.
-"""
+                """
 Unable to infer Contract class name because state class ${state::class.java.name} is not annotated with
 @BelongsToContract, and does not have an enclosing class which implements Contract. Either annotate ${state::class.java.name}
 with @BelongsToContract, or supply an explicit contract parameter to addOutputState().

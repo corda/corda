@@ -91,8 +91,8 @@ fun startPublishingFixedRateInjector(
                         }
                         workBoundSemaphore.release()
                     }
-                } catch (throwable: Throwable) {
-                    throwable.printStackTrace()
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }

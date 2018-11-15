@@ -27,7 +27,6 @@ import net.corda.testing.node.internal.addressMustNotBeBound
 import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
-import org.junit.Assume.assumeTrue
 import org.junit.ClassRule
 import org.junit.Test
 import java.util.*
@@ -179,8 +178,8 @@ class DriverTests : IntegrationTest() {
     fun `driver waits for in-process nodes to finish`() {
         fun NodeHandle.stopQuietly() = try {
             stop()
-        } catch (t: Throwable) {
-            t.printStackTrace()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
         val handlesFuture = openFuture<List<NodeHandle>>()

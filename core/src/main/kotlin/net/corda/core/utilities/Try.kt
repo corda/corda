@@ -19,8 +19,8 @@ sealed class Try<out A> {
         inline fun <T> on(body: () -> T): Try<T> {
             return try {
                 Success(body())
-            } catch (t: Throwable) {
-                Failure(t)
+            } catch (e: Exception) {
+                Failure(e)
             }
         }
     }

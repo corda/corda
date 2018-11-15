@@ -71,8 +71,8 @@ fun <V, W> CordaFuture<out V>.flatMap(transform: (V) -> CordaFuture<out W>): Cor
     thenMatch(success@ {
         result.captureLater(try {
             transform(it)
-        } catch (t: Throwable) {
-            result.setException(t)
+        } catch (e: Exception) {
+            result.setException(e)
             return@success
         })
     }, {
@@ -128,8 +128,8 @@ interface ValueOrException<in V> {
     fun capture(block: () -> V): Boolean {
         return set(try {
             block()
-        } catch (t: Throwable) {
-            return setException(t)
+        } catch (e: Exception) {
+            return setException(e)
         })
     }
 }
@@ -153,8 +153,8 @@ internal class CordaFutureImpl<V>(private val impl: CompletableFuture<V> = Compl
         impl.whenComplete { _, _ ->
             try {
                 callback(this)
-            } catch (t: Throwable) {
-                log.error(listenerFailedMessage, t)
+            } catch (e: Exception) {
+                log.error(listenerFailedMessage, e)
             }
         }
     }

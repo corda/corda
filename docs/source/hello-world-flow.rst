@@ -40,8 +40,7 @@ FlowLogic
 ---------
 All flows must subclass ``FlowLogic``. You then define the steps taken by the flow by overriding ``FlowLogic.call``.
 
-Let's define our ``IOUFlow`` in either ``Initiator.java`` or ``Flows.kt``. Delete the two existing flows in the
-template (``Initiator`` and ``Responder``), and replace them with the following:
+Let's define our ``IOUFlow``. Delete the existing ``Responder`` flow. Then replace the definition of ``Initiator`` with the following:
 
 .. container:: codeset
 

@@ -118,7 +118,7 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
         val specificConfig = config.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet()))
 
-        val parsedConfig = specificConfig.parseAsNodeConfiguration().orThrow()
+        val parsedConfig = specificConfig.parseAsNodeConfiguration().value()
 
         defaultNetworkParameters.install(baseDirectory)
         return InProcessNode(parsedConfig, MOCK_VERSION_INFO.copy(platformVersion = platformVersion), flowManager)

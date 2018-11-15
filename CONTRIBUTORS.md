@@ -121,6 +121,7 @@ see changes to this list.
 * Lulu Ren (Monad-Labs)
 * Maksymilian Pawlak (R3)
 * Manila Gauns (Persistent Systems Limited)
+* Manos Batsis
 * Marek Scocovsky (ABSA)
 * marekdapps
 * Mark Lauer (Westpac)
