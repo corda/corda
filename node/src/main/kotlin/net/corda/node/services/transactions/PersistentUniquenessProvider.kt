@@ -96,13 +96,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     // Estimated time of request processing.
     override fun eta(): Duration {
+        // TODO: config
         val rate = throughputMeter.oneMinuteRate
         val nrStates = nrQueuedStates.get()
         log.info("rate: $rate, queueSize: $nrStates")
-        if (rate > 1e-5 && nrStates > 20) {
+        if (rate > 1e-5 && nrStates > 5) {
             return Duration.ofSeconds((1.5 * nrStates / rate).toLong())
         }
-        return 25.seconds
+        return 1.seconds
     }
 
     /** A request processor thread. */
@@ -143,7 +144,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                         persistentEntityClass = CommittedState::class.java
                 )
     }
-
 
     /**
      * Generates and adds a [CommitRequest] to the request queue. If the request queue is full, this method will block
@@ -253,11 +253,11 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
-            if (exception is NotaryInternalException) {
-                request.future.set(UniquenessProvider.Result.Failure(exception.error))
-            } else {
-                request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
-            }
+        if (exception is NotaryInternalException) {
+            request.future.set(UniquenessProvider.Result.Failure(exception.error))
+        } else {
+            request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
+        }
     }
 
     private fun respondWithSuccess(request: CommitRequest) {

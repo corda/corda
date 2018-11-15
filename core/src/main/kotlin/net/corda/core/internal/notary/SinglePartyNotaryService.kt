@@ -65,7 +65,6 @@ abstract class SinglePartyNotaryService : NotaryService() {
 
     override fun getEstimatedWaitTime(): Duration = uniquenessProvider.eta()
 
-
     /**
      * Required for the flow to be able to suspend until the commit is complete.
      * This object will be included in the flow checkpoint.
