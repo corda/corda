@@ -13,7 +13,7 @@ abstract class BackpressureAwareTimedFlow<ResultType, ReceiveType>(val receiveTy
             val wrappedResult = session.receive<Any>()
             val unwrapped = wrappedResult.fromUntrustedWorld
             if (unwrapped is WaitTimeUpdate) {
-                logger.info("Counterparty is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTimeSeconds} seconds for completion.")
+                logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTimeSeconds} seconds for completion.")
                 stateMachine.updateTimedFlowTimeout(unwrapped.waitTimeSeconds)
             } else if (unwrapped::class.java == receiveType) {
                 @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
