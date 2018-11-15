@@ -119,7 +119,20 @@ sealed class LocalTypeInformation {
     /**
      * May in fact be a more complex class, but is treated as if atomic, i.e. we don't further expand its properties.
      */
-    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier) : LocalTypeInformation()
+    data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier,
+                      private val _expand: () -> LocalTypeInformation) : LocalTypeInformation() {
+        val expand: LocalTypeInformation get() = _expand()
+
+        // Custom equals / hashcode because otherwise the "expand" lambda makes equality harder to reason about.
+        override fun equals(other: Any?): Boolean =
+                other is Cycle &&
+                        other.observedType == observedType &&
+                        other.typeIdentifier == typeIdentifier
+
+        override fun hashCode(): Int = Objects.hash(observedType, typeIdentifier)
+
+        override fun toString(): String = "Opaque($observedType, $typeIdentifier)"
+    }
 
     /**
      * Represents a scalar type such as [Int].
@@ -198,6 +211,7 @@ sealed class LocalTypeInformation {
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
             val constructor: LocalConstructorInformation,
+            val evolverConstructors: List<EvolverConstructorInformation>,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
@@ -205,9 +219,10 @@ sealed class LocalTypeInformation {
 
     /**
      * Represents a type whose instances may have observable properties (represented by "getter" methods), but for which
-     * we do not possess a method (such as a unique "deserialization constructor") for creating a new instance from a
-     * dictionary of property values.
+     * we do not possess a method (such as a unique "deserialization constructor" satisfied by these properties) for
+     * creating a new instance from a dictionary of property values.
      *
+     * @param constructor [LocalConstructorInformation] for the constructor of this type, if there is one.
      * @param properties [LocalPropertyInformation] for the properties of the interface.
      * @param superclass [LocalTypeInformation] for the superclass of the underlying class of this type.
      * @param interfaces [LocalTypeInformation] for the interfaces extended by this interface.
@@ -216,6 +231,7 @@ sealed class LocalTypeInformation {
     data class NonComposable(
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
+            val constructor: LocalConstructorInformation?,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
@@ -293,6 +309,14 @@ data class LocalConstructorInformation(
 }
 
 /**
+ * Represents information about a constructor that is specifically to be used for evolution, and is potentially matched
+ * with a different set of properties to the regular constructor.
+ */
+data class EvolverConstructorInformation(
+        val constructor: LocalConstructorInformation,
+        val properties: Map<String, LocalPropertyInformation>)
+
+/**
  * Represents information about a constructor parameter
  */
 data class LocalConstructorParameterInformation(
@@ -342,7 +366,7 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     (if (value.isCalculated) " (calculated)" else "") +
-                    ": " + value.type.prettyPrint()
+                    ": " + value.type.prettyPrint(simplifyClassNames)
 
     private inline fun indentAnd(block: LocalTypeInformationPrettyPrinter.() -> String) =
             copy(indent = indent + 1).block()

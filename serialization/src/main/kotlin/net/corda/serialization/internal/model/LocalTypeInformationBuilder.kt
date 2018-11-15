@@ -4,6 +4,7 @@ import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.isConcreteClass
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
@@ -44,8 +45,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
         if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
             LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
         }
-        else lookup.findOrBuild(type, typeIdentifier) {
-            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier)
+        else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
+            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
         }
 
     private fun resolveAndBuild(type: Type): LocalTypeInformation {
@@ -57,49 +58,55 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
     private fun Type.resolveAgainstContext(): Type =
             if (resolutionContext == null) this else resolveAgainst(resolutionContext)
 
-    private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation {
+    private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation {
         val rawType = type.asClass()
         return when (typeIdentifier) {
             is TypeIdentifier.TopType -> LocalTypeInformation.Top
             is TypeIdentifier.UnknownType -> LocalTypeInformation.Unknown
             is TypeIdentifier.Unparameterised,
-            is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier)
+            is TypeIdentifier.Erased -> buildForClass(rawType, typeIdentifier, isOpaque)
             is TypeIdentifier.ArrayOf -> {
                 LocalTypeInformation.AnArray(
                         type,
                         typeIdentifier,
                         resolveAndBuild(type.componentType()))
             }
-            is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier)
+            is TypeIdentifier.Parameterised -> buildForParameterised(rawType, type as ParameterizedType, typeIdentifier, isOpaque)
         }
     }
 
-    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier): LocalTypeInformation = withContext(type) {
+    private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(type) &&
             !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
             Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
-            type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
-            type.isPrimitive -> LocalTypeInformation.Atomic(type, typeIdentifier)
+            type.kotlin.javaPrimitiveType != null -> LocalTypeInformation.Atomic(type.kotlin.javaPrimitiveType!!, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
                     type,
                     typeIdentifier,
                     type.enumConstants.map { it.toString() },
                     buildInterfaceInformation(type))
-            type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
             type.kotlinObjectInstance != null -> LocalTypeInformation.Singleton(
                     type,
                     typeIdentifier,
                     buildSuperclassInformation(type),
                     buildInterfaceInformation(type))
-            else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
+            type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
+            type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
+            else -> when {
+                isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier) {
+                    buildNonAtomic(type, type, typeIdentifier, emptyList())
+                }
+                else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
+            }
         }
     }
 
     private fun buildForParameterised(
             rawType: Class<*>,
             type: ParameterizedType,
-            typeIdentifier: TypeIdentifier.Parameterised): LocalTypeInformation = withContext(type) {
+            typeIdentifier: TypeIdentifier.Parameterised,
+            isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(rawType) &&
             !EnumSet::class.java.isAssignableFrom(rawType) ->
@@ -110,7 +117,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+            else -> when {
+                isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier) {
+                        buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+                    }
+                else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+            }
         }
     }
 
@@ -153,7 +165,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
 
         if (observedConstructor == null) {
             logger.warn("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, buildReadOnlyProperties(rawType),
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
                     superclassInformation, interfaceInformation, typeParameterInformation)
         }
 
@@ -168,11 +180,17 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
             } else {
                 logger.warn("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, properties, superclassInformation,
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
                     interfaceInformation, typeParameterInformation)
         }
 
-        return LocalTypeInformation.Composable(rawType, typeIdentifier, constructorInformation, properties,
+        val evolverConstructors = evolverConstructors(type).map { ctor ->
+            val constructorInformation = buildConstructorInformation(type, ctor)
+            val evolverProperties = buildObjectProperties(rawType, constructorInformation)
+            EvolverConstructorInformation(constructorInformation, evolverProperties)
+        }
+
+        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolverConstructors, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
     }
 
@@ -255,11 +273,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                                               name: String,
                                               descriptor: PropertyDescriptor,
                                               constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
-        val constructorIndex = constructorParameterIndices[name] ?: return null
-        val isMandatory = constructorInformation.parameters[constructorIndex].isMandatory
-        if (descriptor.field == null) return null
+        val constructorIndex = constructorParameterIndices[name] ?:
+            // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
+            // and cannot infer whether the property name should be capitalised or not.
+            constructorParameterIndices[name.decapitalize()] ?: return null
 
         if (descriptor.getter == null) {
+            if (descriptor.field == null) return null
             val paramType = descriptor.field.genericType
             val paramTypeInformation = resolveAndBuild(paramType)
 
@@ -267,7 +287,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     descriptor.field,
                     ConstructorSlot(constructorIndex, constructorInformation),
                     paramTypeInformation,
-                    isMandatory)
+                    constructorInformation.parameters[constructorIndex].isMandatory)
         }
 
         val paramType = descriptor.getter.genericReturnType
@@ -277,7 +297,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                 descriptor.getter,
                 ConstructorSlot(constructorIndex, constructorInformation),
                 paramTypeInformation,
-                isMandatory)
+                descriptor.getter.returnType.isPrimitive ||
+                        !descriptor.getter.returnsNullable())
     }
 
     private fun getterSetterProperties(rawType: Class<*>): Sequence<Pair<String, LocalPropertyInformation>> =
@@ -361,11 +382,29 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     val nonDefaultCtors = kotlinCtors.filter { it != defaultCtor }
 
     val preferredCandidate = clazz.kotlin.primaryConstructor ?:
-        when(nonDefaultCtors.size) {
-            1 -> nonDefaultCtors.first()
-            0 -> defaultCtor
-            else -> null
-        }
+    when(nonDefaultCtors.size) {
+        1 -> nonDefaultCtors.first()
+        0 -> defaultCtor
+        else -> null
+    } ?: return null
 
-    return preferredCandidate?.apply { isAccessible = true }
+    return try {
+        preferredCandidate.apply { isAccessible = true }
+    } catch (e: SecurityException) {
+        null
+    }
+}
+
+private fun evolverConstructors(type: Type): List<KFunction<Any>> {
+    val clazz = type.asClass()
+    if (!clazz.isConcreteClass || clazz.isSynthetic) return emptyList()
+
+    return clazz.kotlin.constructors.asSequence()
+            .mapNotNull {
+                val version = it.findAnnotation<DeprecatedConstructorForDeserialization>()?.version
+                if (version == null) null else version to it
+            }
+            .sortedBy { (version, ctor) -> version }
+            .map { (version, ctor) -> ctor.apply { isAccessible = true} }
+            .toList()
 }
