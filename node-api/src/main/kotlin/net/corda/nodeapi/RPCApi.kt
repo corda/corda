@@ -172,27 +172,7 @@ object RPCApi {
                 val tag = Tag.values()[message.getIntProperty(TAG_FIELD_NAME)]
                 return when (tag) {
                     RPCApi.ClientToServer.Tag.RPC_REQUEST -> message.toRpcRequest()
-                    RPCApi.ClientToServer.Tag.RPC_ATTACHMENT_UPLOAD_REQUEST -> {
-                        // TODO sollecitom make this work without buffering in memory
-                        val bytesOutput = ByteArrayOutputStream()
-                        message.saveToOutputStream(bytesOutput)
-                        val bytes = bytesOutput.toByteArray()
-
-                        val knownArgsSize = message.getIntProperty(AttachmentUploadRpcRequest.KNOWN_ARGUMENTS_SIZE)
-                        val rpcRequest = message.toRpcRequest(bytes.sliceArray(0 until knownArgsSize))
-                        val input = ByteArrayInputStream(bytes.sliceArray(knownArgsSize until bytes.size))
-
-                        // TODO sollecitom try piping
-//                        val output = PipedOutputStream()
-//                        val input = PipedInputStream(output)
-//                        message.setOutputStream(output)
-
-//                        val output = ByteArrayOutputStream()
-//                        message.saveToOutputStream(output)
-//                        val input = BufferedInputStream(ByteArrayInputStream(output.toByteArray()))
-
-                        ClientToServer.AttachmentUploadRpcRequest(rpcRequest, input)
-                    }
+                    RPCApi.ClientToServer.Tag.RPC_ATTACHMENT_UPLOAD_REQUEST -> message.toAttachmentUploadRpcRequest()
                     RPCApi.ClientToServer.Tag.OBSERVABLES_CLOSED -> {
                         val ids = ArrayList<InvocationId>()
                         val buffer = message.bodyBuffer
@@ -205,6 +185,43 @@ object RPCApi {
                 }
             }
         }
+    }
+
+    private class ArgsAwareOutputStream(private val knownArgsSize: Int, private val delegate: OutputStream) : OutputStream() {
+        private val serialisedArgs = ByteArray(knownArgsSize)
+        private var cursor = 0
+
+        fun haveArgsReady(): Boolean = cursor == knownArgsSize
+
+        fun serialisedArgs(): ByteArray = serialisedArgs
+
+        override fun write(byte: Int) {
+            if (cursor < knownArgsSize) {
+                serialisedArgs[cursor] = byte.toByte()
+                cursor++
+            } else {
+                delegate.write(byte)
+            }
+        }
+
+        override fun close() {
+            delegate.close()
+        }
+    }
+
+    private fun ClientMessage.toAttachmentUploadRpcRequest(): ClientToServer.AttachmentUploadRpcRequest {
+        val knownArgsSize = getIntProperty(ClientToServer.AttachmentUploadRpcRequest.KNOWN_ARGUMENTS_SIZE)
+        val output = PipedOutputStream()
+        val outputWithArgs = ArgsAwareOutputStream(knownArgsSize, output)
+        val input = PipedInputStream(output)
+
+        setOutputStream(outputWithArgs)
+        while(!outputWithArgs.haveArgsReady()) {
+            Thread.sleep(50)
+        }
+        val rpcRequest = toRpcRequest(outputWithArgs.serialisedArgs())
+
+        return ClientToServer.AttachmentUploadRpcRequest(rpcRequest, input)
     }
 
     private fun ClientMessage.toRpcRequest(body: ByteArray = getBodyAsByteArray()): ClientToServer.RpcRequest {

@@ -318,7 +318,6 @@ class RPCServer(
         try {
             when (clientToServer) {
                 is RPCApi.ClientToServer.RpcRequest -> clientToServer.handleIncoming(artemisMessage) { clientToServer.serialisedArguments.deserialize(context = RPC_SERVER_CONTEXT) }
-                // TODO sollecitom check
                 is RPCApi.ClientToServer.AttachmentUploadRpcRequest -> clientToServer.rpcRequest.handleIncoming(artemisMessage) { listOf<Any?>(clientToServer.attachmentInputStream) + clientToServer.rpcRequest.serialisedArguments.deserialize<List<Any?>>(context = RPC_SERVER_CONTEXT) }
                 is RPCApi.ClientToServer.ObservablesClosed -> {
                     observableMap.invalidateAll(clientToServer.ids)
