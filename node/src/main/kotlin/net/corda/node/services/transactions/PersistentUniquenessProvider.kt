@@ -99,7 +99,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         val rate = throughputMeter.oneMinuteRate
         log.info("rate: $rate, queueSize: ${nrQueuedStates.get()}")
         if (rate > 1e-5) {
-            return Duration.ofSeconds((nrQueuedStates.get() / rate).toLong())
+            return Duration.ofSeconds((1.5 * nrQueuedStates.get() / rate).toLong())
         }
         return 1.minutes
     }
