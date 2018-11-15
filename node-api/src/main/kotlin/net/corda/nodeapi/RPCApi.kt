@@ -142,12 +142,15 @@ object RPCApi {
         }
 
         data class AttachmentUploadRpcRequest(val rpcRequest: RpcRequest, val attachmentInputStream: InputStream) : ClientToServer() {
+            internal companion object {
+                internal const val KNOWN_ARGUMENTS_SIZE = "KNOWN_ARGS_SIZE"
+            }
+
             override fun writeToClientMessage(message: ClientMessage) {
                 rpcRequest.writeMetadataTo(message)
                 message.putIntProperty(TAG_FIELD_NAME, Tag.RPC_ATTACHMENT_UPLOAD_REQUEST.ordinal)
-                // TODO sollecitom here
                 val knownArgs = rpcRequest.serialisedArguments.bytes
-                message.putIntProperty("KNOWN_ARGS_SIZE", knownArgs.size)
+                message.putIntProperty(KNOWN_ARGUMENTS_SIZE, knownArgs.size)
                 val concatenatedInput = SequenceInputStream(knownArgs.inputStream(), attachmentInputStream)
                 message.bodyInputStream = concatenatedInput
             }
@@ -175,7 +178,7 @@ object RPCApi {
                         message.saveToOutputStream(bytesOutput)
                         val bytes = bytesOutput.toByteArray()
 
-                        val knownArgsSize = message.getIntProperty("KNOWN_ARGS_SIZE")
+                        val knownArgsSize = message.getIntProperty(AttachmentUploadRpcRequest.KNOWN_ARGUMENTS_SIZE)
                         val rpcRequest = message.toRpcRequest(bytes.sliceArray(0 until knownArgsSize))
                         val input = ByteArrayInputStream(bytes.sliceArray(knownArgsSize until bytes.size))
 
