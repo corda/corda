@@ -281,7 +281,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val defaultOutputConstraint = selectAttachmentConstraint(contractClassName, inputStates, attachmentToUse, services)
 
         // Sanity check that the selected attachment actually passes.
-        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParameters.whitelistedContractImplementations)
+        val constraintAttachment = AttachmentWithContext(attachmentToUse, contractClassName, services.networkParametersStorage.currentParameters.whitelistedContractImplementations)
         require(defaultOutputConstraint.isSatisfiedBy(constraintAttachment)) { "Selected output constraint: $defaultOutputConstraint not satisfying $selectedAttachmentId" }
 
         val resolvedOutputStates = outputStates.map {
@@ -323,7 +323,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             }
         }
         attachmentToUse.signers.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signers)
-        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
+        useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParametersStorage.currentParameters) -> WhitelistedByZoneAttachmentConstraint
         else -> HashAttachmentConstraint(attachmentToUse.id)
     }
 

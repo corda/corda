@@ -38,7 +38,7 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     @JvmField
     val rollbackRule = VaultQueryRollbackRule(this)
 
-//    @Test
+    @Test
     fun `query attempting to use unregistered schema`() {
         database.transaction {
             // CashSchemaV3 NOT registered with NodeSchemaService
