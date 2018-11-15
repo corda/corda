@@ -225,7 +225,7 @@ class TimedFlowTests {
         }
 
         @Suspendable
-        override fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>, otherSideSession: FlowSession?) {
+        override fun commitInputStates(inputs: List<StateRef>, txId: SecureHash, caller: Party, requestSignature: NotarisationRequestSignature, timeWindow: TimeWindow?, references: List<StateRef>) {
             val callingFlow = FlowLogic.currentTopLevel
                     ?: throw IllegalStateException("This method should be invoked in a flow context.")
 
@@ -235,7 +235,7 @@ class TimedFlowTests {
                 callingFlow.stateMachine.suspend(FlowIORequest.WaitForLedgerCommit(SecureHash.randomSHA256()), false)
             } else {
                 log.info("Processing")
-                super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references, otherSideSession)
+                super.commitInputStates(inputs, txId, caller, requestSignature, timeWindow, references)
             }
         }
 

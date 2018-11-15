@@ -6,7 +6,6 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.*
 import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowAsyncOperation
@@ -36,8 +35,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             caller: Party,
             requestSignature: NotarisationRequestSignature,
             timeWindow: TimeWindow?,
-            references: List<StateRef>,
-            otherSideSession: FlowSession? = null
+            references: List<StateRef>
     ) {
         // TODO: Log the request here. Benchmarking shows that logging is expensive and we might get better performance
         // when we concurrently log requests here as part of the flows, instead of logging sequentially in the

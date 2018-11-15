@@ -96,10 +96,9 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
 
     // Estimated time of request processing.
     override fun eta(): Duration {
-        // TODO: config
         val rate = throughputMeter.oneMinuteRate
         val nrStates = nrQueuedStates.get()
-        log.info("rate: $rate, queueSize: $nrStates")
+        log.debug { "rate: $rate, queueSize: $nrStates" }
         if (rate > 1e-5 && nrStates > 5) {
             return Duration.ofSeconds((1.5 * nrStates / rate).toLong())
         }

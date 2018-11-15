@@ -7,7 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
-import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import java.time.Duration
 
 /**
@@ -27,7 +27,7 @@ interface UniquenessProvider {
 
     // Estimated time of request processing.
     fun eta(): Duration {
-       return 1.minutes
+       return 30.seconds
     }
 
     /** The outcome of committing a transaction. */
