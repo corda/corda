@@ -450,6 +450,9 @@ An example is the ``@InitiatingFlow InitiatorFlow``/``@InitiatedBy ResponderFlow
 
 .. note:: Initiating flows are versioned separately from their parents.
 
+.. note:: The only exception to this rule is ``FinalityFlow`` which is annotated with ``@InitiatingFlow`` but is an inlined flow. This flow
+   was previously initiating and the annotation exists to maintain backwards compatibility with old code.
+
 Core initiating subflows
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Corda-provided initiating subflows are a little different to standard ones as they are versioned together with the
@@ -460,8 +463,6 @@ Library flows
 ^^^^^^^^^^^^^
 Corda installs four initiating subflow pairs on each node by default:
 
-* ``FinalityFlow``/``FinalityHandler``, which should be used to notarise and record a transaction and broadcast it to
-  all relevant parties
 * ``NotaryChangeFlow``/``NotaryChangeHandler``, which should be used to change a state's notary
 * ``ContractUpgradeFlow.Initiate``/``ContractUpgradeHandler``, which should be used to change a state's contract
 * ``SwapIdentitiesFlow``/``SwapIdentitiesHandler``, which is used to exchange confidential identities with a
@@ -474,10 +475,13 @@ Corda installs four initiating subflow pairs on each node by default:
 Corda also provides a number of built-in inlined subflows that should be used for handling common tasks. The most
 important are:
 
-* ``CollectSignaturesFlow`` (inlined), which should be used to collect a transaction's required signatures
-* ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on
+* ``FinalityFlow`` which is used to notarise, record locally and then broadcast a signed transaction to its participants
+  and any extra parties.
+* ``ReceiveFinalityFlow`` to receive these notarised transactions from the ``FinalityFlow`` sender and record locally.
+* ``CollectSignaturesFlow`` , which should be used to collect a transaction's required signatures
+* ``SendTransactionFlow`` , which should be used to send a signed transaction if it needed to be resolved on
   the other side.
-* ``ReceiveTransactionFlow`` (inlined), which should be used receive a signed transaction
+* ``ReceiveTransactionFlow``, which should be used receive a signed transaction
 
 Let's look at some of these flows in more detail.
 
@@ -516,20 +520,26 @@ We can also choose to send the transaction to additional parties who aren't one 
         :end-before: DOCEND 10
         :dedent: 12
 
-Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It does
-**not** need to be called by each participant individually.
+Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It **must not**
+be called by every participant. Instead, every other particpant **must** call ``ReceiveFinalityFlow`` in their responder
+flow to receive the transaction:
 
-Because the transaction has already been notarised and the input states consumed, if the participants when receiving the
-transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have
-the scenario where not all parties have the correct up to date view of the ledger. To recover from this the finality handler
-is automatically sent to the flow hospital where it's suspended and retried from its last checkpoint on node restart.
-This gives the node operator the opportunity to recover from the error. Until the issue is resolved the node will continue
-to retry the flow on each startup.
+.. container:: codeset
 
-.. note:: It's possible to forcibly terminate the erroring finality handler using the ``killFlow`` RPC but at the risk
-   of an inconsistent view of the ledger.
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART ReceiveFinalityFlow
+        :end-before: DOCEND ReceiveFinalityFlow
+        :dedent: 8
 
-.. note:: A future release will allow retrying hospitalised flows without restarting the node, i.e. via RPC.
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
+        :language: java
+        :start-after: DOCSTART ReceiveFinalityFlow
+        :end-before: DOCEND ReceiveFinalityFlow
+        :dedent: 12
+
+``idOfTxWeSigned`` is an optional parameter used to confirm that we got the right transaction. It comes from using ``SignTransactionFlow``
+which is described below.
 
 CollectSignaturesFlow/SignTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

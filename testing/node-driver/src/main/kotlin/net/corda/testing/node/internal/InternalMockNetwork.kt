@@ -251,12 +251,10 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
-        val version = VersionInfo(networkParameters.minimumPlatformVersion, "Mock release", "Mock revision", "Mock Vendor")
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating)),
-                    version = version
+                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating))
             ))
         }
     }

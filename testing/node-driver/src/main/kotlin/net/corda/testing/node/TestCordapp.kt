@@ -10,7 +10,7 @@ import net.corda.testing.node.internal.simplifyScanPackages
  */
 @DoNotImplement
 interface TestCordapp {
-    /** Returns the name, defaults to "test-cordapp" if not specified. */
+    /** Returns the name, defaults to "test-name" if not specified. */
     val name: String
 
     /** Returns the title, defaults to "test-title" if not specified. */
@@ -51,17 +51,21 @@ interface TestCordapp {
 
     class Factory {
         companion object {
+            /**
+             * Create a [TestCordapp] object by scanning the given packages. The meta data on the CorDapp will be the
+             * default values, which can be changed with the wither methods.
+             */
             @JvmStatic
             fun fromPackages(vararg packageNames: String): TestCordapp = fromPackages(packageNames.asList())
 
             /**
              * Create a [TestCordapp] object by scanning the given packages. The meta data on the CorDapp will be the
-             * default values, which can be specified with the wither methods.
+             * default values, which can be changed with the wither methods.
              */
             @JvmStatic
             fun fromPackages(packageNames: Collection<String>): TestCordapp {
                 return TestCordappImpl(
-                        name = "test-cordapp",
+                        name = "test-name",
                         version = "1.0",
                         vendor = "test-vendor",
                         title = "test-title",

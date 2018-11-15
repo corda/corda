@@ -12,9 +12,21 @@ Unreleased
 
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
-* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+* CorDapps now have the ability to specify a minimum platform version in their MANIFEST.MF to prevent old nodes from loading them.
 
-* Introduce minimum and target platform version for CorDapps.
+* CorDapps have the ability to specify a target platform version in their MANIFEST.MF as a means of indicating to the node
+  the app was designed and tested on that version.
+
+* Nodes will no longer automatically reject flow initiation requests for flows they don't know about. Instead the request will remain
+  un-acknowledged in the message broker. This enables the recovery scenerio whereby any missing CorDapp can be installed and retried on node
+  restart. As a consequence the initiating flow will be blocked until the receiving node has resolved the issue.
+
+* ``FinalityFlow`` is now an inlined flow and no longer requires a handler flow in the counterparty. This is to fix the
+  security problem with the handler flow as it accepts any transaction it receives without any checks. Existing CorDapp
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that
+  CorDapps switch to this new API. See :doc:`upgrade-notes` for further details.
+
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
 * BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
   their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.

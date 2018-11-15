@@ -1,10 +1,14 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
+import net.corda.core.internal.cordapp.CordappInfoResolver
 import net.corda.core.internal.pushToLoggingContext
+import net.corda.core.node.StatesToRecord
+import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -17,23 +21,53 @@ import net.corda.core.utilities.ProgressTracker
  * The transaction is expected to have already been resolved: if its dependencies are not available in local
  * storage, verification will fail. It must have signatures from all necessary parties other than the notary.
  *
- * If specified, the extra recipients are sent the given transaction. The base set of parties to inform are calculated
- * from the contract-given set of participants.
+ * A list of [FlowSession]s is required for each non-local participant of the transaction. These participants will receive
+ * the final notarised transaction by calling [ReceiveFinalityFlow] in their counterpart flows. Sessions with non-participants
+ * can also be included, but they must specifiy [StatesToRecord.ALL_VISIBLE] for statesToRecortd if they wish to record the
+ * contract states into their vaults.
  *
  * The flow returns the same transaction but with the additional signatures from the notary.
  *
+ * NOTE: This is an inlined flow but for backwards compatibility is annotated with [InitiatingFlow].
+ *
  * @param transaction What to commit.
- * @param extraRecipients A list of additional participants to inform of the transaction.
+ * @param sessions A collection of [FlowSession]s who will be given the notarised transaction. This list **must** include
+ * all participants in the transaction (excluding the local identity).
  */
+// To maintain backwards compatibility with the old API, FinalityFlow can act both as an intiating flow and as an inlined flow.
+// This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
+// presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
 @InitiatingFlow
-class FinalityFlow(val transaction: SignedTransaction,
-                   private val extraRecipients: Set<Party>,
-                   override val progressTracker: ProgressTracker) : FlowLogic<SignedTransaction>() {
-    constructor(transaction: SignedTransaction, extraParticipants: Set<Party>) : this(transaction, extraParticipants, tracker())
-    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker())
-    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker)
+class FinalityFlow private constructor(val transaction: SignedTransaction,
+                                       private val extraRecipients: Set<Party>,
+                                       override val progressTracker: ProgressTracker,
+                                       private val sessions: Collection<FlowSession>?) : FlowLogic<SignedTransaction>() {
+    @Deprecated(DEPRECATION_MSG)
+    constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
+            transaction, extraRecipients, progressTracker, null
+    )
+    @Deprecated(DEPRECATION_MSG)
+    constructor(transaction: SignedTransaction, extraRecipients: Set<Party>) : this(transaction, extraRecipients, tracker(), null)
+    @Deprecated(DEPRECATION_MSG)
+    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker(), null)
+    @Deprecated(DEPRECATION_MSG)
+    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker, null)
+
+    constructor(transaction: SignedTransaction, sessions: Collection<FlowSession>, progressTracker: ProgressTracker) : this(
+            transaction, emptySet(), progressTracker, sessions
+    )
+    constructor(transaction: SignedTransaction, sessions: Collection<FlowSession>) : this(
+            transaction, emptySet(), tracker(), sessions
+    )
+    constructor(transaction: SignedTransaction, firstSession: FlowSession, vararg restSessions: FlowSession) : this(
+            transaction, emptySet(), tracker(), listOf(firstSession) + restSessions.asList()
+    )
 
     companion object {
+        private const val DEPRECATION_MSG = "It is unsafe to use this constructor as it requires nodes to automatically " +
+                "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
+                "that takes in existing FlowSessions."
+
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
         }
@@ -47,6 +81,19 @@ class FinalityFlow(val transaction: SignedTransaction,
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
+        if (sessions == null) {
+            require(CordappInfoResolver.currentTargetVersion < 4) {
+                "A flow session for each external participant to the transaction must be provided. If you wish to continue " +
+                        "using this insecure API then specify a target platform version of less than 4 for your CorDapp."
+            }
+            logger.warn("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
+                    "FinalityFlow with FlowSessions.")
+        } else {
+            require(sessions.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
+                "Do not provide flow sessions for the local node. FinalityFlow will record the notarised transaction locally."
+            }
+        }
+
         // Note: this method is carefully broken up to minimize the amount of data reachable from the stack at
         // the point where subFlow is invoked, as that minimizes the checkpointing work to be done.
         //
@@ -54,24 +101,47 @@ class FinalityFlow(val transaction: SignedTransaction,
         // Then send to the notary if needed, record locally and distribute.
 
         transaction.pushToLoggingContext()
-        val commandDataTypes = transaction.tx.commands.map { it.value }.mapNotNull { it::class.qualifiedName }.distinct()
-        logger.info("Started finalization, commands are ${commandDataTypes.joinToString(", ", "[", "]")}.")
-        val parties = getPartiesToSend(verifyTx())
+        logCommandData()
+        val externalParticipants = extractExternalParticipants(verifyTx())
+
+        if (sessions != null) {
+            val missingRecipients = externalParticipants - sessions.map { it.counterparty }
+            require(missingRecipients.isEmpty()) {
+                "Flow sessions were not provided for the following transaction participants: $missingRecipients"
+            }
+        }
+
         val notarised = notariseAndRecord()
 
         // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
-        val recipients = parties.filterNot(serviceHub.myInfo::isLegalIdentity)
-        logger.info("Broadcasting transaction to parties ${recipients.map { it.name }.joinToString(", ", "[", "]")}.")
-        for (party in recipients) {
-            logger.info("Sending transaction to party ${party.name}.")
-            val session = initiateFlow(party)
-            subFlow(SendTransactionFlow(session, notarised))
-            logger.info("Party ${party.name} received the transaction.")
+
+        if (sessions == null) {
+            val recipients = externalParticipants + (extraRecipients - serviceHub.myInfo.legalIdentities)
+            logger.info("Broadcasting transaction to parties ${recipients.joinToString(", ", "[", "]")}.")
+            for (recipient in recipients) {
+                logger.info("Sending transaction to party ${recipient.name}.")
+                val session = initiateFlow(recipient)
+                subFlow(SendTransactionFlow(session, notarised))
+                logger.info("Party $recipient received the transaction.")
+            }
+        } else {
+            for (session in sessions) {
+                subFlow(SendTransactionFlow(session, notarised))
+                logger.info("Party ${session.counterparty} received the transaction.")
+            }
         }
+
         logger.info("All parties received the transaction successfully.")
 
         return notarised
+    }
+
+    private fun logCommandData() {
+        if (logger.isDebugEnabled) {
+            val commandDataTypes = transaction.tx.commands.asSequence().mapNotNull { it.value::class.qualifiedName }.distinct()
+            logger.debug("Started finalization, commands are ${commandDataTypes.joinToString(", ", "[", "]")}.")
+        }
     }
 
     @Suspendable
@@ -98,13 +168,13 @@ class FinalityFlow(val transaction: SignedTransaction,
 
     private fun hasNoNotarySignature(stx: SignedTransaction): Boolean {
         val notaryKey = stx.tx.notary?.owningKey
-        val signers = stx.sigs.map { it.by }.toSet()
+        val signers = stx.sigs.asSequence().map { it.by }.toSet()
         return notaryKey?.isFulfilledBy(signers) != true
     }
 
-    private fun getPartiesToSend(ltx: LedgerTransaction): Set<Party> {
+    private fun extractExternalParticipants(ltx: LedgerTransaction): Set<Party> {
         val participants = ltx.outputStates.flatMap { it.participants } + ltx.inputStates.flatMap { it.participants }
-        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys + extraRecipients
+        return groupAbstractPartyByWellKnownParty(serviceHub, participants).keys - serviceHub.myInfo.legalIdentities
     }
 
     private fun verifyTx(): LedgerTransaction {
@@ -114,5 +184,35 @@ class FinalityFlow(val transaction: SignedTransaction,
         val ltx = transaction.toLedgerTransaction(serviceHub, false)
         ltx.verify()
         return ltx
+    }
+}
+
+/**
+ * The receiving counterpart to [FinalityFlow].
+ *
+ * All parties who are receiving a finalised transaction from a sender flow must subcall this flow in their own flows.
+ *
+ * It's typical to have already signed the transaction proposal in the same workflow using [SignTransactionFlow]. If so
+ * then the transaction ID can be passed in as an extra check to ensure the finalised transaction is the one that was signed
+ * before it's committed to the vault.
+ *
+ * @param otherSideSession The session which is providing the transaction to record.
+ * @param expectedTxId Expected ID of the transaction that's about to be received. This is typically retrieved from
+ * [SignTransactionFlow].
+ * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
+ */
+class ReceiveFinalityFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
+                                                    val expectedTxId: SecureHash? = null,
+                                                    val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+    @Suspendable
+    override fun call(): SignedTransaction {
+        return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord) {
+            override fun checkBeforeRecording(stx: SignedTransaction) {
+                require(expectedTxId == null || expectedTxId == stx.id) {
+                    "We expected to receive transaction with ID $expectedTxId but instead got ${stx.id}. Transaction was" +
+                            "not recorded and nor its states sent to the vault."
+                }
+            }
+        })
     }
 }

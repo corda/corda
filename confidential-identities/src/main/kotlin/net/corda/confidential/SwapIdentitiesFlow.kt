@@ -28,6 +28,9 @@ import java.util.*
  */
 @StartableByRPC
 @InitiatingFlow
+// TODO Make this non-initiating as otherwise any CorDapp using confidential identities will cause its node to have an
+// open door where any counterparty will be able to swap identities at will. Instead SwapIdentitiesFlow and its counterpart,
+// SwapIdentitiesHandler, should be in-lined and called by CorDapp specfic-flows.
 class SwapIdentitiesFlow(private val otherParty: Party,
                          private val revocationEnabled: Boolean,
                          override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {

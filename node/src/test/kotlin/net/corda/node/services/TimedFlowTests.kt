@@ -156,7 +156,7 @@ class TimedFlowTests {
                 setTimeWindow(services.clock.instant(), 30.seconds)
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            val flow = FinalityFlow(issueTx)
+            val flow = FinalityFlow(issueTx, emptyList())
             val progressTracker = flow.progressTracker
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
             val progressTrackerDone = getDoneFuture(flow.progressTracker)

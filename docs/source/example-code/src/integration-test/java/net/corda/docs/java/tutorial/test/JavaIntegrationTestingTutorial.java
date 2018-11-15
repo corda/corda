@@ -1,4 +1,4 @@
-package net.corda.docs;
+package net.corda.docs.java.tutorial.test;
 
 import net.corda.client.rpc.CordaRPCClient;
 import net.corda.core.concurrent.CordaFuture;
@@ -22,7 +22,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import rx.Observable;
 
-import java.util.*;
+import java.util.Currency;
+import java.util.HashSet;
+import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -48,7 +50,7 @@ public class JavaIntegrationTestingTutorial extends IntegrationTest {
         // START 1
         driver(new DriverParameters()
                 .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(Arrays.asList("net.corda.finance.contracts.asset", "net.corda.finance.schemas")), dsl -> {
+                .withExtraCordappPackagesToScan(singletonList("net.corda.finance")), dsl -> {
 
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),

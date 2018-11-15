@@ -1,6 +1,6 @@
 @file:Suppress("unused", "MemberVisibilityCanBePrivate")
 
-package net.corda.docs.kotlin
+package net.corda.docs.kotlin.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
@@ -68,7 +68,6 @@ object CustomVaultQuery {
  *  This is a slightly modified version of the IssuerFlow, which uses a 3rd party custom query to
  *  retrieve a list of currencies and top up amounts to be used in the issuance.
  */
-
 object TopupIssuerFlow {
     @CordaSerializable
     data class TopupRequest(val issueToParty: Party,

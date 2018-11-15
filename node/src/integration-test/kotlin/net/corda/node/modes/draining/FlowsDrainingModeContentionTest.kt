@@ -43,7 +43,6 @@ class FlowsDrainingModeContentionTest : IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
-
     private val portAllocation = PortAllocation.Incremental(10000)
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
@@ -100,7 +99,7 @@ class ProposeTransactionAndWaitForCommit(private val data: String,
         subFlow(SendTransactionFlow(session, signedTx))
         session.send(myRpcInfo)
 
-        return waitForLedgerCommit(signedTx.id)
+        return subFlow(ReceiveFinalityFlow(session, expectedTxId = signedTx.id))
     }
 }
 
@@ -114,7 +113,7 @@ class SignTransactionTriggerDrainingModeAndFinality(private val session: FlowSes
 
         triggerDrainingModeForInitiatingNode(initiatingRpcInfo)
 
-        subFlow(FinalityFlow(signedTx, setOf(session.counterparty)))
+        subFlow(FinalityFlow(signedTx, session))
     }
 
     private fun triggerDrainingModeForInitiatingNode(initiatingRpcInfo: RpcInfo) {

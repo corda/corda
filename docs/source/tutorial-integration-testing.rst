@@ -21,13 +21,13 @@ a local network where all the nodes see each other and provides safe shutting do
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt
+    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt
         :language: kotlin
         :start-after: START 1
         :end-before: END 1
         :dedent: 8
 
-    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java
+    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java
         :language: java
         :start-after: START 1
         :end-before: END 1
@@ -49,13 +49,13 @@ the information returned; their respective ``NodeHandles`` s.
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt
+    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt
         :language: kotlin
         :start-after: START 2
         :end-before: END 2
         :dedent: 12
 
-    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java
+    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java
         :language: java
         :start-after: START 2
         :end-before: END 2
@@ -66,13 +66,13 @@ us to start flows and query state.
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt
+    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt
         :language: kotlin
         :start-after: START 3
         :end-before: END 3
         :dedent: 12
 
-    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java
+    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java
         :language: java
         :start-after: START 3
         :end-before: END 3
@@ -84,13 +84,13 @@ Now that we're all set up we can finally get some cash action going!
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt
+    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt
         :language: kotlin
         :start-after: START 4
         :end-before: END 4
         :dedent: 12
 
-    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java
+    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java
         :language: java
         :start-after: START 4
         :end-before: END 4
@@ -106,13 +106,13 @@ is asserting.
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt
+    .. literalinclude:: example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt
         :language: kotlin
         :start-after: START 5
         :end-before: END 5
         :dedent: 12
 
-    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java
+    .. literalinclude:: example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java
         :language: java
         :start-after: START 5
         :end-before: END 5
@@ -123,6 +123,6 @@ Next we want Bob to send this cash back to Alice.
 That's it! We saw how to start up several corda nodes locally, how to connect to them, and how to test some simple invariants
 about ``CashIssueAndPaymentFlow`` and ``CashPaymentFlow``.
 
-You can find the complete test at ``example-code/src/integration-test/java/net/corda/docs/JavaIntegrationTestingTutorial.java``
-(Java) and ``example-code/src/integration-test/kotlin/net/corda/docs/KotlinIntegrationTestingTutorial.kt`` (Kotlin) in the
+You can find the complete test at ``example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java``
+(Java) and ``example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt`` (Kotlin) in the
 `Corda repo <https://github.com/corda/corda>`_.
