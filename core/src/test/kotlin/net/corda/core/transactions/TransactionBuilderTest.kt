@@ -45,9 +45,9 @@ class TransactionBuilderTest {
         val networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
         doReturn(networkParametersStorage).whenever(services).networkParametersStorage
         doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentParametersHash
+        doReturn(networkParameters).whenever(networkParametersStorage).currentParameters
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        doReturn(networkParameters).whenever(services).networkParameters
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -99,12 +99,12 @@ class TransactionBuilderTest {
                 .addOutputState(TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary))
                 .addCommand(DummyCommandData, notary.owningKey)
 
-        doReturn(testNetworkParameters(minimumPlatformVersion = 3)).whenever(services).networkParameters
+        doReturn(testNetworkParameters(minimumPlatformVersion = 3)).whenever(networkParametersStorage).currentParameters
         assertThatThrownBy { builder.toWireTransaction(services) }
                 .isInstanceOf(ZoneVersionTooLowException::class.java)
                 .hasMessageContaining("Reference states")
 
-        doReturn(testNetworkParameters(minimumPlatformVersion = 4)).whenever(services).networkParameters
+        doReturn(testNetworkParameters(minimumPlatformVersion = 4)).whenever(networkParametersStorage).currentParameters
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
     }

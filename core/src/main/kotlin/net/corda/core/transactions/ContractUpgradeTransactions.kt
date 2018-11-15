@@ -66,16 +66,14 @@ data class ContractUpgradeWireTransaction(
 
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
-    override val networkParametersHash: SecureHash? by lazy {
-        try {
-            serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
-        } catch (e: IndexOutOfBoundsException) {
-            null
-        }
-    }
     val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
     val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
     val upgradedContractAttachmentId: SecureHash by lazy { serializedComponents[UPGRADED_ATTACHMENT.ordinal].deserialize<SecureHash>() }
+    override val networkParametersHash: SecureHash? by lazy {
+        if (serializedComponents.size >= 6) {
+            serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
+        } else null
+    }
 
     init {
         check(inputs.isNotEmpty()) { "A contract upgrade transaction must have inputs" }
@@ -113,9 +111,13 @@ data class ContractUpgradeWireTransaction(
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw AttachmentResolutionException(upgradedContractAttachmentId)
-        val resolvedNetworkParameters: NetworkParameters = networkParametersHash?.let {
-            services.networkParametersStorage.readParametersFromHash(it)
-        } ?: services.networkParametersStorage.defaultParameters
+        val resolvedNetworkParameters = networkParametersHash.let {
+            if (it == null) {
+                services.networkParametersStorage.defaultParameters
+            } else {
+                services.networkParametersStorage.readParametersFromHash(it) ?: throw TransactionResolutionException(id)
+            }
+        }
         return ContractUpgradeLedgerTransaction(
                 resolvedInputs,
                 notary,

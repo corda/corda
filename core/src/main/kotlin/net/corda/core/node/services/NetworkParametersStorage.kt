@@ -9,7 +9,7 @@ import net.corda.core.node.NetworkParameters
  * Interface for handling network parameters storage used for resolving transactions according to parameters that were
  * historically in force in the network.
  */
-@DoNotImplement //TODO check DeleteFromDJVM
+@DoNotImplement
 interface NetworkParametersStorage {
     /**
      * Hash of the current parameters for the network.
@@ -17,12 +17,12 @@ interface NetworkParametersStorage {
     val currentParametersHash: SecureHash
 
     /**
-    * Hash of the current parameters for the network.
+    * Current parameters for the network.
     */
     val currentParameters: NetworkParameters
 
     /**
-     * For backwards compatibility, these parameters will be used for resolving historical transactions in the chain.
+     * For backwards compatibility, this parameters hash will be used for resolving historical transactions in the chain.
      */
     val defaultParametersHash: SecureHash
 

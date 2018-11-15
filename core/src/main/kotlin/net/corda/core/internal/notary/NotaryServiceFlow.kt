@@ -39,7 +39,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
-            // TODO Should it commit all parts?
             service.commitInputStates(
                     tx.inputs,
                     tx.id,
@@ -99,7 +98,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      //     lets us predict what is the reasonable time window for changing parameters on most of the nodes.
     @Suspendable
     protected fun checkParametersHash(networkParametersHash: SecureHash?) {
-        if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        if (networkParametersHash == null && serviceHub.networkParametersStorage.currentParameters.minimumPlatformVersion < 4) return
         val notaryParametersHash = serviceHub.networkParametersStorage.currentParametersHash
         require (notaryParametersHash == networkParametersHash) {
             "Transaction for notarisation was tagged with parameters with hash: $networkParametersHash, but current network parameters are: $notaryParametersHash"

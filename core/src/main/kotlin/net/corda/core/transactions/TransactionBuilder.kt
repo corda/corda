@@ -312,9 +312,9 @@ open class TransactionBuilder @JvmOverloads constructor(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
-        attachmentToUse.signers.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
-            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
-            if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
+        attachmentToUse.signers.isNotEmpty() && services.networkParametersStorage.currentParameters.minimumPlatformVersion < 4 -> {
+            log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParametersStorage.currentParameters.minimumPlatformVersion}.")
+            if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParametersStorage.currentParameters)) {
                 log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
                 WhitelistedByZoneAttachmentConstraint
             } else {

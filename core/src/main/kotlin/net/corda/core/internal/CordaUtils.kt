@@ -27,7 +27,7 @@ import org.slf4j.MDC
 const val PLATFORM_VERSION = 4
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
-    checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
+    checkMinimumPlatformVersion(networkParametersStorage.currentParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
 }
 
 fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatformVersion: Int, feature: String) {

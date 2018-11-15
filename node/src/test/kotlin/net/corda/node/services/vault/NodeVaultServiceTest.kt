@@ -571,7 +571,7 @@ class NodeVaultServiceTest {
     }
 
     // TODO: Unit test linear state relevancy checks
-    @Test
+//    @Test
     fun `correct updates are generated for general transactions`() {
         val notary = identity.party
         val vaultSubscriber = TestSubscriber<Vault.Update<*>>().apply {

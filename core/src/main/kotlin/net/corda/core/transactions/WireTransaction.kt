@@ -339,7 +339,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         for ((data) in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $data")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
         for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
-        // TODO The most important question is what emoji should I choose for network parameters hash
+        if (networkParametersHash != null) buf.appendln("PARAMETERS HASH: $networkParametersHash")
         return buf.toString()
     }
 

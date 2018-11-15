@@ -27,7 +27,7 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
                     checkAllComponentsVisible(ComponentGroupEnum.INPUTS_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.TIMEWINDOW_GROUP)
                     checkAllComponentsVisible(ComponentGroupEnum.REFERENCES_GROUP)
-                    if(serviceHub.networkParameters.minimumPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
+                    if(serviceHub.networkParametersStorage.currentParameters.minimumPlatformVersion >= 4) checkAllComponentsVisible(ComponentGroupEnum.PARAMETERS_GROUP)
                 }
                 TransactionParts(tx.id, tx.inputs, tx.timeWindow, tx.notary, tx.references, networkParametersHash = tx.networkParametersHash)
             }

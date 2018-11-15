@@ -102,20 +102,6 @@ class ValidatingNotaryServiceTests {
     }
 
     @Test
-    fun `should sign transaction with valid network parameters`() {
-        val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
-            val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
-                    .addCommand(dummyCommand(alice.owningKey))
-            aliceNode.services.signInitialTransaction(tx)
-        }
-        val future = runNotaryClient(stx)
-        val signatures = future.getOrThrow()
-        signatures.forEach { it.verify(stx.id) }
-    }
-
-    @Test
     fun `should reject transaction without network parameters`() {
         val inputState = issueState(aliceNode.services, alice).ref
         val wtx = createWireTransaction(inputs = listOf(inputState),

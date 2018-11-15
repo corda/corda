@@ -176,10 +176,6 @@ class NodeParametersStorage(
         }
     }
 
-    fun readSignedParametersFromHash(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {
-        return database.transaction { hashToParameters[hash] }
-    }
-
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }
         val networkParameters = signedNetworkParameters.verified()

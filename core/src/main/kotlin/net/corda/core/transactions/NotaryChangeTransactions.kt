@@ -38,17 +38,15 @@ data class NotaryChangeWireTransaction(
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val references: List<StateRef> = emptyList()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
-    override val networkParametersHash: SecureHash?
-        get() {
-            return try {
-                serializedComponents[PARAMETERS_HASH.ordinal].deserialize()
-            } catch (e: IndexOutOfBoundsException) {
-                null
-            }
-        }
 
     /** Identity of the notary service to reassign the states to.*/
     val newNotary: Party = serializedComponents[NEW_NOTARY.ordinal].deserialize()
+
+    override val networkParametersHash: SecureHash? by lazy {
+        if (serializedComponents.size >= 4) {
+            serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
+        } else null
+    }
 
     /**
      * This transaction does not contain any output states, outputs can be obtained by resolving a
@@ -80,9 +78,14 @@ data class NotaryChangeWireTransaction(
     @DeleteForDJVM
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        val resolvedParameters = networkParametersHash?.let { services.networkParametersStorage.readParametersFromHash(it) }
-                ?: services.networkParametersStorage.defaultParameters
-        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs, resolvedParameters)
+        val resolvedNetworkParameters = networkParametersHash.let {
+            if (it == null) {
+                services.networkParametersStorage.defaultParameters
+            } else {
+                services.networkParametersStorage.readParametersFromHash(it) ?: throw TransactionResolutionException(id)
+            }
+        }
+        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */

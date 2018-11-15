@@ -80,13 +80,13 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
         doReturn(networkParameters.serialize().hash).whenever(it).currentParametersHash
+        doReturn(networkParameters).whenever(it).currentParameters
     }
 
     private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
-        doReturn(networkParameters).whenever(it).networkParameters
         doReturn(networkParametersStorage).whenever(it).networkParametersStorage
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(it).attachments

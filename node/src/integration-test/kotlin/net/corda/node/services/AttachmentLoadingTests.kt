@@ -66,6 +66,7 @@ class AttachmentLoadingTests {
     }
 
     private val services = object : ServicesForResolution {
+        private val testNetworkParameters = testNetworkParameters()
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
@@ -73,10 +74,10 @@ class AttachmentLoadingTests {
         }
         override val attachments: AttachmentStorage get() = this@AttachmentLoadingTests.attachments
         override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
-        override val networkParameters: NetworkParameters = testNetworkParameters()
+        override val networkParameters: NetworkParameters = testNetworkParameters
         override val networkParametersStorage: NetworkParametersStorage get() = rigorousMock<NetworkParametersStorage>().apply {
-            doReturn(networkParameters.serialize().hash).whenever(this).currentParametersHash
-            doReturn(networkParameters).whenever(this).readParametersFromHash(any())
+            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentParametersHash
+            doReturn(testNetworkParameters).whenever(this).readParametersFromHash(any())
         }
     }
 

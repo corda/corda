@@ -42,7 +42,7 @@ interface ServicesForResolution {
     val networkParametersStorage: NetworkParametersStorage
 
     /** Returns the network parameters the node is operating under. */
-    // TODO We don't need this one anymore on ServiceHub, could use the networkParametersStorage instead.
+    @Deprecated("Use: ServiceHub.networkParametersStorage.currentParameters instead")
     val networkParameters: NetworkParameters
 
     /**

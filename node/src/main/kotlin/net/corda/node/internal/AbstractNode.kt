@@ -994,7 +994,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
 
-        private lateinit var _networkParameters: NetworkParameters
+        private lateinit var _networkParameters: NetworkParameters // TODO delegate to network parameters storage
         override val networkParameters: NetworkParameters get() = _networkParameters
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {
