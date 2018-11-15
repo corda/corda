@@ -32,6 +32,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 import kotlin.concurrent.thread
@@ -88,6 +89,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val commitLog = createMap(cacheFactory)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
+    private val nrQueuedStates = AtomicInteger(0)
 
     // Estimated time of request processing.
     override fun eta(): Duration {
@@ -151,6 +153,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
+        nrQueuedStates.addAndGet(states.size + references.size)
         requestQueue.put(request)
         return future
     }
@@ -229,6 +232,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun processRequest(request: CommitRequest) {
+        nrQueuedStates.addAndGet(-(request.states.size + request.references.size))
         try {
             commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
             respondWithSuccess(request)
