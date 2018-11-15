@@ -13,6 +13,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
 import net.corda.node.internal.cordapp.set
@@ -34,6 +35,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -41,9 +43,9 @@ import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
 import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
-import java.util.jar.Manifest
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
@@ -183,14 +185,29 @@ fun configureDatabase(hikariProperties: Properties,
 /**
  * Convenience method for creating a fake attachment containing a file with some content.
  */
-fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<String,String> = emptyMap()): ByteArray {
+fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<String, String> = emptyMap()): ByteArray {
     val bs = ByteArrayOutputStream()
     val manifest = Manifest()
-    manifestAttributes.forEach{ manifest[it.key] = it.value} //adding manually instead of putAll, as it requires typed keys, not strings
+    manifestAttributes.forEach { manifest[it.key] = it.value } //adding manually instead of putAll, as it requires typed keys, not strings
     JarOutputStream(bs, manifest).use { js ->
         js.putNextEntry(ZipEntry(filePath))
         js.writer().apply { append(content); flush() }
         js.closeEntry()
     }
     return bs.toByteArray()
+}
+
+/** If [effectiveSerializationEnv] is not set, runs the block with a new [SerializationEnvironmentRule]. */
+fun <R> withTestSerializationEnvIfNotSet(taskName: String, block: () -> R): R {
+    val serializationExists = try {
+        effectiveSerializationEnv
+        true
+    } catch (e: IllegalStateException) {
+        false
+    }
+    return if (serializationExists) {
+        block()
+    } else SerializationEnvironmentRule.run(taskName) {
+        block()
+    }
 }

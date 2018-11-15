@@ -13,7 +13,10 @@ import net.corda.node.services.config.MB
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
@@ -27,7 +30,6 @@ import kotlin.test.assertEquals
 class LargeTransactionsTest {
     private companion object {
         val BOB = TestIdentity(BOB_NAME, 80).party
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
     }
 
     @StartableByRPC
@@ -38,7 +40,8 @@ class LargeTransactionsTest {
                                    private val hash4: SecureHash) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val tx = TransactionBuilder(notary = DUMMY_NOTARY)
+            val notary = serviceHub.networkParameters.notaries.first().identity
+            val tx = TransactionBuilder(notary)
                     .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
                     .addAttachment(hash1)

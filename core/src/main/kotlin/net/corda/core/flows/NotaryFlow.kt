@@ -2,7 +2,6 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
-import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
@@ -26,6 +25,8 @@ class NotaryFlow {
      *
      * In case of a single-node or Raft notary, the flow will return a single signature. For the BFT notary multiple
      * signatures will be returned – one from each replica that accepted the input state commit.
+     *
+     * The transaction to be notarised, [stx], should be fully verified before calling this flow.
      *
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
      *                         by another transaction or the time-window is invalid or
@@ -51,8 +52,8 @@ class NotaryFlow {
         override fun call(): List<TransactionSignature> {
             stx.pushToLoggingContext()
             val notaryParty = checkTransaction()
-            progressTracker.currentStep = REQUESTING
             logger.info("Sending transaction to notary: ${notaryParty.name}.")
+            progressTracker.currentStep = REQUESTING
             val response = notarise(notaryParty)
             logger.info("Notary responded.")
             progressTracker.currentStep = VALIDATING
@@ -63,6 +64,7 @@ class NotaryFlow {
          * Checks that the transaction specifies a valid notary, and verifies that it contains all required signatures
          * apart from the notary's.
          */
+        // TODO: [CORDA-2274] Perform full transaction verification once verification caching is enabled.
         protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
@@ -72,18 +74,35 @@ class NotaryFlow {
             stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             return notaryParty
         }
-
         /** Notarises the transaction with the [notaryParty], obtains the notary's signature(s). */
         @Throws(NotaryException::class)
         @Suspendable
         protected fun notarise(notaryParty: Party): UntrustworthyData<NotarisationResponse> {
             val session = initiateFlow(notaryParty)
             val requestSignature = generateRequestSignature()
-            return if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+            return if (isValidating(notaryParty)) {
                 sendAndReceiveValidating(session, requestSignature)
             } else {
                 sendAndReceiveNonValidating(notaryParty, session, requestSignature)
             }
+        }
+
+        private fun isValidating(notaryParty: Party): Boolean {
+            val onTheCurrentWhitelist = serviceHub.networkMapCache.isNotary(notaryParty)
+            return if (!onTheCurrentWhitelist) {
+                /*
+                    Note that the only scenario where it's acceptable to use a notary not in the current network parameter whitelist is
+                    when performing a notary change transaction after a network merge – the old notary won't be on the whitelist of the new network,
+                    and can't be used for regular transactions.
+                */
+                check(stx.coreTransaction is NotaryChangeWireTransaction) {
+                    "Notary $notaryParty is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
+                }
+                val historicNotary = serviceHub.networkParametersStorage.getHistoricNotary(notaryParty)
+                        ?: throw IllegalStateException("The notary party $notaryParty specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
+                historicNotary.validating
+
+            } else serviceHub.networkMapCache.isValidatingNotary(notaryParty)
         }
 
         @Suspendable

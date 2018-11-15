@@ -2,7 +2,6 @@ package net.corda.node.services.transactions
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.PrivacySalt
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
@@ -15,7 +14,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -51,7 +49,7 @@ class ValidatingNotaryServiceTests {
     @Before
     fun setup() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4))
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
@@ -116,6 +114,7 @@ class ValidatingNotaryServiceTests {
         )
         val stx = SignedTransaction(wtx, listOf(sig))
         assertThat(stx.networkParametersHash).isNull()
+
         val future = runNotaryClient(stx)
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid

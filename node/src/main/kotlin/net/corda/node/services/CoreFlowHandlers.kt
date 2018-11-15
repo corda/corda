@@ -29,16 +29,10 @@ class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacem
     override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Party>) {
         val state = proposal.stateRef
         val proposedTx = stx.resolveNotaryChangeTransaction(serviceHub)
-        val newNotary = proposal.modification
+        // TODO: Right now all nodes will automatically approve the notary change. We need to figure out if stricter controls are necessary.
 
         if (state !in proposedTx.inputs.map { it.ref }) {
             throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")
-        }
-
-        // TODO: load and compare against notary whitelist from config. Remove the check below
-        val isNotary = serviceHub.networkMapCache.isNotary(newNotary)
-        if (!isNotary) {
-            throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
         }
     }
 }

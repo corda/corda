@@ -11,7 +11,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.packageName
-import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.VaultService
 import net.corda.core.node.services.queryBy
@@ -24,6 +23,8 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.rigorousMock
@@ -74,16 +75,21 @@ class VaultWithCashTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(VaultWithCashTest::class)
+
+        val networkParameters = testNetworkParameters().addNotary(DUMMY_NOTARY)
         val databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, dummyCashIssuer.identity, dummyNotary.identity),
                 TestIdentity(MEGA_CORP.name, servicesKey),
+                networkParameters,
                 moreKeys = *arrayOf(dummyNotary.keyPair))
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock<IdentityService>())
+
+
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), networkParameters, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), networkParameters)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 

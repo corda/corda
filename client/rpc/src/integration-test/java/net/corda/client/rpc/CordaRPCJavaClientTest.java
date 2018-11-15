@@ -1,6 +1,7 @@
 package net.corda.client.rpc;
 
 import net.corda.core.contracts.Amount;
+import net.corda.core.identity.Party;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.messaging.FlowHandle;
 import net.corda.core.utilities.OpaqueBytes;
@@ -28,10 +29,11 @@ import static net.corda.finance.contracts.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
+import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 
 public class CordaRPCJavaClientTest extends NodeBasedTest {
     public CordaRPCJavaClientTest() {
-        super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()));
+        super(Arrays.asList("net.corda.finance.contracts", CashSchemaV1.class.getPackage().getName()), Collections.singletonList(DUMMY_NOTARY_NAME));
     }
 
     private List<String> perms = Arrays.asList(
@@ -73,9 +75,10 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     public void testCashBalances() throws ExecutionException, InterruptedException {
         login(rpcUser.getUsername(), rpcUser.getPassword());
 
+        Party notaryIdentity = InternalTestUtilsKt.chooseIdentity(getNotaryNodes().get(0).getInfo());
         FlowHandle<AbstractCashFlow.Result> flowHandle = rpcProxy.startFlowDynamic(CashIssueFlow.class,
                 DOLLARS(123), OpaqueBytes.of((byte)0),
-                InternalTestUtilsKt.chooseIdentity(node.getInfo()));
+                notaryIdentity);
         System.out.println("Started issuing cash, waiting on result");
         flowHandle.getReturnValue().get();
 

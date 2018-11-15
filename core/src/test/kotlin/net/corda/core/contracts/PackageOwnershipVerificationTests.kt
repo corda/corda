@@ -6,6 +6,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
@@ -43,8 +44,10 @@ class PackageOwnershipVerificationTests {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
-            networkParameters = testNetworkParameters()
-                    .copy(packageOwnership = mapOf("net.corda.core.contracts" to OWNER_KEY_PAIR.public))
+            networkParameters = testNetworkParameters(
+                    packageOwnership = mapOf("net.corda.core.contracts" to OWNER_KEY_PAIR.public),
+                    notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))
+            )
     )
 
     @Test
@@ -70,7 +73,6 @@ class PackageOwnershipVerificationTests {
             }
         }
     }
-
 }
 
 @BelongsToContract(DummyContract::class)

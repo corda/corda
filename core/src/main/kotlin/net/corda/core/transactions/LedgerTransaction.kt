@@ -53,8 +53,6 @@ private constructor(
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
         /** Network parameters that were in force when the transaction was notarised. */
-        // TODO Network parameters should never be null on LedgerTransaction, this is left only because of deprecated constructors. We should decide to
-        //  get rid of them.
         override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>
         //DOCEND 1
@@ -67,6 +65,7 @@ private constructor(
     init {
         checkBaseInvariants()
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
+        checkNotaryWhitelisted()
         checkNoNotaryChange()
         checkEncumbrancesValid()
     }

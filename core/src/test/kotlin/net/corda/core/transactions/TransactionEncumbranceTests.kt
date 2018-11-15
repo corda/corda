@@ -5,10 +5,12 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NotaryInfo
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -51,11 +53,14 @@ class TransactionEncumbranceTests {
         val FIVE_PM: Instant = FOUR_PM.plus(1, ChronoUnit.HOURS)
         val timeLock = DummyTimeLock.State(FIVE_PM)
 
-
-        val ledgerServices = MockServices(listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"), MEGA_CORP.name,
+        val ledgerServices = MockServices(
+                listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
+                MEGA_CORP.name,
                 rigorousMock<IdentityServiceInternal>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-                })
+                },
+                testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+        )
     }
 
     class DummyTimeLock : Contract {
@@ -255,7 +260,7 @@ class TransactionEncumbranceTests {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID, TEST_TIMELOCK_ID)
                 output(Cash.PROGRAM_ID, "state encumbered by 5pm time-lock", encumbrance = 1, contractState = state)
-                output(TEST_TIMELOCK_ID, "5pm time-lock",0, timeLock)
+                output(TEST_TIMELOCK_ID, "5pm time-lock", 0, timeLock)
             }
             transaction {
                 attachments(Cash.PROGRAM_ID)
@@ -330,27 +335,31 @@ class TransactionEncumbranceTests {
         // More complex encumbrance (full cycle of size 4) where one of the encumbered states is assigned to a different notary.
         // 0 -> 1, 1 -> 3, 3 -> 2, 2 -> 0
         // We expect that state at index 3 cannot be encumbered with the state at index 2, due to mismatched notaries.
-        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java).isThrownBy {
-            TransactionBuilder()
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 2, AutomaticHashConstraint)
-                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
-                    .toLedgerTransaction(ledgerServices)
-        }.withMessageContaining("index 3 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 2 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
+        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java)
+                .isThrownBy {
+                    TransactionBuilder()
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 0, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 2, AutomaticHashConstraint)
+                            .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                            .toLedgerTransaction(ledgerServices)
+                }
+                .withMessageContaining("index 3 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 2 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
 
         // Two different encumbrance chains, where only one fails due to mismatched notary.
         // 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2 where encumbered states with indices 2 and 3, respectively, are assigned
         // to different notaries.
-        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java).isThrownBy {
-            TransactionBuilder()
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 0, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
-                    .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 2, AutomaticHashConstraint)
-                    .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
-                    .toLedgerTransaction(ledgerServices)
-        }.withMessageContaining("index 2 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 3 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
+        AssertionsForClassTypes.assertThatExceptionOfType(TransactionVerificationException.TransactionNotaryMismatchEncumbranceException::class.java)
+                .isThrownBy {
+                    TransactionBuilder()
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 1, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 0, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY, 3, AutomaticHashConstraint)
+                            .addOutputState(stateWithNewOwner, Cash.PROGRAM_ID, DUMMY_NOTARY2, 2, AutomaticHashConstraint)
+                            .addCommand(Cash.Commands.Issue(), MEGA_CORP.owningKey)
+                            .toLedgerTransaction(ledgerServices)
+                }
+                .withMessageContaining("index 2 is assigned to notary [O=Notary Service, L=Zurich, C=CH], while its encumbrance with index 3 is assigned to notary [O=Notary Service2, L=Zurich, C=CH]")
     }
 }

@@ -12,18 +12,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.EUR
-import net.corda.finance.contracts.AccrualAdjustment
-import net.corda.finance.contracts.BusinessCalendar
-import net.corda.finance.contracts.DateRollConvention
-import net.corda.finance.contracts.DayCountBasisDay
-import net.corda.finance.contracts.DayCountBasisYear
-import net.corda.finance.contracts.Expression
-import net.corda.finance.contracts.Fix
-import net.corda.finance.contracts.FixOf
-import net.corda.finance.contracts.Frequency
-import net.corda.finance.contracts.PaymentRule
-import net.corda.finance.contracts.Tenor
+import net.corda.finance.contracts.*
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -47,12 +39,9 @@ private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
 private val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
 private val ORACLE_PUBKEY = TestIdentity(CordaX500Name("Oracle", "London", "GB")).publicKey
 private val DUMMY_NOTARY get() = dummyNotary.party
-private val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
 private val MEGA_CORP get() = megaCorp.party
-private val MEGA_CORP_KEY get() = megaCorp.keyPair
 private val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
 private val MINI_CORP get() = miniCorp.party
-private val MINI_CORP_KEY get() = miniCorp.keyPair
 fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
     return when (irsSelect) {
         1 -> {
@@ -228,7 +217,6 @@ fun createDummyIRS(irsSelect: Int): InterestRateSwap.State {
             )
 
             return InterestRateSwap.State(fixedLeg = fixedLeg, floatingLeg = floatingLeg, calculation = calculation, common = common, oracle = DUMMY_PARTY)
-
         }
         else -> TODO("IRS number $irsSelect not defined")
     }
@@ -238,14 +226,20 @@ class IRSTests {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
-    private val megaCorpServices = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
-    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), MINI_CORP.name, rigorousMock(), MINI_CORP_KEY)
-    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
-    private val ledgerServices
-        get() = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
-            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-            doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
-        })
+    private val cordappPackages = listOf("net.corda.irs.contract")
+    private val networkParameters = testNetworkParameters().addNotary(dummyNotary.party)
+    private val megaCorpServices = MockServices(cordappPackages, megaCorp, rigorousMock(), networkParameters, megaCorp.keyPair)
+    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), miniCorp, rigorousMock(), networkParameters,  miniCorp.keyPair)
+    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), dummyNotary, rigorousMock(), networkParameters, dummyNotary.keyPair)
+    private val ledgerServices = MockServices(
+            emptyList(),
+            megaCorp,
+            rigorousMock<IdentityServiceInternal>().also {
+                doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
+                doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
+            },
+            networkParameters
+    )
 
     @Test
     fun ok() {
@@ -346,7 +340,8 @@ class IRSTests {
                     listOf(MEGA_CORP, MINI_CORP).forEach { party ->
                         doReturn(party).whenever(it).partyFromKey(party.owningKey)
                     }
-                })
+                },
+                networkParameters = ledgerServices.networkParameters)
         var previousTXN = generateIRSTxn(1)
         previousTXN.toLedgerTransaction(services).verify()
         services.recordTransactions(previousTXN)
@@ -407,7 +402,6 @@ class IRSTests {
         }
         // This does not throw an exception in the test itself; it evaluates the above and they will throw if they do not pass.
     }
-
 
     /**
      * Generates a typical transactional history for an IRS.
@@ -583,7 +577,6 @@ class IRSTests {
             this `fails with` "The termination dates are aligned"
         }
 
-
         val modifiedIRS4 = irs.copy(floatingLeg = irs.floatingLeg.copy(effectiveDate = irs.fixedLeg.effectiveDate.minusDays(1)))
         transaction {
             attachments(IRS_PROGRAM_ID)
@@ -593,7 +586,6 @@ class IRSTests {
             this `fails with` "The effective dates are aligned"
         }
     }
-
 
     @Test
     fun `various fixing tests`() {
@@ -671,7 +663,6 @@ class IRSTests {
             }
         }
     }
-
 
     /**
      * This returns an example of transactions that are grouped by TradeId and then a fixing applied.

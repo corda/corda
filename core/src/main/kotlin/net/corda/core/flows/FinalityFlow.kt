@@ -102,7 +102,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
 
         transaction.pushToLoggingContext()
         logCommandData()
-        val externalParticipants = extractExternalParticipants(verifyTx())
+        val ledgerTransaction = verifyTx()
+        val externalParticipants = extractExternalParticipants(ledgerTransaction)
 
         if (sessions != null) {
             val missingRecipients = externalParticipants - sessions.map { it.counterparty }

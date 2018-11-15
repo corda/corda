@@ -2,12 +2,14 @@ package net.corda.testing.node.internal
 
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.FlowManager
@@ -15,6 +17,7 @@ import net.corda.node.internal.Node
 import net.corda.node.internal.NodeFlowManager
 import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.config.*
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
@@ -37,7 +40,9 @@ import kotlin.test.assertFalse
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
 // support this, and it's a property of the Corda JAR)
-abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList()) {
+abstract class NodeBasedTest
+@JvmOverloads
+constructor(private val cordappPackages: List<String> = emptyList(), private val notaries: List<CordaX500Name> = emptyList()) {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
@@ -50,8 +55,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     val tempFolder = TemporaryFolder()
 
     private lateinit var defaultNetworkParameters: NetworkParametersCopier
+    protected val notaryNodes = mutableListOf<NodeWithInfo>()
     private val nodes = mutableListOf<NodeWithInfo>()
-    private val nodeInfos = mutableListOf<NodeInfo>()
     private val portAllocation = incrementalPortAllocation(10000)
 
     init {
@@ -60,7 +65,14 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 
     @Before
     fun init() {
-        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters())
+        val notaryInfos = notaries.map { NotaryInfo(installNotary(it), true) } // todo only validating ones
+        defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(notaries = notaryInfos))
+        notaries.mapTo(notaryNodes) { startNode(it) }
+    }
+
+    private fun installNotary(legalName: CordaX500Name): Party {
+        val baseDirectory = baseDirectory(legalName).createDirectories()
+        return DevIdentityGenerator.installKeyStoreWithNodeIdentity(baseDirectory, legalName)
     }
 
     /**
@@ -69,17 +81,19 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
      */
     @After
     fun stopAllNodes() {
-        val shutdownExecutor = Executors.newScheduledThreadPool(nodes.size)
+        val nodesToShut = nodes + notaryNodes
+        val shutdownExecutor = Executors.newScheduledThreadPool(nodesToShut.size)
         try {
-            nodes.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
+            nodesToShut.map { shutdownExecutor.fork(it::dispose) }.transpose().getOrThrow()
             // Wait until ports are released
-            val portNotBoundChecks = nodes.flatMap {
+            val portNotBoundChecks = nodesToShut.flatMap {
                 listOf(
                         addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.p2pAddress),
                         addressMustNotBeBoundFuture(shutdownExecutor, it.node.configuration.rpcOptions.address)
                 )
             }
             nodes.clear()
+            notaryNodes.clear()
             portNotBoundChecks.transpose().getOrThrow()
         } finally {
             shutdownExecutor.shutdown()
@@ -146,8 +160,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
 }
 
 class InProcessNode(configuration: NodeConfiguration, versionInfo: VersionInfo, flowManager: FlowManager = NodeFlowManager(configuration.flowOverrides)) : Node(configuration, versionInfo, false, flowManager = flowManager) {
-    override fun start() : NodeInfo {
-        assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8." )
+    override fun start(): NodeInfo {
+        assertFalse(isInvalidJavaVersion(), "You are using a version of Java that is not supported (${SystemUtils.JAVA_VERSION}). Please upgrade to the latest version of Java 8.")
         return super.start()
     }
 
