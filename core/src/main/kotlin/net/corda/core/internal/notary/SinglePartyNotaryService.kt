@@ -16,6 +16,7 @@ import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
+import net.corda.core.utilities.seconds
 import org.slf4j.Logger
 
 /** Base implementation for a notary service operated by a singe party. */
@@ -51,7 +52,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
             log.info("otherSideSession.flowInfo.flowVersion = ${otherSideSession.getCounterpartyFlowInfo().flowVersion}")
             val eta = uniquenessProvider.eta()
             log.info("eta: $eta")
-            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && eta > 5.minutes) {
+            if (otherSideSession.getCounterpartyFlowInfo().flowVersion >= 4 && eta > 30.seconds) {
                 otherSideSession.send(WaitTimeUpdate(uniquenessProvider.eta().toMillis() / 1000))
             }
         }
