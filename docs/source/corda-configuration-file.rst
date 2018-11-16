@@ -313,6 +313,7 @@ In cases where a proprietary CRL infrastructure is provided those values need to
 Hiding Sensitive Data
 ---------------------
 A frequent requirement is that configuration files must not expose passwords to unauthorised readers. By leveraging environment variables, it is possible to hide passwords and other similar fields.
+
 Take a simple node config that wishes to protect the node cryptographic stores:
 
 .. parsed-literal::
@@ -343,11 +344,11 @@ Windows PowerShell
     $env:KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword); $env:TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword); java -jar corda.jar
 
 
-For non PowerShell launching on windows, it is not possible to perform command substitution, and so the variables must be specified manually.
+For launching on Windows without PowerShell, it is not possible to perform command substitution, and so the variables must be specified manually, for example:
 
 .. sourcecode:: shell
 
-    SET KEY_PASS=mypassword; SET TRUST_PASS=mypassword; java -jar corda.jar
+    SET KEY_PASS=mypassword & SET TRUST_PASS=mypassword & java -jar corda.jar
 
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
 
