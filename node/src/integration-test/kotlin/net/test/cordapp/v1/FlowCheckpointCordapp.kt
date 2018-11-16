@@ -49,9 +49,9 @@ class SendMessageFlow(private val message: Message, private val notary: Party, p
         return if (reciepent != null) {
             val session = initiateFlow(reciepent)
             subFlow(SendTransactionFlow(session, signedTx))
-            subFlow(FinalityFlow(signedTx, setOf(reciepent), FINALISING_TRANSACTION.childProgressTracker()))
+            subFlow(FinalityFlow(signedTx, listOf(session), FINALISING_TRANSACTION.childProgressTracker()))
         } else {
-            subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
+            subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
         }
     }
 }

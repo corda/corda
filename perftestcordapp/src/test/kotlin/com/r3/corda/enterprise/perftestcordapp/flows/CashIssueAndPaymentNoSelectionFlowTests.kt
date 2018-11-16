@@ -11,10 +11,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.TestStartedNode
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -23,7 +20,7 @@ import org.junit.runners.Parameterized
 import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
-class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
+class CashIssueAndPaymentNoSelectionTests(private val anonymous: Boolean) {
     companion object {
         @Parameterized.Parameters(name = "Anonymous = {0}")
         @JvmStatic
@@ -39,8 +36,11 @@ class CashIssueAndPayNoSelectionTests(private val anonymous: Boolean) {
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(servicePeerAllocationStrategy = RoundRobin(),
-                cordappsForAllNodes = cordappsForPackages("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
+        mockNet = InternalMockNetwork(
+                servicePeerAllocationStrategy = RoundRobin(),
+                // TODO Update the performance test cordapp to use the new FinalityFlow API
+                cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+        )
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
         bankOfCorda = bankOfCordaNode.info.singleIdentity()

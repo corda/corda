@@ -10,6 +10,7 @@ import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.cordappForPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,7 +27,10 @@ class CashIssueFlowTests {
     fun start() {
         mockNet = MockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
+                cordappPackages = emptyList(),
+                // TODO Update the performance test cordapp to use the new FinalityFlow API
+                cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+        )
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda =  bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity

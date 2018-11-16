@@ -32,14 +32,14 @@ class TestNotaryFlow : FlowLogic<String>() {
         issueBuilder.addOutputState(NotaryTestState(notary.name.toString(), myIdentity), NotaryTestContract::class.java.name)
         issueBuilder.addCommand(NotaryTestCommand, myIdentity.owningKey)
         val signedTx = serviceHub.signInitialTransaction(issueBuilder)
-        val issueResult = subFlow(FinalityFlow(signedTx))
+        val issueResult = subFlow(FinalityFlow(signedTx, emptyList()))
         progressTracker.currentStep = ISSUED
         val destroyBuilder = TransactionBuilder()
         destroyBuilder.notary = notary
         destroyBuilder.addInputState(issueResult.tx.outRefsOfType<NotaryTestState>().first())
         destroyBuilder.addCommand(NotaryTestCommand, myIdentity.owningKey)
         val signedDestroyT = serviceHub.signInitialTransaction(destroyBuilder)
-        val result = subFlow(FinalityFlow(signedDestroyT))
+        val result = subFlow(FinalityFlow(signedDestroyT, emptyList()))
         progressTracker.currentStep = DESTROYING
         progressTracker.currentStep = FINALIZED
         return "notarised: ${result.notary}::${result.tx.id}"

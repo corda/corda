@@ -1,13 +1,14 @@
-package net.corda.docs.kotlin
+package net.corda.docs.kotlin.vault
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
+import net.corda.core.internal.packageName
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
-import net.corda.docs.java.tutorial.helloworld.IOUFlow
+import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
 import net.corda.finance.*
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
@@ -17,7 +18,7 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.After
-import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import java.util.*
@@ -30,7 +31,7 @@ class CustomVaultQueryTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", "net.corda.docs", "com.template"))
+        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance", IOUFlow::class.packageName, javaClass.packageName, "com.template"))
         nodeA = mockNet.createPartyNode()
         nodeB = mockNet.createPartyNode()
         notary = mockNet.defaultNotaryIdentity
@@ -43,7 +44,6 @@ class CustomVaultQueryTest {
 
     @Test
     fun `query by max recorded time`() {
-
         nodeA.startFlow(IOUFlow(1000, nodeB.info.singleIdentity())).getOrThrow()
         nodeA.startFlow(IOUFlow(500, nodeB.info.singleIdentity())).getOrThrow()
 
@@ -69,9 +69,9 @@ class CustomVaultQueryTest {
         topUpCurrencies()
         val (cashBalancesAfterTopup, _) = getBalances()
 
-        Assert.assertEquals(cashBalancesOriginal[GBP]?.times(2), cashBalancesAfterTopup[GBP])
-        Assert.assertEquals(cashBalancesOriginal[USD]?.times(2)  , cashBalancesAfterTopup[USD])
-        Assert.assertEquals(cashBalancesOriginal[CHF]?.times( 2), cashBalancesAfterTopup[CHF])
+        assertEquals(cashBalancesOriginal[GBP]?.times(2), cashBalancesAfterTopup[GBP])
+        assertEquals(cashBalancesOriginal[USD]?.times(2)  , cashBalancesAfterTopup[USD])
+        assertEquals(cashBalancesOriginal[CHF]?.times( 2), cashBalancesAfterTopup[CHF])
     }
 
     private fun issueCashForCurrency(amountToIssue: Amount<Currency>) {
@@ -86,7 +86,8 @@ class CustomVaultQueryTest {
                 nodeA.info.singleIdentity(),
                 OpaqueBytes.of(0x01),
                 nodeA.info.singleIdentity(),
-                notary)).getOrThrow()
+                notary)
+        ).getOrThrow()
     }
 
     private fun getBalances(): Pair<Map<Currency, Amount<Currency>>, Map<Currency, Amount<Currency>>> {

@@ -7,21 +7,15 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.ContractUpgradeUtils
-import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.node.StatesToRecord
+import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 
-// TODO: We should have a whitelist of contracts we're willing to accept at all, and reject if the transaction
-//       includes us in any outside that list. Potentially just if it includes any outside that list at all.
-// TODO: Do we want to be able to reject specific transactions on more complex rules, for example reject incoming
-//       cash without from unknown parties?
-class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
+class FinalityHandler(val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
     }
-
-    internal fun sender(): Party = sender.counterparty
 }
 
 class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacementFlow.Acceptor<Party>(otherSideSession) {
@@ -54,10 +48,13 @@ class ContractUpgradeHandler(otherSide: FlowSession) : AbstractStateReplacementF
     override fun verifyProposal(stx: SignedTransaction, proposal: AbstractStateReplacementFlow.Proposal<Class<out UpgradedContract<ContractState, *>>>) {
         // Retrieve signed transaction from our side, we will apply the upgrade logic to the transaction on our side, and
         // verify outputs matches the proposed upgrade.
-        val ourSTX = serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)
-        requireNotNull(ourSTX) { "We don't have a copy of the referenced state" }
-        val oldStateAndRef = ourSTX!!.resolveBaseTransaction(serviceHub).outRef<ContractState>(proposal.stateRef.index)
-        val authorisedUpgrade = serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref) ?: throw IllegalStateException("Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}")
+        val ourSTX = requireNotNull(serviceHub.validatedTransactions.getTransaction(proposal.stateRef.txhash)) {
+            "We don't have a copy of the referenced state"
+        }
+        val oldStateAndRef = ourSTX.resolveBaseTransaction(serviceHub).outRef<ContractState>(proposal.stateRef.index)
+        val authorisedUpgrade = checkNotNull(serviceHub.contractUpgradeService.getAuthorisedContractUpgrade(oldStateAndRef.ref)) {
+            "Contract state upgrade is unauthorised. State hash : ${oldStateAndRef.ref}"
+        }
         val proposedTx = stx.coreTransaction as ContractUpgradeWireTransaction
         val expectedTx = ContractUpgradeUtils.assembleUpgradeTx(oldStateAndRef, proposal.modification, proposedTx.privacySalt, serviceHub)
         requireThat {

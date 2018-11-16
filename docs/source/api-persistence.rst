@@ -136,23 +136,23 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
 
-JDBC sessions can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+JDBC sessions can be used in flows and services (see ":doc:`flow-state-machines`").
 
-The following example illustrates the creation of a custom corda service using a jdbcSession:
+The following example illustrates the creation of a custom Corda service using a ``jdbcSession``:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART CustomVaultQuery
   :end-before: DOCEND CustomVaultQuery
 
 which is then referenced within a custom flow:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
-For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
+For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
 JPA Support
 -----------

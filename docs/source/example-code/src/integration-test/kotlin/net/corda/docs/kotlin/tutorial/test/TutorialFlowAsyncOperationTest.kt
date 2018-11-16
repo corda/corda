@@ -1,4 +1,4 @@
-package net.corda.docs
+package net.corda.docs.kotlin.tutorial.test
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.messaging.startFlow

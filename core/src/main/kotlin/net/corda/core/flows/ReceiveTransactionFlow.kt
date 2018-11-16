@@ -23,9 +23,9 @@ import java.security.SignatureException
  * @property checkSufficientSignatures if true checks all required signatures are present. See [SignedTransaction.verify].
  * @property statesToRecord which transaction states should be recorded in the vault, if any.
  */
-class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                       private val checkSufficientSignatures: Boolean = true,
-                                                       private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
+open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                            private val checkSufficientSignatures: Boolean = true,
+                                                            private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<SignedTransaction>() {
     @Suppress("KDocMissingDocumentation")
     @Suspendable
     @Throws(SignatureException::class,
@@ -40,7 +40,7 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
         }
         val stx = otherSideSession.receive<SignedTransaction>().unwrap {
             it.pushToLoggingContext()
-            logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty.name}.")
+            logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             subFlow(ResolveTransactionsFlow(it, otherSideSession))
             logger.info("Transaction dependencies resolution completed.")
             try {
@@ -54,12 +54,21 @@ class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSideSess
         if (checkSufficientSignatures) {
             // We should only send a transaction to the vault for processing if we did in fact fully verify it, and
             // there are no missing signatures. We don't want partly signed stuff in the vault.
+            checkBeforeRecording(stx)
             logger.info("Successfully received fully signed tx. Sending it to the vault for processing.")
             serviceHub.recordTransactions(statesToRecord, setOf(stx))
             logger.info("Successfully recorded received transaction locally.")
         }
         return stx
     }
+
+    /**
+     * Hook to perform extra checks on the received transaction just before it's recorded. The transaction has already
+     * been resolved and verified at this point.
+     */
+    @Suspendable
+    @Throws(FlowException::class)
+    protected open fun checkBeforeRecording(stx: SignedTransaction) = Unit
 }
 
 /**
@@ -74,7 +83,8 @@ class ReceiveStateAndRefFlow<out T : ContractState>(private val otherSideSession
     @Suspendable
     override fun call(): List<StateAndRef<T>> {
         return otherSideSession.receive<List<StateAndRef<T>>>().unwrap {
-            subFlow(ResolveTransactionsFlow(it.map { it.ref.txhash }.toSet(), otherSideSession))
+            val txHashes = it.asSequence().map { it.ref.txhash }.toSet()
+            subFlow(ResolveTransactionsFlow(txHashes, otherSideSession))
             it
         }
     }

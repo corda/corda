@@ -65,7 +65,7 @@ class ServiceHubConcurrentUsageTest {
             val issuer = ourIdentity.ref(OpaqueBytes.of(0))
             Cash().generateIssue(builder, 10.DOLLARS.issuedBy(issuer), ourIdentity, notary)
             val stx = serviceHub.signInitialTransaction(builder)
-            return subFlow(FinalityFlow(stx))
+            return subFlow(FinalityFlow(stx, emptyList()))
         }
     }
 }

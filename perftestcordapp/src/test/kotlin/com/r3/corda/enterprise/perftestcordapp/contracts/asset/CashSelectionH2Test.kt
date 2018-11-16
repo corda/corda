@@ -11,6 +11,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.cordappForPackages
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
@@ -19,7 +20,10 @@ import java.util.Collections.nCopies
 class CashSelectionH2Test {
     private val mockNet = MockNetwork(
             threadPerNode = true,
-            cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"))
+            cordappPackages = emptyList(),
+            // TODO Update the performance test cordapp to use the new FinalityFlow API
+            cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+    )
 
     @After
     fun cleanUp() {

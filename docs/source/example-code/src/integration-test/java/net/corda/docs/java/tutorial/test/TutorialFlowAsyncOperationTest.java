@@ -1,4 +1,4 @@
-package net.corda.docs.java;
+package net.corda.docs.java.tutorial.test;
 
 import kotlin.Unit;
 import net.corda.client.rpc.CordaRPCClient;
