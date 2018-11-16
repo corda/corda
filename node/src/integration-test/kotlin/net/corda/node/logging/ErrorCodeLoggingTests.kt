@@ -22,7 +22,7 @@ class ErrorCodeLoggingTests {
             node.rpc.startFlow(::MyFlow).waitForCompletion()
             val logFile = node.logFile()
 
-            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.toList() }
+            val linesWithErrorCode = logFile.useLines { lines -> lines.filter { line -> line.contains("[errorCode=") }.filter { line -> line.contains("moreInformationAt=https://errors.corda.net/") }.toList() }
 
             assertThat(linesWithErrorCode).isNotEmpty
         }

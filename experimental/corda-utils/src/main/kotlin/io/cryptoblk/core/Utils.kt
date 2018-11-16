@@ -20,16 +20,6 @@ inline fun <reified T : ContractState> ServiceHub.queryStateByRef(ref: StateRef)
 }
 
 /**
- * Shorthand when a single party signs a TX and then returns a result that uses the signed TX (e.g. includes the TX id)
- */
-@Suspendable
-fun <R> FlowLogic<R>.finalize(tx: TransactionBuilder, returnWithSignedTx: (stx: SignedTransaction) -> R): R {
-    val stx = serviceHub.signInitialTransaction(tx)
-    subFlow(FinalityFlow(stx)) // it'll send to all participants in the state by default
-    return returnWithSignedTx(stx)
-}
-
-/**
  * Corda fails when it tries to store the same attachment hash twice. And it's convenient to also do nothing if no attachment is provided.
  * This doesn't fix the same-attachment problem completely but should at least help in testing with the same file.
  */

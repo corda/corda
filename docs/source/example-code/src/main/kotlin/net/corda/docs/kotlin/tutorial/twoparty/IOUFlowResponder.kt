@@ -3,10 +3,7 @@
 package net.corda.docs.kotlin.tutorial.twoparty
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.SignTransactionFlow
+import net.corda.core.flows.*
 import net.corda.docs.kotlin.tutorial.helloworld.IOUFlow
 import net.corda.docs.kotlin.tutorial.helloworld.IOUState
 
@@ -20,7 +17,8 @@ import net.corda.core.transactions.SignedTransaction
 class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
+        // DOCSTART 01
+        val signTransactionFlow = object : SignTransactionFlow(otherPartySession) {
             override fun checkTransaction(stx: SignedTransaction) = requireThat {
                 val output = stx.tx.outputs.single().data
                 "This must be an IOU transaction." using (output is IOUState)
@@ -29,7 +27,9 @@ class IOUFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
             }
         }
 
-        subFlow(signTransactionFlow)
+        val expectedTxId = subFlow(signTransactionFlow).id
+
+        subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId))
+        // DOCEND 01
     }
 }
-// DOCEND 01

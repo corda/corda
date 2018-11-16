@@ -332,6 +332,6 @@ class ValidatingNotaryServiceTests {
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         serviceHub.recordTransactions(stx)
-        return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
+        return StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0))
     }
 }

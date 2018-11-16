@@ -50,7 +50,7 @@ internal class CreateRefState : FlowLogic<SignedTransaction>() {
             addOutputState(RefState.State(ourIdentity), RefState.CONTRACT_ID)
             addCommand(RefState.Create(), listOf(ourIdentity.owningKey))
         })
-        return subFlow(FinalityFlow(stx))
+        return subFlow(FinalityFlow(stx, emptyList()))
     }
 }
 
@@ -64,7 +64,7 @@ internal class UpdateRefState(private val stateAndRef: StateAndRef<RefState.Stat
             addOutputState(stateAndRef.state.data.update(), RefState.CONTRACT_ID)
             addCommand(RefState.Update(), listOf(ourIdentity.owningKey))
         })
-        return subFlow(FinalityFlow(stx))
+        return subFlow(FinalityFlow(stx, emptyList()))
     }
 }
 
@@ -111,7 +111,7 @@ internal class UseRefState(private val linearId: UniqueIdentifier) : FlowLogic<S
             addOutputState(DummyState(), DummyContract.PROGRAM_ID)
             addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
         })
-        return subFlow(FinalityFlow(stx))
+        return subFlow(FinalityFlow(stx, emptyList()))
     }
 }
 

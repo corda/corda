@@ -18,12 +18,18 @@ import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import java.security.SecureRandom
 import java.security.Security
 
-internal val cordaSecurityProvider = CordaSecurityProvider().also {
+val cordaSecurityProvider = CordaSecurityProvider().also {
+    // Among the others, we should register [CordaSecurityProvider] as the first provider, to ensure that when invoking [SecureRandom()]
+    // the [platformSecureRandom] is returned (which is registered in CordaSecurityProvider).
+    // Note that internally, [SecureRandom()] will look through all registered providers.
+    // Then it returns the first PRNG algorithm of the first provider that has registered a SecureRandom
+    // implementation (in our case [CordaSecurityProvider]), or null if none of the registered providers supplies
+    // a SecureRandom implementation.
     Security.insertProviderAt(it, 1) // The position is 1-based.
 }
 // OID taken from https://tools.ietf.org/html/draft-ietf-curdle-pkix-00
-internal val `id-Curve25519ph` = ASN1ObjectIdentifier("1.3.101.112")
-internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
+val `id-Curve25519ph` = ASN1ObjectIdentifier("1.3.101.112")
+val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     putAll(EdDSASecurityProvider())
     // Override the normal EdDSA engine with one which can handle X509 keys.
     put("Signature.${EdDSAEngine.SIGNATURE_ALGORITHM}", X509EdDSAEngine::class.java.name)
@@ -38,7 +44,7 @@ internal val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     // TODO: Find a way to make JKS work with bouncy castle provider or implement our own provide so we don't have to register bouncy castle provider.
     Security.addProvider(it)
 }
-internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
+val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
     require(name == "BCPQC") { "Invalid PQCProvider name" }
 }.also {
     Security.addProvider(it)
@@ -47,7 +53,7 @@ internal val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
 // that could cause unexpected and suspicious behaviour.
 // i.e. if someone removes a Provider and then he/she adds a new one with the same name.
 // The val is private to avoid any harmful state changes.
-internal val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
+val providerMap = listOf(cordaBouncyCastleProvider, cordaSecurityProvider, bouncyCastlePQCProvider).map { it.name to it }.toMap()
 
 @DeleteForDJVM
-internal fun platformSecureRandomFactory(): SecureRandom = platformSecureRandom() // To minimise diff of CryptoUtils against open-source.
+fun platformSecureRandomFactory(): SecureRandom = platformSecureRandom() // To minimise diff of CryptoUtils against open-source.

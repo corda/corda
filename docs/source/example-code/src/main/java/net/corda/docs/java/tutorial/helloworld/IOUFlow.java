@@ -3,15 +3,14 @@ package net.corda.docs.java.tutorial.helloworld;
 import co.paralleluniverse.fibers.Suspendable;
 import com.template.TemplateContract;
 import net.corda.core.flows.*;
+import net.corda.core.utilities.ProgressTracker;
 
 // DOCSTART 01
 // Add these imports:
 import net.corda.core.contracts.Command;
-import net.corda.core.contracts.CommandData;
 import net.corda.core.identity.Party;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
-import net.corda.core.utilities.ProgressTracker;
 
 // Replace Initiator's definition with:
 @InitiatingFlow
@@ -46,19 +45,21 @@ public class IOUFlow extends FlowLogic<Void> {
 
         // We create the transaction components.
         IOUState outputState = new IOUState(iouValue, getOurIdentity(), otherParty);
-        CommandData cmdType = new TemplateContract.Commands.Action();
-        Command cmd = new Command<>(cmdType, getOurIdentity().getOwningKey());
+        Command command = new Command<>(new TemplateContract.Commands.Action(), getOurIdentity().getOwningKey());
 
         // We create a transaction builder and add the components.
         TransactionBuilder txBuilder = new TransactionBuilder(notary)
                 .addOutputState(outputState, TemplateContract.ID)
-                .addCommand(cmd);
+                .addCommand(command);
 
         // Signing the transaction.
         SignedTransaction signedTx = getServiceHub().signInitialTransaction(txBuilder);
 
-        // Finalising the transaction.
-        subFlow(new FinalityFlow(signedTx));
+        // Creating a session with the other party.
+        FlowSession otherPartySession = initiateFlow(otherParty);
+
+        // We finalise the transaction and then send it to the counterparty.
+        subFlow(new FinalityFlow(signedTx, otherPartySession));
 
         return null;
     }

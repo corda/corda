@@ -71,7 +71,7 @@ object TwoPartyDealFlow {
 
             val txId = subFlow(signTransactionFlow).id
 
-            return waitForLedgerCommit(txId)
+            return subFlow(ReceiveFinalityFlow(otherSideSession, expectedTxId = txId))
         }
 
         @Suspendable
@@ -81,8 +81,7 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
-                                val regulators: Set<Party> = emptySet()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -124,7 +123,7 @@ object TwoPartyDealFlow {
             logger.trace("Got signatures from other party, verifying ... ")
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, regulators + otherSideSession.counterparty))
+            val ftx = subFlow(FinalityFlow(stx, otherSideSession))
             logger.trace("Recorded transaction.")
 
             return ftx

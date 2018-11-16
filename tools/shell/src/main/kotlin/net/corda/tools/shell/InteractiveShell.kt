@@ -128,7 +128,11 @@ object InteractiveShell {
         InterruptHandler { jlineProcessor.interrupt() }.install()
         thread(name = "Command line shell processor", isDaemon = true) {
             Emoji.renderIfSupported {
-                jlineProcessor.run()
+                try {
+                    jlineProcessor.run()
+                } catch (e: IndexOutOfBoundsException) {
+                    log.warn("Cannot parse malformed command.")
+                }
             }
         }
         thread(name = "Command line shell terminator", isDaemon = true) {

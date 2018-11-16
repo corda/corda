@@ -8,11 +8,11 @@ import java.util.Collections.emptySet
  */
 interface Validated<TARGET, ERROR> {
     /**
-     * The valid [TARGET] value.
+     * Returns a valid [TARGET] if no validation errors are present. Otherwise, it throws the exception produced by [exceptionOnErrors], defaulting to [IllegalStateException].
      *
-     * @throws IllegalStateException if accessed in presence of validation errors.
+     * @throws IllegalStateException or the result of [exceptionOnErrors] if there are errors.
      */
-    val value: TARGET
+    fun value(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalStateException(errors.joinToString(System.lineSeparator())) }): TARGET
 
     /**
      * The errors produced during validation, if any.
@@ -32,14 +32,7 @@ interface Validated<TARGET, ERROR> {
     /**
      * Returns the underlying value as optional, with a null result instead of an exception if validation rules were violated.
      */
-    val optional: TARGET? get() = if (isValid) value else null
-
-    /**
-     * Returns a valid [TARGET] if no validation errors are present. Otherwise, it throws the exception produced by [exceptionOnErrors], defaulting to [IllegalStateException].
-     *
-     * @throws IllegalStateException or the result of [exceptionOnErrors] if there are errors.
-     */
-    fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalStateException(errors.joinToString(System.lineSeparator())) }): TARGET
+    val optional: TARGET? get() = if (isValid) value() else null
 
     /**
      * Applies the [convert] function to the [TARGET] value, if valid. Otherwise, returns a [Validated] monad with a [MAPPED] generic type and the current errors set.
@@ -62,7 +55,7 @@ interface Validated<TARGET, ERROR> {
      */
     fun doIfValid(action: (TARGET) -> Unit): Validated<TARGET, ERROR> {
         if (isValid) {
-            action.invoke(value)
+            action.invoke(value())
         }
         return this
     }
@@ -110,10 +103,10 @@ interface Validated<TARGET, ERROR> {
         /**
          * A successful validation result, containing a valid [TARGET] value and no [ERROR]s.
          */
-        class Successful<TARGET, ERROR>(override val value: TARGET) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
+        class Successful<TARGET, ERROR>(private val value: TARGET) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
             override val errors: Set<ERROR> = emptySet<ERROR>()
 
-            override fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = value
+            override fun value(exceptionOnErrors: (Set<ERROR>) -> Exception) = value
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
                 return valid(convert.invoke(value))
@@ -136,9 +129,7 @@ interface Validated<TARGET, ERROR> {
                 require(errors.isNotEmpty()) { "No errors encountered during validation" }
             }
 
-            override val value: TARGET get() = throw IllegalStateException("Invalid state.")
-
-            override fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
+            override fun value(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
                 return invalid(errors)

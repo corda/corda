@@ -36,7 +36,7 @@ class InteractiveShellTest {
         constructor(party: Party) : this(party.name.toString())
         constructor(b: Int?, amount: Amount<UserValue>) : this("${(b ?: 0) + amount.quantity} ${amount.token}")
         constructor(b: Array<String>) : this(b.joinToString("+"))
-        constructor(amounts: Array<Amount<UserValue>>) : this(amounts.map(Amount<UserValue>::toString).joinToString("++"))
+        constructor(amounts: Array<Amount<UserValue>>) : this(amounts.joinToString("++", transform = Amount<UserValue>::toString))
 
         override val progressTracker = ProgressTracker()
         override fun call() = a

@@ -33,6 +33,7 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
 import java.io.File
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
@@ -226,7 +227,13 @@ internal constructor(private val initSerEnv: Boolean,
             println("Copying CorDapp JARs into node directories")
             for (nodeDir in nodeDirs) {
                 val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+                cordappJars.forEach {
+                    try {
+                        it.copyToDirectory(cordappsDir)
+                    } catch (e: FileAlreadyExistsException) {
+                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                    }
+                }
             }
         }
         generateServiceIdentitiesForNotaryClusters(configs)

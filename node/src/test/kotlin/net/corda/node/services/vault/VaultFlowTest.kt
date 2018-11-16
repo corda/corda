@@ -1,9 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.InitiatingFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.services.queryBy
@@ -26,7 +24,6 @@ import java.util.concurrent.ExecutionException
 import kotlin.test.assertEquals
 
 class VaultFlowTest {
-
     private lateinit var mockNetwork: MockNetwork
     private lateinit var partyA: StartedMockNode
     private lateinit var partyB: StartedMockNode
@@ -72,17 +69,26 @@ class VaultFlowTest {
             partyB.services.vaultService.queryBy<DummyDealContract.State>().states.size
         })
     }
-}
 
-@InitiatingFlow
-class Initiator(private val participants: List<Party>) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        val stx = serviceHub.signInitialTransaction(TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
-            addOutputState(UniqueDummyLinearContract.State(participants, "Dummy linear id"), UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
-            addOutputState(DummyDealContract.State(participants, "linear id"), DUMMY_DEAL_PROGRAM_ID)
-            addCommand(DummyCommandData, listOf(ourIdentity.owningKey))
-        })
-        subFlow(FinalityFlow(stx))
+    @InitiatingFlow
+    class Initiator(private val participants: List<Party>) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val stx = serviceHub.signInitialTransaction(TransactionBuilder(serviceHub.networkMapCache.notaryIdentities.first()).apply {
+                addOutputState(UniqueDummyLinearContract.State(participants, "Dummy linear id"), UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
+                addOutputState(DummyDealContract.State(participants, "linear id"), DUMMY_DEAL_PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(ourIdentity.owningKey))
+            })
+            val sessions = participants.mapNotNull { if (it != ourIdentity) initiateFlow(it) else null }
+            subFlow(FinalityFlow(stx, sessions))
+        }
+    }
+
+    @InitiatedBy(Initiator::class)
+    class Responder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
     }
 }

@@ -114,7 +114,7 @@ object TwoPartyTradeFlow {
             val txId = subFlow(signTransactionFlow).id
             // DOCEND 5
 
-            return waitForLedgerCommit(txId)
+            return subFlow(ReceiveFinalityFlow(otherSideSession, expectedTxId = txId))
         }
         // DOCEND 4
 
@@ -188,7 +188,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx))
+            return subFlow(FinalityFlow(twiceSignedTx, sellerSession))
         }
 
         @Suspendable

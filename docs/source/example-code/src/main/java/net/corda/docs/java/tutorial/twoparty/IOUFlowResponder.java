@@ -1,15 +1,14 @@
 package net.corda.docs.java.tutorial.twoparty;
 
-// DOCSTART 01
-// Add these imports:
 import co.paralleluniverse.fibers.Suspendable;
 import net.corda.core.contracts.ContractState;
+import net.corda.core.crypto.SecureHash;
 import net.corda.core.flows.*;
 import net.corda.core.transactions.SignedTransaction;
-import net.corda.core.utilities.ProgressTracker;
 
 import static net.corda.core.contracts.ContractsDSL.requireThat;
 
+@SuppressWarnings("unused")
 // Define IOUFlowResponder:
 @InitiatedBy(IOUFlow.class)
 public class IOUFlowResponder extends FlowLogic<Void> {
@@ -22,9 +21,10 @@ public class IOUFlowResponder extends FlowLogic<Void> {
     @Suspendable
     @Override
     public Void call() throws FlowException {
+        // DOCSTART 01
         class SignTxFlow extends SignTransactionFlow {
-            private SignTxFlow(FlowSession otherPartySession, ProgressTracker progressTracker) {
-                super(otherPartySession, progressTracker);
+            private SignTxFlow(FlowSession otherPartySession) {
+                super(otherPartySession);
             }
 
             @Override
@@ -39,9 +39,11 @@ public class IOUFlowResponder extends FlowLogic<Void> {
             }
         }
 
-        subFlow(new SignTxFlow(otherPartySession, SignTransactionFlow.Companion.tracker()));
+        SecureHash expectedTxId = subFlow(new SignTxFlow(otherPartySession)).getId();
+
+        subFlow(new ReceiveFinalityFlow(otherPartySession, expectedTxId));
 
         return null;
+        // DOCEND 01
     }
 }
-// DOCEND 01
