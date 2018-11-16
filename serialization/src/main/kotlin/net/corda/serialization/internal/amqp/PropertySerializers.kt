@@ -52,6 +52,8 @@ class PublicPropertyReader(private val readMethod: Method) : PropertyReader() {
     }
 
     override fun isNullable(): Boolean = readMethod.returnsNullable()
+
+    val genericReturnType get() = readMethod.genericReturnType
 }
 
 /**
