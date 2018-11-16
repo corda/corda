@@ -45,7 +45,7 @@ class AzureSmbVolume(private val azure: Azure, private val resourceGroup: Resour
                 cloudFileShare.createIfNotExists()
                 networkParamsFolder.createIfNotExists()
                 break
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 LOG.debug("storage account not ready, waiting")
                 Thread.sleep(5000)
             }

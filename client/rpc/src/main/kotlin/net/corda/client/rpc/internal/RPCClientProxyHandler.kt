@@ -564,8 +564,8 @@ class RPCClientProxyHandler(
             observationExecutorPool.run(k) {
                 try {
                     m[k]?.onError(ConnectionFailureException())
-                } catch (th: Throwable) {
-                    log.error("Unexpected exception when RPC connection failure handling", th)
+                } catch (e: Exception) {
+                    log.error("Unexpected exception when RPC connection failure handling", e)
                 }
             }
         }

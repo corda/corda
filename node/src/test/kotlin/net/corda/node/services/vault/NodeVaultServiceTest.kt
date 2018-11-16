@@ -276,7 +276,7 @@ class NodeVaultServiceTest {
                     assertThat(vaultService.queryBy<Cash.State>(criteriaByLockId1).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #1 succeeded")
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 println("SOFT LOCK STATES #1 failed")
             } finally {
                 countDown.countDown()
@@ -292,7 +292,7 @@ class NodeVaultServiceTest {
                     assertThat(vaultService.queryBy<Cash.State>(criteriaByLockId2).states).hasSize(3)
                 }
                 println("SOFT LOCK STATES #2 succeeded")
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 println("SOFT LOCK STATES #2 failed")
             } finally {
                 countDown.countDown()

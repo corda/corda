@@ -65,7 +65,7 @@ class InterestRateSwapAPI {
         return try {
             rpc.startFlow(AutoOfferFlow::Requester, newDeal).returnValue.getOrThrow()
             ResponseEntity.created(URI.create(generateDealLink(newDeal))).build()
-        } catch (ex: Throwable) {
+        } catch (ex: Exception) {
             logger.info("Exception when creating deal: $ex", ex)
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.toString())
         }

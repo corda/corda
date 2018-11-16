@@ -493,8 +493,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 val republishInterval = try {
                     networkMapClient.publish(signedNodeInfo)
                     heartbeatInterval
-                } catch (t: Throwable) {
-                    log.warn("Error encountered while publishing node info, will retry again", t)
+                } catch (e: Exception) {
+                    log.warn("Error encountered while publishing node info, will retry again", e)
                     // TODO: Exponential backoff? It should reach max interval of eventHorizon/2.
                     1.minutes
                 }

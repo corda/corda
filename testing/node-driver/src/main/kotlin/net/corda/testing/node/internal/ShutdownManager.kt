@@ -65,6 +65,9 @@ class ShutdownManager(private val executorService: ExecutorService) {
                         it.value()
                     } catch (t: Throwable) {
                         log.warn("Exception while calling a shutdown action, this might create resource leaks", t)
+                        if (t is VirtualMachineError) {
+                            throw t
+                        }
                     }
                 is Try.Failure -> log.warn("Exception while getting shutdown method, disregarding", it.exception)
             }
