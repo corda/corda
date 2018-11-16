@@ -33,6 +33,7 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
 import java.io.File
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
@@ -226,7 +227,13 @@ internal constructor(private val initSerEnv: Boolean,
             println("Copying CorDapp JARs into node directories")
             for (nodeDir in nodeDirs) {
                 val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+                cordappJars.forEach {
+                    try {
+                        it.copyToDirectory(cordappsDir)
+                    } catch (e: FileAlreadyExistsException) {
+                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                    }
+                }
             }
         }
         generateServiceIdentitiesForNotaryClusters(configs)
@@ -424,10 +431,10 @@ internal constructor(private val initSerEnv: Boolean,
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-        // cluster and is shared by all the other members. This is the notary identity.
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }

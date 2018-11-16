@@ -39,8 +39,8 @@ private fun rowsToAmount(currency: Currency, rows: Vault.Page<FungibleAsset<*>>)
     return if (rows.otherResults.isEmpty()) {
         Amount(0L, currency)
     } else {
-        require(rows.otherResults.size == 2)
-        require(rows.otherResults[1] == currency.currencyCode)
+        require(rows.otherResults.size == 2){"Invalid number of rows returned by query"}
+        require(rows.otherResults[1] == currency.currencyCode){"Currency on rows returned by query does not match expected"}
         val quantity = rows.otherResults[0] as Long
         Amount(quantity, currency)
     }

@@ -203,7 +203,7 @@ class UniversalContract : Contract {
                 val rest = extractRemainder(arr, action)
 
                 // for now - let's assume not
-                require(rest is Zero)
+                require(rest is Zero) { "Remainder must be zero" }
 
                 requireThat {
                     "action must have a time-window" using (tx.timeWindow != null)

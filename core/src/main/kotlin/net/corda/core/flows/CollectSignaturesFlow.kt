@@ -187,9 +187,9 @@ class CollectSignatureFlow(val partiallySignedTx: SignedTransaction, val session
  *              }
  *
  *              // Invoke the subFlow, in response to the counterparty calling [CollectSignaturesFlow].
- *              val stx = subFlow(flow)
+ *              val expectedTxId = subFlow(flow).id
  *
- *              return waitForLedgerCommit(stx.id)
+ *              return subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId))
  *          }
  *      }
  *

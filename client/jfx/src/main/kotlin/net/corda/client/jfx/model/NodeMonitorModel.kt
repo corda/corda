@@ -202,7 +202,7 @@ class NodeMonitorModel : AutoCloseable {
                 val _connection = client.start(username, password)
                 // Check connection is truly operational before returning it.
                 val nodeInfo = _connection.proxy.nodeInfo()
-                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
+                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty()){"No identity certificates found"}
                 _connection
             } catch (exception: Exception) {
                 if (shouldRetry) {

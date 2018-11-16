@@ -9,9 +9,9 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
@@ -122,14 +122,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                cacheFactoryPrototype: BindableNamedCacheFactory,
                                protected val versionInfo: VersionInfo,
                                protected val flowManager: FlowManager,
-                               protected val serverThread: AffinityExecutor.ServiceAffinityExecutor,
-                               private val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
+                               val serverThread: AffinityExecutor.ServiceAffinityExecutor,
+                               val busyNodeLatch: ReusableLatch = ReusableLatch()) : SingletonSerializeAsToken() {
 
     protected abstract val log: Logger
     @Suppress("LeakingThis")
     private var tokenizableServices: MutableList<Any>? = mutableListOf(platformClock, this)
 
-    protected val metricRegistry = MetricRegistry()
+    val metricRegistry = MetricRegistry()
     protected val cacheFactory = cacheFactoryPrototype.bindWithConfig(configuration).bindWithMetrics(metricRegistry).tokenize()
     val monitoringService = MonitoringService(metricRegistry).tokenize()
 
@@ -146,7 +146,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    protected val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
+    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -650,10 +650,37 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun installCoreFlows() {
-        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class, ::FinalityHandler)
+        installFinalityHandler()
         flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
         flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
+        // TODO Make this an inlined flow (and remove this flow mapping!), which should be possible now that FinalityFlow is also inlined
         flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
+    }
+
+    // The FinalityHandler is insecure as it blindly accepts any and all transactions into the node's local vault without doing any checks.
+    // To plug this hole, the sending-side FinalityFlow has been made inlined with an inlined ReceiveFinalityFlow counterpart. The old
+    // FinalityFlow API is gated to only work with old CorDapps (those whose target platform version < 4), and the FinalityHandler will only
+    // work if there is at least one old CorDapp loaded (to preserve backwards compatibility).
+    //
+    // If an attempt is made to send us a transaction via FinalityHandler, and it's disabled, we will reject the request at the session-init
+    // level by throwing a FinalityHandlerDisabled exception. This is picked up by the flow hospital which will not send the error back
+    // (immediately) and instead pause the request by keeping it un-acknowledged in the message broker. This means the request isn't lost
+    // across node restarts and allows the node operator time to accept or reject the request.
+    // TODO Add public API to allow the node operator to accept or reject
+    private fun installFinalityHandler() {
+        // Disable the insecure FinalityHandler if none of the loaded CorDapps are old enough to require it.
+        val cordappsNeedingFinalityHandler = cordappLoader.cordapps.filter { it.info.targetPlatformVersion < 4 }
+        if (cordappsNeedingFinalityHandler.isEmpty()) {
+            log.info("FinalityHandler is disabled as there are no CorDapps loaded which require it")
+        } else {
+            log.warn("FinalityHandler is enabled as there are CorDapps that require it: ${cordappsNeedingFinalityHandler.map { it.info }}. " +
+                    "This is insecure and it is strongly recommended that newer versions of these CorDapps be used instead.")
+        }
+        val disabled = cordappsNeedingFinalityHandler.isEmpty()
+        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class) {
+            if (disabled) throw SessionRejectException.FinalityHandlerDisabled()
+            FinalityHandler(it)
+        }
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
@@ -778,7 +805,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
         // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
         // the identity key. But the infrastructure to make that easy isn't here yet.
-        return BasicHSMKeyManagementService(cacheFactory,identityService, database, cryptoService)
+        return BasicHSMKeyManagementService(cacheFactory, identityService, database, cryptoService)
     }
 
     open fun stop() {
@@ -838,13 +865,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
 
         val signingCertificateStore = configuration.signingCertificateStore.get()
+        // A composite key is only required for BFT notaries.
         val certificates = if (cryptoService.containsKey(compositeKeyAlias)) {
             val certificate = signingCertificateStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
             listOf(certificate) + signingCertificateStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
-        } else throw IllegalStateException("The identity public key for the notary service $serviceLegalName was not found in the key store.")
+        } else {
+            // We assume the notary is CFT, and each cluster member shares the same notary key pair.
+            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
+        }
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
         if (subject != serviceLegalName) {
@@ -1009,7 +1040,6 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
             private val _future = openFuture<FlowStateMachine<T>>()
             override val future: CordaFuture<FlowStateMachine<T>>
                 get() = _future
-
         }
         return startFlow(startFlowEvent)
     }

@@ -4,9 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.google.common.collect.ImmutableList
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
@@ -32,6 +30,7 @@ import kotlin.test.assertEquals
 
 class ScheduledFlowIntegrationTests {
     @StartableByRPC
+    @InitiatingFlow
     class InsertInitialStateFlow(private val destination: Party,
                                  private val notary: Party,
                                  private val identity: Int = 1,
@@ -44,11 +43,20 @@ class ScheduledFlowIntegrationTests {
                     .addOutputState(scheduledState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(tx))
+            subFlow(FinalityFlow(tx, initiateFlow(destination)))
+        }
+    }
+
+    @InitiatedBy(InsertInitialStateFlow::class)
+    class InsertInitialStateResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveFinalityFlow(otherSide))
         }
     }
 
     @StartableByRPC
+    @InitiatingFlow
     class AnotherFlow(private val identity: String) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
@@ -64,7 +72,15 @@ class ScheduledFlowIntegrationTests {
                     .addOutputState(outputState, DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(tx, outputState.participants.toSet()))
+            subFlow(FinalityFlow(tx, initiateFlow(state.state.data.destination)))
+        }
+    }
+
+    @InitiatedBy(AnotherFlow::class)
+    class AnotherResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveFinalityFlow(otherSide))
         }
     }
 

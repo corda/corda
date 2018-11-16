@@ -1,21 +1,7 @@
 package net.corda.irs.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.CommandWithParties
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.SchedulableState
-import net.corda.core.contracts.ScheduledActivity
-import net.corda.core.contracts.StateAndContract
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.TypeOnlyCommandData
-import net.corda.core.contracts.UniqueIdentifier
-import net.corda.core.contracts.requireThat
-import net.corda.core.contracts.select
+import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogicRefFactory
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
@@ -254,8 +240,7 @@ class InterestRateSwap : Contract {
          * @return LocalDate or null if no more fixings.
          */
         fun nextFixingDate(): LocalDate? {
-            return floatingLegPaymentSchedule.
-                    filter { it.value.rate is ReferenceRate }.// TODO - a better way to determine what fixings remain to be fixed
+            return floatingLegPaymentSchedule.filter { it.value.rate is ReferenceRate }.// TODO - a better way to determine what fixings remain to be fixed
                     minBy { it.value.fixingDate.toEpochDay() }?.value?.fixingDate
         }
 
@@ -650,7 +635,7 @@ class InterestRateSwap : Contract {
         }
 
         override fun generateFix(ptx: TransactionBuilder, oldState: StateAndRef<*>, fix: Fix) {
-            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, IRS_PROGRAM_ID, oldState.state.notary), oldState.ref), fix)
+            InterestRateSwap().generateFix(ptx, StateAndRef(TransactionState(this, IRS_PROGRAM_ID, oldState.state.notary, constraint = AlwaysAcceptAttachmentConstraint), oldState.ref), fix)
         }
 
         override fun nextFixingOf(): FixOf? {
@@ -748,10 +733,9 @@ class InterestRateSwap : Contract {
 
         // Put all the above into a new State object.
         val state = State(fixedLeg, floatingLeg, newCalculation, common, oracle)
-        return TransactionBuilder(notary).withItems(
-                StateAndContract(state, IRS_PROGRAM_ID),
-                Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey))
-        )
+        return TransactionBuilder(notary)
+                .addCommand(Command(Commands.Agree(), listOf(state.floatingLeg.floatingRatePayer.owningKey, state.fixedLeg.fixedRatePayer.owningKey)))
+                .addOutputState(TransactionState(state, IRS_PROGRAM_ID, notary, null, AlwaysAcceptAttachmentConstraint))
     }
 
     private fun calcFixingDate(date: LocalDate, fixingPeriodOffset: Int, calendar: BusinessCalendar): LocalDate {
@@ -767,7 +751,8 @@ class InterestRateSwap : Contract {
         tx.addOutputState(
                 irs.state.data.copy(calculation = irs.state.data.calculation.applyFixing(fixing.of.forDay, fixedRate)),
                 irs.state.contract,
-                irs.state.notary
+                irs.state.notary,
+                constraint = AlwaysAcceptAttachmentConstraint
         )
         tx.addCommand(Commands.Refix(fixing), listOf(irs.state.data.floatingLeg.floatingRatePayer.owningKey, irs.state.data.fixedLeg.fixedRatePayer.owningKey))
     }

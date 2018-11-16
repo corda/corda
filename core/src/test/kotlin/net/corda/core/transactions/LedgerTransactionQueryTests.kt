@@ -46,11 +46,12 @@ class LedgerTransactionQueryTests {
         data class Cmd3(val id: Int) : CommandData, Commands // Unused command, required for command not-present checks.
     }
 
-
+    @BelongsToContract(DummyContract::class)
     private class StringTypeDummyState(val data: String) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
 
+    @BelongsToContract(DummyContract::class)
     private class IntTypeDummyState(val data: Int) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
@@ -72,7 +73,7 @@ class LedgerTransactionQueryTests {
         )
         services.recordTransactions(fakeIssueTx)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
-        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, null), dummyStateRef)
+        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), dummyStateRef)
     }
 
     private fun makeDummyTransaction(): LedgerTransaction {

@@ -5,8 +5,6 @@ import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.requireThat
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -17,6 +15,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -116,7 +116,7 @@ class CollectSignaturesFlowTests : WithContracts {
                 val ptx = serviceHub.signInitialTransaction(builder)
                 val sessions = excludeHostNode(serviceHub, groupAbstractPartyByWellKnownParty(serviceHub, state.owners)).map { initiateFlow(it.key) }
                 val stx = subFlow(CollectSignaturesFlow(ptx, sessions, myInputKeys))
-                return subFlow(FinalityFlow(stx))
+                return subFlow(FinalityFlow(stx, sessions))
             }
         }
 
@@ -136,8 +136,8 @@ class CollectSignaturesFlowTests : WithContracts {
                     }
                 }
 
-                val stx = subFlow(signFlow)
-                waitForLedgerCommit(stx.id)
+                val stxId = subFlow(signFlow).id
+                subFlow(ReceiveFinalityFlow(otherSideSession, expectedTxId = stxId))
             }
         }
     }
