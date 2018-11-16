@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import com.google.common.primitives.Primitives
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.ClassWhitelist
@@ -9,7 +8,6 @@ import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.lang.reflect.Type
 import java.util.*
 
 @KeepForDJVM
@@ -118,18 +116,6 @@ object SerializerFactoryBuilder {
         return ComposedSerializerFactory(localSerializerFactory, remoteSerializerFactory, customSerializerRegistry)
     }
 
-}
-
-/**
- * [LocalTypeModelConfiguration] based on a [ClassWhitelist]
- */
-class WhitelistBasedTypeModelConfiguration(
-        private val whitelist: ClassWhitelist,
-        private val customSerializerRegistry: CustomSerializerRegistry)
-    : LocalTypeModelConfiguration {
-    override fun isExcluded(type: Type): Boolean = whitelist.isNotWhitelisted(type.asClass())
-    override fun isOpaque(type: Type): Boolean = Primitives.unwrap(type.asClass()) in opaqueTypes ||
-            customSerializerRegistry.findCustomSerializer(type.asClass(), type) != null
 }
 
 // Copied from SerializerFactory so that we can have equivalent behaviour, for now.
