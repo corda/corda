@@ -47,8 +47,10 @@ Here are the contents of the ``reference.conf`` file:
 
 Fields
 ------
-The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the
-absolute path to the node's base directory.
+
+.. note:: All fields can be used with placeholders for environment variables. For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``. See: `Hiding Sensitive Data`_
+
+The available config fields are listed below.
 
 :myLegalName: The legal identity of the node. This acts as a human-readable alias to the node's public key and can be used with
     the network map to look up the node's info. This is the name that is used in the node's certificates (either when requesting them
@@ -307,3 +309,47 @@ Together with the above configuration `tlsCertCrlIssuer` option needs to be set 
 
 This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
 In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.
+
+Hiding Sensitive Data
+---------------------
+A frequent requirement is that configuration files must not expose passwords to unauthorised readers. By leveraging environment variables, it is possible to hide passwords and other similar fields.
+
+Take a simple node config that wishes to protect the node cryptographic stores:
+
+.. parsed-literal::
+
+    myLegalName : "O=PasswordProtectedNode,OU=corda,L=London,C=GB"
+    keyStorePassword : ${KEY_PASS}
+    trustStorePassword : ${TRUST_PASS}
+    p2pAddress : "localhost:12345"
+    devMode : false
+    compatibilityZoneURL : "https://cz.corda.net"
+
+By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
+The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
+
+
+Bash
+~~~~
+
+.. sourcecode:: shell
+
+    KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword) TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword) java -jar corda.jar
+
+Windows PowerShell
+~~~~~~~~~~~~~~~~~~
+
+.. sourcecode:: shell
+
+    $env:KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword); $env:TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword); java -jar corda.jar
+
+
+For launching on Windows without PowerShell, it is not possible to perform command substitution, and so the variables must be specified manually, for example:
+
+.. sourcecode:: shell
+
+    SET KEY_PASS=mypassword & SET TRUST_PASS=mypassword & java -jar corda.jar
+
+.. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
+
+
