@@ -48,7 +48,7 @@ Here are the contents of the ``reference.conf`` file:
 Fields
 ------
 
-.. note:: All fields can be used with placeholders for environment variables. For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``
+.. note:: All fields can be used with placeholders for environment variables. For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``. See: `Hiding Sensitive Data`_
 
 The available config fields are listed below.
 
@@ -324,23 +324,30 @@ Take a simple node config that wishes to protect the node cryptographic stores:
     devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
 
-On linux By delegating to a password store, and using bash `Command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
-Below is an example of loading corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
+By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
+The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
 
-This method of launching corda also supported in windows PowerShell.
+
+Bash
+~~~~
 
 .. sourcecode:: shell
 
     KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword) TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword) java -jar corda.jar
 
-
-For non PowerShell launching on windows, it is not possible to perform Command substitution, and so the variables must be specified manually.
+Windows PowerShell
+~~~~~~~~~~~~~~~~~~
 
 .. sourcecode:: shell
 
-    SET KEY_PASS=mypassword
-    SET TRUST_PASS=mypassword
-    java -jar corda.jar
+    $env:KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword); $env:TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword); java -jar corda.jar
+
+
+For non PowerShell launching on windows, it is not possible to perform command substitution, and so the variables must be specified manually.
+
+.. sourcecode:: shell
+
+    SET KEY_PASS=mypassword; SET TRUST_PASS=mypassword; java -jar corda.jar
 
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
 
