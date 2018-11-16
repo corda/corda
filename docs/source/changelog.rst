@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
+  and is configurable via the node config. See :doc:`network-map` for more information.
+
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter

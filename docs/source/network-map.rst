@@ -165,17 +165,28 @@ know about the details of the impending change, along with the justification, ho
 Auto Acceptance
 ```````````````
 
-If the only changes between the new and old parameters are for auto-acceptable parameters then, unless configured otherwise, the new
-parameters will be accepted without user input. The following parameters with the @AutoAcceptable annotation are auto-acceptable:
+If the only changes between the current and new parameters are for auto-acceptable parameters then, unless configured otherwise, the new
+parameters will be accepted without user input. The following parameters with the ``@AutoAcceptable`` annotation are auto-acceptable:
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/NetworkParameters.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
 
-This behaviour can be turned off by setting the optional node configuration property ``autoAcceptNetworkParameterChanges`` to false. It
-is also possible to switch off this behaviour at a more granular parameter level by specifying the set of @AutoAcceptable parameters that
-should not be auto-acceptable in the optional ``excludedAutoAcceptNetworkParameters`` node configuration property.
+This behaviour can be turned off by setting the optional node configuration property ``NetworkParameterAcceptanceSettings.autoAcceptEnabled``
+to ``false``. For example:
+
+.. sourcecode:: guess
+
+    ...
+    NetworkParameterAcceptanceSettings {
+        autoAcceptEnabled = false
+    }
+    ...
+
+It is also possible to switch off this behaviour at a more granular parameter level. This can be achieved by specifying the set of
+``@AutoAcceptable`` parameters that should not be auto-acceptable in the optional
+``NetworkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
 
 For example, auto-acceptance can be switched off for any updates that change the ``packageOwnership`` map by adding the following to the
 node configuration:
@@ -183,7 +194,9 @@ node configuration:
 .. sourcecode:: guess
 
     ...
-    excludedAutoAcceptNetworkParameters: ["packageOwnership"]
+    NetworkParameterAcceptanceSettings {
+        excludedAutoAcceptableParameters: ["packageOwnership"]
+    }
     ...
 
 Manual Acceptance

@@ -21,6 +21,10 @@ Significant Changes in 4.0
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
   normal state when it occurs in an input or output position.
 
+* **Added auto-acceptance for network parameters updates**
+  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
+  command on every parameter update. This behaviour can be turned off via the node configuration.
+
 << MORE TO COME >>
 
 .. _release_notes_v3_3:

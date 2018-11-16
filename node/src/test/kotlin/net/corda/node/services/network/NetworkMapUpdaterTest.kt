@@ -17,6 +17,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -100,8 +101,7 @@ class NetworkMapUpdaterTest {
                       ourNodeInfo,
                       networkParameters,
                       MockKeyManagementService(makeTestIdentityService(), ourKeyPair),
-                      autoAcceptNetworkParameters,
-                      excludedAutoAcceptNetworkParameters)
+                      NetworkParameterAcceptanceSettings(autoAcceptNetworkParameters, excludedAutoAcceptNetworkParameters))
     }
 
     @Test

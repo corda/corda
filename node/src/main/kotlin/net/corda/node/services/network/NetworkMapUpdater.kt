@@ -13,6 +13,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
 import net.corda.nodeapi.internal.SignedNodeInfo
@@ -64,8 +65,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
               ourNodeInfo: SignedNodeInfo,
               networkParameters: NetworkParameters,
               keyManagementService: KeyManagementService,
-              autoAcceptNetworkParameters: Boolean,
-              excludedAutoAcceptNetworkParameters: Set<String>) {
+              networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings) {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         this.trustRoot = trustRoot
         this.currentParametersHash = currentParametersHash
@@ -73,8 +73,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         this.ourNodeInfoHash = ourNodeInfo.raw.hash
         this.networkParameters = networkParameters
         this.keyManagementService = keyManagementService
-        this.autoAcceptNetworkParameters = autoAcceptNetworkParameters
-        this.excludedAutoAcceptNetworkParameters = excludedAutoAcceptNetworkParameters
+        this.autoAcceptNetworkParameters = networkParameterAcceptanceSettings.autoAcceptEnabled
+        this.excludedAutoAcceptNetworkParameters = networkParameterAcceptanceSettings.excludedAutoAcceptableParameters
 
         val autoAcceptNetworkParametersNames = NetworkParameters.autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
         if (autoAcceptNetworkParameters && autoAcceptNetworkParametersNames.isNotEmpty()) {

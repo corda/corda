@@ -81,8 +81,7 @@ interface NodeConfiguration {
 
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
-    val autoAcceptNetworkParameterChanges: Boolean get() = true
-    val excludedAutoAcceptNetworkParameters: Set<String>
+    val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
     fun validate(): List<String>
 
@@ -158,6 +157,19 @@ data class NetworkServicesConfig(
 )
 
 /**
+ * Specifies the auto-acceptance behaviour for network parameter updates
+ *
+ * @property autoAcceptEnabled Specifies whether network parameter auto-accepting is enabled. Only parameters annotated with the
+ * AutoAcceptable annotation can be auto-accepted.
+ * @property excludedAutoAcceptableParameters Set of parameters to explicitly exclude from auto-accepting. Note that if [autoAcceptEnabled]
+ * is false then this parameter is redundant.
+ */
+data class NetworkParameterAcceptanceSettings(
+        val autoAcceptEnabled: Boolean = true,
+        val excludedAutoAcceptableParameters: Set<String> = emptySet()
+)
+
+/**
  * Currently only used for notarisation requests.
  *
  * Specifies the configuration for timing out and restarting a [TimedFlow].
@@ -223,8 +235,7 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = JmxReporterType.JOLOKIA,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() },
-        override val autoAcceptNetworkParameterChanges: Boolean = true,
-        override val excludedAutoAcceptNetworkParameters: Set<String> = emptySet()
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
 ) : NodeConfiguration {
     companion object {
         private val logger = loggerFor<NodeConfigurationImpl>()

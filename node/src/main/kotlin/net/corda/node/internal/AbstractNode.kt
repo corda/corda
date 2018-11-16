@@ -341,8 +341,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 signedNodeInfo,
                 netParams,
                 keyManagementService,
-                configuration.autoAcceptNetworkParameterChanges,
-                configuration.excludedAutoAcceptNetworkParameters)
+                configuration.networkParameterAcceptanceSettings)
         startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
 
         // Do all of this in a database transaction so anything that might need a connection has one.
