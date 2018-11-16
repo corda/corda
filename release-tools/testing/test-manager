@@ -16,10 +16,10 @@ try:
     def red(message): return colored(message, 'red')
     def yellow(message): return colored(message, 'yellow')
     def faint(message): return colored(message, 'white', attrs=['dark'])
-    def on_green(message): return colored(message, 'white', 'on_green')
-    def on_red(message): return colored(message, 'white', 'on_red')
-    def blue_on_white(message): return colored(message, 'blue', 'on_white')
-    def yellow_on_white(message): return colored(message, 'yellow', 'on_white')
+    def on_green(message): return colored(message, 'green')
+    def on_red(message): return colored(message, 'red')
+    def blue_on_white(message): return colored(message, 'blue')
+    def yellow_on_white(message): return colored(message, 'yellow')
 except:
     def blue(message): return u'[{}]'.format(message)
     def green(message): return message
@@ -159,7 +159,10 @@ def create_version(args):
                 jira.jira.create_version(name=version, project=project, description=version)
                 print(u'   {} - Created version for project {}'.format(green('SUCCESS'), blue(project)))
             except Exception as error:
-                print(u'   {} - Failed to version: {}'.format(red('FAIL'), error))
+                if args.verbose:
+                    print(u'   {} - Failed to version: {}'.format(red('FAIL'), error))
+                else:
+                    print(u'   {} - Failed to version: {}'.format(red('FAIL'), error.text))
             print()
 
 

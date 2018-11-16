@@ -36,9 +36,11 @@ handling, and ensures the Corda service is run at boot.
 
 6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
-      basedir : "/opt/corda"
       p2pAddress : "example.com:10002"
-      rpcAddress : "example.com:10003"
+      rpcSettings {
+          address: "example.com:10003"
+          adminAddress: "example.com:10004"
+      }
       h2port : 11000
       emailAddress : "you@example.com"
       myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
@@ -57,18 +59,19 @@ handling, and ensures the Corda service is run at boot.
 
 7. Make the following changes to ``/opt/corda/node.conf``:
 
-   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address.
-      This is the address other nodes or RPC interfaces will use to communicate with your node
-   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below)
+   *  Change the ``p2pAddress``, ``rpcSettings.address`` and ``rpcSettings.adminAddress`` values to match
+      your server's hostname or external IP address. These are the addresses other nodes or RPC interfaces will use to
+      communicate with your node.
+   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below).
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
-      only visible to the permissioning service
+      only visible to the permissioning service.
    *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
-      change as it should represent the legal identity of your node
+      change as it should represent the legal identity of your node.
 
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password
+   *  Change the RPC username and password.
 
 .. note:: Ubuntu 16.04 and most current Linux distributions use SystemD, so if you are running one of these
           distributions follow the steps marked **SystemD**. 
@@ -200,15 +203,16 @@ at boot, and means the Corda service stays running with no users connected to th
 
 3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
-        basedir : "C:\\Corda"
         p2pAddress : "example.com:10002"
-        rpcAddress : "example.com:10003"
+        rpcSettings {
+            address: "example.com:10003"
+            adminAddress: "example.com:10004"
+        }
         h2port : 11000
         emailAddress: "you@example.com"
         myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
         keyStorePassword : "cordacadevpass"
         trustStorePassword : "trustpass"
-        extraAdvertisedServiceIds: [ "" ]
         devMode : false
         rpcUsers=[
             {
@@ -222,18 +226,19 @@ at boot, and means the Corda service stays running with no users connected to th
 
 4. Make the following changes to ``C:\Corda\node.conf``:
 
-   *  Change the ``p2pAddress`` and ``rpcAddress`` values to start with your server's hostname or external IP address.
-      This is the address other nodes or RPC interfaces will use to communicate with your node
-   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below)
+   *  Change the ``p2pAddress``, ``rpcSettings.address`` and ``rpcSettings.adminAddress`` values to match
+      your server's hostname or external IP address. These are the addresses other nodes or RPC interfaces will use to
+      communicate with your node.
+   *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below).
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
-      only visible to the permissioning service
+      only visible to the permissioning service.
    *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
-      change as it should represent the legal identity of your node
+      change as it should represent the legal identity of your node.
 
       * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
       * Location (``L=``) is your nearest city
       * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password
+   *  Change the RPC username and password.
 
 5. Copy the required Java keystores to the node. See :doc:`permissioning`
 

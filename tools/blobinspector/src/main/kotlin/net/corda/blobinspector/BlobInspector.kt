@@ -110,7 +110,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             } else {
                 null   // Not an AMQP blob.
             }
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
             return null   // Failed to parse in some other way.
         }
     }

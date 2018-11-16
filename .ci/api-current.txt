@@ -21,6 +21,8 @@ public class net.corda.core.CordaException extends java.lang.Exception implement
 ##
 public final class net.corda.core.CordaOID extends java.lang.Object
   @NotNull
+  public static final String ALIAS_PRIVATE_KEY = "1.3.6.1.4.1.50530.1.2"
+  @NotNull
   public static final String CORDA_PLATFORM = "1.3.6.1.4.1.50530.1"
   public static final net.corda.core.CordaOID INSTANCE
   @NotNull

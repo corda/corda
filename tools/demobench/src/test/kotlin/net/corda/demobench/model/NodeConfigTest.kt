@@ -39,7 +39,7 @@ class NodeConfigTest {
                 .withFallback(ConfigFactory.parseResources("reference.conf"))
                 .withFallback(ConfigFactory.parseMap(mapOf("devMode" to true)))
                 .resolve()
-        val fullConfig = nodeConfig.parseAsNodeConfiguration()
+        val fullConfig = nodeConfig.parseAsNodeConfiguration().orThrow()
 
         // No custom configuration is created by default.
         assertFailsWith<ConfigException.Missing> { nodeConfig.getConfig("custom") }

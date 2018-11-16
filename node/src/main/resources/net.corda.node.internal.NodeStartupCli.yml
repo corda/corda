@@ -72,7 +72,6 @@
     multiParam: false
     acceptableValues:
     - "FAIL"
-    - "WARN"
     - "IGNORE"
   - parameterName: "--sshd"
     parameterType: "boolean"

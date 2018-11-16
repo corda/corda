@@ -327,7 +327,7 @@ class TLSAuthenticationTests {
                     lock.notifyAll()
                 }
                 sslServerSocket.close()
-            } catch (ex: Throwable) {
+            } catch (ex: Exception) {
                 serverError = true
             }
         }

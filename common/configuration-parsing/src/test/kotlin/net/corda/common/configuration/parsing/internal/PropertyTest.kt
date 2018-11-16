@@ -95,7 +95,7 @@ class PropertyTest {
         val configuration = configObject(key to null).toConfig()
 
         val defaultValue = listOf(1L, 2L, 3L)
-        val property = Configuration.Property.Definition.long(key).list().optional(defaultValue)
+        val property = Configuration.Property.Definition.long(key).list().optional().withDefaultValue(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -173,7 +173,7 @@ class PropertyTest {
         val configuration = configObject(key to null).toConfig()
 
         val defaultValue = 23L
-        val property = Configuration.Property.Definition.long(key).optional(defaultValue)
+        val property = Configuration.Property.Definition.long(key).optional().withDefaultValue(defaultValue)
         println(property)
 
         assertThat(property.key).isEqualTo(key)

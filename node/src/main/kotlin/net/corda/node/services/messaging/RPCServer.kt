@@ -232,6 +232,7 @@ class RPCServer(
             log.error("Failed to send message, kicking client. Message was ${job.message}", throwable)
             serverControl!!.closeConsumerConnectionsForAddress(job.clientAddress.toString())
             invalidateClient(job.clientAddress)
+            if (throwable is VirtualMachineError) throw throwable
         }
     }
 

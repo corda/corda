@@ -56,6 +56,10 @@ open class TransactionBuilder @JvmOverloads constructor(
     private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
+    companion object {
+        private val log = contextLogger()
+    }
+
     /**
      * Creates a copy of the builder.
      */
@@ -74,10 +78,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
         return t
-    }
-
-    companion object {
-       val logger = contextLogger()
     }
 
     // DOCSTART 1
@@ -165,7 +165,21 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         return when {
             attachmentSigners.isEmpty() -> HashAttachmentConstraint(attachmentId)
-            else -> makeSignatureAttachmentConstraint(attachmentSigners)
+            else -> {
+                // Auto downgrade: signature constraints only available with a corda network minimum platform version of >= 4
+                if (services.networkParameters.minimumPlatformVersion < 4) {
+                    log.warn("Signature constraints not available on network requiring a minimum platform version of ${services.networkParameters.minimumPlatformVersion}")
+                    if (useWhitelistedByZoneAttachmentConstraint(state.contract, services.networkParameters)) {
+                        log.warn("Reverting back to using whitelisted zone constraints")
+                        WhitelistedByZoneAttachmentConstraint
+                    }
+                    else {
+                        log.warn("Reverting back to using hash constraints")
+                        HashAttachmentConstraint(attachmentId)
+                    }
+                }
+                else makeSignatureAttachmentConstraint(attachmentSigners)
+            }
         }
     }
 
@@ -247,7 +261,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                     addReferenceState(resolvedStateAndRef.referenced())
                 }
             } else {
-                logger.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
+                log.warn("WARNING: You must pass in a ServiceHub reference to TransactionBuilder to resolve " +
                         "state pointers outside of flows. If you are writing a unit test then pass in a " +
                         "MockServices instance.")
                 return

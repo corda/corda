@@ -106,10 +106,10 @@ data class LoadTest<T, S>(
                                     log.info("Executing $it")
                                     try {
                                         nodes.execute(it)
-                                    } catch (exception: Throwable) {
-                                        val diagnostic = executeDiagnostic(state, newState, it, exception)
+                                    } catch (throwable: Throwable) {
+                                        val diagnostic = executeDiagnostic(state, newState, it, throwable)
                                         log.error(diagnostic)
-                                        throw Exception(diagnostic)
+                                        throw if (throwable is Exception) Exception(diagnostic) else throwable
                                     }
                                 }
                             }

@@ -17,7 +17,7 @@ We'll do this by modifying the flow we wrote in the previous tutorial.
 
 Verifying the transaction
 -------------------------
-In ``IOUFlow.java``/``App.kt``, change the imports block to the following:
+In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
 
 .. container:: codeset
 

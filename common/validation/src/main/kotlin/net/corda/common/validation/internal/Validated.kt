@@ -39,7 +39,7 @@ interface Validated<TARGET, ERROR> {
      *
      * @throws IllegalStateException or the result of [exceptionOnErrors] if there are errors.
      */
-    fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalStateException(errors.joinToString(System.lineSeparator())) }): TARGET
+    fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception = { errors -> IllegalStateException(errors.joinToString(System.lineSeparator())) }): TARGET
 
     /**
      * Applies the [convert] function to the [TARGET] value, if valid. Otherwise, returns a [Validated] monad with a [MAPPED] generic type and the current errors set.
@@ -113,7 +113,7 @@ interface Validated<TARGET, ERROR> {
         class Successful<TARGET, ERROR>(override val value: TARGET) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
             override val errors: Set<ERROR> = emptySet<ERROR>()
 
-            override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = value
+            override fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = value
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
                 return valid(convert.invoke(value))
@@ -138,7 +138,7 @@ interface Validated<TARGET, ERROR> {
 
             override val value: TARGET get() = throw IllegalStateException("Invalid state.")
 
-            override fun valueOrThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
+            override fun orThrow(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)
 
             override fun <MAPPED> map(convert: (TARGET) -> MAPPED): Validated<MAPPED, ERROR> {
                 return invalid(errors)

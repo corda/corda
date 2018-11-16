@@ -38,3 +38,5 @@ interface CryptoService {
      */
     fun getSigner(alias: String): ContentSigner
 }
+
+open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)

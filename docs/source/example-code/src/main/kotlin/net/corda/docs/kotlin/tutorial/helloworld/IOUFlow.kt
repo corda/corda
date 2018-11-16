@@ -16,8 +16,6 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 
-import com.template.TemplateContract.TEMPLATE_CONTRACT_ID
-
 // Replace Initiator's definition with:
 @InitiatingFlow
 @StartableByRPC
@@ -39,7 +37,7 @@ class IOUFlow(val iouValue: Int,
 
         // We create a transaction builder and add the components.
         val txBuilder = TransactionBuilder(notary = notary)
-                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
+                .addOutputState(outputState, TemplateContract.ID)
                 .addCommand(cmd)
 
         // We sign the transaction.

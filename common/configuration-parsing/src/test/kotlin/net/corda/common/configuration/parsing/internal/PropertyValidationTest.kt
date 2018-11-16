@@ -1,9 +1,7 @@
 package net.corda.common.configuration.parsing.internal
 
-import com.typesafe.config.Config
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
-import net.corda.common.validation.internal.Validator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
@@ -15,7 +13,7 @@ class PropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key)
+        val property = Configuration.Property.Definition.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -34,7 +32,7 @@ class PropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key)
+        val property = Configuration.Property.Definition.long(key)
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -53,7 +51,7 @@ class PropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key).list()
+        val property = Configuration.Property.Definition.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -72,7 +70,7 @@ class PropertyValidationTest {
         val key = "a.b.c"
         val configuration = configObject(key to null).toConfig()
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key).list()
+        val property = Configuration.Property.Definition.long(key).list()
 
         assertThat(property.validate(configuration).errors).satisfies { errors ->
 
@@ -90,7 +88,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key)
+        val property = Configuration.Property.Definition.long(key)
 
         val configuration = configObject(key to false).toConfig()
 
@@ -110,7 +108,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key)
+        val property = Configuration.Property.Definition.long(key)
 
         val configuration = configObject(key to 1.2).toConfig()
 
@@ -130,7 +128,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.double(key)
+        val property = Configuration.Property.Definition.double(key)
 
         val configuration = configObject(key to 1).toConfig()
 
@@ -142,7 +140,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key).list()
+        val property = Configuration.Property.Definition.long(key).list()
 
         val configuration = configObject(key to listOf(false, true)).toConfig()
 
@@ -162,7 +160,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key)
+        val property = Configuration.Property.Definition.long(key)
 
         val configuration = configObject(key to listOf(1, 2, 3)).toConfig()
 
@@ -182,7 +180,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.long(key).list()
+        val property = Configuration.Property.Definition.long(key).list()
 
         val configuration = configObject(key to 1).toConfig()
 
@@ -205,7 +203,7 @@ class PropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
+        val property = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -228,7 +226,7 @@ class PropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
+        val property = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject()).toConfig()
 
@@ -251,7 +249,7 @@ class PropertyValidationTest {
         val nestedKey = "d"
         val nestedPropertySchema = Configuration.Schema.withProperties(Configuration.Property.Definition.long(nestedKey))
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
+        val property = Configuration.Property.Definition.nestedObject(key, nestedPropertySchema)
 
         val configuration = configObject(key to configObject(nestedKey to null)).toConfig()
 
@@ -273,7 +271,7 @@ class PropertyValidationTest {
 
         val nestedKey = "d"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.nestedObject(key)
+        val property = Configuration.Property.Definition.nestedObject(key)
 
         val configuration = configObject(key to configObject(nestedKey to false)).toConfig()
 
@@ -285,7 +283,7 @@ class PropertyValidationTest {
 
         val key = "a"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).mapValid(::parseAddress)
+        val property = Configuration.Property.Definition.string(key).mapValid(::parseAddress)
 
         val host = "localhost"
         val port = 8080
@@ -301,7 +299,7 @@ class PropertyValidationTest {
 
         val key = "a.b.c"
 
-        val property: Validator<Config, Configuration.Validation.Error, Configuration.Validation.Options> = Configuration.Property.Definition.string(key).mapValid(::parseAddress)
+        val property = Configuration.Property.Definition.string(key).mapValid(::parseAddress)
 
         val host = "localhost"
         val port = 8080
