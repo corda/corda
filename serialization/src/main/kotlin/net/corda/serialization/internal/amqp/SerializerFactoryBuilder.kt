@@ -118,31 +118,6 @@ object SerializerFactoryBuilder {
 
 }
 
-// Copied from SerializerFactory so that we can have equivalent behaviour, for now.
-private val opaqueTypes = setOf(
-        Character::class.java,
-        Char::class.java,
-        Boolean::class.java,
-        Byte::class.java,
-        UnsignedByte::class.java,
-        Short::class.java,
-        UnsignedShort::class.java,
-        Int::class.java,
-        UnsignedInteger::class.java,
-        Long::class.java,
-        UnsignedLong::class.java,
-        Float::class.java,
-        Double::class.java,
-        Decimal32::class.java,
-        Decimal64::class.java,
-        Decimal128::class.java,
-        Date::class.java,
-        UUID::class.java,
-        ByteArray::class.java,
-        String::class.java,
-        Symbol::class.java
-)
-
 object NoEvolutionSerializerFactory : EvolutionSerializerFactory {
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
         throw NotSerializableException("""
