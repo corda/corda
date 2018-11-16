@@ -72,7 +72,7 @@ object TransactionGenerator {
                     wtx3.serialize(),
                     arrayOf(wtx1.serialize(), wtx2.serialize()),
                     arrayOf(contractAttachment.serialize().bytes),
-                    ledgerServices.networkParametersStorage.currentParameters.serialize())
+                    ledgerServices.networkParameters.serialize())
                 .serialize()
                 .writeTo(output)
         }
@@ -106,7 +106,7 @@ object TransactionGenerator {
                     wtx3.serialize(),
                     arrayOf(wtx1.serialize(), wtx2.serialize()),
                     arrayOf(contractAttachment.serialize().bytes),
-                    ledgerServices.networkParametersStorage.currentParameters.serialize())
+                    ledgerServices.networkParameters.serialize())
                 .serialize()
                 .writeTo(output)
         }

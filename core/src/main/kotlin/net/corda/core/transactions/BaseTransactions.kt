@@ -37,7 +37,6 @@ abstract class FullTransaction : BaseTransaction() {
     }
 
     private fun checkInputsAndReferencesHaveSameNotary() {
-        // TODO Add check for the notary in whitelist.
         if (inputs.isEmpty() && references.isEmpty()) return
         val notaries = (inputs + references).map { it.state.notary }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }

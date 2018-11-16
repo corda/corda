@@ -48,7 +48,11 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         timeWindows.firstOrNull()
     }
 
-    override val networkParametersHash: SecureHash? = deserialiseComponentGroup(SecureHash::class, PARAMETERS_GROUP).firstOrNull()
+    override val networkParametersHash: SecureHash? = let {
+        val parametersHashes = deserialiseComponentGroup(SecureHash::class, PARAMETERS_GROUP)
+        check(parametersHashes.size <= 1) { "Invalid Transaction. More than 1 network parameters hash detected." }
+        parametersHashes.firstOrNull()
+    }
 
     /**
      * Returns a list of all the component groups that are present in the transaction, excluding the privacySalt,
@@ -259,7 +263,8 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
+            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) })
+                    .hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
             visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {

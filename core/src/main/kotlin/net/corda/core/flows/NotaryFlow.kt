@@ -100,9 +100,11 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                // TODO networkParametersHash type overlaps with the attachments - it is problematic in filtering.
+                // TODO networkParametersHash type overlaps with the attachments type - it is problematic in filtering.
                 //  Also, we want to be sure in this case that we always include the componentGroup for the parameters hash.
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
+                    it is StateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal
+                })
                 else -> ctx
             }
             return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))

@@ -60,7 +60,6 @@ class ResolveStatePointersTest {
                 initialIdentity = myself,
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         )
-
         services = databaseAndServices.second
     }
 

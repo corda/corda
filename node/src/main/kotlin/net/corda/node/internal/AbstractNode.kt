@@ -990,11 +990,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
+        override val networkParametersStorage: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo
 
-        private lateinit var _networkParameters: NetworkParameters // TODO delegate to network parameters storage
+        private lateinit var _networkParameters: NetworkParameters
         override val networkParameters: NetworkParameters get() = _networkParameters
 
         fun start(myInfo: NodeInfo, networkParameters: NetworkParameters) {

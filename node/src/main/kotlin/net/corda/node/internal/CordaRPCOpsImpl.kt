@@ -83,7 +83,7 @@ internal class CordaRPCOpsImpl(
         return snapshot
     }
 
-    override val networkParameters: NetworkParameters get() = services.networkParametersStorage.currentParameters
+    override val networkParameters: NetworkParameters get() = services.networkParameters
 
     override fun networkParametersFeed(): DataFeed<ParametersUpdateInfo?, ParametersUpdateInfo> {
         return services.networkMapUpdater.trackParametersUpdate()
