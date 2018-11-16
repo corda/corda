@@ -6,6 +6,7 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 
@@ -41,7 +42,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             verifyTransaction(requestPayload)
 
             val eta = service.getEstimatedWaitTime()
-            if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= 4) {
+            if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE) {
                 otherSideSession.send(WaitTimeUpdate(eta.toMillis() / 1000))
             }
 
