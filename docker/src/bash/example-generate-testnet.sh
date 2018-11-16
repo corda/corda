@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
 docker run -ti \
-        -e MY_PUBLIC_ADDRESS=stefano.azure.io \
-        -e ONE_TIME_DOWNLOAD_KEY="694c0a8f-b91c-4718-a9a2-c25e1eca490d" \
+        -e MY_PUBLIC_ADDRESS="corda-node.example.com" \
+        -e ONE_TIME_DOWNLOAD_KEY="bbcb189e-9e4f-4b27-96db-134e8f592785" \
         -e LOCALITY="London" -e COUNTRY="GB" \
         -v $(pwd)/docker/config:/etc/corda \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
         corda/corda-4.0-snapshot:latest config-generator --testnet
 
 docker run -ti \
-        -e JVM_ARGS="-Xmx5g -Xms2g -XX:+UseG1GC" \
+        --memory=2048m \
+        --cpus=2 \
         -v $(pwd)/docker/config:/etc/corda \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
         -v $(pwd)/docker/persistence:/opt/corda/persistence \

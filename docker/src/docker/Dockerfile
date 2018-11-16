@@ -34,10 +34,11 @@ VOLUME ["/opt/corda/persistence"]
 VOLUME ["/opt/corda/certificates"]
 ##OPTIONAL JDBC DRIVERS FOLDER
 VOLUME ["/opt/corda/drivers"]
-##CONFIG LOCATION
-VOLUME ["/etc/corda"]
 ##LOG FOLDER
 VOLUME ["/opt/corda/logs"]
+##CONFIG LOCATION
+VOLUME ["/etc/corda"]
+
 
 ##CORDA JAR
 ADD --chown=corda:corda corda.jar /opt/corda/bin/corda.jar

@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 
+##in this example the doorman will be running on the host machine on port 8080
+##so the container must be launched with "host" networking
 docker run -ti --net="host" \
-        -e  MY_LEGAL_NAME="O=ALL,L=Berlin,C=DE"     \
-        -e MY_PUBLIC_ADDRESS=stefano.azure.io       \
-        -e COMPATIBILITY_ZONE="http://corda.net"    \
-        -e DOORMAN_URL="http://localhost:8080"      \
-        -e NETWORK_TRUST_PASSWORD="password"       \
+        -e  MY_LEGAL_NAME="O=EXAMPLE,L=Berlin,C=DE"     \
+        -e MY_PUBLIC_ADDRESS="corda.example-hoster.com"       \
+        -e COMPATIBILITY_ZONE="https://map.corda.example.com"    \
+        -e DOORMAN_URL="https://doorman.corda.example.com"      \
+        -e NETWORK_TRUST_PASSWORD="trustPass"       \
         -v $(pwd)/docker/config:/etc/corda          \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
         corda/corda-4.0-snapshot:latest config-generator --generic
 
+##set memory to 2gb max, and 2cores max
 docker run -ti \
-        -e JVM_ARGS="-Xmx5g -Xms2g -XX:+UseG1GC" \
+        --memory=2048m \
+        --cpus=2 \
         -v $(pwd)/docker/config:/etc/corda \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
         -v $(pwd)/docker/persistence:/opt/corda/persistence \
