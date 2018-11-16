@@ -452,6 +452,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Write the node-info file even if nothing's changed, just in case the file has been deleted.
         NodeInfoWatcher.saveToFile(configuration.baseDirectory, nodeInfoAndSigned)
+        NodeInfoWatcher.saveToFile(configuration.baseDirectory / NODE_INFO_DIRECTORY, nodeInfoAndSigned)
 
         // Always republish on startup, it's treated by network map server as a heartbeat.
         if (publish && networkMapClient != null) {
