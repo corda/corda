@@ -9,6 +9,7 @@ RUN mkdir -p /opt/corda/certificates
 RUN mkdir -p /opt/corda/drivers
 RUN mkdir -p /opt/corda/logs
 RUN mkdir -p /opt/corda/bin
+RUN mkdir -p /opt/corda/additional-node-infos
 RUN mkdir -p /etc/corda
 
 # Create corda user
@@ -36,6 +37,8 @@ VOLUME ["/opt/corda/certificates"]
 VOLUME ["/opt/corda/drivers"]
 ##LOG FOLDER
 VOLUME ["/opt/corda/logs"]
+##ADDITIONAL NODE INFOS FOLDER
+VOLUME ["/opt/corda/additional-node-infos"]
 ##CONFIG LOCATION
 VOLUME ["/etc/corda"]
 
