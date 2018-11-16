@@ -12,4 +12,5 @@ wish to try the :doc:`blob-inspector`.
    notary-healthcheck
    demobench
    node-explorer
+   ha-utilities
 
