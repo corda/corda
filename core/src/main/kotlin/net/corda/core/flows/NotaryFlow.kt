@@ -36,7 +36,7 @@ class NotaryFlow {
     open class Client(
             private val stx: SignedTransaction,
             override val progressTracker: ProgressTracker
-    ) : BackpressureAwareTimedFlow<List<TransactionSignature>, NotarisationResponse>(NotarisationResponse::class.java), TimedFlow {
+    ) : BackpressureAwareTimedFlow<List<TransactionSignature>, NotarisationResponse>(NotarisationResponse::class.java) {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
