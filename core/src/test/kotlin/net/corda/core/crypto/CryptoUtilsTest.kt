@@ -6,6 +6,7 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
+import net.corda.core.crypto.internal.PlatformSecureRandomService
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
@@ -21,10 +22,7 @@ import net.i2p.crypto.eddsa.spec.EdDSANamedCurveTable
 import net.i2p.crypto.eddsa.spec.EdDSAPublicKeySpec
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo
-import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPrivateKey
 import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
@@ -36,9 +34,9 @@ import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.math.BigInteger
-import java.security.KeyPair
 import java.security.KeyPairGenerator
-import java.security.cert.X509Certificate
+import java.security.SecureRandom
+import java.security.Security
 import java.util.*
 import kotlin.test.*
 
@@ -948,26 +946,25 @@ class CryptoUtilsTest {
         this.outputStream.close()
     }
 
-    private fun createCert(signer: ContentSigner, keyPair: KeyPair): X509Certificate {
-        val dname = X500Name("CN=TestEntity")
-        val startDate = Calendar.getInstance().let { cal ->
-            cal.time = Date()
-            cal.add(Calendar.HOUR, -1)
-            cal.time
-        }
-        val endDate = Calendar.getInstance().let { cal ->
-            cal.time = startDate
-            cal.add(Calendar.YEAR, 1)
-            cal.time
-        }
-        val certificate = JcaX509v3CertificateBuilder(
-                dname,
-                BigInteger.TEN,
-                startDate,
-                endDate,
-                dname,
-                keyPair.public
-        ).build(signer)
-        return JcaX509CertificateConverter().getCertificate(certificate)
+    @Test
+    fun `test default SecureRandom uses platformSecureRandom`() {
+        // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
+
+        // Remove [CordaSecurityProvider] in case it is already registered.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        // Try after removing CordaSecurityProvider.
+        val secureRandomNotRegisteredCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+
+        // Now register CordaSecurityProvider as last Provider.
+        Security.addProvider(CordaSecurityProvider())
+        val secureRandomRegisteredLastCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+
+        // Remove Corda Provider again and add it as the first Provider entry.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
+        val secureRandomRegisteredFirstCordaProvider = SecureRandom()
+        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
 }
