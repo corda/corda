@@ -101,7 +101,6 @@ object SerializerFactoryBuilder {
 
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
-                descriptorBasedSerializerRegistry,
                 classCarpenter.classloader,
                 false
         ) else NoEvolutionSerializerFactory
