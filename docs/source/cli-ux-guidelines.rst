@@ -192,7 +192,7 @@ Changing the type of existing command line parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Don't change the type of an existing command line parameter if that change would not be backwards compatible. For example, adding a
-value to an enumeration based parameter would be fine, but removing one would not. Rather than change the type, consider adding a new parameter,
+value to an enumeration based parameter would be fine, but removing one would not. Instead of changing the type, consider adding a new parameter,
 deprecating the old parameter as described above, and redirecting inputs from the old parameter to the new parameter internally.
 
 Testing backwards compatibility
@@ -209,21 +209,21 @@ and then creating a test class that extends ``CliBackwardsCompatibleTest`` for t
 
         class UsefulUtilityBackwardsCompatibleTest : CliBackwardsCompatibleTest(UsefulUtility::class.java)
 
-The test will search for a yaml file on the class path named ``<fully.qualified.class.name>.yml`` which details the names, types and possible
+The test will search for a YAML file on the class path named ``<fully.qualified.class.name>.yml`` which details the names, types and possible
 options of parameters, and compares it to the options of the current class to make sure they are compatible.
 
 In order to generate the file, create and run the test for your application. The test will fail, but the test output
-will contain the yaml for the current state of the tool. This can be copied and then pasted into a correctly named ``.yml``
+will contain the YAML for the current state of the tool. This can be copied and then pasted into a correctly named ``.yml``
 file in the resources directory of the project.
 
 Release process
 ~~~~~~~~~~~~~~~
 
-As part of the release process, the release manager should regenerate the yaml files for each command line tool by following the following steps:
+As part of the release process, the release manager should regenerate the YAML files for each command line tool by following the following steps:
 
 * Check out the release branch
 * Delete the ``<fully.qualified.tool.name>.yml`` file for the tool
 * Re-run the backwards compatibility test for the tool
-* Copy the resulting yaml from the test output
+* Copy the resulting YAML from the test output
 * Check out the master branch
 * Replace the text in ``<fully.qualified.tool.name>.yml`` with the text generated on the release branch
