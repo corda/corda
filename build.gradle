@@ -77,7 +77,7 @@ buildscript {
     ext.snappy_version = '0.4'
     ext.class_graph_version = '4.2.12'
     ext.jcabi_manifests_version = '1.1'
-    ext.picocli_version = '3.6.1'
+    ext.picocli_version = '3.8.0'
 
     // Name of the IntelliJ SDK created for the deterministic Java rt.jar.
     // ext.deterministic_idea_sdk = '1.8 (Deterministic)'

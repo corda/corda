@@ -64,6 +64,7 @@ see changes to this list.
 * Credit Suisse
 * cyrsis
 * Dan Newton (Accenture)
+* Daniel Krajnik (BCS Technology International)
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)

@@ -1373,8 +1373,6 @@ public final class net.corda.core.crypto.CordaSecurityProvider extends java.secu
 public static final class net.corda.core.crypto.CordaSecurityProvider$Companion extends java.lang.Object
 ##
 public final class net.corda.core.crypto.CordaSecurityProviderKt extends java.lang.Object
-  @NotNull
-  public static final String CORDA_SECURE_RANDOM_ALGORITHM = "CordaPRNG"
 ##
 public final class net.corda.core.crypto.Crypto extends java.lang.Object
   @NotNull
@@ -1508,13 +1506,6 @@ public final class net.corda.core.crypto.CryptoUtils extends java.lang.Object
   public static final boolean verify(java.security.KeyPair, byte[], byte[])
   public static final boolean verify(java.security.PublicKey, byte[], net.corda.core.crypto.DigitalSignature)
   public static final boolean verify(java.security.PublicKey, byte[], byte[])
-##
-public final class net.corda.core.crypto.DelegatingSecureRandomSpi extends java.security.SecureRandomSpi
-  public <init>(kotlin.jvm.functions.Function0<? extends java.security.SecureRandom>)
-  @Nullable
-  protected byte[] engineGenerateSeed(int)
-  protected void engineNextBytes(byte[])
-  protected void engineSetSeed(byte[])
 ##
 @CordaSerializable
 public class net.corda.core.crypto.DigitalSignature extends net.corda.core.utilities.OpaqueBytes
