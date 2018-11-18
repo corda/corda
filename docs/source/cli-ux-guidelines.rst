@@ -198,7 +198,7 @@ deprecating the old parameter as described above, and redirecting inputs from th
 Testing backwards compatibility
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When adding a new command line tool, a backwards compatibility test should be created by adding the ``test-cil`` as a test dependency of your project
+When adding a new command line tool, a backwards compatibility test should be created by adding the ``test-cli`` as a test dependency of your project
 and then creating a test class that extends ``CliBackwardsCompatibleTest`` for the class, like so:
 
 .. container:: codeset
