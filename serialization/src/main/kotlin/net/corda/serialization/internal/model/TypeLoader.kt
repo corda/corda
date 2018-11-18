@@ -33,7 +33,7 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
-                    null
+                null
             }
         }.toMap()
 

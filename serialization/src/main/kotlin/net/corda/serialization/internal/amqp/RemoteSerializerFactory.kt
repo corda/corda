@@ -51,17 +51,16 @@ class DefaultRemoteSerializerFactory(
     private fun getUncached(remoteLocalPair: ReflectedTypeInformation, descriptor: TypeDescriptor): AMQPSerializer<Any> {
         val (remoteTypeInformation, localTypeInformation) = remoteLocalPair
 
+        val localSerializer = localSerializerFactory.get(localTypeInformation)
+        val localDescriptor = localSerializer.typeDescriptor.toString()
+
+        if (localDescriptor == descriptor) return localSerializer
+
         if (remoteTypeInformation !is RemoteTypeInformation.Composable
-            && remoteTypeInformation !is RemoteTypeInformation.AnEnum) return localSerializerFactory.get(localTypeInformation)
+            && remoteTypeInformation !is RemoteTypeInformation.AnEnum) return localSerializer
 
-        val localDescriptor = localSerializerFactory.createDescriptor(localTypeInformation)
-
-        return if (localDescriptor.toString() == descriptor) {
-            localSerializerFactory.get(localTypeInformation)
-        } else {
-            evolutionSerializerFactory.getEvolutionSerializer(remoteTypeInformation, localTypeInformation).also {
-                descriptorBasedSerializerRegistry[descriptor] = it
-            }
+        return evolutionSerializerFactory.getEvolutionSerializer(remoteTypeInformation, localTypeInformation).also {
+            descriptorBasedSerializerRegistry[descriptor] = it
         }
     }
 }
