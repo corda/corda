@@ -4,8 +4,6 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
-import net.corda.confidential.SwapIdentitiesFlow
-import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -660,8 +658,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installFinalityHandler()
         flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
         flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
-        // TODO Make this an inlined flow (and remove this flow mapping!), which should be possible now that FinalityFlow is also inlined
-        flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
     }
 
     // The FinalityHandler is insecure as it blindly accepts any and all transactions into the node's local vault without doing any checks.

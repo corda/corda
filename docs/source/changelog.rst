@@ -7,6 +7,17 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
+  whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
+  also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities
+  with a node at will with no checks.
+
+  The result type has changed to a simple wrapper class, instead of a Map, to make extracting the identities easier. Also, the wire protocol
+  of the flow has slightly changed.
+
+  .. note:: V3 and V4 of confidential-identities are not compatible and confidential-identities V3 will not work with a V4 Corda node. CorDapps
+     in such scenarios using confidential-identities must be updated.
+
 * Marked the ``Attachment`` interface as ``@DoNotImplement`` because it is not meant to be extended by CorDapp developers. If you have already
   done so, please get in contact on the usual communication channels.
 
@@ -33,10 +44,10 @@ Unreleased
   un-acknowledged in the message broker. This enables the recovery scenerio whereby any missing CorDapp can be installed and retried on node
   restart. As a consequence the initiating flow will be blocked until the receiving node has resolved the issue.
 
-* ``FinalityFlow`` is now an inlined flow and no longer requires a handler flow in the counterparty. This is to fix the
-  security problem with the handler flow as it accepts any transaction it receives without any checks. Existing CorDapp
-  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that
-  CorDapps switch to this new API. See :doc:`upgrade-notes` for further details.
+* ``FinalityFlow`` is now an inlined flow and requires ``FlowSession`` s to each party intended to receive the transaction. This is to fix the
+  security problem with the old API that required every node to accept any transaction it received without any checks. Existing CorDapp
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that CorDapps switch to
+  this new API. See :doc:`upgrade-notes` for further details.
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 

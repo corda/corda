@@ -68,7 +68,6 @@ processTestResources {
 
 dependencies {
     compile project(':node-api')
-    compile project(":confidential-identities")
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')
