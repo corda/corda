@@ -36,8 +36,7 @@ class AMQPRemoteTypeModel {
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
 
         return byTypeDescriptor.mapValues { (typeDescriptor, typeNotation) ->
-            cache[typeDescriptor] ?: interpretationState.run { typeNotation.name.typeIdentifier.interpretIdentifier() }
-                    .also { cache.putIfAbsent(typeDescriptor, it) }
+            cache.getOrPut(typeDescriptor) { interpretationState.run { typeNotation.name.typeIdentifier.interpretIdentifier() } }
         }
     }
 
@@ -74,10 +73,12 @@ class AMQPRemoteTypeModel {
          * [TypeNotation].
          */
         private fun TypeNotation.interpretNotation(identifier: TypeIdentifier): RemoteTypeInformation =
-                cache[typeDescriptor] ?: when (this) {
-                    is CompositeType -> interpretComposite(identifier)
-                    is RestrictedType -> interpretRestricted(identifier)
-                }.also { cache.putIfAbsent(typeDescriptor, it) }
+                cache.getOrPut(typeDescriptor) {
+                    when (this) {
+                        is CompositeType -> interpretComposite(identifier)
+                        is RestrictedType -> interpretRestricted(identifier)
+                    }
+                }
 
         /**
          * Interpret the properties, interfaces and type parameters in this [TypeNotation], and return suitable
@@ -184,7 +185,7 @@ private fun interpretTransformSet(transformSet: EnumMap<TransformTypes, MutableL
 }
 
 private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?:
-throw NotSerializableException("Type notation has no type descriptor: $this")
+    throw NotSerializableException("Type notation has no type descriptor: $this")
 
 private val String.typeIdentifier get(): TypeIdentifier = AMQPTypeIdentifierParser.parse(this)
 

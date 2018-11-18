@@ -22,7 +22,7 @@ class CarpentryDependencyGraph private constructor(private val typesRequiringCar
         fun buildInReverseDependencyOrder(
                 typesRequiringCarpentry: Set<RemoteTypeInformation>,
                 getOrBuild: (RemoteTypeInformation) -> Type): Map<TypeIdentifier, Type> =
-            CarpentryDependencyGraph(typesRequiringCarpentry.toSet()).buildInOrder(getOrBuild)
+            CarpentryDependencyGraph(typesRequiringCarpentry).buildInOrder(getOrBuild)
     }
 
     /**
@@ -47,7 +47,7 @@ class CarpentryDependencyGraph private constructor(private val typesRequiringCar
      * [dependencies] graph.
      */
     private fun RemoteTypeInformation.dependsOn(dependees: Collection<RemoteTypeInformation>) {
-        val dependeesInTypesRequiringCarpentry = dependees.filter { it in typesRequiringCarpentry}
+        val dependeesInTypesRequiringCarpentry = dependees.filter { it in typesRequiringCarpentry }
         if (dependeesInTypesRequiringCarpentry.isEmpty()) return // we don't want to put empty sets into the map.
             dependencies.compute(this) { _, dependees ->
                 dependees?.apply { addAll(dependeesInTypesRequiringCarpentry) } ?:

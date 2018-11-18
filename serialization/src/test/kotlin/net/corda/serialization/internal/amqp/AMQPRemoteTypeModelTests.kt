@@ -38,6 +38,8 @@ class AMQPRemoteTypeModelTests {
 
     class C<V>(array: Array<out String>, list: List<UUID>, map: Map<UUID, V>, val enum: Enum): Superclass<UUID, V>(array, list, map)
 
+    class SimpleClass(val a: Int, val b: Double, val c: Short?, val d: ByteArray, val e: ByteArray?)
+
     @Test
     fun `round-trip some types through AMQP serialisations`() {
         arrayOf("").assertRemoteType("String[]")
@@ -46,6 +48,16 @@ class AMQPRemoteTypeModelTests {
         Enum.BAZ.assertRemoteType("Enum(FOO|BAR|BAZ)")
         mapOf("string" to 1).assertRemoteType("Map<?, ?>")
         arrayOf(byteArrayOf(1, 2, 3)).assertRemoteType("byte[][]")
+
+        SimpleClass(1, 2.0, null, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
+                .assertRemoteType("""
+                SimpleClass
+                  a: int
+                  b: double
+                  c (optional): Short
+                  d: byte[]
+                  e (optional): byte[]
+                """)
 
         C(arrayOf("a", "b"), listOf(UUID.randomUUID()), mapOf(UUID.randomUUID() to intArrayOf(1, 2, 3)), Enum.BAZ)
                 .assertRemoteType("""

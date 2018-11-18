@@ -10,7 +10,7 @@ import java.util.*
  * Thrown if a [TypeIdentifier] is incompatible with the local [Type] to which it refers,
  * i.e. if the number of type parameters does not match.
  */
-class IncompatibleTypeIdentifierException(message: String): NotSerializableException(message)
+class IncompatibleTypeIdentifierException(message: String) : NotSerializableException(message)
 
 /**
  * Used as a key for retrieving cached type information. We need slightly more information than the bare classname,
