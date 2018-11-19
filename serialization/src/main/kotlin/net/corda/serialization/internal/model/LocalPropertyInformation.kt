@@ -18,6 +18,10 @@ sealed class LocalPropertyInformation(val isCalculated: Boolean) {
      */
     abstract val isMandatory: Boolean
 
+    interface HasObservedGetter {
+        val observedGetter: Method
+    }
+
     /**
      * A property of an interface, for which we have only a getter method.
      *
