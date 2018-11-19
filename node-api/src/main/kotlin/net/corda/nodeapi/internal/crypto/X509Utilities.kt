@@ -254,7 +254,7 @@ object X509Utilities {
                           crlIssuer: X500Name? = null): X509Certificate {
         val builder = createPartialCertificate(certificateType, issuer, issuerPublicKey, subject, subjectPublicKey, validityWindow, nameConstraints, crlDistPoint, crlIssuer)
         return builder.build(issuerSigner).run {
-            require(isValidOn(Date()))
+            require(isValidOn(Date())){"Certificate is not valid at instant now"}
             toJca()
         }
     }
@@ -292,8 +292,8 @@ object X509Utilities {
                 crlDistPoint,
                 crlIssuer)
         return builder.build(signer).run {
-            require(isValidOn(Date()))
-            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public)))
+            require(isValidOn(Date())){"Certificate is not valid at instant now"}
+            require(isSignatureValid(JcaContentVerifierProviderBuilder().build(issuerKeyPair.public))){"Invalid signature"}
             toJca()
         }
     }

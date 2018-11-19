@@ -172,7 +172,7 @@ class SingleThreadedStateMachineManager(
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
     override fun stop(allowedUnsuspendedFiberCount: Int) {
-        require(allowedUnsuspendedFiberCount >= 0)
+        require(allowedUnsuspendedFiberCount >= 0){"allowedUnsuspendedFiberCount must be greater than or equal to zero"}
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
@@ -775,10 +775,10 @@ class SingleThreadedStateMachineManager(
     ) {
         drainFlowEventQueue(flow)
         // final sanity checks
-        require(lastState.pendingDeduplicationHandlers.isEmpty())
-        require(lastState.isRemoved)
-        require(lastState.checkpoint.subFlowStack.size == 1)
-        require(flow.fiber.id !in sessionToFlow.values)
+        require(lastState.pendingDeduplicationHandlers.isEmpty()) { "Flow cannot be removed until all pending deduplications have completed" }
+        require(lastState.isRemoved) { "Flow must be in removable state before removal" }
+        require(lastState.checkpoint.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
+        require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))

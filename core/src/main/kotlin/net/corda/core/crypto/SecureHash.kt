@@ -21,7 +21,7 @@ sealed class SecureHash(bytes: ByteArray) : OpaqueBytes(bytes) {
     /** SHA-256 is part of the SHA-2 hash function family. Generated hash is fixed size, 256-bits (32-bytes). */
     class SHA256(bytes: ByteArray) : SecureHash(bytes) {
         init {
-            require(bytes.size == 32)
+            require(bytes.size == 32) { "Invalid hash size, must be 32 bytes" }
         }
     }
 

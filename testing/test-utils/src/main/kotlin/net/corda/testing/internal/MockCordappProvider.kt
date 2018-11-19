@@ -38,7 +38,7 @@ class MockCordappProvider(
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash)
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) && it.second == contractHash }) {
-            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName), contractClassName.toByteArray(), attachments, contractHash, signers)))
+            cordappRegistry.add(Pair(cordapp, findOrImportAttachment(listOf(contractClassName), fakeAttachmentCached(contractClassName), attachments, contractHash, signers)))
         }
         return cordappRegistry.findLast { contractClassName in it.first.contractClassNames }?.second!!
     }
@@ -55,5 +55,10 @@ class MockCordappProvider(
         } else {
             attachments.importContractAttachment(contractClassNames, DEPLOYED_CORDAPP_UPLOADER, data.inputStream(), contractHash, signers)
         }
+    }
+
+    private val attachmentsCache = mutableMapOf<String, ByteArray>()
+    private fun fakeAttachmentCached(contractClass: String): ByteArray = attachmentsCache.computeIfAbsent(contractClass) {
+        fakeAttachment(contractClass, contractClass)
     }
 }

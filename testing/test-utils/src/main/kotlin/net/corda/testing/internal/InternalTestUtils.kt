@@ -33,10 +33,13 @@ import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.internal.stubs.CertificateStoreStubs
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyPair
 import java.util.*
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
 
 @Suppress("unused")
@@ -173,4 +176,17 @@ fun configureDatabase(hikariProperties: Properties,
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory)
     persistence.startHikariPool(hikariProperties, databaseConfig, schemas)
     return persistence
+}
+
+/**
+ * Convenience method for creating a fake attachment containing a file with some content.
+ */
+fun fakeAttachment(filePath: String, content: String): ByteArray {
+    val bs = ByteArrayOutputStream()
+    JarOutputStream(bs).use { js ->
+        js.putNextEntry(ZipEntry(filePath))
+        js.writer().apply { append(content); flush() }
+        js.closeEntry()
+    }
+    return bs.toByteArray()
 }

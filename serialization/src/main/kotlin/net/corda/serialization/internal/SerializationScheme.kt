@@ -8,6 +8,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.LoggerFactory
@@ -31,20 +32,12 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
-                                                              override val lenientCarpenterEnabled: Boolean = false,
-                                                              private val builder: AttachmentsClassLoaderBuilder = AttachmentsClassLoaderBuilder()
-) : SerializationContext {
-
-
+                                                              override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
     /**
      * {@inheritDoc}
-     *
-     * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val classLoader = builder.build(attachmentHashes, properties, deserializationClassLoader) ?: return this
-        return withClassLoader(classLoader)
+        return this
     }
 
     override fun withProperty(property: Any, value: Any): SerializationContext {
@@ -70,34 +63,6 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)
     override fun withEncoding(encoding: SerializationEncoding?) = copy(encoding = encoding)
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
-}
-
-/*
- * This class is internal rather than private so that serialization-deterministic
- * can replace it with an alternative version.
- */
-@DeleteForDJVM
-class AttachmentsClassLoaderBuilder() {
-    private val cache: Cache<Pair<List<SecureHash>, ClassLoader>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
-
-    fun build(attachmentHashes: List<SecureHash>, properties: Map<Any, Any>, deserializationClassLoader: ClassLoader): AttachmentsClassLoader? {
-        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.
-        try {
-            return cache.get(Pair(attachmentHashes, deserializationClassLoader)) {
-                val missing = ArrayList<SecureHash>()
-                val attachments = ArrayList<Attachment>()
-                attachmentHashes.forEach { id ->
-                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it }
-                        ?: run { missing += id }
-                }
-                missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-                AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
-            }!!
-        } catch (e: ExecutionException) {
-            // Caught from within the cache get, so unwrap.
-            throw e.cause!!
-        }
-    }
 }
 
 @KeepForDJVM

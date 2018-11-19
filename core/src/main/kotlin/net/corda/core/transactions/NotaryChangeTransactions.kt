@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
@@ -10,6 +11,7 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
@@ -74,6 +76,20 @@ data class NotaryChangeWireTransaction(
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     @DeleteForDJVM
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
+
+    /**
+     * This should return a serialized virtual output state, that will be used to verify spending transactions.
+     * The binary output should not depend on the classpath of the node that is verifying the transaction.
+     *
+     * Ideally the serialization engine would support partial deserialization so that only the Notary ( and the encumbrance can be replaced from the binary input state)
+     *
+     *
+     * TODO - currently this uses the main classloader.
+     */
+    @CordaInternal
+    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef): SerializedBytes<TransactionState<ContractState>> {
+        return services.loadState(stateRef).serialize()
+    }
 
     enum class Component {
         INPUTS, NOTARY, NEW_NOTARY

@@ -16,7 +16,7 @@ The example CorDapp allows nodes to agree IOUs with each other, as long as they 
 
 We will deploy and run the CorDapp on four test nodes:
 
-* **Notary**, which hosts a validating notary service
+* **Notary**, which runs a notary service
 * **PartyA**
 * **PartyB**
 * **PartyC**
@@ -30,10 +30,9 @@ Start by downloading the example CorDapp from GitHub:
 
 * Set up your machine by following the :doc:`quickstart guide <getting-set-up>`
 
-* Clone the example CorDapp from the `cordapp-example repository <https://github.com/corda/cordapp-example>`_ using
-  the following command: ``git clone https://github.com/corda/cordapp-example``
+* Clone the samples repository from using the following command: ``git clone https://github.com/corda/samples``
 
-* Change directories to the freshly cloned repo: ``cd cordapp-example``
+* Change directories to the ``cordapp-example`` folder: ``cd samples/cordapp-example``
 
 Opening the example CorDapp in IntelliJ
 ---------------------------------------
@@ -41,7 +40,7 @@ Let's open the example CorDapp in IntelliJ IDEA:
 
 * Open IntelliJ
 
-* A splash screen will appear. Click ``open``, select the cloned ``cordapp-example`` folder, and click ``OK``
+* A splash screen will appear. Click ``open``, navigate to and select the ``cordapp-example`` folder, and click ``OK``
 
 * Once the project is open, click ``File``, then ``Project Structure``. Under ``Project SDK:``, set the project SDK by
   clicking ``New...``, clicking ``JDK``, and navigating to ``C:\Program Files\Java\jdk1.8.0_XXX`` on Windows or ``Library/Java/JavaVirtualMachines/jdk1.8.XXX`` on MacOSX (where ``XXX`` is the
@@ -65,61 +64,59 @@ The example CorDapp has the following structure:
     │   │   └── log4j2.xml
     │   └── test
     │       └── log4j2.xml
-    ├── doc
-    │   └── example_flow.plantuml
     ├── gradle
     │   └── wrapper
     │       ├── gradle-wrapper.jar
     │       └── gradle-wrapper.properties
-    ├── lib
-    │   ├── README.txt
-    │   └── quasar.jar
     ├── java-source
-    │   └── ...
-    ├── kotlin-source
     │   ├── build.gradle
     │   └── src
+    │       ├── integrationTest
+    │       │   └── java
+    │       │       └── com
+    │       │           └── example
+    │       │               └── DriverBasedTests.java
     │       ├── main
-    │       │   ├── kotlin
+    │       │   ├── java
     │       │   │   └── com
     │       │   │       └── example
     │       │   │           ├── api
-    │       │   │           │   └── ExampleApi.kt
+    │       │   │           │   └── ExampleApi.java
     │       │   │           ├── client
-    │       │   │           │   └── ExampleClientRPC.kt
+    │       │   │           │   └── ExampleClientRPC.java
     │       │   │           ├── contract
-    │       │   │           │   └── IOUContract.kt
+    │       │   │           │   └── IOUContract.java
     │       │   │           ├── flow
-    │       │   │           │   └── ExampleFlow.kt
-    │       │   │           ├── model
-    │       │   │           │   └── IOU.kt
+    │       │   │           │   └── ExampleFlow.java
     │       │   │           ├── plugin
-    │       │   │           │   └── ExamplePlugin.kt
+    │       │   │           │   └── ExamplePlugin.java
     │       │   │           ├── schema
-    │       │   │           │   └── IOUSchema.kt
+    │       │   │           │   ├── IOUSchema.java
+    │       │   │           │   └── IOUSchemaV1.java
     │       │   │           └── state
-    │       │   │               └── IOUState.kt
+    │       │   │               └── IOUState.java
     │       │   └── resources
     │       │       ├── META-INF
     │       │       │   └── services
     │       │       │       └── net.corda.webserver.services.WebServerPluginRegistry
-    │       │       ├── certificates
-    │       │       │   ├── readme.txt
-    │       │       │   ├── sslkeystore.jks
-    │       │       │   └── truststore.jks
     │       │       └── exampleWeb
     │       │           ├── index.html
     │       │           └── js
     │       │               └── angular-module.js
     │       └── test
-    │           └── kotlin
+    │           └── java
     │               └── com
     │                   └── example
-    │                       ├── Main.kt
+    │                       ├── NodeDriver.java
     │                       ├── contract
-    │                       │   └── IOUContractTests.kt
+    │                       │   └── IOUContractTests.java
     │                       └── flow
-    │                           └── IOUFlowTests.kt
+    │                           └── IOUFlowTests.java
+    ├── kotlin-source
+    │   ├── ...
+    ├── lib
+    │   ├── README.txt
+    │   └── quasar.jar
     ├── .gitignore
     ├── LICENCE
     ├── README.md
@@ -137,16 +134,15 @@ The key files and directories are as follows:
 * **gradle** contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
-* **kotlin-source** contains the source code for the example CorDapp written in Kotlin
+* **java-source** contains the source code for the example CorDapp written in Java
 
-  * **kotlin-source/src/main/kotlin** contains the source code for the example CorDapp
-  * **kotlin-source/src/main/resources** contains the certificate store, some static web content to be served by the
+  * **java-source/src/main/java** contains the source code for the example CorDapp
+  * **java-source/src/main/resources** contains the certificate store, some static web content to be served by the
     nodes and the WebServerPluginRegistry file
-  * **kotlin-source/src/test/kotlin** contains unit tests for the contracts and flows, and the driver to run the nodes
+  * **java-source/src/test/java** contains unit tests for the contracts and flows, and the driver to run the nodes
     via IntelliJ
 
-* **java-source** contains the same source code, but written in Java. CorDapps can be developed in any language
-  targeting the JVM
+* **kotlin-source** contains the same source code, but written in Kotlin. CorDapps can be developed in either Java and Kotlin
 
 Running the example CorDapp
 ---------------------------

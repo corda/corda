@@ -289,7 +289,7 @@ class RPCServer<OPS : RPCOps>(
     private fun bindingRemovalArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
         val notificationType = artemisMessage.getStringProperty(ManagementHelper.HDR_NOTIFICATION_TYPE)
-        require(notificationType == CoreNotificationType.BINDING_REMOVED.name)
+        require(notificationType == CoreNotificationType.BINDING_REMOVED.name){"Message contained notification type of $notificationType instead of expected ${CoreNotificationType.BINDING_REMOVED.name}"}
         val clientAddress = artemisMessage.getStringProperty(ManagementHelper.HDR_ROUTING_NAME)
         log.warn("Detected RPC client disconnect on address $clientAddress, scheduling for reaping")
         invalidateClient(SimpleString(clientAddress))
@@ -299,7 +299,7 @@ class RPCServer<OPS : RPCOps>(
     private fun bindingAdditionArtemisMessageHandler(artemisMessage: ClientMessage) {
         lifeCycle.requireState(State.STARTED)
         val notificationType = artemisMessage.getStringProperty(ManagementHelper.HDR_NOTIFICATION_TYPE)
-        require(notificationType == CoreNotificationType.BINDING_ADDED.name)
+        require(notificationType == CoreNotificationType.BINDING_ADDED.name){"Message contained notification type of $notificationType instead of expected ${CoreNotificationType.BINDING_ADDED.name}"}
         val clientAddress = SimpleString(artemisMessage.getStringProperty(ManagementHelper.HDR_ROUTING_NAME))
         log.debug("RPC client queue created on address $clientAddress")
 

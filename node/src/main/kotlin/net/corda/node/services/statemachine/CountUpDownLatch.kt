@@ -1,7 +1,7 @@
 package net.corda.node.services.statemachine
 
-import co.paralleluniverse.strands.concurrent.AbstractQueuedSynchronizer
 import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.strands.concurrent.AbstractQueuedSynchronizer
 
 /**
  * Quasar-compatible latch that may be incremented.
@@ -56,7 +56,7 @@ class CountUpDownLatch(initialValue: Int) {
     }
 
     fun countDown(number: Int = 1) {
-        require(number > 0)
+        require(number > 0){"Number to count down by must be greater than 0"}
         sync.releaseShared(number)
     }
 

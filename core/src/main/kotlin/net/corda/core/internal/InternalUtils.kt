@@ -5,7 +5,10 @@ package net.corda.core.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.*
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.UntrustworthyData
 import org.slf4j.Logger
@@ -109,7 +112,7 @@ fun <T> List<T>.randomOrNull(): T? {
 /** Returns the index of the given item or throws [IllegalArgumentException] if not found. */
 fun <T> List<T>.indexOfOrThrow(item: T): Int {
     val i = indexOf(item)
-    require(i != -1)
+    require(i != -1){"No such element"}
     return i
 }
 
@@ -218,7 +221,8 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
          * Note that a slightly bigger than numOfExpectedBytes size is expected.
          */
         @DeleteForDJVM
-        fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte): InputStreamAndHash {
+        fun createInMemoryTestZip(numOfExpectedBytes: Int, content: Byte, entryName: String = "z"): InputStreamAndHash {
+            require(numOfExpectedBytes > 0){"Expected bytes must be greater than zero"}
             require(numOfExpectedBytes > 0)
             val baos = ByteArrayOutputStream()
             ZipOutputStream(baos).use { zos ->
@@ -226,7 +230,7 @@ data class InputStreamAndHash(val inputStream: InputStream, val sha256: SecureHa
                 val bytes = ByteArray(arraySize) { content }
                 val n = (numOfExpectedBytes - 1) / arraySize + 1 // same as Math.ceil(numOfExpectedBytes/arraySize).
                 zos.setLevel(Deflater.NO_COMPRESSION)
-                zos.putNextEntry(ZipEntry("z"))
+                zos.putNextEntry(ZipEntry(entryName))
                 for (i in 0 until n) {
                     zos.write(bytes, 0, arraySize)
                 }
@@ -498,3 +502,18 @@ fun <T : Any> SerializedBytes<Any>.checkPayloadIs(type: Class<T>): Untrustworthy
     return type.castIfPossible(payloadData)?.let { UntrustworthyData(it) }
             ?: throw IllegalArgumentException("We were expecting a ${type.name} but we instead got a ${payloadData.javaClass.name} ($payloadData)")
 }
+
+/**
+ * Simple Map structure that can be used as a cache in the DJVM.
+ */
+fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, V>) -> Unit = {}): MutableMap<K, V> {
+    return object : LinkedHashMap<K, V>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean {
+            val eject = size > maxSize
+            if (eject) onEject(eldest!!)
+            return eject
+        }
+    }
+}
+
+fun <K,V> MutableMap<K,V>.toSynchronised(): MutableMap<K,V> = Collections.synchronizedMap(this)

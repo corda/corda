@@ -77,7 +77,9 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         // Verify that this class is immutable (all properties are final).
         // We disable this check inside SGX as the reflection blows up.
         if (!SgxSupport.isInsideEnclave) {
-            require(props.none { it is KMutableProperty<*> })
+            props.forEach {
+                require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
+            }
         }
     }
 
