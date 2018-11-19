@@ -383,7 +383,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, constraints: List<AttachmentConstraint>, services: ServicesForResolution): AttachmentId {
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        return services.cordappProvider.getContractAttachmentID(contractClassName)!!
+        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(setOf(contractClassName))
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
