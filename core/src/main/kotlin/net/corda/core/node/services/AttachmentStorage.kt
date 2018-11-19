@@ -64,15 +64,6 @@ interface AttachmentStorage {
     fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<AttachmentId>
 
     /**
-     * Searches attachment using given criteria and optional sort rules
-     * @param criteria Query criteria to use as a filter
-     * @param sorting Sorting definition, if not given, order is undefined
-     *
-     * @return List of Attachments matching criteria, sorted according to given sorting parameter
-     */
-    fun queryAttachmentsFully(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<Attachment>
-
-    /**
      * Searches for an attachment already in the store
      * @param attachmentId The attachment Id
      * @return true if it's in there
