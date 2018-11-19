@@ -43,7 +43,7 @@ data class NotaryChangeWireTransaction(
     val newNotary: Party = serializedComponents[NEW_NOTARY.ordinal].deserialize()
 
     override val networkParametersHash: SecureHash? by lazy {
-        if (serializedComponents.size >= 4) {
+        if (serializedComponents.size >= PARAMETERS_HASH.ordinal + 1) {
             serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
         } else null
     }

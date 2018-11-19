@@ -49,7 +49,7 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
     }
 
     override val networkParametersHash: SecureHash? = let {
-        val parametersHashes = deserialiseComponentGroup(SecureHash::class, PARAMETERS_GROUP)
+        val parametersHashes = deserialiseComponentGroup(componentGroups, SecureHash::class, PARAMETERS_GROUP)
         check(parametersHashes.size <= 1) { "Invalid Transaction. More than 1 network parameters hash detected." }
         parametersHashes.firstOrNull()
     }

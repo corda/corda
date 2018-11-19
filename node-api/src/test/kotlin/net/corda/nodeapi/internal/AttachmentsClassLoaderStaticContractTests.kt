@@ -70,14 +70,6 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val networkParameters = testNetworkParameters()
 
-    private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
-        override val id: SecureHash get() = throw UnsupportedOperationException()
-    }
-
-    private val attachments = rigorousMock<AttachmentStorage>().also {
-            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
-    }
-
     private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
         doReturn(networkParameters.serialize().hash).whenever(it).currentParametersHash
         doReturn(networkParameters).whenever(it).currentParameters
@@ -88,6 +80,7 @@ class AttachmentsClassLoaderStaticContractTests {
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(networkParametersStorage).whenever(it).networkParametersStorage
+        doReturn(networkParameters).whenever(it).networkParameters
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(it).attachments
         val attachment = rigorousMock<ContractAttachment>()

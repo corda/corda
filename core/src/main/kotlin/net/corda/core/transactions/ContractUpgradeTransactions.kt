@@ -70,7 +70,7 @@ data class ContractUpgradeWireTransaction(
     val upgradedContractClassName: ContractClassName by lazy { serializedComponents[UPGRADED_CONTRACT.ordinal].deserialize<ContractClassName>() }
     val upgradedContractAttachmentId: SecureHash by lazy { serializedComponents[UPGRADED_ATTACHMENT.ordinal].deserialize<SecureHash>() }
     override val networkParametersHash: SecureHash? by lazy {
-        if (serializedComponents.size >= 6) {
+        if (serializedComponents.size >= PARAMETERS_HASH.ordinal + 1) {
             serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
         } else null
     }

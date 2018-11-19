@@ -160,8 +160,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment(att) ?: throw AttachmentResolutionException(att)
         }
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
-        val ltx = LedgerTransaction.makeLedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
-        checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize ?: 10485760)
+        val ltx = LedgerTransaction.makeLedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, resolvedNetworkParameters, resolvedReferences, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
+        checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize)
         return ltx
     }
 
@@ -274,8 +274,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
-        private const val DEFAULT_MAX_TX_SIZE = 10485760
-
         /**
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.

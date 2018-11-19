@@ -63,20 +63,8 @@ data class LedgerTransaction private constructor(
             id: SecureHash,
             notary: Party?,
             timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList(), null, null, null)
-
-    @Deprecated("Client code should not instantiate LedgerTransaction.")
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?
+            networkParameters: NetworkParameters
     ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), null, null, null)
 
     //DOCEND 1
@@ -100,7 +88,7 @@ data class LedgerTransaction private constructor(
                 notary: Party?,
                 timeWindow: TimeWindow?,
                 privacySalt: PrivacySalt,
-                networkParameters: NetworkParameters?,
+                networkParameters: NetworkParameters,
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>,
                 resolvedInputBytes: List<SerializedStateAndRef>,
