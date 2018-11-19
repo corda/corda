@@ -12,8 +12,7 @@ import java.io.NotSerializableException
 object SerializerFactoryBuilder {
 
     @JvmStatic
-    // Has to be named differently, otherwise serialization-deterministic:determinise fails.
-    fun buildDeterministic(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
+    fun build(whitelist: ClassWhitelist, classCarpenter: ClassCarpenter): SerializerFactory {
         return makeFactory(
                 whitelist,
                 classCarpenter,
@@ -26,7 +25,6 @@ object SerializerFactoryBuilder {
 
     @JvmStatic
     @DeleteForDJVM
-    @JvmOverloads
     fun build(
             whitelist: ClassWhitelist,
             classCarpenter: ClassCarpenter,
@@ -48,7 +46,6 @@ object SerializerFactoryBuilder {
 
     @JvmStatic
     @DeleteForDJVM
-    @JvmOverloads
     fun build(
             whitelist: ClassWhitelist,
             carpenterClassLoader: ClassLoader,
