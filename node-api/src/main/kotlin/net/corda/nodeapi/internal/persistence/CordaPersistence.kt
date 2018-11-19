@@ -22,11 +22,18 @@ const val NODE_DATABASE_PREFIX = "node_"
 
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
-        val initialiseSchema: Boolean = true,
-        val transactionIsolationLevel: TransactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ,
-        val exportHibernateJMXStatistics: Boolean = false,
-        val mappedSchemaCacheSize: Long = 100
-)
+        val initialiseSchema: Boolean = Defaults.initialiseSchema,
+        val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
+        val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
+        val mappedSchemaCacheSize: Long = Defaults.mappedSchemaCacheSize
+) {
+    object Defaults {
+        val initialiseSchema = true
+        val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
+        val exportHibernateJMXStatistics = false
+        val mappedSchemaCacheSize = 100L
+    }
+}
 
 // This class forms part of the node config and so any changes to it must be handled with care
 enum class TransactionIsolationLevel {
@@ -153,8 +160,8 @@ class CordaPersistence(
         var recoverableFailureCount = 0
         fun <T> quietly(task: () -> T) = try {
             task()
-        } catch (t: Throwable) {
-            log.warn("Cleanup task failed:", t)
+        } catch (e: Exception) {
+            log.warn("Cleanup task failed:", e)
         }
         while (true) {
             val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?
@@ -162,7 +169,7 @@ class CordaPersistence(
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 quietly(transaction::rollback)
                 if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause())) {
                     if (++recoverableFailureCount > recoverableFailureTolerance) throw e

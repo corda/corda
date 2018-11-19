@@ -72,7 +72,8 @@ object JacksonSupport {
                               override val isFullParties: Boolean = false) : PartyObjectMapper, ObjectMapper(factory) {
         override fun wellKnownPartyFromX500Name(name: CordaX500Name): Party? = rpc.wellKnownPartyFromX500Name(name)
         override fun partyFromKey(owningKey: PublicKey): Party? = rpc.partyFromKey(owningKey)
-        override fun partiesFromName(query: String) = rpc.partiesFromName(query, fuzzyIdentityMatch)
+        // Second parameter is exactMatch, so we have to invert the meaning here.
+        override fun partiesFromName(query: String) = rpc.partiesFromName(query, !fuzzyIdentityMatch)
         override fun nodeInfoFromParty(party: AbstractParty): NodeInfo? = rpc.nodeInfoFromParty(party)
     }
 
@@ -351,7 +352,11 @@ object JacksonSupport {
             val nameMatches = mapper.partiesFromName(parser.text)
             return when {
                 nameMatches.isEmpty() -> {
-                    val publicKey = parser.readValueAs<PublicKey>()
+                    val publicKey = try {
+                        parser.readValueAs<PublicKey>()
+                    } catch (e: Exception) {
+                        throw JsonParseException(parser, "No matching Party found, then tried to directly deserialise ${parser.text} as a PublicKey with no success", e)
+                    }
                     mapper.partyFromKey(publicKey)
                             ?: throw JsonParseException(parser, "Could not find a Party with key ${publicKey.toStringShort()}")
                 }

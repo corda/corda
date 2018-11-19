@@ -265,8 +265,11 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     override fun toString(): String = "${javaClass.simpleName}(id=$id)"
 
     private companion object {
-        private fun missingSignatureMsg(missing: Set<PublicKey>, descriptions: List<String>, id: SecureHash): String =
-                "Missing signatures for $descriptions on transaction ${id.prefixChars()} for ${missing.joinToString()}"
+        private fun missingSignatureMsg(missing: Set<PublicKey>, descriptions: List<String>, id: SecureHash): String {
+            return "Missing signatures on transaction ${id.prefixChars()} for " +
+                    "keys: ${missing.joinToString { it.toStringShort() }}, " +
+                    "by signers: ${descriptions.joinToString()} "
+        }
     }
 
     @KeepForDJVM

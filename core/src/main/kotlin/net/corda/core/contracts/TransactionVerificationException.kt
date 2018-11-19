@@ -37,7 +37,7 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @CordaSerializable
-sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
+abstract class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 
     /**
@@ -50,6 +50,19 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
         constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
     }
+
+    /**
+     * This exception happens when a transaction was not built correctly.
+     * When a contract is not annotated with [NoConstraintPropagation], then the platform ensures that the constraints of output states transition correctly from input states.
+     *
+     * @property txId The transaction.
+     * @property contractClass The fully qualified class name of the failing contract.
+     * @property inputConstraint The constraint of the input state.
+     * @property outputConstraint The constraint of the outputs state.
+     */
+    @KeepForDJVM
+    class ConstraintPropagationRejection(txId: SecureHash, val contractClass: String, inputConstraint: AttachmentConstraint, outputConstraint: AttachmentConstraint)
+        : TransactionVerificationException(txId, "Contract constraints for $contractClass are not propagated correctly. The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.", null)
 
     /**
      * The transaction attachment that contains the [contractClass] class didn't meet the constraints specified by
@@ -135,6 +148,16 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
         : TransactionVerificationException(txId, "The bi-directionality property of encumbered output states " +
             "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
             "a full cycle. Offending indices $nonMatching", null)
+
+    /**
+     * All encumbered states should be assigned to the same notary. This is due to the fact that multi-notary
+     * transactions are not supported and thus two encumbered states with different notaries cannot be consumed
+     * in the same transaction.
+     */
+    @KeepForDJVM
+    class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party)
+        : TransactionVerificationException(txId, "Encumbered output states assigned to different notaries found. " +
+            "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable

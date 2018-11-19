@@ -46,9 +46,13 @@ Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to defin
 
 ``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
 ``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version numbers used in the ``build.gradle`` file of the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version
+numbers used in the ``build.gradle`` file of the
+`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the
+`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 
-For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and version 1.1.60 of Kotlin, you'd write:
+For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and
+version 1.1.60 of Kotlin, you'd write:
 
 .. sourcecode:: groovy
 
@@ -70,19 +74,55 @@ The ``cordformation`` plugin adds two new gradle configurations:
 configurations should be used for any Corda dependency (e.g. ``corda-core``, ``corda-node``) in order to prevent a
 dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
 
-To build against Corda, you must add the following to your ``build.gradle`` file:
+Here are some guidelines for Corda dependencies:
 
-* ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
-* Each Corda compile dependency (eg ``net.corda:corda-core:$corda_release_version``) as a ``cordaCompile`` dependency
+* When building a CorDapp, you should always include ``net.corda:corda-core:$corda_release_version`` as a
+  ``cordaCompile`` dependency, and ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
 
-You may also want to add:
+* When building an RPC client that communicates with a node (e.g. a webserver), you should include
+  ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
 
-* ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile`` dependency, in order to use Corda's test
+* When you need to use the network bootstrapper to bootstrap a local network (e.g. when using ``Cordformation``), you
+  should include ``net.corda:corda-node-api:$corda_release_version`` as a ``cordaCompile`` dependency
+
+* To use Corda's test frameworks, add ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile``
+  dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency
+
+* Any other Corda dependencies you need should be included as ``cordaCompile`` dependencies
+
+Here is an overview of the various Corda dependencies:
+
+* ``corda`` - The Corda fat JAR. Do not use as a compile dependency. Required as a ``cordaRuntime`` dependency when
+  using ``Cordformation``
+* ``corda-confidential-identities`` - A part of the core Corda libraries. Automatically pulled in by other libraries
+* ``corda-core`` - Usually automatically included by another dependency, contains core Corda utilities, model, and
+  functionality. Include manually if the utilities are useful or you are writing a library for Corda
+* ``corda-core-deterministic`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
+* ``corda-djvm`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
+* ``corda-finance`` - The Corda finance CorDapp. Only include as a ``cordaCompile`` dependency if using as a dependent
+  Cordapp or if you need access to the Corda finance types. Use as a ``cordapp`` dependency if using as a CorDapp
+  dependency (see below)
+* ``corda-jackson`` - Corda Jackson support. Use if you plan to serialise Corda objects to and/or from JSON
+* ``corda-jfx`` - JavaFX utilities with some Corda-specific models and utilities. Only use with JavaFX apps
+* ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
+* ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
   frameworks
-* ``net.corda:corda-webserver:$corda_release_version`` as a ``cordaRuntime`` dependency, in order to use Corda's
-  built-in development webserver
-
-.. warning:: Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
+* ``corda-node-api`` - The node API. Required to bootstrap a local network
+* ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
+* ``corda-notary-bft-smart`` - A Corda notary implementation
+* ``corda-notary-raft`` - A Corda notary implementation
+* ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
+* ``corda-serialization`` - The Corda core serialization library. Automatically included by other dependencies
+* ``corda-serialization-deterministic`` - The Corda core serialization library. Automatically included by other
+  dependencies
+* ``corda-shell`` - Used by the Corda node. Never depend on directly
+* ``corda-test-common`` - A common test library. Automatically included by other test libraries
+* ``corda-test-utils`` - Used when writing tests against Corda/Cordapps
+* ``corda-tools-explorer`` - The Node Explorer tool. Do not depend on
+* ``corda-tools-network-bootstrapper`` - The Network Builder tool. Useful in build scripts
+* ``corda-tools-shell-cli`` - The Shell CLI tool. Useful in build scripts
+* ``corda-webserver-impl`` - The Corda webserver fat JAR. Deprecated. Usually only used by build scripts
+* ``corda-websever`` - The Corda webserver library. Deprecated. Use a standard webserver library such as Spring instead
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -157,16 +197,19 @@ The example ``cordapp`` plugin with plugin ``signing`` configuration:
         }
         //...
 
-CorDapp auto-signing allows to use signature constraints for contracts from the CorDapp
-without need to create a keystore and configure the ``cordapp`` plugin.
-For production deployment ensure to sign the CorDapp using your own certificate e.g. by setting system properties to point to an external keystore
-or by disabling signing in ``cordapp`` plugin and signing the CordDapp JAR downstream in your build pipeline.
-CorDapp signed by Corda development certificate is accepted by Corda node only when running in the development mode.
+CorDapp auto-signing allows to use signature constraints for contracts from the CorDapp without need to create a
+keystore and configure the ``cordapp`` plugin. For production deployment ensure to sign the CorDapp using your own
+certificate e.g. by setting system properties to point to an external keystore or by disabling signing in ``cordapp``
+plugin and signing the CordDapp JAR downstream in your build pipeline. CorDapp signed by Corda development certificate
+is accepted by Corda node only when running in the development mode. In case CordDapp signed by the (default)
+development key is run on node in the production mode (e.g. for testing), the node may be set to accept the development
+key by adding the ``cordappSignerKeyFingerprintBlacklist = []`` property set to empty list (see
+:ref:`Configuring a node <corda_configuration_file_signer_blacklist>`).
 
-Signing options can be contextually overwritten by the relevant system properties as described above.
-This allows the single ``build.gradle`` file to be used for a development build (defaulting to the Corda development keystore)
-and for a production build (using an external keystore).
-The example system properties setup for the build process which overrides signing options:
+Signing options can be contextually overwritten by the relevant system properties as described above. This allows the
+single ``build.gradle`` file to be used for a development build (defaulting to the Corda development keystore) and for
+a production build (using an external keystore). The example system properties setup for the build process which
+overrides signing options:
 
 .. sourcecode:: shell
 
@@ -184,8 +227,9 @@ CorDapp signing can be disabled for a build:
 
     ./gradlew -Dsigning.enabled=false
 
-Other system properties can be explicitly assigned to options by calling ``System.getProperty`` in ``cordapp`` plugin configuration.
-For example the below configuration sets the specific signing algorithm when a system property is available otherwise defaults to an empty string:
+Other system properties can be explicitly assigned to options by calling ``System.getProperty`` in ``cordapp`` plugin
+configuration. For example the below configuration sets the specific signing algorithm when a system property is
+available otherwise defaults to an empty string:
 
 .. sourcecode:: groovy
 
@@ -197,7 +241,8 @@ For example the below configuration sets the specific signing algorithm when a s
         }
         //...
 
-Then the build process can set the value for *custom.sigalg* system property and other system properties recognized by ``cordapp`` plugin:
+Then the build process can set the value for *custom.sigalg* system property and other system properties recognized by
+``cordapp`` plugin:
 
 .. sourcecode:: shell
 
@@ -213,8 +258,8 @@ Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, s
 
 Example
 ^^^^^^^
-Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you should 
-base yourself on the ``build.gradle`` file of the 
+Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you
+should base yourself on the ``build.gradle`` file of the
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
 `Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
 

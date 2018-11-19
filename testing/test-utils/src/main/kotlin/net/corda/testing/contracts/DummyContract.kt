@@ -79,7 +79,7 @@ data class DummyContract(val blank: Any? = null) : Contract {
          */
         @JvmStatic
         fun move(priors: List<StateAndRef<SingleOwnerState>>, newOwner: AbstractParty): TransactionBuilder {
-            require(priors.isNotEmpty())
+            require(priors.isNotEmpty()){"States to move to new owner must not be empty"}
             val priorState = priors[0].state.data
             val (cmd, state) = priorState.withNewOwner(newOwner)
             return TransactionBuilder(notary = priors[0].state.notary).withItems(

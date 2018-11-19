@@ -11,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.reflect.KProperty
@@ -27,6 +28,10 @@ infix fun Int.exactAdd(b: Int): Int = Math.addExact(this, b)
 
 /** Like the + operator but throws [ArithmeticException] in case of integer overflow. */
 infix fun Long.exactAdd(b: Long): Long = Math.addExact(this, b)
+
+/** There is no special case function for filtering null values out of a map in the stdlib */
+@Suppress("UNCHECKED_CAST")
+fun <K, V> Map<K, V?>.filterNotNullValues() = filterValues { it != null } as Map<K, V>
 
 /**
  * Usually you won't need this method:
@@ -142,3 +147,20 @@ fun <V> Future<V>.getOrThrow(timeout: Duration? = null): V = try {
  * Size is very cheap as it doesn't call [transform].
  */
 fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
+
+private const val MAX_SIZE = 100
+private val warnings = Collections.newSetFromMap(object : LinkedHashMap<String, Boolean>() {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > MAX_SIZE
+})
+
+/**
+ * Utility to help log a warning message only once.
+ * It implements an ad hoc Fifo cache because there's none available in the standard libraries.
+ */
+@Synchronized
+fun Logger.warnOnce(warning: String) {
+    if (warning !in warnings) {
+        warnings.add(warning)
+        this.warn(warning)
+    }
+}

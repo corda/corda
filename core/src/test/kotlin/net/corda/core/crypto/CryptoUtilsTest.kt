@@ -6,6 +6,7 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
+import net.corda.core.crypto.internal.PlatformSecureRandomService
 import net.corda.core.utilities.OpaqueBytes
 import net.i2p.crypto.eddsa.EdDSAKey
 import net.i2p.crypto.eddsa.EdDSAPrivateKey
@@ -22,12 +23,15 @@ import org.bouncycastle.jcajce.provider.asymmetric.ec.BCECPublicKey
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.interfaces.ECKey
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
+import org.bouncycastle.operator.ContentSigner
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PrivateKey
 import org.bouncycastle.pqc.jcajce.provider.sphincs.BCSphincs256PublicKey
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 import java.math.BigInteger
 import java.security.KeyPairGenerator
+import java.security.SecureRandom
+import java.security.Security
 import java.util.*
 import kotlin.test.*
 
@@ -901,7 +905,7 @@ class CryptoUtilsTest {
         val keyPairBiggerThan258bits = Crypto.deriveKeyPairFromEntropy(ECDSA_SECP256K1_SHA256, BigInteger("2").pow(259).plus(BigInteger.ONE))
         assertEquals("DL7NbssqvuuJ4cqFkkaVYu9j1MsVswESGgCfbqBS9ULwuM", keyPairBiggerThan258bits.public.toStringShort())
     }
-    
+
     @Test
     fun `Ensure deterministic signatures of EdDSA, SPHINCS-256 and RSA PKCS1`() {
         listOf(EDDSA_ED25519_SHA512, SPHINCS256_SHA256, RSA_SHA256)
@@ -921,5 +925,32 @@ class CryptoUtilsTest {
 
         // Just in case, test that signatures of different messages are not the same.
         assertNotEquals(OpaqueBytes(signedData1stTime), OpaqueBytes(signedZeroArray1stTime))
+    }
+
+    fun ContentSigner.write(message: ByteArray)  {
+        this.outputStream.write(message)
+        this.outputStream.close()
+    }
+
+    @Test
+    fun `test default SecureRandom uses platformSecureRandom`() {
+        // Note than in Corda, [CordaSecurityProvider] is registered as the first provider.
+
+        // Remove [CordaSecurityProvider] in case it is already registered.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        // Try after removing CordaSecurityProvider.
+        val secureRandomNotRegisteredCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomNotRegisteredCordaProvider.algorithm)
+
+        // Now register CordaSecurityProvider as last Provider.
+        Security.addProvider(CordaSecurityProvider())
+        val secureRandomRegisteredLastCordaProvider = SecureRandom()
+        assertNotEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredLastCordaProvider.algorithm)
+
+        // Remove Corda Provider again and add it as the first Provider entry.
+        Security.removeProvider(CordaSecurityProvider.PROVIDER_NAME)
+        Security.insertProviderAt(CordaSecurityProvider(), 1) // This is base-1.
+        val secureRandomRegisteredFirstCordaProvider = SecureRandom()
+        assertEquals(PlatformSecureRandomService.algorithm, secureRandomRegisteredFirstCordaProvider.algorithm)
     }
 }

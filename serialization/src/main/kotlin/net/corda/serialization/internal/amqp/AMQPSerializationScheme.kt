@@ -172,7 +172,7 @@ abstract class AbstractAMQPSerializationScheme(
     // Not used as a simple direct import to facilitate testing
     open val publicKeySerializer: CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 
-    private fun getSerializerFactory(context: SerializationContext): SerializerFactory {
+    fun getSerializerFactory(context: SerializationContext): SerializerFactory {
         val key = Pair(context.whitelist, context.deserializationClassLoader)
         // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
         return serializerFactoriesForContexts[key] ?: serializerFactoriesForContexts.computeIfAbsent(key) {

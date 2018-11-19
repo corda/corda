@@ -13,29 +13,38 @@ By this point, :doc:`your dev environment should be set up <getting-set-up>`, yo
 :doc:`your first CorDapp <tutorial-cordapp>`, and you're familiar with Corda's :doc:`key concepts <key-concepts>`. What
 comes next?
 
-If you're a developer, the next step is to write your own CorDapp. CorDapps are plugins that are installed on one or
-more Corda nodes, and give the nodes' owners the ability to make their node conduct some new process - anything from
+If you're a developer, the next step is to write your own CorDapp. CorDapps are applications that are installed on one or
+more Corda nodes, and that allow the node's operator to instruct their node to perform some new process - anything from
 issuing a debt instrument to making a restaurant booking.
 
 Our use-case
 ------------
-Our CorDapp will model IOUs on-ledger. An IOU – short for “I O(we) (yo)U” – records the fact that one person owes
-another person a given amount of money. Clearly this is sensitive information that we'd only want to communicate on
-a need-to-know basis between the lender and the borrower. Fortunately, this is one of the areas where Corda excels.
-Corda makes it easy to allow a small set of parties to agree on a shared fact without needing to share this fact with
-everyone else on the network, as is the norm in blockchain platforms.
+We will write a CorDapp to model IOUs on the blockchain. Each IOU – short for “I O(we) (yo)U” – will record the fact that one node owes
+another node a certain amount. This simple CorDapp will showcase several key benefits of Corda as a blockchain platform:
 
-To serve any useful function, our CorDapp will need at least two things:
+* **Privacy** - Since IOUs represent sensitive information, we will be taking advantage of Corda's ability to only share
+  ledger updates with other nodes on a need-to-know basis, instead of using a gossip protocol to share this information with every node on
+  the network as you would with a traditional blockchain platform
 
-* **States**, the shared facts that Corda nodes reach consensus over and are then stored on the ledger
-* **Flows**, which encapsulate the procedure for carrying out a specific ledger update
+* **Well-known identities** - Each Corda node has a well-known identity on the network. This allows us to write code in terms of real
+  identities, rather than anonymous public keys
 
-Our IOU CorDapp is no exception. It will define both a state and a flow:
+* **Re-use of existing, proven technologies** - We will be writing our CorDapp using standard Java. It will run on a Corda node, which is
+  simply a Java process and runs on a regular Java machine (e.g. on your local machine or in the cloud). The nodes will store their data in
+  a standard SQL database
+
+CorDapps usually define at least three things:
+
+* **States** - the (possibly shared) facts that are written to the ledger
+* **Flows** - the procedures for carrying out specific ledger updates
+* **Contracts** - the constraints governing how states of a given type can evolve over time
+
+Our IOU CorDapp is no exception. It will define the following components:
 
 The IOUState
 ^^^^^^^^^^^^
-Our state will be the ``IOUState``. It will store the value of the IOU, as well as the identities of the lender and the
-borrower. We can visualize ``IOUState`` as follows:
+Our state will be the ``IOUState``, representing an IOU. It will contain the IOU's value, its lender and its borrower. We can visualize
+``IOUState`` as follows:
 
   .. image:: resources/tutorial-state.png
      :scale: 25%
@@ -43,20 +52,20 @@ borrower. We can visualize ``IOUState`` as follows:
 
 The IOUFlow
 ^^^^^^^^^^^
-Our flow will be the ``IOUFlow``. This flow will completely automate the process of issuing a new IOU onto a ledger. It
-is composed of the following steps:
+Our flow will be the ``IOUFlow``. This flow will completely automate the process of issuing a new IOU onto a ledger. It has the following
+steps:
 
   .. image:: resources/simple-tutorial-flow.png
      :scale: 25%
      :align: center
 
-In traditional distributed ledger systems, where all data is broadcast to every network participant, you don’t need to
-think about data flows – you simply package up your ledger update and send it to everyone else on the network. But in
-Corda, where privacy is a core focus, flows allow us to carefully control who sees what during the process of
-agreeing a ledger update.
+The IOUContract
+^^^^^^^^^^^^^^^
+For this tutorial, we will use the default ``TemplateContract``. We will update it to create a fully-fledged ``IOUContract`` in the next
+tutorial.
 
 Progress so far
 ---------------
-We've sketched out a simple CorDapp that will allow nodes to confidentially issue new IOUs onto a ledger.
+We've designed a simple CorDapp that will allow nodes to agree new IOUs on the blockchain.
 
-Next, we'll be taking a look at the template project we'll be using as the basis for our CorDapp.
+Next, we'll take a look at the template project we'll be using as the basis for our CorDapp.

@@ -12,7 +12,7 @@ class VersionedParsingExampleTest {
     @Test
     fun correct_parsing_function_is_used_for_present_version() {
 
-        val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", null)
+        val versionParser = Configuration.Version.Extractor.fromPath("configuration.metadata.version")
         val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parseRequired(config) }
         val parseConfiguration = VersionedSpecificationRegistry.mapping(extractVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
 
@@ -35,7 +35,7 @@ class VersionedParsingExampleTest {
     fun default_value_is_used_for_absent_version() {
 
         val defaultVersion = 2
-        val versionParser = Configuration.Version.Extractor.fromKey("configuration.metadata.version", defaultVersion)
+        val versionParser = Configuration.Version.Extractor.fromPath("configuration.metadata.version", defaultVersion)
         val extractVersion: (Config) -> Valid<Int> = { config -> versionParser.parseRequired(config) }
         val parseConfiguration = VersionedSpecificationRegistry.mapping(extractVersion, 1 to RpcSettingsSpec.V1, 2 to RpcSettingsSpec.V2)
 
@@ -52,7 +52,7 @@ class VersionedParsingExampleTest {
     private fun assertResult(result: Valid<RpcSettings>, principalAddressValue: Address, adminAddressValue: Address) {
 
         assertThat(result.isValid).isTrue()
-        assertThat(result.valueOrThrow()).satisfies { value ->
+        assertThat(result.value()).satisfies { value ->
 
             assertThat(value.principal).isEqualTo(principalAddressValue)
             assertThat(value.admin).isEqualTo(adminAddressValue)
@@ -94,7 +94,7 @@ class VersionedParsingExampleTest {
                 val adminAddress = addressFor(adminHost, adminPort)
 
                 return if (principalAddress.isValid && adminAddress.isValid) {
-                    return valid(RpcSettings(principalAddress.value, adminAddress.value))
+                    return valid(RpcSettings(principalAddress.value(), adminAddress.value()))
                 } else {
                     invalid(principalAddress.errors + adminAddress.errors)
                 }
@@ -128,4 +128,4 @@ class VersionedParsingExampleTest {
     }
 }
 
-private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it ?: throw IllegalStateException("Absent version value.") }
+private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it }

@@ -44,7 +44,7 @@ class TestCommsFlowInitiator(private val x500Name: CordaX500Name? = null) : Flow
         tx.addOutputState(CommsTestState(responses, serviceHub.myInfo.legalIdentities.first()), CommsTestContract::class.java.name)
         tx.addCommand(CommsTestCommand, serviceHub.myInfo.legalIdentities.first().owningKey)
         val signedTx = serviceHub.signInitialTransaction(tx)
-        subFlow(FinalityFlow(signedTx))
+        subFlow(FinalityFlow(signedTx, emptyList()))
         return responses
     }
 

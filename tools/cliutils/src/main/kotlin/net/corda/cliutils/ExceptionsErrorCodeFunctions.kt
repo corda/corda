@@ -8,10 +8,12 @@ import java.util.*
 internal fun Message.withErrorCodeFor(error: Throwable?, level: Level): Message {
 
     return when {
-        error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}]", format, parameters, throwable)
+        error != null && level.isInRange(Level.FATAL, Level.WARN) -> CompositeMessage("$formattedMessage [errorCode=${error.errorCode()}, moreInformationAt=${error.errorCodeLocationUrl()}]", format, parameters, throwable)
         else -> this
     }
 }
+
+private fun Throwable.errorCodeLocationUrl() = "https://errors.corda.net/${CordaVersionProvider.platformEditionCode}/${CordaVersionProvider.semanticVersion}/${errorCode()}"
 
 private fun Throwable.errorCode(hashedFields: (Throwable) -> Array<out Any?> = Throwable::defaultHashedFields): String {
 

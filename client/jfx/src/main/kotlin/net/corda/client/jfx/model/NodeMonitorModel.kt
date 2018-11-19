@@ -202,15 +202,15 @@ class NodeMonitorModel : AutoCloseable {
                 val _connection = client.start(username, password)
                 // Check connection is truly operational before returning it.
                 val nodeInfo = _connection.proxy.nodeInfo()
-                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
+                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty()){"No identity certificates found"}
                 _connection
-            } catch (throwable: Throwable) {
+            } catch (exception: Exception) {
                 if (shouldRetry) {
                     // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                    logger.info("Exception upon establishing connection: {}", throwable.message)
+                    logger.info("Exception upon establishing connection: {}", exception.message)
                     null
                 } else {
-                    throw throwable
+                    throw exception
                 }
             }
 

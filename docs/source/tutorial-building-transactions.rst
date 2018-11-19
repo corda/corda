@@ -81,12 +81,10 @@ To give a few more specific details consider two simplified real world
 scenarios. First, a basic foreign exchange cash transaction. This
 transaction needs to locate a set of funds to exchange. A flow
 modelling this is implemented in ``FxTransactionBuildTutorial.kt``
-(see ``docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FxTransactionBuildTutorial.kt`` in the
-`main Corda repo <https://github.com/corda/corda>`_).
+(in the `main Corda repo <https://github.com/corda/corda>`_).
 Second, a simple business model in which parties manually accept or
 reject each other's trade proposals, which is implemented in
-``WorkflowTransactionBuildTutorial.kt`` (see
-``docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/WorkflowTransactionBuildTutorial.kt`` in the
+``WorkflowTransactionBuildTutorial.kt`` (in the
 `main Corda repo <https://github.com/corda/corda>`_). To run and explore these
 examples using the IntelliJ IDE one can run/step through the respective unit
 tests in ``FxTransactionBuildTutorialTest.kt`` and
@@ -148,7 +146,7 @@ parameters to the flow to identify the states being operated upon. Thus
 code to gather the latest input state for a given ``StateRef`` would use
 the ``VaultService`` as follows:
 
-.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/WorkflowTransactionBuildTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/txbuild/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 1
     :end-before: DOCEND 1
@@ -221,7 +219,7 @@ and convert it into a ``SignedTransaction``.
 
 Examples of this process are:
 
-.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/WorkflowTransactionBuildTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/txbuild/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 2
     :end-before: DOCEND 2
@@ -260,7 +258,7 @@ context. For example, the flow may need to check that the parties are the
 right ones, or that the ``Command`` present on the transaction is as
 expected for this specific flow. An example of this from the demo code is:
 
-.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/WorkflowTransactionBuildTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/txbuild/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 3
     :end-before: DOCEND 3
@@ -277,7 +275,7 @@ Once all the signatures are applied to the ``SignedTransaction``, the
 final steps are notarisation and ensuring that all nodes record the fully-signed transaction. The
 code for this is standardised in the ``FinalityFlow``:
 
-.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/WorkflowTransactionBuildTutorial.kt
+.. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/txbuild/WorkflowTransactionBuildTutorial.kt
     :language: kotlin
     :start-after: DOCSTART 4
     :end-before: DOCEND 4

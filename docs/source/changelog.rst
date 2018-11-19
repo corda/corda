@@ -10,11 +10,26 @@ Unreleased
 * Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
   and is configurable via the node config. See :doc:`network-map` for more information.
 
+* Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
+  to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
+
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
-* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+* CorDapps now have the ability to specify a minimum platform version in their MANIFEST.MF to prevent old nodes from loading them.
 
-* Introduce minimum and target platform version for CorDapps.
+* CorDapps have the ability to specify a target platform version in their MANIFEST.MF as a means of indicating to the node
+  the app was designed and tested on that version.
+
+* Nodes will no longer automatically reject flow initiation requests for flows they don't know about. Instead the request will remain
+  un-acknowledged in the message broker. This enables the recovery scenerio whereby any missing CorDapp can be installed and retried on node
+  restart. As a consequence the initiating flow will be blocked until the receiving node has resolved the issue.
+
+* ``FinalityFlow`` is now an inlined flow and no longer requires a handler flow in the counterparty. This is to fix the
+  security problem with the handler flow as it accepts any transaction it receives without any checks. Existing CorDapp
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that
+  CorDapps switch to this new API. See :doc:`upgrade-notes` for further details.
+
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
 * BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
   their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
@@ -191,7 +206,7 @@ Unreleased
 * Configuration file changes:
 
   * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+    Values are: [FAIL, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.

@@ -137,21 +137,119 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
 
-JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+JDBC sessions can be used in flows and services (see ":doc:`flow-state-machines`").
 
-The following example illustrates the creation of a custom corda service using a jdbcSession:
+The following example illustrates the creation of a custom Corda service using a ``jdbcSession``:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART CustomVaultQuery
   :end-before: DOCEND CustomVaultQuery
 
 which is then referenced within a custom flow:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
-For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
+For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
+JPA Support
+-----------
+In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
+method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
+useful if off-ledger data must be maintained in conjunction with on-ledger state data.
+
+    .. note:: Your entity must be included as a mappedType in as part of a MappedSchema for it to be added to Hibernate
+              as a custom schema. See Samples below.
+
+The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. Note that ``PersistentFoo`` is added to
+a list of mapped types which is passed to ``MappedSChema``. This is exactly how state schemas are defined, except that
+the entity in this case should not subclass ``PersistentState`` (as it is not a state object). See examples:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        public class FooSchema {}
+
+        @CordaSerializable
+        public class FooSchemaV1 extends MappedSchema {
+            FooSchemaV1() {
+                super(FooSchema.class, 1, ImmutableList.of(PersistentFoo.class));
+            }
+
+            @Entity
+            @Table(name = "foos")
+            class PersistentFoo implements Serializable {
+                @Id
+                @Column(name = "foo_id")
+                String fooId;
+
+                @Column(name = "foo_data")
+                String fooData;
+            }
+        }
+
+    .. sourcecode:: kotlin
+
+        object FooSchema
+
+        object FooSchemaV1 : MappedSchema(schemaFamily = FooSchema.javaClass, version = 1, mappedTypes = listOf(PersistentFoo::class.java)) {
+            @Entity
+            @Table(name = "foos")
+            class PersistentFoo(@Id @Column(name = "foo_id") var fooId: String, @Column(name = "foo_data") var fooData: String) : Serializable
+        }
+
+Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        PersistentFoo foo = new PersistentFoo(new UniqueIdentifier().getId().toString(), "Bar");
+        node.getServices().withEntityManager(entityManager -> {
+            entityManager.persist(foo);
+            entityManager.flush();
+            return null;
+        });
+
+    .. sourcecode:: kotlin
+
+        val foo = FooSchemaV1.PersistentFoo(UniqueIdentifier().id.toString(), "Bar")
+        serviceHub.withEntityManager {
+            persist(foo)
+        }
+
+And retrieved via a query, as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: java
+
+        node.getServices().withEntityManager((EntityManager entityManager) -> {
+            CriteriaQuery<PersistentFoo> query = entityManager.getCriteriaBuilder().createQuery(PersistentFoo.class);
+            Root<PersistentFoo> type = query.from(PersistentFoo.class);
+            query.select(type);
+            return entityManager.createQuery(query).getResultList();
+        });
+
+    .. sourcecode:: kotlin
+
+        val result: MutableList<FooSchemaV1.PersistentFoo> = services.withEntityManager {
+            val query = criteriaBuilder.createQuery(FooSchemaV1.PersistentFoo::class.java)
+            val type = query.from(FooSchemaV1.PersistentFoo::class.java)
+            query.select(type)
+            createQuery(query).resultList
+        }
+
+Please note that suspendable flow operations such as:
+
+* ``FlowSession.send``
+* ``FlowSession.receive``
+* ``FlowLogic.receiveAll``
+* ``FlowLogic.sleep``
+* ``FlowLogic.subFlow``
+
+Cannot be used within the lambda function passed to ``withEntityManager``.

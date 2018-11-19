@@ -114,7 +114,7 @@ object TwoPartyTradeFlow {
             val txId = subFlow(signTransactionFlow).id
             // DOCEND 5
 
-            return waitForLedgerCommit(txId)
+            return subFlow(ReceiveFinalityFlow(otherSideSession, expectedTxId = txId))
         }
         // DOCEND 4
 
@@ -188,7 +188,7 @@ object TwoPartyTradeFlow {
 
             // Notarise and record the transaction.
             progressTracker.currentStep = RECORDING
-            return subFlow(FinalityFlow(twiceSignedTx))
+            return subFlow(FinalityFlow(twiceSignedTx, sellerSession))
         }
 
         @Suspendable
@@ -203,7 +203,7 @@ object TwoPartyTradeFlow {
                 // The asset must either be owned by the well known identity of the counterparty, or we must be able to
                 // prove the owner is a confidential identity of the counterparty.
                 val assetForSaleIdentity = serviceHub.identityService.wellKnownPartyFromAnonymous(asset.owner)
-                require(assetForSaleIdentity == sellerSession.counterparty)
+                require(assetForSaleIdentity == sellerSession.counterparty){"Well known identity lookup returned identity that does not match counterparty"}
 
                 // Register the identity we're about to send payment to. This shouldn't be the same as the asset owner
                 // identity, so that anonymity is enforced.

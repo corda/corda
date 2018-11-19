@@ -175,8 +175,6 @@ class RetryFlowMockTest {
                 TODO("not implemented")
             }
         }), nodeA.services.newContext()).get()
-        // Should be 2 records, one for admission and one for keep in.
-        records.next()
         records.next()
         // Killing it should remove it.
         nodeA.smm.killFlow(flow.id)

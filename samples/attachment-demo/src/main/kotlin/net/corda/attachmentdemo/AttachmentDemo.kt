@@ -8,16 +8,14 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
-import net.corda.core.flows.StartableByService
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
+import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -96,7 +94,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
             val id = rpc.uploadAttachment(it)
             require(hash == id) { "Id was '$id' instead of '$hash'" }
         }
-        require(rpc.attachmentExists(hash))
+        require(rpc.attachmentExists(hash)){"Attachment matching hash: $hash does not exist"}
     }
 
     val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSideFuture.get(), notaryFuture.get(), hash)
@@ -106,6 +104,7 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
 }
 // DOCEND 2
 
+@InitiatingFlow
 @StartableByRPC
 class AttachmentDemoFlow(private val otherSide: Party,
                          private val notary: Party,
@@ -125,10 +124,19 @@ class AttachmentDemoFlow(private val otherSide: Party,
 
         progressTracker.currentStep = SIGNING
 
-        // Send the transaction to the other recipient
         val stx = serviceHub.signInitialTransaction(ptx)
 
-        return subFlow(FinalityFlow(stx, setOf(otherSide)))
+        // Send the transaction to the other recipient
+        return subFlow(FinalityFlow(stx, initiateFlow(otherSide)))
+    }
+}
+
+@InitiatedBy(AttachmentDemoFlow::class)
+class StoreAttachmentFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        // As a non-participant to the transaction we need to record all states
+        subFlow(ReceiveFinalityFlow(otherSide, statesToRecord = StatesToRecord.ALL_VISIBLE))
     }
 }
 
@@ -151,7 +159,7 @@ fun recipient(rpc: CordaRPCOps, webPort: Int) {
     if (wtx.attachments.isNotEmpty()) {
         if (wtx.outputs.isNotEmpty()) {
             val state = wtx.outputsOfType<AttachmentContract.State>().single()
-            require(rpc.attachmentExists(state.hash))
+            require(rpc.attachmentExists(state.hash)) {"attachment matching hash: ${state.hash} does not exist"}
 
             // Download the attachment via the Web endpoint.
             val connection = URL("http://localhost:$webPort/attachments/${state.hash}").openConnection() as HttpURLConnection
@@ -199,7 +207,7 @@ class AttachmentContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val state = tx.outputsOfType<AttachmentContract.State>().single()
         // we check that at least one has the matching hash, the other will be the contract
-        require(tx.attachments.any { it.id == state.hash })
+        require(tx.attachments.any { it.id == state.hash }) {"At least one attachment in transaction must match hash ${state.hash}"}
     }
 
     object Command : TypeOnlyCommandData()

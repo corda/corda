@@ -71,7 +71,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 HTTPNetworkRegistrationService(
                         requireNotNull(conf.networkServices),
                         versionInfo),
-                nodeRegistration).buildKeystore()
+                nodeRegistration).generateKeysAndRegister()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
@@ -107,4 +107,3 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         initialRegistration(node.configuration)
     }
 }
-

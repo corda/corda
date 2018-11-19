@@ -1,5 +1,5 @@
-The Corda Testnet
-=================
+Joining Corda Testnet
+=====================
 
 .. contents::
 

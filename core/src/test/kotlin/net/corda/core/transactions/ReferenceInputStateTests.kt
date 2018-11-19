@@ -187,7 +187,7 @@ class ReferenceStateTests {
     @Test
     fun `state ref cannot be a reference input and regular input in the same transaction`() {
         val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
-        val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY), StateRef(SecureHash.zeroHash, 0))
+        val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))
         assertFailsWith(IllegalArgumentException::class, "A StateRef cannot be both an input and a reference input in the same transaction.") {
             @Suppress("DEPRECATION") // To be removed when feature is finalised.
             TransactionBuilder(notary = DUMMY_NOTARY).addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())

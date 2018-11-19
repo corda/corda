@@ -4,6 +4,7 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigObject
 import com.typesafe.config.ConfigValue
+import com.typesafe.config.ConfigValueFactory
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -24,7 +25,7 @@ object Configuration {
         /**
          * Describes a [Config] hiding sensitive data.
          */
-        fun describe(configuration: Config): ConfigValue
+        fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }): ConfigValue?
     }
 
     object Value {
@@ -112,6 +113,11 @@ object Configuration {
          */
         interface Definition<TYPE> : Configuration.Property.Metadata, Configuration.Validator, Configuration.Value.Extractor<TYPE>, Configuration.Describer, Configuration.Value.Parser<TYPE> {
 
+            /**
+             * Validates target [Config] with default [Configuration.Validation.Options].
+             */
+            fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
+
             override fun isSpecifiedBy(configuration: Config): Boolean = configuration.hasPath(key)
 
             /**
@@ -120,9 +126,9 @@ object Configuration {
             interface Required<TYPE> : Definition<TYPE> {
 
                 /**
-                 * Returns an optional property with given [defaultValue]. This property does not produce errors in case the value is unspecified, returning the [defaultValue] instead.
+                 * Returns an optional property. This property does not produce errors in case the value is unspecified.
                  */
-                fun optional(defaultValue: TYPE? = null): Definition<TYPE?>
+                fun optional(): Optional<TYPE>
             }
 
             /**
@@ -134,6 +140,17 @@ object Configuration {
                  * Returns a required property expecting multiple values for the relevant key.
                  */
                 fun list(): Required<List<TYPE>>
+            }
+
+            /**
+             * Defines a property that might be missing, resulting in a null value.
+             */
+            interface Optional<TYPE> : Definition<TYPE?> {
+
+                /**
+                 * Allows to specify a [defaultValue], returning a required [Configuration.Property.Definition].
+                 */
+                fun withDefaultValue(defaultValue: TYPE): Definition<TYPE>
             }
 
             /**
@@ -219,7 +236,7 @@ object Configuration {
 
                 /**
                  * Returns a [Configuration.Property.Definition.Standard] with value of type [ENUM].
-                 * This property expects the exact [ENUM] value specified as text for the relevant key.
+                 * This property expects a value in the configuration matching one of the cases of [ENUM], as text, in uppercase.
                  */
                 fun <ENUM : Enum<ENUM>> enum(key: String, enumClass: KClass<ENUM>, sensitive: Boolean = false): Standard<ENUM> = StandardProperty(key, enumClass.java.simpleName, { conf: Config, propertyKey: String -> conf.getEnum(enumClass.java, propertyKey) }, { conf: Config, propertyKey: String -> conf.getEnumList(enumClass.java, propertyKey) }, sensitive)
             }
@@ -246,6 +263,13 @@ object Configuration {
          */
         val properties: Set<Property.Definition<*>>
 
+        /**
+         * Validates target [Config] with default [Configuration.Validation.Options].
+         */
+        fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
+
+        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue
+
         companion object {
 
             /**
@@ -270,7 +294,7 @@ object Configuration {
      * A [Configuration.Schema] that is also able to parse a raw [Config] object into a [VALUE].
      * It is an abstract class to allow extension with delegated properties e.g., object Settings: Specification() { val address by string().optional("localhost:8080") }.
      */
-    abstract class Specification<VALUE>(name: String?, private val prefix: String? = null) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
+    abstract class Specification<VALUE>(override val name: String, private val prefix: String? = null) : Configuration.Schema, Configuration.Value.Parser<VALUE> {
 
         private val mutableProperties = mutableSetOf<Property.Definition<*>>()
 
@@ -321,17 +345,20 @@ object Configuration {
 
         /**
          * Returns a delegate for a [Configuration.Property.Definition.Standard] of type [ENUM].
-         * This property expects the exact [ENUM] value specified as text for the relevant key.
+         * This property expects a value in the configuration matching one of the cases of [ENUM], as text, in uppercase.
          */
         fun <ENUM : Enum<ENUM>> enum(key: String? = null, enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = PropertyDelegate.enum(key, prefix, enumClass, sensitive) { mutableProperties.add(it) }
 
-        override val name: String? get() = schema.name
+        /**
+         * @see enum
+         */
+        fun <ENUM : Enum<ENUM>> enum(enumClass: KClass<ENUM>, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key = null, enumClass = enumClass, sensitive = sensitive)
 
         override fun description() = schema.description()
 
-        override fun validate(target: Config, options: Validation.Options?) = schema.validate(target, options)
+        override fun validate(target: Config, options: Validation.Options) = schema.validate(target, options)
 
-        override fun describe(configuration: Config) = schema.describe(configuration)
+        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = schema.describe(configuration, serialiseValue)
 
         final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).mapValid(::parseValid)
 
@@ -397,9 +424,11 @@ object Configuration {
             val containingPathAsString: String = containingPath.joinToString(".")
 
             /**
-             * [pathstr] joined by "." characters.
+             * [path] joined by "." characters.
              */
-            val pathAsString: String = path.joinToString(".")
+            val pathAsString: String get() = path.joinToString(".")
+
+            internal fun withContainingPathPrefix(vararg containingPath: String): Error = withContainingPath(*(containingPath.toList() + this.containingPath).toTypedArray())
 
             internal abstract fun withContainingPath(vararg containingPath: String): Error
 
@@ -415,12 +444,14 @@ object Configuration {
              */
             class WrongType private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): WrongType = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> WrongType(key, typeName, message, path) }
+
+                    fun forKey(keyName: String, expectedTypeName: String, actualTypeName: String): WrongType = of("$keyName has type ${actualTypeName.toUpperCase()} rather than ${expectedTypeName.toUpperCase()}")
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = WrongType(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): WrongType = WrongType.of(message, keyName, typeName, containingPath)
             }
@@ -430,12 +461,14 @@ object Configuration {
              */
             class MissingValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MissingValue = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> MissingValue(key, typeName, message, path) }
+
+                    fun forKey(keyName: String): MissingValue = of("No configuration setting found for key '$keyName'", keyName)
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = MissingValue(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): MissingValue = MissingValue.of(message, keyName, typeName, containingPath)
             }
@@ -445,12 +478,12 @@ object Configuration {
              */
             class BadValue private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadValue = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> BadValue(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = BadValue(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): BadValue = BadValue.of(message, keyName, typeName, containingPath)
             }
@@ -460,12 +493,12 @@ object Configuration {
              */
             class BadPath private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): BadPath = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> BadPath(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = BadPath(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): BadPath = BadPath.of(message, keyName, typeName, containingPath)
             }
@@ -475,12 +508,12 @@ object Configuration {
              */
             class MalformedStructure private constructor(override val keyName: String, override val typeName: String, message: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, typeName, message, containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(message: String, keyName: String = UNKNOWN, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
+                    fun of(message: String, keyName: String? = null, typeName: String = UNKNOWN, containingPath: List<String> = emptyList()): MalformedStructure = contextualize(keyName ?: UNKNOWN, containingPath).let { (key, path) -> MalformedStructure(key, typeName, message, path) }
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = MalformedStructure(keyName, typeName, message, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): MalformedStructure = MalformedStructure.of(message, keyName, typeName, containingPath)
             }
@@ -490,16 +523,14 @@ object Configuration {
              */
             class Unknown private constructor(override val keyName: String, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(keyName, null, message(keyName), containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    private fun message(keyName: String) = "Unknown property \"$keyName\"."
+                    private fun message(keyName: String) = "Unknown property \'$keyName\'"
 
-                    internal fun of(keyName: String = UNKNOWN, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
+                    fun of(keyName: String = UNKNOWN, containingPath: List<String> = emptyList()): Unknown = contextualize(keyName, containingPath).let { (key, path) -> Unknown(key, path) }
                 }
 
-                override val message = message(pathAsString)
-
-                override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = Unknown(keyName, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): Unknown = Unknown.of(keyName, containingPath)
             }
@@ -509,12 +540,12 @@ object Configuration {
              */
             class UnsupportedVersion private constructor(val version: Int, containingPath: List<String> = emptyList()) : Configuration.Validation.Error(null, null, "Unknown configuration version $version.", containingPath) {
 
-                internal companion object {
+                companion object {
 
-                    internal fun of(version: Int): UnsupportedVersion = UnsupportedVersion(version)
+                    fun of(version: Int): UnsupportedVersion = UnsupportedVersion(version)
                 }
 
-                override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList() + this.containingPath)
+                override fun withContainingPath(vararg containingPath: String) = UnsupportedVersion(version, containingPath.toList())
 
                 override fun with(keyName: String, typeName: String): UnsupportedVersion = this
             }
@@ -526,16 +557,16 @@ object Configuration {
         /**
          * Defines the contract from extracting a specification version from a [Config] object.
          */
-        interface Extractor : Configuration.Value.Parser<Int?> {
+        interface Extractor : Configuration.Value.Parser<Int> {
 
             companion object {
 
                 const val DEFAULT_VERSION_VALUE = 1
 
                 /**
-                 * Returns a [Configuration.Version.Extractor] that reads the value from given [versionKey], defaulting to [versionDefaultValue] when [versionKey] is unspecified.
+                 * Returns a [Configuration.Version.Extractor] that reads the value from given [versionPath], defaulting to [versionDefaultValue] when [versionPath] is unspecified.
                  */
-                fun fromKey(versionKey: String, versionDefaultValue: Int? = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionKey, versionDefaultValue)
+                fun fromPath(versionPath: String, versionDefaultValue: Int = DEFAULT_VERSION_VALUE): Configuration.Version.Extractor = VersionExtractor(versionPath, versionDefaultValue)
             }
         }
     }

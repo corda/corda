@@ -21,11 +21,11 @@ require the following steps:
 
   1. Building the transaction proposal for the issuance of a new IOU onto a ledger
   2. Signing the transaction proposal
-  3. Recording the transaction
-  4. Sending the transaction to the IOU's borrower so that they can record it too
+  3. Recording the transaction and sending it to the IOU's borrower so that they can record it too
 
-At this stage, we do not require the borrower to approve and sign IOU issuance transactions. We will be able to impose
-this requirement when we look at contracts in the next tutorial.
+We also need the borrower to receive the transaction and record it for itself. At this stage, we do not require the borrower
+to approve and sign IOU issuance transactions. We will be able to impose this requirement when we look at contracts in the
+next tutorial.
 
 Subflows
 ^^^^^^^^
@@ -34,14 +34,11 @@ forcing each developer to reimplement their own logic to handle these tasks, Cor
 to handle these tasks. We call these flows that are invoked in the context of a larger flow to handle a repeatable task
 *subflows*.
 
-In our case, we can automate steps 3 and 4 of the IOU issuance flow using ``FinalityFlow``.
-
 FlowLogic
 ---------
 All flows must subclass ``FlowLogic``. You then define the steps taken by the flow by overriding ``FlowLogic.call``.
 
-Let's define our ``IOUFlow`` in either ``TemplateFlow.java`` or ``App.kt``. Delete the two existing flows in the
-template (``Initiator`` and ``Responder``), and replace them with the following:
+Let's define our ``IOUFlow``. Replace the definition of ``Initiator`` with the following:
 
 .. container:: codeset
 
@@ -55,8 +52,9 @@ template (``Initiator`` and ``Responder``), and replace them with the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-If you're following along in Java, you'll also need to rename ``TemplateFlow.java`` to ``IOUFlow.java``. Let's walk
-through this code step-by-step.
+If you're following along in Java, you'll also need to rename ``Initiator.java`` to ``IOUFlow.java``.
+
+Let's walk through this code step-by-step.
 
 We've defined our own ``FlowLogic`` subclass that overrides ``FlowLogic.call``. ``FlowLogic.call`` has a return type
 that must match the type parameter passed to ``FlowLogic`` - this is type returned by running the flow.
@@ -74,7 +72,7 @@ annotation out will lead to some very weird error messages!
 There are also a few more annotations, on the ``FlowLogic`` subclass itself:
 
   * ``@InitiatingFlow`` means that this flow is part of a flow pair and that it triggers the other side to run the
-    the counterpart flow.
+    the counterpart flow (which in our case is the ``IOUFlowResponder`` defined below).
   * ``@StartableByRPC`` allows the node owner to start this flow via an RPC call
 
 Let's walk through the steps of ``FlowLogic.call`` itself. This is where we actually describe the procedure for
@@ -146,13 +144,34 @@ We sign the transaction using ``ServiceHub.signInitialTransaction``, which retur
 
 Finalising the transaction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-We now have a valid signed transaction. All that's left to do is to have it recorded by all the relevant parties. By
-doing so, it will become a permanent part of the ledger. As discussed, we'll handle this process automatically using a
-built-in flow called ``FinalityFlow``. ``FinalityFlow`` completely automates the process of:
+We now have a valid signed transaction. All that's left to do is to get the notary to sign it, have that recorded
+locally and then send it to all the relevant parties. Once that happens the transaction will become a permanent part of the
+ledger. We use ``FinalityFlow`` which does all of this for the lender.
 
-* Notarising the transaction if required (i.e. if the transaction contains inputs and/or a time-window)
-* Recording it in our vault
-* Sending it to the other participants (i.e. the lender) for them to record as well
+For the borrower to receive the transaction they just need a flow that responds to the seller's.
+
+Creating the borrower's flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The borrower has to use ``ReceiveFinalityFlow`` in order to receive and record the transaction; it needs to respond to
+the lender's flow. Let's do that by replacing ``Responder`` from the template with the following:
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/helloworld/IOUFlowResponder.kt
+        :language: kotlin
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/helloworld/IOUFlowResponder.java
+        :language: java
+        :start-after: DOCSTART 01
+        :end-before: DOCEND 01
+
+As with the ``IOUFlow``, our ``IOUFlowResponder`` flow is a ``FlowLogic`` subclass where we've overridden ``FlowLogic.call``.
+
+The flow is annotated with ``InitiatedBy(IOUFlow.class)``, which means that your node will invoke
+``IOUFlowResponder.call`` when it receives a message from a instance of ``Initiator`` running on another node. This message
+will be the finalised transaction which will be recorded in the borrower's vault.
 
 Progress so far
 ---------------
