@@ -42,12 +42,6 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun openAttachment(id: SecureHash): Attachment? = files[id]?.first
 
-    override fun queryAttachmentsFully(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<Attachment> {
-        val contractMetadataList = emptyList<ContractAttachmentMetadata>()
-        val attachmentIds = _contractClasses.filterKeys { contractMetadataList.contains(it) }.values.toList()
-        return _files.filterKeys { attachmentIds.contains(it) }.values.map { it.first }
-    }
-
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<SecureHash> {
         val contractMetadataList = emptyList<ContractAttachmentMetadata>()
         return _contractClasses.filterKeys { contractMetadataList.contains(it) }.values.toList()
