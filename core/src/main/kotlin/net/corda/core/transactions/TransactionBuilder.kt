@@ -21,6 +21,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.filterNotNullValues
 import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
@@ -125,6 +126,18 @@ open class TransactionBuilder @JvmOverloads constructor(
         for (state in (inputsWithTransactionState + resolvedOutputs)) {
             checkConstraintValidity(state)
         }
+
+//        val inputsAttchamentsVersions2 : List<Pair<ContractClassName, Attachment?>> = inputs.map {
+//             Pair(services.loadState(it).contract, services.loadContractAttachment(it)) }
+//
+//        val inputsAttchamentsVersions3 : List<Pair<ContractClassName, Attachment>> = inputsAttchamentsVersions2.filter { it.second != null }
+//                .map { Pair(it.first, it.second as Attachment) }
+//
+//        val inputsAttchamentsVersions4: List<Pair<ContractClassName, Version>> =
+//                inputsAttchamentsVersions3.map { Pair(it.first, Version(it.second.openAsJAR().manifest.mainAttributes.getValue("Implementation-Version"))) }
+//
+//        val inputContractClassToJArVersion: Map<ContractClassName, Set<Version>> = inputsAttchamentsVersions4.groupBy { it.first }
+//                .mapValues { it.value.map { p -> p.second }.toSet() }
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             WireTransaction(

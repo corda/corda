@@ -64,6 +64,9 @@ interface ServicesForResolution {
     // as the existing transaction store will become encrypted at some point
     @Throws(TransactionResolutionException::class)
     fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
+
+    @Throws(TransactionResolutionException::class)
+    fun loadContractAttachment(stateRef: StateRef): Attachment?
 }
 
 /**

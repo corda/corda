@@ -170,7 +170,7 @@ data class StateRef(val txhash: SecureHash, val index: Int) {
 @CordaSerializable
 // DOCSTART 7
 data class StateAndRef<out T : ContractState>(val state: TransactionState<T>, val ref: StateRef) {
-    /** For adding [StateAndRef]s as references to a [TransactionBuilder]. */
+    /** For adding [StateAndRef]s as references to a [net.corda.core.transactions.TransactionBuilder]. */
     fun referenced() = ReferencedStateAndRef(this)
 }
 // DOCEND 7

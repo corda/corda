@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import com.google.common.collect.MutableClassToInstanceMap
+import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.StateRef
 import net.corda.core.cordapp.CordappProvider
@@ -321,6 +322,9 @@ open class MockServices private constructor(
 
     override fun loadState(stateRef: StateRef) = servicesForResolution.loadState(stateRef)
     override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
+
+    override fun loadContractAttachment(stateRef: StateRef) = servicesForResolution.loadContractAttachment(stateRef)
+
 }
 
 /**

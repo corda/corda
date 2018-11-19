@@ -4,10 +4,12 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.transactions.WireTransaction
 
 data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
@@ -32,5 +34,21 @@ data class ServicesForResolutionImpl(
             val baseTx = stx.resolveBaseTransaction(this)
             it.value.map { StateAndRef(baseTx.outputs[it.index], it) }
         }.toSet()
+    }
+
+    override fun loadContractAttachment (stateRef: StateRef): Attachment? {
+            val stx = validatedTransactions.getTransaction(stateRef.txhash)
+            if (stx!= null) {
+                val transactionState = loadState(stateRef)
+                if (stx.coreTransaction is WireTransaction) {
+                    for (attachmentId in stx.tx.attachments) {
+                        val attachment = attachments.openAttachment(attachmentId)
+                        if (attachment is ContractAttachment && transactionState.contract == attachment.contract) {
+                            return attachment
+                        }
+                    }
+                }
+            }
+            return null
     }
 }
