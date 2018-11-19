@@ -3,7 +3,7 @@
 ##in this example the doorman will be running on the host machine on port 8080
 ##so the container must be launched with "host" networking
 docker run -ti --net="host" \
-        -e  MY_LEGAL_NAME="O=EXAMPLE,L=Berlin,C=DE"     \
+        -e MY_LEGAL_NAME="O=EXAMPLE,L=Berlin,C=DE"     \
         -e MY_PUBLIC_ADDRESS="corda.example-hoster.com"       \
         -e COMPATIBILITY_ZONE="https://map.corda.example.com"    \
         -e DOORMAN_URL="https://doorman.corda.example.com"      \
@@ -21,4 +21,6 @@ docker run -ti \
         -v $(pwd)/docker/persistence:/opt/corda/persistence \
         -v $(pwd)/docker/logs:/opt/corda/logs \
         -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
+        -p 10200:10200 \
+        -p 10201:10201 \
         corda/corda-4.0-snapshot:latest

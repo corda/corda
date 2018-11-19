@@ -1,6 +1,6 @@
 FROM azul/zulu-openjdk:8u192
 
-RUN apt-get update && apt-get -y install bash curl unzip
+RUN apt-get update && apt-get -y upgrade && apt-get -y install bash curl unzip
 
 # Create dirs
 RUN mkdir -p /opt/corda/cordapps
@@ -23,6 +23,10 @@ ENV PERSISTENCE_FOLDER="/opt/corda/persistence"
 ENV CERTIFICATES_FOLDER="/opt/corda/certificates"
 ENV DRIVERS_FOLDER="/opt/corda/drivers"
 ENV CONFIG_FOLDER="/etc/corda"
+
+ENV MY_P2P_PORT=10200
+ENV MY_RPC_PORT=10201
+ENV MY_RPC_ADMIN_PORT=10202
 
 RUN chown -R corda:corda /opt/corda
 RUN chown -R corda:corda /etc/corda
@@ -58,6 +62,9 @@ RUN chmod +x /opt/corda/bin/config-generator
 RUN chmod +x /opt/corda/bin/run-corda
 
 ENV PATH=$PATH:/opt/corda/bin
+
+EXPOSE $MY_P2P_PORT
+EXPOSE $MY_RPC_PORT
 
 USER "corda"
 CMD ["run-corda"]

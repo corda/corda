@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 : ${MY_PUBLIC_ADDRESS:? 'MY_PUBLIC_ADDRESS must be set as environment variable'}
 
-: ${MY_P2P_PORT=4443}
-: ${MY_RPC_PORT=10021}
-: ${MY_RPC_ADMIN_PORT=10020}
 : ${TRUST_STORE_NAME="network-root-truststore.jks"}
 : ${JVM_ARGS='-Xmx4g -Xms2g -XX:+UseG1GC'}
 
@@ -25,7 +22,7 @@ function generateTestnetConfig() {
 }
 
 function generateGenericCZConfig(){
-    : ${COMPATIBILITY_ZONE:? '$COMPATIBILITY_ZONE, the CompatibilityZone to join must be set as environment variable'}
+    : ${COMPATIBILITY_ZONE:? '$COMPATIBILITY_ZONE, the Compatibility Zone to join must be set as environment variable'}
     : ${DOORMAN_URL:? '$DOORMAN_URL, the Doorman to use when joining must be set as environment variable'}
     : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
     : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
@@ -53,8 +50,8 @@ function generateGenericCZConfig(){
 function downloadTestnetCerts() {
     if [[ ! -f ${CERTIFICATES_FOLDER}/certs.zip ]]; then
         : ${ONE_TIME_DOWNLOAD_KEY:? '$ONE_TIME_DOWNLOAD_KEY must be set as environment variable'}
-        : ${LOCALITY:? '$LOCALITY (the locality used when registering for testnet) must be set as environment variable'}
-        : ${COUNTRY:? 'COUNTRY (the country used when registering for testnet) must be set as environment variable'}
+        : ${LOCALITY:? '$LOCALITY (the locality used when registering for Testnet) must be set as environment variable'}
+        : ${COUNTRY:? '$COUNTRY (the country used when registering for Testnet) must be set as environment variable'}
         curl -L -d "{\"x500Name\":{\"locality\":\"${LOCALITY}\", \"country\":\"${COUNTRY}\"}, \"configType\": \"INSTALLSCRIPT\", \"include\": { \"systemdServices\": false, \"cordapps\": false, \"cordaJar\": false, \"cordaWebserverJar\": false, \"scripts\": false} }" \
         -H 'Content-Type: application/json' \
         -X POST "https://testnet.corda.network/api/user/node/generate/one-time-key/redeem/$ONE_TIME_DOWNLOAD_KEY" \
@@ -84,7 +81,7 @@ while :; do
             if [[ ${GENERATE_TEST_NET} = 0 ]]; then
                 GENERATE_GENERIC=1
             else
-                die 'ERROR: "cannot generate config for multiple networks'
+                die 'ERROR: cannot generate config for multiple networks'
             fi
             ;;
         --)              # End of all options.

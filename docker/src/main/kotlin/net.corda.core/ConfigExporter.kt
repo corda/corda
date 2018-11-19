@@ -22,7 +22,7 @@ class ConfigExporter {
         ourParsedConfig = ourParsedConfig.withValue("myLegalName", testNetParsedConfig.getValue("myLegalName"))
         ourParsedConfig = ourParsedConfig.withValue("trustStorePassword", testNetParsedConfig.getValue("trustStorePassword"))
         File(outputFile).writer().use { fileWriter ->
-            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig()
+            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().value().toConfig()
             var configToWrite = ConfigFactory.empty()
             ourParsedConfig.entrySet().sortedBy { it.key }.forEach { configEntry ->
                 //use all keys present in "ourConfig" but get values from "finalConfig"
@@ -37,7 +37,7 @@ class ConfigExporter {
     fun buildGenericCZConfig(ourConf: String, outputFile: String){
         val ourParsedConfig = ConfigFactory.parseFile(File(ourConf))
         File(outputFile).writer().use { fileWriter ->
-            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().orThrow().toConfig()
+            val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().value().toConfig()
             var configToWrite = ConfigFactory.empty()
             ourParsedConfig.entrySet().sortedBy { it.key }.forEach { configEntry ->
                 //use all keys present in "ourConfig" but get values from "finalConfig"
