@@ -4,8 +4,6 @@ import java.lang.reflect.*
 import kotlin.reflect.KFunction
 import java.util.*
 
-typealias PropertyName = String
-
 /**
  * The [LocalTypeInformation] captured for a [Type] gathers together everything that can be ascertained about the type
  * through runtime reflection, in the form of a directed acyclic graph (DAG) of types and relationships between types.

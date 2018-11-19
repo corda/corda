@@ -169,7 +169,7 @@ class DeserializationInput constructor(
                 val objectRead = when (obj) {
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
-                        val serializer = serializerFactory.get(obj.descriptor, schemas)
+                        val serializer = serializerFactory.get(obj.descriptor.toString(), schemas)
                         if (type != TypeIdentifier.UnknownType.getLocalType() && serializer.type != type && with(serializer.type) {
                                     !isSubClassOf(type) && !materiallyEquivalentTo(type)
                                 }

@@ -4,10 +4,20 @@ import net.corda.core.contracts.ContractState
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 
+/**
+ * A factory that knows how to create serialisers when there is a mismatch between the remote and local type schemas.
+ */
 interface EvolutionSerializerFactory {
+
+    /**
+     * Compare the given [RemoteTypeInformation] and [LocalTypeInformation], and construct (if needed) an evolution
+     * serialiser that can take properties serialised in the remote schema and construct an object conformant to the local schema.
+     *
+     * Will return null if no evolution is necessary, because the schemas are compatible.
+     */
     fun getEvolutionSerializer(
             remoteTypeInformation: RemoteTypeInformation,
-            localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>
+            localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>?
 }
 
 class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, reason: String)
@@ -25,31 +35,45 @@ class DefaultEvolutionSerializerFactory(
         private val mustPreserveContractStateData: Boolean): EvolutionSerializerFactory {
 
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
-                                        localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
+                                        localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>? {
         val local = (localTypeInformation as? LocalTypeInformation.Cycle)?.follow ?: localTypeInformation
 
-        val serializerForTypeDescriptor = when(remoteTypeInformation) {
+        return when(remoteTypeInformation) {
             is RemoteTypeInformation.Composable -> when (local) {
                 is LocalTypeInformation.Composable -> remoteTypeInformation.getEvolutionSerializer(local)
-                else -> null
+                else -> throw NotSerializableException("""
+                    Remote type is Composable, but local type is not.
+
+                    Remote type:
+                    ${remoteTypeInformation.prettyPrint(false)}
+
+                    Local type:
+                    ${localTypeInformation.prettyPrint(false)}
+                """.trimIndent())
             }
             is RemoteTypeInformation.AnEnum -> when(local) {
                 is LocalTypeInformation.AnEnum -> remoteTypeInformation.getEvolutionSerializer(local)
-                else -> null
-            }
-            else -> null
-        }
+                else -> throw NotSerializableException("""
+                    Remote type is Enum, but local type is not.
 
-        return serializerForTypeDescriptor ?: localSerializerFactory.get(localTypeInformation)
+                    Remote type:
+                    ${remoteTypeInformation.prettyPrint(false)}
+
+                    Local type:
+                    ${localTypeInformation.prettyPrint(false)}
+                """.trimIndent())
+            }
+            else -> throw NotSerializableException("Cannot create an evolution serialiser for remote type $remoteTypeInformation")
+        }
     }
     
     private fun RemoteTypeInformation.Composable.getEvolutionSerializer(
-            localTypeInformation: LocalTypeInformation.Composable): AMQPSerializer<Any> {
+            localTypeInformation: LocalTypeInformation.Composable): AMQPSerializer<Any>? {
         // The no-op case: although the fingerprints don't match for some reason, we have compatible signatures.
         if (propertyNamesMatch(localTypeInformation)) {
             // Make sure types are assignment-compatible, and return the local serializer for the type.
             validateCompatibility(localTypeInformation)
-            return localSerializerFactory.get(localTypeInformation)
+            return null
         }
 
         // Failing that, we have to create an evolution serializer.
@@ -126,8 +150,8 @@ class DefaultEvolutionSerializerFactory(
         ContractState::class.java.isAssignableFrom(typeIdentifier.getLocalType(classLoader).asClass())
 
     private fun RemoteTypeInformation.AnEnum.getEvolutionSerializer(
-            localTypeInformation: LocalTypeInformation.AnEnum): AMQPSerializer<Any> {
-        if (members == localTypeInformation.members) return localSerializerFactory.get(localTypeInformation)
+            localTypeInformation: LocalTypeInformation.AnEnum): AMQPSerializer<Any>? {
+        if (members == localTypeInformation.members) return null
 
         val remoteTransforms = transforms
         val localTransforms = localTypeInformation.getEnumTransforms(localSerializerFactory)
