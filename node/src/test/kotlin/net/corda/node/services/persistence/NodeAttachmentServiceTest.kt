@@ -91,7 +91,7 @@ class NodeAttachmentServiceTest {
             val signedJar = jarAndSigner.first
             signedJar.inputStream().use { jarStream ->
                 val attachmentId = storage.importAttachment(jarStream, "test", null)
-                assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signers.map { it.hash })
+                assertEquals(listOf(jarAndSigner.second.hash), storage.openAttachment(attachmentId)!!.signerKeys.map { it.hash })
             }
         }
     }
@@ -102,7 +102,7 @@ class NodeAttachmentServiceTest {
             val jarName = makeTestContractJar(it.path, "com.example.MyContract")
             it.path.resolve(jarName).inputStream().use { jarStream ->
                 val attachmentId = storage.importAttachment(jarStream, "test", null)
-                assertEquals(0, storage.openAttachment(attachmentId)!!.signers.size)
+                assertEquals(0, storage.openAttachment(attachmentId)!!.signerKeys.size)
             }
         }
     }

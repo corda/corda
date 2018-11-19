@@ -234,7 +234,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val attachment = rigorousMock<ContractAttachment>()
         doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
         doReturn(attachmentId).whenever(attachment).id
-        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
 

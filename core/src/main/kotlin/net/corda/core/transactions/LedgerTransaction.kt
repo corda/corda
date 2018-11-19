@@ -166,7 +166,7 @@ data class LedgerTransaction private constructor(
 
         contractsAndOwners.forEach { contract, owner ->
             val attachment = contractAttachmentsByContract[contract]!!
-            if (!owner.isFulfilledBy(attachment.signers)) {
+            if (!owner.isFulfilledBy(attachment.signerKeys)) {
                 throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
             }
         }
