@@ -10,7 +10,7 @@ import java.util.*
  * Thrown if a [TypeIdentifier] is incompatible with the local [Type] to which it refers,
  * i.e. if the number of type parameters does not match.
  */
-class IncompatibleTypeIdentifierException(message: String): NotSerializableException(message)
+class IncompatibleTypeIdentifierException(message: String) : NotSerializableException(message)
 
 /**
  * Used as a key for retrieving cached type information. We need slightly more information than the bare classname,
@@ -104,7 +104,7 @@ sealed class TypeIdentifier {
      */
     object TopType : TypeIdentifier() {
         override val name get() = "*"
-        override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass("java.lang.Object")
+        override fun getLocalType(classLoader: ClassLoader): Type = Any::class.java
         override fun toString() = "TopType"
     }
 
