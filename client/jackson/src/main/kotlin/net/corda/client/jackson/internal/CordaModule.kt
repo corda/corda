@@ -94,13 +94,7 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
         val beanClass = beanDesc.beanClass
         if (hasCordaSerializable(beanClass) && beanClass.kotlinObjectInstance == null) {
             val typeInformation = serializerFactory.getTypeInformation(beanClass)
-            val properties = when(typeInformation) {
-                is LocalTypeInformation.Composable -> typeInformation.properties
-                is LocalTypeInformation.Abstract -> typeInformation.properties
-                is LocalTypeInformation.AnInterface -> typeInformation.properties
-                is LocalTypeInformation.NonComposable -> typeInformation.properties
-                else -> emptyMap()
-            }
+            val properties = typeInformation.propertiesOrEmptyMap
             val amqpProperties = properties.mapNotNull { (name, property) ->
                 if (property.isCalculated) null else name
             }

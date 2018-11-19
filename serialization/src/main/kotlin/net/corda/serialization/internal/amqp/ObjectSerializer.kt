@@ -20,24 +20,19 @@ interface ObjectSerializer : AMQPSerializer<Any> {
             return when (typeInformation) {
                 is LocalTypeInformation.Composable ->
                     makeForComposable(typeInformation, typeNotation, typeDescriptor, factory)
-                is LocalTypeInformation.AnInterface ->
-                    makeForAbstract(typeNotation, typeInformation.interfaces, typeInformation.properties,
-                            typeInformation, typeDescriptor, factory)
+                is LocalTypeInformation.AnInterface,
                 is LocalTypeInformation.Abstract ->
-                    makeForAbstract(typeNotation, typeInformation.interfaces, typeInformation.properties,
-                            typeInformation, typeDescriptor, factory)
+                    makeForAbstract(typeNotation, typeInformation, typeDescriptor, factory)
                 else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
             }
         }
 
         private fun makeForAbstract(typeNotation: CompositeType,
-                                    interfaces: List<LocalTypeInformation>,
-                                    properties: Map<PropertyName, LocalPropertyInformation>,
                                     typeInformation: LocalTypeInformation,
                                     typeDescriptor: Symbol,
                                     factory: LocalSerializerFactory): AbstractObjectSerializer {
-            val propertySerializers = makePropertySerializers(properties, factory)
-            val writer = ComposableObjectWriter(typeNotation, interfaces, propertySerializers)
+            val propertySerializers = makePropertySerializers(typeInformation.propertiesOrEmptyMap, factory)
+            val writer = ComposableObjectWriter(typeNotation, typeInformation.interfacesOrEmptyList, propertySerializers)
             return AbstractObjectSerializer(typeInformation.observedType, typeDescriptor, propertySerializers,
                     typeNotation.fields, writer)
         }

@@ -15,8 +15,8 @@ interface EvolutionSerializerFactory {
      * Will return null if no evolution is necessary, because the schemas are compatible.
      */
     fun getEvolutionSerializer(
-            remoteTypeInformation: RemoteTypeInformation,
-            localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>?
+            remote: RemoteTypeInformation,
+            local: LocalTypeInformation): AMQPSerializer<Any>?
 }
 
 class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformation, reason: String)
@@ -33,20 +33,17 @@ class DefaultEvolutionSerializerFactory(
         private val classLoader: ClassLoader,
         private val mustPreserveDataWhenEvolving: Boolean): EvolutionSerializerFactory {
 
-    override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
-                                        localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>? {
-        val local = localTypeInformation
-
-        return when(remoteTypeInformation) {
-            is RemoteTypeInformation.Composable ->
-                if (local is LocalTypeInformation.Composable) remoteTypeInformation.getEvolutionSerializer(local)
-                else null
-            is RemoteTypeInformation.AnEnum ->
-                if (local is LocalTypeInformation.AnEnum) remoteTypeInformation.getEvolutionSerializer(local)
-                else null
-            else -> null
-        }
-    }
+    override fun getEvolutionSerializer(remote: RemoteTypeInformation,
+                                        local: LocalTypeInformation): AMQPSerializer<Any>? =
+            when(remote) {
+                is RemoteTypeInformation.Composable ->
+                    if (local is LocalTypeInformation.Composable) remote.getEvolutionSerializer(local)
+                    else null
+                is RemoteTypeInformation.AnEnum ->
+                    if (local is LocalTypeInformation.AnEnum) remote.getEvolutionSerializer(local)
+                    else null
+                else -> null
+            }
     
     private fun RemoteTypeInformation.Composable.getEvolutionSerializer(
             localTypeInformation: LocalTypeInformation.Composable): AMQPSerializer<Any>? {
@@ -62,7 +59,7 @@ class DefaultEvolutionSerializerFactory(
         val constructorForEvolution = bestMatchEvolutionConstructor?.constructor ?: localTypeInformation.constructor
         val evolverProperties = bestMatchEvolutionConstructor?.properties ?: localTypeInformation.properties
 
-        validateEvolvability(localTypeInformation, evolverProperties)
+        validateEvolvability(evolverProperties)
 
         return buildComposableEvolutionSerializer(localTypeInformation, constructorForEvolution, evolverProperties)
     }
@@ -100,9 +97,7 @@ class DefaultEvolutionSerializerFactory(
         }
     }
 
-    private fun RemoteTypeInformation.Composable.validateEvolvability(
-                                   localTypeInformation: LocalTypeInformation,
-                                   localProperties: Map<PropertyName, LocalPropertyInformation>) {
+    private fun RemoteTypeInformation.Composable.validateEvolvability(localProperties: Map<PropertyName, LocalPropertyInformation>) {
         val remotePropertyNames = properties.keys
         val localPropertyNames = localProperties.keys
         val deletedProperties = remotePropertyNames - localPropertyNames
