@@ -329,11 +329,11 @@ private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val right: PartialTreeJson? = null) {
     init {
         if (includedLeaf != null) {
-            require(leaf == null && left == null && right == null)
+            require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
         } else if (leaf != null) {
-            require(left == null && right == null)
+            require(left == null && right == null) { "Invalid JSON structure" }
         } else {
-            require(left != null && right != null)
+            require(left != null && right != null) { "Invalid JSON structure" }
         }
     }
 }
