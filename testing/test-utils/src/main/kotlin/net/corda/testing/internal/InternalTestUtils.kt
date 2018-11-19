@@ -173,7 +173,7 @@ fun configureDatabase(hikariProperties: Properties,
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory()): CordaPersistence {
     val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
     val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
-    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory)
+    val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory, null)
     persistence.startHikariPool(hikariProperties, databaseConfig, schemas)
     return persistence
 }

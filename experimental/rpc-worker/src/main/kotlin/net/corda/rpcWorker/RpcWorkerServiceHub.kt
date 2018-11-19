@@ -92,7 +92,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
             identityService::wellKnownPartyFromX500Name,
             identityService::wellKnownPartyFromAnonymous,
             schemaService,
-            cacheFactory
+            cacheFactory,
+            cordappLoader.appClassLoader
     )
 
     init {
