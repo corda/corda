@@ -88,7 +88,8 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
-                serializedReferences: List<SerializedStateAndRef>? = null
+                serializedReferences: List<SerializedStateAndRef>? = null,
+                inputStatesContractClassNameToVersions: Map<ContractClassName, Set<Version>>
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
                 this.componentGroups = componentGroups
