@@ -4,7 +4,6 @@ import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
@@ -14,18 +13,23 @@ import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.model.LocalPropertyInformation
+import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.model.PropertyName
 import org.apache.qpid.proton.amqp.Symbol
 import picocli.CommandLine
 import java.io.File
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
+import java.lang.reflect.WildcardType
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import kotlin.reflect.full.superclasses
 
 fun main(args: Array<String>) {
     GenerateCPPHeaders().start(args)
@@ -72,7 +76,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
     @CommandLine.Parameters(index = "1", arity = "1..*", paramLabel = "CLASS-NAME", description = ["A list of fully qualified Java class names to generate"])
     lateinit var classNames: List<String>
 
-    private fun Type.getCppName() = this.typeName.replace(".", "::")
+    private fun Type.mangleToCPPSyntax() = this.typeName.replace(".", "::").replace("?", "void *")
 
     override fun runProgram(): Int {
         val classes = classNames.map { Class.forName(it) }
@@ -106,7 +110,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
     }
 
     private val Type.baseClass: Class<*> get() = ((this as? ParameterizedType)?.rawType as? Class<*> ?: this as Class<*>)
-    private val Type.eraseGenerics: String get() = baseClass.toGenericString()
+    private val Type.eraseGenericsToBounds: String get() = baseClass.toGenericString()
 
     private data class GenResult(val code: String?, val dependencies: Set<Type>, val needsSpecialisationFor: Symbol?)
 
@@ -148,6 +152,8 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         val descriptorSpecializations = HashMap<String, MutableSet<String>>()
         while (workQ.isNotEmpty()) {
             val type = workQ.pop()
+            if (type.eraseGenericsToBounds in seenSoFar)
+                continue   // This can happen if we have cycles in the _type_ graph (not object graph).
             try {
                 val baseName: String = type.baseClass.name
                 val (code, dependencies, needsSpecialisationFor) = generateClassFor(type, serializerFactory, seenSoFar) ?: continue
@@ -163,7 +169,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                         .toMutableSet()
 
                 if (needsSpecialisationFor != null) {
-                    val specialization = """template<> const std::string ${type.getCppName()}::descriptor() { return "$needsSpecialisationFor"; }"""
+                    val specialization = """template<> const std::string ${type.mangleToCPPSyntax()}::descriptor() { return "$needsSpecialisationFor"; }"""
                     descriptorSpecializations.getOrPut(baseName) { LinkedHashSet() } += specialization
                     predeclarationsNeeded += type.allMentionedClasses
                 }
@@ -181,7 +187,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     classPredeclarations.getOrPut(baseName) { LinkedHashSet() }.addAll(predeclarationsNeeded)
 
                 workQ += dependencies
-                seenSoFar += type.eraseGenerics
+                seenSoFar += type.eraseGenericsToBounds
             } catch (e: AMQPNotSerializableException) {
                 println("Warning: Skipping $type due to inability to process it: ${e.message}")
             }
@@ -189,7 +195,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         for ((baseName, classSource) in classSources) {
             val path = Paths.get(baseName.replace('.', File.separatorChar).replace('$', '.') + ".h")
-            val guardName = baseName.toUpperCase().replace('.', '_') + "_H"
+            val guardName = baseName.toUpperCase().replace('.', '_').replace('$', '_') + "_H"
             val predeclarations = classPredeclarations[baseName]?.let { formatPredeclarations(it, baseName) } ?: ""
             val specializations = descriptorSpecializations[baseName]?.joinToString(System.lineSeparator()) ?: ""
             block(path, """
@@ -234,6 +240,15 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         return predeclaration.toString()
     }
 
+    private fun Type.inner(index: Int): Type {
+        val pt = this as ParameterizedType
+        val i = pt.actualTypeArguments[index]
+        return if (i is WildcardType)
+            i.upperBounds.first()
+        else
+            i
+    }
+
     // Foo<Bar, Baz<Boz>> -> [Foo, Bar, Baz, Boz]
     private val Type.allMentionedClasses: Set<Class<*>>
         get() {
@@ -242,8 +257,8 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             fun recurse(t: Type) {
                 result += t.baseClass
                 if (t !is ParameterizedType) return
-                for (argument in t.actualTypeArguments) {
-                    recurse(argument)
+                for (i in t.actualTypeArguments.indices) {
+                    recurse(t.inner(i))
                 }
             }
 
@@ -251,35 +266,47 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             return result
         }
 
-    private fun generateClassFor(type: Type, serializerFactory: SerializerFactory, seenSoFar: Set<String>): GenResult? {
-        // Get the serializer created by the serialization engine, and map it to C++.
-        val amqpSerializer: AMQPSerializer<Any> = serializerFactory.get(null, type)
-        if (amqpSerializer !is ObjectSerializer) {
-            // Some serialisers are special and need to be hand coded.
-            when (amqpSerializer.type) {
-                Instant::class.java, PublicKey::class.java -> {
-                }
-                else -> {
-                    val warning = "Need to write code for custom serializer '${amqpSerializer.type}' / ${amqpSerializer.typeDescriptor}"
-                    println(warning)
-                }
-            }
-            return null
-        }
-
-        // Calculate the body of the class where field are declared and initialised in the constructor.
-        val descriptorSymbol = amqpSerializer.typeDescriptor
+    private fun generateClassFor(type: Type, serializerFactory: LocalSerializerFactory, seenSoFar: Set<String>): GenResult? {
         val fieldDeclarations = mutableListOf<String>()
         val fieldInitializations = mutableListOf<String>()
         val dependencies = mutableSetOf<Type>()
-        for (accessor in amqpSerializer.propertySerializers.serializationOrder) {
-            val javaName = accessor.serializer.name
+
+        // Get the serializer created by the serialization engine, and map it to C++.
+        val typeInformation: LocalTypeInformation = serializerFactory.getTypeInformation(type)
+        if (type == Instant::class.java || type == PublicKey::class.java || type == Any::class.java || type.baseClass.isInterface) {
+            // Some serialisers are special and need to be hand coded, or can be ignored.
+            return null
+        }
+
+        // descriptorSymbol is the string "net.corda:blahblah" that maps a section of data to a schema.
+        val descriptorSymbol = serializerFactory.createDescriptor(typeInformation)
+
+        val properties: Map<PropertyName, LocalPropertyInformation> = when (typeInformation) {
+            is LocalTypeInformation.Abstract -> {
+                // We can only discover nested classes at the moment for kotlin classes. This should be reworked to use a ClassGraph scanner
+                // so we can navigate the hierarchy better but it'll do for now.
+                val kclass = type.baseClass.kotlin
+                if (kclass.isSealed)
+                    dependencies += kclass.nestedClasses.filter { kclass in it.superclasses }.map { it.java }
+
+                typeInformation.properties
+            }
+            is LocalTypeInformation.Composable -> typeInformation.properties
+            else -> {
+                println("Need to write code for custom serializer '$type' / $descriptorSymbol")
+                return null
+            }
+        }
+
+        // Calculate the body of the class where field are declared and initialised in the constructor.
+        for ((javaName, propInfo) in properties) {
             val name = javaToCPPName(javaName)
-            val (declType, newDeps) = convertType(accessor.serializer.resolvedType, (accessor.serializer.propertyReader as? PublicPropertyReader)?.genericReturnType)
+            val genericReturnType = if (propInfo is LocalPropertyInformation.HasObservedGetter) propInfo.observedGetter.genericReturnType else null
+            val (declType, newDeps) = convertType(propInfo.type.observedType, genericReturnType)
             dependencies += newDeps
             fieldDeclarations += "$declType $name;"
             val readTo = "net::corda::Parser::read_to(decoder, $name);"
-            fieldInitializations += if (!accessor.serializer.mandatory)
+            fieldInitializations += if (!propInfo.isMandatory)
                 "if (decoder.next_type() != proton::NULL_TYPE) $readTo else decoder.next();"
             else
                 readTo
@@ -292,11 +319,11 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         // Bail out early without generating code if we already did this class. We had to scan it anyway to discover
         // if there were any new dependencies as a result of the template substitution.
-        if (type.eraseGenerics in seenSoFar)
+        if (type.eraseGenericsToBounds in seenSoFar)
             return GenResult(null, dependencies, if (isGeneric) descriptorSymbol else null)
 
         // Calculate the right namespace{} blocks.
-        val nameComponents = type.getCppName().substringBefore('<').split("::")
+        val nameComponents = type.mangleToCPPSyntax().substringBefore('<').split("::")
         val (namespaceOpenings, namespaceClosings) = namespaceBoilerplate(nameComponents)
         val undecoratedName = nameComponents.last()
 
@@ -306,10 +333,25 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             "const std::string descriptor() { return \"$descriptorSymbol\"; }"
         }
 
+        // Inheritance.
+        val supers: List<LocalTypeInformation> = when (typeInformation) {
+            is LocalTypeInformation.Composable -> typeInformation.interfaces + typeInformation.superclass
+            is LocalTypeInformation.Abstract -> typeInformation.interfaces + typeInformation.superclass
+            else -> emptyList()
+        }.filterNot {
+            it.observedType.baseClass.name.startsWith("java.lang.")
+        }
+
+        dependencies += supers.map { it.observedType }
+
+        val inheritance = if (supers.isEmpty()) "" else {
+            ": " + supers.joinToString(", ") { "public " + it.observedType.mangleToCPPSyntax() } + " "
+        }
+
         return GenResult("""
                     |$namespaceOpenings
                     |
-                    |${templateHeader(typeParameters)}class $undecoratedName {
+                    |${templateHeader(typeParameters)}class $undecoratedName $inheritance{
                     |public:
                     |    ${fieldDeclarations.joinToString(System.lineSeparator() + (" ".repeat(4)))}
                     |
@@ -328,6 +370,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
     // Java type to C++ type. See SerializerFactory.primitiveTypeNames and https://qpid.apache.org/releases/qpid-proton-0.26.0/proton/cpp/api/types_page.html
     private fun convertType(resolved: Type, genericReturnType: Type?): Pair<String, Set<Type>> {
         val dependencies = mutableSetOf<Type>()
+
         val cppType = when (resolved.typeName) {
             // Primitives.
             "char" -> "char"
@@ -368,15 +411,17 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             // Classes, containers and other custom types.
             else -> when (resolved.baseClass.name) {
                 "java.util.List" -> {
-                    val innerType: Type = (resolved as ParameterizedType).actualTypeArguments[0]
+                    resolved as ParameterizedType
+                    var innerType: Type = resolved.inner(0)
+                    if (innerType is WildcardType) innerType = innerType.upperBounds.first()
                     val (innerName, innerDeps) = convertType(innerType, innerType)
                     dependencies += innerDeps
                     "std::list<$innerName>"
                 }
                 "java.util.Map" -> {
                     resolved as ParameterizedType
-                    val keyType: Type = resolved.actualTypeArguments[0]
-                    val valueType: Type = resolved.actualTypeArguments[1]
+                    val keyType: Type = resolved.inner(0)
+                    val valueType: Type = resolved.inner(1)
                     val (cppKeyType, extraDeps1) = convertType(keyType, keyType)
                     dependencies += extraDeps1
                     val (cppValueType, extraDeps2) = convertType(valueType, valueType)
@@ -385,11 +430,16 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 }
                 else -> {
                     check(!resolved.baseClass.isArray) { "Unsupported array type: $resolved" }
+
+                    // A plain old class OR a type variable.
                     dependencies += resolved
-                    "net::corda::ptr<${genericReturnType!!.getCppName()}>"
+                    "net::corda::ptr<${genericReturnType!!.mangleToCPPSyntax()}>"
                 }
             }
         }
+
+        // println("${resolved.typeName} -> $cppType     $dependencies")
+
         return Pair(cppType, dependencies)
     }
 

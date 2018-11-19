@@ -25,7 +25,7 @@ dependencies {
 
 task generateCppHeaders(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = "net.corda.tools.serialization.GenerateCPPHeadersKt"
+    main = "net.corda.tools.serialization.GenerateCPPKt"
     args = ['include', 'net.corda.core.transactions.SignedTransaction', 'net.corda.core.transactions.WireTransaction']
 }
 
@@ -49,7 +49,7 @@ jar {
     baseName = "corda-cpp"
     manifest {
         attributes(
-                'Main-Class': 'net.corda.tools.serialization.GenerateCPPHeadersKt'
+                'Main-Class': 'net.corda.tools.serialization.GenerateCPPKt'
         )
     }
 }
