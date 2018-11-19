@@ -876,18 +876,22 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val compositeKeyAlias = "$DISTRIBUTED_NOTARY_ALIAS_PREFIX-composite-key"
 
         val signingCertificateStore = configuration.signingCertificateStore.get()
+        val privateKeyAliasCertChain = try {
+            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
+        } catch (e: Exception) {
+            throw IllegalStateException("Certificate-chain for $privateKeyAlias cannot be found", e)
+        }
         // A composite key is only required for BFT notaries.
         val certificates = if (cryptoService.containsKey(compositeKeyAlias) && signingCertificateStore.contains(compositeKeyAlias)) {
             val certificate = signingCertificateStore[compositeKeyAlias]
             // We have to create the certificate chain for the composite key manually, this is because we don't have a keystore
             // provider that understand compositeKey-privateKey combo. The cert chain is created using the composite key certificate +
             // the tail of the private key certificates, as they are both signed by the same certificate chain.
-            listOf(certificate) + signingCertificateStore.query { getCertificateChain(privateKeyAlias) }.drop(1)
+            listOf(certificate) + privateKeyAliasCertChain.drop(1)
         } else {
-            // We assume the notary is CFT, and each cluster member shares the same notary key pair.
-            signingCertificateStore.query { getCertificateChain(privateKeyAlias) }
             checkAliasMismatch(compositeKeyAlias, signingCertificateStore)
-            throw IllegalStateException("The identity key entry for the notary service $serviceLegalName cannot be found (in both CryptoService and signingCertificateStore).")
+            // If [compositeKeyAlias] does not exist, we assume the notary is CFT, and each cluster member shares the same notary key pair.
+            privateKeyAliasCertChain
         }
 
         val subject = CordaX500Name.build(certificates.first().subjectX500Principal)
