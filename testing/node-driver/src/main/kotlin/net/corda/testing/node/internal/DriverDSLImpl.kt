@@ -71,6 +71,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -396,6 +397,13 @@ class DriverDSLImpl(
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
         }
+        try {
+            _notaries.map { notary -> notary.map { handle -> handle.nodeHandles } }.getOrThrow(notaryHandleTimeout).forEach { future -> future.getOrThrow(notaryHandleTimeout) }
+        } catch (e: ListenProcessDeathException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        } catch (e: TimeoutException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        }
     }
 
     private fun startNotaryIdentityGeneration(): CordaFuture<List<NotaryInfo>> {
@@ -700,6 +708,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
+        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
