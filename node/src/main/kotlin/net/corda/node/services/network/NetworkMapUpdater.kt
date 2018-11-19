@@ -9,6 +9,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
@@ -33,7 +34,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val nodeInfoWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?,
                         private val baseDirectory: Path,
-                        private val extraNetworkMapKeys: List<UUID>
+                        private val extraNetworkMapKeys: List<UUID>,
+                        private val networkParametersStorage: NetworkParametersStorage
 ) : AutoCloseable {
     companion object {
         private val logger = contextLogger()
@@ -240,6 +242,7 @@ The node will shutdown now.""")
             signedNewNetParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
+            networkParametersStorage.saveParameters(signedNewNetParams)
             networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
             logger.info("Accepted network parameter update $update: $newNetParams")
         } else {

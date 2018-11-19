@@ -30,7 +30,6 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
                 resolveAttachment = { attachmentMap[it] },
                 resolveStateRef = { deps[it.txhash]?.outputs?.get(it.index) },
                 resolveContractAttachment = { contractAttachmentMap[it.contract]?.id },
-                // TODO I am not sure what is the grand scheme of things in this context, because there are absolutely no comments on that code.
                 resolveParameters = { networkParameters.deserialize() }
         )
     }

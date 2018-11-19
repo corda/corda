@@ -22,10 +22,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils
 import java.security.cert.X509Certificate
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
+import javax.persistence.*
 
 // TODO NetworkParametersReader + NodeParametersStorage refactor
 class NodeParametersStorage(
@@ -80,9 +77,7 @@ class NodeParametersStorage(
     private val hashToParameters = createParametersMap(cacheFactory)
 
     override fun readParametersFromHash(hash: SecureHash): NetworkParameters? {
-        return database.transaction {
-            hashToParameters[hash]?.raw?.deserialize() ?: tryDownloadUnknownParameters(hash)
-        }
+        return database.transaction { hashToParameters[hash]?.raw?.deserialize() } ?: tryDownloadUnknownParameters(hash)
     }
 
     override fun getEpochFromHash(hash: SecureHash): Int? = readParametersFromHash(hash)?.epoch
@@ -104,7 +99,7 @@ class NodeParametersStorage(
                 saveParameters(signedParams)
                 networkParameters
             } catch (e: Exception) {
-                log.warn("Failed to downolad historical network parameters with hash $parametersHash", e)
+                log.warn("Failed to download historical network parameters with hash $parametersHash", e)
                 null
             }
         } else {
@@ -114,13 +109,12 @@ class NodeParametersStorage(
     }
 
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}network_parameters")
+    @Table(name = "${NODE_DATABASE_PREFIX}network_parameters")
     class PersistentNetworkParameters(
             @Id
             @Column(name = "hash", length = MAX_HASH_HEX_SIZE, nullable = false)
             val hash: String = "",
 
-            // TODO For notary change transaction needed for Andrius work
             @Column(name = "epoch", nullable = false)
             val epoch: Int = 0,
 

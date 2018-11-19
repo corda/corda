@@ -101,7 +101,9 @@ class NotaryFlow {
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
                 // TODO networkParametersHash type overlaps with the attachments type - it is problematic in filtering.
-                //  Also, we want to be sure in this case that we always include the componentGroup for the parameters hash.
+                //  We want to be sure that attachment with the same hash as network parameters isn't revealed by accident (or vice versa).
+                //  The same applies to reference and input states.
+                //  Also, we want to ensure in this case that the componentGroup for the parameters hash is always included.
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
                     it is StateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal
                 })

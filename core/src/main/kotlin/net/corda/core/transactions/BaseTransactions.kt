@@ -29,8 +29,7 @@ abstract class CoreTransaction : BaseTransaction() {
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
     abstract override val references: List<StateAndRef<ContractState>>
-    abstract val networkParameters: NetworkParameters?
-
+    abstract val networkParameters: NetworkParameters
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()
         checkInputsAndReferencesHaveSameNotary()

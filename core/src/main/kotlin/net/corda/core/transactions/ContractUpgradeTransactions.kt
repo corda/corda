@@ -198,11 +198,8 @@ data class ContractUpgradeFilteredTransaction(
         visibleComponents[NOTARY.ordinal]?.component?.deserialize<Party>()
                 ?: throw IllegalArgumentException("Notary not specified")
     }
-    // TODO Do we ever store filteredTransactions anywhere? Or is it safe to assume that apart from checkpoints it won't break wire compat.
-    //  We need to increase platform version in this case to 4.
-    override val networkParametersHash: SecureHash by lazy {
+    override val networkParametersHash: SecureHash? by lazy {
         visibleComponents[PARAMETERS_HASH.ordinal]?.component?.deserialize<SecureHash>()
-                ?: throw IllegalArgumentException("Network parameters hash not specified")
     }
     override val id: SecureHash by lazy {
         val totalComponents = visibleComponents.size + hiddenComponents.size
