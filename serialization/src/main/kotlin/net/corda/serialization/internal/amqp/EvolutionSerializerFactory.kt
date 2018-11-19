@@ -36,34 +36,16 @@ class DefaultEvolutionSerializerFactory(
 
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
                                         localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>? {
-        val local = (localTypeInformation as? LocalTypeInformation.Cycle)?.follow ?: localTypeInformation
+        val local = localTypeInformation
 
         return when(remoteTypeInformation) {
-            is RemoteTypeInformation.Composable -> when (local) {
-                is LocalTypeInformation.Composable -> remoteTypeInformation.getEvolutionSerializer(local)
-                else -> throw NotSerializableException("""
-                    Remote type is Composable, but local type is not.
-
-                    Remote type:
-                    ${remoteTypeInformation.prettyPrint(false)}
-
-                    Local type:
-                    ${localTypeInformation.prettyPrint(false)}
-                """.trimIndent())
-            }
-            is RemoteTypeInformation.AnEnum -> when(local) {
-                is LocalTypeInformation.AnEnum -> remoteTypeInformation.getEvolutionSerializer(local)
-                else -> throw NotSerializableException("""
-                    Remote type is Enum, but local type is not.
-
-                    Remote type:
-                    ${remoteTypeInformation.prettyPrint(false)}
-
-                    Local type:
-                    ${localTypeInformation.prettyPrint(false)}
-                """.trimIndent())
-            }
-            else -> throw NotSerializableException("Cannot create an evolution serialiser for remote type $remoteTypeInformation")
+            is RemoteTypeInformation.Composable ->
+                if (local is LocalTypeInformation.Composable) remoteTypeInformation.getEvolutionSerializer(local)
+                else null
+            is RemoteTypeInformation.AnEnum ->
+                if (local is LocalTypeInformation.AnEnum) remoteTypeInformation.getEvolutionSerializer(local)
+                else null
+            else -> null
         }
     }
     
@@ -128,7 +110,7 @@ class DefaultEvolutionSerializerFactory(
         val newProperties = localPropertyNames - remotePropertyNames
 
         // Here is where we can exercise a veto on evolutions that remove properties.
-        if (deletedProperties.isNotEmpty() && mustPreserveContractStateData && localTypeInformation.isContractState)
+        if (deletedProperties.isNotEmpty() && mustPreserveContractStateData)
             throw EvolutionSerializationException(this,
                     "Property ${deletedProperties.first()} of remote ContractState type is not present in local type")
 
@@ -145,9 +127,6 @@ class DefaultEvolutionSerializerFactory(
         is LocalPropertyInformation.PrivateConstructorPairedProperty -> isMandatory
         else -> false
     }
-
-    private val LocalTypeInformation.isContractState: Boolean get() =
-        ContractState::class.java.isAssignableFrom(typeIdentifier.getLocalType(classLoader).asClass())
 
     private fun RemoteTypeInformation.AnEnum.getEvolutionSerializer(
             localTypeInformation: LocalTypeInformation.AnEnum): AMQPSerializer<Any>? {

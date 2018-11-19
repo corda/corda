@@ -9,7 +9,7 @@ import java.lang.reflect.Type
 
 interface ObjectSerializer : AMQPSerializer<Any> {
 
-    val propertySerializers: Map<String, ComposableTypePropertySerializer>
+    val propertySerializers: Map<String, PropertySerializer>
     val fields: List<Field>
 
     companion object {
@@ -67,7 +67,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
         }
 
         private fun makePropertySerializers(properties: Map<PropertyName, LocalPropertyInformation>,
-                                            factory: LocalSerializerFactory): Map<String, ComposableTypePropertySerializer> =
+                                            factory: LocalSerializerFactory): Map<String, PropertySerializer> =
                 properties.mapValues { (name, property) ->
                     ComposableTypePropertySerializer.make(name, property, factory)
                 }
@@ -77,7 +77,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
 class ComposableObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
         override val fields: List<Field>,
         private val reader: ComposableObjectReader,
         private val writer: ComposableObjectWriter): ObjectSerializer {
@@ -94,7 +94,7 @@ class ComposableObjectSerializer(
 class ComposableObjectWriter(
         private val typeNotation: TypeNotation,
         private val interfaces: List<LocalTypeInformation>,
-        private val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>
+        private val propertySerializers: Map<PropertyName, PropertySerializer>
 ) {
     fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
@@ -121,7 +121,7 @@ class ComposableObjectWriter(
 
 class ComposableObjectReader(
         val typeIdentifier: TypeIdentifier,
-        private val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
+        private val propertySerializers: Map<PropertyName, PropertySerializer>,
         private val objectBuilderProvider: () -> ObjectBuilder
 ) {
 
@@ -149,7 +149,7 @@ class ComposableObjectReader(
 class AbstractObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
         override val fields: List<Field>,
         private val writer: ComposableObjectWriter): ObjectSerializer {
     override fun writeClassInfo(output: SerializationOutput) =
@@ -165,7 +165,7 @@ class AbstractObjectSerializer(
 class EvolutionObjectSerializer(
         override val type: Type,
         override val typeDescriptor: Symbol,
-        override val propertySerializers: Map<PropertyName, ComposableTypePropertySerializer>,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
         private val reader: ComposableObjectReader): ObjectSerializer {
 
     companion object {
@@ -186,7 +186,7 @@ class EvolutionObjectSerializer(
 
         private fun makePropertySerializers(localProperties: Map<String, LocalPropertyInformation>,
                                             remoteProperties: Map<String, RemotePropertyInformation>,
-                                            classLoader: ClassLoader): Map<String, ComposableTypePropertySerializer> =
+                                            classLoader: ClassLoader): Map<String, PropertySerializer> =
                 remoteProperties.mapValues { (name, property) ->
                     val localProperty = localProperties[name]
                     val isCalculated = localProperty?.isCalculated ?: false

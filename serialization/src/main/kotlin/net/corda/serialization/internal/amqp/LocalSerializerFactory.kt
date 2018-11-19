@@ -13,27 +13,74 @@ import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.util.*
 
+/**
+ * A factory that handles the serialisation and deserialisation of [Type]s visible from a given [ClassLoader].
+ *
+ * Unlike the [RemoteSerializerFactory], which deals with types for which we have [Schema] information and serialised data,
+ * the [LocalSerializerFactory] deals with types for which we have a Java [Type] (and perhaps some in-memory data, from which
+ * we can discover the actual [Class] we are working with.
+ */
 interface LocalSerializerFactory {
-    // TODO: remove from interface
+    /**
+     * The [ClassWhitelist] used by this factory.
+     */
     val whitelist: ClassWhitelist
 
-    // TODO: remove from interface
+    /**
+     * The [ClassLoader] used by this factory.
+     */
     val classloader: ClassLoader
 
+    /**
+     * Obtain an [AMQPSerializer] for an object of actual type [actualClass], and declared type [declaredType].
+     */
     fun get(actualClass: Class<*>, declaredType: Type): AMQPSerializer<Any>
 
-    fun get(declaredType: Type): AMQPSerializer<Any>
+    /**
+     * Obtain an [AMQPSerializer] for the [declaredType].
+     */
+    fun get(declaredType: Type): AMQPSerializer<Any> {
+        val resolvedType = when(declaredType) {
+            is WildcardType -> if (declaredType.upperBounds.size == 1) declaredType.upperBounds[0]
+            else throw NotSerializableException("Cannot obtain upper bound for type $declaredType")
+            else -> declaredType
+        }
+        return get(getTypeInformation(resolvedType))
+    }
+
+    /**
+     * Obtain an [AMQPSerializer] for the type having the given [typeInformation].
+     */
     fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any>
 
+    /**
+     * Obtain [LocalTypeInformation] for the given [Type].
+     */
     fun getTypeInformation(type: Type): LocalTypeInformation
 
+    /**
+     * Use the [FingerPrinter] to create a type descriptor for the given [type].
+     */
     fun createDescriptor(type: Type): Symbol = createDescriptor(getTypeInformation(type))
 
+    /**
+     * Use the [FingerPrinter] to create a type descriptor for the given [typeInformation].
+     */
     fun createDescriptor(typeInformation: LocalTypeInformation): Symbol
+
+    /**
+     * Obtain or register [Transform]s for the given class [name].
+     *
+     * Eventually this information should be moved into the [LocalTypeInformation] for the type.
+     */
     fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>>
 }
 
+/**
+ * A [LocalSerializerFactory] equipped with a [LocalTypeModel] and a [FingerPrinter] to help it build fingerprint-based descriptors
+ * and serializers for local types.
+ */
 class DefaultLocalSerializerFactory(
         override val whitelist: ClassWhitelist,
         private val typeModel: LocalTypeModel,
@@ -59,15 +106,6 @@ class DefaultLocalSerializerFactory(
     override fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
             EnumMap<TransformTypes, MutableList<Transform>> =
             transformsCache.computeIfAbsent(name) { _ -> builder() }
-
-    override fun get(declaredType: Type): AMQPSerializer<Any> {
-        val resolvedType = when(declaredType) {
-            is WildcardType -> if (declaredType.upperBounds.size == 1) declaredType.upperBounds[0]
-            else throw NotSerializableException("Cannot obtain upper bound for type $declaredType")
-            else -> declaredType
-        }
-        return get(resolvedType, typeModel.inspect(resolvedType))
-    }
 
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
             get(typeInformation.observedType, typeInformation)
