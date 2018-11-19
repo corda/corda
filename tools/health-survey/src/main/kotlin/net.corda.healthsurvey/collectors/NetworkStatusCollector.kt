@@ -8,9 +8,9 @@ import java.net.InetAddress
 import java.net.URI
 import java.net.URL
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
-class NetworkStatusCollector : TrackedCollector("Collecting general network information ...") {
+class NetworkStatusCollector(private val nodeConfigurationFile: Path) : TrackedCollector("Collecting general network information ...") {
 
     private lateinit var file: Report.ReportFile
 
@@ -32,9 +32,8 @@ class NetworkStatusCollector : TrackedCollector("Collecting general network info
                 file.withContent("Resolved $host to $hostAddress\n")
             }
             attempt("Resolving database host ...", "Failed to resolve database host, continuing ...", file) {
-                val path = Paths.get("node.conf")
-                if (Files.exists(path)) {
-                    val config = ConfigFactory.parseReader(Files.newBufferedReader(path))
+                if (Files.exists(nodeConfigurationFile)) {
+                    val config = ConfigFactory.parseReader(Files.newBufferedReader(nodeConfigurationFile))
                     val rawDatabaseUrl = config.getOptionalString("dataSourceProperties.dataSource.url")
                     val host = (URI((rawDatabaseUrl ?: "jdbc:").substring(5)).host ?: "")
                     if (host.isNotBlank()) {
@@ -50,9 +49,8 @@ class NetworkStatusCollector : TrackedCollector("Collecting general network info
                 }
             }
             attempt("Resolving doorman host ...", "Failed to resolve doorman host, continuing ...", file) {
-                val path = Paths.get("node.conf")
-                if (Files.exists(path)) {
-                    val config = ConfigFactory.parseReader(Files.newBufferedReader(path))
+                if (Files.exists(nodeConfigurationFile)) {
+                    val config = ConfigFactory.parseReader(Files.newBufferedReader(nodeConfigurationFile))
                     val rawCompatibilityZoneUrl = config.getOptionalString("compatibilityZoneURL")
                     val rawDoormanUrl = config.getOptionalString("networkServices.doormanURL")
                     val host = URL(rawDoormanUrl ?: rawCompatibilityZoneUrl ?: "http://").host
@@ -69,9 +67,8 @@ class NetworkStatusCollector : TrackedCollector("Collecting general network info
                 }
             }
             attempt("Resolving network map host ...", "Failed to resolve network map host, continuing ...", file) {
-                val path = Paths.get("node.conf")
-                if (Files.exists(path)) {
-                    val config = ConfigFactory.parseReader(Files.newBufferedReader(path))
+                if (Files.exists(nodeConfigurationFile)) {
+                    val config = ConfigFactory.parseReader(Files.newBufferedReader(nodeConfigurationFile))
                     val rawCompatibilityZoneUrl = config.getOptionalString("compatibilityZoneURL")
                     val rawNetworkMapUrl = config.getOptionalString("networkServices.networkMapURL")
                     val host = URL(rawNetworkMapUrl ?: rawCompatibilityZoneUrl ?: "http://").host

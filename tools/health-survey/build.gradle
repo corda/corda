@@ -12,6 +12,7 @@ description 'Health survey tool for Corda installations'
 ext.gson_version = '2.8.5'
 ext.jira_version = '0.5'
 ext.commons_logging_version = '1.2'
+ext.commons_cli_version = '1.4'
 
 configurations {
     runtimeDependency
@@ -22,6 +23,7 @@ dependencies {
     compile "com.typesafe:config:$typesafe_config_version"
     compile "com.google.code.gson:gson:$gson_version"
     compile "net.rcarz:jira-client:$jira_version"
+    compile "commons-cli:commons-cli:$commons_cli_version"
     runtimeDependency "commons-logging:commons-logging:$commons_logging_version"
 }
 

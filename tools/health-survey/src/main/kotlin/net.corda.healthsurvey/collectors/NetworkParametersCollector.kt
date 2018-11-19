@@ -2,14 +2,13 @@ package net.corda.healthsurvey.collectors
 
 import net.corda.healthsurvey.output.Report
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
-class NetworkParametersCollector : TrackedCollector("Collecting network parameters ...") {
+class NetworkParametersCollector(private val networkParameters: Path) : TrackedCollector("Collecting network parameters ...") {
 
     override fun collect(report: Report) {
-        val path = Paths.get("network-parameters")
-        if (Files.exists(path)) {
-            report.addFile("network-parameters").asCopyOfFile()
+        if (Files.exists(networkParameters)) {
+            report.addFile("network-parameters").asCopyOfFile(networkParameters)
             complete("Collected network parameters")
         } else {
             fail("Failed to find network parameters")

@@ -4,14 +4,13 @@ import com.google.gson.GsonBuilder
 import com.typesafe.config.*
 import net.corda.healthsurvey.output.Report
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
-class ConfigurationCollector : TrackedCollector("Collecting censored node configuration ...") {
+class ConfigurationCollector(private val nodeConfigurationFile: Path) : TrackedCollector("Collecting censored node configuration ...") {
 
     override fun collect(report: Report) {
-        val path = Paths.get("node.conf")
-        if (Files.exists(path)) {
-            val config = filterConfig(ConfigFactory.parseReader(Files.newBufferedReader(path)))
+        if (Files.exists(nodeConfigurationFile)) {
+            val config = filterConfig(ConfigFactory.parseReader(Files.newBufferedReader(nodeConfigurationFile)))
             val gson = GsonBuilder().disableHtmlEscaping().create()
             report.addFile("node.conf").withContent(gson.toJson(config))
             complete("Collected censored node configuration")

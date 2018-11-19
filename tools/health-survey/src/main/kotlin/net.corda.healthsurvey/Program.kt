@@ -3,7 +3,9 @@ package net.corda.healthsurvey
 import net.corda.healthsurvey.cli.Console
 import net.corda.healthsurvey.cli.Console.yellow
 import net.corda.healthsurvey.collectors.*
+import net.corda.healthsurvey.domain.NodeConfigurationPaths
 import net.corda.healthsurvey.output.Report
+import org.apache.commons.cli.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Instant
@@ -11,6 +13,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 fun main(args: Array<String>) {
+    val nodeConfigPaths = args.readNodeConfigPaths() ?: return
+    val nonExistentPaths = nodeConfigPaths.requiredExisting.filter { path -> !path.toFile().exists() }.toSet()
+    if (nonExistentPaths.isNotEmpty()) {
+        println(" ${yellow("Error:")} Some specified configuration paths do not point to existing files or directories. Paths were: ${nonExistentPaths.joinToString(separator = ", ", prefix = "[", postfix = "]")}")
+        return
+    }
+
     printHeader()
     val canIncludeLogs = requestPermission("Can we include the node's log files in the report?")
     println()
@@ -19,8 +28,8 @@ fun main(args: Array<String>) {
             .withZone(ZoneId.systemDefault())
 
     val report = Report(Paths.get("report-${formatter.format(Instant.now())}.zip"))
-    val collectors = collectors
-            .add(canIncludeLogs, OptInLogCollector())
+    val collectors = collectors(nodeConfigPaths)
+            .add(canIncludeLogs, OptInLogCollector(nodeConfigPaths.logs))
             .add(ExportReportJob())
 
     collectors.forEach { collector ->
@@ -56,16 +65,16 @@ fun main(args: Array<String>) {
 
 private const val version = "1.0"
 
-private val collectors = listOf(
+private fun collectors(nodeConfigurationPaths: NodeConfigurationPaths) = listOf(
         MachineInformationCollector(),
-        CordaInfoCollector(),
-        NetworkParametersCollector(),
-        NodeInfoCollector(),
-        AdditionalNodeInfoCollector(),
-        CorDappCollector(),
-        ConfigurationCollector(),
-        NetworkStatusCollector(),
-        DriverCollector()
+        CordaInfoCollector(nodeConfigurationPaths.baseDirectory),
+        NetworkParametersCollector(nodeConfigurationPaths.networkParameters),
+        NodeInfoCollector(nodeConfigurationPaths.baseDirectory),
+        AdditionalNodeInfoCollector(nodeConfigurationPaths.additionalNodeInfos),
+        CorDappCollector(nodeConfigurationPaths.cordapps),
+        ConfigurationCollector(nodeConfigurationPaths.nodeConfigurationFile),
+        NetworkStatusCollector(nodeConfigurationPaths.nodeConfigurationFile),
+        DriverCollector(nodeConfigurationPaths.drivers)
 )
 
 private fun getUsernameAndPassword(): Pair<String, String>? {
@@ -141,3 +150,42 @@ private fun <E> List<E>.add(condition: Boolean, element: E): List<E> {
         this
     }
 }
+
+private fun Array<String>.readNodeConfigPaths(): NodeConfigurationPaths? {
+    val defaultBaseDirectory = Paths.get(".")
+    val options = Options()
+    val baseDirectoryArg = option("d", "base-directory", "Path to the Corda node base directory")
+    options += baseDirectoryArg
+
+    val nodeConfigurationArg = option("c", "node-configuration", "Path to the Corda node configuration file")
+    options += nodeConfigurationArg
+
+    val parser: CommandLineParser = DefaultParser()
+    val optionsFormatter = HelpFormatter()
+    val cmd: CommandLine? = try {
+        parser.parse(options, this)
+    } catch (e: ParseException) {
+        println(e.message)
+        optionsFormatter.printHelp("Corda Health Survey Tool", options)
+        null
+    }
+    return cmd?.let {
+        val baseDirectory = cmd[baseDirectoryArg]?.let { path -> Paths.get(path) } ?: defaultBaseDirectory
+        val nodeConfigurationPath = cmd[nodeConfigurationArg]?.let { path -> Paths.get(path) }
+
+        return NodeConfigurationPaths(baseDirectory.toAbsolutePath(), nodeConfigurationPath?.toAbsolutePath())
+    }
+}
+
+private fun option(opt: String, longOpt: String, description: String, hasArg: Boolean = true, isRequired: Boolean = false, type: Class<*> = String::class.java): Option {
+    val option = Option("d", "base-directory", true, "Path to the Corda node base directory")
+    option.isRequired = isRequired
+    option.setType(type)
+    return option
+}
+
+private operator fun Options.plusAssign(option: Option) {
+    addOption(option)
+}
+
+private operator fun CommandLine.get(option: Option): String? = getOptionValue(option.longOpt)

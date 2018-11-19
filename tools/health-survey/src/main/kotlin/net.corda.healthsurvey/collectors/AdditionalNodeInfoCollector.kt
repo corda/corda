@@ -2,15 +2,14 @@ package net.corda.healthsurvey.collectors
 
 import net.corda.healthsurvey.output.Report
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import kotlin.streams.toList
 
-class AdditionalNodeInfoCollector : TrackedCollector("Collecting additional node information files ...") {
+class AdditionalNodeInfoCollector(private val additionalNodeInfos: Path) : TrackedCollector("Collecting additional node information files ...") {
 
     override fun collect(report: Report) {
-        val directory = Paths.get("additional-node-infos")
-        if (Files.exists(directory)) {
-            val paths = Files.list(directory)
+        if (Files.exists(additionalNodeInfos)) {
+            val paths = Files.list(additionalNodeInfos)
                     .filter { path -> path.toString().contains("nodeInfo-") }
                     .toList()
             val file = report.addFile("additional-node-infos.txt")

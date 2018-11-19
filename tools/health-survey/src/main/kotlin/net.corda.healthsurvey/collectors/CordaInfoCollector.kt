@@ -3,13 +3,13 @@ package net.corda.healthsurvey.collectors
 import net.corda.healthsurvey.FileUtils.checksum
 import net.corda.healthsurvey.output.Report
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import kotlin.streams.toList
 
-class CordaInfoCollector : TrackedCollector("Collecting information about Corda installation ...") {
+class CordaInfoCollector(private val baseDirectory: Path) : TrackedCollector("Collecting information about Corda installation ...") {
 
     override fun collect(report: Report) {
-        val paths = Files.list(Paths.get("."))
+        val paths = Files.list(baseDirectory)
                 .filter { path -> path.toString().contains("corda", true) && path.toString().endsWith(".jar", true) }
                 .toList()
         val file = report.addFile("corda.txt")

@@ -19,12 +19,19 @@ with a support request, including things like:
 The tool also allows the user to upload the resulting report to a support ticket. JIRA credentials can either be
 provided through the environment variables `JIRA_USER` and `JIRA_PASSWORD`, or through the prompt.
 
-The tool has to be run with the node installation as its current working directory, e.g.:
+The tool can be run with the node installation as its current working directory, e.g.:
 
 ```bash
 $ cd /opt/corda/
 $ java -jar corda-tools-health-survey.jar
 ```
+
+Alternatively, the base directory and node configuration paths can be specified as program arguments:
+
+- `--base-directory` or `-d`, specifying the path to the node installation.
+- `--node-configuration` or `-c`, specifying the path to the node configuration file.
+
+These options can be specified together, allowing for setups with node configuration files under separate directories.
 
 ![tool-animation](tool-animation.gif)
 
