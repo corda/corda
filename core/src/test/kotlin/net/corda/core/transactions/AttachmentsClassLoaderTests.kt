@@ -72,6 +72,16 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    fun `Test valid overlapping file condition`() {
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file1.jar")
+        val att2 = storage.importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file2.jar")
+
+        val cl = AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
+        assertEquals("same data", txt)
+    }
+
+    @Test
     fun `No overlapping exception thrown on certain META-INF files`() {
         listOf("meta-inf/manifest.mf", "meta-inf/license", "meta-inf/test.dsa", "meta-inf/test.sf").forEach { path ->
             val att1 = storage.importAttachment(fakeAttachment(path, "some data").inputStream(), "app", "file1.jar")

@@ -16,7 +16,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -137,6 +137,19 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
     }
 
+    // TODO: changes required by ongoing usage within core-deterministic. Should this be annotated as @Deprecated ?
+    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
+    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    fun toLedgerTransaction(
+            resolveIdentity: (PublicKey) -> Party?,
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+            networkParameters: NetworkParameters?
+    ): LedgerTransaction {
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, networkParameters, null)
+    }
+
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
@@ -164,13 +177,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val hashConstrainedInputs = resolvedInputs.filter { it.state.constraint is HashAttachmentConstraint }
         val extraAttachmentIds =
                 if (hashConstrainedInputs.isNotEmpty() && signatureConstrainedOutputs.isNotEmpty()) {
-                    val contractClassNames = hashConstrainedInputs.map { it.state.contract }
-                    println("Ledger txn: contractClassNames = $contractClassNames")
-                    // TODO: query by Contract Class AND VERSION
+                    val unsignedContractClassNames = hashConstrainedInputs.map { it.state.contract }
+                    println("Ledger txn: unsigned contractClassNames = $unsignedContractClassNames")
                     checkNotNull(attachmentStorage)
-                    val extraAttachmentIds = attachmentStorage!!.queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(contractClassNames)))
-                    println("Ledger txn: extraAttachmentIds = $extraAttachmentIds")
-                    extraAttachmentIds
+                    // TODO: filter query by contract version
+                    val attachmentQueryCriteria = AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(unsignedContractClassNames), isSignedCondition = Builder.equal(true))
+                    val signedAttachmentIds = attachmentStorage!!.queryAttachments(attachmentQueryCriteria)
+                    println("Ledger txn: signed AttachmentIds = $signedAttachmentIds")
+                    signedAttachmentIds
                 } else emptyList()
 
         val resolvedAttachments = (attachments + extraAttachmentIds).lazyMapped { att, _ ->

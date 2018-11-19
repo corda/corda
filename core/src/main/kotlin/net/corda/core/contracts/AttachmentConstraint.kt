@@ -4,10 +4,12 @@ import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.node.JavaPackageName
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.warnOnce
@@ -43,8 +45,9 @@ interface AttachmentConstraint {
      *  * Anything (except the [AlwaysAcceptAttachmentConstraint]) can be transitioned to a [HashAttachmentConstraint].
      *  * You can transition from the [WhitelistedByZoneAttachmentConstraint] to the [SignatureAttachmentConstraint] only if all signers of the JAR are required to sign in the future.
      *  * You can transition from a [HashAttachmentConstraint] to a [SignatureAttachmentConstraint] when the following conditions are met:
-     *      1. Both original "hash-constrained" contract jar and signed "signature-constrained" contract jar are whitelisted in the CZ network map
-     *      2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
+     *  *  1. Jar contents (per entry, by hashcode) of both original (unsigned) and signed contract jars are identical
+     *  *     Note: this step is enforced in the [AttachmentsClassLoader] no overlap rule checking.
+     *  *  2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
      *
      * TODO - SignatureConstraint third party signers.
      */
@@ -76,28 +79,19 @@ interface AttachmentConstraint {
                 attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
             // Transition from Hash to Signature constraint (via CZ whitelisting) requires
-            // 1. Hashcode of both original (unsigned) and signed contract JARS are registered in the NP CZ whitelist
-            // 2. Signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
-            // 3. Signer(s) associated with signature constraint match those of signed contract JAR.
+            // 1. Signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
+            // 2. Signature constraint key must be one of keys used to sign contract JAR.
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
                 val signedAttachment = attachment.signedContractAttachment
                 signedAttachment?.let {
                     // rule 1
-                    val attachmentIdsToVerify = listOf(input.attachmentId, signedAttachment.attachment.id)
-                    val attachmentClassName = signedAttachment.contract
-                    val czAttachmentIdsForContractClass = attachment.networkParameters.whitelistedContractImplementations[attachmentClassName] ?: return false
-                    attachmentIdsToVerify.forEach { attachmentId ->
-                        if (!czAttachmentIdsForContractClass.contains(attachmentId)) return false
-                    }
-                    // rule 2
                     val signedAttachmentSigners = signedAttachment.signers
                     if (signedAttachmentSigners.isEmpty()) return false
-                    signedAttachmentSigners.forEach { signer ->
-                        if (attachment.networkParameters.packageOwnership[JavaPackageName(attachmentClassName)] != signer) return false
-                    }
-                    // rule 3
-                    if (output.key.keys.containsAll(signedAttachment.signers)) return true
-                    return false
+                    val packageOwner = attachment.networkParameters.packageOwnership[JavaPackageName(signedAttachment.contract)] ?: return false
+                    if (!packageOwner.containsAny(signedAttachment.signers)) return false
+                    // rule 2
+                    if (!signedAttachment.signers.contains(output.key)) return false
+                    return true
                 } ?: false
             }
 
