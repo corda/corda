@@ -300,13 +300,8 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Serializes the given object and returns a [SerializedBytes] wrapper for it. An alias for [Any.serialize]
          * intended to make the calling smoother for Java users.
-         *
-         * TODO: Take out the @CordaInternal annotation post-Enterprise GA when we can add API again.
-         *
-         * @suppress
          */
         @JvmStatic
-        @CordaInternal
         @JvmOverloads
         fun <T : Any> from(obj: T, serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
                            context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {
