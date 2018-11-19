@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -11,10 +12,12 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.combinedHash
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction.FilteredComponent
+import net.corda.core.transactions.ContractUpgradeWireTransaction.Companion.calculateUpgradedState
 import net.corda.core.transactions.ContractUpgradeWireTransaction.Component.*
+import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toBase58String
 import java.security.PublicKey
@@ -35,6 +38,32 @@ data class ContractUpgradeWireTransaction(
         /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
         val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction() {
+
+    companion object {
+        /**
+         * Runs the explicit upgrade logic.
+         */
+        @CordaInternal
+        internal fun <T : ContractState, S : ContractState> calculateUpgradedState(state: TransactionState<T>, upgradedContract: UpgradedContract<T, S>, upgradedContractAttachment: Attachment): TransactionState<S> {
+            // TODO: if there are encumbrance states in the inputs, just copy them across without modifying
+            val upgradedState: S = upgradedContract.upgrade(state.data)
+            val inputConstraint = state.constraint
+            val outputConstraint = when (inputConstraint) {
+                is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
+                WhitelistedByZoneAttachmentConstraint -> WhitelistedByZoneAttachmentConstraint
+                else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
+            }
+            // TODO: re-map encumbrance pointers
+            return TransactionState(
+                    data = upgradedState,
+                    contract = upgradedContract::class.java.name,
+                    constraint = outputConstraint,
+                    notary = state.notary,
+                    encumbrance = state.encumbrance
+            )
+        }
+    }
+
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val notary: Party by lazy { serializedComponents[NOTARY.ordinal].deserialize<Party>() }
     val legacyContractAttachmentId: SecureHash by lazy { serializedComponents[LEGACY_ATTACHMENT.ordinal].deserialize<SecureHash>() }
@@ -88,6 +117,32 @@ data class ContractUpgradeWireTransaction(
                 sigs,
                 services.networkParameters
         )
+    }
+
+    private fun upgradedContract(className: ContractClassName, classLoader: ClassLoader): UpgradedContract<ContractState, ContractState> = try {
+        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java as Class<UpgradedContract<ContractState, ContractState>>)
+                .newInstance()
+    } catch (e: Exception) {
+        throw TransactionVerificationException.ContractCreationError(id, className, e)
+    }
+
+    /**
+     * Creates a binary serialized component for a virtual output state serialised and executed with the attachments from the transaction.
+     */
+    @CordaInternal
+    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef): SerializedBytes<TransactionState<ContractState>> {
+        val binaryInput = resolveStateRefBinaryComponent(inputs[stateRef.index], services)!!
+        val legacyAttachment = services.attachments.openAttachment(legacyContractAttachmentId)
+                ?: throw MissingContractAttachments(emptyList())
+        val upgradedAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
+                ?: throw MissingContractAttachments(emptyList())
+
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(legacyAttachment, upgradedAttachment)) { transactionClassLoader ->
+            val resolvedInput = binaryInput.deserialize<TransactionState<ContractState>>()
+            val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
+            val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)
+            outputState.serialize()
+        }
     }
 
     /** Constructs a filtered transaction: the inputs and the notary party are always visible, while the rest are hidden. */
@@ -222,22 +277,7 @@ data class ContractUpgradeLedgerTransaction(
      * Outputs are computed by running the contract upgrade logic on input states. This is done eagerly so that the
      * transaction is verified during construction.
      */
-    override val outputs: List<TransactionState<ContractState>> = inputs.map { (state) ->
-        // TODO: if there are encumbrance states in the inputs, just copy them across without modifying
-        val upgradedState = upgradedContract.upgrade(state.data)
-        val inputConstraint = state.constraint
-        val outputConstraint = when (inputConstraint) {
-            is HashAttachmentConstraint -> HashAttachmentConstraint(upgradedContractAttachment.id)
-            WhitelistedByZoneAttachmentConstraint -> WhitelistedByZoneAttachmentConstraint
-            else -> throw IllegalArgumentException("Unsupported input contract constraint $inputConstraint")
-        }
-        // TODO: re-map encumbrance pointers
-        state.copy(
-                data = upgradedState,
-                contract = upgradedContractClassName,
-                constraint = outputConstraint
-        )
-    }
+    override val outputs: List<TransactionState<ContractState>> = inputs.map { calculateUpgradedState(it.state, upgradedContract, upgradedContractAttachment) }
 
     /** The required signers are the set of all input states' participants. */
     override val requiredSigningKeys: Set<PublicKey>

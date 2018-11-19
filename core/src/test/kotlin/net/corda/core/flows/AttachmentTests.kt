@@ -14,18 +14,13 @@ import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.hash
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.makeUnique
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
+import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import org.junit.AfterClass
 import org.junit.Test
-import java.io.ByteArrayOutputStream
-import java.util.jar.JarOutputStream
-import java.util.zip.ZipEntry
 
 class AttachmentTests : WithMockNet {
     companion object {
@@ -46,7 +41,7 @@ class AttachmentTests : WithMockNet {
     @Test
     fun `download and store`() {
         // Insert an attachment into node zero's store directly.
-        val id = aliceNode.importAttachment(fakeAttachment())
+        val id = aliceNode.importAttachment(fakeAttachment("file1.txt", "Some useful content"))
 
         // Get node one to run a flow to fetch it and insert it.
         assert.that(
@@ -87,7 +82,7 @@ class AttachmentTests : WithMockNet {
         val badAlice = badAliceNode.info.singleIdentity()
 
         // Insert an attachment into node zero's store directly.
-        val attachment = fakeAttachment()
+        val attachment = fakeAttachment("file1.txt", "Some useful content")
         val id = badAliceNode.importAttachment(attachment)
 
         // Corrupt its store.
@@ -134,18 +129,6 @@ class AttachmentTests : WithMockNet {
                 }
             }).apply { registerInitiatedFlow(FetchAttachmentsResponse::class.java) }
 
-    private fun fakeAttachment(): ByteArray =
-        ByteArrayOutputStream().use { baos ->
-            JarOutputStream(baos).use { jos ->
-                jos.putNextEntry(ZipEntry("file1.txt"))
-                jos.writer().apply {
-                    append("Some useful content")
-                    flush()
-                }
-                jos.closeEntry()
-            }
-            baos.toByteArray()
-        }
     //endregion
 
     //region Operations

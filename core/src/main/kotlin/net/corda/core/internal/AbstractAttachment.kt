@@ -27,6 +27,11 @@ fun isUploaderTrusted(uploader: String?): Boolean = uploader in TRUSTED_UPLOADER
 @KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
+        /**
+         * Returns a function that knows how to load an attachment.
+         *
+         * TODO - this code together with the rest of the Attachment handling (including [FetchedAttachment]) needs some refactoring as it is really hard to follow.
+         */
         @DeleteForDJVM
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {

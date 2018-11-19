@@ -1,6 +1,10 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -8,11 +12,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import org.slf4j.MDC
 
 // *Internal* Corda-specific utilities
@@ -73,3 +80,11 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
     override fun get(index: Int) = partialResolvedList[index]
             ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
 }
+
+/**
+ * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
+ * The [serializedState] is the actual component from the original transaction.
+ */
+@KeepForDJVM
+@CordaSerializable
+data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef)

@@ -10,6 +10,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
+import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
@@ -118,7 +119,8 @@ class TransactionTests {
         val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = listOf<Attachment>(ContractAttachment(rigorousMock<Attachment>().also {
             doReturn(SecureHash.zeroHash).whenever(it).id
-        }, DummyContract.PROGRAM_ID))
+            doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
+        }, DummyContract.PROGRAM_ID, uploader = "app"))
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
