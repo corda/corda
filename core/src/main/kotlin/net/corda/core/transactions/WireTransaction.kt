@@ -128,9 +128,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, null)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, null, null)
     }
-
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
