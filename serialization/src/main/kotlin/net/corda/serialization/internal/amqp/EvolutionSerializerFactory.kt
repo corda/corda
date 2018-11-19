@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.contracts.ContractState
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 
@@ -32,7 +31,7 @@ class EvolutionSerializationException(remoteTypeInformation: RemoteTypeInformati
 class DefaultEvolutionSerializerFactory(
         private val localSerializerFactory: LocalSerializerFactory,
         private val classLoader: ClassLoader,
-        private val mustPreserveContractStateData: Boolean): EvolutionSerializerFactory {
+        private val mustPreserveDataWhenEvolving: Boolean): EvolutionSerializerFactory {
 
     override fun getEvolutionSerializer(remoteTypeInformation: RemoteTypeInformation,
                                         localTypeInformation: LocalTypeInformation): AMQPSerializer<Any>? {
@@ -110,7 +109,7 @@ class DefaultEvolutionSerializerFactory(
         val newProperties = localPropertyNames - remotePropertyNames
 
         // Here is where we can exercise a veto on evolutions that remove properties.
-        if (deletedProperties.isNotEmpty() && mustPreserveContractStateData)
+        if (deletedProperties.isNotEmpty() && mustPreserveDataWhenEvolving)
             throw EvolutionSerializationException(this,
                     "Property ${deletedProperties.first()} of remote ContractState type is not present in local type")
 

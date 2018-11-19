@@ -6,9 +6,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.serialization.internal.carpenter.ClassCarpenter
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.*
-import org.apache.qpid.proton.amqp.*
 import java.io.NotSerializableException
-import java.util.*
 
 @KeepForDJVM
 object SerializerFactoryBuilder {
@@ -22,6 +20,7 @@ object SerializerFactoryBuilder {
                 DefaultDescriptorBasedSerializerRegistry(),
                 true,
                 null,
+                false,
                 false)
     }
 
@@ -35,14 +34,16 @@ object SerializerFactoryBuilder {
                     DefaultDescriptorBasedSerializerRegistry(),
             allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
-            onlyCustomSerializers: Boolean = false): SerializerFactory {
+            onlyCustomSerializers: Boolean = false,
+            mustPreserveDataWhenEvolving: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 classCarpenter,
                 descriptorBasedSerializerRegistry,
                 allowEvolution,
                 overrideFingerPrinter,
-                onlyCustomSerializers)
+                onlyCustomSerializers,
+                mustPreserveDataWhenEvolving)
     }
 
     @JvmStatic
@@ -56,14 +57,16 @@ object SerializerFactoryBuilder {
                     DefaultDescriptorBasedSerializerRegistry(),
             allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
-            onlyCustomSerializers: Boolean = false): SerializerFactory {
+            onlyCustomSerializers: Boolean = false,
+            mustPreserveDataWhenEvolving: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
                 descriptorBasedSerializerRegistry,
                 allowEvolution,
                 overrideFingerPrinter,
-                onlyCustomSerializers)
+                onlyCustomSerializers,
+                mustPreserveDataWhenEvolving)
     }
 
     private fun makeFactory(whitelist: ClassWhitelist,
@@ -71,7 +74,8 @@ object SerializerFactoryBuilder {
                             descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
                             allowEvolution: Boolean,
                             overrideFingerPrinter: FingerPrinter?,
-                            onlyCustomSerializers: Boolean): SerializerFactory {
+                            onlyCustomSerializers: Boolean,
+                            mustPreserveDataWhenEvolving: Boolean): SerializerFactory {
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
 
         val localTypeModel = ConfigurableLocalTypeModel(
@@ -80,7 +84,7 @@ object SerializerFactoryBuilder {
                         customSerializerRegistry))
 
         val fingerPrinter = overrideFingerPrinter ?:
-            CustomisableLocalTypeInformationFingerPrinter(customSerializerRegistry)
+            TypeModellingFingerPrinter(customSerializerRegistry)
 
         val localSerializerFactory = DefaultLocalSerializerFactory(
                 whitelist,
@@ -102,7 +106,7 @@ object SerializerFactoryBuilder {
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 classCarpenter.classloader,
-                false
+                mustPreserveDataWhenEvolving
         ) else NoEvolutionSerializerFactory
 
         val remoteSerializerFactory = DefaultRemoteSerializerFactory(

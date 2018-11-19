@@ -72,6 +72,28 @@ sealed class LocalTypeInformation {
     abstract val typeIdentifier: TypeIdentifier
 
     /**
+     * Get the map of [LocalPropertyInformation], for all types that have it, or an empty map otherwise.
+     */
+    val propertiesOrEmptyMap: Map<PropertyName, LocalPropertyInformation> get() = when(this) {
+        is LocalTypeInformation.Composable -> properties
+        is LocalTypeInformation.Abstract -> properties
+        is LocalTypeInformation.AnInterface -> properties
+        is LocalTypeInformation.NonComposable -> properties
+        else -> emptyMap()
+    }
+
+    /**
+     * Get the list of interfaces, for all types that have them, or an empty list otherwise.
+     */
+    val interfacesOrEmptyList: List<LocalTypeInformation> get() = when(this) {
+        is LocalTypeInformation.Composable -> interfaces
+        is LocalTypeInformation.Abstract -> interfaces
+        is LocalTypeInformation.AnInterface -> interfaces
+        is LocalTypeInformation.NonComposable -> interfaces
+        else -> emptyList()
+    }
+
+    /**
      * Obtain a multi-line, recursively-indented representation of this type information.
      *
      * @param simplifyClassNames By default, class names are printed as their "simple" class names, i.e. "String" instead

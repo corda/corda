@@ -27,9 +27,9 @@ interface FingerPrinter {
  * @param customTypeDescriptorLookup The [CustomTypeDescriptorLookup] to use to obtain custom type descriptors for
  * selected types.
  */
-class CustomisableLocalTypeInformationFingerPrinter(
+class TypeModellingFingerPrinter(
         private val customTypeDescriptorLookup: CustomSerializerRegistry,
-        private val debugEnabled: Boolean = true) : FingerPrinter {
+        private val debugEnabled: Boolean = false) : FingerPrinter {
 
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
 
