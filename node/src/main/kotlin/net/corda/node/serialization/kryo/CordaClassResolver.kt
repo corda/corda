@@ -11,7 +11,7 @@ import net.corda.core.internal.writer
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.utilities.contextLogger
-import net.corda.serialization.internal.AttachmentsClassLoader
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.TransientClassWhiteList
 import net.corda.serialization.internal.amqp.hasCordaSerializable

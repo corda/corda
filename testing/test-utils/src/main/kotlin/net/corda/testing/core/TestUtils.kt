@@ -161,3 +161,4 @@ fun NodeInfo.singleIdentityAndCert(): PartyAndCertificate = legalIdentitiesAndCe
  * Extract a single identity from the node info. Throws an error if the node has multiple identities.
  */
 fun NodeInfo.singleIdentity(): Party = singleIdentityAndCert().party
+

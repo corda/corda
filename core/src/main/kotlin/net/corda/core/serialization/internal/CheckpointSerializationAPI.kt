@@ -74,13 +74,6 @@ interface CheckpointSerializationContext {
     fun withClassLoader(classLoader: ClassLoader): CheckpointSerializationContext
 
     /**
-     * Helper method to return a new context based on this context with the appropriate class loader constructed from the passed attachment identifiers.
-     * (Requires the attachment storage to have been enabled).
-     */
-    @Throws(MissingAttachmentsException::class)
-    fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): CheckpointSerializationContext
-
-    /**
      * Helper method to return a new context based on this context with the given class specifically whitelisted.
      */
     fun withWhitelisted(clazz: Class<*>): CheckpointSerializationContext
