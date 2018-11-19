@@ -137,7 +137,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
     }
 
-
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
