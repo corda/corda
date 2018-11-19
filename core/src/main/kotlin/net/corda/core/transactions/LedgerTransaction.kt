@@ -1,22 +1,21 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
-import net.corda.core.internal.AttachmentWithContext
-import net.corda.core.internal.castIfPossible
-import net.corda.core.internal.checkMinimumPlatformVersion
-import net.corda.core.internal.uncheckedCast
+import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.Try
+import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
 import kotlin.collections.HashSet
-import net.corda.core.utilities.warnOnce
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -34,7 +33,7 @@ import net.corda.core.utilities.warnOnce
 // DOCSTART 1
 @KeepForDJVM
 @CordaSerializable
-data class LedgerTransaction @JvmOverloads constructor(
+data class LedgerTransaction private constructor(
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,
         override val outputs: List<TransactionState<ContractState>>,
@@ -47,9 +46,38 @@ data class LedgerTransaction @JvmOverloads constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        private val networkParameters: NetworkParameters? = null,
-        override val references: List<StateAndRef<ContractState>> = emptyList()
+        private val networkParameters: NetworkParameters?,
+        override val references: List<StateAndRef<ContractState>>,
+        val componentGroups: List<ComponentGroup>?,
+        val resolvedInputBytes: List<SerializedStateAndRef>?,
+        val resolvedReferenceBytes: List<SerializedStateAndRef>?
 ) : FullTransaction() {
+
+    @Deprecated("Client code should not instantiate LedgerTransaction.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList(), null, null, null)
+
+    @Deprecated("Client code should not instantiate LedgerTransaction.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt,
+            networkParameters: NetworkParameters?
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), null, null, null)
+
     //DOCEND 1
     init {
         checkBaseInvariants()
@@ -58,19 +86,25 @@ data class LedgerTransaction @JvmOverloads constructor(
         checkEncumbrancesValid()
     }
 
-    private companion object {
-        val logger = loggerFor<LedgerTransaction>()
-        private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader?): Try<Class<out Contract>> {
-            return Try.on {
-                (classLoader ?: this::class.java.classLoader)
-                        .loadClass(className)
-                        .asSubclass(Contract::class.java)
-            }
-        }
+    companion object {
+        private val logger = loggerFor<LedgerTransaction>()
 
-        private fun stateToContractClass(state: TransactionState<ContractState>): Try<Class<out Contract>> {
-            return contractClassFor(state.contract, state.data::class.java.classLoader)
-        }
+        @CordaInternal
+        internal fun makeLedgerTransaction(
+                inputs: List<StateAndRef<ContractState>>,
+                outputs: List<TransactionState<ContractState>>,
+                commands: List<CommandWithParties<CommandData>>,
+                attachments: List<Attachment>,
+                id: SecureHash,
+                notary: Party?,
+                timeWindow: TimeWindow?,
+                privacySalt: PrivacySalt,
+                networkParameters: NetworkParameters?,
+                references: List<StateAndRef<ContractState>>,
+                componentGroups: List<ComponentGroup>,
+                resolvedInputBytes: List<SerializedStateAndRef>,
+                resolvedReferenceBytes: List<SerializedStateAndRef>
+        ) = LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
     }
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
@@ -88,6 +122,12 @@ data class LedgerTransaction @JvmOverloads constructor(
 
     /**
      * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
+
+     * The contract verification logic is run in a custom [AttachmentsClassLoader] created for the current transaction.
+     * This classloader is only used during verification and does not leak to the client code.
+     *
+     * The reason for this is that classes (contract states) deserialized in this classloader would actually be a different type from what
+     * the calling code would expect.
      *
      * @throws TransactionVerificationException if anything goes wrong.
      */
@@ -95,12 +135,17 @@ data class LedgerTransaction @JvmOverloads constructor(
     fun verify() {
         val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
 
-        // TODO - verify for version downgrade
-        validatePackageOwnership(contractAttachmentsByContract)
-        validateStatesAgainstContract()
-        verifyConstraintsValidity(contractAttachmentsByContract)
-        verifyConstraints(contractAttachmentsByContract)
-        verifyContracts()
+        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
+
+            val internalTx = createInternalLedgerTransaction()
+
+            // TODO - verify for version downgrade
+            validatePackageOwnership(contractAttachmentsByContract)
+            validateStatesAgainstContract(internalTx)
+            verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
+            verifyConstraints(internalTx, contractAttachmentsByContract)
+            verifyContracts(internalTx)
+        }
     }
 
     /**
@@ -133,7 +178,7 @@ data class LedgerTransaction @JvmOverloads constructor(
      *
      * A warning will be written to the log if any mismatch is detected.
      */
-    private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
+    private fun validateStatesAgainstContract(internalTx: LedgerTransaction) = internalTx.allStates.forEach { validateStateAgainstContract(it) }
 
     private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
         state.data.requiredContractClassName?.let { requiredContractClassName ->
@@ -150,25 +195,25 @@ data class LedgerTransaction @JvmOverloads constructor(
      * * Constraints should be one of the valid supported ones.
      * * Constraints should propagate correctly if not marked otherwise.
      */
-    private fun verifyConstraintsValidity(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+    private fun verifyConstraintsValidity(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>, transactionClassLoader: ClassLoader) {
         // First check that the constraints are valid.
-        for (state in allStates) {
+        for (state in internalTx.allStates) {
             checkConstraintValidity(state)
         }
 
         // Group the inputs and outputs by contract, and for each contract verify the constraints propagation logic.
         // This is not required for reference states as there is nothing to propagate.
-        val inputContractGroups = inputs.groupBy { it.state.contract }
-        val outputContractGroups = outputs.groupBy { it.contract }
+        val inputContractGroups = internalTx.inputs.groupBy { it.state.contract }
+        val outputContractGroups = internalTx.outputs.groupBy { it.contract }
 
         for (contractClassName in (inputContractGroups.keys + outputContractGroups.keys)) {
-            if (contractClassName.contractHasAutomaticConstraintPropagation()) {
+            if (contractClassName.contractHasAutomaticConstraintPropagation(transactionClassLoader)) {
                 // Verify that the constraints of output states have at least the same level of restriction as the constraints of the corresponding input states.
                 val inputConstraints = inputContractGroups[contractClassName]?.map { it.state.constraint }?.toSet()
                 val outputConstraints = outputContractGroups[contractClassName]?.map { it.constraint }?.toSet()
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
-                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachmentsByContract[contractClassName]!! ))) {
+                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachmentsByContract[contractClassName]!!))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
                     }
@@ -186,8 +231,8 @@ data class LedgerTransaction @JvmOverloads constructor(
      *
      * @throws TransactionVerificationException if the constraints fail to verify
      */
-    private fun verifyConstraints(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
-        for (state in allStates) {
+    private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        for (state in internalTx.allStates) {
             val contractAttachment = contractAttachmentsByContract[state.contract]
                     ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
@@ -226,38 +271,64 @@ data class LedgerTransaction @JvmOverloads constructor(
         return result
     }
 
+    private fun contractClassFor(className: ContractClassName, classLoader: ClassLoader): Class<out Contract> = try {
+        classLoader.loadClass(className).asSubclass(Contract::class.java)
+    } catch (e: Exception) {
+        throw TransactionVerificationException.ContractCreationError(id, className, e)
+    }
+
+    private fun createInternalLedgerTransaction(): LedgerTransaction {
+        return if (resolvedInputBytes != null && resolvedReferenceBytes != null && componentGroups != null) {
+
+            // Deserialize all relevant classes in the transaction classloader.
+            val resolvedDeserializedInputs = resolvedInputBytes.map { StateAndRef(it.serializedState.deserialize(), it.ref) }
+            val resolvedDeserializedReferences = resolvedReferenceBytes.map { StateAndRef(it.serializedState.deserialize(), it.ref) }
+            val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
+            val deserializedCommands = deserialiseCommands(this.componentGroups, forceDeserialize = true)
+            val authenticatedArgs = deserializedCommands.map { cmd ->
+                val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
+                CommandWithParties(cmd.signers, parties, cmd.value)
+            }
+
+            val ledgerTransactionToVerify = this.copy(
+                    inputs = resolvedDeserializedInputs,
+                    outputs = deserializedOutputs,
+                    commands = authenticatedArgs,
+                    references = resolvedDeserializedReferences)
+
+            ledgerTransactionToVerify
+        } else {
+            // This branch is only present for backwards compatibility.
+            // TODO - it should be removed once the constructor of LedgerTransaction is no longer public api.
+            logger.warn("The LedgerTransaction should not be instantiated directly from client code. Please use WireTransaction.toLedgerTransaction. The result of the verify method might not be accurate.")
+            this
+        }
+    }
+
     /**
      * Check the transaction is contract-valid by running the verify() for each input and output state contract.
      * If any contract fails to verify, the whole transaction is considered to be invalid.
      */
-    private fun verifyContracts() = inputAndOutputStates.forEach { ts ->
-        val contractClass = getContractClass(ts)
-        val contract = createContractInstance(contractClass)
+    private fun verifyContracts(internalTx: LedgerTransaction) {
+        val contractClasses = (internalTx.inputs.map { it.state } + internalTx.outputs).toSet()
+                .map { it.contract to contractClassFor(it.contract, it.data.javaClass.classLoader) }
 
-        try {
-            contract.verify(this)
-        } catch (e: Exception) {
-            throw TransactionVerificationException.ContractRejection(id, contract, e)
-        }
-    }
-
-    // Obtain the contract class from the class name, wrapping any exception as a [ContractCreationError]
-    private fun getContractClass(ts: TransactionState<ContractState>): Class<out Contract> =
-            try {
-                (ts.data::class.java.classLoader ?: this::class.java.classLoader)
-                        .loadClass(ts.contract)
-                        .asSubclass(Contract::class.java)
-            } catch (e: Exception) {
-                throw TransactionVerificationException.ContractCreationError(id, ts.contract, e)
-            }
-
-    // Obtain an instance of the contract class, wrapping any exception as a [ContractCreationError]
-    private fun createContractInstance(contractClass: Class<out Contract>): Contract =
+        val contractInstances = contractClasses.map { (contractClassName, contractClass) ->
             try {
                 contractClass.newInstance()
             } catch (e: Exception) {
-                throw TransactionVerificationException.ContractCreationError(id, contractClass.name, e)
+                throw TransactionVerificationException.ContractCreationError(id, contractClassName, e)
             }
+        }
+
+        contractInstances.forEach { contract ->
+            try {
+                contract.verify(internalTx)
+            } catch (e: Exception) {
+                throw TransactionVerificationException.ContractRejection(id, contract, e)
+            }
+        }
+    }
 
     /**
      * Make sure the notary has stayed the same. As we can't tell how inputs and outputs connect, if there
@@ -286,7 +357,8 @@ data class LedgerTransaction @JvmOverloads constructor(
         // b) the number of outputs can contain the encumbrance
         // c) the bi-directionality (full cycle) property is satisfied
         // d) encumbered output states are assigned to the same notary.
-        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }.map { Pair(it.index, it.value.encumbrance!!) }
+        val statesAndEncumbrance = outputs.withIndex().filter { it.value.encumbrance != null }
+                .map { Pair(it.index, it.value.encumbrance!!) }
         if (!statesAndEncumbrance.isEmpty()) {
             checkBidirectionalOutputEncumbrances(statesAndEncumbrance)
             checkNotariesOutputEncumbrance(statesAndEncumbrance)
