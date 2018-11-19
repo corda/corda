@@ -230,27 +230,22 @@ class ConstraintsPropagationTests {
     @Test
     fun `Signature Constraints canBeTransitionedFrom Hash Constraints behaves as expected`() {
 
-        // signature constrained attachment
-        val attachmentSignatureConstraintsJar = mock<AttachmentWithContext>()
-        whenever(attachmentSignatureConstraintsJar.signers).thenReturn(listOf(ALICE_PARTY.owningKey))
+        // unsigned attachment (for hash constraint)
+        val attachmentUnsigned = mock<ContractAttachment>()
+        val attachmentIdUnsigned = allOnesHash
+        whenever(attachmentUnsigned.contract).thenReturn(propagatingContractClassName)
 
-        // hash constrained attachments
+        // signed attachment (for signature constraint)
         val attachmentSigned = mock<ContractAttachment>()
-        val attachmentIdSigned = zeroHash       // NP CZ whitelisted
+        val attachmentIdSigned = zeroHash
         whenever(attachmentSigned.signers).thenReturn(listOf(ALICE_PARTY.owningKey))
         whenever(attachmentSigned.contract).thenReturn(propagatingContractClassName)
-        val attachment = MockAttachment({ ByteArray(0) }, attachmentIdSigned, listOf(ALICE_PARTY.owningKey))
-        whenever(attachmentSigned.attachment).thenReturn(attachment)
-
-        val attachmentUnsigned = mock<ContractAttachment>()
-        val attachmentIdUnsigned = allOnesHash  // NP CZ whitelisted
-        whenever(attachmentUnsigned.contract).thenReturn(propagatingContractClassName)
 
         // network parameters
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                whitelistedContractImplementations = mapOf(propagatingContractClassName to listOf(attachmentIdSigned, attachmentIdUnsigned)),
                 packageOwnership = mapOf(JavaPackageName(propagatingContractClassName) to ALICE_PARTY.owningKey))
 
+        // attachment with context (both unsigned and signed attachments representing same contract)
         val attachmentUnsignedWithContext = mock<AttachmentWithContext>()
         whenever(attachmentUnsignedWithContext.contractAttachment).thenReturn(attachmentUnsigned)
         whenever(attachmentUnsignedWithContext.contract).thenReturn(propagatingContractClassName)
@@ -262,7 +257,6 @@ class ConstraintsPropagationTests {
 
         // propagation check
         assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentUnsignedWithContext))
-
     }
 
     @Test
