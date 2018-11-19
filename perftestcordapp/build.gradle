@@ -72,9 +72,7 @@ cordapp {
     info {
         name "net/corda/perftestcordapp"
         vendor "R3"
-        // TODO Update the performance test cordapp to use the new FinalityFlow API
-//        targetPlatformVersion corda_platform_version.toInteger()
-        targetPlatformVersion 3
+        targetPlatformVersion corda_platform_version.toInteger()
         minimumPlatformVersion 1
     }
 }

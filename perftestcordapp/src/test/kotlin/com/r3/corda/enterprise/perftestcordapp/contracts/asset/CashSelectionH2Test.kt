@@ -20,9 +20,7 @@ import java.util.Collections.nCopies
 class CashSelectionH2Test {
     private val mockNet = MockNetwork(
             threadPerNode = true,
-            cordappPackages = emptyList(),
-            // TODO Update the performance test cordapp to use the new FinalityFlow API
-            cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+            cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp")
     )
 
     @After

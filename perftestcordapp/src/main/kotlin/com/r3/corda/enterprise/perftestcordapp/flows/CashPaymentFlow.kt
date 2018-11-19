@@ -9,7 +9,7 @@ import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.InsufficientBalanceException
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
@@ -27,6 +27,7 @@ import java.util.*
  * for testing purposes.
  */
 @StartableByRPC
+@InitiatingFlow
 open class CashPaymentFlow(
         val amount: Amount<Currency>,
         val recipient: Party,
@@ -66,7 +67,8 @@ open class CashPaymentFlow(
         val tx = serviceHub.signInitialTransaction(spendTX, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
+        val sessions = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(initiateFlow(recipient))
+        val notarised = finaliseTx(tx, sessions, "Unable to notarise spend")
         return Result(notarised.id, anonymousRecipient)
     }
 
@@ -75,4 +77,12 @@ open class CashPaymentFlow(
                          val recipient: Party,
                          val anonymous: Boolean,
                          val issuerConstraint: Set<Party> = emptySet()) : AbstractRequest(amount)
+}
+
+@InitiatedBy(CashPaymentFlow::class)
+class CashPaymentResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ReceiveFinalityFlow(otherSide))
+    }
 }

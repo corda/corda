@@ -10,10 +10,7 @@ import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.
 import com.r3.corda.enterprise.perftestcordapp.flows.AbstractCashFlow.Companion.SIGNING_TX
 import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.*
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -34,6 +31,7 @@ import java.util.*
  * @param notary the notary to set on the output states.
  */
 @StartableByRPC
+@InitiatingFlow
 class CashIssueAndDoublePayment(val amount: Amount<Currency>,
                                 val issueRef: OpaqueBytes,
                                 val recipient: Party,
@@ -79,9 +77,11 @@ class CashIssueAndDoublePayment(val amount: Amount<Currency>,
         val tx2 = serviceHub.signInitialTransaction(spendTx2, keysForSigning2)
 
         progressTracker.currentStep = FINALISING_TX
-        val notarised1 = finaliseTx(tx1, setOf(recipient), "Unable to notarise spend first time")
+        val sessions = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(initiateFlow(recipient))
+
+        val notarised1 = finaliseTx(tx1, sessions, "Unable to notarise spend first time")
         try {
-            finaliseTx(tx2, setOf(recipient), "Unable to notarise spend second time")
+            finaliseTx(tx2, sessions, "Unable to notarise spend second time")
         } catch (expected: CashException) {
             val cause = expected.cause
             if (cause is NotaryException) {
@@ -92,5 +92,13 @@ class CashIssueAndDoublePayment(val amount: Amount<Currency>,
             }
         }
         throw FlowException("Managed to do double spend.  Should have thrown NotaryError.Conflict.")
+    }
+}
+
+@InitiatedBy(CashIssueAndDoublePayment::class)
+class CashIssueAndDoublePaymentResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ReceiveFinalityFlow(otherSide))
     }
 }

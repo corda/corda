@@ -85,8 +85,7 @@ internal fun CheckpointStorage.checkpoints(): List<SerializedBytes<Checkpoint>> 
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
-        // TODO Update the performance test cordapp to use the new FinalityFlow API
-        private val cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+        private val cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp"))
         @JvmStatic
         @Parameterized.Parameters(name = "Anonymous = {0}")
         fun data(): Collection<Boolean> = listOf(true, false)

@@ -9,7 +9,7 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
@@ -18,6 +18,7 @@ import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
 @StartableByRPC
+@InitiatingFlow
 class CashPaymentFromKnownStatesFlow(
         val inputs: Set<StateRef>,
         val numberOfStates: Int,
@@ -64,7 +65,16 @@ class CashPaymentFromKnownStatesFlow(
         val tx = serviceHub.signInitialTransaction(spendTx, keysForSigning)
 
         progressTracker.currentStep = AbstractCashFlow.Companion.FINALISING_TX
-        val notarised = finaliseTx(tx, setOf(recipient), "Unable to notarise spend")
+        val sessions = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(initiateFlow(recipient))
+        val notarised = finaliseTx(tx, sessions, "Unable to notarise spend")
         return AbstractCashFlow.Result(notarised.id, anonymousRecipient)
+    }
+}
+
+@InitiatedBy(CashPaymentFromKnownStatesFlow::class)
+class CashPaymentFromKnownStatesResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ReceiveFinalityFlow(otherSide))
     }
 }

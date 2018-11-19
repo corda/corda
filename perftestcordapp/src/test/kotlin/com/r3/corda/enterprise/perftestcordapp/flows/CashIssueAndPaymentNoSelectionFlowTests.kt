@@ -11,7 +11,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -27,19 +28,18 @@ class CashIssueAndPaymentNoSelectionTests(private val anonymous: Boolean) {
         fun data() = listOf(false, true)
     }
 
-    private lateinit var mockNet: InternalMockNetwork
+    private lateinit var mockNet: MockNetwork
     private val ref = OpaqueBytes.of(0x01)
-    private lateinit var bankOfCordaNode: TestStartedNode
+    private lateinit var bankOfCordaNode: StartedMockNode
     private lateinit var bankOfCorda: Party
-    private lateinit var aliceNode: TestStartedNode
+    private lateinit var aliceNode: StartedMockNode
     private lateinit var notary: Party
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(
+        mockNet = MockNetwork(
                 servicePeerAllocationStrategy = RoundRobin(),
-                // TODO Update the performance test cordapp to use the new FinalityFlow API
-                cordappsForAllNodes = listOf(cordappForPackages("com.r3.corda.enterprise.perftestcordapp").withTargetVersion(3))
+                cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp")
         )
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -58,7 +58,7 @@ class CashIssueAndPaymentNoSelectionTests(private val anonymous: Boolean) {
         val payTo = aliceNode.info.singleIdentity()
         val expectedPayment = 500.DOLLARS
 
-        bankOfCordaNode.database.transaction {
+        bankOfCordaNode.transaction {
             // Register for vault updates
             val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
             val (_, vaultUpdatesBoc)
@@ -66,8 +66,8 @@ class CashIssueAndPaymentNoSelectionTests(private val anonymous: Boolean) {
             val (_, vaultUpdatesBankClient)
                     = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.services.startFlow(CashIssueAndPaymentNoSelection(
-                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary)).resultFuture
+            val future = bankOfCordaNode.startFlow(CashIssueAndPaymentNoSelection(
+                    expectedPayment, OpaqueBytes.of(1), payTo, anonymous, notary))
             mockNet.runNetwork()
             future.getOrThrow()
 

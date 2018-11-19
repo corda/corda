@@ -117,7 +117,7 @@ class LinearStateBatchNotariseFlow(private val notary: Party,
     @Suspendable
     private fun finaliseTx(tx: SignedTransaction, message: String): SignedTransaction {
         try {
-            return subFlow(FinalityFlow(tx))
+            return subFlow(FinalityFlow(tx, emptySet<FlowSession>()))
         } catch (e: NotaryException) {
             throw FlowException(message, e)
         }
