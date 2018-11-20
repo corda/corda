@@ -190,12 +190,16 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                                                  resolveAttachment: (SecureHash) -> Attachment?,
                                                  resolveContractAttachment: (StateRef) -> Attachment?)
             : Map<ContractClassName, Set<Version>> {
-        val contractClassAndAttachmentId: List<Pair<ContractClassName, AttachmentId>> = states.map {
-            Pair(it.state.contract, resolveContractAttachment(it.ref))
-        }.filter { it.second != null }.map { Pair(it.first, it.second as AttachmentId) }
+//        val contractClassAndAttachmentId: List<Pair<ContractClassName, AttachmentId>> = states.map {
+//            Pair(it.state.contract, resolveContractAttachment(it.ref))
+//        }.filter { it.second != null }.map { Pair(it.first, it.second as AttachmentId) }
+//
+//        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = contractClassAndAttachmentId.map { x ->
+//            Pair(x.first, resolveAttachment(x.second))
+//        }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
 
-        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = contractClassAndAttachmentId.map { x ->
-            Pair(x.first, resolveAttachment(x.second))
+        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
+            Pair(it.state.contract, resolveContractAttachment(it.ref))
         }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
 
         val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndAttachment
