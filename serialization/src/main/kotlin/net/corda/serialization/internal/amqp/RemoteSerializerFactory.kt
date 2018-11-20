@@ -30,9 +30,9 @@ data class RemoteAndLocalTypeInformation(
 
 /**
  * A [RemoteSerializerFactory] which uses an [AMQPRemoteTypeModel] to interpret AMQP [Schema]s into [RemoteTypeInformation],
- * reflects this into [LocalTypeInformation] using a [RemoteTypeReflector], and compares the two in order to decide whether to
- * return the serializer provided by the [LocalSerializerFactory] or to construct a special evolution serializer using the
- * [EvolutionSerializerFactory].
+ * reflects this into [LocalTypeInformation] using a [LocalTypeModel] and a [TypeLoader], and compares the two in order to
+ * decide whether to return the serializer provided by the [LocalSerializerFactory] or to construct a special evolution serializer
+ * using the [EvolutionSerializerFactory].
  *
  * Its decisions are recorded by registering the chosen serialisers against their type descriptors
  * in the [DescriptorBasedSerializerRegistry].
@@ -40,7 +40,8 @@ data class RemoteAndLocalTypeInformation(
  * @param evolutionSerializerFactory The [EvolutionSerializerFactory] to use to create evolution serializers, when necessary.
  * @param descriptorBasedSerializerRegistry The registry to use to store serializers by [TypeDescriptor].
  * @param remoteTypeModel The [AMQPRemoteTypeModel] to use to interpret AMPQ [Schema] information into [RemoteTypeInformation].
- * @param typeReflector The [RemoteTypeReflector] to use to reflect [RemoteTypeInformation] into [LocalTypeInformation].
+ * @param localTypeModel The [LocalTypeModel] to use to obtain [LocalTypeInformation] for reflected [Type]s.
+ * @param typeLoader The [TypeLoader] to use to load local [Type]s reflecting [RemoteTypeInformation].
  * @param localSerializerFactory The [LocalSerializerFactory] to use to obtain serializers for non-evolved types.
  */
 class DefaultRemoteSerializerFactory(

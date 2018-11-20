@@ -35,18 +35,23 @@ class AMQPRemoteTypeModel {
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
 
-        return byTypeDescriptor.mapValues { (typeDescriptor, typeNotation) ->
+        val result = byTypeDescriptor.mapValues { (typeDescriptor, typeNotation) ->
             cache.getOrPut(typeDescriptor) { interpretationState.run { typeNotation.name.typeIdentifier.interpretIdentifier() } }
         }
+        val typesByIdentifier = result.values.associateBy { it.typeIdentifier }
+        result.values.forEach { typeInformation ->
+            if (typeInformation is RemoteTypeInformation.Cycle) {
+                typeInformation.follow = typesByIdentifier[typeInformation.typeIdentifier] ?:
+                        throw NotSerializableException("Cannot resolve cyclic reference to ${typeInformation.typeIdentifier}")
+            }
+        }
+        return result
     }
 
     data class InterpretationState(val notationLookup: Map<TypeIdentifier, TypeNotation>,
                                    val enumTransformsLookup: Map<TypeIdentifier, EnumTransforms>,
                                    val cache: MutableMap<TypeDescriptor, RemoteTypeInformation>,
                                    val seen: Set<TypeIdentifier>) {
-
-        private inline fun <T> forgetSeen(block: InterpretationState.() -> T): T =
-                withSeen(emptySet(), block)
 
         private inline fun <T> withSeen(typeIdentifier: TypeIdentifier, block: InterpretationState.() -> T): T =
                 withSeen(seen + typeIdentifier, block)
@@ -62,7 +67,7 @@ class AMQPRemoteTypeModel {
          * know we have hit a cycle and respond accordingly.
          */
         fun TypeIdentifier.interpretIdentifier(): RemoteTypeInformation =
-            if (this in seen) RemoteTypeInformation.Cycle(this) { forgetSeen { interpretIdentifier() } }
+            if (this in seen) RemoteTypeInformation.Cycle(this)
             else withSeen(this) {
                 val identifier = this@interpretIdentifier
                 notationLookup[identifier]?.interpretNotation(identifier) ?: interpretNoNotation()
