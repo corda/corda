@@ -65,14 +65,8 @@ class NodeParametersStorage(
 
     private lateinit var _currentHash: SecureHash
     override val currentParametersHash: SecureHash get() = _currentHash
-    override val currentParameters: NetworkParameters
-        get() = readParametersFromHash(currentParametersHash)
-                ?: throw IllegalAccessException("No current parameters for the network provided")
     // TODO Have network map serve special "starting" parameters as parameters for resolution for older transactions?
     override val defaultParametersHash: SecureHash get() = currentParametersHash
-    override val defaultParameters: NetworkParameters
-        get() = readParametersFromHash(defaultParametersHash)
-                ?: throw IllegalAccessException("No default parameters for the network provided")
 
     private val hashToParameters = createParametersMap(cacheFactory)
 

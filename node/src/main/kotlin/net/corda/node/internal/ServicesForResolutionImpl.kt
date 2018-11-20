@@ -16,7 +16,8 @@ data class ServicesForResolutionImpl(
         override val networkParametersStorage: NetworkParametersStorage,
         private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
-    override val networkParameters: NetworkParameters get() = networkParametersStorage.currentParameters
+    override val networkParameters: NetworkParameters get() = networkParametersStorage.readParametersFromHash(networkParametersStorage.currentParametersHash) ?:
+            throw IllegalArgumentException("No current parameters in network parameters storage")
 
     @Throws(TransactionResolutionException::class)
     override fun loadState(stateRef: StateRef): TransactionState<*> {

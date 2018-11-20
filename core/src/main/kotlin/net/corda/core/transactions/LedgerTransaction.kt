@@ -221,7 +221,7 @@ data class LedgerTransaction private constructor(
                     ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
-                    networkParameters?.whitelistedContractImplementations)
+                    networkParameters.whitelistedContractImplementations)
 
             if (state.constraint is SignatureAttachmentConstraint)
                 checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, 4, "Signature constraints")

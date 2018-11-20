@@ -17,19 +17,9 @@ interface NetworkParametersStorage {
     val currentParametersHash: SecureHash
 
     /**
-    * Current parameters for the network.
-    */
-    val currentParameters: NetworkParameters
-
-    /**
      * For backwards compatibility, this parameters hash will be used for resolving historical transactions in the chain.
      */
     val defaultParametersHash: SecureHash
-
-    /**
-     * For backwards compatibility, these parameters will be used for resolving historical transactions in the chain.
-     */
-    val defaultParameters: NetworkParameters
 
     /**
      * Return network parameters for the given hash. Null if there are no parameters for this hash in the storage and we are unable to

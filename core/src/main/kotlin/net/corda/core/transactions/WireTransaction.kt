@@ -104,7 +104,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefComponent = { resolveStateRefBinaryComponent(it, services) },
-                resolveParameters = { it?.let { services.networkParametersStorage.readParametersFromHash(it) } ?: services.networkParametersStorage.defaultParameters }
+                resolveParameters = {
+                    val hashToResolve = it ?: services.networkParametersStorage.defaultParametersHash
+                    services.networkParametersStorage.readParametersFromHash(hashToResolve)
+                }
         )
     }
 

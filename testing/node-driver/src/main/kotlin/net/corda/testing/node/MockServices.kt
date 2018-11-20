@@ -44,6 +44,7 @@ import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
+import java.time.Instant
 import java.util.*
 import java.util.function.Consumer
 import javax.persistence.EntityManager
@@ -109,7 +110,7 @@ open class MockServices private constructor(
         fun makeTestDatabaseAndMockServices(cordappPackages: List<String>,
                                             identityService: IdentityService,
                                             initialIdentity: TestIdentity,
-                                            networkParameters: NetworkParameters = testNetworkParameters(),
+                                            networkParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
 
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
@@ -169,7 +170,7 @@ open class MockServices private constructor(
                 initialIdentity: TestIdentity,
                 identityService: IdentityService = makeTestIdentityService(),
                 vararg moreKeys: KeyPair) :
-            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
+            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(modifiedTime = Instant.MIN), initialIdentity, moreKeys)
 
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
@@ -324,14 +325,13 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
 }
 
-class MockNetworkParametersStorage(override val currentParameters: NetworkParameters = testNetworkParameters()) : NetworkParametersStorage {
+class MockNetworkParametersStorage(val currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorage {
     private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
     init {
         hashToParametersMap[currentParametersHash] = currentParameters
     }
     override val currentParametersHash: SecureHash get() = currentParameters.serialize().hash
     override val defaultParametersHash: SecureHash get() = currentParametersHash
-    override val defaultParameters: NetworkParameters get() = readParametersFromHash(currentParametersHash) ?: testNetworkParameters()
     override fun getEpochFromHash(hash: SecureHash): Int?  = readParametersFromHash(hash)?.epoch
     override fun readParametersFromHash(hash: SecureHash): NetworkParameters? = hashToParametersMap[hash]
     override fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>) {

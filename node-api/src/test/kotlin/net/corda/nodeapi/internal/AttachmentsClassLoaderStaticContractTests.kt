@@ -72,7 +72,6 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
         doReturn(networkParameters.serialize().hash).whenever(it).currentParametersHash
-        doReturn(networkParameters).whenever(it).currentParameters
     }
 
     private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
