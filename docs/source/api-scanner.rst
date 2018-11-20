@@ -1,5 +1,5 @@
-API stability check
-===================
+Checking API stability
+======================
 
 We have committed not to alter Corda's API so that developers will not have to keep rewriting their CorDapps with each
 new Corda release. The stable Corda modules are listed :ref:`here <internal-apis-and-stability-guarantees>`. Our CI process runs an "API Stability"
