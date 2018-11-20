@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.flows.FlowLogic
@@ -830,7 +831,7 @@ class DriverDSLImpl(
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
+                    arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
