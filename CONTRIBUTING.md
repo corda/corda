@@ -7,10 +7,12 @@ We welcome contributions to Corda! Here's how to go about it.
 ## Contents
 
 * [Mission](#mission)
-* [Scope](#scope)
-* [How to Contribute](#how-to-contribute)
-* [Project Leadership and Maintainers](#project-leadership-and-maintainers)
 * [Community Locations](#community-locations)
+* [Project Leadership and Maintainers](#project-leadership-and-maintainers)
+* [How to Contribute](#how-to-contribute)
+    * [Scope](#scope)
+    * [Contribution Guidelines](#contribution-guidelines)
+    * [Advice to Contributors](#advice-to-contributors)
 * [Transparency and Conflict Policy](#transparency-and-conflict-policy)
 * [Developer Certificate of Origin](#developer-certificate-of-origin)
 
@@ -26,7 +28,33 @@ or innovate around. The mission of Corda is further detailed in the
 The project is supported and maintained by the [R3 Alliance](https://www.r3.com), or R3 for short, which consists of over two hundred firms 
 working together to build and maintain this open source enterprise-grade blockchain platform.
 
-## Scope
+## Community Locations
+
+The Corda maintainers, developers and extended community make active use of the following channels:
+ 
+* The [Corda Slack team](http://slack.corda.net/) for general community discussion, and in particular:
+    * The `#contributing` channel for discussions around contributing
+    * The `#design` channel for discussions around the platform's design
+* The [`corda-dev` mailing list](https://groups.io/g/corda-dev) for discussion regarding Corda's design and roadmap
+* The [GitHub issues board](https://github.com/corda/corda/issues) for reporting platform bugs and potential enhancements
+* The [Stack Overflow `corda` tag](https://stackoverflow.com/questions/tagged/corda) for specific technical questions
+
+## Project Leadership and Maintainers
+
+The leader of this project is currently [Mike Hearn](https://github.com/mikehearn), who is also the Lead Platform Engineer at R3. The 
+project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the 
+code base and acting as points of contact. There is currently one such community maintainer, 
+[Joel Dudley](https://github.com/joeldudleyr3). We anticipate additional maintainers joining the project in the future from across the 
+community.
+
+In addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process have commit 
+privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged; they 
+are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this 
+[review process](https://github.com/corda/corda/pulls).
+
+## How to Contribute
+
+### Scope
 
 We believe one of the things that makes Corda special is its coherent design and we seek to retain this defining characteristic. One of the 
 ways we do this is by encouraging developers of new features to write a design proposal for review, comment and advice before they start 
@@ -35,10 +63,9 @@ channel on Slack is a good way to kick this process off. When reviewing a propos
 [Corda Technical Whitepaper](https://docs.corda.net/_static/corda-technical-whitepaper.pdf) as a guide and you are strongly encouraged to 
 study it. This white paper is a living document that is updated from time to time under the guidance of the project leader (see below).
 
-## How to Contribute
+### Contribution Guidelines
 
-Contributions from the community are welcomed and strongly encouraged. From the outset we defined some guidelines to ensure new 
-contributions only ever enhance the project:
+From the outset we defined some guidelines to ensure new contributions only ever enhance the project:
 
 * **Quality**: Code in the Corda project should meet the [Corda coding style guidelines](https://docs.corda.net/codestyle.html), with 
   sufficient test-cases, descriptive commit messages, evidence that the contribution does not break any compatibility commitments or cause 
@@ -56,31 +83,14 @@ contributions only ever enhance the project:
   available on the [design](https://cordaledger.slack.com/messages/C3J04VC3V/) channel of our [Slack](https://slack.corda.net/) and they 
   would be delighted to discuss any work you plan to do.
 
-**Advice to contributors**: You are encouraged to join our [Slack](https://slack.corda.net/), observe the 
-  [Pull Request](https://github.com/corda/corda/pulls) process in action, contribute to code reviews and start by submitting small changes. 
-  [This page](https://docs.corda.net/head/contributing.html) in our docsite shares tips on how to identify areas in which to contribute, 
-  and outlines the mechanics for doing so.
+### Advice to Contributors
+
+You are encouraged to join our [Slack](https://slack.corda.net/), observe the [Pull Request](https://github.com/corda/corda/pulls) process 
+in action, contribute to code reviews and start by submitting small changes. [This page](https://docs.corda.net/head/contributing.html) in 
+our docsite shares tips on how to identify areas in which to contribute, and outlines the mechanics for doing so.
 
 To start contributing you can clone our repo and begin making pull requests. All contributions to this project are subject to the terms of 
 the Developer Certificate of Origin, reproduced at the bottom of this page.
-
-## Project Leadership and Maintainers
-
-The leader of this project is currently [Mike Hearn](https://github.com/mikehearn), who is also the Lead Platform Engineer at R3. The 
-project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the 
-code base and acting as points of contact. There is currently one such community maintainer, 
-[Joel Dudley](https://github.com/joeldudleyr3). We anticipate additional maintainers joining the project in the future from across the 
-community.
-
-Transparency: In addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process 
-have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be 
-merged; they are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this 
-[review process](https://github.com/corda/corda/pulls).
-
-## Community Locations
-
-The Corda maintainers, developers and extended community make active use of the [Corda Slack](http://slack.corda.net/). We also support a 
-very active community of question askers and answerers on [Stack Overflow](https://stackoverflow.com/questions/tagged/corda).
 
 ## Transparency and Conflict Policy
 
