@@ -23,6 +23,7 @@ import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
+import java.util.jar.Manifest
 
 /**
  * A transaction ready for serialisation, without any signatures attached. A WireTransaction is usually wrapped
@@ -202,8 +203,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             Pair(it.state.contract, resolveContractAttachment(it.ref))
         }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
 
-        val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndAttachment
-                .map { Pair(it.first, Version(it.second.openAsJAR().manifest.mainAttributes.getValue("Implementation-Version"))) }
+        val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
+                .map { Pair(it.first, it.second.openAsJAR().manifest) }.filter { it.second != null }
+        //TODO is MANINFEST optional?
+
+        val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
+                .map { Pair(it.first, Version(it.second.mainAttributes.getValue("Implementation-Version"))) }
 
         return contractClassAndVersion.groupBy { it.first }
                 .mapValues { it.value.map { p -> p.second }.toSet() }
