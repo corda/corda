@@ -67,7 +67,7 @@ private fun makeTestData() {
 }
 
 /**
- * Generates C++ source code that deserialises types, based on types discovered using classpath scanning.
+ * Generates C++ source code that deserialises types.
  */
 class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate source code for reading serialised messages in C++ languages") {
     @CommandLine.Parameters(index = "0", paramLabel = "OUTPUT", description = ["Path to where the output files are generated"], defaultValue = "out")
@@ -98,6 +98,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 allHeaders += path.toString()
             }
 
+            // TODO: Topologically sort the dependencies. We can't get away with just using pre-declarations and pointer types.
             val uberHeader = listOf("#include \"corda-std-serializers.h\"") + allHeaders.map { "#include \"$it\"" }.sorted()
             val uberHeaderPath = outPath.resolve("all-messages.h")
             Files.write(uberHeaderPath, uberHeader)
