@@ -22,7 +22,7 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
     companion object {
         // lazy init the logging, because the logging levels aren't configured until we have parsed some options.
         private val log by lazy { contextLogger() }
-        val LOGS_DIRECTORY_NAME = "logs"
+        const val LOGS_DIRECTORY_NAME = "logs"
     }
 
     @Mixin

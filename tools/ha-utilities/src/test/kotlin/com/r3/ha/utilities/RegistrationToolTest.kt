@@ -1,5 +1,6 @@
 package com.r3.ha.utilities
 
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -37,7 +38,7 @@ class RegistrationToolTest {
 
         RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
             it.start()
-            CommandLine.populateCommand(registrationTool, "--base-directory", workingDirectory.toString(),
+            CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
                     "--network-root-truststore-password", "password",
                     "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(), (workingDirectory / "nodeC.conf").toString())

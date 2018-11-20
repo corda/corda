@@ -3,6 +3,7 @@ package net.corda.bridge
 import net.corda.bridge.services.api.FirewallConfiguration
 import net.corda.bridge.services.config.BridgeConfigHelper
 import net.corda.bridge.services.config.parseAsFirewallConfiguration
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.utilities.contextLogger
@@ -32,7 +33,7 @@ class FirewallCmdLineOptions {
     }
 
     @Option(
-            names = ["-b", "--base-directory"],
+            names = ["-b", BASE_DIR],
             description = ["The firewall working directory where all the files are kept."]
     )
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()

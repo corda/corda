@@ -1,6 +1,7 @@
 package com.r3.ha.utilities
 
 import net.corda.cliutils.CliWrapperBase
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.div
@@ -16,7 +17,7 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
     lateinit var nodeKeystore: Array<Path>
     @Option(names = ["--node-keystore-passwords"], arity = "1..*", paramLabel = "PASSWORDS", description = ["The password(s) of the node SSL keystore(s)"], required = true)
     lateinit var nodeKeystorePasswords: Array<String>
-    @Option(names = ["-b", "--base-directory"], paramLabel = "FOLDER", description = ["The working directory where all the files are kept."])
+    @Option(names = ["-b", BASE_DIR], paramLabel = "FOLDER", description = ["The working directory where all the files are kept."])
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
     @Option(names = ["-k", "--bridge-keystore"], paramLabel = "FILES", description = ["The path to the bridge SSL keystore."])
     private var _bridgeKeystore: Path? = null

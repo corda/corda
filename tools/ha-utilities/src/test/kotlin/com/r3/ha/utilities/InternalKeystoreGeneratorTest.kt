@@ -1,5 +1,6 @@
 package com.r3.ha.utilities
 
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
@@ -22,7 +23,7 @@ class InternalKeystoreGeneratorTest {
     @Test
     fun `generate keystores correctly`() {
         val workingDirectory = tempFolder.root.toPath()
-        CommandLine.populateCommand(generator, "--base-directory", workingDirectory.toString())
+        CommandLine.populateCommand(generator, BASE_DIR, workingDirectory.toString())
         Assertions.assertThat(generator.baseDirectory).isEqualTo(workingDirectory)
         generator.runProgram()
 

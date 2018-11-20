@@ -1,6 +1,7 @@
 package com.r3.ha.utilities
 
 import com.typesafe.config.ConfigValueFactory
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
@@ -26,7 +27,7 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
                 CordaVersionProvider.vendor)
     }
 
-    @Option(names = ["-b", "--base-directory"], paramLabel = "FOLDER", description = ["The node working directory where all the files are kept."])
+    @Option(names = ["-b", BASE_DIR], paramLabel = "FOLDER", description = ["The node working directory where all the files are kept."])
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
     @Option(names = ["--config-files", "-f"], arity = "1..*", paramLabel = "FILE", description = ["The path to the config file"], required = true)
     lateinit var configFiles: List<Path>

@@ -1,6 +1,7 @@
 package com.r3.ha.utilities
 
 import net.corda.cliutils.CliWrapperBase
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.div
@@ -19,7 +20,7 @@ class InternalKeystoreGenerator : CliWrapperBase("generate-internal-ssl-keystore
         private const val DEFAULT_PASSWORD = "changeit"
     }
 
-    @Option(names = ["-b", "--base-directory"], description = ["The node working directory where all the files are kept."])
+    @Option(names = ["-b", BASE_DIR], description = ["The node working directory where all the files are kept."])
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
 
     // TODO: options to generate keys for different HA deployment mode?
@@ -31,7 +32,7 @@ class InternalKeystoreGenerator : CliWrapperBase("generate-internal-ssl-keystore
     var organizationUnit: String? = null
     @Option(names = ["-l", "--locality"], description = ["X500Name's locality attribute."], defaultValue = "London")
     lateinit var locality: String
-    @Option(names = ["-c", "--county"], description = ["X500Name's country attribute."], defaultValue = "GB")
+    @Option(names = ["-c", "--country"], description = ["X500Name's country attribute."], defaultValue = "GB")
     lateinit var country: String
 
     override fun runProgram(): Int {

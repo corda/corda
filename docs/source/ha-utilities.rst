@@ -86,7 +86,7 @@ Command-line options
 * ``-p``, ``--password=<password>``: Default password for all generated keystore and private keys. Default: changeit
 * ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
-* ``-c``, ``--county=<country>``: X500Name's country attribute. Default: GB
+* ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
 * ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
