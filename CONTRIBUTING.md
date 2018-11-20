@@ -2,4 +2,4 @@
 
 Corda is an open-source project and contributions are welcome!
 
-To find out how to contribute, please see our [contributing page](https://docs.corda.net/head/contributing.html).
+To find out how to contribute, please see our [contributing docs](https://docs.corda.net/head/contributing-index.html).
