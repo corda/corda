@@ -2,7 +2,7 @@ package net.corda.deterministic.verifier
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.StateRef
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
@@ -23,13 +23,13 @@ class TransactionVerificationRequest(val wtxToVerify: SerializedBytes<WireTransa
         val attachmentMap = attachments
                 .mapNotNull { it as? MockContractAttachment }
                 .associateBy(Attachment::id) { ContractAttachment(it, it.contract, uploader = DEPLOYED_CORDAPP_UPLOADER) }
-        val contractAttachmentMap = emptyMap<ContractClassName, ContractAttachment>()
+        val contractAttachmentMap = emptyMap<StateRef, ContractAttachment>()
         @Suppress("DEPRECATION")
         return wtxToVerify.deserialize().toLedgerTransaction(
                 resolveIdentity = { null },
                 resolveAttachment = { attachmentMap[it] },
                 resolveStateRef = { deps[it.txhash]?.outputs?.get(it.index) },
-                resolveContractAttachment = { contractAttachmentMap[it.contract]?.id },
+                resolveContractAttachment = { contractAttachmentMap[it] },
                 resolveParameters = { networkParameters.deserialize() }
         )
     }
