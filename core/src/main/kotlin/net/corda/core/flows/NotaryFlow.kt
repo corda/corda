@@ -125,7 +125,7 @@ class NotaryFlow {
 
         /**
          * Ensure that transaction ID instances are not referenced in the serialized form in case several input states are outputs of the
-         * same issue transaction.
+         * same transaction.
          */
         private fun generateSignature(): NotarisationRequestSignature {
             val notarisationRequest = NotarisationRequest(stx.inputs.map { it.copy(txhash = SecureHash.parse(it.txhash.toString())) }, stx.id)
