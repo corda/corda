@@ -91,6 +91,8 @@ interface NodeConfiguration {
     val cryptoServiceName: SupportedCryptoServices?
     val cryptoServiceConf: String? // Location for the cryptoService conf file.
 
+    val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
+
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         internal val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
@@ -190,6 +192,19 @@ data class NetworkServicesConfig(
         val networkMapURL: URL,
         val pnm: UUID? = null,
         val inferred: Boolean = false
+)
+
+/**
+ * Specifies the auto-acceptance behaviour for network parameter updates
+ *
+ * @property autoAcceptEnabled Specifies whether network parameter auto-accepting is enabled. Only parameters annotated with the
+ * AutoAcceptable annotation can be auto-accepted.
+ * @property excludedAutoAcceptableParameters Set of parameters to explicitly exclude from auto-accepting. Note that if [autoAcceptEnabled]
+ * is false then this parameter is redundant.
+ */
+data class NetworkParameterAcceptanceSettings(
+        val autoAcceptEnabled: Boolean = true,
+        val excludedAutoAcceptableParameters: Set<String> = emptySet()
 )
 
 /**

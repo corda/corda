@@ -20,9 +20,10 @@ import java.security.cert.X509Certificate
 class TestNodeInfoBuilder(private val intermediateAndRoot: Pair<CertificateAndKeyPair, X509Certificate> = DEV_INTERMEDIATE_CA to DEV_ROOT_CA.certificate) {
     private val identitiesAndPrivateKeys = ArrayList<Pair<PartyAndCertificate, PrivateKey>>()
 
-    fun addLegalIdentity(name: CordaX500Name, nodeKeyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): Pair<PartyAndCertificate, PrivateKey> {
+    fun addLegalIdentity(name: CordaX500Name, nodeKeyPair:
+                         KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME),
+                         identityKeyPair: KeyPair = Crypto.generateKeyPair()): Pair<PartyAndCertificate, PrivateKey> {
         val nodeCertificateAndKeyPair = createDevNodeCa(intermediateAndRoot.first, name, nodeKeyPair)
-        val identityKeyPair = Crypto.generateKeyPair()
         val identityCert = X509Utilities.createCertificate(
                 CertificateType.LEGAL_IDENTITY,
                 nodeCertificateAndKeyPair.certificate,

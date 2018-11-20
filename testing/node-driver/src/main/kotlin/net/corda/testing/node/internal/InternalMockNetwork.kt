@@ -621,6 +621,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
                 mutualExclusionConfiguration = MutualExclusionConfiguration(false, "", 20000, 40000),
                 useMultiThreadedSMM = false
         )).whenever(it).enterpriseConfiguration
+        doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
     }
 }
 
