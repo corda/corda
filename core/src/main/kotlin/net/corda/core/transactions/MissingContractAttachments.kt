@@ -1,7 +1,6 @@
 package net.corda.core.transactions
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowException
@@ -14,9 +13,6 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 @KeepForDJVM
-class MissingContractAttachments(contracts: Set<ContractClassName>)
-    : FlowException("Cannot find contract attachments for $contracts. " +
-        "See https://docs.corda.net/api-contract-constraints.html#debugging") {
-
-    constructor(states: List<TransactionState<ContractState>>) : this(states.map { it.contract }.toSet())
-}
+class MissingContractAttachments(val states: List<TransactionState<ContractState>>)
+    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}. " +
+        "See https://docs.corda.net/api-contract-constraints.html#debugging")

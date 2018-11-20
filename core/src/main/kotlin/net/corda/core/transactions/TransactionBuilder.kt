@@ -175,7 +175,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
                 .filterNot { it.key in allContracts }
                 .map { refStateEntry ->
-                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value.map { it.constraint }, services)
+                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, services)
                 }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
@@ -250,7 +250,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         fun selectAttachment() = selectAttachmentThatSatisfiesConstraints(
                 false,
                 contractClassName,
-                inputsAndOutputs.map { it.constraint }.toSet().filterNot { it in automaticConstraints },
+                inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
                 services)
 
         // This will contain the hash of the JAR that will be used by this Transaction.
@@ -380,10 +380,11 @@ open class TransactionBuilder @JvmOverloads constructor(
      * TODO - When the SignatureConstraint and contract version logic is in, this will need to query the attachments table and find the latest one that satisfies all constraints.
      * TODO - select a version of the contract that is no older than the one from the previous transactions.
      */
-    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, constraints: List<AttachmentConstraint>, services: ServicesForResolution): AttachmentId {
+    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
+        val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(setOf(contractClassName))
+        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(states)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
