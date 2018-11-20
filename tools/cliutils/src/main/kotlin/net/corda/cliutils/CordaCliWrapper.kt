@@ -191,6 +191,13 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 }
 
 /**
+ * Useful commonly used constants applicable to many CLI tools
+ */
+object CommonCliConstants {
+    const val BASE_DIR = "--base-directory"
+}
+
+/**
  * Converter from String to slf4j logging Level.
  */
 class LoggingLevelConverter : ITypeConverter<Level> {
