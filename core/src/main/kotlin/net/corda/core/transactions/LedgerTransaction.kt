@@ -147,11 +147,15 @@ private constructor(
 
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>){
          contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val version = Version(attachment.openAsJAR().manifest.mainAttributes.getValue("Implementation-Version"))
-            val ok = inputStatesContractClassNameToVersions[contractClassName]?.all { version >= it } ?: true
-            if (!ok) {
-                throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
+            val manifest = attachment.openAsJAR().manifest
+            if (manifest!= null) {
+                val version = Version(manifest.mainAttributes.getValue("Implementation-Version"))
+                val ok = inputStatesContractClassNameToVersions[contractClassName]?.all { version >= it } ?: true
+                if (!ok) {
+                    throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
+                }
             }
+            //TODO if manifest is not present - in unit tests
         }
     }
     /**
