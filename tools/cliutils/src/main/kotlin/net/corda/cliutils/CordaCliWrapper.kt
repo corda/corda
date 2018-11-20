@@ -184,6 +184,10 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     fun printHelp() = cmd.usage(System.out)
+
+    fun printlnErr(message: String) = System.err.println(message)
+
+    fun printlnWarn(message: String) = System.err.println(message)
 }
 
 /**
