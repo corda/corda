@@ -60,7 +60,7 @@ interface Attachment : NamedByHash {
      *
      * Note: Anyone can sign attachments, not only Corda parties. It's recommended to use [signerKeys].
      */
-    @Deprecated("use signerKeys")
+    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
     val signers: List<Party>
 
     /**

@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Marked the `Attachment` interface as `@DoNotImplement` because it is not meant to be extended by CorDapp developers. If you have already done so,
+please get in contact on the usual communication channels.
+
 * Deprecated `SerializationContext.withAttachmentsClassLoader`. This functionality has always been disabled by flags
 and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
 
