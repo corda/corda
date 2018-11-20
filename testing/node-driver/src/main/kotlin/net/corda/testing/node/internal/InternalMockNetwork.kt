@@ -35,6 +35,7 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
@@ -618,6 +619,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(null).whenever(it).devModeOptions
         doReturn(null).whenever(it).cryptoServiceName
         doReturn(null).whenever(it).cryptoServiceConf
+        doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
     }
 }
 

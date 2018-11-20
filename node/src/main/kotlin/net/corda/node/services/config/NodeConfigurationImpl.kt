@@ -76,7 +76,8 @@ data class NodeConfigurationImpl(
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val cryptoServiceName: SupportedCryptoServices? = null,
-        override val cryptoServiceConf: String? = null
+        override val cryptoServiceConf: String? = null,
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -108,6 +109,7 @@ data class NodeConfigurationImpl(
         val flowMonitorSuspensionLoggingThresholdMillis: Duration = NodeConfiguration.DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
         val jmxReporterType: JmxReporterType = NodeConfiguration.defaultJmxReporterType
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
+        val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
+  and is configurable via the node config. See :doc:`network-map` for more information.
+  
 * Deprecated `SerializationContext.withAttachmentsClassLoader`. This functionality has always been disabled by flags
 and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
 
