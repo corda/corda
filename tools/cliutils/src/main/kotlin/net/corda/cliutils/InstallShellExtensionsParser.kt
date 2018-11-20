@@ -94,7 +94,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
             val semanticParts = declaredBashVersion().split(".")
             semanticParts.firstOrNull()?.toIntOrNull()?.let { major ->
                 if (major < minSupportedBashVersion) {
-                    parent.printlnWarn("Cannot install shell extension for Bash major version earlier than $minSupportedBashVersion. Please upgrade your Bash version. Aliases should still work.")
+                    parent.printlnWarn("Cannot install shell extension for bash major version earlier than $minSupportedBashVersion. Please upgrade your bash version. Aliases should still work.")
                     generateAutoCompleteFile = false
                 }
             }
@@ -122,7 +122,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         if (generateAutoCompleteFile) {
             println("Installation complete, ${parent.alias} is available in bash with autocompletion.")
         } else {
-            println("Installation complete, ${parent.alias} is available in bash, but autocompletion was not installed because of an old version of Bash.")
+            println("Installation complete, ${parent.alias} is available in bash, but autocompletion was not installed because of an old version of bash.")
         }
         println("Type `${parent.alias} <options>` from the commandline.")
         println("Restart bash for this to take effect, or run `. ~/.bashrc` in bash or `. ~/.zshrc` in zsh to re-initialise your shell now")
