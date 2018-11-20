@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-: ${MY_PUBLIC_ADDRESS:? 'MY_PUBLIC_ADDRESS must be set as environment variable'}
 
-: ${TRUST_STORE_NAME="network-root-truststore.jks"}
-: ${JVM_ARGS='-Xmx4g -Xms2g -XX:+UseG1GC'}
 
 die() {
     printf '%s\n' "$1" >&2
     exit 1
+}
+
+show_help(){
+
+    echo "usage: generate-config <--testnet>|<--generic>"
+    echo -e "\t --testnet is used to generate config and certificates for joining TestNet"
+    echo -e "\t --generic is used to generate config and certificates for joining an existing Corda Compatibility Zone"
+
 }
 
 function generateTestnetConfig() {
@@ -16,15 +21,16 @@ function generateTestnetConfig() {
     MY_P2P_PORT=${MY_P2P_PORT} \
     MY_RPC_PORT=${MY_RPC_PORT} \
     MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
-    COMPATIBILITY_ZONE='https://map.testnet.corda.network' \
+    NETWORKMAP_URL='https://map.testnet.corda.network' \
     DOORMAN_URL='https://doorman.testnet.corda.network' \
     java -jar config-exporter.jar "TEST-NET-COMBINE" "node.conf" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
 }
 
 function generateGenericCZConfig(){
-    : ${COMPATIBILITY_ZONE:? '$COMPATIBILITY_ZONE, the Compatibility Zone to join must be set as environment variable'}
+    : ${NETWORKMAP_URL:? '$NETWORKMAP_URL, the Compatibility Zone to join must be set as environment variable'}
     : ${DOORMAN_URL:? '$DOORMAN_URL, the Doorman to use when joining must be set as environment variable'}
     : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
+    : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
     : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
 
     if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
@@ -74,7 +80,7 @@ while :; do
             if [[ ${GENERATE_GENERIC} = 0 ]]; then
                 GENERATE_TEST_NET=1
             else
-                die 'ERROR: "cannot generate config for multiple networks'
+                die 'ERROR: cannot generate config for multiple networks'
             fi
             ;;
         -g|--generic)
@@ -98,17 +104,21 @@ while :; do
 done
 
 
-
+: ${TRUST_STORE_NAME="network-root-truststore.jks"}
+: ${JVM_ARGS='-Xmx4g -Xms2g -XX:+UseG1GC'}
 
 
 if [[ ${GENERATE_TEST_NET} == 1 ]]
 then
+    : ${MY_PUBLIC_ADDRESS:? 'MY_PUBLIC_ADDRESS must be set as environment variable'}
     downloadTestnetCerts
     generateTestnetConfig
 elif [[ ${GENERATE_GENERIC} == 1 ]]
 then
+    : ${MY_PUBLIC_ADDRESS:? 'MY_PUBLIC_ADDRESS must be set as environment variable'}
     generateGenericCZConfig
 else
+    show_help
     die "No Valid Configuration requested"
 fi
 

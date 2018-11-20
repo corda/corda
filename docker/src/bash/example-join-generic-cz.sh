@@ -5,9 +5,10 @@
 docker run -ti --net="host" \
         -e MY_LEGAL_NAME="O=EXAMPLE,L=Berlin,C=DE"     \
         -e MY_PUBLIC_ADDRESS="corda.example-hoster.com"       \
-        -e COMPATIBILITY_ZONE="https://map.corda.example.com"    \
+        -e NETWORKMAP_URL="https://map.corda.example.com"    \
         -e DOORMAN_URL="https://doorman.corda.example.com"      \
         -e NETWORK_TRUST_PASSWORD="trustPass"       \
+        -e MY_EMAIL_ADDRESS="cordauser@r3.com"      \
         -v $(pwd)/docker/config:/etc/corda          \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
         corda/corda-4.0-snapshot:latest config-generator --generic

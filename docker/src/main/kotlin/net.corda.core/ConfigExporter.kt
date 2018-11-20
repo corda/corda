@@ -21,6 +21,7 @@ class ConfigExporter {
         ourParsedConfig = ourParsedConfig.withValue("keyStorePassword", testNetParsedConfig.getValue("keyStorePassword"))
         ourParsedConfig = ourParsedConfig.withValue("myLegalName", testNetParsedConfig.getValue("myLegalName"))
         ourParsedConfig = ourParsedConfig.withValue("trustStorePassword", testNetParsedConfig.getValue("trustStorePassword"))
+        ourParsedConfig = ourParsedConfig.withValue("emailAddress", testNetParsedConfig.getValue("emailAddress"))
         File(outputFile).writer().use { fileWriter ->
             val finalConfig = ourParsedConfig.parseAsNodeConfigWithFallback().value().toConfig()
             var configToWrite = ConfigFactory.empty()
