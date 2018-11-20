@@ -1,8 +1,6 @@
 # Contributing to Corda
 
-## Contributions are Welcome
-
-We welcome contributions to Corda! Here's how to go about it.
+We welcome contributions to Corda! Here's what you need to know to start contributing.
 
 ## Contents
 
@@ -13,6 +11,7 @@ We welcome contributions to Corda! Here's how to go about it.
     * [Scope](#scope)
     * [Contribution Guidelines](#contribution-guidelines)
     * [Advice to Contributors](#advice-to-contributors)
+* [Existing Contributors](#existing-contributors)
 * [Transparency and Conflict Policy](#transparency-and-conflict-policy)
 * [Developer Certificate of Origin](#developer-certificate-of-origin)
 
@@ -91,6 +90,11 @@ our docsite shares tips on how to identify areas in which to contribute, and out
 
 To start contributing you can clone our repo and begin making pull requests. All contributions to this project are subject to the terms of 
 the Developer Certificate of Origin, reproduced at the bottom of this page.
+
+## Existing Contributors
+
+Over two hundred individuals have contributed to the development of Corda. You can find a full list of contributors in the 
+[CONTRIBUTORS.md file](https://github.com/corda/corda/blob/master/CONTRIBUTORS.md).
 
 ## Transparency and Conflict Policy
 
