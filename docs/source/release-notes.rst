@@ -30,7 +30,7 @@ Significant Changes in 4.0
   CorDapps build by corda-gradle-plugins are now signed and sealed JAR files.
   Signing can be configured or opt-out, and it defaults to use Corda development certificate.
   Signed CorDapps facilitate signature constraints checks.
-  Sealed JARs require a unique package to be shipped within a single CorDapp JAR.
+  Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be opt-out.
 
 << MORE TO COME >>
 
