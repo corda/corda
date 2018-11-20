@@ -30,12 +30,12 @@ The Corda maintainers, developers and extended community make active use of the 
 Project Leadership and Maintainers
 ----------------------------------
 The leader of this project is currently `Mike Hearn <https://github.com/mikehearn>`_, who is also the Lead Platform Engineer at R3. The
-project leader will appoint maintainers of the project, to whom responsibility is delegated for merging community contributions into the
-code base and acting as points of contact.
+project leader appoints the project's Community Maintainers, who are responsible for merging community contributions into the code base and
+acting as points of contact.
 
-In addition to the project lead and maintainer(s), developers employed by R3 who have passed our technical interview process have commit
-privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be merged; they
-are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this
+In addition to the project leader and community maintainer(s), developers employed by R3 who have passed our technical interview process
+have commit privileges to the repo. All R3 contributions undergo peer review, which is documented in public in GitHub, before they can be
+merged; they are held to the same standard as all other contributions. The community is encouraged both to observe and participate in this
 `review process <https://github.com/corda/corda/pulls>`_.
 
 .. _community-maintainers:
@@ -44,15 +44,15 @@ Community maintainers
 ^^^^^^^^^^^^^^^^^^^^^
 Current community maintainers:
 
-* `Joel Dudley <https://github.com/joeldudleyr3>`_ - Contact via the ``#community`` channel or a direct message in the
-  `Corda Slack team <http://slack.corda.net/>`_ using the handle ``@joel``
+* `Joel Dudley <https://github.com/joeldudleyr3>`_ - Contact via the `Corda Slack team <http://slack.corda.net/>`_, either in the
+  ``#community`` channel or via direct message using the handle ``@joel``
 
 We anticipate additional maintainers joining the project in the future from across the community.
 
 Existing Contributors
 ---------------------
 Over two hundred individuals have contributed to the development of Corda. You can find a full list of contributors in the
-`CONTRIBUTORS.md file <https://github.com/corda/corda/blob/master/CONTRIBUTORS.md>`_.
+`CONTRIBUTORS.md list <https://github.com/corda/corda/blob/master/CONTRIBUTORS.md>`_.
 
 Transparency and Conflict Policy
 --------------------------------
