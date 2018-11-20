@@ -77,30 +77,29 @@ class NotaryFlow {
         @Suspendable
         protected fun notarise(notaryParty: Party): UntrustworthyData<NotarisationResponse> {
             val session = initiateFlow(notaryParty)
+            val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
             return if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
-                sendAndReceiveValidating(session)
+                sendAndReceiveValidating(session, requestSignature)
             } else {
-                sendAndReceiveNonValidating(notaryParty, session)
+                sendAndReceiveNonValidating(notaryParty, session, requestSignature)
             }
         }
 
         @Suspendable
-        private fun sendAndReceiveValidating(session: FlowSession): UntrustworthyData<NotarisationResponse> {
-            val signature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
+        private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
             return session.receive()
         }
 
         @Suspendable
-        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession): UntrustworthyData<NotarisationResponse> {
+        private fun sendAndReceiveNonValidating(notaryParty: Party, session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
                 else -> ctx
             }
-            val signature = NotarisationRequest(tx.inputs, tx.id).generateSignature(serviceHub)
             return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
         }
 
