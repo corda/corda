@@ -6,6 +6,7 @@ Nodes
 
    node-structure
    generating-a-node
+   docker-image
    running-a-node
    deploying-a-node
    corda-configuration-file
