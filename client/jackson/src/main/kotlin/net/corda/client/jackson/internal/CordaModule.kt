@@ -3,7 +3,7 @@
 package net.corda.client.jackson.internal
 
 import com.fasterxml.jackson.annotation.*
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.*
+import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
@@ -38,7 +38,10 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.constructorForDeserialization
+import net.corda.serialization.internal.amqp.hasCordaSerializable
+import net.corda.serialization.internal.amqp.propertiesForSerialization
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -327,11 +330,11 @@ private class PartialTreeJson(val includedLeaf: SecureHash? = null,
                               val right: PartialTreeJson? = null) {
     init {
         if (includedLeaf != null) {
-            require(leaf == null && left == null && right == null)
+            require(leaf == null && left == null && right == null) { "Invalid JSON structure" }
         } else if (leaf != null) {
-            require(left == null && right == null)
+            require(left == null && right == null) { "Invalid JSON structure" }
         } else {
-            require(left != null && right != null)
+            require(left != null && right != null) { "Invalid JSON structure" }
         }
     }
 }

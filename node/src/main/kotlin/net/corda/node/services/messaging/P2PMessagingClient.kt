@@ -673,7 +673,7 @@ private class P2PMessagingConsumer(
     override fun start() {
 
         synchronized(this) {
-            require(!startedFlag)
+            require(!startedFlag){"Must not already be started"}
             drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { initialAndExistingConsumer.switchTo(existingOnlyConsumer) }.subscribe()
             drainingModeWasChangedEvents.filter { change -> change.switchedOff() }.doOnNext { existingOnlyConsumer.switchTo(initialAndExistingConsumer) }.subscribe()
             subscriptions += existingOnlyConsumer.messages.doOnNext(messages::onNext).subscribe()

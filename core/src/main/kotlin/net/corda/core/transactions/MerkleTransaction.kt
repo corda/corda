@@ -6,14 +6,14 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.LazyMappedList
-import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.*
+import net.corda.core.internal.deserialiseCommands
+import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.util.function.Predicate
-import kotlin.reflect.KClass
 
 /**
  * Implemented by [WireTransaction] and [FilteredTransaction]. A TraversableTransaction allows you to iterate
@@ -23,27 +23,27 @@ import kotlin.reflect.KClass
  */
 abstract class TraversableTransaction(open val componentGroups: List<ComponentGroup>) : CoreTransaction() {
     /** Hashes of the ZIP/JAR files that are needed to interpret the contents of this wire transaction. */
-    val attachments: List<SecureHash> = deserialiseComponentGroup(SecureHash::class, ATTACHMENTS_GROUP)
+    val attachments: List<SecureHash> = deserialiseComponentGroup(componentGroups, SecureHash::class, ATTACHMENTS_GROUP)
 
     /** Pointers to the input states on the ledger, identified by (tx identity hash, output index). */
-    override val inputs: List<StateRef> = deserialiseComponentGroup(StateRef::class, INPUTS_GROUP)
+    override val inputs: List<StateRef> = deserialiseComponentGroup(componentGroups, StateRef::class, INPUTS_GROUP)
 
     /** Pointers to reference states, identified by (tx identity hash, output index). */
-    override val references: List<StateRef> = deserialiseComponentGroup(StateRef::class, REFERENCES_GROUP)
+    override val references: List<StateRef> = deserialiseComponentGroup(componentGroups, StateRef::class, REFERENCES_GROUP)
 
-    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(TransactionState::class, OUTPUTS_GROUP, attachmentsContext = true)
+    override val outputs: List<TransactionState<ContractState>> = deserialiseComponentGroup(componentGroups, TransactionState::class, OUTPUTS_GROUP)
 
     /** Ordered list of ([CommandData], [PublicKey]) pairs that instruct the contracts what to do. */
-    val commands: List<Command<*>> = deserialiseCommands()
+    val commands: List<Command<*>> = deserialiseCommands(componentGroups)
 
     override val notary: Party? = let {
-        val notaries: List<Party> = deserialiseComponentGroup(Party::class, NOTARY_GROUP)
+        val notaries: List<Party> = deserialiseComponentGroup(componentGroups, Party::class, NOTARY_GROUP)
         check(notaries.size <= 1) { "Invalid Transaction. More than 1 notary party detected." }
         notaries.firstOrNull()
     }
 
     val timeWindow: TimeWindow? = let {
-        val timeWindows: List<TimeWindow> = deserialiseComponentGroup(TimeWindow::class, TIMEWINDOW_GROUP)
+        val timeWindows: List<TimeWindow> = deserialiseComponentGroup(componentGroups, TimeWindow::class, TIMEWINDOW_GROUP)
         check(timeWindows.size <= 1) { "Invalid Transaction. More than 1 time-window detected." }
         timeWindows.firstOrNull()
     }
@@ -66,65 +66,6 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
             timeWindow?.let { result += listOf(it) }
             return result
         }
-
-    // Helper function to return a meaningful exception if deserialisation of a component fails.
-    private fun <T : Any> deserialiseComponentGroup(clazz: KClass<T>,
-                                                    groupEnum: ComponentGroupEnum,
-                                                    attachmentsContext: Boolean = false): List<T> {
-        val group = componentGroups.firstOrNull { it.groupIndex == groupEnum.ordinal }
-
-        if (group == null || group.components.isEmpty()) {
-            return emptyList()
-        }
-
-        // If the componentGroup is a [LazyMappedList] it means that the original deserialized version is already available.
-        val components = group.components
-        if (components is LazyMappedList<*, OpaqueBytes>) {
-            return components.originalList as List<T>
-        }
-
-        val factory = SerializationFactory.defaultFactory
-        val context = factory.defaultContext.let { if (attachmentsContext) it.withAttachmentsClassLoader(attachments) else it }
-
-        return components.lazyMapped { component, internalIndex ->
-            try {
-                factory.deserialize(component, clazz.java , context)
-            } catch (e: MissingAttachmentsException) {
-                throw e
-            } catch (e: Exception) {
-                throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
-            }
-        }
-    }
-
-    // Method to deserialise Commands from its two groups:
-    // COMMANDS_GROUP which contains the CommandData part
-    // and SIGNERS_GROUP which contains the Signers part.
-    private fun deserialiseCommands(): List<Command<*>> {
-        // TODO: we could avoid deserialising unrelated signers.
-        //      However, current approach ensures the transaction is not malformed
-        //      and it will throw if any of the signers objects is not List of public keys).
-        val signersList: List<List<PublicKey>> = uncheckedCast(deserialiseComponentGroup(List::class, SIGNERS_GROUP))
-        val commandDataList: List<CommandData> = deserialiseComponentGroup(CommandData::class, COMMANDS_GROUP, attachmentsContext = true)
-        val group = componentGroups.firstOrNull { it.groupIndex == COMMANDS_GROUP.ordinal }
-        return if (group is FilteredComponentGroup) {
-            check(commandDataList.size <= signersList.size) {
-                "Invalid Transaction. Less Signers (${signersList.size}) than CommandData (${commandDataList.size}) objects"
-            }
-            val componentHashes = group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }
-            val leafIndices = componentHashes.map { group.partialMerkleTree.leafIndex(it) }
-            if (leafIndices.isNotEmpty())
-                check(leafIndices.max()!! < signersList.size) { "Invalid Transaction. A command with no corresponding signer detected" }
-            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[leafIndices[index]]) }
-        } else {
-            // It is a WireTransaction
-            // or a FilteredTransaction with no Commands (in which case group is null).
-            check(commandDataList.size == signersList.size) {
-                "Invalid Transaction. Sizes of CommandData (${commandDataList.size}) and Signers (${signersList.size}) do not match"
-            }
-            commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
-        }
-    }
 }
 
 /**

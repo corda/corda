@@ -25,6 +25,7 @@ import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.dsl.*
 import net.corda.testing.internal.TEST_TX_TIME
+import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.node.MockServices
@@ -565,7 +566,7 @@ class ObligationTests {
 
     @Test
     fun `commodity settlement`() {
-        val commodityContractBytes = "https://www.big-book-of-banking-law.gov/commodity-claims.html".toByteArray()
+        val commodityContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/commodity-claims.html")
         val defaultFcoj = Issued(defaultIssuer, Commodity.getInstance("FCOJ")!!)
         val oneUnitFcoj = Amount(1, defaultFcoj)
         val obligationDef = Obligation.Terms(NonEmptySet.of(commodityContractBytes.sha256() as SecureHash), NonEmptySet.of(defaultFcoj), TEST_TX_TIME)
@@ -957,7 +958,7 @@ class ObligationTests {
         assertEquals(expected, actual)
     }
 
-    private val cashContractBytes = "https://www.big-book-of-banking-law.gov/cash-claims.html".toByteArray()
+    private val cashContractBytes = fakeAttachment("file1.txt", "https://www.big-book-of-banking-law.gov/cash-claims.html")
     private val Issued<Currency>.OBLIGATION_DEF: Obligation.Terms<Currency>
         get() = Obligation.Terms(NonEmptySet.of(cashContractBytes.sha256() as SecureHash), NonEmptySet.of(this), TEST_TX_TIME)
     private val Amount<Issued<Currency>>.OBLIGATION: Obligation.State<Currency>

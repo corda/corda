@@ -126,7 +126,7 @@ interface Validated<TARGET, ERROR> {
          */
         class Unsuccessful<TARGET, ERROR>(override val errors: Set<ERROR>) : Result<TARGET, ERROR>(), Validated<TARGET, ERROR> {
             init {
-                require(errors.isNotEmpty())
+                require(errors.isNotEmpty()) { "No errors encountered during validation" }
             }
 
             override fun value(exceptionOnErrors: (Set<ERROR>) -> Exception) = throw exceptionOnErrors.invoke(errors)

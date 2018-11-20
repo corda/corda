@@ -45,7 +45,7 @@ val cordaBouncyCastleProvider = BouncyCastleProvider().apply {
     Security.addProvider(it)
 }
 val bouncyCastlePQCProvider = BouncyCastlePQCProvider().apply {
-    require(name == "BCPQC") // The constant it comes from is not final.
+    require(name == "BCPQC") { "Invalid PQCProvider name" }
 }.also {
     Security.addProvider(it)
 }

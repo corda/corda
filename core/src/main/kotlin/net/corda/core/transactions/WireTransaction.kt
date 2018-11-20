@@ -7,11 +7,15 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.Emoji
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.lazyMapped
@@ -99,7 +103,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) },
+                resolveStateRefComponent = { resolveStateRefBinaryComponent(it, services) },
                 networkParameters = services.networkParameters
         )
     }
@@ -119,13 +123,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
+        // This reverts to serializing the resolved transaction state.
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, null)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveStateRefComponent: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             networkParameters: NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
@@ -133,20 +138,38 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(cmd.signers, parties, cmd.value)
         }
-        val resolvedInputs = inputs.lazyMapped { ref, _ ->
-            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
+
+        val resolvedInputBytes = inputs.map { ref ->
+            SerializedStateAndRef(resolveStateRefComponent(ref)
+                    ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedReferences = references.lazyMapped { ref, _ ->
-            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
+        val resolvedInputs = resolvedInputBytes.lazyMapped { (serialized, ref), _ ->
+            StateAndRef(serialized.deserialize(), ref)
         }
+
+        val resolvedReferenceBytes = references.map { ref ->
+            SerializedStateAndRef(resolveStateRefComponent(ref)
+                    ?: throw TransactionResolutionException(ref.txhash), ref)
+        }
+        val resolvedReferences = resolvedReferenceBytes.lazyMapped { (serialized, ref), _ ->
+            StateAndRef(serialized.deserialize(), ref)
+        }
+
         val attachments = attachments.lazyMapped { att, _ ->
             resolveAttachment(att) ?: throw AttachmentResolutionException(att)
         }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences)
-        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
+
+        val ltx = LedgerTransaction.makeLedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
+
+        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: DEFAULT_MAX_TX_SIZE)
+
         return ltx
     }
 
+    /**
+     * Deterministic function that checks if the transaction is below the maximum allowed size.
+     * It uses the binary representation of transactions.
+     */
     private fun checkTransactionSize(ltx: LedgerTransaction, maxTransactionSize: Int) {
         var remainingTransactionSize = maxTransactionSize
 
@@ -164,9 +187,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
         ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
 
-        // TODO - these can be optimized by creating a LazyStateAndRef class, that just stores (a pointer) the serialized output componentGroup from the previous transaction.
-        minus(ltx.references.serialize().size)
-        minus(ltx.inputs.serialize().size)
+        minus(ltx.resolvedInputBytes!!.sumBy { it.serializedState.size })
+        minus(ltx.resolvedReferenceBytes!!.sumBy { it.serializedState.size })
 
         // For Commands and outputs we can use the component groups as they are already serialized.
         minus(componentGroupSize(COMMANDS_GROUP))
@@ -253,6 +275,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
+        private const val DEFAULT_MAX_TX_SIZE = 10485760
+
         /**
          * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
          * for backwards compatibility purposes.
@@ -280,6 +304,28 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             // a FilteredTransaction can now verify it sees all the commands it should sign.
             if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
             return componentGroupMap
+        }
+
+        /**
+         * This is the main logic that knows how to retrieve the binary representation of [StateRef]s.
+         *
+         * For [ContractUpgradeWireTransaction] or [NotaryChangeWireTransaction] it knows how to recreate the output state in the correct classloader independent of the node's classpath.
+         */
+        @CordaInternal
+        fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
+            return if (services is ServiceHub) {
+                val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
+                        ?: throw TransactionResolutionException(stateRef.txhash)
+                when (coreTransaction) {
+                    is WireTransaction -> coreTransaction.componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }?.components?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
+                    is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
+                    is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
+                    else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
+                }
+            } else {
+                // For backwards compatibility revert to using the node classloader.
+                services.loadState(stateRef).serialize()
+            }
         }
     }
 

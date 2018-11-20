@@ -31,7 +31,7 @@ class SchemaMigrationTest {
     private fun configureDatabase(hikariProperties: Properties,
                           databaseConfig: DatabaseConfig,
                           schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence =
-            createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory())
+            createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(), null)
                 .apply { startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys) }
 
     @Test

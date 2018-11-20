@@ -75,7 +75,7 @@ open class SharedNodeCmdLineOptions {
         errors.forEach { error ->
             when (error) {
                 is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
-                else -> logger.error(error.message, error)
+                else -> logger.error(error.message)
             }
         }
     }

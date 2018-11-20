@@ -140,8 +140,8 @@ object TwoPartyDealFlow {
                 // Verify the transaction identities represent the correct parties
                 val wellKnownOtherParty = serviceHub.identityService.wellKnownPartyFromAnonymous(it.primaryIdentity)
                 val wellKnownMe = serviceHub.identityService.wellKnownPartyFromAnonymous(it.secondaryIdentity)
-                require(wellKnownOtherParty == otherSideSession.counterparty)
-                require(wellKnownMe == ourIdentity)
+                require(wellKnownOtherParty == otherSideSession.counterparty){"Well known party for handshake identity ${it.primaryIdentity} does not match counterparty"}
+                require(wellKnownMe == ourIdentity){"Well known party for handshake identity ${it.secondaryIdentity} does not match ourIdentity"}
                 validateHandshake(it)
             }
         }

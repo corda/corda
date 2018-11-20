@@ -39,7 +39,7 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     override fun start() {
 
         synchronized(this) {
-            require(!startedFlag)
+            require(!startedFlag) { "Must not be started" }
             connect()
             startedFlag = true
         }
@@ -59,7 +59,7 @@ private class MultiplexingReactiveArtemisConsumer(private val queueNames: Set<St
     override fun connect() {
 
         synchronized(this) {
-            require(!connected)
+            require(!connected) { "Must not be connected" }
             queueNames.forEach { queue ->
                 createSession().apply {
                     start()
