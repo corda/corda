@@ -8,7 +8,6 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.BackpressureAwareTimedFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
@@ -90,7 +89,7 @@ class NotaryFlow {
         private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
-            return receiveResultOrTiming<NotarisationResponse>(session)
+            return receiveResultOrTiming(session)
         }
 
         @Suspendable
@@ -102,7 +101,7 @@ class NotaryFlow {
                 else -> ctx
             }
             session.send(NotarisationPayload(tx, signature))
-            return receiveResultOrTiming<NotarisationResponse>(session)
+            return receiveResultOrTiming(session)
         }
 
         /** Checks that the notary's signature(s) is/are valid. */
