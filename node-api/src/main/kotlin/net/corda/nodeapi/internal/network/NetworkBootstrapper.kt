@@ -36,7 +36,9 @@ import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.security.InvalidParameterException
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
@@ -190,14 +192,14 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()) {
-        require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
-        // Don't accidently include the bootstrapper jar as a CorDapp!
+    fun bootstrap(directory: Path, copyCordapps: Boolean, networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides()) {
+
+        // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion, packageOwnership = packageOwnership)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParametersOverrides)
     }
 
     private fun bootstrap(
@@ -205,42 +207,43 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            minimumPlatformVersion: Int = PLATFORM_VERSION,
-            packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()
-    ) {
-        directory.createDirectories()
-        println("Bootstrapping local test network in $directory")
-        if (!fromCordform) {
-            println("Found the following CorDapps: ${cordappJars.map { it.fileName }}")
-        }
-        createNodeDirectoriesIfNeeded(directory, fromCordform)
-        val nodeDirs = gatherNodeDirectories(directory)
+            networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides()
+        ) {
+            directory.createDirectories()
+            println("Bootstrapping local test network in $directory")
+            if (!fromCordform) {
+                println("Found the following CorDapps: ${cordappJars.map { it.fileName }}")
+            }
+            createNodeDirectoriesIfNeeded(directory, fromCordform)
+            val nodeDirs = gatherNodeDirectories(directory)
 
-        require(nodeDirs.isNotEmpty()) { "No nodes found" }
-        if (!fromCordform) {
-            println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
-        }
+            require(nodeDirs.isNotEmpty()) { "No nodes found" }
+            if (!fromCordform) {
+                println("Nodes found in the following sub-directories: ${nodeDirs.map { it.fileName }}")
+            }
 
-        val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
-        checkForDuplicateLegalNames(configs.values)
-        if (copyCordapps && cordappJars.isNotEmpty()) {
-            println("Copying CorDapp JARs into node directories")
-            for (nodeDir in nodeDirs) {
-                val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                cordappJars.forEach {
-                    try {
-                        it.copyToDirectory(cordappsDir)
-                    } catch (e: FileAlreadyExistsException) {
-                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+            val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
+            checkForDuplicateLegalNames(configs.values)
+            if (copyCordapps && cordappJars.isNotEmpty()) {
+                println("Copying CorDapp JARs into node directories")
+                for (nodeDir in nodeDirs) {
+                    val cordappsDir = (nodeDir / "cordapps").createDirectories()
+                    cordappJars.forEach {
+                        try {
+                            it.copyToDirectory(cordappsDir)
+                        } catch (e: FileAlreadyExistsException) {
+                            println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                        }
                     }
                 }
             }
-        }
         generateServiceIdentitiesForNotaryClusters(configs)
         if (initSerEnv) {
             initialiseSerialization()
         }
         try {
+            println("Network Parameters Overrides: ${networkParametersOverrides.minimumPlatformVersion}")
+
             println("Waiting for all nodes to generate their node-info files...")
             val nodeInfoFiles = nodeInfosGenerator(nodeDirs)
             println("Distributing all node-info files to all nodes")
@@ -252,7 +255,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion, packageOwnership)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, networkParametersOverrides)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -264,6 +267,14 @@ internal constructor(private val initSerEnv: Boolean,
                 _contextSerializationEnv.set(null)
             }
         }
+    }
+
+    private fun getNetworkParameterDefaultsFromFile(networkParametersFile: Path?) {
+        if (networkParametersFile == null) return
+        if (!networkParametersFile.exists()) {
+            throw InvalidParameterException("The file $networkParametersFile does not exist.")
+        }
+
     }
 
     private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean) {
@@ -384,8 +395,7 @@ internal constructor(private val initSerEnv: Boolean,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            minimumPlatformVersion: Int,
-            packageOwnership: Map<JavaPackageName, PublicKey?>
+            networkParametersOverrides: NetworkParametersOverrides
     ): NetworkParameters {
         // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
@@ -413,7 +423,7 @@ internal constructor(private val initSerEnv: Boolean,
             }
         } else {
             NetworkParameters(
-                    minimumPlatformVersion = minimumPlatformVersion,
+                    minimumPlatformVersion = PLATFORM_VERSION,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
@@ -423,7 +433,7 @@ internal constructor(private val initSerEnv: Boolean,
                     epoch = 1,
                     eventHorizon = 30.days
             )
-        }
+        }.overrideWith(networkParametersOverrides)
         val copier = NetworkParametersCopier(netParams, overwriteFile = true)
         nodeDirs.forEach(copier::install)
         return netParams
@@ -436,7 +446,7 @@ internal constructor(private val initSerEnv: Boolean,
             // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
             // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
-            else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
+            else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenario: $this")
         }
     }
 
@@ -465,3 +475,22 @@ internal constructor(private val initSerEnv: Boolean,
         }
     }
 }
+
+fun NetworkParameters.overrideWith(override: NetworkParametersOverrides): NetworkParameters {
+    return this.copy(
+            minimumPlatformVersion = override.minimumPlatformVersion ?: this.minimumPlatformVersion,
+            maxMessageSize = override.maxMessageSize ?: this.maxMessageSize,
+            maxTransactionSize = override.maxTransactionSize ?: this.maxTransactionSize,
+            packageOwnership = override.packageOwnership?.map{  it.javaPackageName to it.publicKey }?.toMap() ?: this.packageOwnership
+    )
+}
+
+data class PackageOwner(val javaPackageName: JavaPackageName, val publicKey: PublicKey)
+
+data class NetworkParametersOverrides (
+        val minimumPlatformVersion: Int? = null,
+        val maxMessageSize: Int? = null,
+        val maxTransactionSize: Int? = null,
+        val packageOwnership: List<PackageOwner>? = null,
+        val eventHorizon: Duration? = null
+)

@@ -1,18 +1,31 @@
 package net.corda.bootstrapper
 
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
+import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.configuration.parsing.internal.get
+import net.corda.common.configuration.parsing.internal.mapValid
+import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.validation.internal.Validated
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.exists
 import net.corda.core.node.JavaPackageName
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
+import net.corda.nodeapi.internal.network.NetworkParametersOverrides
+import net.corda.nodeapi.internal.network.PackageOwner
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.io.FileNotFoundException
 import java.io.IOException
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyStoreException
-import java.security.PublicKey
+import java.time.Duration
 
 fun main(args: Array<String>) {
     NetworkBootstrapperRunner().start(args)
@@ -31,8 +44,17 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     var noCopy: Boolean = false
 
-    @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in the network-parameters."])
-    var minimumPlatformVersion = PLATFORM_VERSION
+    @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in the network-parameters. Current default is $PLATFORM_VERSION."])
+    var minimumPlatformVersion: Int? = null
+
+    @Option(names = ["--max-message-size"], description = ["The maximum transaction size to use in the network-parameters."])
+    var maxMessageSize: Int? = null
+
+    @Option(names = ["--max-transaction-size"], description = ["The maximum transaction size to use in the network-parameters."])
+    var maxTransactionSize: Int? = null
+
+    @Option(names = ["--event-horizon"], description = ["The event horizon to use in the network-parameters."])
+    var eventHorizon: Duration? = null
 
     @Option(names = ["--register-package-owner"],
             converter = [PackageOwnerConverter::class],
@@ -55,19 +77,38 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
             ])
     var unregisterPackageOwnership: List<JavaPackageName> = mutableListOf()
 
+    @Option(names = ["--network-parameters", "-n"],
+            description = ["Overrides the default network parameters with those in the given file."])
+    var networkParametersFile: Path? = null
+
+    private fun commandLineOverrides(): Map<String, Any> {
+        val overrides = mutableMapOf<String, Any>()
+        if (minimumPlatformVersion != null) overrides += mutableMapOf("minimumPlatformVersion" to eventHorizon!!)
+        if (maxMessageSize != null) overrides += mutableMapOf("maxMessageSize" to eventHorizon!!)
+        if (maxTransactionSize != null) overrides += mutableMapOf("maxTransactionSize" to eventHorizon!!)
+        if (eventHorizon != null) overrides += mutableMapOf("eventHorizon" to eventHorizon!!)
+        return overrides
+    }
+
+    private fun getNetworkParametersOverrides(): Validated<NetworkParametersOverrides, Configuration.Validation.Error> {
+        val parseOptions = ConfigParseOptions.defaults()
+        if (networkParametersFile == null) return Validated.valid(NetworkParametersOverrides())
+        if (networkParametersFile?.exists() == false) throw FileNotFoundException("Unable to find specified network parameters config file at $networkParametersFile")
+        val config = ConfigFactory.parseFile(networkParametersFile?.toFile(), parseOptions)
+        val finalConfig = ConfigFactory.parseMap(commandLineOverrides()).withFallback(config).resolve()
+        return finalConfig.parseAsNetworkParametersConfiguration()
+    }
+
     override fun runProgram(): Int {
         NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(),
                 copyCordapps = !noCopy,
-                minimumPlatformVersion = minimumPlatformVersion,
                 packageOwnership = registerPackageOwnership.map { Pair(it.javaPackageName, it.publicKey) }.toMap()
-                        .plus(unregisterPackageOwnership.map { Pair(it, null) })
+                        .plus(unregisterPackageOwnership.map { Pair(it, null) }),
+                networkParametersOverrides = getNetworkParametersOverrides().value()
         )
         return 0 //exit code
     }
 }
-
-
-data class PackageOwner(val javaPackageName: JavaPackageName, val publicKey: PublicKey)
 
 /**
  * Converter from String to PackageOwner (JavaPackageName and PublicKey)
@@ -82,27 +123,23 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
             val javaPackageName = JavaPackageName(packageOwnerSpec[0])
             // cater for passwords that include the argument delimiter field
             val keyStorePassword =
-                if (packageOwnerSpec.size > 4)
-                    packageOwnerSpec.subList(2, packageOwnerSpec.size-1).joinToString(";")
-                else packageOwnerSpec[2]
+                    if (packageOwnerSpec.size > 4)
+                        packageOwnerSpec.subList(2, packageOwnerSpec.size - 1).joinToString(";")
+                    else packageOwnerSpec[2]
             try {
                 val ks = loadKeyStore(Paths.get(packageOwnerSpec[1]), keyStorePassword)
                 try {
-                    val publicKey = ks.getCertificate(packageOwnerSpec[packageOwnerSpec.size-1]).publicKey
-                    return PackageOwner(javaPackageName,publicKey)
-                }
-                catch(kse: KeyStoreException) {
+                    val publicKey = ks.getCertificate(packageOwnerSpec[packageOwnerSpec.size - 1]).publicKey
+                    return PackageOwner(javaPackageName, publicKey)
+                } catch (kse: KeyStoreException) {
                     throw IllegalArgumentException("Keystore has not been initialized for alias ${packageOwnerSpec[3]}")
                 }
-            }
-            catch(kse: KeyStoreException) {
+            } catch (kse: KeyStoreException) {
                 throw IllegalArgumentException("Password is incorrect or the key store is damaged for keyStoreFilePath: ${packageOwnerSpec[1]} and keyStorePassword: $keyStorePassword")
-            }
-            catch(e: IOException) {
+            } catch (e: IOException) {
                 throw IllegalArgumentException("Error reading the key store from the file for keyStoreFilePath: ${packageOwnerSpec[1]} and keyStorePassword: $keyStorePassword")
             }
-        }
-        else throw IllegalArgumentException("Must specify package owner argument: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
+        } else throw IllegalArgumentException("Must specify package owner argument: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
     }
 }
 
@@ -113,4 +150,66 @@ class JavaPackageNameConverter : CommandLine.ITypeConverter<JavaPackageName> {
     override fun convert(packageName: String): JavaPackageName {
         return JavaPackageName(packageName)
     }
+}
+
+fun Config.parseAsNetworkParametersConfiguration(options: Configuration.Validation.Options = Configuration.Validation.Options(strict = false)):
+        Validated<NetworkParametersOverrides, Configuration.Validation.Error> = NetworkParametersFileSpecification.parse(this, options)
+
+internal fun toPath(rawValue: String): Validated<Path, Configuration.Validation.Error> {
+    return try {
+        valid(Paths.get(rawValue))
+    } catch (e: Exception) {
+        when (e) {
+            is InvalidPathException -> badValue("Path $rawValue not found")
+            else -> throw e
+        }
+    }
+}
+
+internal fun <T> badValue(msg: String): Validated<T, Configuration.Validation.Error> = Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of(msg)).toSet())
+internal fun <T> valid(value: T): Validated<T, Configuration.Validation.Error> = Validated.valid(value)
+
+internal object NetworkParametersFileSpecification : Configuration.Specification<NetworkParametersOverrides>("DefaultNetworkParameters") {
+    internal object PackageOwnershipSpec : Configuration.Specification<PackageOwner>("PackageOwners") {
+        private val packageName by string()
+        private val keystore by string().mapValid(::toPath)
+        private val keystorePassword by string()
+        private val keystoreAlias by string()
+
+        override fun parseValid(configuration: Config): Validated<PackageOwner, Configuration.Validation.Error> {
+            // java package name validation
+            val javaPackageName = JavaPackageName(configuration[packageName])
+
+            return try {
+                val ks = loadKeyStore(configuration[keystore].toAbsolutePath(), configuration[keystorePassword])
+                return try {
+                    val publicKey = ks.getCertificate(configuration[keystoreAlias]).publicKey
+                    valid(PackageOwner(javaPackageName, publicKey))
+                } catch (kse: KeyStoreException) {
+                    badValue("Keystore has not been initialized for alias ${configuration[keystoreAlias]}")
+                }
+            } catch (kse: KeyStoreException) {
+                badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: ${configuration[keystore]} and keyStorePassword: ${configuration[keystorePassword]}")
+            } catch (e: IOException) {
+                badValue("Error reading the key store from the file for keyStoreFilePath: ${configuration[keystore]} and keyStorePassword: ${configuration[keystorePassword]} ${e.message}")
+            }
+        }
+    }
+
+    override fun parseValid(configuration: Config): Validated<NetworkParametersOverrides, Configuration.Validation.Error> {
+        return valid(NetworkParametersOverrides(
+                minimumPlatformVersion = configuration[minimumPlatformVersion],
+                maxMessageSize = configuration[maxMessageSize],
+                maxTransactionSize = configuration[maxTransactionSize],
+                packageOwnership = configuration[packageOwnership],
+                eventHorizon = configuration[eventHorizon]
+        )
+        )
+    }
+
+    private val minimumPlatformVersion by int().optional()
+    private val maxMessageSize by int().optional()
+    private val maxTransactionSize by int().optional()
+    private val packageOwnership by nested(PackageOwnershipSpec).list().optional()
+    private val eventHorizon by duration().optional()
 }
