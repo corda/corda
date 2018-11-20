@@ -211,6 +211,7 @@ The node will shutdown now.""")
         }
         val newSignedNetParams = networkMapClient.getNetworkParameters(update.newParametersHash)
         val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
+        networkParametersStorage.saveParameters(newSignedNetParams)
         logger.info("Downloaded new network parameters: $newNetParams from the update: $update")
         newNetworkParameters = Pair(update, newSignedNetParams)
         val updateInfo = ParametersUpdateInfo(
@@ -242,7 +243,6 @@ The node will shutdown now.""")
             signedNewNetParams.serialize()
                     .open()
                     .copyTo(baseDirectory / NETWORK_PARAMS_UPDATE_FILE_NAME, StandardCopyOption.REPLACE_EXISTING)
-            networkParametersStorage.saveParameters(signedNewNetParams)
             networkMapClient.ackNetworkParametersUpdate(sign(parametersHash))
             logger.info("Accepted network parameter update $update: $newNetParams")
         } else {
