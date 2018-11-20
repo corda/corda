@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-How to extend the state machine
-===============================
+Extending the state machine
+===========================
 
 This article explains how to extend the state machine code that underlies flow execution. It is intended for Corda
 contributors.

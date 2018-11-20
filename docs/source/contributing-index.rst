@@ -10,8 +10,8 @@ Corda is an open-source project and contributions are welcome!
    contributing
    building-corda
    testing
+   api-scanner
+   building-the-docs
    codestyle
    cli-ux-guidelines
-   building-the-docs
-   api-scanner
    contributing-flow-state-machines

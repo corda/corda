@@ -16,29 +16,24 @@ Contribution guidelines
 -----------------------
 From the outset we defined some guidelines to ensure new contributions only ever enhance the project:
 
-* **Quality**: Code in the Corda project should meet the :doc:`Corda coding style guidelines <codestyle>`, with
-  sufficient test-cases, descriptive commit messages, evidence that the contribution does not break any compatibility commitments or cause
-  adverse feature interactions, and evidence of high-quality peer-review.
+* **Quality**: Code in the Corda project should meet the :doc:`Corda coding style guidelines <codestyle>`, with sufficient test-cases,
+  descriptive commit messages, evidence that the contribution does not break any compatibility commitments or cause adverse feature
+  interactions, and evidence of high-quality peer-review
+
 * **Size**: The Corda project's culture is one of small pull-requests, regularly submitted. The larger a pull-request, the more likely it
-  is that you will be asked to resubmit as a series of self-contained and individually reviewable smaller PRs.
+  is that you will be asked to resubmit as a series of self-contained and individually reviewable smaller PRs
+
 * **Scope**: We try to ensure the Corda project remains coherent and focused so we ask that the feature's scope is within the definition
-  specified in the Technical White Paper.
+  specified in the Technical White Paper
+
 * **Maintainability**: If the feature will require ongoing maintenance (eg support for a particular brand of database), we may ask you to
-  accept responsibility for maintaining this feature.
+  accept responsibility for maintaining this feature
+
 * **Non-duplicative**: If the contribution duplicates features that already exist or are already in progress, you may be asked to work with
   the project maintainers to reconcile this. As the major contributor to Corda, many employees of `R3 <https://r3.com>`_ will be working on
-  features at any given time. To avoid surprises and foster transparency, our work tracking system,
-  `Jira <https://r3-cev.atlassian.net/projects/CORDA/summary>`_, is public. In addition, the maintainers and developers on the project are
-  available on the `design <https://cordaledger.slack.com/messages/C3J04VC3V/>`_ channel of our `Slack <https://slack.corda.net/>`_ and
-  they would be delighted to discuss any work you plan to do.
-
-Advice to contributors
-----------------------
-You are encouraged to join our `Slack team <https://slack.corda.net/>`_, observe the
-`Pull Request process <https://github.com/corda/corda/pulls>`_ in action, contribute to code reviews and start by submitting small changes.
-
-To start contributing you can clone our repo and begin making pull requests. All contributions to this project are subject to the terms of
-the Developer Certificate of Origin, reproduced at the bottom of this page.
+  features at any given time. To avoid surprises and foster transparency,
+  `our Jira work tracking system is public <https://r3-cev.atlassian.net/projects/CORDA/summary>`_. If in doubt, reach out to one of the
+  :ref:`Community Maintainers <community-maintainers>`
 
 Identifying an area to contribute
 ---------------------------------
@@ -68,62 +63,41 @@ You can find instructions on how to extend the flow state machine :doc:`here </c
 Things to check
 ^^^^^^^^^^^^^^^
 
-Is your error handling up to scratch?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Errors should not leak to the UI. When writing tools intended for end users, like the node or command line tools,
-remember to add ``try``/``catch`` blocks. Throw meaningful errors. For example, instead of throwing an
-``OutOfMemoryError``, use the error message to indicate that a file is missing, a network socket was unreachable, etc.
-Tools should not dump stack traces to the end user.
+* **Is your error handling up to scratch?** Errors should not leak to the UI. When writing tools intended for end users, like the node or
+  command line tools, remember to add ``try``/``catch`` blocks. Throw meaningful errors. For example, instead of throwing an
+  ``OutOfMemoryError``, use the error message to indicate that a file is missing, a network socket was unreachable, etc. Tools should not
+  dump stack traces to the end user
 
-Look for API breaks
-~~~~~~~~~~~~~~~~~~~
-We have an automated checker tool that runs as part of our continuous integration pipeline and helps a lot, but it
-can't catch semantic changes where the behavior of an API changes in ways that might violate app developer expectations.
+* **Look for API breaks:** We have an automated checker tool that runs as part of our continuous integration pipeline and helps a lot, but
+  it can't catch semantic changes where the behavior of an API changes in ways that might violate app developer expectations
 
-Suppress inevitable compiler warnings
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Compiler warnings should have a ``@Suppress`` annotation on them if they're expected and can't be avoided.
+* **Suppress inevitable compiler warnings:** Compiler warnings should have a ``@Suppress`` annotation on them if they're expected and can't
+  be avoided
 
-Remove deprecated functionality
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When deprecating functionality, make sure you remove the deprecated uses in the codebase.
+* **Remove deprecated functionality:** When deprecating functionality, make sure you remove the deprecated uses in the codebase
 
-Avoid making formatting changes as you work
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In Kotlin 1.2.20, new style guide rules were implemented. The new Kotlin style guide is significantly more detailed
-than before and IntelliJ knows how to implement those rules. Re-formatting the codebase creates a lot of diffs that
-make merging more complicated.
+* **Avoid making formatting changes as you work:** In Kotlin 1.2.20, new style guide rules were implemented. The new Kotlin style guide is
+  significantly more detailed than before and IntelliJ knows how to implement those rules. Re-formatting the codebase creates a lot of
+  diffs that make merging more complicated
 
-Things to consider when writing CLI apps
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Make sure any changes to CLI applications conform to the :doc:`cli-ux-guidelines`.
+* **Things to consider when writing CLI apps:** Make sure any changes to CLI applications conform to the :doc:`cli-ux-guidelines`
 
 Testing the changes
 -------------------
 
-Adding tests
-^^^^^^^^^^^^
-Unit tests and integration tests for external API changes must cover Java and Kotlin. For internal API changes these
-tests can be scaled back to kotlin only.
+1. **Add tests**: Unit tests and integration tests for external API changes must cover Java and Kotlin. For internal API changes these
+   tests can be scaled back to Kotlin only
 
-Running the tests
-^^^^^^^^^^^^^^^^^
-Your changes must pass the tests described :doc:`here </testing>`.
+2. **Run the tests**: Your changes must pass the tests described :doc:`here <testing>`
 
-Manual testing
-^^^^^^^^^^^^^^
-Before sending that code for review, spend time poking and prodding the tool and thinking, “Would the experience of
-using this feature make my mum proud of me?”. Automated tests are not a substitute for dogfooding.
+3. **Perform manual testing**: Before sending that code for review, spend time poking and prodding the tool and thinking, “Would the
+   experience of using this feature make my mum proud of me?”. Automated tests are not a substitute for dogfooding
 
-Building against the master branch
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You can test your changes against CorDapps defined in other repos by following the instructions
-:doc:`here </building-against-master>`.
+4. **Build against the master branch**: You can test your changes against CorDapps defined in other repos by following the instructions
+   :doc:`here <building-against-master>`
 
-Running the API scanner
-^^^^^^^^^^^^^^^^^^^^^^^
-Your changes must also not break compatibility with existing public API. We have an API scanning tool which runs as part of the build
-process which can be used to flag up any accidental changes, which is detailed :doc:`here </api-scanner>`.
+5. **Run the API scanner**: Your changes must also not break compatibility with existing public API. We have an API scanning tool which
+   runs as part of the build process which can be used to flag up any accidental changes, which is detailed :doc:`here <api-scanner>`
 
 Updating the docs
 -----------------
@@ -136,9 +110,9 @@ Any changes to Corda's public API must be documented as follows:
 2. Update the relevant `.rst file(s) <https://github.com/corda/corda/tree/master/docs/source>`_
 3. Include the change in the :doc:`changelog </changelog>` if the change is external and therefore visible to CorDapp
    developers and/or node operators
-4. :doc:`Build the docs locally </building-the-docs>`
-5. Check the built .html files (under ``docs/build/html``) for the modified pages to ensure they render correctly
-6. If relevant, add a sample. Samples are one of the key ways in which users learn about what the platform can do.
+4. :doc:`Build the docs locally </building-the-docs>` and check that the resulting .html files (under ``docs/build/html``) for the modified
+   render correctly
+5. If relevant, add a sample. Samples are one of the key ways in which users learn about what the platform can do.
    If you add a new API or feature and don't update the samples, your work will be much less impactful
 
 Merging the changes back into Corda
@@ -166,8 +140,14 @@ Merging the changes back into Corda
 5. The reviewer will either:
 
   * Accept and merge your PR
-  * Request that you make further changes. Do this by committing and pushing the changes onto the branch you are PRing
-    into Corda. The PR will be updated automatically
+  * Request that you make further changes via the GitHub PR interface
+
+    * Do this by making and pushing changes directly to your PR branch. The PR will be updated automatically
+
+6. (Optional) Open an additional PR to add yourself to the
+   `CONTRIBUTORS.md file <https://github.com/corda/corda/blob/master/CONTRIBUTORS.md>`_
+
+    * The format is generally ``firstname surname (company)``, but the company can be omitted if desired
 
 Developer Certificate of Origin
 -------------------------------
