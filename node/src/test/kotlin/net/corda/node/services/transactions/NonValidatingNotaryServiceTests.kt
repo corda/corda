@@ -304,7 +304,7 @@ class NonValidatingNotaryServiceTests {
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         serviceHub.recordTransactions(stx)
-        return listOf(StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0)),
-                StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 1)))
+        return listOf(StateAndRef(stx.coreTransaction.outputs[0], StateRef(stx.id, 0)),
+                StateAndRef(stx.coreTransaction.outputs[1], StateRef(stx.id, 1)))
     }
 }
