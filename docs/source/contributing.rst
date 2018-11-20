@@ -1,9 +1,47 @@
 How to contribute
 =================
 
+.. contents::
+
+Scope
+-----
+We believe one of the things that makes Corda special is its coherent design and we seek to retain this defining characteristic. One of the
+ways we do this is by encouraging developers of new features to write a design proposal for review, comment and advice before they start
+work and you are encouraged to take advantage of this process. Posting to the
+`design channel <https://cordaledger.slack.com/messages/C3J04VC3V/>`_ on Slack is a good way to kick this process off. When reviewing a
+proposed feature, we use the `Corda Technical Whitepaper`_ as a guide and you are strongly encouraged to study it. This white paper is a
+living document that is updated from time to time under the guidance of the project leader (see below).
+
+Contribution guidelines
+-----------------------
+From the outset we defined some guidelines to ensure new contributions only ever enhance the project:
+
+* **Quality**: Code in the Corda project should meet the :doc:`Corda coding style guidelines <codestyle>`, with
+  sufficient test-cases, descriptive commit messages, evidence that the contribution does not break any compatibility commitments or cause
+  adverse feature interactions, and evidence of high-quality peer-review.
+* **Size**: The Corda project's culture is one of small pull-requests, regularly submitted. The larger a pull-request, the more likely it
+  is that you will be asked to resubmit as a series of self-contained and individually reviewable smaller PRs.
+* **Scope**: We try to ensure the Corda project remains coherent and focused so we ask that the feature's scope is within the definition
+  specified in the Technical White Paper.
+* **Maintainability**: If the feature will require ongoing maintenance (eg support for a particular brand of database), we may ask you to
+  accept responsibility for maintaining this feature.
+* **Non-duplicative**: If the contribution duplicates features that already exist or are already in progress, you may be asked to work with
+  the project maintainers to reconcile this. As the major contributor to Corda, many employees of `R3 <https://r3.com>`_ will be working on
+  features at any given time. To avoid surprises and foster transparency, our work tracking system,
+  `Jira <https://r3-cev.atlassian.net/projects/CORDA/summary>`_, is public. In addition, the maintainers and developers on the project are
+  available on the `design <https://cordaledger.slack.com/messages/C3J04VC3V/>`_ channel of our `Slack <https://slack.corda.net/>`_ and
+  they would be delighted to discuss any work you plan to do.
+
+Advice to contributors
+----------------------
+You are encouraged to join our `Slack team <https://slack.corda.net/>`_, observe the
+`Pull Request process <https://github.com/corda/corda/pulls>`_ in action, contribute to code reviews and start by submitting small changes.
+
+To start contributing you can clone our repo and begin making pull requests. All contributions to this project are subject to the terms of
+the Developer Certificate of Origin, reproduced at the bottom of this page.
+
 Identifying an area to contribute
 ---------------------------------
-
 There are several ways to identify an area where you can contribute to Corda:
 
 * Browse issues labelled as ``good first issue`` in the
@@ -18,7 +56,6 @@ There are several ways to identify an area where you can contribute to Corda:
 
 Making the required changes
 ---------------------------
-
 1. Create a fork of the master branch of the `Corda repo <https://github.com/corda/corda>`_
 2. Clone the fork to your local machine
 3. Build Corda by following the instructions :doc:`here </building-corda>`
@@ -33,7 +70,6 @@ Things to check
 
 Is your error handling up to scratch?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Errors should not leak to the UI. When writing tools intended for end users, like the node or command line tools,
 remember to add ``try``/``catch`` blocks. Throw meaningful errors. For example, instead of throwing an
 ``OutOfMemoryError``, use the error message to indicate that a file is missing, a network socket was unreachable, etc.
@@ -41,30 +77,25 @@ Tools should not dump stack traces to the end user.
 
 Look for API breaks
 ~~~~~~~~~~~~~~~~~~~
-
 We have an automated checker tool that runs as part of our continuous integration pipeline and helps a lot, but it
 can't catch semantic changes where the behavior of an API changes in ways that might violate app developer expectations.
 
 Suppress inevitable compiler warnings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Compiler warnings should have a ``@Suppress`` annotation on them if they're expected and can't be avoided.
 
 Remove deprecated functionality
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 When deprecating functionality, make sure you remove the deprecated uses in the codebase.
 
 Avoid making formatting changes as you work
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 In Kotlin 1.2.20, new style guide rules were implemented. The new Kotlin style guide is significantly more detailed
 than before and IntelliJ knows how to implement those rules. Re-formatting the codebase creates a lot of diffs that
 make merging more complicated.
 
 Things to consider when writing CLI apps
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Make sure any changes to CLI applications conform to the :doc:`cli-ux-guidelines`.
 
 Testing the changes
@@ -96,7 +127,6 @@ process which can be used to flag up any accidental changes, which is detailed :
 
 Updating the docs
 -----------------
-
 Any changes to Corda's public API must be documented as follows:
 
 1. Add comments and javadocs/kdocs. API functions must have javadoc/kdoc comments and sentences must be terminated
@@ -113,7 +143,6 @@ Any changes to Corda's public API must be documented as follows:
 
 Merging the changes back into Corda
 -----------------------------------
-
 1. Create a pull request from your fork to the ``master`` branch of the Corda repo
 
 2. In the PR comments box:
@@ -129,7 +158,8 @@ Merging the changes back into Corda
 
   * Add a clear description of the purpose of the PR
   
-  * Add the following statement to confirm that your contribution is your own original work: "I hereby certify that my contribution is in accordance with the Developer Certificate of Origin (https://github.com/corda/corda/blob/master/CONTRIBUTING.md#developer-certificate-of-origin)."
+  * Add the following statement to confirm that your contribution is your own original work: "I hereby certify that my contribution is in
+    accordance with the Developer Certificate of Origin (https://developercertificate.org/)."
 
 4. Request a review from a member of the Corda platform team via the `#design channel <http://slack.corda.net/>`_
 
@@ -138,3 +168,47 @@ Merging the changes back into Corda
   * Accept and merge your PR
   * Request that you make further changes. Do this by committing and pushing the changes onto the branch you are PRing
     into Corda. The PR will be updated automatically
+
+Developer Certificate of Origin
+-------------------------------
+All contributions to this project are subject to the terms of the Developer Certificate of Origin, available
+`here <https://developercertificate.org/>`_. We have reproduced it below::
+
+    Developer Certificate of Origin
+    Version 1.1
+
+    Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+    1 Letterman Drive
+    Suite D4700
+    San Francisco, CA, 94129
+
+    Everyone is permitted to copy and distribute verbatim copies of this
+    license document, but changing it is not allowed.
+
+    Developer's Certificate of Origin 1.1
+
+    By making a contribution to this project, I certify that:
+
+    (a) The contribution was created in whole or in part by me and I
+        have the right to submit it under the open source license
+        indicated in the file; or
+
+    (b) The contribution is based upon previous work that, to the best
+        of my knowledge, is covered under an appropriate open source
+        license and I have the right under that license to submit that
+        work with modifications, whether created in whole or in part
+        by me, under the same open source license (unless I am
+        permitted to submit under a different license), as indicated
+        in the file; or
+
+    (c) The contribution was provided directly to me by some other
+        person who certified (a), (b) or (c) and I have not modified
+        it.
+
+    (d) I understand and agree that this project and the contribution
+        are public and that a record of the contribution (including all
+        personal information I submit with it, including my sign-off) is
+        maintained indefinitely and may be redistributed consistent with
+        this project or the open source license(s) involved.
+
+.. _`Corda Technical Whitepaper`: _static/corda-technical-whitepaper.pdf

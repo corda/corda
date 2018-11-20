@@ -1,13 +1,12 @@
 Contributing
 ============
 
-Corda is an open-source project and contributions are welcome. Our contributing philosophy is described in
-`CONTRIBUTING.md <https://github.com/corda/corda/blob/master/CONTRIBUTING.md>`_. This guide explains the mechanics
-of contributing to Corda.
+Corda is an open-source project and contributions are welcome!
 
 .. toctree::
    :maxdepth: 1
 
+   contributing-philosophy
    contributing
    building-corda
    testing
