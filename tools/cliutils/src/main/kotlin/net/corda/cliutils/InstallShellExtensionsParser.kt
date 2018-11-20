@@ -87,17 +87,21 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
     }
 
     fun installShellExtensions(): Int {
+        // Get jar location and generate alias command
+        val command = "alias ${parent.alias}='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
+        var generateAutoCompleteFile = true
         if (SystemUtils.IS_OS_UNIX && installedShell() == ShellType.BASH) {
             val semanticParts = declaredBashVersion().split(".")
             semanticParts.firstOrNull()?.toIntOrNull()?.let { major ->
                 if (major < minSupportedBashVersion) {
                     parent.printlnWarn("Cannot install shell extension for Bash major version earlier than $minSupportedBashVersion. Please upgrade your Bash version. Aliases should still work.")
+                    generateAutoCompleteFile = false
                 }
             }
         }
-        // Get jar location and generate alias command
-        val command = "alias ${parent.alias}='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
-        generateAutoCompleteFile(parent.alias)
+        if (generateAutoCompleteFile) {
+            generateAutoCompleteFile(parent.alias)
+        }
 
         // Get bash settings file
         val bashSettingsFile = SettingsFile(userHome / ".bashrc")
@@ -115,7 +119,11 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         zshSettingsFile.addIfNotExists(completionFileCommand)
         zshSettingsFile.updateAndBackupIfNecessary()
 
-        println("Installation complete, ${parent.alias} is available in bash with autocompletion. ")
+        if (generateAutoCompleteFile) {
+            println("Installation complete, ${parent.alias} is available in bash with autocompletion.")
+        } else {
+            println("Installation complete, ${parent.alias} is available in bash, but autocompletion was not installed because of an old version of Bash.")
+        }
         println("Type `${parent.alias} <options>` from the commandline.")
         println("Restart bash for this to take effect, or run `. ~/.bashrc` in bash or `. ~/.zshrc` in zsh to re-initialise your shell now")
         return ExitCodes.SUCCESS
