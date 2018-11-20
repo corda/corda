@@ -32,7 +32,10 @@ import kotlin.reflect.jvm.javaType
  * this is not a [MutableSet], as we want to be able to backtrack while traversing through the graph of related types, and
  * will find it useful to revert to earlier states of knowledge about which types have been visited on a given branch.
  */
-internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val resolutionContext: Type? = null, val visited: Set<TypeIdentifier> = emptySet()) {
+internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
+                                                val resolutionContext: Type? = null,
+                                                val visited: Set<TypeIdentifier> = emptySet(),
+                                                val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf()) {
 
     companion object {
         private val logger = contextLogger()
@@ -42,9 +45,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
      */
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
-        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
-            LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
-        }
+        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier).apply { cycles.add(this) }
         else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
             copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
         }

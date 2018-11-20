@@ -37,6 +37,10 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
 
         private val supportedTypeIdentifiers = supportedTypes.keys.asSequence().map { TypeIdentifier.forClass(it) }.toSet()
 
+        /**
+         * Replace erased collection types with parameterised types with wildcard type parameters, so that they are represented
+         * appropriately in the AMQP schema.
+         */
         fun resolveDeclared(declaredTypeInformation: LocalTypeInformation.ACollection): LocalTypeInformation.ACollection {
             if (declaredTypeInformation.typeIdentifier.erased in supportedTypeIdentifiers)
                 return reparameterise(declaredTypeInformation)

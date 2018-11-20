@@ -154,8 +154,10 @@ sealed class PropertyReader {
     /**
      * Reads a property using a getter [Method].
      */
-    class GetterReader(_getter: Method): PropertyReader() {
-        val getter = _getter.also { it.isAccessible = true }
+    class GetterReader(private val getter: Method): PropertyReader() {
+        init {
+            getter.isAccessible = true
+        }
 
         override fun read(obj: Any?): Any? = if (obj == null) null else getter.invoke(obj)
     }
@@ -163,8 +165,10 @@ sealed class PropertyReader {
     /**
      * Reads a property using a backing [Field].
      */
-    class FieldReader(_field: Field): PropertyReader() {
-        val field = _field.also { it.isAccessible = true }
+    class FieldReader(private val field: Field): PropertyReader() {
+        init {
+            field.isAccessible = true
+        }
 
         override fun read(obj: Any?): Any? = if (obj == null) null else field.get(obj)
     }

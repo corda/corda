@@ -22,15 +22,6 @@ class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Pr
 
     override val additionalSerializers: Iterable<CustomSerializer<out Any>> = listOf(StackTraceElementSerializer(factory))
 
-    private val LocalTypeInformation.properties: Map<String, LocalPropertyInformation> get() = when(this) {
-        is LocalTypeInformation.AnInterface -> properties
-        is LocalTypeInformation.Abstract -> properties
-        is LocalTypeInformation.NonComposable -> properties
-        is LocalTypeInformation.Composable -> properties
-        is LocalTypeInformation.Opaque -> expand.properties
-        else -> emptyMap()
-    }
-
     private val LocalTypeInformation.constructor: LocalConstructorInformation get() = when(this) {
         is LocalTypeInformation.NonComposable -> constructor ?:
                 throw NotSerializableException("$this has no deserialization constructor")
@@ -45,7 +36,7 @@ class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Pr
             // Try and find a constructor
             try {
                 val typeInformation = factory.getTypeInformation(obj.javaClass)
-                extraProperties.putAll(typeInformation.properties.mapValues { (_, property) ->
+                extraProperties.putAll(typeInformation.propertiesOrEmptyMap.mapValues { (_, property) ->
                     PropertyReader.make(property).read(obj)
                 })
             } catch (e: NotSerializableException) {

@@ -21,6 +21,14 @@ interface RemoteSerializerFactory {
 }
 
 /**
+ * Represents the reflection of some [RemoteTypeInformation] by some [LocalTypeInformation], which we use to make
+ * decisions about evolution.
+ */
+data class RemoteAndLocalTypeInformation(
+        val remoteTypeInformation: RemoteTypeInformation,
+        val localTypeInformation: LocalTypeInformation)
+
+/**
  * A [RemoteSerializerFactory] which uses an [AMQPRemoteTypeModel] to interpret AMQP [Schema]s into [RemoteTypeInformation],
  * reflects this into [LocalTypeInformation] using a [RemoteTypeReflector], and compares the two in order to decide whether to
  * return the serializer provided by the [LocalSerializerFactory] or to construct a special evolution serializer using the
@@ -39,7 +47,8 @@ class DefaultRemoteSerializerFactory(
         private val evolutionSerializerFactory: EvolutionSerializerFactory,
         private val descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry,
         private val remoteTypeModel: AMQPRemoteTypeModel,
-        private val typeReflector: RemoteTypeReflector,
+        private val localTypeModel: LocalTypeModel,
+        private val typeLoader: TypeLoader,
         private val localSerializerFactory: LocalSerializerFactory)
     : RemoteSerializerFactory {
 
@@ -54,7 +63,7 @@ class DefaultRemoteSerializerFactory(
 
             // Interpret all of the types in the schema into RemoteTypeInformation, and reflect that into LocalTypeInformation.
             val remoteTypeInformationMap = remoteTypeModel.interpret(schema)
-            val reflected = typeReflector.reflect(remoteTypeInformationMap)
+            val reflected = reflect(remoteTypeInformationMap)
 
             // Get, and record in the registry, serializers for all of the types contained in the schema.
             // This will save us having to re-interpret the entire schema on re-entry when deserialising individual property values.
@@ -104,6 +113,17 @@ ${localTypeInformation.prettyPrint(false)}
 
                 localSerializer
             }
+        }
+    }
+
+    private fun reflect(remoteInformation: Map<TypeDescriptor, RemoteTypeInformation>):
+            Map<TypeDescriptor, RemoteAndLocalTypeInformation> {
+        val localInformationByIdentifier = typeLoader.load(remoteInformation.values).mapValues { (_, type) ->
+            localTypeModel.inspect(type)
+        }
+
+        return remoteInformation.mapValues { (_, remoteInformation) ->
+            RemoteAndLocalTypeInformation(remoteInformation, localInformationByIdentifier[remoteInformation.typeIdentifier]!!)
         }
     }
 

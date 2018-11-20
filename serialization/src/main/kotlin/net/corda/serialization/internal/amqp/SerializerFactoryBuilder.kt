@@ -96,10 +96,6 @@ object SerializerFactoryBuilder {
                 SchemaBuildingRemoteTypeCarpenter(classCarpenter),
                 classCarpenter.classloader)
 
-        val remoteTypeReflector = TypeLoadingRemoteTypeReflector(
-                typeLoader,
-                localTypeModel)
-
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,
                 classCarpenter.classloader,
@@ -110,7 +106,8 @@ object SerializerFactoryBuilder {
                 evolutionSerializerFactory,
                 descriptorBasedSerializerRegistry,
                 AMQPRemoteTypeModel(),
-                remoteTypeReflector,
+                localTypeModel,
+                typeLoader,
                 localSerializerFactory)
 
         return ComposedSerializerFactory(localSerializerFactory, remoteSerializerFactory, customSerializerRegistry)

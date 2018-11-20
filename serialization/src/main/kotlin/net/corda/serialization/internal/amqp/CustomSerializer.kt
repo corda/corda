@@ -3,7 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
-import net.corda.serialization.internal.model.fingerprintForDescriptors
+import net.corda.serialization.internal.model.FingerprintWriter
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
@@ -67,7 +67,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
         override val type: Type get() = clazz
         override val typeDescriptor: Symbol by lazy {
-            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerprintForDescriptors(superClassSerializer.typeDescriptor.toString(), AMQPTypeIdentifiers.nameForType(clazz))}")
+            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${FingerprintWriter(false).write(arrayOf(superClassSerializer.typeDescriptor.toString(), AMQPTypeIdentifiers.nameForType(clazz)).joinToString()).fingerprint}")
         }
         private val typeNotation: TypeNotation = RestrictedType(
                 AMQPTypeIdentifiers.nameForType(clazz),
@@ -192,7 +192,7 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
 
         override val schemaForDocumentation = Schema(
                 listOf(RestrictedType(AMQPTypeIdentifiers.nameForType(type), "", listOf(AMQPTypeIdentifiers.nameForType(type)),
-                        AMQPTypeIdentifiers.primitiveTypeName(String::class.java)!!,
+                        AMQPTypeIdentifiers.primitiveTypeName(String::class.java),
                         descriptor, emptyList())))
 
         override fun writeDescribedObject(obj: T, data: Data, type: Type, output: SerializationOutput,

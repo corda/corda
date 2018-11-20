@@ -35,7 +35,7 @@ class TypeModellingFingerPrinter(
 
     override fun fingerprint(typeInformation: LocalTypeInformation): String =
             cache.computeIfAbsent(typeInformation.typeIdentifier) {
-                CustomisableLocalTypeInformationFingerPrintingState(
+                FingerPrintingState(
                         customTypeDescriptorLookup,
                         FingerprintWriter(debugEnabled)).fingerprint(typeInformation)
             }
@@ -55,13 +55,11 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
         private const val NOT_NULLABLE_HASH: String = "Nullable = false"
         private const val ANY_TYPE_HASH: String = "Any type = true"
 
-        val ANY = FingerprintWriter(false).writeAny().fingerprint
-
         private val logger = contextLogger()
     }
 
     private val debugBuffer: StringBuilder? = if (debugEnabled) StringBuilder() else null
-    private var hasher = Hashing.murmur3_128().newHasher()
+    private var hasher = Hashing.murmur3_128().newHasher() // FIXUP: remove dependency on Guava Hasher
 
     fun write(chars: CharSequence) = append(chars)
     fun write(words: List<CharSequence>) = append(words.joinToString())
@@ -77,10 +75,10 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
         hasher = hasher.putUnencodedChars(chars)
     }
 
-    val fingerprint: String get() {
+    val fingerprint: String by lazy {
         val fingerprint = hasher.hash().asBytes().toBase64()
         if (debugBuffer != null) logger.info("$fingerprint from $debugBuffer")
-        return fingerprint
+        fingerprint
     }
 }
 
@@ -88,7 +86,7 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
  * Representation of the current state of fingerprinting, which keeps track of which types have already been visited
  * during fingerprinting.
  */
-private class CustomisableLocalTypeInformationFingerPrintingState(
+private class FingerPrintingState(
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val writer: FingerprintWriter) {
 
@@ -108,7 +106,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
 
     // This method concatenates various elements of the types recursively as unencoded strings into the hasher,
     // effectively creating a unique string for a type which we then hash in the calling function above.
-    private fun fingerprintType(type: LocalTypeInformation): CustomisableLocalTypeInformationFingerPrintingState = apply {
+    private fun fingerprintType(type: LocalTypeInformation): FingerPrintingState = apply {
         // Don't go round in circles.
         when {
             hasSeen(type.typeIdentifier) -> writer.writeAlreadySeen()
@@ -164,7 +162,7 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
     private fun fingerprintInterface(type: LocalTypeInformation.AnInterface) =
             fingerprintWithCustomSerializerOrElse(type) {
                 fingerprintName(type)
-                writer.writeAlreadySeen() // replicate behaviour of old fingerprinter
+                writer.writeAlreadySeen() // FIXUP: this replicates the behaviour of the old fingerprinter for compatibility reasons.
                 fingerprintInterfaces(type.interfaces)
                 fingerprintTypeParameters(type.typeParameters)
             }
@@ -233,8 +231,3 @@ private class CustomisableLocalTypeInformationFingerPrintingState(
     private fun hasSeen(type: TypeIdentifier) = (type in typesSeen)
             && (type != TypeIdentifier.UnknownType)
 }
-
-// region Utility functions
-internal fun fingerprintForDescriptors(vararg typeDescriptors: String): String =
-        FingerprintWriter(false).write(typeDescriptors.joinToString()).fingerprint
-// endregion

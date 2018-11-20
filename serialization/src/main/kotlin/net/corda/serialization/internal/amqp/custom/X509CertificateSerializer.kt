@@ -12,7 +12,7 @@ object X509CertificateSerializer : CustomSerializer.Implements<X509Certificate>(
             type.toString(),
             "",
             listOf(type.toString()),
-            AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java)!!,
+            AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java),
             descriptor,
             emptyList()
     )))

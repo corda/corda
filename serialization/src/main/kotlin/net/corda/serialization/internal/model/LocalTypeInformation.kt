@@ -3,6 +3,7 @@ package net.corda.serialization.internal.model
 import java.lang.reflect.*
 import kotlin.reflect.KFunction
 import java.util.*
+import kotlin.math.exp
 
 typealias PropertyName = String
 
@@ -56,8 +57,19 @@ sealed class LocalTypeInformation {
          * @param type The [Type] to obtain [LocalTypeInformation] for.
          * @param lookup The [LocalTypeLookup] to use to find previously-constructed [LocalTypeInformation].
          */
-        fun forType(type: Type, lookup: LocalTypeLookup): LocalTypeInformation =
-                LocalTypeInformationBuilder(lookup).build(type, TypeIdentifier.forGenericType(type))
+        fun forType(type: Type, lookup: LocalTypeLookup): LocalTypeInformation {
+            val builder =  LocalTypeInformationBuilder(lookup)
+            val result = builder.build(type, TypeIdentifier.forGenericType(type))
+
+            // Patch every cyclic reference with a `follow` property pointing to the type information it refers to.
+            builder.cycles.forEach { cycle ->
+                cycle.follow = lookup.findOrBuild(cycle.observedType, cycle.typeIdentifier) {
+                    throw IllegalStateException("Should not be attempting to build new type information when populating a cycle")
+                }
+            }
+
+            return result
+        }
     }
 
     /**
@@ -79,6 +91,7 @@ sealed class LocalTypeInformation {
         is LocalTypeInformation.Abstract -> properties
         is LocalTypeInformation.AnInterface -> properties
         is LocalTypeInformation.NonComposable -> properties
+        is LocalTypeInformation.Opaque -> expand.propertiesOrEmptyMap
         else -> emptyMap()
     }
 
@@ -123,11 +136,10 @@ sealed class LocalTypeInformation {
      */
     data class Cycle(
             override val observedType: Type,
-            override val typeIdentifier: TypeIdentifier,
-            private val _follow: () -> LocalTypeInformation) : LocalTypeInformation() {
-        val follow: LocalTypeInformation get() = _follow()
+            override val typeIdentifier: TypeIdentifier) : LocalTypeInformation() {
+        lateinit var follow: LocalTypeInformation
 
-        // Custom equals / hashcode because otherwise the "follow" lambda makes equality harder to reason about.
+        // Custom equals / hashcode omitting "follow"
         override fun equals(other: Any?): Boolean =
                 other is Cycle &&
                         other.observedType == observedType &&
@@ -143,7 +155,10 @@ sealed class LocalTypeInformation {
      */
     data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier,
                       private val _expand: () -> LocalTypeInformation) : LocalTypeInformation() {
-        val expand: LocalTypeInformation get() = _expand()
+        /**
+         * In some rare cases, e.g. during Exception serialisation, we may want to "look inside" an opaque type.
+         */
+        val expand: LocalTypeInformation by lazy { _expand() }
 
         // Custom equals / hashcode because otherwise the "expand" lambda makes equality harder to reason about.
         override fun equals(other: Any?): Boolean =

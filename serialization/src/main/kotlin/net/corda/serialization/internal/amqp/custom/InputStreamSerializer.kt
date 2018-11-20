@@ -20,7 +20,7 @@ object InputStreamSerializer : CustomSerializer.Implements<InputStream>(InputStr
                             type.toString(),
                             "",
                             listOf(type.toString()),
-                            AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java)!!,
+                            AMQPTypeIdentifiers.primitiveTypeName(ByteArray::class.java),
                             descriptor,
                             emptyList())))
 
