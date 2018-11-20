@@ -1,6 +1,8 @@
 package net.corda.cliutils
 
 import net.corda.core.internal.*
+import org.apache.commons.io.IOUtils
+import org.apache.commons.lang.SystemUtils
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import java.nio.file.Path
@@ -9,6 +11,10 @@ import java.nio.file.StandardCopyOption
 import java.util.*
 
 private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
+    private companion object {
+        private const val minSupportedBashVersion = 4
+    }
+
     private class SettingsFile(val filePath: Path) {
         private val lines: MutableList<String> by lazy { getFileLines() }
         var fileModified: Boolean = false
@@ -80,7 +86,16 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         autoCompleteFile.writeText(builder.toString())
     }
 
-    fun installShellExtensions() {
+    fun installShellExtensions(): Int {
+        if (SystemUtils.IS_OS_UNIX && installedShell() == ShellType.BASH) {
+            val semanticParts = declaredBashVersion().split(".")
+            semanticParts.firstOrNull()?.toIntOrNull()?.let { major ->
+                if (major < minSupportedBashVersion) {
+                    parent.printlnErr("Cannot install shell extension for Bash major version earlier than $minSupportedBashVersion. Please upgrade your Bash version.")
+                    return ExitCodes.FAILURE
+                }
+            }
+        }
         // Get jar location and generate alias command
         val command = "alias ${parent.alias}='java -jar \"${jarLocation.toStringWithDeWindowsfication()}\"'"
         generateAutoCompleteFile(parent.alias)
@@ -104,6 +119,27 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         println("Installation complete, ${parent.alias} is available in bash with autocompletion. ")
         println("Type `${parent.alias} <options>` from the commandline.")
         println("Restart bash for this to take effect, or run `. ~/.bashrc` in bash or `. ~/.zshrc` in zsh to re-initialise your shell now")
+        return ExitCodes.SUCCESS
+    }
+
+    private fun declaredBashVersion(): String = execCommand("bash -c 'echo \$BASH_VERSION'")
+
+    private fun installedShell(): ShellType {
+        val path = execCommand("bash -c 'echo \$SHELL'")
+        return when {
+            path.endsWith("/zsh") -> ShellType.ZSH
+            path.endsWith("/bash") -> ShellType.BASH
+            else -> ShellType.OTHER
+        }
+    }
+
+    private enum class ShellType {
+        ZSH, BASH, OTHER
+    }
+
+    private fun execCommand(command: String): String {
+        val process = ProcessBuilder(command)
+        return IOUtils.toString(process.start().inputStream, Charsets.UTF_8)
     }
 
     fun checkForAutoCompleteUpdate() {
@@ -127,8 +163,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
 class InstallShellExtensionsParser(private val cliWrapper: CordaCliWrapper) : CliWrapperBase("install-shell-extensions", "Install alias and autocompletion for bash and zsh") {
     private val generator = ShellExtensionsGenerator(cliWrapper)
     override fun runProgram(): Int {
-        generator.installShellExtensions()
-        return ExitCodes.SUCCESS
+        return generator.installShellExtensions()
     }
 
     fun updateShellExtensions() = generator.checkForAutoCompleteUpdate()
