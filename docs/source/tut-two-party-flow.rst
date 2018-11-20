@@ -88,7 +88,7 @@ to respond, we need to write a response flow as well. In a new ``IOUFlowResponde
 
 .. container:: codeset
 
-    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/tutorial/twoparty/IOUFlowResponder.kt
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/tutorial/twoparty/IOUFlowResponder.kt
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01

@@ -8,6 +8,7 @@ import net.corda.core.transactions.LedgerTransaction
 // Add this import:
 import net.corda.core.contracts.*
 
+// Replace TemplateContract's definition with:
 class IOUContract : Contract {
     companion object {
         const val ID = "com.template.IOUContract"
