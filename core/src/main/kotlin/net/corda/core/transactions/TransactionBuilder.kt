@@ -177,7 +177,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<AttachmentId, List<TransactionState<ContractState>>?>> = allContracts.toSet()
                 .map { ctr ->
-                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], serializationContext, services)
+                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
                 }
 
         val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
@@ -213,7 +213,6 @@ open class TransactionBuilder @JvmOverloads constructor(
             inputStates: List<TransactionState<ContractState>>?,
             outputStates: List<TransactionState<ContractState>>?,
             explicitContractAttachment: AttachmentId?,
-            serializationContext: SerializationContext?,
             services: ServicesForResolution
     ): Pair<AttachmentId, List<TransactionState<ContractState>>?> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
