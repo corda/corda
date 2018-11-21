@@ -12,7 +12,7 @@ To run simply pass in the file or URL as the first parameter:
 
 .. parsed-literal::
 
-    > java -jar |jar_name| <file or URL>
+    > java -jar |jar_name| <sub-command> <command line options>
 
 ..
 
@@ -82,12 +82,13 @@ Command-line options
       ha-utilities generate-internal-ssl-keystores [-hvV] [--logging-level=<loggingLevel>] [-b=<baseDirectory>] [-c=<country>] [-l=<locality>] [-o=<organization>] [-p=<password>]
 
 * ``-v``, ``--verbose``, ``--log-to-console``: If set, prints logging to the console as well as to a file.
-* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values:ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO
-* ``-p``, ``--password=<password>``: Default password for all generated keystore and private keys. Default: changeit
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO
+* ``-p``, ``--keyStorePassword=<keyStorePassword>``: Password for all generated keystores. Default: changeit
+* ``-e``, ``--entryPassword=<entryPassword>``: Password for all the keystores private keys. Default: changeit
+* ``-t``, ``--trustStorePassword=<trustStorePassword>``: Password for all the trust stores. Default: changeit
 * ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
 * ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
 * ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
-

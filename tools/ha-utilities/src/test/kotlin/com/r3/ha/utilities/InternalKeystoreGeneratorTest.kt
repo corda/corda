@@ -4,13 +4,16 @@ import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.crypto.X509KeyStore
-import net.corda.nodeapi.internal.crypto.X509Utilities
-import org.assertj.core.api.Assertions
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_TLS
+import net.corda.nodeapi.internal.crypto.getCertificateAndKeyPair
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class InternalKeystoreGeneratorTest {
@@ -23,40 +26,52 @@ class InternalKeystoreGeneratorTest {
     @Test
     fun `generate keystores correctly`() {
         val workingDirectory = tempFolder.root.toPath()
-        CommandLine.populateCommand(generator, BASE_DIR, workingDirectory.toString())
-        Assertions.assertThat(generator.baseDirectory).isEqualTo(workingDirectory)
+        val keyStorePassword = "keyStorePassword"
+        val entryPassword = "entryPassword"
+        val trustStorePassword = "trustStorePassword"
+        CommandLine.populateCommand(generator,
+                BASE_DIR, workingDirectory.toString(),
+                "--keyStorePassword", keyStorePassword,
+                "--entryPassword", entryPassword,
+                "--trustStorePassword", trustStorePassword)
+        assertEquals(workingDirectory, generator.baseDirectory)
+        assertEquals(keyStorePassword, generator.keyStorePassword)
+        assertEquals(entryPassword, generator.entryPassword)
+        assertEquals(trustStorePassword, generator.trustStorePassword)
         generator.runProgram()
 
-        listOf("float.jks").map { workingDirectory / "tunnel" / it }.forEach {
+        listOf("float.jks", "bridge.jks").map { workingDirectory / "tunnel" / it }.forEach {
             assertTrue(it.exists())
-            assertTrue(X509KeyStore.fromFile(it, generator.password).contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertTrue(X509KeyStore.fromFile(it, generator.password).internal.isKeyEntry(X509Utilities.CORDA_CLIENT_TLS))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(CORDA_CLIENT_TLS))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))
+            assertNotNull(X509KeyStore.fromFile(it, keyStorePassword).internal.getCertificateAndKeyPair(CORDA_CLIENT_TLS, entryPassword))
         }
 
-        X509KeyStore.fromFile(workingDirectory / "tunnel" / "tunnel-root.jks", generator.password).update {
-            assertTrue(contains(X509Utilities.CORDA_ROOT_CA))
-            assertTrue(internal.isKeyEntry(X509Utilities.CORDA_ROOT_CA))
+        X509KeyStore.fromFile(workingDirectory / "tunnel" / "tunnel-root.jks", keyStorePassword).update {
+            assertTrue(contains(CORDA_ROOT_CA))
+            assertTrue(internal.isKeyEntry(CORDA_ROOT_CA))
+            assertNotNull(internal.getCertificateAndKeyPair(CORDA_ROOT_CA, entryPassword))
         }
 
-        X509KeyStore.fromFile(workingDirectory / "tunnel" / "tunnel-truststore.jks", generator.password).update {
-            assertTrue(contains(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(internal.isKeyEntry(X509Utilities.CORDA_ROOT_CA))
+        X509KeyStore.fromFile(workingDirectory / "tunnel" / "tunnel-truststore.jks", trustStorePassword).update {
+            assertTrue(internal.isCertificateEntry(CORDA_ROOT_CA))
+            assertFalse(internal.isKeyEntry(CORDA_ROOT_CA))
         }
 
         listOf("bridge.jks", "artemis.jks", "artemis-client.jks").map { workingDirectory / "artemis" / it }.forEach {
             assertTrue(it.exists())
-            assertTrue(X509KeyStore.fromFile(it, generator.password).contains(X509Utilities.CORDA_CLIENT_TLS))
-            assertTrue(X509KeyStore.fromFile(it, generator.password).internal.isKeyEntry(X509Utilities.CORDA_CLIENT_TLS))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(CORDA_CLIENT_TLS))
+            assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))
         }
 
-        X509KeyStore.fromFile(workingDirectory / "artemis" / "artemis-root.jks", generator.password).update {
-            assertTrue(contains(X509Utilities.CORDA_ROOT_CA))
-            assertTrue(internal.isKeyEntry(X509Utilities.CORDA_ROOT_CA))
+        X509KeyStore.fromFile(workingDirectory / "artemis" / "artemis-root.jks", keyStorePassword).update {
+            assertTrue(contains(CORDA_ROOT_CA))
+            assertTrue(internal.isKeyEntry(CORDA_ROOT_CA))
         }
 
-        X509KeyStore.fromFile(workingDirectory / "artemis" / "artemis-truststore.jks", generator.password).update {
-            assertTrue(contains(X509Utilities.CORDA_ROOT_CA))
-            assertFalse(internal.isKeyEntry(X509Utilities.CORDA_ROOT_CA))
+        X509KeyStore.fromFile(workingDirectory / "artemis" / "artemis-truststore.jks", trustStorePassword).update {
+            assertTrue(contains(CORDA_ROOT_CA))
+            assertFalse(internal.isKeyEntry(CORDA_ROOT_CA))
         }
     }
 }
