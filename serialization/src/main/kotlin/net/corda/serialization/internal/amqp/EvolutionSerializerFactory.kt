@@ -58,7 +58,7 @@ class DefaultEvolutionSerializerFactory(
         }
 
         // Failing that, we have to create an evolution serializer.
-        val bestMatchEvolutionConstructor = findEvolverConstructor(localTypeInformation.evolverConstructors, properties)
+        val bestMatchEvolutionConstructor = findEvolverConstructor(localTypeInformation.evolutionConstructors, properties)
         val constructorForEvolution = bestMatchEvolutionConstructor?.constructor ?: localTypeInformation.constructor
         val evolverProperties = bestMatchEvolutionConstructor?.properties ?: localTypeInformation.properties
 
@@ -85,8 +85,8 @@ class DefaultEvolutionSerializerFactory(
 
     // Find the evolution constructor with the highest version number whose parameters are all assignable from the
     // provided property types.
-    private fun findEvolverConstructor(constructors: List<EvolverConstructorInformation>,
-                                       properties: Map<String, RemotePropertyInformation>): EvolverConstructorInformation? {
+    private fun findEvolverConstructor(constructors: List<EvolutionConstructorInformation>,
+                                       properties: Map<String, RemotePropertyInformation>): EvolutionConstructorInformation? {
         val propertyTypes = properties.mapValues { (_, info) -> info.type.typeIdentifier.getLocalType(classLoader).asClass() }
 
         // Evolver constructors are listed in ascending version order, so we just want the last that matches.

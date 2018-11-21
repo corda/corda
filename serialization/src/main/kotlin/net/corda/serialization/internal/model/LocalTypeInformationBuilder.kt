@@ -185,13 +185,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     interfaceInformation, typeParameterInformation)
         }
 
-        val evolverConstructors = evolverConstructors(type).map { ctor ->
+        val evolutionConstructors = evolutionConstructors(type).map { ctor ->
             val constructorInformation = buildConstructorInformation(type, ctor)
-            val evolverProperties = buildObjectProperties(rawType, constructorInformation)
-            EvolverConstructorInformation(constructorInformation, evolverProperties)
+            val evolutionProperties = buildObjectProperties(rawType, constructorInformation)
+            EvolutionConstructorInformation(constructorInformation, evolutionProperties)
         }
 
-        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolverConstructors, properties,
+        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolutionConstructors, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
     }
 
@@ -396,7 +396,10 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     }
 }
 
-private fun evolverConstructors(type: Type): List<KFunction<Any>> {
+/**
+ * Obtain evolution constructors in ascending version order.
+ */
+private fun evolutionConstructors(type: Type): List<KFunction<Any>> {
     val clazz = type.asClass()
     if (!clazz.isConcreteClass || clazz.isSynthetic) return emptyList()
 

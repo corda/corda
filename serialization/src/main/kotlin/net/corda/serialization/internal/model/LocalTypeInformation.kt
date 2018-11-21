@@ -3,7 +3,6 @@ package net.corda.serialization.internal.model
 import java.lang.reflect.*
 import kotlin.reflect.KFunction
 import java.util.*
-import kotlin.math.exp
 
 typealias PropertyName = String
 
@@ -239,6 +238,7 @@ sealed class LocalTypeInformation {
      *
      * @param constructor [LocalConstructorInformation] for the constructor used when building instances of this type
      * out of dictionaries of typed values.
+     * @param evolutionConstructors Evolution constructors in ascending version order.
      * @param properties [LocalPropertyInformation] for the properties of the interface.
      * @param superclass [LocalTypeInformation] for the superclass of the underlying class of this type.
      * @param interfaces [LocalTypeInformation] for the interfaces extended by this interface.
@@ -248,7 +248,7 @@ sealed class LocalTypeInformation {
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
             val constructor: LocalConstructorInformation,
-            val evolverConstructors: List<EvolverConstructorInformation>,
+            val evolutionConstructors: List<EvolutionConstructorInformation>,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
@@ -349,7 +349,7 @@ data class LocalConstructorInformation(
  * Represents information about a constructor that is specifically to be used for evolution, and is potentially matched
  * with a different set of properties to the regular constructor.
  */
-data class EvolverConstructorInformation(
+data class EvolutionConstructorInformation(
         val constructor: LocalConstructorInformation,
         val properties: Map<String, LocalPropertyInformation>)
 
