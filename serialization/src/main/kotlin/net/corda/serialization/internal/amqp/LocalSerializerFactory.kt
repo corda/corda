@@ -12,6 +12,7 @@ import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.util.*
+import javax.annotation.concurrent.ThreadSafe
 
 /**
  * A factory that handles the serialisation and deserialisation of [Type]s visible from a given [ClassLoader].
@@ -22,7 +23,8 @@ import java.util.*
  */
 interface LocalSerializerFactory {
     /**
-     * The [ClassWhitelist] used by this factory.
+     * The [ClassWhitelist] used by this factory. Classes must be whitelisted for serialization, because they are expected
+     * to be written in a secure manner.
      */
     val whitelist: ClassWhitelist
 
@@ -39,14 +41,7 @@ interface LocalSerializerFactory {
     /**
      * Obtain an [AMQPSerializer] for the [declaredType].
      */
-    fun get(declaredType: Type): AMQPSerializer<Any> {
-        val resolvedType = when(declaredType) {
-            is WildcardType -> if (declaredType.upperBounds.size == 1) declaredType.upperBounds[0]
-            else throw NotSerializableException("Cannot obtain upper bound for type $declaredType")
-            else -> declaredType
-        }
-        return get(getTypeInformation(resolvedType))
-    }
+    fun get(declaredType: Type): AMQPSerializer<Any> = get(getTypeInformation(declaredType))
 
     /**
      * Obtain an [AMQPSerializer] for the type having the given [typeInformation].
@@ -81,6 +76,7 @@ interface LocalSerializerFactory {
  * A [LocalSerializerFactory] equipped with a [LocalTypeModel] and a [FingerPrinter] to help it build fingerprint-based descriptors
  * and serializers for local types.
  */
+@ThreadSafe
 class DefaultLocalSerializerFactory(
         override val whitelist: ClassWhitelist,
         private val typeModel: LocalTypeModel,
@@ -212,7 +208,9 @@ class DefaultLocalSerializerFactory(
         onlyCustomSerializers -> throw AMQPNotSerializableException(type, "Only allowing custom serializers")
         type.isArray() ->
             if (clazz.componentType.isPrimitive) PrimArraySerializer.make(type, this)
-            else ArraySerializer.make(type, this)
+            else {
+                ArraySerializer.make(type, this)
+            }
         else -> {
             val singleton = clazz.kotlinObjectInstance
             if (singleton != null) {

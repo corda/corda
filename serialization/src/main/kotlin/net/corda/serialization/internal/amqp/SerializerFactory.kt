@@ -16,17 +16,6 @@ data class SerializationSchemas(val schema: Schema, val transforms: TransformsSc
  * @property onlyCustomSerializers used for testing, when set will cause the factory to throw a
  * [NotSerializableException] if it cannot find a registered custom serializer for a given type
  */
-// TODO: support for intern-ing of deserialized objects for some core types (e.g. PublicKey) for memory efficiency
-// TODO: maybe support for caching of serialized form of some core types for performance
-// TODO: profile for performance in general
-// TODO: use guava caches etc so not unbounded
-// TODO: allow definition of well known types that are left out of the schema.
-// TODO: migrate some core types to unsigned integer descriptor
-// TODO: document and alert to the fact that classes cannot default superclass/interface properties otherwise they are "erased" due to matching with constructor.
-// TODO: type name prefixes for interfaces and abstract classes?  Or use label?
-// TODO: generic types should define restricted type alias with source of the wildcarded version, I think, if we're to generate classes from schema
-// TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
-// TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @KeepForDJVM
 @ThreadSafe
 interface SerializerFactory : LocalSerializerFactory, RemoteSerializerFactory, CustomSerializerRegistry

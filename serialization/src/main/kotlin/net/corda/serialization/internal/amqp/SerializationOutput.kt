@@ -151,7 +151,14 @@ open class SerializationOutput constructor(
 
     internal open fun requireSerializer(type: Type) {
         if (type != Object::class.java && type.typeName != "?") {
-            val serializer = serializerFactory.get(type)
+            val resolvedType = when(type) {
+                is WildcardType ->
+                    if (type.upperBounds.size == 1) type.upperBounds[0]
+                    else throw NotSerializableException("Cannot obtain upper bound for type $type")
+                else -> type
+            }
+
+            val serializer = serializerFactory.get(resolvedType)
             if (serializer !in serializerHistory) {
                 serializerHistory.add(serializer)
                 serializer.writeClassInfo(this)

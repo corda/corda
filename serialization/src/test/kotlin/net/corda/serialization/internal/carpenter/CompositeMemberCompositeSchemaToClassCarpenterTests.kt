@@ -1,12 +1,9 @@
 package net.corda.serialization.internal.carpenter
 
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.AllWhitelist
 import org.junit.Test
 import java.io.NotSerializableException
-import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -106,8 +103,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val infoForD = envelope.typeInformationFor<D>().mangle<C>()
         val mangledNotAMap = envelope.typeInformationFor<NotAMap<String, C>>().mangle<C>()
         val mangledC = envelope.getMangled<C>()
-
-        println(mangledNotAMap.prettyPrint())
 
         assertCanLoadAll(infoForD, mangledNotAMap, mangledC)
     }

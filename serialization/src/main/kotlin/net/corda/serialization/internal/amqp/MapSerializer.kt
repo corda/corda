@@ -123,6 +123,7 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
     override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput,
                             context: SerializationContext
     ): Any = ifThrowsAppend({ declaredType.typeName }) {
+        // FIXUP - look into this.
         // TODO: General generics question. Do we need to validate that entries in Maps and Collections match the generic type?  Is it a security hole?
         val entries: Iterable<Pair<Any?, Any?>> = (obj as Map<*, *>).map { readEntry(schemas, input, it, context) }
         concreteBuilder(entries.toMap())

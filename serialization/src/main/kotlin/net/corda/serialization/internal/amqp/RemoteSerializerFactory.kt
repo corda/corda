@@ -134,12 +134,8 @@ ${localTypeInformation.prettyPrint(false)}
         else -> false
     }
 
-    private fun RemoteTypeInformation.isDeserialisableWithoutEvolutionTo(localTypeInformation: LocalTypeInformation) = when(this) {
-        is RemoteTypeInformation.Parameterised -> when(localTypeInformation) {
-                is LocalTypeInformation.ACollection,
-                is LocalTypeInformation.AMap -> true
-            else -> false
-        }
-        else -> false
-    }
+    private fun RemoteTypeInformation.isDeserialisableWithoutEvolutionTo(localTypeInformation: LocalTypeInformation) =
+            this is RemoteTypeInformation.Parameterised  &&
+                (localTypeInformation is LocalTypeInformation.ACollection ||
+                localTypeInformation is LocalTypeInformation.AMap)
 }

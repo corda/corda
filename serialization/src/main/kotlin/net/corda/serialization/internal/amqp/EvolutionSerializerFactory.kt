@@ -48,6 +48,9 @@ class DefaultEvolutionSerializerFactory(
     private fun RemoteTypeInformation.Composable.getEvolutionSerializer(
             localTypeInformation: LocalTypeInformation.Composable): AMQPSerializer<Any>? {
         // The no-op case: although the fingerprints don't match for some reason, we have compatible signatures.
+        // This might happen because of inconsistent type erasure, changes to the behaviour of the fingerprinter,
+        // or changes to the type itself - such as adding an interface - that do not change its serialisation/deserialisation
+        // signature.
         if (propertyNamesMatch(localTypeInformation)) {
             // Make sure types are assignment-compatible, and return the local serializer for the type.
             validateCompatibility(localTypeInformation)
@@ -106,13 +109,15 @@ class DefaultEvolutionSerializerFactory(
         // Here is where we can exercise a veto on evolutions that remove properties.
         if (deletedProperties.isNotEmpty() && mustPreserveDataWhenEvolving)
             throw EvolutionSerializationException(this,
-                    "Property ${deletedProperties.first()} of remote ContractState type is not present in local type")
+                    "Property ${deletedProperties.first()} of remote ContractState type is not present in local type, " +
+                            "and context is configured to prevent forwards-compatible deserialization.")
 
         // Check mandatory-ness of constructor-set properties.
         newProperties.forEach { propertyName ->
             if (localProperties[propertyName]!!.mustBeProvided) throw EvolutionSerializationException(
                     this,
-                    "Mandatory property $propertyName of local type is not present in remote type")
+                    "Mandatory property $propertyName of local type is not present in remote type - " +
+                    "did someone remove a property from the schema without considering old clients?")
         }
     }
 

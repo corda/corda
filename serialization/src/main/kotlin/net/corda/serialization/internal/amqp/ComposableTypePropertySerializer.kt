@@ -206,7 +206,7 @@ class DescribedTypeReadStrategy(name: String,
 /**
  * Writes a property value into [SerializationOutput], together with a schema information describing it.
  */
-class DescribedTypeWriteStrategy(name: String,
+class DescribedTypeWriteStrategy(private val name: String,
                                  private val propertyInformation: LocalPropertyInformation,
                                  private val reader: PropertyReader,
                                  private val serializerProvider: () -> AMQPSerializer<Any>) : PropertyWriteStrategy {
@@ -214,7 +214,7 @@ class DescribedTypeWriteStrategy(name: String,
     // Lazy to avoid getting into infinite loops when there are cycles.
     private val serializer by lazy { serializerProvider() }
 
-    private val nameForDebug = "$name(${propertyInformation.type.typeIdentifier.prettyPrint(false)})"
+    private val nameForDebug get() = "$name(${propertyInformation.type.typeIdentifier.prettyPrint(false)})"
 
     override fun writeClassInfo(output: SerializationOutput) {
         if (propertyInformation.type !is LocalTypeInformation.Top) {
@@ -241,6 +241,7 @@ class AMQPPropertyWriteStrategy(private val reader: PropertyReader) : PropertyWr
                                context: SerializationContext, debugIndent: Int
     ) {
         val value = reader.read(obj)
+        // ByteArrays have to be wrapped in an AMQP Binary wrapper.
         if (value is ByteArray) {
             data.putObject(Binary(value))
         } else {
