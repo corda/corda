@@ -9,7 +9,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.TimedFlow
-import net.corda.core.internal.notary.generateRequestSignature
+import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.ContractUpgradeWireTransaction
@@ -130,7 +130,7 @@ class NotaryFlow {
         private fun generateRequestSignature(): NotarisationRequestSignature {
             // TODO: This is not required any more once our AMQP serialization supports turning off object referencing.
             val notarisationRequest = NotarisationRequest(stx.inputs.map { it.copy(txhash = SecureHash.parse(it.txhash.toString())) }, stx.id)
-            return notarisationRequest.generateRequestSignature(serviceHub)
+            return notarisationRequest.generateSignature(serviceHub)
         }
     }
 }

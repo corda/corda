@@ -41,7 +41,7 @@ fun NotarisationResponse.validateSignatures(txId: SecureHash, notary: Party) {
 }
 
 /** Creates a signature over the notarisation request using the legal identity key. */
-fun NotarisationRequest.generateRequestSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
+fun NotarisationRequest.generateSignature(serviceHub: ServiceHub): NotarisationRequestSignature {
     val serializedRequest = this.serialize().bytes
     val signature = with(serviceHub) {
         val myLegalIdentity = myInfo.legalIdentitiesAndCerts.first().owningKey
