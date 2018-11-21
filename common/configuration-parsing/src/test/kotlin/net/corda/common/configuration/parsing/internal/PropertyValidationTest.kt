@@ -84,6 +84,50 @@ class PropertyValidationTest {
     }
 
     @Test
+    fun whole_list_validation_valid_value() {
+
+        val key = "a.b.c"
+        val value = listOf(1L, 2L, 3L)
+        val configuration = configObject(key to value).toConfig()
+
+        // TODO sollecitom make it work with optional types
+        fun parseMax(list: List<Long>): Valid<Long> = valid(list.max()!!)
+
+        val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
+
+        assertThat(property.validate(configuration).errors).isEmpty()
+    }
+
+    @Test
+    fun whole_list_validation_invalid_value() {
+
+        val key = "a.b.c"
+        val value = listOf(1L, 2L, 3L)
+        val configuration = configObject(key to value).toConfig()
+
+        // TODO sollecitom make it work with optional types
+        fun parseMax(list: List<Long>): Valid<Long> {
+
+            if (list.any { value -> value <= 1L }) {
+                return invalid(Configuration.Validation.Error.BadValue.of("All values must be greater than 1"))
+            }
+            return valid(list.max()!!)
+        }
+
+        val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
+
+        assertThat(property.validate(configuration).errors).satisfies { errors ->
+
+            assertThat(errors).hasSize(1)
+            assertThat(errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
+
+                assertThat(error.keyName).isEqualTo(key.split(".").last())
+                assertThat(error.path).containsExactly(*key.split(".").toTypedArray())
+            }
+        }
+    }
+
+    @Test
     fun wrong_type() {
 
         val key = "a.b.c"
