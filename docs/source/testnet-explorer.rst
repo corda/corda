@@ -74,7 +74,7 @@ couple of resources.
 
    .. code:: bash
 
-       echo "issuableCurrencies : [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
+       echo "issuableCurrencies = [ USD ]" > /opt/corda/cordapps/config/corda-finance-<VERSION>-corda.conf
 
 #. Restart the Corda node:
 
