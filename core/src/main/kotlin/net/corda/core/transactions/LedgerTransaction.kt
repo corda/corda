@@ -129,7 +129,7 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
-        val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
+        val contractAttachmentsByContract: Map<Pair<ContractClassName,Boolean>, ContractAttachment> = getUniqueContractAttachmentsByContract()
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
 
@@ -180,7 +180,7 @@ private constructor(
      * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
      *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
-    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<Pair<ContractClassName, Boolean>, ContractAttachment>) {
         // This should never happen once we have network parameters in the transaction.
         if (networkParameters == null) {
             return
@@ -203,9 +203,7 @@ private constructor(
      * * Constraints should be one of the valid supported ones.
      * * Constraints should propagate correctly if not marked otherwise.
      */
-    private fun verifyConstraintsValidity(internalTx: LedgerTransaction,
-                                          contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>,
-                                          transactionClassLoader: ClassLoader) {
+    private fun verifyConstraintsValidity(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<Pair<ContractClassName, Boolean>, ContractAttachment>, transactionClassLoader: ClassLoader) {
         // First check that the constraints are valid.
         for (state in internalTx.allStates) {
             checkConstraintValidity(state)
@@ -224,7 +222,15 @@ private constructor(
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
                         checkNotNull(networkParameters)
-                        val constraintAttachment = AttachmentWithContext(contractAttachmentsByContract[contractClassName]!!, contractClassName, networkParameters!!)
+                        val unsignedAttachment = contractAttachmentsByContract[Pair(contractClassName, false)]
+                        val signedAttachment = contractAttachmentsByContract[Pair(contractClassName, true)]
+                        val constraintAttachment =
+                            when {
+                                (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
+                                (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
+                                (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+                                else -> throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
+                            }
                         if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
@@ -243,25 +249,22 @@ private constructor(
      *
      * @throws TransactionVerificationException if the constraints fail to verify
      */
-    private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+    private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<Pair<ContractClassName, Boolean>, ContractAttachment>) {
         for (state in internalTx.allStates) {
-            val contractAttachment = contractAttachmentsByContract[state.contract]
-                    ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
-
-            checkNotNull(networkParameters)
-            val constraintAttachment =
-                if (state.constraint is HashAttachmentConstraint) {
-                    // locate signed attachment hash
-                    val signedContractAttachment = contractAttachmentsByContract[state.contract]
-                            ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
-                    AttachmentWithContext(signedContractAttachment, state.contract, networkParameters!!)
-                }
-                else {
-                    AttachmentWithContext(contractAttachment, state.contract, networkParameters!!)
-                }
-
             if (state.constraint is SignatureAttachmentConstraint)
-                checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, 4, "Signature constraints")
+                checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
+
+            val contractClassName = state.contract
+            val unsignedAttachment = contractAttachmentsByContract[Pair(contractClassName, false)]
+            val signedAttachment = contractAttachmentsByContract[Pair(contractClassName, true)]
+            val constraintAttachment =
+                    when {
+                        (state.constraint is SignatureAttachmentConstraint && signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+                        (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
+                        (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
+                        (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+                        else -> throw TransactionVerificationException.ContractConstraintRejection(id, contractClassName)
+                    }
 
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
@@ -270,17 +273,18 @@ private constructor(
     }
 
     // TODO: revisit to include contract version information
-    private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
-        val result = mutableMapOf<ContractClassName, ContractAttachment>()
+    private fun getUniqueContractAttachmentsByContract(): Map<Pair<ContractClassName,Boolean>, ContractAttachment> {
+        val result = mutableMapOf<Pair<ContractClassName,Boolean>, ContractAttachment>()
 
         for (attachment in attachments) {
             if (attachment !is ContractAttachment) continue
 
             for (contract in attachment.allContracts) {
-                result.compute(contract) { _, previousAttachment ->
+                result.compute(Pair(contract,attachment.isSigned)) { _, previousAttachment ->
                     when {
                         previousAttachment == null -> attachment
                         attachment.id == previousAttachment.id -> previousAttachment
+                        (attachment.isSigned && !previousAttachment.isSigned) -> attachment
                         // In case multiple attachments have been added for the same contract, fail because this
                         // transaction will not be able to be verified because it will break the no-overlap rule
                         // that we have implemented in our Classloaders

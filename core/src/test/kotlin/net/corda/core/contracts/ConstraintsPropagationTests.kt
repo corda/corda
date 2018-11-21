@@ -8,8 +8,8 @@ import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.inputStream
 import net.corda.core.node.JavaPackageName
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.POUNDS
@@ -17,20 +17,23 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.*
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
+import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import java.security.PublicKey
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConstraintsPropagationTests {
+
+    @Rule
+    @JvmField
+    val testSerialization = SerializationEnvironmentRule()
 
     private companion object {
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
@@ -42,24 +45,42 @@ class ConstraintsPropagationTests {
         val BOB_PUBKEY get() = BOB.publicKey
         val noPropagationContractClassName = "net.corda.core.contracts.NoPropagationContract"
         val propagatingContractClassName = "net.corda.core.contracts.PropagationContract"
+
+        private lateinit var keyStoreDir: SelfCleaningDir
+        private lateinit var hashToSignatureConstraintsKey: PublicKey
+
+        @BeforeClass
+        @JvmStatic
+        fun setUpBeforeClass() {
+            keyStoreDir = SelfCleaningDir()
+            hashToSignatureConstraintsKey = keyStoreDir.path.generateKey("testAlias", "testPassword", ALICE_NAME.toString())
+        }
+
+        @AfterClass
+        @JvmStatic
+        fun cleanUpAfterClass() {
+            keyStoreDir.close()
+        }
     }
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    private lateinit var ledgerServices: MockServices
 
-    private val ledgerServices = MockServices(
-            cordappPackages = listOf("net.corda.finance.contracts.asset"),
-            initialIdentity = ALICE,
-            identityService = rigorousMock<IdentityServiceInternal>().also {
-                doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
-                doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
-            },
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-                    .copy(whitelistedContractImplementations = mapOf(
-                            Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
-                            noPropagationContractClassName to listOf(SecureHash.zeroHash)))
-    )
+    @Before
+    fun setUp() {
+        ledgerServices = MockServices(
+                cordappPackages = listOf("net.corda.finance.contracts.asset"),
+                initialIdentity = ALICE,
+                identityService = rigorousMock<IdentityServiceInternal>().also {
+                    doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
+                    doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
+                },
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                        .copy(whitelistedContractImplementations = mapOf(
+                                Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
+                                noPropagationContractClassName to listOf(SecureHash.zeroHash)),
+                                packageOwnership = mapOf(JavaPackageName(Cash.PROGRAM_ID) to hashToSignatureConstraintsKey))
+        )
+    }
 
     @Test
     fun `Happy path with the HashConstraint`() {
@@ -74,6 +95,35 @@ class ConstraintsPropagationTests {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Happy path for Hash to Signature Constraint migration`() {
+
+        val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
+        cordapps.forEach { cordapp ->
+            val jarAndSigner = ContractJarTestUtils.signContractJar(cordapp.jarPath, copyFirst = true, keyStoreDir = keyStoreDir.path)
+            val signedJar = jarAndSigner.first
+            signedJar.inputStream().use { signedJarStream ->
+                ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", signedJarStream,null, listOf(jarAndSigner.second))
+            }
+        }
+
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
+                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                verifies()
+            }
+            transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
+                input("c1")
+                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
                 verifies()
             }
@@ -225,8 +275,6 @@ class ConstraintsPropagationTests {
         }
     }
 
-    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash, override val signers: List<PublicKey>) : AbstractAttachment(dataLoader)
-
     @Test
     fun `Signature Constraints canBeTransitionedFrom Hash Constraints behaves as expected`() {
 
@@ -246,17 +294,17 @@ class ConstraintsPropagationTests {
                 packageOwnership = mapOf(JavaPackageName(propagatingContractClassName) to ALICE_PARTY.owningKey))
 
         // attachment with context (both unsigned and signed attachments representing same contract)
-        val attachmentUnsignedWithContext = mock<AttachmentWithContext>()
-        whenever(attachmentUnsignedWithContext.contractAttachment).thenReturn(attachmentUnsigned)
-        whenever(attachmentUnsignedWithContext.contract).thenReturn(propagatingContractClassName)
-        whenever(attachmentUnsignedWithContext.networkParameters).thenReturn(netParams)
-        whenever(attachmentUnsignedWithContext.signedContractAttachment).thenReturn(attachmentSigned)
+        val attachmentWithContext = mock<AttachmentWithContext>()
+        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentUnsigned)
+        whenever(attachmentWithContext.contract).thenReturn(propagatingContractClassName)
+        whenever(attachmentWithContext.networkParameters).thenReturn(netParams)
+        whenever(attachmentWithContext.signedContractAttachment).thenReturn(attachmentSigned)
 
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
 
         // propagation check
-        assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentUnsignedWithContext))
+        assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentWithContext))
     }
 
     @Test
