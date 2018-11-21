@@ -146,22 +146,26 @@ private constructor(
         }
     }
 
-    private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>){
-         contractAttachmentsByContract.forEach { contractClassName, attachment ->
-             val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
-             if (contractClassVersions != null && contractClassVersions.isNotEmpty()) {
-                 val implementationVersion = attachment.openAsJAR()
-                         .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                 if (implementationVersion == null) {
-                     throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, "UNKNOWN")
-                 } else {
-                     val version = Version(implementationVersion)
-                     if (contractClassVersions.any { version < it }) {
-                         throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
-                     }
-                 }
-             }
-         }
+    /**
+     * Verify that contract class versions of output states are not lower that versions of relevant input states.
+     */
+    private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        contractAttachmentsByContract.forEach { contractClassName, attachment ->
+            val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
+            if (contractClassVersions != null && contractClassVersions.isNotEmpty()) {
+                val implementationVersion = attachment.openAsJAR()
+                        .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
+                        ?: throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, "UNKNOWN")
+                val version = try {
+                    Version(implementationVersion)
+                } catch (e: IllegalArgumentException) {
+                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, implementationVersion)
+                }
+                if (contractClassVersions.any { version < it }) {
+                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, version.toString())
+                }
+            }
+        }
     }
     /**
      * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the

@@ -240,7 +240,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
 
     @KeepForDJVM
-    class TransactionContractClassVersionDowngradation(txId: SecureHash, contractClassName: ContractClassName, outputVersion: String)
-        : TransactionVerificationException(txId, "Output state of contract class $contractClassName version $outputVersion is lower that" +
-            " one of contract class version of input state.", null)
+    class TransactionContractClassVersionDowngrading(txId: SecureHash, contractClassName: ContractClassName, outputVersion: String)
+        : TransactionVerificationException(txId, "The output state contract $contractClassName version $outputVersion is lower that the version of the input state.", null)
 }
