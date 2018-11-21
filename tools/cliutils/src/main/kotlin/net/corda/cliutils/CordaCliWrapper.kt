@@ -83,10 +83,12 @@ fun CordaCliWrapper.start(args: Array<String>) {
         exitProcess(ExitCodes.SUCCESS)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
+        System.out.println(throwable::class.java.typeName)
+
         if (this.verbose || this.subCommands().any { it.verbose }) {
             throwable.printStackTrace()
         } else {
-            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
+            (throwable.rootMessage ?: "Use --verbose for more details").printError()
         }
         exitProcess(ExitCodes.FAILURE)
     }
@@ -139,6 +141,8 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         logger.info("Application Args: ${args.joinToString(" ")}")
         return runProgram()
     }
+
+    fun String.printError() = System.err.println("${ShellConstants.RED}$this${ShellConstants.RESET}")
 
     val specifiedLogLevel: String by lazy { System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH) }
 }

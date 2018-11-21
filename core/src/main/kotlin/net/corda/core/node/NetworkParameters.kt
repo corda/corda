@@ -103,8 +103,8 @@ data class NetworkParameters(
         require(epoch > 0) { "epoch must be at least 1" }
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
-        require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
-        require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
+        require(!eventHorizon.isNegative) { "eventHorizon must be a positive value" }
+        require(noOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -225,7 +225,7 @@ private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpt
 }
 
 // Make sure that packages don't overlap so that ownership is clear.
-private fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { currentPackage ->
+fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { currentPackage ->
     packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.name.startsWith("${currentPackage.name}.") }
 }
 
