@@ -132,6 +132,22 @@ object Configuration {
             }
 
             /**
+             * Defines a required property with a collection of values.
+             */
+            interface RequiredList<TYPE> : Required<List<TYPE>> {
+
+                /**
+                 * Passes the value to a validating mapping function, provided this is valid in the first place.
+                 */
+                fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Validation.Error>): Required<MAPPED>
+
+                /**
+                 * Passes the value to a non-validating mapping function, provided this is valid in the first place.
+                 */
+                fun <MAPPED : Any> map(mappedTypeName: String, convert: (List<TYPE>) -> MAPPED): Required<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
+            }
+
+            /**
              * Defines a property that must provide a single value or produce an error in case multiple values are specified for the relevant key.
              */
             interface Single<TYPE> : Definition<TYPE> {
@@ -139,7 +155,7 @@ object Configuration {
                 /**
                  * Returns a required property expecting multiple values for the relevant key.
                  */
-                fun list(): Required<List<TYPE>>
+                fun list(): RequiredList<TYPE>
             }
 
             /**

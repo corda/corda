@@ -3,13 +3,19 @@ package net.corda.common.configuration.parsing.internal
 import com.typesafe.config.*
 import net.corda.common.validation.internal.Validated
 
-inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
-
 inline fun <reified ENUM : Enum<ENUM>, VALUE : Any> Configuration.Specification<VALUE>.enum(key: String? = null, sensitive: Boolean = false): PropertyDelegate.Standard<ENUM> = enum(key, ENUM::class, sensitive)
 
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
 
 inline fun <TYPE, reified MAPPED : Any> PropertyDelegate.Standard<TYPE>.map(noinline convert: (TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+
+inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
+
+inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.Standard<TYPE>.map(noinline convert: (TYPE) -> MAPPED): Configuration.Property.Definition.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+
+inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.RequiredList<TYPE>.mapValid(noinline convert: (List<TYPE>) -> Valid<MAPPED>): Configuration.Property.Definition.Required<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
+
+inline fun <TYPE, reified MAPPED : Any> Configuration.Property.Definition.RequiredList<TYPE>.map(noinline convert: (List<TYPE>) -> MAPPED): Configuration.Property.Definition.Required<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
 operator fun <TYPE> Config.get(property: Configuration.Property.Definition<TYPE>): TYPE = property.valueIn(this)
 

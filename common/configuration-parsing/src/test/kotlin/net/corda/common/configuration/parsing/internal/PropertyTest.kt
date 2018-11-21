@@ -57,6 +57,23 @@ class PropertyTest {
     }
 
     @Test
+    fun present_value_of_list_type_with_mapping() {
+
+        val key = "a.b.c"
+        val value = listOf(1L, 3L, 2L)
+        val configuration = configObject(key to value).toConfig()
+
+        // TODO sollecitom make it work with optional values
+        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max()!! }
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.isMandatory).isTrue()
+        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(value.max())
+    }
+
+    @Test
     fun optional_present_value_of_list_type() {
 
         val key = "a.b.c"
