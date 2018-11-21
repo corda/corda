@@ -5,8 +5,6 @@ import net.corda.serialization.internal.carpenter.*
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 
-typealias PropertyName = String
-
 /**
  * Constructs [Type]s using [RemoteTypeInformation].
  */

@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.flows.FlowLogic
@@ -71,6 +72,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -396,6 +398,13 @@ class DriverDSLImpl(
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
         }
+        try {
+            _notaries.map { notary -> notary.map { handle -> handle.nodeHandles } }.getOrThrow(notaryHandleTimeout).forEach { future -> future.getOrThrow(notaryHandleTimeout) }
+        } catch (e: ListenProcessDeathException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        } catch (e: TimeoutException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        }
     }
 
     private fun startNotaryIdentityGeneration(): CordaFuture<List<NotaryInfo>> {
@@ -700,6 +709,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
+        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
@@ -821,7 +831,7 @@ class DriverDSLImpl(
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
+                    arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },

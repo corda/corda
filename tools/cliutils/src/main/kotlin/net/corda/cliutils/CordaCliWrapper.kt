@@ -184,6 +184,17 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     fun printHelp() = cmd.usage(System.out)
+
+    fun printlnErr(message: String) = System.err.println(message)
+
+    fun printlnWarn(message: String) = System.err.println(message)
+}
+
+/**
+ * Useful commonly used constants applicable to many CLI tools
+ */
+object CommonCliConstants {
+    const val BASE_DIR = "--base-directory"
 }
 
 /**

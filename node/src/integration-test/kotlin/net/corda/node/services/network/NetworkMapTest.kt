@@ -94,7 +94,10 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
-            val nextParams = networkMapServer.networkParameters.copy(epoch = 3, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            val nextParams = networkMapServer.networkParameters.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = networkMapServer.networkParameters.maxMessageSize + 1)
             val nextHash = nextParams.serialize().hash
             val snapshot = alice.rpc.networkParametersFeed().snapshot
             val updates = alice.rpc.networkParametersFeed().updates.bufferUntilSubscribed()
@@ -103,7 +106,10 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             networkMapServer.scheduleParametersUpdate(nextParams, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
-            val laterParams = networkMapServer.networkParameters.copy(epoch = 4, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            val laterParams = networkMapServer.networkParameters.copy(
+                    epoch = 4,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = nextParams.maxMessageSize + 1)
             val laterHash = laterParams.serialize().hash
             networkMapServer.scheduleParametersUpdate(laterParams, "Another update", Instant.ofEpochMilli(random63BitValue()))
             Thread.sleep(cacheTimeout.toMillis() * 2)

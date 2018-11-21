@@ -10,6 +10,9 @@ Unreleased
 * Marked the `Attachment` interface as `@DoNotImplement` because it is not meant to be extended by CorDapp developers. If you have already done so,
 please get in contact on the usual communication channels.
 
+* Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
+and is configurable via the node config. See :doc:`network-map` for more information.
+
 * Deprecated `SerializationContext.withAttachmentsClassLoader`. This functionality has always been disabled by flags
 and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
 
@@ -281,6 +284,12 @@ and there is no reason for a CorDapp developer to use it. It is just an internal
 
 * `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
   `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
+
+* CorDapps built by ``corda-gradle-plugins`` are now signed and sealed JAR files.
+  Signing can be configured or disabled, and it defaults to using the Corda development certificate.
+
+* Finance CorDapp is now build as a sealed and signed JAR file.
+  Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
 
 Version 3.3
 -----------

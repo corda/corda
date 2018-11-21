@@ -3,6 +3,7 @@ package net.corda.node
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -23,7 +24,7 @@ open class SharedNodeCmdLineOptions {
         private val logger by lazy { loggerFor<SharedNodeCmdLineOptions>() }
     }
     @Option(
-            names = ["-b", "--base-directory"],
+            names = ["-b", BASE_DIR],
             description = ["The node working directory where all the files are kept."]
     )
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
@@ -75,7 +76,7 @@ open class SharedNodeCmdLineOptions {
         errors.forEach { error ->
             when (error) {
                 is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
-                else -> logger.error(error.message, error)
+                else -> logger.error(error.message)
             }
         }
     }
