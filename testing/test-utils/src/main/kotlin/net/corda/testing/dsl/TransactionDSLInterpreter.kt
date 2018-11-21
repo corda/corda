@@ -97,6 +97,15 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param attachmentId The attachment
      */
     fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>)
+
+    /**
+     * Attaches an attachment containing the named contract to the transaction
+     * @param contractClassName The contract class to attach
+     * @param attachmentId The attachment
+     * @param attachmentId The signers
+     * @param jarManifestAttributes The JAR manifest file attributes.
+     */
+    fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>, jarManifestAttributes: Map<String,String>)
 }
 
 /**
@@ -203,7 +212,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      */
     fun attachment(contractClassName: ContractClassName) = _attachment(contractClassName)
 
-    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>) = _attachment(contractClassName, attachmentId, signers)
+    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>, jarManifestAttributes: Map<String,String> = emptyMap()) = _attachment(contractClassName, attachmentId, signers, jarManifestAttributes)
     fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId) = _attachment(contractClassName, attachmentId, emptyList())
 
     fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it) }
