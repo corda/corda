@@ -6,10 +6,11 @@ import net.corda.testing.core.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.JarSignatureTestUtils.signJar
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
+import net.corda.core.internal.toPath
 import java.io.OutputStream
 import java.net.URI
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.net.URL
+import java.nio.file.*
 import java.security.PublicKey
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
@@ -83,4 +84,25 @@ object ContractJarTestUtils {
         return Paths.get(outFile.name)
     }
 
+    fun signContractJar(jarURL: URL, copyFirst: Boolean, keyStoreDir: Path? = null, alias: String = "testAlias", pwd: String  = "testPassword"): Pair<Path, PublicKey> {
+        val jarName =
+            if (copyFirst) {
+                val signedJarName = Paths.get(jarURL.path.substringBeforeLast(".") + "-SIGNED.jar")
+                Files.copy(jarURL.toPath(), signedJarName, StandardCopyOption.REPLACE_EXISTING)
+                signedJarName
+            }
+            else jarURL.toPath()
+
+        val workingDir =
+            if (keyStoreDir == null) {
+                val workingDir = jarName.parent
+                workingDir.generateKey(alias, pwd, ALICE_NAME.toString())
+                workingDir
+            } else keyStoreDir
+
+        val signer = workingDir.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
+        (workingDir / "_shredder").delete()
+        (workingDir / "_teststore").delete()
+        return workingDir.resolve(jarName) to signer
+    }
 }

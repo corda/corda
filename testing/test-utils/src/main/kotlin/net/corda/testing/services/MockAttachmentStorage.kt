@@ -12,6 +12,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.ColumnPredicate
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
@@ -43,7 +45,17 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     override fun openAttachment(id: SecureHash): Attachment? = files[id]?.first
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<SecureHash> {
-        val contractMetadataList = emptyList<ContractAttachmentMetadata>()
+        criteria as AttachmentQueryCriteria.AttachmentsQueryCriteria
+        val isSigned = criteria.isSignedCondition == Builder.equal(true)
+        val contractClassNames =
+                if (criteria.contractClassNamesCondition is ColumnPredicate.EqualityComparison)
+                    (criteria.contractClassNamesCondition as ColumnPredicate.EqualityComparison<List<ContractClassName>>).rightLiteral
+                else emptyList()
+        val contractMetadataList = contractClassNames.map {contractClassName ->
+            ContractAttachmentMetadata(contractClassName, "1.0", isSigned)
+        }
+
+        _contractClasses.forEach { println("${it.value} : ${it.key}" ) }
         return _contractClasses.filterKeys { contractMetadataList.contains(it) }.values.toList()
     }
 

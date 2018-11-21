@@ -4,7 +4,6 @@ import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.internal.AttachmentWithContext
@@ -12,6 +11,7 @@ import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.node.JavaPackageName
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
 import org.slf4j.LoggerFactory
 import java.lang.annotation.Inherited
@@ -34,6 +34,10 @@ annotation class NoConstraintPropagation
 interface AttachmentConstraint {
     /** Returns whether the given contract attachment can be used with the [ContractState] associated with this constraint object. */
     fun isSatisfiedBy(attachment: Attachment): Boolean
+
+    private companion object {
+        private val log = contextLogger()
+    }
 
     /**
      * This method will be used in conjunction with [NoConstraintPropagation]. It is run during transaction verification when the contract is not annotated with [NoConstraintPropagation].
@@ -83,16 +87,32 @@ interface AttachmentConstraint {
             // 2. Signature constraint key must be one of keys used to sign contract JAR.
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
                 val signedAttachment = attachment.signedContractAttachment
-                signedAttachment?.let {
+                if (signedAttachment != null) {
                     // rule 1
-                    val signedAttachmentSigners = signedAttachment.signers
-                    if (signedAttachmentSigners.isEmpty()) return false
-                    val packageOwner = attachment.networkParameters.packageOwnership[JavaPackageName(signedAttachment.contract)] ?: return false
-                    if (!packageOwner.containsAny(signedAttachment.signers)) return false
+                    if (signedAttachment.signers.isEmpty()) {
+                        log.warn("Missing signers in signed attachment: $signedAttachment (input constraint = $input, output constraint = $output)")
+                        return false
+                    }
+                    val packageOwnerPK = attachment.networkParameters.packageOwnership[JavaPackageName(signedAttachment.contract)]
+                    if (packageOwnerPK == null) {
+                        log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
+                        return false
+                    }
+                    if (!packageOwnerPK.isFulfilledBy(signedAttachment.signers)) {
+                        log.warn("Attachment signers ${signedAttachment.signers} do not match registered java package owner key ${packageOwnerPK}for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
+                        return false
+                    }
                     // rule 2
-                    if (!signedAttachment.signers.contains(output.key)) return false
+                    if (!output.key.isFulfilledBy(signedAttachment.signers)) {
+                        log.warn("Attachment signers ${signedAttachment.signers} do not contain output constraint signer ${output.key} for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
+                        return false
+                    }
                     return true
-                } ?: false
+                }
+                else {
+                    log.warn("Missing signed attachment for ${attachment.contract} (input constraint = $input, output constraint = $output)")
+                    return false
+                }
             }
 
             else -> false
