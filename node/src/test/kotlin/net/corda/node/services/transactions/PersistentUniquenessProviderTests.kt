@@ -106,8 +106,10 @@ class PersistentUniquenessProviderTests {
     fun `handles transaction with reference states only`() {
         val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
         val inputState1 = generateStateRef()
+        val inputState2 = generateStateRef()
         val firstTxId = SecureHash.randomSHA256()
         val secondTxId = SecureHash.randomSHA256()
+        val thirdTxId = SecureHash.randomSHA256()
 
         // Conflict free transaction goes through.
         val result1 = provider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(inputState1)).get()
@@ -120,5 +122,12 @@ class PersistentUniquenessProviderTests {
         // Re-notarisation works.
         val result3 = provider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(inputState1)).get()
         assertEquals(UniquenessProvider.Result.Success, result3)
+
+        // Transaction referencing the spent sate fails.
+        val result4 = provider.commit(emptyList(), thirdTxId, identity, requestSignature, references = listOf(inputState1)).get()
+        val error = (result4 as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
+        val conflictCause = error.consumedStates[inputState1]!!
+        assertEquals(conflictCause.hashOfTransactionId, secondTxId.sha256())
+        assertEquals(conflictCause.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
     }
 }
