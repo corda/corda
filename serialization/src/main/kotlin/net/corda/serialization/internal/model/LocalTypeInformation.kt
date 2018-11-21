@@ -367,16 +367,16 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
         with(typeInformation) {
             when (this) {
                 is LocalTypeInformation.Abstract ->
-                    typeIdentifier.prettyPrint() +
+                    typeIdentifier.prettyPrint(simplifyClassNames) +
                             printInheritsFrom(interfaces, superclass) +
                             indentAnd { printProperties(properties) }
                 is LocalTypeInformation.AnInterface ->
-                    typeIdentifier.prettyPrint() + printInheritsFrom(interfaces)
-                is LocalTypeInformation.Composable -> typeIdentifier.prettyPrint() +
+                    typeIdentifier.prettyPrint(simplifyClassNames) + printInheritsFrom(interfaces)
+                is LocalTypeInformation.Composable -> typeIdentifier.prettyPrint(simplifyClassNames) +
                         printConstructor(constructor) +
                         printInheritsFrom(interfaces, superclass) +
                         indentAnd { printProperties(properties) }
-                else -> typeIdentifier.prettyPrint()
+                else -> typeIdentifier.prettyPrint(simplifyClassNames)
             }
         }
 
@@ -403,7 +403,7 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     (if (value.isCalculated) " (calculated)" else "") +
-                    ": " + value.type.prettyPrint(simplifyClassNames)
+                    ": " + prettyPrint(value.type)
 
     private inline fun indentAnd(block: LocalTypeInformationPrettyPrinter.() -> String) =
             copy(indent = indent + 1).block()

@@ -1,9 +1,5 @@
 package net.corda.serialization.internal.model
 
-import net.corda.serialization.internal.amqp.Transform
-import net.corda.serialization.internal.amqp.TransformTypes
-import java.util.*
-
 typealias TypeDescriptor = String
 
 /**
@@ -176,14 +172,14 @@ private data class RemoteTypeInformationPrettyPrinter(private val simplifyClassN
             }
 
     private fun printProperties(properties: Map<String, RemotePropertyInformation>) =
-            properties.entries.sortedBy { it.key }.joinToString("\n", "\n", "") {
+            properties.entries.joinToString("\n", "\n", "") {
                 it.prettyPrint()
             }
 
     private fun Map.Entry<String, RemotePropertyInformation>.prettyPrint(): String =
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
-                    ": " + value.type.prettyPrint(simplifyClassNames)
+                    ": " + prettyPrint(value.type)
 }
 
 data class EnumTransforms(val defaults: Map<String, String>, val renames: Map<String, String>) {

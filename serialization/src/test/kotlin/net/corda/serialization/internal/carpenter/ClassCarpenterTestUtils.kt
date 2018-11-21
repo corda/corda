@@ -7,10 +7,7 @@ import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testName
-import net.corda.serialization.internal.model.ClassCarpentingTypeLoader
-import net.corda.serialization.internal.model.RemoteTypeInformation
-import net.corda.serialization.internal.model.SchemaBuildingRemoteTypeCarpenter
-import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.serialization.internal.model.*
 import org.junit.Assert.assertTrue
 
 /**
@@ -30,8 +27,11 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     protected inline fun <reified T: Any> T.roundTrip(): ObjectAndEnvelope<T> =
         DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(this))
 
+    protected val Envelope.typeInformation: Map<TypeDescriptor, RemoteTypeInformation> get() =
+        remoteTypeModel.interpret(SerializationSchemas(schema, transformsSchema))
+
     protected inline fun <reified T: Any> Envelope.typeInformationFor(): RemoteTypeInformation {
-        val interpreted = remoteTypeModel.interpret(SerializationSchemas(schema, transformsSchema))
+        val interpreted = typeInformation
         val type = object : TypeToken<T>() {}.type
         return interpreted.values.find { it.typeIdentifier == TypeIdentifier.forGenericType(type) }
                 as RemoteTypeInformation

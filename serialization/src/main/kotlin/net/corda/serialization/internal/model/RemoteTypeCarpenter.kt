@@ -23,7 +23,10 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
         try {
             when (typeInformation) {
                 is RemoteTypeInformation.AnInterface -> typeInformation.carpentInterface()
-                is RemoteTypeInformation.Composable -> typeInformation.carpentComposable()
+                is RemoteTypeInformation.Composable ->
+                    // We cannot carpent parameterised types, and if the type is parameterised assume we are really here
+                    // because a type parameter needed carpenting.
+                    if (typeInformation.typeIdentifier !is TypeIdentifier.Parameterised) typeInformation.carpentComposable()
                 is RemoteTypeInformation.AnEnum -> typeInformation.carpentEnum()
                 else -> {
                 } // Anything else, such as arrays, will be taken care of by the above
@@ -31,7 +34,14 @@ class SchemaBuildingRemoteTypeCarpenter(private val carpenter: ClassCarpenter): 
         } catch (e: ClassCarpenterException) {
             throw NotSerializableException("${typeInformation.typeIdentifier.name}: ${e.message}")
         }
-        return typeInformation.typeIdentifier.getLocalType(classLoader)
+
+        return try {
+            typeInformation.typeIdentifier.getLocalType(classLoader)
+        } catch (e: ClassNotFoundException) {
+            // This might happen if we've been asked to carpent up a parameterised type, and it's the rawtype itself
+            // rather than any of its type parameters that were missing.
+            throw NotSerializableException("Could not carpent ${typeInformation.typeIdentifier.prettyPrint(false)}")
+        }
     }
 
     private val RemoteTypeInformation.erasedLocalClass get() = typeIdentifier.getLocalType(classLoader).asClass()

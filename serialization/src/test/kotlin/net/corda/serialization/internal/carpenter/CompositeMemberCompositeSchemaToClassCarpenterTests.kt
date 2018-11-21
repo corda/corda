@@ -78,4 +78,37 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val instance = recarpented.new(null, uuid, 10)
         assertEquals(uuid, instance.get("ref"))
     }
+
+    @Test
+    fun mapWithUnknown() {
+        data class C(val a: Int)
+        data class D(val m: Map<String, C>)
+        val (_, envelope) = D(mapOf("c" to C(1))).roundTrip()
+
+        val infoForD = envelope.typeInformationFor<D>().mangle<C>()
+        val mangledMap = envelope.typeInformation.values.find { it.typeIdentifier.name == "java.util.Map" }!!.mangle<C>()
+        val mangledC = envelope.getMangled<C>()
+
+        assertEquals(
+                "java.util.Map<java.lang.String, ${mangledC.typeIdentifier.prettyPrint(false)}>",
+                mangledMap.prettyPrint(false))
+
+        assertCanLoadAll(infoForD, mangledMap, mangledC)
+    }
+
+    @Test
+    fun parameterisedNonCollectionWithUnknown() {
+        data class C(val a: Int)
+        data class NotAMap<K, V>(val key: K, val value: V)
+        data class D(val m: NotAMap<String, C>)
+        val (_, envelope) = D(NotAMap("c" , C(1))).roundTrip()
+
+        val infoForD = envelope.typeInformationFor<D>().mangle<C>()
+        val mangledNotAMap = envelope.typeInformationFor<NotAMap<String, C>>().mangle<C>()
+        val mangledC = envelope.getMangled<C>()
+
+        println(mangledNotAMap.prettyPrint())
+
+        assertCanLoadAll(infoForD, mangledNotAMap, mangledC)
+    }
 }

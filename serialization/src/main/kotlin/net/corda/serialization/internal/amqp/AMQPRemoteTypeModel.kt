@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import java.util.*
+import kotlin.collections.LinkedHashMap
 
 /**
  * Interprets AMQP [Schema] information to obtain [RemoteTypeInformation], caching by [TypeDescriptor].
@@ -90,7 +91,7 @@ class AMQPRemoteTypeModel {
          * [RemoteTypeInformation].
          */
         private fun CompositeType.interpretComposite(identifier: TypeIdentifier): RemoteTypeInformation {
-            val properties = fields.asSequence().map { it.interpret() }.toMap()
+            val properties = fields.asSequence().sortedBy { it.name }.map { it.interpret() }.toMap(LinkedHashMap())
             val typeParameters = identifier.interpretTypeParameters()
             val interfaceIdentifiers = provides.map { name -> name.typeIdentifier }
             val isInterface = identifier in interfaceIdentifiers
