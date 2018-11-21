@@ -31,6 +31,7 @@ import net.corda.node.services.api.AuditService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
@@ -254,7 +255,13 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
         }
         identityService.ourNames = myInfo.legalIdentities.map { it.name }.toSet()
 
-        networkMapUpdater.start(trustRoot, signedNetworkParameters.signed.raw.hash, nodeInfoAndSigned.signed.raw.hash)
+        networkMapUpdater.start(
+            trustRoot,
+            signedNetworkParameters.signed.raw.hash,
+            nodeInfoAndSigned.signed,
+            networkParameters,
+            keyManagementService,
+            NetworkParameterAcceptanceSettings())
 
         database.transaction {
             identityService.loadIdentities(myInfo.legalIdentitiesAndCerts)

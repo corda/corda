@@ -44,6 +44,7 @@ import net.corda.node.services.api.DummyAuditService
 import net.corda.node.services.api.MonitoringService
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.PersistentKeyManagementService
@@ -417,7 +418,13 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
         val nodeInfoAndSigned = NodeInfoAndSigned(myInfo) { _, serialised ->
             ourKeyPair.private.sign(serialised.bytes)
         }
-        networkMapUpdater.start(trustRoot, signedNetworkParameters.signed.raw.hash, nodeInfoAndSigned.signed.raw.hash)
+        networkMapUpdater.start(
+                trustRoot,
+                signedNetworkParameters.signed.raw.hash,
+                nodeInfoAndSigned.signed,
+                networkParameters,
+                keyManagementService,
+                NetworkParameterAcceptanceSettings())
 
         database.transaction {
             identityService.loadIdentities(myInfo.legalIdentitiesAndCerts)
