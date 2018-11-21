@@ -68,7 +68,7 @@ class ClassCarpentingTypeLoaderTests {
                 "postcode" : "RA8 81T"
               } ]
             }
-        """, personJson)
+        """.trimIndent(), personJson)
     }
 
     private fun Type.make(vararg params: Any): Any {
