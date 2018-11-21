@@ -2,17 +2,18 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.serialization.CordaSerializable
+import net.corda.core.internal.toSynchronised
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
-import net.corda.core.internal.createSimpleCache
-import net.corda.core.internal.toSynchronised
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
+import java.util.jar.Manifest
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -30,33 +31,24 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
         }
 
-        private const val `META-INF` = "meta-inf"
-        private val excludeFromNoOverlapCheck = setOf(
-                "manifest.mf",
-                "license",
-                "license.txt",
-                "notice",
-                "notice.txt",
-                "index.list"
-        )
+        // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
+        // In the AttachmentsClassLoader we just ignore any class in those 2 packages.
+        private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
+        private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
 
-        private fun shouldCheckForNoOverlap(path: String): Boolean {
-            if (!path.startsWith(`META-INF`)) return true
-            val p = path.substring(`META-INF`.length + 1)
-            if (p in excludeFromNoOverlapCheck) return false
-            if (p.endsWith(".sf") || p.endsWith(".dsa")) return false
-            return true
-        }
-
-        @CordaSerializable
-        class OverlappingAttachments(val path: String) : Exception() {
-            override fun toString() = "Multiple attachments define a file at path $path"
+        private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int) = when {
+            path.endsWith("/") -> false                     // Directories (packages) can overlap.
+            targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
+            path.endsWith(".class") -> true                 // All class files need to be unique.
+            !path.startsWith("meta-inf") -> true            // All files outside of Meta-inf need to be unique.
+            else -> false                                          // This allows overlaps over any non-class files in "Meta-inf".
         }
 
         private fun requireNoDuplicates(attachments: List<Attachment>) {
             val classLoaderEntries = mutableSetOf<String>()
             for (attachment in attachments) {
                 attachment.openAsJAR().use { jar ->
+                    val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                     while (true) {
                         val entry = jar.nextJarEntry ?: break
 
@@ -67,16 +59,24 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                         // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                         //
                         // Also convert to Unix path separators as all resource/class lookups will expect this.
-                        // If 2 entries have the same CRC, it means the same file is present in both attachments, so that is ok. TODO - Mike, wdyt?
                         val path = entry.name.toLowerCase().replace('\\', '/')
-                        if (shouldCheckForNoOverlap(path)) {
-                            if (path in classLoaderEntries) throw OverlappingAttachments(path)
+                        // TODO - If 2 entries are identical, it means the same file is present in both attachments, so that should be ok.
+                        if (shouldCheckForNoOverlap(path, targetPlatformVersion)) {
+                            if (path in classLoaderEntries) throw TransactionVerificationException.OverlappingAttachments(path)
                             classLoaderEntries.add(path)
                         }
                     }
                 }
             }
         }
+
+        // This was reused from: https://github.com/corda/corda/pull/4240.
+        // TODO - Once that is merged it should be extracted to a utility.
+        private val Manifest.targetPlatformVersion: Int
+            get() {
+                val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
+                return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
+            }
     }
 
     init {
@@ -85,6 +85,16 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         }
 
         requireNoDuplicates(attachments)
+    }
+
+    /**
+     * Required to prevent Jolokia from being loaded by contract code.
+     */
+    override fun loadClass(name: String?): Class<*> {
+        if (ignorePackages.any { name!!.startsWith(it) }) {
+            throw ClassNotFoundException(name)
+        }
+        return super.loadClass(name)
     }
 }
 
