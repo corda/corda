@@ -95,6 +95,30 @@ data class NetworkParameters(
         private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({ it.name }, { it.javaGetter })
         private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
         val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
+
+
+        /**
+         * Returns true if the [fullClassName] is in a subpackage of [packageName].
+         * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
+         *
+         * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
+         * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
+         */
+        private fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
+
+        // Check if a string is a legal Java package name.
+        private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
+            Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
+        }
+
+        // Make sure that packages don't overlap so that ownership is clear.
+        private fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
+            packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("${currentPackage}.") }
+        }
+
+        private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
+            return this.findAnnotation<AutoAcceptable>() != null
+        }
     }
 
     init {
@@ -200,26 +224,3 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  * version.
  */
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
-
-/**
- * Returns true if the [fullClassName] is in a subpackage of [packageName].
- * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
- *
- * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
- * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
- */
-internal fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
-
-// Check if a string is a legal Java package name.
-private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
-    Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
-}
-
-// Make sure that packages don't overlap so that ownership is clear.
-private fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
-    packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("${currentPackage}.") }
-}
-
-private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
-    return this.findAnnotation<AutoAcceptable>() != null
-}
