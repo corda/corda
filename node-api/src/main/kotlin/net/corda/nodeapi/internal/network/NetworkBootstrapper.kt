@@ -190,7 +190,7 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<String, PublicKey?> = emptyMap()) {
         require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
@@ -206,7 +206,7 @@ internal constructor(private val initSerEnv: Boolean,
             copyCordapps: Boolean,
             fromCordform: Boolean,
             minimumPlatformVersion: Int = PLATFORM_VERSION,
-            packageOwnership: Map<JavaPackageName, PublicKey?> = emptyMap()
+            packageOwnership: Map<String, PublicKey?> = emptyMap()
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -385,7 +385,7 @@ internal constructor(private val initSerEnv: Boolean,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
             minimumPlatformVersion: Int,
-            packageOwnership: Map<JavaPackageName, PublicKey?>
+            packageOwnership: Map<String, PublicKey?>
     ): NetworkParameters {
         // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {

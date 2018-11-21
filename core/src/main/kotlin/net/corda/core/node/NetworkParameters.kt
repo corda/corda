@@ -47,7 +47,7 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>
+        @AutoAcceptable val packageOwnership: Map<String, PublicKey>
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
@@ -92,7 +92,7 @@ data class NetworkParameters(
     companion object {
         private val memberPropertyPartition = NetworkParameters::class.declaredMemberProperties.asSequence()
                 .partition { it.isAutoAcceptable() }
-        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({it.name}, {it.javaGetter})
+        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({ it.name }, { it.javaGetter })
         private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
         val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
     }
@@ -165,7 +165,7 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
-    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
+    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { JavaPackageName(it).owns(contractClassName) }.values.singleOrNull()
 
     /**
      * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
@@ -173,7 +173,7 @@ data class NetworkParameters(
      */
     fun canAutoAccept(newNetworkParameters: NetworkParameters, excludedParameterNames: Set<String>): Boolean {
         return nonAutoAcceptableGetters.none { valueChanged(newNetworkParameters, it) } &&
-               autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
+                autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
     }
 
     private fun valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
@@ -225,8 +225,8 @@ private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpt
 }
 
 // Make sure that packages don't overlap so that ownership is clear.
-private fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { currentPackage ->
-    packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.name.startsWith("${currentPackage.name}.") }
+private fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
+    packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("${currentPackage}.") }
 }
 
 private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {

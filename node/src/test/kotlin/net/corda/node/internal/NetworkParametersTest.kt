@@ -92,7 +92,7 @@ class NetworkParametersTest {
                     emptyMap(),
                     Int.MAX_VALUE.days,
                     mapOf(
-                            JavaPackageName("com.!example.stuff") to key2
+                            "com.!example.stuff" to key2
                     )
             )
         }.withMessageContaining("Invalid Java package name")
@@ -107,8 +107,8 @@ class NetworkParametersTest {
                     emptyMap(),
                     Int.MAX_VALUE.days,
                     mapOf(
-                            JavaPackageName("com.example") to key1,
-                            JavaPackageName("com.example.stuff") to key2
+                            "com.example" to key1,
+                            "com.example.stuff" to key2
                     )
             )
         }.withMessage("multiple packages added to the packageOwnership overlap.")
@@ -122,8 +122,8 @@ class NetworkParametersTest {
                 emptyMap(),
                 Int.MAX_VALUE.days,
                 mapOf(
-                        JavaPackageName("com.example") to key1,
-                        JavaPackageName("com.examplestuff") to key2
+                        "com.example" to key1,
+                        "com.examplestuff" to key2
                 )
         )
 
@@ -135,8 +135,8 @@ class NetworkParametersTest {
     @Test
     fun `auto acceptance checks are correct`() {
         val packageOwnership = mapOf(
-                JavaPackageName("com.example1") to generateKeyPair().public,
-                JavaPackageName("com.example2") to generateKeyPair().public)
+                "com.example1" to generateKeyPair().public,
+                "com.example2" to generateKeyPair().public)
         val whitelistedContractImplementations = mapOf(
                 "example1" to listOf(AttachmentId.randomSHA256()),
                 "example2" to listOf(AttachmentId.randomSHA256()))

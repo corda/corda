@@ -48,7 +48,7 @@ class PackageOwnershipVerificationTests {
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
             networkParameters = testNetworkParameters()
-                    .copy(packageOwnership = mapOf(JavaPackageName("net.corda.core.contracts") to OWNER_KEY_PAIR.public))
+                    .copy(packageOwnership = mapOf("net.corda.core.contracts" to OWNER_KEY_PAIR.public))
     )
 
     @Test
