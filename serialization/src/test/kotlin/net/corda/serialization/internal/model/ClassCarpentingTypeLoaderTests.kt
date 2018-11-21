@@ -54,7 +54,7 @@ class ClassCarpentingTypeLoaderTests {
         val person = personType.make("Arthur Putey", 42, address, listOf(previousAddress))
         val personJson = ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(person)
                 .replace("\r\n", "\n")
-        
+
         assertEquals("""
             {
               "name" : "Arthur Putey",
@@ -68,7 +68,7 @@ class ClassCarpentingTypeLoaderTests {
                 "postcode" : "RA8 81T"
               } ]
             }
-        """.trimIndent(), personJson)
+        """, personJson)
     }
 
     private fun Type.make(vararg params: Any): Any {
