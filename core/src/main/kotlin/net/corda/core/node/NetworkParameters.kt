@@ -96,7 +96,6 @@ data class NetworkParameters(
         private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
         val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
 
-
         /**
          * Returns true if the [fullClassName] is in a subpackage of [packageName].
          * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
@@ -109,6 +108,10 @@ data class NetworkParameters(
         // Check if a string is a legal Java package name.
         private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
             Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
+        }
+
+        fun requirePackageValid(name: String) {
+            require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
         }
 
         // Make sure that packages don't overlap so that ownership is clear.
@@ -128,9 +131,7 @@ data class NetworkParameters(
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
-        packageOwnership.keys.forEach { name ->
-            require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
-        }
+        packageOwnership.keys.forEach(::requirePackageValid)
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
     }
 

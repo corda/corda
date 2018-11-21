@@ -3,6 +3,7 @@ package net.corda.bootstrapper
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.node.NetworkParameters.Companion.requirePackageValid
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
@@ -76,8 +77,11 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
             val packageOwnerSpec = packageOwner.split(";")
             if (packageOwnerSpec.size < 4)
                 throw IllegalArgumentException("Package owner must specify 4 elements separated by semi-colon: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
+
             // java package name validation
             val javaPackageName = packageOwnerSpec[0]
+            requirePackageValid(javaPackageName)
+
             // cater for passwords that include the argument delimiter field
             val keyStorePassword =
                 if (packageOwnerSpec.size > 4)
