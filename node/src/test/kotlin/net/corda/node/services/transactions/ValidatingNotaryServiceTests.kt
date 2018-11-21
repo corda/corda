@@ -7,7 +7,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.*
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.notary.generateSignature
+import net.corda.core.internal.notary.generateRequestSignature
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.deserialize
@@ -270,7 +270,7 @@ class ValidatingNotaryServiceTests {
             val transaction = originalPayload.signedTransaction
             val wrongInputs = listOf(StateRef(SecureHash.randomSHA256(), 0))
             val request = NotarisationRequest(wrongInputs, transaction.id)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
+            val modifiedSignature = request.generateRequestSignature(aliceNode.services)
             originalPayload.copy(requestSignature = modifiedSignature)
         }
     }
@@ -281,7 +281,7 @@ class ValidatingNotaryServiceTests {
             val transaction = originalPayload.signedTransaction
             val wrongTransactionId = SecureHash.randomSHA256()
             val request = NotarisationRequest(transaction.inputs, wrongTransactionId)
-            val modifiedSignature = request.generateSignature(aliceNode.services)
+            val modifiedSignature = request.generateRequestSignature(aliceNode.services)
             originalPayload.copy(requestSignature = modifiedSignature)
         }
     }
