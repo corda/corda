@@ -204,7 +204,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
 
         val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
-                .map { Pair(it.first, it.second.openAsJAR().manifest) }.filter { it.second != null }
+                .map { Pair(it.first, it.second.openAsJAR().manifest) }.filter { it.second != null && it.second.mainAttributes.getValue("Implementation-Version") !=null }
         //TODO is MANINFEST optional?
 
         val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest

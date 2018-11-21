@@ -149,10 +149,13 @@ private constructor(
          contractAttachmentsByContract.forEach { contractClassName, attachment ->
             val manifest = attachment.openAsJAR().manifest
             if (manifest!= null) {
-                val version = Version(manifest.mainAttributes.getValue("Implementation-Version"))
-                val ok = inputStatesContractClassNameToVersions[contractClassName]?.all { version >= it } ?: true
-                if (!ok) {
-                    throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
+                val entry = manifest.mainAttributes.getValue("Implementation-Version")
+                if(entry!=null) {
+                    val version = Version(entry)
+                    val ok = inputStatesContractClassNameToVersions[contractClassName]?.all { version >= it } ?: true
+                    if (!ok) {
+                        throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
+                    }
                 }
             }
             //TODO if manifest is not present - in unit tests
