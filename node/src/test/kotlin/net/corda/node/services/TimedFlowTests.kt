@@ -19,6 +19,7 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
@@ -55,6 +56,7 @@ class TimedFlowTests {
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var notary: Party
         private lateinit var node: TestStartedNode
+        private lateinit var patientNode: TestStartedNode
 
         private const val waitEtaThresholdSeconds = NotaryServiceFlow.defaultEstimatedWaitTimeSeconds
         private var waitETA: Duration = waitEtaThresholdSeconds.seconds
@@ -75,6 +77,8 @@ class TimedFlowTests {
             val started = startClusterAndNode(mockNet)
             notary = started.first
             node = started.second
+            patientNode = started.third
+
         }
 
         @AfterClass
@@ -83,7 +87,7 @@ class TimedFlowTests {
             mockNet.stopNodes()
         }
 
-        private fun startClusterAndNode(mockNet: InternalMockNetwork): Pair<Party, TestStartedNode> {
+        private fun startClusterAndNode(mockNet: InternalMockNetwork): Triple<Party, TestStartedNode, TestStartedNode> {
             val replicaIds = (0 until CLUSTER_SIZE)
             val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
             val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
@@ -110,14 +114,22 @@ class TimedFlowTests {
                     )
             )
 
+            val patientNode = mockNet.createUnstartedNode(
+                    InternalMockNodeParameters(
+                            legalName = CordaX500Name("Bob", "BobCorp", "GB"),
+                            configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(10.seconds, 3, 1.0))
+                    )
+            )
+
+
             // MockNetwork doesn't support notary clusters, so we create all the nodes we need unstarted, and then install the
             // network-parameters in their directories before they're started.
-            val node = (notaryNodes + aliceNode).map { node ->
+            val nodes = (notaryNodes + aliceNode + patientNode).map { node ->
                 networkParameters.install(mockNet.baseDirectory(node.id))
                 node.start()
-            }.last()
+            }
 
-            return Pair(notaryIdentity, node)
+            return Triple(notaryIdentity, nodes[nodes.lastIndex - 1], nodes.last())
         }
     }
 
@@ -184,7 +196,7 @@ class TimedFlowTests {
                     exceptionThrown = true
                 }
                 assertTrue(exceptionThrown)
-                flow.stateMachine.updateTimedFlowTimeout(1)
+                flow.stateMachine.updateTimedFlowTimeout(2)
                 val notarySignatures = resultFuture.get(10, TimeUnit.SECONDS)
                 (issueTx + notarySignatures).verifyRequiredSignatures()
                 progressTrackerDone.get()
@@ -193,6 +205,64 @@ class TimedFlowTests {
             waitETA = waitEtaThresholdSeconds.seconds
         }
     }
+
+    @Test
+    fun `timed flow cannot update its ETA to less than default`() {
+        try {
+            waitETA = 1.seconds
+            patientNode.run {
+                val issueTx = signInitialTransaction(notary) {
+                    setTimeWindow(services.clock.instant(), 30.seconds)
+                    addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                }
+                val flow = NotaryFlow.Client(issueTx)
+                val progressTracker = flow.progressTracker
+                assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+                val progressTrackerDone = getDoneFuture(progressTracker)
+
+                val resultFuture = services.startFlow(flow).resultFuture
+                flow.stateMachine.updateTimedFlowTimeout(1)
+                var exceptionThrown = false
+                try {
+                    resultFuture.get(3, TimeUnit.SECONDS)
+                } catch (e: TimeoutException) {
+                    exceptionThrown = true
+                }
+                assertTrue(exceptionThrown)
+                val notarySignatures = resultFuture.get(10, TimeUnit.SECONDS)
+                (issueTx + notarySignatures).verifyRequiredSignatures()
+                progressTrackerDone.get()
+            }
+        } finally {
+            waitETA = waitEtaThresholdSeconds.seconds
+        }
+    }
+
+    @Test
+    fun `timed flow cannot update its ETA to really large number`() {
+        try {
+            waitETA = 10.days
+            node.run {
+                val issueTx = signInitialTransaction(notary) {
+                    setTimeWindow(services.clock.instant(), 30.seconds)
+                    addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
+                }
+                val flow = NotaryFlow.Client(issueTx)
+                val progressTracker = flow.progressTracker
+                assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
+                val progressTrackerDone = getDoneFuture(progressTracker)
+
+                val resultFuture = services.startFlow(flow).resultFuture
+                val notarySignatures = resultFuture.get(10, TimeUnit.SECONDS)
+                (issueTx + notarySignatures).verifyRequiredSignatures()
+                progressTrackerDone.get()
+            }
+        } finally {
+            waitETA = waitEtaThresholdSeconds.seconds
+        }
+    }
+
+
 
     private fun TestStartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
