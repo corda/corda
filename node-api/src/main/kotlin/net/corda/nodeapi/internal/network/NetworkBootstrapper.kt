@@ -9,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo

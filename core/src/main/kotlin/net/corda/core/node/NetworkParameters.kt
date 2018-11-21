@@ -104,7 +104,9 @@ data class NetworkParameters(
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
-        packageOwnership.keys.forEach { JavaPackageName(it) }
+        packageOwnership.keys.forEach { name ->
+            require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
+        }
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
     }
 
@@ -166,7 +168,7 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
-    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { JavaPackageName(it).owns(contractClassName) }.values.singleOrNull()
+    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
 
     /**
      * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
@@ -200,25 +202,13 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
 
 /**
- * A wrapper for a legal java package. Used by the network parameters to store package ownership.
+ * Returns true if the [fullClassName] is in a subpackage of [packageName].
+ * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
+ *
+ * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
+ * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
  */
-@CordaSerializable
-data class JavaPackageName(val name: String) {
-    init {
-        require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
-    }
-
-    /**
-     * Returns true if the [fullClassName] is in a subpackage of the current package.
-     * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
-     *
-     * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
-     * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
-     */
-    fun owns(fullClassName: String) = fullClassName.startsWith("$name.", ignoreCase = true)
-
-    override fun toString() = name
-}
+internal fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
 
 // Check if a string is a legal Java package name.
 private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->

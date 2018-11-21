@@ -3,7 +3,6 @@ package net.corda.bootstrapper
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.node.JavaPackageName
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
@@ -47,13 +46,12 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     var registerPackageOwnership: List<PackageOwner> = mutableListOf()
 
     @Option(names = ["--unregister-package-owner"],
-            converter = [JavaPackageNameConverter::class],
             description = [
                 "Unregister owner of Java package namespace in the network-parameters.",
                 "Format: [java-package-namespace]",
                 "         `java-package-namespace` is case insensitive and cannot be a sub-package of an existing registered namespace"
             ])
-    var unregisterPackageOwnership: List<JavaPackageName> = mutableListOf()
+    var unregisterPackageOwnership: List<String> = mutableListOf()
 
     override fun runProgram(): Int {
         NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(),
@@ -67,10 +65,10 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
 }
 
 
-data class PackageOwner(val javaPackageName: JavaPackageName, val publicKey: PublicKey)
+data class PackageOwner(val javaPackageName: String, val publicKey: PublicKey)
 
 /**
- * Converter from String to PackageOwner (JavaPackageName and PublicKey)
+ * Converter from String to PackageOwner (String and PublicKey)
  */
 class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
     override fun convert(packageOwner: String): PackageOwner {
@@ -79,7 +77,7 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
             if (packageOwnerSpec.size < 4)
                 throw IllegalArgumentException("Package owner must specify 4 elements separated by semi-colon: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
             // java package name validation
-            val javaPackageName = JavaPackageName(packageOwnerSpec[0])
+            val javaPackageName = packageOwnerSpec[0]
             // cater for passwords that include the argument delimiter field
             val keyStorePassword =
                 if (packageOwnerSpec.size > 4)
@@ -103,14 +101,5 @@ class PackageOwnerConverter : CommandLine.ITypeConverter<PackageOwner> {
             }
         }
         else throw IllegalArgumentException("Must specify package owner argument: 'java-package-namespace;keyStorePath;keyStorePassword;alias'")
-    }
-}
-
-/**
- * Converter from String to JavaPackageName.
- */
-class JavaPackageNameConverter : CommandLine.ITypeConverter<JavaPackageName> {
-    override fun convert(packageName: String): JavaPackageName {
-        return JavaPackageName(packageName)
     }
 }

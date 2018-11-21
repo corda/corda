@@ -5,7 +5,6 @@ import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
@@ -214,8 +213,8 @@ class NetworkBootstrapperTest {
     private val ALICE = TestIdentity(ALICE_NAME, 70)
     private val BOB = TestIdentity(BOB_NAME, 80)
 
-    private val alicePackageName = JavaPackageName("com.example.alice")
-    private val bobPackageName = JavaPackageName("com.example.bob")
+    private val alicePackageName = "com.example.alice"
+    private val bobPackageName = "com.example.bob"
 
     @Test
     fun `register new package namespace in existing network`() {
@@ -238,7 +237,7 @@ class NetworkBootstrapperTest {
     @Test
     fun `attempt to register overlapping namespaces in existing network`() {
         createNodeConfFile("alice", aliceConfig)
-        val greedyNamespace = JavaPackageName("com.example")
+        val greedyNamespace = "com.example"
         bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         // register overlapping package name
@@ -293,7 +292,7 @@ class NetworkBootstrapperTest {
         return bytes
     }
 
-    private fun bootstrap(copyCordapps: Boolean = true, packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()) {
+    private fun bootstrap(copyCordapps: Boolean = true, packageOwnership : Map<String, PublicKey?> = emptyMap()) {
         providedCordaJar = (rootDir / "corda.jar").let { if (it.exists()) it.readAll() else null }
         bootstrapper.bootstrap(rootDir, copyCordapps, PLATFORM_VERSION, packageOwnership)
     }
@@ -363,7 +362,7 @@ class NetworkBootstrapperTest {
         }
     }
 
-    private fun assertContainsPackageOwner(nodeDirName: String, packageOwners: Map<JavaPackageName, PublicKey>) {
+    private fun assertContainsPackageOwner(nodeDirName: String, packageOwners: Map<String, PublicKey>) {
         val networkParams = (rootDir / nodeDirName).networkParameters
         assertThat(networkParams.packageOwnership).isEqualTo(packageOwners)
     }
