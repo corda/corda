@@ -6,8 +6,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
+import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.notary.NotaryInternalException
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -25,7 +25,6 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Clock
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class PersistentUniquenessProviderTests {
     @Rule
@@ -70,10 +69,56 @@ class PersistentUniquenessProviderTests {
 
         val secondTxId = SecureHash.randomSHA256()
 
-        val response:UniquenessProvider.Result  = provider.commit(inputs, secondTxId, identity, requestSignature).get()
+        val response: UniquenessProvider.Result  = provider.commit(inputs, secondTxId, identity, requestSignature).get()
         val error = (response as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
 
         val conflictCause = error.consumedStates[inputState]!!
         assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
+    }
+
+    // TODO: time window tests
+
+    @Test
+    fun `handles reference states`() {
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
+        val inputState1 = generateStateRef()
+        val inputState2 = generateStateRef()
+        val firstTxId = SecureHash.randomSHA256()
+        val secondTxId = SecureHash.randomSHA256()
+
+        // Conflict free transaction goes through.
+        val result1 = provider.commit(listOf(inputState1), firstTxId, identity, requestSignature, references = listOf(inputState2)).get()
+        assertEquals(UniquenessProvider.Result.Success, result1)
+
+        // Referencing a spent state results in a conflict.
+        val result2 = provider.commit(listOf(inputState2), secondTxId, identity, requestSignature, references = listOf(inputState1)).get()
+        val error = (result2 as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
+        val conflictCause = error.consumedStates[inputState1]!!
+        assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
+        assertEquals(conflictCause.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+
+        // Re-notarisation works.
+        val result3 = provider.commit(listOf(inputState1), firstTxId, identity, requestSignature, references = listOf(inputState2)).get()
+        assertEquals(UniquenessProvider.Result.Success, result3)
+    }
+
+    @Test
+    fun `handles transaction with reference states only`() {
+        val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
+        val inputState1 = generateStateRef()
+        val firstTxId = SecureHash.randomSHA256()
+        val secondTxId = SecureHash.randomSHA256()
+
+        // Conflict free transaction goes through.
+        val result1 = provider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(inputState1)).get()
+        assertEquals(UniquenessProvider.Result.Success, result1)
+
+        // Commit state 1.
+        val result2 = provider.commit(listOf(inputState1), secondTxId, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result2)
+
+        // Re-notarisation works.
+        val result3 = provider.commit(emptyList(), firstTxId, identity, requestSignature, references = listOf(inputState1)).get()
+        assertEquals(UniquenessProvider.Result.Success, result3)
     }
 }

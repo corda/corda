@@ -70,6 +70,13 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             var requestDate: Instant
     )
 
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}committed_transactions")
+    class CommittedTransaction(
+            @Id
+            val transactionId: String
+    )
+
     private data class CommitRequest(
             val states: List<StateRef>,
             val txId: SecureHash,
@@ -190,11 +197,25 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             logRequest(txId, callerIdentity, requestSignature)
             val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
-                handleConflicts(txId, conflictingStates)
+                if (states.isEmpty()) {
+                    handleReferenceConflicts(txId, conflictingStates)
+                } else {
+                    handleConflicts(txId, conflictingStates)
+                }
             } else {
                 handleNoConflicts(timeWindow, states, txId, commitLog)
             }
         }
+    }
+
+    private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+        val session = currentDBSession()
+        if (session.find(CommittedTransaction::class.java, txId.toString()) == null) {
+            val conflictError = NotaryError.Conflict(txId, conflictingStates)
+            log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            throw NotaryInternalException(conflictError)
+        }
+        log.debug { "Transaction $txId already notarised" }
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
@@ -214,6 +235,8 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             states.forEach { stateRef ->
                 commitLog[stateRef] = txId
             }
+            val session = currentDBSession()
+            session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
         } else {
             throw NotaryInternalException(outsideTimeWindowError)
