@@ -92,15 +92,16 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
     private val nrQueuedStates = AtomicInteger(0)
 
+    /** Measured in states per second. */
     private val throughputMeter = Meter()
 
-    // Estimated time of request processing.
+    /** Estimated time of request processing. */
     override fun eta(): Duration {
         val rate = throughputMeter.oneMinuteRate
         val nrStates = nrQueuedStates.get()
         log.debug { "rate: $rate, queueSize: $nrStates" }
-        if (rate > 1e-5 && nrStates > 5) {
-            return Duration.ofSeconds((1.5 * nrStates / rate).toLong())
+        if (rate > 1e-5 && nrStates > 100) {
+            return Duration.ofSeconds((2 * nrStates / rate).toLong())
         }
         return 1.seconds
     }

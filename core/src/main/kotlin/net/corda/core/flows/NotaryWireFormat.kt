@@ -7,6 +7,7 @@ import net.corda.core.crypto.TransactionSignature
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import java.time.Duration
 
 /**
  * A notarisation request specifies a list of states to consume and the id of the consuming transaction. Its primary
@@ -84,4 +85,4 @@ data class NotarisationResponse(val signatures: List<TransactionSignature>)
 
 /** Sent by the notary when the notary detects it will unlikely respond before the client retries. */
 @CordaSerializable
-data class WaitTimeUpdate(val waitTimeSeconds: Long)
+data class WaitTimeUpdate(val waitTime: Duration)

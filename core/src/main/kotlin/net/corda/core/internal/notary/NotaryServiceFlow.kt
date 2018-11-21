@@ -43,7 +43,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             val eta = service.getEstimatedWaitTime()
             if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE) {
-                otherSideSession.send(WaitTimeUpdate(eta.toMillis() / 1000))
+                otherSideSession.send(WaitTimeUpdate(eta))
             }
 
             service.commitInputStates(

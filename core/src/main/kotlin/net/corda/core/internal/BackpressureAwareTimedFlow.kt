@@ -24,8 +24,8 @@ abstract class BackpressureAwareTimedFlow<ResultType, ReceiveType>(private val r
             val unwrapped = wrappedResult.fromUntrustedWorld
             when {
                 unwrapped is WaitTimeUpdate -> {
-                    logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTimeSeconds} seconds for completion.")
-                    stateMachine.updateTimedFlowTimeout(unwrapped.waitTimeSeconds)
+                    logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTime} seconds for completion.")
+                    stateMachine.updateTimedFlowTimeout(unwrapped.waitTime.seconds)
                 }
                 unwrapped::class.java == receiveType -> @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
                 return wrappedResult as UntrustworthyData<ReceiveType>
