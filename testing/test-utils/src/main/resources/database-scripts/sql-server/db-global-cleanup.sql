@@ -67,6 +67,7 @@ DROP TABLE IF EXISTS ${schema}.network_map;
 DROP TABLE IF EXISTS ${schema}.parameters_update;
 DROP TABLE IF EXISTS ${schema}.network_parameters;
 DROP TABLE IF EXISTS ${schema}.private_network;
+DROP TABLE IF EXISTS ${schema}.foos;
 DROP SEQUENCE IF EXISTS ${schema}.hibernate_sequence;
 DROP USER IF EXISTS ${schema};
 DROP LOGIN ${schema};

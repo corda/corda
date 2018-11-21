@@ -67,4 +67,5 @@ DROP TABLE ${schema}.network_map CASCADE CONSTRAINTS
 DROP TABLE ${schema}.parameters_update CASCADE CONSTRAINTS
 DROP TABLE ${schema}.network_parameters CASCADE CONSTRAINTS
 DROP TABLE ${schema}.private_network CASCADE CONSTRAINTS
+DROP TABLE ${schema}.foos CASCADE CONSTRAINTS
 DROP SEQUENCE ${schema}.hibernate_sequence

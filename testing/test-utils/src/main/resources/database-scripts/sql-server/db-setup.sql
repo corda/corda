@@ -67,6 +67,7 @@ DROP TABLE IF EXISTS ${schema}.network_map;
 DROP TABLE IF EXISTS ${schema}.parameters_update;
 DROP TABLE IF EXISTS ${schema}.network_parameters;
 DROP TABLE IF EXISTS ${schema}.private_network;
+DROP TABLE IF EXISTS ${schema}.foos;
 DROP SEQUENCE IF EXISTS ${schema}.hibernate_sequence;
 IF NOT EXISTS (SELECT schema_name FROM information_schema.schemata WHERE schema_name = '${schema}') EXEC('CREATE SCHEMA ${schema}');
 IF NOT EXISTS (SELECT * FROM sys.sysusers WHERE name='${schema}') CREATE USER ${schema} FOR LOGIN ${schema} WITH DEFAULT_SCHEMA = ${schema};
