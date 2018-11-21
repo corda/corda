@@ -2,7 +2,6 @@ package net.corda.bootstrapper
 
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
-import net.corda.core.node.JavaPackageName
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
@@ -55,7 +54,7 @@ class PackageOwnerParsingTest {
         val aliceKeyStorePath = dirAlice / "_teststore"
         val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;$ALICE")
         commandLine.parse(*args)
-        assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo("com.example.stuff")
     }
 
     @Test
@@ -141,7 +140,7 @@ class PackageOwnerParsingTest {
                 "net.something4;$aliceKeyStorePath5;\"\"passw;rd\"\";${ALICE}5")
         packageOwnerSpecs.forEachIndexed { i, packageOwnerSpec ->
             commandLine.parse(*arrayOf("--register-package-owner", packageOwnerSpec))
-            assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo(JavaPackageName("net.something$i"))
+            assertThat(networkBootstrapper.registerPackageOwnership[0].javaPackageName).isEqualTo("net.something$i")
         }
     }
 
@@ -149,7 +148,7 @@ class PackageOwnerParsingTest {
     fun `parse unregister request with single mapping`() {
         val args = arrayOf("--unregister-package-owner", "com.example.stuff")
         commandLine.parse(*args)
-        assertThat(networkBootstrapper.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff"))
+        assertThat(networkBootstrapper.unregisterPackageOwnership).contains("com.example.stuff")
     }
 
     @Test
@@ -158,8 +157,8 @@ class PackageOwnerParsingTest {
         val args = arrayOf("--register-package-owner", "com.example.stuff;$aliceKeyStorePath;$ALICE_PASS;$ALICE",
                                         "--unregister-package-owner", "com.example.stuff2")
         commandLine.parse(*args)
-        assertThat(networkBootstrapper.registerPackageOwnership.map { it.javaPackageName }).contains(JavaPackageName("com.example.stuff"))
-        assertThat(networkBootstrapper.unregisterPackageOwnership).contains(JavaPackageName("com.example.stuff2"))
+        assertThat(networkBootstrapper.registerPackageOwnership.map { it.javaPackageName }).contains("com.example.stuff")
+        assertThat(networkBootstrapper.unregisterPackageOwnership).contains("com.example.stuff2")
     }
 }
 

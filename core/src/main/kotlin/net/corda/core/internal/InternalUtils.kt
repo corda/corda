@@ -516,4 +516,15 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
     }
 }
 
-fun <K,V> MutableMap<K,V>.toSynchronised(): MutableMap<K,V> = Collections.synchronizedMap(this)
+fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
+
+private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
+    Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
+}
+
+/**
+ * Check if a string is a legal Java package name.
+ */
+fun requirePackageValid(name: String) {
+    require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
+}
