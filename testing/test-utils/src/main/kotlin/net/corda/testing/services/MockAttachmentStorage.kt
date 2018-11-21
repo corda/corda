@@ -54,8 +54,6 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val contractMetadataList = contractClassNames.map {contractClassName ->
             ContractAttachmentMetadata(contractClassName, "1.0", isSigned)
         }
-
-        _contractClasses.forEach { println("${it.value} : ${it.key}" ) }
         return _contractClasses.filterKeys { contractMetadataList.contains(it) }.values.toList()
     }
 

@@ -10,6 +10,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.inputStream
+import net.corda.core.internal.toPath
 import net.corda.core.node.JavaPackageName
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.POUNDS
@@ -103,25 +104,33 @@ class ConstraintsPropagationTests {
 
     @Test
     fun `Happy path for Hash to Signature Constraint migration`() {
-
         val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
-        cordapps.forEach { cordapp ->
-            val jarAndSigner = ContractJarTestUtils.signContractJar(cordapp.jarPath, copyFirst = true, keyStoreDir = keyStoreDir.path)
-            val signedJar = jarAndSigner.first
-            signedJar.inputStream().use { signedJarStream ->
-                ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", signedJarStream,null, listOf(jarAndSigner.second))
+        val cordappAttachmentIds =
+            cordapps.map { cordapp ->
+                val unsignedAttId =
+                    cordapp.jarPath.toPath().inputStream().use { unsignedJarStream ->
+                        ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", unsignedJarStream,null)
+                    }
+                val jarAndSigner = ContractJarTestUtils.signContractJar(cordapp.jarPath, copyFirst = true, keyStoreDir = keyStoreDir.path)
+                val signedJar = jarAndSigner.first
+                val signedAttId =
+                    signedJar.inputStream().use { signedJarStream ->
+                        ledgerServices.attachments.importContractAttachment(cordapp.contractClassNames,  "rpc", signedJarStream,null, listOf(jarAndSigner.second))
+                    }
+                Pair(unsignedAttId, signedAttId)
             }
-        }
+
+        val unsignedAttachmentId = cordappAttachmentIds.first().first
 
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
-                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
+                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(unsignedAttachmentId), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
                 verifies()
             }
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
+                attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())

@@ -13,6 +13,8 @@ import net.corda.core.internal.toSynchronised
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -29,6 +31,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     companion object {
+        private val log = contextLogger()
 
         init {
             // This is required to register the AttachmentURLStreamHandlerFactory.
@@ -72,15 +75,19 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                                 val contentHash = readAttachment(attachment, path).sha256()
                                 val originalAttachment = classLoaderEntries[path] ?: throw OverlappingAttachments(path)
                                 val originalContentHash = readAttachment(originalAttachment, path).sha256()
-                                if (contentHash == originalContentHash)
+                                if (contentHash == originalContentHash) {
+                                    log.debug { "Duplicate entry $path has same content hash $contentHash" }
                                     continue
+                                }
                                 else
                                     throw OverlappingAttachments(path)
                             }
+                            log.debug { "Adding new entry for $path" }
                             classLoaderEntries[path] = attachment
                         }
                     }
                 }
+                log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
             }
 
             // This was reused from: https://github.com/corda/corda/pull/4240.

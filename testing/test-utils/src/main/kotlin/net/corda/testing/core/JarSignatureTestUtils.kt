@@ -72,19 +72,6 @@ object JarSignatureTestUtils {
     fun Path.getJarSigners(fileName: String) =
             JarInputStream(FileInputStream((this / fileName).toFile())).use(JarSignatureCollector::collectSigners)
 
-    fun Path.printJar(fileName: String) {
-        JarInputStream(FileInputStream((this / fileName).toFile())).use {
-            println("Manifest = ${it.manifest.mainAttributes.toList()}")
-            var count = 0
-            while (true) {
-                val entry = it.nextJarEntry ?: break
-                println("$entry, timestamps: CT=${entry.creationTime}, LAT=${entry.lastAccessTime}, LMT=${entry.lastModifiedTime}")
-                count++
-            }
-            println("\n$fileName has $count entries\n")
-        }
-    }
-
     fun Path.addManifest(fileName: String, vararg entry: Pair<Attributes.Name, String>) {
         JarInputStream(FileInputStream((this / fileName).toFile())).use { input ->
             val manifest = input.manifest ?: Manifest()
