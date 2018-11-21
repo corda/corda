@@ -586,13 +586,13 @@ class SingleThreadedStateMachineManager(
         }
     }
 
-    public fun setCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+    private fun resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
         mutex.locked {
-            setCustomTimeout(flowId, timeoutSeconds)
+            resetCustomTimeout(flowId, timeoutSeconds)
         }
     }
 
-    private fun InnerState.setCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+    private fun InnerState.resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
         val flow = flows[flowId]
         if (flow != null) {
             val scheduledTimeout = timedFlows[flowId]
@@ -670,7 +670,7 @@ class SingleThreadedStateMachineManager(
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!,
                 unfinishedFibers = unfinishedFibers,
-                waitTimeUpdateHook = { flowId, timeout -> setCustomTimeout(flowId, timeout) }
+                waitTimeUpdateHook = { flowId, timeout -> resetCustomTimeout(flowId, timeout) }
         )
     }
 

@@ -16,9 +16,9 @@ const val MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE = 4
  * want to stop retries overwhelming that internal queue. As the TimedFlow mechanism and the notary service back-pressure are very specific
  * to this use case at the moment, this implementation is internal and not for general use.
  */
-abstract class BackpressureAwareTimedFlow<ResultType, ReceiveType>(private val receiveType: Class<ReceiveType>) : FlowLogic<ResultType>(), TimedFlow {
+abstract class BackpressureAwareTimedFlow<ResultType> : FlowLogic<ResultType>(), TimedFlow {
     @Suspendable
-    fun receiveResultOrTiming(session: FlowSession): UntrustworthyData<ReceiveType> {
+    inline fun <reified ReceiveType> receiveResultOrTiming(session: FlowSession): UntrustworthyData<ReceiveType> {
         while (true) {
             val wrappedResult = session.receive<Any>()
             val unwrapped = wrappedResult.fromUntrustedWorld
@@ -27,9 +27,9 @@ abstract class BackpressureAwareTimedFlow<ResultType, ReceiveType>(private val r
                     logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTime} seconds for completion.")
                     stateMachine.updateTimedFlowTimeout(unwrapped.waitTime.seconds)
                 }
-                unwrapped::class.java == receiveType -> @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
+                unwrapped is ReceiveType -> @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
                 return wrappedResult as UntrustworthyData<ReceiveType>
-                else -> throw throw IllegalArgumentException("We were expecting a ${receiveType.name} or WaitTimeUpdate but we instead got a ${unwrapped.javaClass.name} ($unwrapped)")
+                else -> throw throw IllegalArgumentException("We were expecting a ${ReceiveType::class.java.name} or WaitTimeUpdate but we instead got a ${unwrapped.javaClass.name} ($unwrapped)")
             }
         }
     }

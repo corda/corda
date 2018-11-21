@@ -12,6 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.node.NotaryInfo
@@ -55,7 +56,9 @@ class TimedFlowTests {
         private lateinit var notary: Party
         private lateinit var node: TestStartedNode
 
-        private var waitETA: Duration = 10.seconds
+        private const val waitEtaThresholdSeconds = NotaryServiceFlow.defaultEstimatedWaitTime
+        private var waitETA: Duration = waitEtaThresholdSeconds.seconds
+
 
         init {
             LogHelper.setLevel("+net.corda.flow", "+net.corda.testing.node", "+net.corda.node.services.messaging")
@@ -187,7 +190,7 @@ class TimedFlowTests {
                 progressTrackerDone.get()
             }
         } finally {
-            waitETA = 10.seconds
+            waitETA = waitEtaThresholdSeconds.seconds
         }
     }
 
@@ -238,7 +241,7 @@ class TimedFlowTests {
             }
         }
 
-        override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this)
+        override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, waitEtaThresholdSeconds.seconds)
         override fun start() {}
         override fun stop() {}
     }

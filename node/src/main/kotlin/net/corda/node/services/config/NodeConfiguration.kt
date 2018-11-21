@@ -6,6 +6,7 @@ import net.corda.common.validation.internal.Validated
 import net.corda.core.context.AuthServiceId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
@@ -147,6 +148,10 @@ data class NotaryConfig(
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
         val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+        /**If the wait time estimate on the internal queue exceeds this value, the notary may send
+         * a wait time update to the client (implementation specific and dependent on the counter
+         * party version) */
+        val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTime,
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null
 )

@@ -7,8 +7,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE
-import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import java.time.Duration
 
 /**
  * A flow run by a notary service that handles notarisation requests.
@@ -19,13 +19,24 @@ import net.corda.core.utilities.unwrap
  * Additional transaction validation logic can be added when implementing [validateRequest].
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000
+
+        /**
+         * This is default wait time estimate for notaries/uniqueness providers that do not estimate wait times.
+         * Also used as default eta message threshold so that a default wait time/default threshold will never
+         * lead to an update message being sent.
+         */
+        const val defaultEstimatedWaitTime = 10
+
     }
 
     private var transactionId: SecureHash? = null
+
+    @Suspendable
+    private fun counterpartyCanHandleBackPressure() = otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE
 
     @Suspendable
     override fun call(): Void? {
@@ -42,7 +53,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             verifyTransaction(requestPayload)
 
             val eta = service.getEstimatedWaitTime()
-            if (eta > 10.seconds && otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE) {
+            if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
                 otherSideSession.send(WaitTimeUpdate(eta))
             }
 

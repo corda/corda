@@ -13,10 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.core.internal.notary.isConsumedByTheSameTx
-import net.corda.core.internal.notary.validateTimeWindow
+import net.corda.core.internal.notary.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -95,7 +92,12 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     /** Measured in states per second. */
     private val throughputMeter = Meter()
 
-    /** Estimated time of request processing. */
+    /** Estimated time of request processing.
+     *  This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
+     *  It checkst that there is actual traffic going on (i.e. a non-trivial number of states are queued and there
+     *  is actual throughput) and then returns the expected wait time scaled up by a factor to give a probable
+     *  upper bound.
+     */
     override fun eta(): Duration {
         val rate = throughputMeter.oneMinuteRate
         val nrStates = nrQueuedStates.get()
@@ -103,7 +105,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         if (rate > 1e-5 && nrStates > 100) {
             return Duration.ofSeconds((2 * nrStates / rate).toLong())
         }
-        return 1.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTime.seconds
     }
 
     /** A request processor thread. */
@@ -240,10 +242,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         }
     }
 
-    private fun processRequest(request: CommitRequest) {
+    private fun updateThroughputMeter(request: CommitRequest) {
         val nrStates = request.states.size + request.references.size
         throughputMeter.mark(nrStates.toLong())
         nrQueuedStates.addAndGet(-nrStates)
+    }
+
+    private fun processRequest(request: CommitRequest) {
+        updateThroughputMeter(request)
         try {
             commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
             respondWithSuccess(request)

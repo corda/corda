@@ -25,9 +25,14 @@ interface UniquenessProvider {
             references: List<StateRef> = emptyList()
     ): CordaFuture<Result>
 
-    // Estimated time of request processing.
+    /**
+     *    Estimated time of request processing. A uniqueness provider that is aware of his own throughput can return
+     *    an estimate how long requests will be queued before they can be processed. Notary services use this information
+     *    to potentially update clients with an expected wait time in order to avoid spamming by retries when the notary
+     *    gets busy
+     */
     fun eta(): Duration {
-       return 30.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTime.seconds
     }
 
     /** The outcome of committing a transaction. */

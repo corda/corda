@@ -4,6 +4,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.core.schemas.MappedSchema
+import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import java.security.PublicKey
 
@@ -17,10 +18,10 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
             log.info("Starting in validating mode")
-            ValidatingNotaryFlow(otherPartySession, this)
+            ValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
         } else {
             log.info("Starting in non-validating mode")
-            NonValidatingNotaryFlow(otherPartySession, this)
+            NonValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
         }
     }
 
