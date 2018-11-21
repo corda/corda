@@ -165,7 +165,7 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val validating by boolean()
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
     private val className by string().optional().withDefaultValue("net.corda.node.services.transactions.SimpleNotaryService")
-    private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime)
+    private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTimeSeconds)
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {

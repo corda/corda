@@ -56,7 +56,7 @@ class TimedFlowTests {
         private lateinit var notary: Party
         private lateinit var node: TestStartedNode
 
-        private const val waitEtaThresholdSeconds = NotaryServiceFlow.defaultEstimatedWaitTime
+        private const val waitEtaThresholdSeconds = NotaryServiceFlow.defaultEstimatedWaitTimeSeconds
         private var waitETA: Duration = waitEtaThresholdSeconds.seconds
 
 

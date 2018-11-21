@@ -92,20 +92,21 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     /** Measured in states per second. */
     private val throughputMeter = Meter()
 
-    /** Estimated time of request processing.
-     *  This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
-     *  It checkst that there is actual traffic going on (i.e. a non-trivial number of states are queued and there
-     *  is actual throughput) and then returns the expected wait time scaled up by a factor to give a probable
-     *  upper bound.
+    /**
+     * Estimated time of request processing.
+     * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
+     * It checks that there is actual traffic going on (i.e. a non-trivial number of states are queued and there
+     * is actual throughput) and then returns the expected wait time scaled up by a factor to give a probable
+     * upper bound.
      */
     override fun eta(): Duration {
         val rate = throughputMeter.oneMinuteRate
         val nrStates = nrQueuedStates.get()
         log.debug { "rate: $rate, queueSize: $nrStates" }
-        if (rate > 1e-5 && nrStates > 100) {
+        if (rate > 1.0 && nrStates > 100) {
             return Duration.ofSeconds((2 * nrStates / rate).toLong())
         }
-        return NotaryServiceFlow.defaultEstimatedWaitTime.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTimeSeconds.seconds
     }
 
     /** A request processor thread. */

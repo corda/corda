@@ -29,7 +29,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
          * Also used as default eta message threshold so that a default wait time/default threshold will never
          * lead to an update message being sent.
          */
-        const val defaultEstimatedWaitTime = 10
+        const val defaultEstimatedWaitTimeSeconds = 10
 
     }
 

@@ -29,10 +29,10 @@ interface UniquenessProvider {
      *    Estimated time of request processing. A uniqueness provider that is aware of his own throughput can return
      *    an estimate how long requests will be queued before they can be processed. Notary services use this information
      *    to potentially update clients with an expected wait time in order to avoid spamming by retries when the notary
-     *    gets busy
+     *    gets busy.
      */
     fun eta(): Duration {
-        return NotaryServiceFlow.defaultEstimatedWaitTime.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTimeSeconds.seconds
     }
 
     /** The outcome of committing a transaction. */

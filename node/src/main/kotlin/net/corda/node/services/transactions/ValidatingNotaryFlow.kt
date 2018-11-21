@@ -21,7 +21,7 @@ import java.time.Duration
  * has its input states "blocked" by a transaction from another party, and needs to establish whether that transaction was
  * indeed valid.
  */
-open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime.seconds) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
+open class ValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTimeSeconds.seconds) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val stx = requestPayload.signedTransaction
         val timeWindow: TimeWindow? = if (stx.coreTransaction is WireTransaction) stx.tx.timeWindow else null
