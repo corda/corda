@@ -2,6 +2,7 @@ package net.corda.notary.mysql
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
+import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Queues
 import com.mysql.cj.jdbc.exceptions.CommunicationsException
@@ -53,7 +54,7 @@ class MySQLUniquenessProvider(
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()
         // TODO: optimize table schema for InnoDB
-        private const val createCommittedStateTable =
+        const val createCommittedStateTable =
                 "CREATE TABLE IF NOT EXISTS notary_committed_states (" +
                         "issue_transaction_id BINARY(32) NOT NULL," +
                         "issue_transaction_output_id INT UNSIGNED NOT NULL," +
@@ -75,13 +76,25 @@ class MySQLUniquenessProvider(
                         "request_id INT UNSIGNED NOT NULL AUTO_INCREMENT," +
                         "CONSTRAINT rid PRIMARY KEY (request_id)" +
                         ")"
+
+        private const val createCommittedTransactionsTable =
+                "CREATE TABLE IF NOT EXISTS notary_committed_transactions (" +
+                        "transaction_id BINARY(32) NOT NULL," +
+                        "CONSTRAINT tid PRIMARY KEY (transaction_id)" +
+                        ")"
+
         private const val insertRequestStatement = "INSERT INTO notary_request_log (consuming_transaction_id, requesting_party_name, request_signature) VALUES (?, ?, ?)"
+
+        private const val insertCommittedTransactionStatement = "INSERT INTO notary_committed_transactions (transaction_id) VALUES (?)"
+
+        private const val selectCommittedTransactionStatement = "SELECT COUNT(transaction_id) FROM notary_committed_transactions WHERE transaction_id = ?"
 
         /** The maximum number of attempts to retry a database operation. */
         private const val maxRetries = 1000
     }
 
-    private data class CommitRequest(
+    @VisibleForTesting
+    data class CommitRequest(
             val states: List<StateRef>,
             val txId: SecureHash,
             val callerIdentity: Party,
@@ -113,7 +126,8 @@ class MySQLUniquenessProvider(
     private val connectionRetries = config.connectionRetries
 
     /** Attempts to obtain a database connection with number of retries specified in [connectionRetries]. */
-    private val connection: Connection
+    @VisibleForTesting
+    val connection: Connection
         get() {
             var retries = 0
             while (true) {
@@ -296,26 +310,40 @@ class MySQLUniquenessProvider(
      *  Stores all input states that don't yet exist in the database.
      *  A [Result.Conflict] is created for each transaction with one or more inputs already present in the database.
      */
-    private class CommitStates(val requests: List<CommitRequest>, val clock: Clock) : DBOperation<Map<UUID, Result>> {
+    @VisibleForTesting
+    class CommitStates(val requests: List<CommitRequest>, val clock: Clock) : DBOperation<Map<UUID, Result>> {
         override fun execute(connection: Connection): Map<UUID, Result> {
             val results = mutableMapOf<UUID, Result>()
 
-            val allStates = requests.flatMap { it.states }
-            val allConflicts = findAlreadyCommitted(connection, allStates).toMutableMap()
+            val allStates = requests.flatMap { it.states }.toSet()
+            val allReferences = requests.flatMap { it.references }.toSet()
+            val allConflicts = findAlreadyCommitted(connection, allStates, allReferences).toMutableMap()
             val toCommit = mutableListOf<CommitRequest>()
+
             requests.forEach { request ->
-                val conflicts = allConflicts.filter { it.key in request.states }
+                val referenceStateConflicts = allConflicts.keys.intersect(request.references.toSet()).map { it to allConflicts[it]!! }.toMap()
+                val inputStateConflicts = allConflicts.keys.intersect(request.states.toSet()).map { it to allConflicts[it]!! }.toMap()
+                val conflicts = referenceStateConflicts + inputStateConflicts
 
                 results[request.id] = if (conflicts.isNotEmpty()) {
-                    if (isConsumedByTheSameTx(request.txId.sha256(), conflicts)) {
+                    if (request.states.isEmpty() && referenceStateConflicts.isNotEmpty()) {
+                        if (isPreviouslySigned(connection, request.txId)) {
+                            Result.Success
+                        } else {
+                            Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+                        }
+                    } else if (inputStateConflicts.isNotEmpty() && isConsumedByTheSameTx(request.txId.sha256(), inputStateConflicts)) {
                         Result.Success
                     } else {
                         Result.Failure(NotaryError.Conflict(request.txId, conflicts))
                     }
                 } else {
                     val outsideTimeWindowError = validateTimeWindow(clock.instant(), request.timeWindow)
-                    if (outsideTimeWindowError == null) {
-                        toCommit.add(request)
+                    val preSigned = outsideTimeWindowError != null && request.states.isEmpty() && isPreviouslySigned(connection, request.txId)
+                    if (outsideTimeWindowError == null || preSigned) {
+                        if (!preSigned) {
+                            toCommit.add(request)
+                        }
                         // Mark states as consumed to capture conflicting transactions in the same batch
                         request.states.forEach {
                             allConflicts[it] = StateConsumptionDetails(request.txId.sha256())
@@ -342,29 +370,55 @@ class MySQLUniquenessProvider(
                 executeBatch()
                 close()
             }
+
+            connection.prepareStatement(insertCommittedTransactionStatement).apply {
+                toCommit.forEach { (_, txId, _, _) ->
+                    setBytes(1, txId.bytes)
+                    addBatch()
+                    clearParameters()
+                }
+                executeBatch()
+                close()
+            }
             connection.commit()
             return results
         }
 
-        private fun findAlreadyCommitted(connection: Connection, states: List<StateRef>): Map<StateRef, StateConsumptionDetails> {
-            if (states.isEmpty()) {
+        private fun isPreviouslySigned(connection: Connection, txId: SecureHash): Boolean {
+            val preparedStatement = connection.prepareStatement(selectCommittedTransactionStatement)
+            preparedStatement.setBytes(1, txId.bytes)
+            val resultSet = preparedStatement.executeQuery()
+            val nrRecords = if (resultSet.next()) {
+                resultSet.getInt(1)
+            } else {
+                0
+            }
+            preparedStatement.close()
+            return nrRecords == 1
+        }
+
+        private fun findAlreadyCommitted(connection: Connection, states: Set<StateRef>, references: Set<StateRef>): Map<StateRef, StateConsumptionDetails> {
+            if (states.isEmpty() && references.isEmpty()) {
                 return emptyMap()
             }
-            val queryString = buildQueryString(states.size)
+            val queryString = buildQueryString((states + references).size)
             val preparedStatement = connection.prepareStatement(queryString).apply {
                 var parameterIndex = 0
-                states.forEach { (txId, index) ->
+                (states + references).forEach { (txId, index) ->
                     setBytes(++parameterIndex, txId.bytes)
                     setInt(++parameterIndex, index)
                 }
-
             }
             val resultSet = preparedStatement.executeQuery()
             val committedStates = mutableMapOf<StateRef, StateConsumptionDetails>()
             while (resultSet.next()) {
                 val consumingTxId = SecureHash.SHA256(resultSet.getBytes(1))
                 val stateRef = StateRef(SecureHash.SHA256(resultSet.getBytes(2)), resultSet.getInt(3))
-                committedStates[stateRef] = StateConsumptionDetails(consumingTxId.sha256())
+                committedStates[stateRef] = if (stateRef in references) {
+                    StateConsumptionDetails(consumingTxId.sha256(), StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+                } else {
+                    StateConsumptionDetails(consumingTxId.sha256())
+                }
             }
             preparedStatement.close()
             return committedStates
@@ -424,6 +478,7 @@ class MySQLUniquenessProvider(
         connection.use {
             it.createStatement().execute(createCommittedStateTable)
             it.createStatement().execute(createRequestLogTable)
+            it.createStatement().execute(createCommittedTransactionsTable)
             it.commit()
         }
     }

@@ -8,6 +8,7 @@ import net.corda.client.mock.Generator
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
@@ -67,7 +68,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     fun before() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.notary.mysql"), threadPerNode = true)
         notaryParty = DevIdentityGenerator.generateDistributedNotarySingularIdentity(listOf(mockNet.baseDirectory(mockNet.nextNodeId)), notaryName)
-        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryParty, true))))
+        val networkParameters = NetworkParametersCopier(testNetworkParameters(notaries = listOf(NotaryInfo(notaryParty, true)), minimumPlatformVersion = 4))
         val notaryNodeUnstarted = createNotaryNode()
         val nodeUnstarted = mockNet.createUnstartedNode()
         val startedNodes = listOf(notaryNodeUnstarted, nodeUnstarted).map { n ->
@@ -108,11 +109,87 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     }
 
     @Test
+    fun `handles reference states`() {
+        val inputState1 = issueState(node, notaryParty)
+        val inputState2 = issueState(node, notaryParty)
+        val outputState = TransactionState(DummyContract.SingleOwnerState(Random().nextInt(), node.services.myInfo.singleIdentity()), DummyContract.PROGRAM_ID, notaryParty)
+
+        val firstTxBuilder = TransactionBuilder(notaryParty)
+                .addInputState(inputState1)
+                .addReferenceState(inputState2.referenced())
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+        val firstSpendTx = node.services.signInitialTransaction(firstTxBuilder)
+        val firstSpend = node.services.startFlow(NotaryFlow.Client(firstSpendTx)).resultFuture
+        firstSpend.getOrThrow()
+
+        val secondTxBuilder = TransactionBuilder(notaryParty)
+                .addInputState(inputState2)
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+        val secondSpendTx = node.services.signInitialTransaction(secondTxBuilder)
+        val secondSpend = node.services.startFlow(NotaryFlow.Client(secondSpendTx)).resultFuture
+        secondSpend.getOrThrow()
+
+        val firstSpendReferenceInvalidButIdempotent = node.services.startFlow(NotaryFlow.Client(firstSpendTx)).resultFuture
+        firstSpendReferenceInvalidButIdempotent.getOrThrow()
+
+        val thirdSpendTxBuilder = TransactionBuilder(notaryParty)
+                .addOutputState(outputState)
+                .addReferenceState(inputState2.referenced())
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+        val thirdSpendTx = node.services.signInitialTransaction(thirdSpendTxBuilder)
+        val thirdSpend = node.services.startFlow(NotaryFlow.Client(thirdSpendTx)).resultFuture
+
+        val ex = assertFailsWith(NotaryException::class) {  thirdSpend.getOrThrow() }
+        val error = ex.error as NotaryError.Conflict
+        assertEquals(error.txId, thirdSpendTx.id)
+        assertEquals(error.consumedStates[inputState2.ref]!!.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+    }
+
+    @Test
+    fun `handles transactions with only reference states`() {
+        val outputState = TransactionState(DummyContract.SingleOwnerState(Random().nextInt(), node.services.myInfo.singleIdentity()), DummyContract.PROGRAM_ID, notaryParty)
+        val inputState1 = issueState(node, notaryParty)
+        val inputState2 = issueState(node, notaryParty)
+
+        val firstTxBuilder = TransactionBuilder(notaryParty)
+                .addOutputState(outputState)
+                .addReferenceState(inputState1.referenced())
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+        val firstSpendTx = node.services.signInitialTransaction(firstTxBuilder)
+        val firstSpend = node.services.startFlow(NotaryFlow.Client(firstSpendTx)).resultFuture
+        firstSpend.getOrThrow()
+
+        val secondTxBuilder = TransactionBuilder(notaryParty)
+                .addInputState(inputState1)
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+        val secondSpendTx = node.services.signInitialTransaction(secondTxBuilder)
+        val secondSpend = node.services.startFlow(NotaryFlow.Client(secondSpendTx)).resultFuture
+        secondSpend.getOrThrow()
+
+        val firstSpendSecondNotarisation = node.services.startFlow(NotaryFlow.Client(firstSpendTx)).resultFuture
+        firstSpendSecondNotarisation.getOrThrow()
+
+        val thirdTxBuilder = TransactionBuilder(notaryParty)
+                .addInputState(inputState2)
+                .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
+                .addReferenceState(inputState1.referenced())
+        val thirdSpendTx = node.services.signInitialTransaction(thirdTxBuilder)
+        val thirdSpendNotarisation = node.services.startFlow(NotaryFlow.Client(thirdSpendTx)).resultFuture
+        val ex = assertFailsWith(NotaryException::class) { thirdSpendNotarisation.getOrThrow() }
+        val error = ex.error as NotaryError.Conflict
+        assertEquals(error.txId, thirdSpendTx.id)
+        assertEquals(error.consumedStates[inputState1.ref]!!.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+    }
+
+
+    @Test
     fun `notarisations are idempotent`() {
         val inputState = issueState(node, notaryParty)
+        val referenceState = issueState(node, notaryParty)
 
         val txBuilder = TransactionBuilder(notaryParty)
                 .addInputState(inputState)
+                .addReferenceState(referenceState.referenced())
                 .addCommand(dummyCommand(node.services.myInfo.singleIdentity().owningKey))
         val spendTx = node.services.signInitialTransaction(txBuilder)
 
@@ -144,6 +221,30 @@ class MySQLNotaryServiceTests : IntegrationTest() {
             val inputState = issueState(node, notaryParty)
             val tx = TransactionBuilder(notaryParty)
                     .addInputState(inputState)
+                    .addCommand(dummyCommand(nodeParty.owningKey))
+                    .setTimeWindow(node.services.clock.instant(), 30.seconds)
+            node.services.signInitialTransaction(tx)
+        }
+
+        val sig1 = node.services.startFlow(NotaryFlow.Client(stx)).resultFuture.get().first()
+        assertEquals(sig1.by, notaryParty.owningKey)
+        assertTrue(sig1.isValid(stx.id))
+
+        mockNet.nodes.forEach {
+            val nodeClock = (it.started!!.services.clock as TestClock)
+            nodeClock.advanceBy(Duration.ofDays(1))
+        }
+
+        val sig2 = node.services.startFlow(NotaryFlow.Client(stx)).resultFuture.get().first()
+        assertEquals(sig2.by, notaryParty.owningKey)
+    }
+
+    @Test
+    fun `should re-sign a transaction with an expired time-window without input states`() {
+        val stx = run {
+            val outputState = issueState(node, notaryParty)
+            val tx = TransactionBuilder(notaryParty)
+                    .addOutputState(outputState.state)
                     .addCommand(dummyCommand(nodeParty.owningKey))
                     .setTimeWindow(node.services.clock.instant(), 30.seconds)
             node.services.signInitialTransaction(tx)
@@ -212,7 +313,6 @@ class MySQLNotaryServiceTests : IntegrationTest() {
         @Suspendable
         override fun call(): List<Result> {
             val futures = mutableListOf<CordaFuture<Result>>()
-            var requestSignature: NotarisationRequestSignature? = null
             for (i in 1..transactionCount) {
                 val txId: SecureHash = txIdGenerator.generateOrFail(random)
                 val callerParty = partyGenerator.generateOrFail(random)
@@ -222,15 +322,12 @@ class MySQLNotaryServiceTests : IntegrationTest() {
                     Generator.replicate(inputStateCount, stateRefGenerator)
                 }
                 val inputs = inputGenerator.generateOrFail(random)
-                if (requestSignature == null || random.nextInt(10) < 2) {
-                    requestSignature = NotarisationRequest(inputs, txId).generateSignature(serviceHub)
-                }
                 futures += SinglePartyNotaryService.CommitOperation(
                         service,
                         inputs,
                         txId,
                         callerParty,
-                        requestSignature,
+                        NotarisationRequest(inputs, txId).generateSignature(serviceHub),
                         null,
                         emptyList()).execute("")
             }
