@@ -20,6 +20,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
+import java.util.jar.Attributes
 import kotlin.collections.HashSet
 
 /**
@@ -147,19 +148,20 @@ private constructor(
 
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>){
          contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val manifest = attachment.openAsJAR().manifest
-            if (manifest!= null) {
-                val entry = manifest.mainAttributes.getValue("Implementation-Version")
-                if(entry!=null) {
-                    val version = Version(entry)
-                    val ok = inputStatesContractClassNameToVersions[contractClassName]?.all { version >= it } ?: true
-                    if (!ok) {
-                        throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
-                    }
-                }
-            }
-            //TODO if manifest is not present - in unit tests
-        }
+             val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
+             if (contractClassVersions != null && contractClassVersions.isNotEmpty()) {
+                 val implementationVersion = attachment.openAsJAR()
+                         .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
+                 if (implementationVersion == null) {
+                     throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, "UNKNOWN")
+                 } else {
+                     val version = Version(implementationVersion)
+                     if (contractClassVersions.any { version < it }) {
+                         throw TransactionVerificationException.TransactionContractClassVersionDowngradation(this.id, contractClassName, version.toString())
+                     }
+                 }
+             }
+         }
     }
     /**
      * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
