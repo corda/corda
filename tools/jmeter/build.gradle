@@ -136,7 +136,7 @@ capsule {
 // No additional args required but will be passed if specified.
 task buildJMeterJAR(type: FatCapsule) {
     applicationClass mainClassName
-    archiveName "jmeter-corda-${corda_release_version}.jar"
+    archiveName "jmeter-corda-${corda_release_version}-capsule.jar"
     applicationSource = jar
     from 'NOTICE' // Copy CDDL notice
     from(processResources) {
@@ -161,7 +161,7 @@ task buildJMeterJAR(type: FatCapsule) {
 task buildReleasePackage(type: Zip) {
     baseName = "corda-performance-testsuite"
     from (buildJMeterJAR){
-        include "jmeter-corda*.jar"
+        include "jmeter-corda-*-capsule.jar"
     }
     from (configurations.compile.files){
         include "corda-ptflow*.jar"
@@ -179,6 +179,9 @@ assemble.dependsOn buildReleasePackage
 artifacts {
     runtimeArtifacts buildJMeterJAR
     publish buildJMeterJAR {
+        classifier "capsule"
+    }
+    publish jar {
         classifier ""
     }
 }

@@ -9,10 +9,11 @@ File Contents
 
 The performance test suite comes as a zip file containing the following files:
 
-``jmeter-corda.jar``
-    The JAR file that contains the wrapped JMeter code to to drive performance tests.
+``jmeter-corda-<version>-capsule.jar``
+    The JAR file that contains the wrapped JMeter code to to drive performance tests. This is a fat jar that contains all the required
+    dependencies to run the JMeter application. It will be referred to as ``jmeter-corda.jar`` in the rest of this documentation
 
-``perftestcordapp.jar``
+``perftestcordapp-<version>.jar``
     The performance test CorDapp used in for the built-in samplers and the included sample test plans. This needs to
     be deployed to any node of the system under test if these test plans will be used.
 
