@@ -133,24 +133,41 @@ inline std::string dump(const std::string &bytes) { return Parser(bytes).dump();
  * stream for reading by entering the composite type (which is a described list). When it goes out of scope,
  * it will pop up a frame and exit the composite type.
  */
-class CompositeTypeGuard {
+class EnterCompositeType {
 public:
     proton::symbol sym;
     proton::codec::start block;
 
-    CompositeTypeGuard(proton::codec::decoder &decoder, const char *name, const proton::symbol &expected, int num_fields);
+    explicit EnterCompositeType(proton::codec::decoder &decoder, const char *name, bool has_contents);
 
-    virtual ~CompositeTypeGuard();
+    virtual ~EnterCompositeType();
 
-private:
+protected:
     bool pop_second = false;
     proton::codec::decoder &decoder;
+    size_t num_fields = -1;
+};
+
+class CompositeTypeGuard : public EnterCompositeType {
+public:
+    CompositeTypeGuard(proton::codec::decoder &decoder, const char *name, const proton::symbol &expected, int expected_fields);
 };
 
 
 template<class T>
 proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<T> &out) {
     out = corda::ptr<T>(new T(d));
+    return d;
+}
+
+// Used for cases where we could deserialize *any* potential object.
+inline proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<void *> &out) {
+    out.reset(nullptr);
+    // Just skip this as we don't yet know how to read it yet.
+    // TODO: We need a different approach for this type of polymorphism - check what descriptor we actually find and look up how to instantiate it.
+    proton::codec::start s;
+    d >> s;
+    d >> proton::codec::finish();
     return d;
 }
 

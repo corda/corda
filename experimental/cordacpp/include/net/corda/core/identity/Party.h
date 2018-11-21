@@ -5,8 +5,8 @@
 #define NET_CORDA_CORE_IDENTITY_PARTY_H
 
 #include "corda.h"
+#include "net/corda/core/identity/AbstractParty.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
@@ -22,9 +22,6 @@ namespace security {
 class PublicKey;
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
@@ -35,22 +32,20 @@ public:
     net::corda::ptr<net::corda::core::identity::CordaX500Name> name;
     net::corda::ptr<java::security::PublicKey> owning_key;
 
+    Party() = default;
+
     explicit Party(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.identity.Party", descriptor(), 2);
         net::corda::Parser::read_to(decoder, name);
         net::corda::Parser::read_to(decoder, owning_key);
     }
 
-    const std::string descriptor() { return "net.corda:H9KOi8agUusgKKi3MEB3xg=="; }
+    virtual const std::string descriptor() { return "net.corda:H9KOi8agUusgKKi3MEB3xg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

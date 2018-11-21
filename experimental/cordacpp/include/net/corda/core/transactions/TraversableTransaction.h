@@ -5,8 +5,8 @@
 #define NET_CORDA_CORE_TRANSACTIONS_TRAVERSABLETRANSACTION_H
 
 #include "corda.h"
+#include "net/corda/core/transactions/CoreTransaction.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
@@ -14,11 +14,6 @@ namespace crypto {
 class SecureHash;
 }
 }
-}
-}
-namespace java {
-namespace lang {
-class Object;
 }
 }
 namespace net {
@@ -30,9 +25,13 @@ class StateRef;
 template <class T> class TransactionState;
 class ContractState;
 class TimeWindow;
-class NamedByHash;
 }
 }
+}
+}
+namespace java {
+namespace lang {
+class Object;
 }
 }
 namespace net {
@@ -54,15 +53,12 @@ class Party;
 }
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
 namespace transactions {
 
-class TraversableTransaction : public net::corda::core::contracts::NamedByHash, public net::corda::core::transactions::CoreTransaction {
+class TraversableTransaction : public net::corda::core::transactions::CoreTransaction {
 public:
     std::list<net::corda::ptr<net::corda::core::crypto::SecureHash>> attachments;
     std::list<net::corda::ptr<net::corda::core::contracts::Command<void *>>> commands;
@@ -72,6 +68,8 @@ public:
     std::list<net::corda::ptr<net::corda::core::contracts::TransactionState<net::corda::core::contracts::ContractState>>> outputs;
     std::list<net::corda::ptr<net::corda::core::contracts::StateRef>> references;
     net::corda::ptr<net::corda::core::contracts::TimeWindow> time_window;
+
+    TraversableTransaction() = default;
 
     explicit TraversableTransaction(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.TraversableTransaction", descriptor(), 8);
@@ -85,16 +83,12 @@ public:
         if (decoder.next_type() != proton::NULL_TYPE) net::corda::Parser::read_to(decoder, time_window); else decoder.next();
     }
 
-    const std::string descriptor() { return "net.corda:6Vnfg6U4l+4PJqeyiZNnwQ=="; }
+    virtual const std::string descriptor() { return "net.corda:7uh5OkEW1sLz08a+OOUFJg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

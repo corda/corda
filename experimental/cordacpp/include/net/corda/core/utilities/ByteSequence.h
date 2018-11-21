@@ -6,9 +6,6 @@
 
 #include "corda.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
-
-// End of pre-declarations.
 
 namespace net {
 namespace corda {
@@ -20,7 +17,7 @@ public:
     int32_t offset;
     int32_t size;
 
-    ByteSequence() : offset(0), size(0) {}
+    ByteSequence() = default;
 
     explicit ByteSequence(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.utilities.ByteSequence", descriptor(), 2);
@@ -28,16 +25,12 @@ public:
         net::corda::Parser::read_to(decoder, size);
     }
 
-    const std::string descriptor() { return "net.corda:+U77oDTFDB2Yr2jufz6oxQ=="; }
+    virtual const std::string descriptor() { return "net.corda:0UvJuq940P0jrySmql4EPg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

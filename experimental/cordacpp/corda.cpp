@@ -250,30 +250,34 @@ proton::codec::decoder Parser::prepare_decoder() {
     return decoder;
 }
 
-CompositeTypeGuard::CompositeTypeGuard(::proton::codec::decoder &decoder, const char *name, const ::proton::symbol &expected, int num_fields) : decoder(decoder),  sym(expected) {
+EnterCompositeType::EnterCompositeType(::proton::codec::decoder &decoder, const char *name, bool has_contents) : decoder(decoder) {
     if (decoder.next_type() != proton::DESCRIBED)
-        throw std::invalid_argument(msg() << "Expected a described element, but got " << decoder.next_type() << " decoding " << name);
+        throw std::invalid_argument(msg() << "Expected a described element, but got " << decoder.next_type() << " whilst decoding a " << name);
     proton::codec::start start;
     decoder >> start;
-    proton::symbol s;
-    decoder >> s;
-    if (s != expected)
-        throw std::invalid_argument(msg() << "Expected descriptor " << expected << " but got " << s << " for " << name);
-    if (num_fields > 0) {
+    decoder >> sym;
+    if (has_contents > 0) {
         pop_second = true;
         decoder >> block;
-        if (block.size != num_fields)
-            throw std::invalid_argument(msg() << "Expected " << num_fields << " fields but got " << block.size << " for " << name);
+        num_fields = block.size;
     }
 }
 
-CompositeTypeGuard::~CompositeTypeGuard()  {
+EnterCompositeType::~EnterCompositeType()  {
     decoder >> proton::codec::finish();
     if (pop_second) {
         // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
         // then the list inside "thing", so we have to pop up twice here.
         decoder >> proton::codec::finish();
     }
+}
+
+CompositeTypeGuard::CompositeTypeGuard(proton::codec::decoder &decoder, const char *name,
+                                       const proton::symbol &expected, int expected_fields) : EnterCompositeType(decoder, name, expected_fields > 0) {
+    if (sym != expected)
+        throw std::invalid_argument(msg() << "Expected descriptor " << expected << " but got " << sym << " for " << name);
+    if (num_fields != expected_fields)
+        throw std::invalid_argument(msg() << "Expected " << expected_fields << " fields but got " << num_fields << " for " << name);
 }
 
 }

@@ -5,8 +5,6 @@
 #define NET_CORDA_CORE_TRANSACTIONS_SIGNEDTRANSACTION_H
 
 #include "corda.h"
-
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
@@ -30,32 +28,21 @@ namespace corda {
 namespace core {
 namespace transactions {
 class CoreTransaction;
-class TransactionWithSignatures;
 }
 }
 }
 }
-namespace net {
-namespace corda {
-namespace core {
-namespace contracts {
-class NamedByHash;
-}
-}
-}
-}
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
 namespace transactions {
 
-class SignedTransaction : public net::corda::core::transactions::TransactionWithSignatures, public net::corda::core::contracts::NamedByHash {
+class SignedTransaction {
 public:
     std::list<net::corda::ptr<net::corda::core::crypto::TransactionSignature>> sigs;
     net::corda::ptr<net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>> tx_bits;
+
+    SignedTransaction() = default;
 
     explicit SignedTransaction(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.SignedTransaction", descriptor(), 2);
@@ -63,16 +50,12 @@ public:
         net::corda::Parser::read_to(decoder, tx_bits);
     }
 
-    const std::string descriptor() { return "net.corda:zToILi8Cg+z9QG52DsFT9g=="; }
+    virtual const std::string descriptor() { return "net.corda:7mttgXO2HdBLwATyV7pCpg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

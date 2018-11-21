@@ -6,9 +6,6 @@
 
 #include "corda.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
-
-// End of pre-declarations.
 
 namespace net {
 namespace corda {
@@ -24,6 +21,8 @@ public:
     std::string organisation_unit;
     std::string state;
 
+    CordaX500Name() = default;
+
     explicit CordaX500Name(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.identity.CordaX500Name", descriptor(), 6);
         if (decoder.next_type() != proton::NULL_TYPE) net::corda::Parser::read_to(decoder, common_name); else decoder.next();
@@ -34,16 +33,12 @@ public:
         if (decoder.next_type() != proton::NULL_TYPE) net::corda::Parser::read_to(decoder, state); else decoder.next();
     }
 
-    const std::string descriptor() { return "net.corda:ngdwbt6kRT0l5nn16uf87A=="; }
+    virtual const std::string descriptor() { return "net.corda:ngdwbt6kRT0l5nn16uf87A=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

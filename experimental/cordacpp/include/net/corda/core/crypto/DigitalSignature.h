@@ -5,8 +5,8 @@
 #define NET_CORDA_CORE_CRYPTO_DIGITALSIGNATURE_H
 
 #include "corda.h"
+#include "net/corda/core/utilities/OpaqueBytes.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
@@ -16,9 +16,6 @@ class OpaqueBytes;
 }
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
@@ -28,21 +25,19 @@ class DigitalSignature : public net::corda::core::utilities::OpaqueBytes {
 public:
     proton::binary bytes;
 
+    DigitalSignature() = default;
+
     explicit DigitalSignature(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.DigitalSignature", descriptor(), 1);
         net::corda::Parser::read_to(decoder, bytes);
     }
 
-    const std::string descriptor() { return "net.corda:8oj/eGKBZ1PitYjJnEwLCA=="; }
+    virtual const std::string descriptor() { return "net.corda:de8amhp5gGpyflz2aiXnLg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

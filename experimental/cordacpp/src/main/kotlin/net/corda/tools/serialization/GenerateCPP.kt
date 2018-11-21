@@ -98,7 +98,6 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 allHeaders += path.toString()
             }
 
-            // TODO: Topologically sort the dependencies. We can't get away with just using pre-declarations and pointer types.
             val uberHeader = listOf("#include \"corda-std-serializers.h\"") + allHeaders.map { "#include \"$it\"" }.sorted()
             val uberHeaderPath = outPath.resolve("all-messages.h")
             Files.write(uberHeaderPath, uberHeader)
@@ -113,7 +112,12 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
     private val Type.baseClass: Class<*> get() = ((this as? ParameterizedType)?.rawType as? Class<*> ?: this as Class<*>)
     private val Type.eraseGenericsToBounds: String get() = baseClass.toGenericString()
 
-    private data class GenResult(val code: String?, val dependencies: Set<Type>, val needsSpecialisationFor: Symbol?)
+    private data class GenResult(
+            val code: String?,
+            val pointerDependencies: Set<Type>,
+            val needsSpecialisationFor: Symbol?,
+            val inheritanceDependencies: Set<Type>
+    )
 
     /**
      * Invokes the given callback with the file path and the file contents that should be created.
@@ -126,7 +130,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         //
         // The factory lets us look up serializers, which gives us the fingerprints we will use to check the format
         // of the data we're decoding matches the generated code. This version of C++ support doesn't do evolution.
-        val serializerFactory: SerializerFactory = Scheme.getSerializerFactory(AMQP_STORAGE_CONTEXT)
+        val serializerFactory: SerializerFactory = Scheme.getSerializerFactory(AMQP_P2P_CONTEXT)
         // We don't want to generate the same code twice, so we keep track of the classes we already made here.
         // This set contains type names with erased type parameters in C++ form, e.g. kotlin::Pair<A, B>, not resolved
         // type parameters.
@@ -135,7 +139,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         val workQ = LinkedList<Type>()
         workQ += roots
         // Map of base type/class name (without type params) to generated code.
-        val classSources = HashMap<String, String>()
+        val classSources = HashMap<String, GenResult>()
         // Map of base type/class name (without type params) to a list of pre-declarations of classes it depends on.
         //
         // We pre-declare classes rather than do the obvious thing of importing headers, because that approach led to
@@ -157,23 +161,24 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 continue   // This can happen if we have cycles in the _type_ graph (not object graph).
             try {
                 val baseName: String = type.baseClass.name
-                val (code, dependencies, needsSpecialisationFor) = generateClassFor(type, serializerFactory, seenSoFar) ?: continue
+                val result: GenResult = generateClassFor(type, serializerFactory, seenSoFar) ?: continue
 
-                check(dependencies.none { it.baseClass.isArray }) {
-                    dependencies
-                }
+                check(result.pointerDependencies.none { it.baseClass.isArray }) { result.pointerDependencies }
 
                 // We have to pre-declare any type that appears anywhere in any field type, including in nested generics.
-                val predeclarationsNeeded: MutableSet<Type> = dependencies
+                val predeclarationsNeeded: MutableSet<Type> = result.pointerDependencies
                         .flatMap { it.allMentionedClasses }
                         .map { it.baseClass }
                         .toMutableSet()
 
-                if (needsSpecialisationFor != null) {
-                    val specialization = """template<> const std::string ${type.mangleToCPPSyntax()}::descriptor() { return "$needsSpecialisationFor"; }"""
+                if (result.needsSpecialisationFor != null) {
+                    val specialization = """template<> const std::string ${type.mangleToCPPSyntax()}::descriptor() { return "${result.needsSpecialisationFor}"; }"""
                     descriptorSpecializations.getOrPut(baseName) { LinkedHashSet() } += specialization
                     predeclarationsNeeded += type.allMentionedClasses
                 }
+
+                if (predeclarationsNeeded.isNotEmpty())
+                    classPredeclarations.getOrPut(baseName) { LinkedHashSet() }.addAll(predeclarationsNeeded)
 
                 // generateClassFor may not have actually generated any class code, if we already did so (it's already
                 // in seenSoFar). We have to let generateClassFor run at least a little bit because even if we generated
@@ -181,24 +186,28 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 // fields and that, in turn, may require us to generate more descriptor specializations. So we have to
                 // explore the dependency graph taking into account resolved type variables, even though the final
                 // emitted code is a template.
-                if (code != null)
-                    classSources[baseName] = code
+                if (result.code != null)
+                    classSources[baseName] = result
 
-                if (predeclarationsNeeded.isNotEmpty())
-                    classPredeclarations.getOrPut(baseName) { LinkedHashSet() }.addAll(predeclarationsNeeded)
-
-                workQ += dependencies
+                workQ += result.pointerDependencies
+                workQ += result.inheritanceDependencies
                 seenSoFar += type.eraseGenericsToBounds
             } catch (e: AMQPNotSerializableException) {
                 println("Warning: Skipping $type due to inability to process it: ${e.message}")
             }
         }
 
-        for ((baseName, classSource) in classSources) {
-            val path = Paths.get(baseName.replace('.', File.separatorChar).replace('$', '.') + ".h")
+        val nl = System.lineSeparator()
+        for ((baseName, genResult) in classSources) {
+            fun header(className: String) = className.replace('.', File.separatorChar).replace('$', '.') + ".h"
+            val path = Paths.get(header(baseName))
             val guardName = baseName.toUpperCase().replace('.', '_').replace('$', '_') + "_H"
             val predeclarations = classPredeclarations[baseName]?.let { formatPredeclarations(it, baseName) } ?: ""
-            val specializations = descriptorSpecializations[baseName]?.joinToString(System.lineSeparator()) ?: ""
+            val specializations = descriptorSpecializations[baseName]?.joinToString(nl) ?: ""
+            val inclusions = genResult.inheritanceDependencies
+                    .flatMap { it.allMentionedClasses }
+                    .map { header(it.baseClass.name) }
+                    .joinToString(nl) { """#include "$it""""}
             block(path, """
                 |////////////////////////////////////////////////////////////////////////////////////////////////////////
                 |// Auto-generated code. Do not edit.
@@ -207,19 +216,16 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 |#define $guardName
                 |
                 |#include "corda.h"
+                |$inclusions
                 |
-                |// Pre-declarations to speed up processing and avoid circular header dependencies.
                 |$predeclarations
-                |// End of pre-declarations.
                 |
-                |$classSource
+                |${genResult.code}
                 |
-                |// Template specializations of the descriptor() method.
                 |$specializations
-                |// End specializations.
                 |
                 |#endif
-            """.trimMargin())
+            """.trimMargin().replace(nl + nl + nl, nl))
         }
     }
 
@@ -233,8 +239,10 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             val (openings, closings) = namespaceBoilerplate("${pkg.name}.DummyClass".split('.'))
             predeclaration.appendln(openings)
             for (needed in types) {
-                val params = needed.baseClass.typeParameters
-                predeclaration.appendln("${templateHeader(params)}class ${needed.baseClass.simpleName};")
+                val baseClass = needed.baseClass
+                val params = baseClass.typeParameters
+                val name = baseClass.name.split('.').last()
+                predeclaration.appendln("${templateHeader(params)}class $name;")
             }
             predeclaration.appendln(closings)
         }
@@ -267,14 +275,17 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             return result
         }
 
+    val Type.isCordaSerializable: Boolean get() = baseClass.isAnnotationPresent(CordaSerializable::class.java)
+
     private fun generateClassFor(type: Type, serializerFactory: LocalSerializerFactory, seenSoFar: Set<String>): GenResult? {
         val fieldDeclarations = mutableListOf<String>()
-        val fieldInitializations = mutableListOf<String>()
+        val fieldReads = mutableListOf<String>()
         val dependencies = mutableSetOf<Type>()
 
         // Get the serializer created by the serialization engine, and map it to C++.
         val typeInformation: LocalTypeInformation = serializerFactory.getTypeInformation(type)
-        if (type == Instant::class.java || type == PublicKey::class.java || type == Any::class.java || type.baseClass.isInterface) {
+        if (type == Instant::class.java || type == PublicKey::class.java || type == Any::class.java ||
+                (type.baseClass.isInterface && !type.isCordaSerializable)) {
             // Some serialisers are special and need to be hand coded, or can be ignored.
             return null
         }
@@ -293,6 +304,10 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 typeInformation.properties
             }
             is LocalTypeInformation.Composable -> typeInformation.properties
+            is LocalTypeInformation.AnInterface -> {
+                println("Emitting skip class for interface $type / $descriptorSymbol")
+                emptyMap()
+            }
             else -> {
                 println("Need to write code for custom serializer '$type' / $descriptorSymbol")
                 return null
@@ -307,7 +322,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             dependencies += newDeps
             fieldDeclarations += "$declType $name;"
             val readTo = "net::corda::Parser::read_to(decoder, $name);"
-            fieldInitializations += if (!propInfo.isMandatory)
+            fieldReads += if (!propInfo.isMandatory)
                 "if (decoder.next_type() != proton::NULL_TYPE) $readTo else decoder.next();"
             else
                 readTo
@@ -321,7 +336,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         // Bail out early without generating code if we already did this class. We had to scan it anyway to discover
         // if there were any new dependencies as a result of the template substitution.
         if (type.eraseGenericsToBounds in seenSoFar)
-            return GenResult(null, dependencies, if (isGeneric) descriptorSymbol else null)
+            return GenResult(null, dependencies, if (isGeneric) descriptorSymbol else null, emptySet())
 
         // Calculate the right namespace{} blocks.
         val nameComponents = type.mangleToCPPSyntax().substringBefore('<').split("::")
@@ -329,9 +344,9 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         val undecoratedName = nameComponents.last()
 
         val descriptorFunction = if (isGeneric) {
-            "const std::string descriptor();"
+            "virtual const std::string descriptor();"
         } else {
-            "const std::string descriptor() { return \"$descriptorSymbol\"; }"
+            "virtual const std::string descriptor() { return \"$descriptorSymbol\"; }"
         }
 
         // Inheritance.
@@ -340,11 +355,9 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             is LocalTypeInformation.Abstract -> typeInformation.interfaces + typeInformation.superclass
             else -> emptyList()
         }.filterNot {
-            it.observedType.baseClass.name.startsWith("java.lang.")
+            it.observedType.baseClass.name.startsWith("java.lang.") || !it.observedType.isCordaSerializable
         }
-
         dependencies += supers.map { it.observedType }
-
         val inheritance = if (supers.isEmpty()) "" else {
             ": " + supers.joinToString(", ") { "public " + it.observedType.mangleToCPPSyntax() } + " "
         }
@@ -356,16 +369,18 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     |public:
                     |    ${fieldDeclarations.joinToString(System.lineSeparator() + (" ".repeat(4)))}
                     |
+                    |    $undecoratedName() = default;
+                    |
                     |    explicit $undecoratedName(proton::codec::decoder &decoder) {
                     |        net::corda::CompositeTypeGuard guard(decoder, "$type", descriptor(), ${fieldDeclarations.size});
-                    |        ${fieldInitializations.joinToString(System.lineSeparator() + (" ".repeat(8)))}
+                    |        ${fieldReads.joinToString(System.lineSeparator() + (" ".repeat(8)))}
                     |    }
                     |
                     |    $descriptorFunction
                     |};
                     |
                     |$namespaceClosings
-                """.trimMargin(), dependencies, if (isGeneric) descriptorSymbol else null)
+                """.trimMargin(), dependencies, if (isGeneric) descriptorSymbol else null, supers.map { it.observedType }.toSet())
     }
 
     // Java type to C++ type. See SerializerFactory.primitiveTypeNames and https://qpid.apache.org/releases/qpid-proton-0.26.0/proton/cpp/api/types_page.html
@@ -434,12 +449,13 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
                     // A plain old class OR a type variable.
                     dependencies += resolved
+                    checkNotNull(genericReturnType) { resolved }
                     "net::corda::ptr<${genericReturnType!!.mangleToCPPSyntax()}>"
                 }
             }
         }
 
-        // println("${resolved.typeName} -> $cppType     $dependencies")
+        // println("${resolved.typeName} -> $cppType     $pointerDependencies")
 
         return Pair(cppType, dependencies)
     }

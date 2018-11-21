@@ -20,8 +20,7 @@ int main() {
         return 1;
     }
 
-    auto stx = corda::parse<transactions::SignedTransaction>(bits);
-    cout << corda::dump(stx->tx_bits->bytes) << endl;
-    auto wtx = corda::parse<net::corda::core::transactions::WireTransaction>(stx->tx_bits->bytes);
+    cout << corda::dump(bits) << endl;
+    auto wtx = corda::parse<net::corda::core::transactions::WireTransaction>(bits);
     return 0;
 }

@@ -5,8 +5,8 @@
 #define NET_CORDA_CORE_TRANSACTIONS_WIRETRANSACTION_H
 
 #include "corda.h"
+#include "net/corda/core/transactions/TraversableTransaction.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
@@ -22,23 +22,21 @@ namespace corda {
 namespace core {
 namespace contracts {
 class PrivacySalt;
-class NamedByHash;
 }
 }
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
 namespace transactions {
 
-class WireTransaction : public net::corda::core::contracts::NamedByHash, public net::corda::core::transactions::TraversableTransaction {
+class WireTransaction : public net::corda::core::transactions::TraversableTransaction {
 public:
     std::list<net::corda::ptr<net::corda::core::transactions::ComponentGroup>> component_groups;
     net::corda::ptr<net::corda::core::contracts::PrivacySalt> privacy_salt;
+
+    WireTransaction() = default;
 
     explicit WireTransaction(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.WireTransaction", descriptor(), 2);
@@ -46,16 +44,12 @@ public:
         net::corda::Parser::read_to(decoder, privacy_salt);
     }
 
-    const std::string descriptor() { return "net.corda:Ii6JRtJqxq7ObI9rkFxz4w=="; }
+    virtual const std::string descriptor() { return "net.corda:XOo5Xrn01mcVjokIlH1ekA=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

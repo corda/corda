@@ -5,21 +5,18 @@
 #define NET_CORDA_CORE_CRYPTO_PARTIALMERKLETREE_PARTIALTREE_INCLUDEDLEAF_H
 
 #include "corda.h"
+#include "net/corda/core/crypto/PartialMerkleTree.PartialTree.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace net {
 namespace corda {
 namespace core {
 namespace crypto {
 class SecureHash;
-class PartialTree;
+class PartialMerkleTree$PartialTree;
 }
 }
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
@@ -29,21 +26,19 @@ class PartialMerkleTree$PartialTree$IncludedLeaf : public net::corda::core::cryp
 public:
     net::corda::ptr<net::corda::core::crypto::SecureHash> hash;
 
+    PartialMerkleTree$PartialTree$IncludedLeaf() = default;
+
     explicit PartialMerkleTree$PartialTree$IncludedLeaf(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.PartialMerkleTree$PartialTree$IncludedLeaf", descriptor(), 1);
         net::corda::Parser::read_to(decoder, hash);
     }
 
-    const std::string descriptor() { return "net.corda:T8bGbh37nPYoMfIBRP1InA=="; }
+    virtual const std::string descriptor() { return "net.corda:K4VxVeBs9tyxPmQo1p4adA=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

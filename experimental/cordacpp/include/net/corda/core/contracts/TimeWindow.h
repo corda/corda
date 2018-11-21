@@ -6,9 +6,6 @@
 
 #include "corda.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
-
-// End of pre-declarations.
 
 namespace net {
 namespace corda {
@@ -19,21 +16,19 @@ class TimeWindow {
 public:
     
 
+    TimeWindow() = default;
+
     explicit TimeWindow(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.contracts.TimeWindow", descriptor(), 0);
         
     }
 
-    const std::string descriptor() { return "net.corda:vCzptpAY4Dzmk+ZJ0z0hgg=="; }
+    virtual const std::string descriptor() { return "net.corda:vCzptpAY4Dzmk+ZJ0z0hgg=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

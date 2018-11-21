@@ -5,8 +5,8 @@
 #define NET_CORDA_CORE_CRYPTO_TRANSACTIONSIGNATURE_H
 
 #include "corda.h"
+#include "net/corda/core/crypto/DigitalSignature.h"
 
-// Pre-declarations to speed up processing and avoid circular header dependencies.
 namespace java {
 namespace security {
 class PublicKey;
@@ -23,9 +23,6 @@ class DigitalSignature;
 }
 }
 }
-
-// End of pre-declarations.
-
 namespace net {
 namespace corda {
 namespace core {
@@ -38,6 +35,8 @@ public:
     net::corda::ptr<net::corda::core::crypto::PartialMerkleTree> partial_merkle_tree;
     net::corda::ptr<net::corda::core::crypto::SignatureMetadata> signature_metadata;
 
+    TransactionSignature() = default;
+
     explicit TransactionSignature(proton::codec::decoder &decoder) {
         net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.TransactionSignature", descriptor(), 4);
         net::corda::Parser::read_to(decoder, by);
@@ -46,16 +45,12 @@ public:
         net::corda::Parser::read_to(decoder, signature_metadata);
     }
 
-    const std::string descriptor() { return "net.corda:yvZEAEk/Mol3gA1115mguQ=="; }
+    virtual const std::string descriptor() { return "net.corda:JDgI4T6c+qDdhNXY0kFjiQ=="; }
 };
 
 }
 }
 }
 }
-
-// Template specializations of the descriptor() method.
-
-// End specializations.
 
 #endif

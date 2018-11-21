@@ -27,7 +27,7 @@ sealed class LocalPropertyInformation(val isCalculated: Boolean) {
      *
      * @param observedGetter The method which can be used to obtain the value of this property from an instance of its owning type.
      */
-    data class ReadOnlyProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class ReadOnlyProperty(override val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false), HasObservedGetter
 
     /**
      * A property for which we have both a getter, and a matching slot in an array of constructor parameters.
@@ -36,7 +36,7 @@ sealed class LocalPropertyInformation(val isCalculated: Boolean) {
      * @param constructorSlot The [ConstructorSlot] to which the property corresponds, used to populate an array of
      * constructor arguments when creating instances of its owning type.
      */
-    data class ConstructorPairedProperty(val observedGetter: Method, val constructorSlot: ConstructorSlot, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class ConstructorPairedProperty(override val observedGetter: Method, val constructorSlot: ConstructorSlot, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false), HasObservedGetter
 
     /**
      * A property for which we have no getter, but for which there is a backing field a matching slot in an array of
@@ -55,12 +55,12 @@ sealed class LocalPropertyInformation(val isCalculated: Boolean) {
      * @param observedGetter The method which can be used to obtain the value of this property from an instance of its owning type.
      * @param observedSetter The method which can be used to set the value of this property on an instance of its owning type.
      */
-    data class GetterSetterProperty(val observedGetter: Method, val observedSetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false)
+    data class GetterSetterProperty(override val observedGetter: Method, val observedSetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(false), HasObservedGetter
 
     /**
      * A property for which we have only a getter method, which is annotated with [SerializableCalculatedProperty].
      */
-    data class CalculatedProperty(val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(true)
+    data class CalculatedProperty(override val observedGetter: Method, override val type: LocalTypeInformation, override val isMandatory: Boolean) : LocalPropertyInformation(true), HasObservedGetter
 }
 
 
