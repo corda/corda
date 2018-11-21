@@ -104,6 +104,7 @@ data class NetworkParameters(
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
         require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
+        packageOwnership.keys.forEach { JavaPackageName(it) }
         require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
     }
 
@@ -204,7 +205,7 @@ class ZoneVersionTooLowException(message: String) : CordaRuntimeException(messag
 @CordaSerializable
 data class JavaPackageName(val name: String) {
     init {
-        require(isPackageValid(name)) { "Invalid Java package name: $name" }
+        require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
     }
 
     /**
