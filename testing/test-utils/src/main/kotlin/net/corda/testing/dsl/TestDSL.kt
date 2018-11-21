@@ -273,7 +273,7 @@ data class TestLedgerDSLInterpreter private constructor(
         }
         transactionMap[wireTransaction.id] =
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
-        saveAsMockSignedTransaction(wireTransaction)
+        saveOptionallyAsMockSignedTransaction(wireTransaction)
         return wireTransaction
     }
 
@@ -347,9 +347,12 @@ data class TestLedgerDSLInterpreter private constructor(
     val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
     val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
 
-    private fun saveAsMockSignedTransaction (wireTransaction: WireTransaction){
-        val alicePublicKey = TestIdentity(CordaX500Name("ALICE", "London", "GB")).publicKey
-        val signatures = listOf(TransactionSignature(ByteArray(1), alicePublicKey, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID)))
-        (services.validatedTransactions as WritableTransactionStorage).addTransaction(SignedTransaction(wireTransaction, signatures))
+    private fun saveOptionallyAsMockSignedTransaction(wireTransaction: WireTransaction) {
+        val transactionStorage = services.validatedTransactions
+        if (transactionStorage is WritableTransactionStorage) {
+            val alicePublicKey = TestIdentity(CordaX500Name("ALICE", "London", "GB")).publicKey
+            val signatures = listOf(TransactionSignature(ByteArray(1), alicePublicKey, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID)))
+            transactionStorage.addTransaction(SignedTransaction(wireTransaction, signatures))
+        }
     }
 }
