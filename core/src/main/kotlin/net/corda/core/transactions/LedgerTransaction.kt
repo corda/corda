@@ -222,15 +222,7 @@ private constructor(
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
                         checkNotNull(networkParameters)
-                        val unsignedAttachment = contractAttachmentsByContract[Pair(contractClassName, false)]
-                        val signedAttachment = contractAttachmentsByContract[Pair(contractClassName, true)]
-                        val constraintAttachment =
-                            when {
-                                (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
-                                (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
-                                (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
-                                else -> throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
-                            }
+                        val constraintAttachment = resolveAttachment(contractClassName, contractAttachmentsByContract)
                         if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
@@ -239,6 +231,17 @@ private constructor(
             } else {
                 contractClassName.warnContractWithoutConstraintPropagation()
             }
+        }
+    }
+
+    private fun resolveAttachment(contractClassName: ContractClassName, contractAttachmentsByContract: Map<Pair<ContractClassName, Boolean>, ContractAttachment>): AttachmentWithContext {
+        val unsignedAttachment = contractAttachmentsByContract[Pair(contractClassName, false)]
+        val signedAttachment = contractAttachmentsByContract[Pair(contractClassName, true)]
+        return when {
+            (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
+            (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
+            (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+            else -> throw TransactionVerificationException.ContractConstraintRejection(id, contractClassName)
         }
     }
 
@@ -254,17 +257,11 @@ private constructor(
             if (state.constraint is SignatureAttachmentConstraint)
                 checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
 
-            val contractClassName = state.contract
-            val unsignedAttachment = contractAttachmentsByContract[Pair(contractClassName, false)]
-            val signedAttachment = contractAttachmentsByContract[Pair(contractClassName, true)]
+            val signedAttachment = contractAttachmentsByContract[Pair(state.contract, true)]
             val constraintAttachment =
-                    when {
-                        (state.constraint is SignatureAttachmentConstraint && signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
-                        (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
-                        (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
-                        (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
-                        else -> throw TransactionVerificationException.ContractConstraintRejection(id, contractClassName)
-                    }
+                if (state.constraint is SignatureAttachmentConstraint && signedAttachment != null)
+                    AttachmentWithContext(signedAttachment, state.contract, networkParameters!!)
+                else resolveAttachment(state.contract, contractAttachmentsByContract)
 
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
