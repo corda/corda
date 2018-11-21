@@ -14,6 +14,7 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
+import net.corda.node.internal.cordapp.set
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool
@@ -41,6 +42,7 @@ import java.util.*
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import javax.security.auth.x500.X500Principal
+import java.util.jar.Manifest
 
 @Suppress("unused")
 inline fun <reified T : Any> T.kryoSpecific(reason: String, function: () -> Unit) = if (!AMQP_ENABLED) {
@@ -180,9 +182,11 @@ fun configureDatabase(hikariProperties: Properties,
 /**
  * Convenience method for creating a fake attachment containing a file with some content.
  */
-fun fakeAttachment(filePath: String, content: String): ByteArray {
+fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<String,String> = emptyMap()): ByteArray {
     val bs = ByteArrayOutputStream()
-    JarOutputStream(bs).use { js ->
+    val manifest = Manifest()
+    manifestAttributes.forEach{ manifest[it.key] = it.value} //adding manually instead of putAll, as it requires typed keys, not strings
+    JarOutputStream(bs, manifest).use { js ->
         js.putNextEntry(ZipEntry(filePath))
         js.writer().apply { append(content); flush() }
         js.closeEntry()
