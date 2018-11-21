@@ -81,7 +81,9 @@ class NodeParametersStorage(
         val networkParameters = signedNetworkParameters.verified()
         val hash = signedNetworkParameters.raw.hash
         log.trace { "Parameters to save $networkParameters with hash $hash" }
-        hashToParameters.addWithDuplicatesAllowed(hash, signedNetworkParameters)
+        database.transaction {
+            hashToParameters.addWithDuplicatesAllowed(hash, signedNetworkParameters)
+        }
     }
 
     // TODO For the future we could get them also as signed (by network operator) attachments on transactions.
