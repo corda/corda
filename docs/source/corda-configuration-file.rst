@@ -79,8 +79,17 @@ The available config fields are listed below.
 :database: Database configuration:
 
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to REPEATABLE_READ.
+            ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix. Defaults to ``REPEATABLE_READ``.
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
+
+        :initialiseSchema: Boolean on whether to update database schema at startup (or create when node starts for the first time).
+            Defaults to ``true``. If set to ``false`` on startup, the node will validate if it's running against the compatible database schema.
+
+        :initialiseAppSchema: The property allows to override (downgrade) ``database.initialiseSchema`` for the Hibernate
+            DDL generation for CorDapp schemas. ``UPDATE`` performs an update of CorDapp schemas, while ``VALID`` only verifies
+            their integrity and ``NONE`` performs no check. By default (if the property is not specified) CorDapp schemas
+            creation is controlled by ``initialiseSchema``. When ``initialiseSchema`` is set to false then ``initialiseAppSchema``
+            may be set as ``VALID`` or ``NONE`` only.
 
 :dataSourceProperties: This section is used to configure the jdbc connection and database driver used for the nodes persistence.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently

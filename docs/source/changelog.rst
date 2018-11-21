@@ -7,6 +7,11 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* New configuration property `database.initialiseAppSchema` with values `UPDATE`, `VALIDATE` and `NONE`.
+  The property controls the behavior of the Hibernate DDL generation. `UPDATE` performs an update of CorDapp schemas, while
+  `VALID` only verifies their integrity.  The property does not affect the node-specific DDL handling and
+   complements `database.initialiseSchema` to disable DDL handling altogether.
+
 * Transaction building and verification enforces new contract attachment version non-downgrade rule.
   For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
   See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
