@@ -3,9 +3,13 @@ package net.corda.testing.dsl
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowException
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.uncheckedCast
@@ -15,6 +19,8 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.services.MockAttachmentStorage
@@ -267,7 +273,7 @@ data class TestLedgerDSLInterpreter private constructor(
         }
         transactionMap[wireTransaction.id] =
                 WireTransactionWithLocation(transactionLabel, wireTransaction, transactionLocation)
-
+        saveAsMockSignedTransaction(wireTransaction)
         return wireTransaction
     }
 
@@ -340,4 +346,10 @@ data class TestLedgerDSLInterpreter private constructor(
 
     val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
     val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
+
+    private fun saveAsMockSignedTransaction (wireTransaction: WireTransaction){
+        val alicePublicKey = TestIdentity(CordaX500Name("ALICE", "London", "GB")).publicKey
+        val signatures = listOf(TransactionSignature(ByteArray(1), alicePublicKey, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID)))
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(SignedTransaction(wireTransaction, signatures))
+    }
 }
