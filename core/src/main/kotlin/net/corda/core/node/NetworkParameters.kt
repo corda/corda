@@ -4,6 +4,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
+import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -104,15 +105,6 @@ data class NetworkParameters(
          * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
          */
         private fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
-
-        // Check if a string is a legal Java package name.
-        private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
-            Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
-        }
-
-        fun requirePackageValid(name: String) {
-            require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
-        }
 
         // Make sure that packages don't overlap so that ownership is clear.
         private fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->

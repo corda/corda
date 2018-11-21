@@ -3,7 +3,7 @@ package net.corda.bootstrapper
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.node.NetworkParameters.Companion.requirePackageValid
+import net.corda.core.internal.requirePackageValid
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import picocli.CommandLine
