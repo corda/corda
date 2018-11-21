@@ -22,7 +22,9 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.lazyMapped
+import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -178,12 +180,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val extraAttachmentIds =
                 if (hashConstrainedInputs.isNotEmpty() && signatureConstrainedOutputs.isNotEmpty()) {
                     val unsignedContractClassNames = hashConstrainedInputs.map { it.state.contract }
-                    println("Ledger txn: unsigned contractClassNames = $unsignedContractClassNames")
+                    log.debug { "Hash->Signature constraints migration: Ledger txn unsigned contractClassNames = $unsignedContractClassNames" }
                     checkNotNull(attachmentStorage)
                     // TODO: filter query by contract version
                     val attachmentQueryCriteria = AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(unsignedContractClassNames), isSignedCondition = Builder.equal(true))
                     val signedAttachmentIds = attachmentStorage!!.queryAttachments(attachmentQueryCriteria)
-                    println("Ledger txn: signed AttachmentIds = $signedAttachmentIds")
+                    log.debug { "Hash->Signature constraints migration: Ledger txn signed attachmentIds = $signedAttachmentIds" }
                     signedAttachmentIds
                 } else emptyList()
 
@@ -326,6 +328,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
+        private val log = loggerFor<LedgerTransaction>()
+        private const val DEFAULT_MAX_TX_SIZE = 10485760
+
         @CordaInternal
         @Deprecated("Do not use, this is internal API")
         fun createComponentGroups(inputs: List<StateRef>,
