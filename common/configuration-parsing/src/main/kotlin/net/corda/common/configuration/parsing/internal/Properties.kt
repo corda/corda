@@ -208,8 +208,35 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
     }
 
     override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
-        // TODO sollecitom here
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+
+        // TODO sollecitom see if you can extract this
+        return object : Configuration.Property.Definition.Required<MAPPED> {
+
+            override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = this@FunctionalListProperty.describe(configuration, serialiseValue)
+
+            override fun valueIn(configuration: Config) = convert.invoke(this@FunctionalListProperty.valueIn(configuration)).value()
+
+            override fun optional(): Configuration.Property.Definition.Optional<MAPPED> = OptionalDelegatedProperty(this)
+
+            override fun validate(target: Config, options: Configuration.Validation.Options): Validated<Config, Configuration.Validation.Error> {
+
+                val errors = mutableSetOf<Configuration.Validation.Error>()
+                errors += this@FunctionalListProperty.validate(target, options).errors
+                if (errors.isEmpty()) {
+                    errors += convert.invoke(this@FunctionalListProperty.valueIn(target)).mapErrors { error -> error.with(delegate.key, mappedTypeName) }.errors
+                }
+                return Validated.withResult(target, errors)
+            }
+
+            override val typeName: String = mappedTypeName
+
+            override val key = delegate.key
+            override val isMandatory = delegate.isMandatory
+            override val isSensitive = delegate.isSensitive
+            override val schema = delegate.schema
+
+            override fun toString() = "\"$key\": \"$typeName\""
+        }
     }
 }
 
