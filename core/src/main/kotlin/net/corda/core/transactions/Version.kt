@@ -12,8 +12,8 @@ class Version(val version: String) : Comparable<Version> {
     override fun compareTo(that: Version): Int {
         if (that == null)
             return 1
-        val thisParts = version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        val thatParts = version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val thisParts = this.version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val thatParts = that.version.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val length = Math.max(thisParts.size, thatParts.size)
         for (i in 0 until length) {
             val thisPart = if (i < thisParts.size)
@@ -39,4 +39,7 @@ class Version(val version: String) : Comparable<Version> {
             return false
         return if (this.javaClass != that.javaClass) false else this.compareTo((that as Version?)!!) == 0
     }
+
+    override fun toString() = version
+
 }
