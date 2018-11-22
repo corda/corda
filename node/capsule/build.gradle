@@ -56,6 +56,7 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
 
     capsuleManifest {
         applicationVersion = corda_release_version
+        applicationId = "net.corda.node.CordaEnterprise"
         // See experimental/quasar-hook/README.md for how to generate.
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         systemProperties['visualvm.display.name'] = 'CordaEnterprise'
