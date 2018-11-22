@@ -79,6 +79,8 @@
       <module name="demobench_test" target="1.8" />
       <module name="djvm_main" target="1.8" />
       <module name="djvm_test" target="1.8" />
+      <module name="docker_main" target="1.8" />
+      <module name="docker_test" target="1.8" />
       <module name="docs_main" target="1.8" />
       <module name="docs_source_example-code_integrationTest" target="1.8" />
       <module name="docs_source_example-code_main" target="1.8" />

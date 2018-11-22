@@ -7,7 +7,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
@@ -75,8 +74,6 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = Defaults.jmxReporterType,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val cryptoServiceName: SupportedCryptoServices? = null,
-        override val cryptoServiceConf: String? = null,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
 ) : NodeConfiguration {
     internal object Defaults {
@@ -203,7 +200,6 @@ data class NodeConfigurationImpl(
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
-        errors += validateCryptoService()
         return errors
     }
 
@@ -224,17 +220,6 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
         if (h2port != null && h2Settings != null) {
             errors += "cannot specify both 'h2port' and 'h2Settings'"
-        }
-        return errors
-    }
-
-    private fun validateCryptoService(): List<String> {
-        val errors = mutableListOf<String>()
-        if (cryptoServiceName == null && cryptoServiceConf != null) {
-            errors += "'cryptoServiceName' is mandatory when 'cryptoServiceConf' is specified"
-        }
-        if (notary != null && !(cryptoServiceName == null || cryptoServiceName == SupportedCryptoServices.BC_SIMPLE)) {
-            errors += "Notary node with a non supported 'cryptoServiceName' has been detected"
         }
         return errors
     }
