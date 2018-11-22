@@ -12,10 +12,6 @@ import java.time.Duration
 
 @DeleteForDJVM
 abstract class NotaryService : SingletonSerializeAsToken() {
-    companion object {
-
-    }
-
     abstract val services: ServiceHub
     abstract val notaryIdentityKey: PublicKey
 
