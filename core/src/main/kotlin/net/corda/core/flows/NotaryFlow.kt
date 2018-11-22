@@ -13,6 +13,7 @@ import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -98,7 +99,7 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty })
                 else -> ctx
             }
             return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))

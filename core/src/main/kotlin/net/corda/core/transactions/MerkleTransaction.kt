@@ -147,7 +147,9 @@ class FilteredTransaction internal constructor(
                 wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
                 if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
-                wtx.references.forEachIndexed { internalIndex, it -> filter(it, REFERENCES_GROUP.ordinal, internalIndex) }
+                // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
+                // when filtering. Thus, to filter-in all [references] based on type, one should use the wrapper type [ReferenceStateRef] and not [StateRef].
+                wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one
@@ -344,3 +346,8 @@ class ComponentVisibilityException(val id: SecureHash, val reason: String) : Cor
 @KeepForDJVM
 @CordaSerializable
 class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")
+
+/** Wrapper over [StateRef] to be used when filtering reference states. */
+@KeepForDJVM
+@CordaSerializable
+data class ReferenceStateRef(val stateRef: StateRef)
