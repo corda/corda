@@ -6,11 +6,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.AttachmentWithContext
-import net.corda.core.internal.FlowStateMachine
-import net.corda.core.internal.StatePointerSearch
-import net.corda.core.internal.ensureMinimumPlatformVersion
-import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -127,14 +123,15 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             WireTransaction(
-                    WireTransaction.createComponentGroups(
+                    createComponentGroups(
                             inputStates(),
                             resolvedOutputs,
                             commands,
                             (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
                             notary,
                             window,
-                            referenceStates),
+                            referenceStates
+                    ),
                     privacySalt
             )
         }
