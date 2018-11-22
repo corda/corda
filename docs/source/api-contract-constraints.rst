@@ -67,17 +67,38 @@ Contract/State Agreement
 
 Starting with Corda 4, ``ContractState``s must explicitly indicate which ``Contract`` they belong to. When a transaction is
 verified, the contract bundled with each state in the transaction must be its "owning" contract, otherwise we cannot guarantee that
-the ``ContractState`` will be verified against the constraints that should apply to it.
+the transition of the ``ContractState`` will be verified against the business rules that should apply to it.
 
 There are two mechanisms for indicating ownership. One is to annotate the ``ContractState`` with the ``BelongsToContract`` annotation,
 indicating the ``Contract`` class to which it is tied:
 
+// sourcecode:: java
+
+    @BelongToContract(MyContract.class)
+    public class MyState implements ContractState {
+        // implementation goes here
+    }
+
 .. sourcecode:: kotlin
 
     @BelongsToContract(MyContract::class)
-    data class MyState(val value: Int) : ContractState
+    data class MyState(val value: Int) : ContractState {
+        // implementation goes here
+    }
 
 The other is to define the ``ContractState`` class as an inner class of the ``Contract`` class
+
+.. sourcecode:: java
+
+    public class MyContract implements Contract {
+    
+        public static class MyState implements ContractState {
+            // state implementation goes here
+        }
+
+        // contract implementation goes here
+    }
+
 
 .. sourcecode:: kotlin
 
