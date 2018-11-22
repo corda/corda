@@ -40,15 +40,6 @@ class GenericsTests {
 
     private fun <T : Any> BytesAndSchemas<T>.printSchema() = if (VERBOSE) println("${this.schema}\n") else Unit
 
-    private fun MutableMap<Any, AMQPSerializer<Any>>.printKeyToType() {
-        if (!VERBOSE) return
-
-        forEach {
-            println("Key = ${it.key} - ${it.value.type.typeName}")
-        }
-        println()
-    }
-
     @Test
     fun twoDifferentTypesSameParameterizedOuter() {
         data class G<A>(val a: A)
@@ -57,11 +48,7 @@ class GenericsTests {
 
         val bytes1 = SerializationOutput(factory).serializeAndReturnSchema(G("hi")).apply { printSchema() }
 
-        factory.serializersByDescriptor.printKeyToType()
-
         val bytes2 = SerializationOutput(factory).serializeAndReturnSchema(G(121)).apply { printSchema() }
-
-        factory.serializersByDescriptor.printKeyToType()
 
         listOf(factory, testDefaultFactory()).forEach { f ->
             DeserializationInput(f).deserialize(bytes1.obj).apply { assertEquals("hi", this.a) }
@@ -94,14 +81,10 @@ class GenericsTests {
 
         val bytes = ser.serializeAndReturnSchema(G("hi")).apply { printSchema() }
 
-        factory.serializersByDescriptor.printKeyToType()
-
         assertEquals("hi", DeserializationInput(factory).deserialize(bytes.obj).a)
         assertEquals("hi", DeserializationInput(altContextFactory).deserialize(bytes.obj).a)
 
         val bytes2 = ser.serializeAndReturnSchema(Wrapper(1, G("hi"))).apply { printSchema() }
-
-        factory.serializersByDescriptor.printKeyToType()
 
         printSeparator()
 
@@ -161,21 +144,18 @@ class GenericsTests {
         ser.serialize(Wrapper(Container(InnerA(1)))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals(1, c.b.a_a) }
-                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
 
         ser.serialize(Wrapper(Container(InnerB(1)))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals(1, c.b.a_b) }
-                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
 
         ser.serialize(Wrapper(Container(InnerC("Ho ho ho")))).apply {
             factories.forEach {
                 DeserializationInput(it).deserialize(this).apply { assertEquals("Ho ho ho", c.b.a_c) }
-                it.serializersByDescriptor.printKeyToType(); printSeparator()
             }
         }
     }
@@ -217,7 +197,6 @@ class GenericsTests {
                     ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
             )): SerializedBytes<*> {
         val bytes = SerializationOutput(factory).serializeAndReturnSchema(a)
-        factory.serializersByDescriptor.printKeyToType()
         bytes.printSchema()
         return bytes.obj
     }

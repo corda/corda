@@ -6,8 +6,7 @@ import java.lang.reflect.Type
 /**
  * Once we have the complete graph of types requiring carpentry to hand, we can use it to sort those types in reverse-
  * dependency order, i.e. beginning with those types that have no dependencies on other types, then the types that
- * depended on those types, and so on. This means we can feed types directly to the [RemoteTypeCarpenter], and don't
- * have to use the [CarpenterMetaSchema].
+ * depended on those types, and so on. This means we can feed types in this order directly to the [RemoteTypeCarpenter].
  *
  * @param typesRequiringCarpentry The set of [RemoteTypeInformation] for types that are not reachable by the current
  * classloader.
