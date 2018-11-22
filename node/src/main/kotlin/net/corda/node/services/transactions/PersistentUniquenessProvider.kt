@@ -119,7 +119,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         val rate = throughput
         val nrStates = nrQueuedStates.get()
         log.debug { "rate: $rate, queueSize: $nrStates" }
-        if (rate > 0.0 && nrStates > 0) {
+        if (rate > 0.0 && nrStates > 100) {
             return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
