@@ -13,7 +13,11 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -34,7 +38,11 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
-import net.corda.node.services.statemachine.interceptors.*
+import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
+import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
@@ -47,11 +55,13 @@ import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
-import java.util.*
-import java.util.concurrent.*
+import java.util.HashSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.streams.toList
 
 /**
@@ -70,12 +80,6 @@ class SingleThreadedStateMachineManager(
 ) : StateMachineManager, StateMachineManagerInternal {
     companion object {
         private val logger = contextLogger()
-
-        /**
-         * Maximum time that this state machine will accept to wait for a timed flow. Any request to wait longer
-         * will lead to a warning and will then be ignored.
-         */
-        private const val maxAcceptableTimeoutSeconds = 7200
     }
 
     private class Flow(val fiber: FlowStateMachineImpl<*>, val resultFuture: OpenFuture<Any?>)
@@ -595,10 +599,6 @@ class SingleThreadedStateMachineManager(
     private fun resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
         if (timeoutSeconds < serviceHub.configuration.flowTimeout.timeout.seconds) {
             logger.debug { "Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is shorter than default of ${serviceHub.configuration.flowTimeout.timeout.seconds} seconds." }
-            return
-        }
-        if (timeoutSeconds > maxAcceptableTimeoutSeconds) {
-            logger.warn("Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is more than the acceptable maximum of $maxAcceptableTimeoutSeconds seconds - is there a bug in the estimation logic of the counterparty?")
             return
         }
         mutex.locked {

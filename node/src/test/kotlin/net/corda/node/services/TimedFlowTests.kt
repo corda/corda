@@ -6,7 +6,11 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FinalityFlow
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
@@ -19,7 +23,6 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import net.corda.core.utilities.days
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
@@ -31,8 +34,16 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.*
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNetFlowTimeOut
+import net.corda.testing.node.MockNetNotaryConfig
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeConfigOverrides
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.InternalMockNodeParameters
+import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
 import org.junit.Before
 import org.junit.BeforeClass
@@ -236,32 +247,6 @@ class TimedFlowTests {
             waitETA = waitEtaThreshold
         }
     }
-
-    @Test
-    fun `timed flow cannot update its ETA to really large number`() {
-        try {
-            waitETA = 10.days
-            node.run {
-                val issueTx = signInitialTransaction(notary) {
-                    setTimeWindow(services.clock.instant(), 30.seconds)
-                    addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
-                }
-                val flow = NotaryFlow.Client(issueTx)
-                val progressTracker = flow.progressTracker
-                assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
-                val progressTrackerDone = getDoneFuture(progressTracker)
-
-                val resultFuture = services.startFlow(flow).resultFuture
-                val notarySignatures = resultFuture.get(10, TimeUnit.SECONDS)
-                (issueTx + notarySignatures).verifyRequiredSignatures()
-                progressTrackerDone.get()
-            }
-        } finally {
-            waitETA = waitEtaThreshold
-        }
-    }
-
-
 
     private fun TestStartedNode.signInitialTransaction(notary: Party, block: TransactionBuilder.() -> Any?): SignedTransaction {
         return services.signInitialTransaction(
