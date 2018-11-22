@@ -1,5 +1,6 @@
-package net.corda.core.transactions
+package net.corda.core.cordapp
 
+//TODO non-downgrade-rule comments
 class Version(val version: String) : Comparable<Version> {
 
     init {
@@ -41,5 +42,4 @@ class Version(val version: String) : Comparable<Version> {
     }
 
     override fun toString() = version
-
 }

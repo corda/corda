@@ -6,6 +6,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.cordapp.Version
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
@@ -14,7 +15,6 @@ import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -23,6 +23,7 @@ import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
+import java.util.jar.Attributes
 import java.util.jar.Manifest
 
 /**
@@ -163,7 +164,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
-        val inputContractClassToJarVersion = resolveContractAttachmentVersion(resolvedInputs, resolveAttachment, resolveContractAttachment)
+        val inputContractClassToJarVersion = resolveContractAttachmentVersion(resolvedInputs, resolveAttachment, resolveContractAttachment, resolveContractAttachment)
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
@@ -185,33 +186,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
 
         return ltx
-    }
-
-    private fun resolveContractAttachmentVersion(states: List<StateAndRef<ContractState>>,
-                                                 resolveAttachment: (SecureHash) -> Attachment?,
-                                                 resolveContractAttachment: (StateRef) -> Attachment?)
-            : Map<ContractClassName, Set<Version>> {
-//        val contractClassAndAttachmentId: List<Pair<ContractClassName, AttachmentId>> = states.map {
-//            Pair(it.state.contract, resolveContractAttachment(it.ref))
-//        }.filter { it.second != null }.map { Pair(it.first, it.second as AttachmentId) }
-//
-//        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = contractClassAndAttachmentId.map { x ->
-//            Pair(x.first, resolveAttachment(x.second))
-//        }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
-
-        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
-            Pair(it.state.contract, resolveContractAttachment(it.ref))
-        }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
-
-        val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
-                .map { Pair(it.first, it.second.openAsJAR().manifest) }.filter { it.second != null && it.second.mainAttributes.getValue("Implementation-Version") !=null }
-        //TODO is MANINFEST optional?
-
-        val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
-                .map { Pair(it.first, Version(it.second.mainAttributes.getValue("Implementation-Version"))) }
-
-        return contractClassAndVersion.groupBy { it.first }
-                .mapValues { it.value.map { p -> p.second }.toSet() }
     }
 
     /**
@@ -357,6 +331,56 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 // For backwards compatibility revert to using the node classloader.
                 services.loadState(stateRef).serialize()
             }
+        }
+
+        @CordaInternal
+        fun resolveContractAttachmentVersionX(states: List<StateAndRef<ContractState>>,
+                                                     resolveAttachment: (SecureHash) -> Attachment?,
+                                                     resolveContractAttachment: (StateRef) -> Attachment?)
+                : Map<ContractClassName, Set<Version>> {
+//        val contractClassAndAttachmentId: List<Pair<ContractClassName, AttachmentId>> = states.map {
+//            Pair(it.state.contract, resolveContractAttachment(it.ref))
+//        }.filter { it.second != null }.map { Pair(it.first, it.second as AttachmentId) }
+//
+//        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = contractClassAndAttachmentId.map { x ->
+//            Pair(x.first, resolveAttachment(x.second))
+//        }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
+
+            val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
+                Pair(it.state.contract, resolveContractAttachment(it.ref))
+            }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
+
+            val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
+                    .map { Pair(it.first, it.second.openAsJAR().manifest) }
+                    .filter { it.second != null && it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION) != null }
+
+            val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
+                    .map { Pair(it.first, Version(it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION))) }
+
+            return contractClassAndVersion.groupBy { it.first }
+                    .mapValues { it.value.map { p -> p.second }.toSet() }
+        }
+
+        //TODO non-downgrade-rule resolveAttachment fun obsolete
+        @CordaInternal
+        fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName,StateRef>>,
+                                             resolveAttachment: (SecureHash) -> Attachment?,
+                                             resolveContractAttachment: (StateRef) -> Attachment?)
+                : Map<ContractClassName, Set<Version>> {
+
+            val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
+                Pair(it.first, resolveContractAttachment(it.second))
+            }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
+
+            val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
+                    .map { Pair(it.first, it.second.openAsJAR().manifest) }
+                    .filter { it.second != null && it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION) != null }
+
+            val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
+                    .map { Pair(it.first, Version(it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION))) }
+
+            return contractClassAndVersion.groupBy { it.first }
+                    .mapValues { it.value.map { p -> p.second }.toSet() }
         }
     }
 

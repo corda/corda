@@ -5,6 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
+import net.corda.core.cordapp.Version
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
@@ -92,10 +93,31 @@ private constructor(
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 inputStatesContractClassNameToVersions: Map<ContractClassName, Set<Version>>
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToVersions).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
+            }
+        }
+
+        /**
+         * Verify that versions contract class version of output states is not lower that versions of relevant input states.
+         */
+        //TODO non-downgrade-rule throw generic error and do not wrap in Transaction one here, so txId doesn't need to be passed
+        @CordaInternal
+        fun requireCompatibleContractClassVersions(contractClassName: ContractClassName, inputContractClassVersions: Set<Version>?, outputAttachment: Attachment, txId : SecureHash?) {
+            if (inputContractClassVersions != null && inputContractClassVersions.isNotEmpty()) {
+                val implementationVersion = outputAttachment.openAsJAR()
+                        .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
+                        ?: throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, "UNKNOWN")
+                val version = try {
+                    Version(implementationVersion)
+                } catch (e: IllegalArgumentException) {
+                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, implementationVersion)
+                }
+                if (inputContractClassVersions.any { version < it }) {
+                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, version.toString())
+                }
             }
         }
     }
@@ -152,21 +174,10 @@ private constructor(
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         contractAttachmentsByContract.forEach { contractClassName, attachment ->
             val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
-            if (contractClassVersions != null && contractClassVersions.isNotEmpty()) {
-                val implementationVersion = attachment.openAsJAR()
-                        .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, "UNKNOWN")
-                val version = try {
-                    Version(implementationVersion)
-                } catch (e: IllegalArgumentException) {
-                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, implementationVersion)
-                }
-                if (contractClassVersions.any { version < it }) {
-                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(this.id, contractClassName, version.toString())
-                }
-            }
+            requireCompatibleContractClassVersions(contractClassName, contractClassVersions, attachment, this.id)
         }
     }
+
     /**
      * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
      * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
