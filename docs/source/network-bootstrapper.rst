@@ -247,81 +247,180 @@ To give the following:
 
 .. note:: The whitelist can only ever be appended to. Once added a contract implementation can never be removed.
 
-Package namespace ownership
-----------------------------
+Modifying the network parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Package namespace ownership is a Corda security feature that allows a compatibility zone to give ownership of parts of the Java package namespace to registered users (e.g. CorDapp development organisations).
-The exact mechanism used to claim a namespace is up to the zone operator. A typical approach would be to accept an SSL
-certificate with the domain in it as proof of domain ownership, or to accept an email from that domain.
+The bootstrapper creates a network parameters file when bootstrapping a network, using a set of sensible defaults. However, if you would like
+to override these defaults when testing, there are two ways of doing this. Options can be overridden via the command line or by supplying a config
+file. In the case of the same parameter being overridden via the command line and being present in the config file, the command line value
+will take precedence.
+
+Overriding network parameters via command line
+----------------------------------------------
+
+The ``--minimum-platform-version``, ``--max-message-size``, ``--max-transaction-size`` and ``--event-horizon`` command line parameters can
+be used to override the default network parameters. See `Command-line options`_ for more information.
+
+Overriding network parameters via a file
+----------------------------------------
+
+You can provide a network parameters overrides file using the following syntax:
+
+``java -jar network-bootstrapper-VERSION.jar --network-parameters-overrides=<filename>``
+
+Or alternatively, by using the short form version:
+
+``java -jar network-bootstrapper-VERSION.jar -n=<filename>``
+
+The network parameter overrides file is a YAML file with the following fields, all of which are optional. Any field that is not provided will be
+ignored. When bootstrapping a new network, the default value will be used. When updating the network parameters, the previous value will be kept.
+
+.. note:: All fields can be used with placeholders for environment variables. For example: ``${KEY_STORE_PASSWORD}`` would be replaced by the contents of environment
+variable ``KEY_STORE_PASSWORD``. See: :ref:`corda-configuration-hiding-sensitive-data` .
+
+The available config fields are listed below:
+
+:minimumPlatformVersion: The minimum supported version of the Corda platform that is required for nodes in the network.
+
+:maxMessageSize: The maximum permitted message size in bytes. This is currently ignored but will be used in a future release.
+
+:maxTransactionSize: The maximum permitted transaction size in bytes.
+
+:eventHorizon: Time after which nodes will be removed from the network map if they have not been seen during this period.
+
+:packageOwnership: A list of package owners. See `Package namespace ownership`_ for more information. For each package owner the following fields
+    are required:
+
+    :packageName: Java package name (e.g `com.my_company` ).
+
+    :keystore: The path of the keystore file containing the signed certificate.
+
+    :keystorePassword: The password for the given keystore (not to be confused with the key password).
+
+    :keystoreAlias: The alias for the name associated with the certificate to be associated with the package namespace.
+
+An example config file:
+
+.. parsed-literal::
+
+    minimumPlatformVersion=4
+    maxMessageSize=10485760
+    maxTransactionSize=524288000
+    eventHorizon="30 days"
+    packageOwnership=[
+        {
+            packageName="com.example"
+            keystore="myteststore"
+            keystorePassword="MyStorePassword"
+            keystoreAlias="MyKeyAlias"
+        }
+    ]
+
+Package namespace ownership
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Package namespace ownership is a Corda security feature that allows a compatibility zone to give ownership of parts of the Java package
+namespace to registered users (e.g. CorDapp development organisations). The exact mechanism used to claim a namespace is up to the zone
+operator. A typical approach would be to accept an SSL certificate with the domain in it as proof of domain ownership, or to accept an email from that domain.
 
 .. note:: Read more about *Package ownership* :doc:`here<design/data-model-upgrades/package-namespace-ownership>`.
 
 A Java package namespace is case insensitive and cannot be a sub-package of an existing registered namespace.
 See `Naming a Package <https://docs.oracle.com/javase/tutorial/java/package/namingpkgs.html>`_ and `Naming Conventions <https://www.oracle.com/technetwork/java/javase/documentation/codeconventions-135099.html#28840 for guidelines and conventions>`_ for guidelines on naming conventions.
 
-Registration of a java package namespace requires creation of a signed certificate as generated by the
+Registration of a java package namespace requires the creation of a signed certificate as generated by the
 `Java keytool <https://docs.oracle.com/javase/8/docs/technotes/tools/windows/keytool.html>`_.
 
-The following four items are passed as a semi-colon separated string to the ``--register-package-owner`` command:
+The packages can be registered by supplying a network parameters override config file via the commandline, using the ``--network-parameters-overrides`` command.
 
-    1. Java package name (e.g `com.my_company` ).
-    2. Keystore file refers to the full path of the file containing the signed certificate.
-    3. Password refers to the key store password (not to be confused with the key password).
-    4. Alias refers to the name associated with a certificate containing the public key to be associated with the package namespace.
+For each package to be registered, the following are required:
 
-Let's use the `Example CorDapp <https://github.com/corda/cordapp-example>`_ to initialise a simple network, and then register and unregister a package namespace.
+:packageName: Java package name (e.g `com.my_company` ).
+
+:keystore: The path of the keystore file containing the signed certificate.
+
+:keystorePassword: The password for the given keystore (not to be confused with the key password).
+
+:keystoreAlias: The alias for the name associated with the certificate to be associated with the package namespace.
+
+Using the `Example CorDapp <https://github.com/corda/cordapp-example>`_ as an example, we will initialise a simple network and then register and unregister a package namespace.
 Checkout the Example CorDapp and follow the instructions to build it `here <https://docs.corda.net/tutorial-cordapp.html#building-the-example-cordapp>`_.
 
 .. note:: You can point to any existing bootstrapped corda network (this will have the effect of updating the associated network parameters file).
 
-1. Create a new public key to use for signing the java package namespace we wish to register:
+#. Create a new public key to use for signing the java package namespace we wish to register:
 
-.. code-block:: shell
+    .. code-block:: shell
 
-    $JAVA_HOME/bin/keytool -genkeypair -keystore _teststore -storepass MyStorePassword -keyalg RSA -alias MyKeyAlias -keypass MyKeyPassword -dname "O=Alice Corp, L=Madrid, C=ES"
+        $JAVA_HOME/bin/keytool -genkeypair -keystore _teststore -storepass MyStorePassword -keyalg RSA -alias MyKeyAlias -keypass MyKeyPassword -dname "O=Alice Corp, L=Madrid, C=ES"
 
-This will generate a key store file called ``_teststore`` in the current directory.
+    This will generate a key store file called ``_teststore`` in the current directory.
 
-2. Register the package namespace to be claimed by the public key generated above:
+#. Create a ``network-parameters.conf`` file in the same directory, with the following information:
 
-.. code-block:: shell
+    .. parsed-literal::
 
-    # Register the java package namespace using the bootstrapper tool
-    java -jar network-bootstrapper.jar --dir build/nodes --register-package-owner com.example;./_teststore;MyStorePassword;MyKeyAlias
+        packageOwnership=[
+            {
+                packageName="com.example"
+                keystore="_teststore"
+                keystorePassword="MyStorePassword"
+                keystoreAlias="MyKeyAlias"
+            }
+        ]
 
-3. Unregister the package namespace:
+#. Register the package namespace to be claimed by the public key generated above:
 
-.. code-block:: shell
+    .. code-block:: shell
 
-    # Unregister the java package namespace using the bootstrapper tool
-    java -jar network-bootstrapper.jar --dir build/nodes --unregister-package-owner com.example
+        # Register the java package namespace using the bootstrapper tool
+        java -jar network-bootstrapper.jar --dir build/nodes --network-parameter-overrides=network-parameters.conf
+
+
+#. To unregister the package namespace, edit the ``network-parameters.conf`` file to remove the package:
+
+    .. parsed-literal::
+
+        packageOwnership=[]
+
+#. Unregister the package namespace:
+
+    .. code-block:: shell
+
+        # Unregister the java package namespace using the bootstrapper tool
+        java -jar network-bootstrapper.jar --dir build/nodes --network-parameter-overrides=network-parameters.conf
 
 Command-line options
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 The network bootstrapper can be started with the following command-line options:
 
 .. code-block:: shell
 
-    bootstrapper [-hvV] [--no-copy] [--dir=<dir>] [--logging-level=<loggingLevel>]
-                 [--minimum-platform-version=<minimumPlatformVersion>]
-                 [--register-package-owner java-package-namespace=keystore-file:password:alias]
-                 [--unregister-package-owner java-package-namespace]
-                 [COMMAND]
+    bootstrapper [-hvV] [--no-copy] [--dir=<dir>] [--event-horizon=<eventHorizon>]
+             [--logging-level=<loggingLevel>]
+             [--max-message-size=<maxMessageSize>]
+             [--max-transaction-size=<maxTransactionSize>]
+             [--minimum-platform-version=<minimumPlatformVersion>]
+             [-n=<networkParametersFile>] [COMMAND]
 
 * ``--dir=<dir>``: Root directory containing the node configuration files and CorDapp JARs that will form the test network.
-  It may also contain existing node directories. Defaults to the current directory.
+    It may also contain existing node directories. Defaults to the current directory.
 * ``--no-copy``: Don't copy the CorDapp JARs into the nodes' "cordapps" directories.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--help``, ``-h``: Show this help message and exit.
 * ``--version``, ``-V``: Print version information and exit.
-* ``--minimum-platform-version``: The minimum platform version to use in the generated network-parameters.
-* ``--register-package-owner``: Register a java package namespace with its owners public key.
-* ``--unregister-package-owner``: Unregister a java package namespace.
+* ``--minimum-platform-version``: The minimum platform version to use in the network-parameters.
+* ``--max-message-size``: The maximum message size to use in the network-parameters, in bytes.
+* ``--max-transaction-size``: The maximum transaction size to use in the network-parameters, in bytes.
+* ``--event-horizon``: The event horizon to use in the network-parameters.
+* ``--network-parameter-overrides=<networkParametersFile>``, ``-n=<networkParametersFile>`: Overrides the default network parameters with those
+    in the given file. See `Overriding network parameters via a file`_ for more information.
+
 
 Sub-commands
-^^^^^^^^^^^^
+------------
 
 ``install-shell-extensions``: Install ``bootstrapper`` alias and auto completion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 

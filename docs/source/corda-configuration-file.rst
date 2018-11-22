@@ -283,7 +283,7 @@ Configuring a node where the Corda Compatibility Zone's registration and Network
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
 
-Fields Override
+Fields override
 ---------------
 JVM options or environmental variables prefixed with ``corda.`` can override ``node.conf`` fields.
 Provided system properties can also set values for absent fields in ``node.conf``.
@@ -294,7 +294,7 @@ This is an example of adding/overriding the keyStore password :
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
 
-CRL Configuration
+CRL configuration
 -----------------
 The Corda Network provides an endpoint serving an empty certificate revocation list for the TLS-level certificates.
 This is intended for deployments that do not provide a CRL infrastructure but still require a strict CRL mode checking.
@@ -313,7 +313,9 @@ Together with the above configuration `tlsCertCrlIssuer` option needs to be set 
 This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
 In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.
 
-Hiding Sensitive Data
+.. _corda-configuration-hiding-sensitive-data:
+
+Hiding sensitive data
 ---------------------
 A frequent requirement is that configuration files must not expose passwords to unauthorised readers. By leveraging environment variables, it is possible to hide passwords and other similar fields.
 
