@@ -22,10 +22,7 @@ import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.*
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -240,7 +237,7 @@ class NetworkMapUpdaterTest {
         assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
         updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }
@@ -258,7 +255,7 @@ class NetworkMapUpdaterTest {
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
-        val paramsFromFile = signedNetworkParams.verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+        val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
         assertEquals(newParameters, paramsFromFile)
         assertEquals(newHash, server.latestParametersAccepted(ourKeyPair.public))
     }

@@ -46,7 +46,10 @@ enum class CertRole(val validParents: NonEmptySet<CertRole?>, val isIdentity: Bo
     LEGAL_IDENTITY(NonEmptySet.of(DOORMAN_CA, NODE_CA), true, true),
 
     /** Confidential (limited visibility) identity of a legal entity. */
-    CONFIDENTIAL_LEGAL_IDENTITY(NonEmptySet.of(LEGAL_IDENTITY), true, false);
+    CONFIDENTIAL_LEGAL_IDENTITY(NonEmptySet.of(LEGAL_IDENTITY), true, false),
+
+    /** Signing certificate for Network Parameters. */
+    NETWORK_PARAMETERS(NonEmptySet.of(null), false, false);
 
     companion object {
         private val values by lazy(LazyThreadSafetyMode.NONE, CertRole::values)
