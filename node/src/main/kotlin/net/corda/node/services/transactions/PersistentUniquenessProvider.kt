@@ -208,9 +208,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         }
     }
 
+    private fun previouslyCommitted(txId: SecureHash): Boolean {
+        val session = currentDBSession()
+        return session.find(CommittedTransaction::class.java, txId.toString()) != null
+    }
+
     private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
         val session = currentDBSession()
-        if (session.find(CommittedTransaction::class.java, txId.toString()) == null) {
+        if (!previouslyCommitted(txId)) {
             val conflictError = NotaryError.Conflict(txId, conflictingStates)
             log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
             throw NotaryInternalException(conflictError)
@@ -239,6 +244,9 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
         } else {
+            if (states.isEmpty() && previouslyCommitted(txId)) {
+                return
+            }
             throw NotaryInternalException(outsideTimeWindowError)
         }
     }
