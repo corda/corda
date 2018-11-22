@@ -218,27 +218,6 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  */
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
 
-/**
- * A wrapper for a legal java package. Used by the network parameters to store package ownership.
- */
-@CordaSerializable
-data class JavaPackageName(val name: String) {
-    init {
-        require(isPackageValid(name)) { "Invalid Java package name: $name" }
-    }
-
-    /**
-     * Returns true if the [fullClassName] is in a subpackage of the current package.
-     * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
-     *
-     * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
-     * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
-     */
-    fun owns(fullClassName: String) = fullClassName.startsWith("$name.", ignoreCase = true)
-
-    override fun toString() = name
-}
-
 // Check if a string is a legal Java package name.
 private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
     Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
