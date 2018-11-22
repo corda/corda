@@ -78,6 +78,10 @@ object InteractiveShell {
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
     private var onExit: () -> Unit = {}
+
+    @JvmStatic
+    fun getCordappsClassloader() = classLoader
+
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
