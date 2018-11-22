@@ -333,34 +333,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             }
         }
 
-        @CordaInternal
-        fun resolveContractAttachmentVersionX(states: List<StateAndRef<ContractState>>,
-                                                     resolveAttachment: (SecureHash) -> Attachment?,
-                                                     resolveContractAttachment: (StateRef) -> Attachment?)
-                : Map<ContractClassName, Set<Version>> {
-//        val contractClassAndAttachmentId: List<Pair<ContractClassName, AttachmentId>> = states.map {
-//            Pair(it.state.contract, resolveContractAttachment(it.ref))
-//        }.filter { it.second != null }.map { Pair(it.first, it.second as AttachmentId) }
-//
-//        val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = contractClassAndAttachmentId.map { x ->
-//            Pair(x.first, resolveAttachment(x.second))
-//        }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
-
-            val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
-                Pair(it.state.contract, resolveContractAttachment(it.ref))
-            }.filter { it.second != null }.map { Pair(it.first, it.second as Attachment) }
-
-            val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
-                    .map { Pair(it.first, it.second.openAsJAR().manifest) }
-                    .filter { it.second != null && it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION) != null }
-
-            val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
-                    .map { Pair(it.first, Version(it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION))) }
-
-            return contractClassAndVersion.groupBy { it.first }
-                    .mapValues { it.value.map { p -> p.second }.toSet() }
-        }
-
         //TODO non-downgrade-rule resolveAttachment fun obsolete
         @CordaInternal
         fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName,StateRef>>,
