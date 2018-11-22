@@ -324,7 +324,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
         //TODO non-downgrade-rule modify to search only for specific ContractClass not all
         val inputContractClassToJarVersion = resolveContractAttachmentVersion(states = inputStateRefs?.map { Pair(services.loadState(it).contract, it) } ?: emptyList(),
-                resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveContractAttachment = { services.loadContractAttachment(it) })
         requireCompatibleContractClassVersions(contractClassName, inputContractClassToJarVersion[contractClassName], attachmentToUse, SecureHash.zeroHash)
 
