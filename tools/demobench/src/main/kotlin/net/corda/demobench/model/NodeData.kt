@@ -25,8 +25,13 @@ object SuggestedDetails {
             "Bank of Golden Gates" to "San Francisco"
     )
 
-    var cursor = 0
+    private var cursor = 0
     val nextBank: Pair<String, String> get() = banks[cursor++ % banks.size]
+
+    fun excludeNames(exists: (String) -> Boolean) {
+        cursor = 0
+        for (bank in banks) if (!exists(bank.first)) break else cursor++
+    }
 }
 
 class NodeData {
