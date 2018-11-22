@@ -4,6 +4,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
+import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -47,7 +48,7 @@ data class NetworkParameters(
         @AutoAcceptable val epoch: Int,
         @AutoAcceptable val whitelistedContractImplementations: Map<String, List<AttachmentId>>,
         val eventHorizon: Duration,
-        @AutoAcceptable val packageOwnership: Map<JavaPackageName, PublicKey>
+        @AutoAcceptable val packageOwnership: Map<String, PublicKey>
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
@@ -92,9 +93,27 @@ data class NetworkParameters(
     companion object {
         private val memberPropertyPartition = NetworkParameters::class.declaredMemberProperties.asSequence()
                 .partition { it.isAutoAcceptable() }
-        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({it.name}, {it.javaGetter})
+        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({ it.name }, { it.javaGetter })
         private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
         val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
+
+        /**
+         * Returns true if the [fullClassName] is in a subpackage of [packageName].
+         * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
+         *
+         * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
+         * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
+         */
+        private fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
+
+        // Make sure that packages don't overlap so that ownership is clear.
+        fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
+            packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("${currentPackage}.") }
+        }
+
+        private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
+            return this.findAnnotation<AutoAcceptable>() != null
+        }
     }
 
     init {
@@ -104,6 +123,7 @@ data class NetworkParameters(
         require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
         require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
         require(!eventHorizon.isNegative) { "eventHorizon must be a positive value" }
+        packageOwnership.keys.forEach(::requirePackageValid)
         require(noOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
     }
 
@@ -165,7 +185,7 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
-    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { it.owns(contractClassName) }.values.singleOrNull()
+    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
 
     /**
      * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
@@ -173,7 +193,7 @@ data class NetworkParameters(
      */
     fun canAutoAccept(newNetworkParameters: NetworkParameters, excludedParameterNames: Set<String>): Boolean {
         return nonAutoAcceptableGetters.none { valueChanged(newNetworkParameters, it) } &&
-               autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
+                autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
     }
 
     private fun valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
@@ -222,11 +242,6 @@ data class JavaPackageName(val name: String) {
 // Check if a string is a legal Java package name.
 private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
     Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
-}
-
-// Make sure that packages don't overlap so that ownership is clear.
-fun noOverlap(packages: Collection<JavaPackageName>) = packages.all { currentPackage ->
-    packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.name.startsWith("${currentPackage.name}.") }
 }
 
 private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {

@@ -8,7 +8,6 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
@@ -194,7 +193,7 @@ internal constructor(private val initSerEnv: Boolean,
 
     /** Entry point for the tool */
     fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides()) {
-
+        require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
@@ -468,7 +467,7 @@ fun NetworkParameters.overrideWith(override: NetworkParametersOverrides): Networ
     )
 }
 
-data class PackageOwner(val javaPackageName: JavaPackageName, val publicKey: PublicKey)
+data class PackageOwner(val javaPackageName: String, val publicKey: PublicKey)
 
 data class NetworkParametersOverrides(
         val minimumPlatformVersion: Int? = null,

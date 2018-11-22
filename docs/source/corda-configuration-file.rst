@@ -248,9 +248,14 @@ The available config fields are listed below.
                                        The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367",
                                        "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
 
-:autoAcceptNetworkParameterChanges: This flag toggles auto accepting of network parameter changes and is enabled by default. If a network operator issues a network parameter change which modifies
-                                    only auto-acceptable options and this behaviour is enabled then the changes will be accepted without any manual intervention from the node operator. See
-                                    :doc:`network-map` for more information on the update process and current auto-acceptable parameters. Set to ``false`` to disable.
+:networkParameterAcceptanceSettings: Optional settings for managing the network parameter auto-acceptance behaviour. If not provided then the defined defaults below are used.
+
+    :autoAcceptEnabled: This flag toggles auto accepting of network parameter changes. If a network operator issues a network parameter change which modifies only
+                        auto-acceptable options and this behaviour is enabled then the changes will be accepted without any manual intervention from the node operator. See
+                        :doc:`network-map` for more information on the update process and current auto-acceptable parameters. Set to ``false`` to disable. Defaults to true.
+
+    :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
+                                       more granular level. Defaults to an empty list.
 
 Examples
 --------

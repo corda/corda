@@ -6,8 +6,8 @@ import net.corda.common.configuration.parsing.internal.get
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
 import net.corda.common.validation.internal.Validated
-import net.corda.core.node.JavaPackageName
-import net.corda.core.node.noOverlap
+import net.corda.core.internal.requirePackageValid
+import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
 import net.corda.nodeapi.internal.network.PackageOwner
@@ -55,9 +55,10 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
             }
         }
 
-        private fun toPackageName(rawValue: String): Validated<JavaPackageName, Configuration.Validation.Error> {
+        private fun toPackageName(rawValue: String): Validated<String, Configuration.Validation.Error> {
             return try {
-                valid(JavaPackageName(rawValue))
+                requirePackageValid(rawValue)
+                valid(rawValue)
             } catch (e: Exception) {
                 return badValue(e.message ?: e.toString())
             }
@@ -77,7 +78,9 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
 
     override fun parseValid(configuration: Config): Valid<NetworkParametersOverrides> {
         val packageOwnership = configuration[packageOwnership]
-        if (packageOwnership != null && !noOverlap(packageOwnership.map { it.javaPackageName })) return  Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of("Package namespaces must not overlap", keyName = "packageOwnership", containingPath = listOf())).toSet())
+        if (packageOwnership != null && !NetworkParameters.noOverlap(packageOwnership.map { it.javaPackageName })) {
+            return Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of("Package namespaces must not overlap", keyName = "packageOwnership", containingPath = listOf())).toSet())
+        }
         return valid(NetworkParametersOverrides(
                 minimumPlatformVersion = configuration[minimumPlatformVersion],
                 maxMessageSize = configuration[maxMessageSize],

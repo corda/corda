@@ -4,6 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchDataFlow
@@ -77,7 +78,7 @@ class NotaryFlow {
         @Suspendable
         protected fun notarise(notaryParty: Party): UntrustworthyData<NotarisationResponse> {
             val session = initiateFlow(notaryParty)
-            val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
+            val requestSignature = generateRequestSignature()
             return if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                 sendAndReceiveValidating(session, requestSignature)
             } else {
@@ -120,6 +121,16 @@ class NotaryFlow {
             override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
                 return otherSideSession.sendAndReceiveWithRetry(payload)
             }
+        }
+
+        /**
+         * Ensure that transaction ID instances are not referenced in the serialized form in case several input states are outputs of the
+         * same transaction.
+         */
+        private fun generateRequestSignature(): NotarisationRequestSignature {
+            // TODO: This is not required any more once our AMQP serialization supports turning off object referencing.
+            val notarisationRequest = NotarisationRequest(stx.inputs.map { it.copy(txhash = SecureHash.parse(it.txhash.toString())) }, stx.id)
+            return notarisationRequest.generateSignature(serviceHub)
         }
     }
 }

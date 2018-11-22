@@ -1,7 +1,6 @@
 package net.corda.node.internal
 
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
@@ -29,6 +28,7 @@ import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
 import java.time.Instant
+import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
 class NetworkParametersTest {
@@ -91,9 +91,7 @@ class NetworkParametersTest {
                     1,
                     emptyMap(),
                     Int.MAX_VALUE.days,
-                    mapOf(
-                            JavaPackageName("com.!example.stuff") to key2
-                    )
+                    mapOf("com.!example.stuff" to key2)
             )
         }.withMessageContaining("Invalid Java package name")
 
@@ -107,13 +105,13 @@ class NetworkParametersTest {
                     emptyMap(),
                     Int.MAX_VALUE.days,
                     mapOf(
-                            JavaPackageName("com.example") to key1,
-                            JavaPackageName("com.example.stuff") to key2
+                            "com.example" to key1,
+                            "com.example.stuff" to key2
                     )
             )
         }.withMessage("multiple packages added to the packageOwnership overlap.")
 
-        NetworkParameters(1,
+        val params = NetworkParameters(1,
                 emptyList(),
                 2001,
                 2000,
@@ -122,21 +120,22 @@ class NetworkParametersTest {
                 emptyMap(),
                 Int.MAX_VALUE.days,
                 mapOf(
-                        JavaPackageName("com.example") to key1,
-                        JavaPackageName("com.examplestuff") to key2
+                        "com.example" to key1,
+                        "com.examplestuff" to key2
                 )
         )
 
-        assert(JavaPackageName("com.example").owns("com.example.something.MyClass"))
-        assert(!JavaPackageName("com.example").owns("com.examplesomething.MyClass"))
-        assert(!JavaPackageName("com.exam").owns("com.example.something.MyClass"))
+        assertEquals(params.getOwnerOf("com.example.something.MyClass"), key1)
+        assertEquals(params.getOwnerOf("com.examplesomething.MyClass"), null)
+        assertEquals(params.getOwnerOf("com.examplestuff.something.MyClass"), key2)
+        assertEquals(params.getOwnerOf("com.exam.something.MyClass"), null)
     }
 
     @Test
     fun `auto acceptance checks are correct`() {
         val packageOwnership = mapOf(
-                JavaPackageName("com.example1") to generateKeyPair().public,
-                JavaPackageName("com.example2") to generateKeyPair().public)
+                "com.example1" to generateKeyPair().public,
+                "com.example2" to generateKeyPair().public)
         val whitelistedContractImplementations = mapOf(
                 "example1" to listOf(AttachmentId.randomSHA256()),
                 "example2" to listOf(AttachmentId.randomSHA256()))

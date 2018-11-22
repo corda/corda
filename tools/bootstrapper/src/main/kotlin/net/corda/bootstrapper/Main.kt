@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
+import net.corda.cliutils.printError
 import net.corda.cliutils.start
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.PLATFORM_VERSION
@@ -78,11 +79,12 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
         return finalConfig.parseAsNetworkParametersConfiguration()
     }
 
+
     private fun <T> Collection<T>.pluralise() = if (this.count() > 1) "s" else ""
 
     private fun reportErrors(errors: Set<Configuration.Validation.Error>) {
-        "Error${errors.pluralise()} found parsing the network parameter overrides file at $networkParametersFile:".printError()
-        errors.forEach { "Error parsing ${it.pathAsString}: ${it.message}".printError() }
+        printError("Error${errors.pluralise()} found parsing the network parameter overrides file at $networkParametersFile:")
+        errors.forEach { printError("Error parsing ${it.pathAsString}: ${it.message}") }
     }
 
     override fun runProgram(): Int {
