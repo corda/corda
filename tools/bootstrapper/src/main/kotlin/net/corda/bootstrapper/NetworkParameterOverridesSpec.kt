@@ -6,7 +6,9 @@ import net.corda.common.configuration.parsing.internal.get
 import net.corda.common.configuration.parsing.internal.mapValid
 import net.corda.common.configuration.parsing.internal.nested
 import net.corda.common.validation.internal.Validated
+import net.corda.core.internal.div
 import net.corda.core.internal.requirePackageValid
+import net.corda.core.internal.toPath
 import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
@@ -39,9 +41,17 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
         private val keystoreAlias by string()
 
         override fun parseValid(configuration: Config): Validated<PackageOwner, Configuration.Validation.Error> {
+            val suppliedKeystorePath = configuration[keystore]
+            val keystorePassword = configuration[keystorePassword]
             return try {
                 val javaPackageName = configuration[packageName]
-                val ks = loadKeyStore(configuration[keystore].toAbsolutePath(), configuration[keystorePassword])
+                val absoluteKeystorePath = if (suppliedKeystorePath.isAbsolute) {
+                    suppliedKeystorePath
+                } else {
+                    //If a relative path is supplied, make it relative to the location of the config file
+                    Paths.get(configuration.origin().filename()).parent / suppliedKeystorePath.toString()
+                }.toAbsolutePath()
+                val ks = loadKeyStore(absoluteKeystorePath, keystorePassword)
                 return try {
                     val publicKey = ks.getCertificate(configuration[keystoreAlias]).publicKey
                     valid(PackageOwner(javaPackageName, publicKey))
@@ -49,9 +59,9 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
                     badValue("Keystore has not been initialized for alias ${configuration[keystoreAlias]}")
                 }
             } catch (kse: KeyStoreException) {
-                badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: ${configuration[keystore]} and keyStorePassword: ${configuration[keystorePassword]}")
+                badValue("Password is incorrect or the key store is damaged for keyStoreFilePath: $suppliedKeystorePath and keyStorePassword: $keystorePassword")
             } catch (e: IOException) {
-                badValue("Error reading the key store from the file for keyStoreFilePath: ${configuration[keystore]} and keyStorePassword: ${configuration[keystorePassword]} ${e.message}")
+                badValue("Error reading the key store from the file for keyStoreFilePath: $suppliedKeystorePath and keyStorePassword: $keystorePassword ${e.message}")
             }
         }
 

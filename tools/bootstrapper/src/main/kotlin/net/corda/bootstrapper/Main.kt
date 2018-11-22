@@ -24,47 +24,47 @@ fun main(args: Array<String>) {
     NetworkBootstrapperRunner().start(args)
 }
 
-class NetworkBootstrapperRunner(val bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()) : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
-    @Option(
-            names = ["--dir"],
-            description = [
-                "Root directory containing the node configuration files and CorDapp JARs that will form the test network.",
-                "It may also contain existing node directories."
-            ]
-    )
+class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
+    //exposed for testing
+    var bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()
+
+    @Option(names = ["--dir"],
+            description = [ "Root directory containing the node configuration files and CorDapp JARs that will form the test network.",
+                "It may also contain existing node directories."])
     var dir: Path = Paths.get(".")
 
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     var noCopy: Boolean = false
 
     @Option(names = ["--minimum-platform-version"], description = ["The minimum platform version to use in the network-parameters. Current default is $PLATFORM_VERSION."])
-    val minimumPlatformVersion: Int? = null
+    var minimumPlatformVersion: Int? = null
 
     @Option(names = ["--max-message-size"], description = ["The maximum message size to use in the network-parameters, in bytes. Current default is $DEFAULT_MAX_MESSAGE_SIZE."])
-    val maxMessageSize: Int? = null
+    var maxMessageSize: Int? = null
 
     @Option(names = ["--max-transaction-size"], description = ["The maximum transaction size to use in the network-parameters, in bytes. Current default is $DEFAULT_MAX_TRANSACTION_SIZE."])
-    val maxTransactionSize: Int? = null
+    var maxTransactionSize: Int? = null
 
     @Option(names = ["--event-horizon"], description = ["The event horizon to use in the network-parameters. Default is 30 days."])
-    val eventHorizon: Duration? = null
+    var eventHorizon: Duration? = null
 
     @Option(names = ["--network-parameter-overrides", "-n"], description = ["Overrides the default network parameters with those in the given file."])
-    val networkParametersFile: Path? = null
+    var networkParametersFile: Path? = null
+
 
     private fun verifyInputs() {
-        require(minimumPlatformVersion == null || minimumPlatformVersion > 0) { "The --minimum-platform-version parameter must be at least 1" }
-        require(eventHorizon == null || !eventHorizon.isNegative) { "The --event-horizon parameter must be a positive value" }
-        require(maxTransactionSize == null || maxTransactionSize > 0) { "The --max-transaction-size parameter must be at least 1" }
-        require(maxMessageSize == null || maxMessageSize > 0) { "The --max-message-size parameter must be at least 1" }
+        require(minimumPlatformVersion == null || minimumPlatformVersion ?: 0 > 0) { "The --minimum-platform-version parameter must be at least 1" }
+        require(eventHorizon == null || eventHorizon?.isNegative == false) { "The --event-horizon parameter must be a positive value" }
+        require(maxTransactionSize == null || maxTransactionSize ?: 0 > 0) { "The --max-transaction-size parameter must be at least 1" }
+        require(maxMessageSize == null || maxMessageSize ?: 0 > 0) { "The --max-message-size parameter must be at least 1" }
     }
 
     private fun commandLineOverrides(): Map<String, Any> {
         val overrides = mutableMapOf<String, Any>()
-        overrides += minimumPlatformVersion?.let { mapOf("minimumPlatformVersion" to minimumPlatformVersion) } ?: mutableMapOf()
-        overrides += maxMessageSize?.let { mapOf("maxMessageSize" to maxMessageSize) } ?: emptyMap()
-        overrides += maxTransactionSize?.let { mapOf("maxTransactionSize" to maxTransactionSize) } ?: emptyMap()
-        overrides += eventHorizon?.let { mapOf("eventHorizon" to eventHorizon) } ?: emptyMap()
+        overrides += minimumPlatformVersion?.let { mapOf("minimumPlatformVersion" to minimumPlatformVersion!!) } ?: mutableMapOf()
+        overrides += maxMessageSize?.let { mapOf("maxMessageSize" to maxMessageSize!!) } ?: emptyMap()
+        overrides += maxTransactionSize?.let { mapOf("maxTransactionSize" to maxTransactionSize!!) } ?: emptyMap()
+        overrides += eventHorizon?.let { mapOf("eventHorizon" to eventHorizon!!) } ?: emptyMap()
         return overrides
     }
 
@@ -73,13 +73,12 @@ class NetworkBootstrapperRunner(val bootstrapper: NetworkBootstrapperWithOverrid
         val config = if (networkParametersFile == null) {
             ConfigFactory.empty()
         } else {
-            if (!networkParametersFile.exists()) throw FileNotFoundException("Unable to find specified network parameters config file at $networkParametersFile")
-            ConfigFactory.parseFile(networkParametersFile.toFile(), parseOptions)
+            if (networkParametersFile?.exists() != true) throw FileNotFoundException("Unable to find specified network parameters config file at $networkParametersFile")
+            ConfigFactory.parseFile(networkParametersFile!!.toFile(), parseOptions)
         }
         val finalConfig = ConfigFactory.parseMap(commandLineOverrides()).withFallback(config).resolve()
         return finalConfig.parseAsNetworkParametersConfiguration()
     }
-
 
     private fun <T> Collection<T>.pluralise() = if (this.count() > 1) "s" else ""
 
@@ -90,7 +89,7 @@ class NetworkBootstrapperRunner(val bootstrapper: NetworkBootstrapperWithOverrid
 
     override fun runProgram(): Int {
         verifyInputs()
-        val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors (::reportErrors).optional ?: return ExitCodes.FAILURE
+        val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors(::reportErrors).optional ?: return ExitCodes.FAILURE
         bootstrapper.bootstrap(dir.toAbsolutePath().normalize(),
                 copyCordapps = !noCopy,
                 networkParameterOverrides = networkParameterOverrides
