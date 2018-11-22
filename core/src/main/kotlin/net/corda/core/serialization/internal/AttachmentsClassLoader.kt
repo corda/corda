@@ -62,7 +62,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                         val path = entry.name.toLowerCase().replace('\\', '/')
                         // TODO - If 2 entries are identical, it means the same file is present in both attachments, so that should be ok.
                         if (shouldCheckForNoOverlap(path, targetPlatformVersion)) {
-                            if (path in classLoaderEntries) throw TransactionVerificationException.OverlappingAttachments(path)
+                            if (path in classLoaderEntries) throw TransactionVerificationException.OverlappingAttachmentsException(path)
                             classLoaderEntries.add(path)
                         }
                     }
@@ -88,7 +88,8 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     }
 
     /**
-     * Required to prevent Jolokia from being loaded by contract code.
+     * Required to prevent classes that were excluded from the no-overlap check from being loaded by contract code.
+     * As it can lead to non-determinism.
      */
     override fun loadClass(name: String?): Class<*> {
         if (ignorePackages.any { name!!.startsWith(it) }) {

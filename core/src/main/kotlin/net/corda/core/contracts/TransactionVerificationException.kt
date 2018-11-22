@@ -207,5 +207,5 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      */
     @CordaSerializable
     @KeepForDJVM
-    class OverlappingAttachments(path: String) : Exception("Multiple attachments define a file at path `$path`.")
+    class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
 }
