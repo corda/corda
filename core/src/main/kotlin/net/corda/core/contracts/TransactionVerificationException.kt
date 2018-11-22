@@ -173,6 +173,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             """
             State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
             is bundled in TransactionState with ${state.contract}.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace('\n', ' '), null)
 
     // TODO: add reference to documentation
@@ -183,6 +185,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             State of class ${state.data::class.java.typeName} does not have a specified owning contract.
             Add the @BelongsToContract annotation to this class to ensure that it can only be bundled in a TransactionState
             with the correct contract.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent(), null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
