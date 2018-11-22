@@ -28,7 +28,6 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
                 "Both network parameters and network parameters update files don't match" +
                         "parameters advertised by network map. Please update node to use correct network parameters file."
         )
-
         class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash) : Error(
                 "Node uses parameters with hash: $previousParametersHash but network map is advertising: " +
                         "$advertisedParametersHash. Please update node to use correct network parameters file."

@@ -46,7 +46,7 @@ data class LedgerTransaction private constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        /** Network parameters that were in force when the trasnaction was notarised. */
+        /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters,
         override val references: List<StateAndRef<ContractState>>,
         val componentGroups: List<ComponentGroup>?,

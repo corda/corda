@@ -24,8 +24,7 @@ import org.apache.commons.lang.ArrayUtils
 import java.security.cert.X509Certificate
 import javax.persistence.*
 
-// TODO NetworkParametersReader + NodeParametersStorage refactor
-class NodeParametersStorage(
+class DBNetworkParametersStorage(
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence,
         // TODO It's very inefficient solution (at least at the beginning when node joins without historical data)

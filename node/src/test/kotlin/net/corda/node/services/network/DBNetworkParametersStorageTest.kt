@@ -9,7 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.NetworkParametersStorage
-import net.corda.node.internal.NodeParametersStorage
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -29,7 +29,7 @@ import org.junit.Test
 import java.io.PrintStream
 import kotlin.streams.toList
 
-class NodeParametersStorageTest {
+class DBNetworkParametersStorageTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
@@ -61,7 +61,7 @@ class NodeParametersStorageTest {
                 { null }
         )
         networkMapClient = createMockNetworkMapClient()
-        nodeParametersStorage = NodeParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
+        nodeParametersStorage = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
             database.transaction {
                 start(netParams1, DEV_ROOT_CA.certificate)
             }
