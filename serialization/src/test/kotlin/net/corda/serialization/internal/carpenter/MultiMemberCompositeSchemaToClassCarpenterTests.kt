@@ -1,57 +1,24 @@
 package net.corda.serialization.internal.carpenter
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.CompositeType
-import net.corda.serialization.internal.amqp.DeserializationInput
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
 
 class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
-    fun twoInts() {
+    fun anIntAndALong() {
         @CordaSerializable
-        data class A(val a: Int, val b: Int)
+        data class A(val a: Int, val b: Long)
 
-        val testA = 10
-        val testB = 20
-        val a = A(testA, testB)
-        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
+        val (_, env) = A(23, 42).roundTrip()
+        val carpentedInstance = env.getMangled<A>().load().new(23, 42)
 
-        val amqpObj = obj.obj
-
-        assertEquals(testA, amqpObj.a)
-        assertEquals(testB, amqpObj.b)
-        assertEquals(1, obj.envelope.schema.types.size)
-        require(obj.envelope.schema.types[0] is CompositeType)
-
-        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
-
-        assertEquals(2, amqpSchema.fields.size)
-        assertEquals("a", amqpSchema.fields[0].name)
-        assertEquals("int", amqpSchema.fields[0].type)
-        assertEquals("b", amqpSchema.fields[1].name)
-        assertEquals("int", amqpSchema.fields[1].type)
-
-        val carpenterSchema = CarpenterMetaSchema.newInstance()
-        amqpSchema.carpenterSchema(
-                classloader = ClassLoader.getSystemClassLoader(),
-                carpenterSchemas = carpenterSchema,
-                force = true)
-
-        assertEquals(1, carpenterSchema.size)
-        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }
-
-        assertNotEquals(null, aSchema)
-
-        val pinochio = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema!!)
-        val p = pinochio.constructors[0].newInstance(testA, testB)
-
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
-        assertEquals(pinochio.getMethod("getB").invoke(p), amqpObj.b)
+        assertEquals(23, carpentedInstance.get("a"))
+        assertEquals(42L, carpentedInstance.get("b"))
     }
 
     @Test
@@ -59,42 +26,65 @@ class MultiMemberCompositeSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhi
         @CordaSerializable
         data class A(val a: Int, val b: String)
 
-        val testA = 10
-        val testB = "twenty"
-        val a = A(testA, testB)
-        val obj = DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(a))
+        val (_, env) = A(23, "skidoo").roundTrip()
+        val carpentedInstance = env.getMangled<A>().load().new(23, "skidoo")
 
-        val amqpObj = obj.obj
+        assertEquals(23, carpentedInstance.get("a"))
+        assertEquals("skidoo", carpentedInstance.get("b"))
+    }
 
-        assertEquals(testA, amqpObj.a)
-        assertEquals(testB, amqpObj.b)
-        assertEquals(1, obj.envelope.schema.types.size)
-        require(obj.envelope.schema.types[0] is CompositeType)
+    interface Parent {
+        @get:SerializableCalculatedProperty
+        val doubled: Int
+    }
 
-        val amqpSchema = obj.envelope.schema.types[0] as CompositeType
+    @Test
+    fun calculatedValues() {
+        data class C(val i: Int): Parent {
+            @get:SerializableCalculatedProperty
+            val squared = (i * i).toString()
 
-        assertEquals(2, amqpSchema.fields.size)
-        assertEquals("a", amqpSchema.fields[0].name)
-        assertEquals("int", amqpSchema.fields[0].type)
-        assertEquals("b", amqpSchema.fields[1].name)
-        assertEquals("string", amqpSchema.fields[1].type)
+            override val doubled get() = i * 2
+        }
 
-        val carpenterSchema = CarpenterMetaSchema.newInstance()
-        amqpSchema.carpenterSchema(
-                classloader = ClassLoader.getSystemClassLoader(),
-                carpenterSchemas = carpenterSchema,
-                force = true)
+        val (amqpObj, envelope) = C(2).roundTrip()
+        val remoteTypeInformation = envelope.typeInformationFor<C>()
 
-        assertEquals(1, carpenterSchema.size)
-        val aSchema = carpenterSchema.carpenterSchemas.find { it.name == classTestName("A") }
+        assertEquals("""
+            C: Parent
+              doubled: int
+              i: int
+              squared: String
+              """.trimIndent(), remoteTypeInformation.prettyPrint())
 
-        assertNotEquals(null, aSchema)
+        val pinochio = remoteTypeInformation.mangle<C>().load()
+        assertNotEquals(pinochio.name, C::class.java.name)
+        assertNotEquals(pinochio, C::class.java)
 
-        val pinochio = ClassCarpenterImpl(whitelist = AllWhitelist).build(aSchema!!)
-        val p = pinochio.constructors[0].newInstance(testA, testB)
+        // Note that params are given in alphabetical order: doubled, i, squared
+        val p = pinochio.new(4, 2, "4")
 
-        assertEquals(pinochio.getMethod("getA").invoke(p), amqpObj.a)
-        assertEquals(pinochio.getMethod("getB").invoke(p), amqpObj.b)
+        assertEquals(2, p.get("i"))
+        assertEquals("4", p.get("squared"))
+        assertEquals(4, p.get("doubled"))
+
+        val upcast = p as Parent
+        assertEquals(upcast.doubled, amqpObj.doubled)
+    }
+
+    @Test
+    fun implementingClassDoesNotCalculateValue() {
+        class C(override val doubled: Int): Parent
+
+        val (_, env) = C(5).roundTrip()
+
+        val pinochio = env.getMangled<C>().load()
+        val p = pinochio.new(5)
+
+        assertEquals(5, p.get("doubled"))
+
+        val upcast = p as Parent
+        assertEquals(5, upcast.doubled)
     }
 }
 
