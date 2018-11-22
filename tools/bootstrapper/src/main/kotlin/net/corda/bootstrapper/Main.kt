@@ -12,6 +12,7 @@ import net.corda.core.internal.exists
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_MESSAGE_SIZE
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_TRANSACTION_SIZE
+import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridableParameters
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
 import picocli.CommandLine.Option
 import java.io.FileNotFoundException
@@ -23,7 +24,7 @@ fun main(args: Array<String>) {
     NetworkBootstrapperRunner().start(args)
 }
 
-class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
+class NetworkBootstrapperRunner(val bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()) : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
     @Option(
             names = ["--dir"],
             description = [
@@ -90,7 +91,7 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     override fun runProgram(): Int {
         verifyInputs()
         val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors (::reportErrors).optional ?: return ExitCodes.FAILURE
-        NetworkBootstrapper().bootstrap(dir.toAbsolutePath().normalize(),
+        bootstrapper.bootstrap(dir.toAbsolutePath().normalize(),
                 copyCordapps = !noCopy,
                 networkParameterOverrides = networkParameterOverrides
         )

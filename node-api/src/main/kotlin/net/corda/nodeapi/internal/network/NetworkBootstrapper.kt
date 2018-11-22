@@ -56,7 +56,7 @@ class NetworkBootstrapper
 internal constructor(private val initSerEnv: Boolean,
                      private val embeddedCordaJar: () -> InputStream,
                      private val nodeInfosGenerator: (List<Path>) -> List<Path>,
-                     private val contractsJarConverter: (Path) -> ContractsJar) {
+                     private val contractsJarConverter: (Path) -> ContractsJar) : NetworkBootstrapperWithOverridableParameters {
 
     constructor() : this(
             initSerEnv = true,
@@ -192,13 +192,12 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides()) {
+    override fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides) {
         require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }
-                    .toList()
+            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
         bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParameterOverrides)
     }
@@ -476,3 +475,7 @@ data class NetworkParametersOverrides(
         val packageOwnership: List<PackageOwner>? = null,
         val eventHorizon: Duration? = null
 )
+
+interface NetworkBootstrapperWithOverridableParameters {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
+}
