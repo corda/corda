@@ -465,6 +465,12 @@ enum class CertificateType(val keyUsage: KeyUsage, vararg val purposes: KeyPurpo
             KeyPurposeId.anyExtendedKeyUsage,
             isCA = false,
             role = CertRole.CONFIDENTIAL_LEGAL_IDENTITY
+    ),
+
+    NETWORK_PARAMETERS(
+            KeyUsage(KeyUsage.digitalSignature),
+            isCA = false,
+            role = CertRole.NETWORK_PARAMETERS
     )
 }
 
