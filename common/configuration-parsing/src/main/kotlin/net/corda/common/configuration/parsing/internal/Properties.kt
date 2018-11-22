@@ -1,10 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigObject
-import com.typesafe.config.ConfigValue
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
@@ -27,13 +23,13 @@ internal open class StandardProperty<TYPE : Any>(override val key: String, typeN
 
     override val typeName: String = schema?.let { "#${it.name ?: "Object@$key"}" } ?: typeNameArg
 
-    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = FunctionalProperty(this, mappedTypeName, extractListValue, convert)
 
     override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
 
     override fun list(): Configuration.Property.Definition.RequiredList<TYPE> = ListProperty(this)
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue {
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
 
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
@@ -79,12 +75,12 @@ private class ListProperty<TYPE : Any>(delegate: StandardProperty<TYPE>) : Requi
         return Validated.withResult(target, errors)
     }
 
-    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
 
         // TODO sollecitom see if you can extract this
         return object : Configuration.Property.Definition.Required<MAPPED> {
 
-            override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = this@ListProperty.describe(configuration, serialiseValue)
+            override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = this@ListProperty.describe(configuration, serialiseValue)
 
             override fun valueIn(configuration: Config) = convert.invoke(this@ListProperty.valueIn(configuration)).value()
 
@@ -111,7 +107,7 @@ private class ListProperty<TYPE : Any>(delegate: StandardProperty<TYPE>) : Requi
         }
     }
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue {
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
 
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
@@ -134,26 +130,26 @@ private class ListProperty<TYPE : Any>(delegate: StandardProperty<TYPE>) : Requi
     }
 }
 
-private class OptionalPropertyWithDefault<TYPE : Any>(delegate: Configuration.Property.Definition.Optional<TYPE>, private val defaultValue: TYPE) : DelegatedProperty<TYPE, Configuration.Property.Definition.Optional<TYPE>>(delegate) {
+private class OptionalPropertyWithDefault<TYPE>(delegate: Configuration.Property.Definition.Optional<TYPE>, private val defaultValue: TYPE) : DelegatedProperty<TYPE, Configuration.Property.Definition.Optional<TYPE>>(delegate) {
 
     override val isMandatory: Boolean = false
 
     override val typeName: String = delegate.typeName.removeSuffix("?")
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = delegate.describe(configuration, serialiseValue) ?: valueDescription(if (isSensitive) Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER else defaultValue, serialiseValue)
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = delegate.describe(configuration, serialiseValue) ?: valueDescription(if (isSensitive) Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER else defaultValue, serialiseValue)
 
     override fun valueIn(configuration: Config): TYPE = delegate.valueIn(configuration) ?: defaultValue
 
     override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> = delegate.validate(target, options)
 }
 
-private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Property.Definition.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
+private class FunctionalProperty<TYPE, MAPPED>(delegate: Configuration.Property.Definition.Standard<TYPE>, private val mappedTypeName: String, internal val extractListValue: (Config, String) -> List<TYPE>, private val convert: (TYPE) -> Valid<MAPPED>) : RequiredDelegatedProperty<MAPPED, Configuration.Property.Definition.Standard<TYPE>>(delegate), Configuration.Property.Definition.Standard<MAPPED> {
 
     override fun valueIn(configuration: Config) = convert.invoke(delegate.valueIn(configuration)).value()
 
     override val typeName: String = if (super.typeName == "#$mappedTypeName") super.typeName else "$mappedTypeName(${super.typeName})"
 
-    override fun <M : Any> mapValid(mappedTypeName: String, convert: (MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { target: TYPE -> this.convert.invoke(target).mapValid(convert) })
+    override fun <M> mapValid(mappedTypeName: String, convert: (MAPPED) -> Valid<M>): Configuration.Property.Definition.Standard<M> = FunctionalProperty(delegate, mappedTypeName, extractListValue, { target: TYPE -> this.convert.invoke(target).mapValid(convert) })
 
     override fun list(): Configuration.Property.Definition.RequiredList<MAPPED> = FunctionalListProperty(this)
 
@@ -167,10 +163,10 @@ private class FunctionalProperty<TYPE, MAPPED : Any>(delegate: Configuration.Pro
         return Validated.withResult(target, errors)
     }
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = delegate.describe(configuration, serialiseValue)
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue) = delegate.describe(configuration, serialiseValue)
 }
 
-private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProperty<RAW, TYPE>) : RequiredDelegatedProperty<List<TYPE>, FunctionalProperty<RAW, TYPE>>(delegate), Configuration.Property.Definition.RequiredList<TYPE> {
+private class FunctionalListProperty<RAW, TYPE>(delegate: FunctionalProperty<RAW, TYPE>) : RequiredDelegatedProperty<List<TYPE>, FunctionalProperty<RAW, TYPE>>(delegate), Configuration.Property.Definition.RequiredList<TYPE> {
 
     override val typeName: String = "List<${super.typeName}>"
 
@@ -199,7 +195,7 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
         }
     }
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue {
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
 
         if (isSensitive) {
             return valueDescription(Configuration.Property.Definition.SENSITIVE_DATA_PLACEHOLDER, serialiseValue)
@@ -207,12 +203,12 @@ private class FunctionalListProperty<RAW, TYPE : Any>(delegate: FunctionalProper
         return delegate.schema?.let { schema -> valueDescription(valueIn(configuration).asSequence().map { element -> valueDescription(element, serialiseValue) }.map { it as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it, serialiseValue) }.toList(), serialiseValue) } ?: valueDescription(valueIn(configuration), serialiseValue)
     }
 
-    override fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
 
         // TODO sollecitom see if you can extract this
         return object : Configuration.Property.Definition.Required<MAPPED> {
 
-            override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue? = this@FunctionalListProperty.describe(configuration, serialiseValue)
+            override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = this@FunctionalListProperty.describe(configuration, serialiseValue)
 
             override fun valueIn(configuration: Config) = convert.invoke(this@FunctionalListProperty.valueIn(configuration)).value()
 
@@ -245,13 +241,13 @@ private abstract class DelegatedProperty<TYPE, DELEGATE : Configuration.Property
     final override fun toString() = "\"$key\": \"$typeName\""
 }
 
-private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Configuration.Property.Definition<TYPE>) : Configuration.Property.Metadata by delegate, Configuration.Property.Definition.Optional<TYPE> {
+private class OptionalDelegatedProperty<TYPE>(private val delegate: Configuration.Property.Definition<TYPE>) : Configuration.Property.Metadata by delegate, Configuration.Property.Definition.Optional<TYPE> {
 
     override val isMandatory: Boolean = false
 
     override val typeName: String = "${delegate.typeName}?"
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = if (isSpecifiedBy(configuration)) delegate.describe(configuration, serialiseValue) else null
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue) = if (isSpecifiedBy(configuration)) delegate.describe(configuration, serialiseValue) else null
 
     override fun valueIn(configuration: Config): TYPE? {
 
@@ -278,7 +274,7 @@ private class OptionalDelegatedProperty<TYPE : Any>(private val delegate: Config
 }
 
 
-private abstract class RequiredDelegatedProperty<TYPE : Any, DELEGATE : Configuration.Property.Definition.Required<*>>(delegate: DELEGATE) : DelegatedProperty<TYPE, DELEGATE>(delegate), Configuration.Property.Definition.Required<TYPE> {
+private abstract class RequiredDelegatedProperty<TYPE, DELEGATE : Configuration.Property.Definition.Required<*>>(delegate: DELEGATE) : DelegatedProperty<TYPE, DELEGATE>(delegate), Configuration.Property.Definition.Required<TYPE> {
 
     final override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
 }
@@ -313,4 +309,4 @@ private val expectedExceptionTypes = setOf(ConfigException.Missing::class, Confi
 
 private fun isErrorExpected(error: ConfigException) = expectedExceptionTypes.any { expected -> expected.isInstance(error) }
 
-private fun valueDescription(value: Any, serialiseValue: (Any) -> ConfigValue) = serialiseValue.invoke(value)
+private fun valueDescription(value: Any?, serialiseValue: (Any?) -> ConfigValue) = serialiseValue.invoke(value)

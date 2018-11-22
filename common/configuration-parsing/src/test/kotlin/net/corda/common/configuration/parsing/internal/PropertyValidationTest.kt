@@ -90,8 +90,7 @@ class PropertyValidationTest {
         val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        // TODO sollecitom make it work with optional types
-        fun parseMax(list: List<Long>): Valid<Long> = valid(list.max()!!)
+        fun parseMax(list: List<Long>): Valid<Long?> = valid(list.max())
 
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)
 
@@ -105,13 +104,12 @@ class PropertyValidationTest {
         val value = listOf(1L, 2L, 3L)
         val configuration = configObject(key to value).toConfig()
 
-        // TODO sollecitom make it work with optional types
-        fun parseMax(list: List<Long>): Valid<Long> {
+        fun parseMax(list: List<Long>): Valid<Long?> {
 
             if (list.any { value -> value <= 1L }) {
                 return invalid(Configuration.Validation.Error.BadValue.of("All values must be greater than 1"))
             }
-            return valid(list.max()!!)
+            return valid(list.max())
         }
 
         val property = Configuration.Property.Definition.long(key).list().mapValid(::parseMax)

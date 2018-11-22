@@ -64,8 +64,7 @@ class PropertyTest {
         val value = listOf(1L, 3L, 2L)
         val configuration = configObject(key to value).toConfig()
 
-        // TODO sollecitom make it work with optional values
-        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max()!! }
+        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max() }
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -80,8 +79,7 @@ class PropertyTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        // TODO sollecitom make it work with optional values
-        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max()!! }.optional()
+        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max() }.optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -97,8 +95,7 @@ class PropertyTest {
         val value = listOf(1L, 3L, 2L)
         val configuration = configObject(key to value).toConfig()
 
-        // TODO sollecitom make it work with optional values
-        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max()!! }
+        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max() }
         println(property)
 
         assertThat(property.key).isEqualTo(key)
@@ -113,8 +110,7 @@ class PropertyTest {
         val key = "a.b.c"
         val configuration = configObject().toConfig()
 
-        // TODO sollecitom make it work with optional values
-        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max()!! }.optional()
+        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max() }.optional()
         println(property)
 
         assertThat(property.key).isEqualTo(key)
