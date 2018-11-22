@@ -37,6 +37,10 @@ object SuggestedDetails {
         }
         return banks[cursor]
     }
+
+    fun reset() {
+        cursor = 0
+    }
 }
 
 class NodeData {
