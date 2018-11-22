@@ -58,9 +58,8 @@ class TimedFlowTests {
         private lateinit var node: TestStartedNode
         private lateinit var patientNode: TestStartedNode
 
-        private const val waitEtaThresholdSeconds = NotaryServiceFlow.defaultEstimatedWaitTimeSeconds
-        private var waitETA: Duration = waitEtaThresholdSeconds.seconds
-
+        private val waitEtaThreshold: Duration = NotaryServiceFlow.defaultEstimatedWaitTime
+        private var waitETA: Duration = waitEtaThreshold
 
         init {
             LogHelper.setLevel("+net.corda.flow", "+net.corda.testing.node", "+net.corda.node.services.messaging")
@@ -202,7 +201,7 @@ class TimedFlowTests {
                 progressTrackerDone.get()
             }
         } finally {
-            waitETA = waitEtaThresholdSeconds.seconds
+            waitETA = waitEtaThreshold
         }
     }
 
@@ -234,7 +233,7 @@ class TimedFlowTests {
                 progressTrackerDone.get()
             }
         } finally {
-            waitETA = waitEtaThresholdSeconds.seconds
+            waitETA = waitEtaThreshold
         }
     }
 
@@ -258,7 +257,7 @@ class TimedFlowTests {
                 progressTrackerDone.get()
             }
         } finally {
-            waitETA = waitEtaThresholdSeconds.seconds
+            waitETA = waitEtaThreshold
         }
     }
 
@@ -311,7 +310,7 @@ class TimedFlowTests {
             }
         }
 
-        override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, waitEtaThresholdSeconds.seconds)
+        override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, waitEtaThreshold)
         override fun start() {}
         override fun stop() {}
     }

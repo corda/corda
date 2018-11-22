@@ -24,7 +24,10 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
 import net.corda.core.serialization.internal.checkpointDeserialize
 import net.corda.core.serialization.internal.checkpointSerialize
-import net.corda.core.utilities.*
+import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.Try
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.node.internal.InitiatedFlowFactory
 import net.corda.node.services.api.CheckpointStorage
 import net.corda.node.services.api.ServiceHubInternal
@@ -591,7 +594,7 @@ class SingleThreadedStateMachineManager(
 
     private fun resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
         if (timeoutSeconds < serviceHub.configuration.flowTimeout.timeout.seconds) {
-            logger.warn("Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is shorter than default of ${serviceHub.configuration.flowTimeout.timeout.seconds} seconds.")
+            logger.debug { "Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is shorter than default of ${serviceHub.configuration.flowTimeout.timeout.seconds} seconds." }
             return
         }
         if (timeoutSeconds > maxAcceptableTimeoutSeconds) {
@@ -632,7 +635,7 @@ class SingleThreadedStateMachineManager(
     private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
         return with(serviceHub.configuration.flowTimeout) {
             val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
-            maxOf(1L, timeoutDelaySeconds / 2 + (Math.random() * timeoutDelaySeconds / 2).toLong())
+            maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
         }
     }
 

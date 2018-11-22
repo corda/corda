@@ -7,12 +7,15 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.SingletonSerializeAsToken
-import net.corda.core.utilities.seconds
 import java.security.PublicKey
 import java.time.Duration
 
 @DeleteForDJVM
 abstract class NotaryService : SingletonSerializeAsToken() {
+    companion object {
+
+    }
+
     abstract val services: ServiceHub
     abstract val notaryIdentityKey: PublicKey
 
@@ -20,7 +23,7 @@ abstract class NotaryService : SingletonSerializeAsToken() {
     abstract fun stop()
 
     /** Estimated wait time until incoming requests are processed. */
-    open fun getEstimatedWaitTime(): Duration = 30.seconds
+    open fun getEstimatedWaitTime(): Duration = NotaryServiceFlow.defaultEstimatedWaitTime
 
     /**
      * Produces a notary service flow which has the corresponding sends and receives as [NotaryFlow.Client].

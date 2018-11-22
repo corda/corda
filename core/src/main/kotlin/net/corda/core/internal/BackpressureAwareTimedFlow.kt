@@ -6,7 +6,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.utilities.UntrustworthyData
 
-const val MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE = 4
+const val MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE = 4
 
 /**
  * Implementation of TimedFlow that can handle WaitTimeUpdate messages. Any flow talking to the notary should implement this and use

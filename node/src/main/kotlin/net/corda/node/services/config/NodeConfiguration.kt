@@ -153,7 +153,7 @@ data class NotaryConfig(
          * a wait time update to the client (implementation specific and dependent on the counter
          * party version).
          */
-        val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTimeSeconds,
+        val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt(),
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null
 )

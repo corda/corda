@@ -20,7 +20,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import net.corda.core.utilities.seconds
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -106,7 +105,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         if (rate > 1.0 && nrStates > 100) {
             return Duration.ofSeconds((2 * nrStates / rate).toLong())
         }
-        return NotaryServiceFlow.defaultEstimatedWaitTimeSeconds.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTime
     }
 
     /** A request processor thread. */

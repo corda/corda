@@ -6,7 +6,8 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE
+import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
 import java.time.Duration
 
@@ -17,6 +18,10 @@ import java.time.Duration
  * if any of the input states have been previously committed.
  *
  * Additional transaction validation logic can be added when implementing [validateRequest].
+ *
+ * @param otherSideSession The session with the notary client.
+ * @param service The notary service to utilise.
+ * @param etaThreshold If the ETA for processing the request, according to the service, is greater than this, notify the client.
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
 abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
@@ -29,14 +34,13 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
          * Also used as default eta message threshold so that a default wait time/default threshold will never
          * lead to an update message being sent.
          */
-        const val defaultEstimatedWaitTimeSeconds = 10
-
+        val defaultEstimatedWaitTime: Duration = 10.seconds
     }
 
     private var transactionId: SecureHash? = null
 
     @Suspendable
-    private fun counterpartyCanHandleBackPressure() = otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORMVERSION_FOR_BACKPRESSURE_MESSAGE
+    private fun counterpartyCanHandleBackPressure() = otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 
     @Suspendable
     override fun call(): Void? {

@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.Party
-import net.corda.core.utilities.seconds
 import java.time.Duration
 
 /**
@@ -26,13 +25,13 @@ interface UniquenessProvider {
     ): CordaFuture<Result>
 
     /**
-     *    Estimated time of request processing. A uniqueness provider that is aware of his own throughput can return
+     *    Estimated time of request processing. A uniqueness provider that is aware of their own throughput can return
      *    an estimate how long requests will be queued before they can be processed. Notary services use this information
      *    to potentially update clients with an expected wait time in order to avoid spamming by retries when the notary
      *    gets busy.
      */
     fun eta(): Duration {
-        return NotaryServiceFlow.defaultEstimatedWaitTimeSeconds.seconds
+        return NotaryServiceFlow.defaultEstimatedWaitTime
     }
 
     /** The outcome of committing a transaction. */

@@ -4,40 +4,14 @@ package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigObject
-import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.common.configuration.parsing.internal.get
-import net.corda.common.configuration.parsing.internal.listOrEmpty
-import net.corda.common.configuration.parsing.internal.map
-import net.corda.common.configuration.parsing.internal.mapValid
-import net.corda.common.configuration.parsing.internal.nested
+import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.node.services.config.AuthDataSourceType
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.CertChainPolicyType
-import net.corda.node.services.config.DevModeOptions
-import net.corda.node.services.config.FlowOverride
-import net.corda.node.services.config.FlowOverrideConfig
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.node.services.config.NodeH2Settings
-import net.corda.node.services.config.NodeRpcSettings
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
-import net.corda.node.services.config.Valid
-import net.corda.node.services.config.schema.parsers.attempt
-import net.corda.node.services.config.schema.parsers.badValue
-import net.corda.node.services.config.schema.parsers.toCordaX500Name
-import net.corda.node.services.config.schema.parsers.toNetworkHostAndPort
-import net.corda.node.services.config.schema.parsers.toPath
-import net.corda.node.services.config.schema.parsers.toProperties
-import net.corda.node.services.config.schema.parsers.toURL
-import net.corda.node.services.config.schema.parsers.toUUID
-import net.corda.node.services.config.schema.parsers.validValue
+import net.corda.node.services.config.schema.parsers.*
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
@@ -165,7 +139,7 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val validating by boolean()
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
     private val className by string().optional().withDefaultValue("net.corda.node.services.transactions.SimpleNotaryService")
-    private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTimeSeconds)
+    private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {
