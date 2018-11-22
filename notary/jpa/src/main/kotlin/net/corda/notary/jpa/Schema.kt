@@ -9,7 +9,8 @@ object JPANotarySchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(
                 JPAUniquenessProvider.CommittedState::class.java,
-                JPAUniquenessProvider.Request::class.java
+                JPAUniquenessProvider.Request::class.java,
+                JPAUniquenessProvider.CommittedTransaction::class.java
         )
 ) {
     override val migrationResource: String?

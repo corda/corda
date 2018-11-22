@@ -89,6 +89,13 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             @Column(name = "consuming_transaction_id", nullable = false, length = 64)
             val consumingTxHash: String)
 
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_committed_transactions")
+    class CommittedTransaction(
+            @Id
+            val transactionId: String
+    )
+
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
 
     // TODO: Collect metrics.
@@ -168,6 +175,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             for (cs in request.committedStatesEntities) {
                 session.persist(cs)
             }
+            session.persist(CommittedTransaction(request.txId.toString()))
         }
     }
 
@@ -185,7 +193,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
             val stateRef = decodeStateRef(it.id)
             val consumingTxId = SecureHash.parse(it.consumingTxHash)
             if (stateRef in references) {
-                stateRef to StateConsumptionDetails(hashOfTransactionId = consumingTxId, type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+                stateRef to StateConsumptionDetails(consumingTxId.sha256(), type = StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
             } else {
                 stateRef to StateConsumptionDetails(consumingTxId.sha256())
             }
@@ -215,17 +223,22 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
         return findAlreadyCommitted(session, allInputs, references).toMutableMap()
     }
 
-    private fun processRequest(request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): UniquenessProvider.Result {
+    private fun processRequest(session: Session, request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): UniquenessProvider.Result {
 
         val conflicts = (request.states + request.references).mapNotNull {
             if (allConflicts.containsKey(it)) it to allConflicts[it]!!
             else null
         }.toMap()
+
         val result = if (conflicts.isNotEmpty()) {
             if (isConsumedByTheSameTx(request.txId.sha256(), conflicts)) {
                 UniquenessProvider.Result.Success
             } else {
-                UniquenessProvider.Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+                if (request.states.isEmpty() && isPreviouslyNotarised(session, request.txId)) {
+                    UniquenessProvider.Result.Success
+                } else {
+                    UniquenessProvider.Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+                }
             }
         } else {
             val outsideTimeWindowError = validateTimeWindow(clock.instant(), request.timeWindow)
@@ -237,10 +250,18 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                 }
                 UniquenessProvider.Result.Success
             } else {
-                UniquenessProvider.Result.Failure(outsideTimeWindowError)
+                if (request.states.isEmpty() && isPreviouslyNotarised(session, request.txId)) {
+                    UniquenessProvider.Result.Success
+                } else {
+                    UniquenessProvider.Result.Failure(outsideTimeWindowError)
+                }
             }
         }
         return result
+    }
+
+    private fun isPreviouslyNotarised(session: Session, txId: SecureHash): Boolean {
+        return session.find(CommittedTransaction::class.java, txId.toString()) != null
     }
 
     private fun processRequests(requests: List<CommitRequest>) {
@@ -255,7 +276,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
                     val allConflicts = findAllConflicts(session, requests)
 
                     val results = requests.map { request ->
-                        processRequest(request, allConflicts, toCommit)
+                        processRequest(session, request, allConflicts, toCommit)
                     }
                     logRequests(requests)
                     commitRequests(session, toCommit)
