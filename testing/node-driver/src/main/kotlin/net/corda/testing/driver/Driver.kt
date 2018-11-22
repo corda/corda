@@ -5,7 +5,6 @@ package net.corda.testing.driver
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
@@ -13,7 +12,6 @@ import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.internal.incrementalPortAllocation
@@ -120,181 +118,6 @@ abstract class PortAllocation {
 
         override fun nextPort() = portCounter.andIncrement
     }
-}
-
-/**
- * Helper builder for configuring a [Node] from Java.
- *
- * @property providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
- *     random. Note that this must be unique as the driver uses it as a primary key!
- * @property rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
- *     all permissions.
- * @property verifierType The type of transaction verifier to use. See: [VerifierType]
- * @property customOverrides A map of custom node configuration overrides.
- * @property startInSameProcess Determines if the node should be started inside the same process the Driver is running
- *     in. If null the Driver-level value will be used.
- * @property maximumHeapSize The maximum JVM heap size to use for the node.
- * @property logLevel Logging level threshold.
- * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
- * @property regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
- */
-@Suppress("unused")
-data class NodeParameters(
-        val providedName: CordaX500Name? = null,
-        val rpcUsers: List<User> = emptyList(),
-        val verifierType: VerifierType = VerifierType.InMemory,
-        val customOverrides: Map<String, Any?> = emptyMap(),
-        val startInSameProcess: Boolean? = null,
-        val maximumHeapSize: String = "512m",
-        val logLevel: String? = null,
-        val additionalCordapps: Collection<TestCordapp> = emptySet(),
-        val regenerateCordappsOnStart: Boolean = false,
-        val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
-) {
-    /**
-     * Helper builder for configuring a [Node] from Java.
-     *
-     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
-     *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
-     *     all permissions.
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
-     * @param customOverrides A map of custom node configuration overrides.
-     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
-     *     in. If null the Driver-level value will be used.
-     * @param maximumHeapSize The maximum JVM heap size to use for the node.
-     * @param logLevel Logging level threshold.
-     */
-    constructor(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            logLevel: String? = null
-    ) : this(
-            providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            logLevel,
-            additionalCordapps = emptySet(),
-            regenerateCordappsOnStart = false
-    )
-
-    /**
-     * Helper builder for configuring a [Node] from Java.
-     *
-     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
-     *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
-     *     all permissions.
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
-     * @param customOverrides A map of custom node configuration overrides.
-     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
-     *     in. If null the Driver-level value will be used.
-     * @param maximumHeapSize The maximum JVM heap size to use for the node.
-     */
-    constructor(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String
-    ) : this(
-            providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            null,
-            additionalCordapps = emptySet(),
-            regenerateCordappsOnStart = false)
-
-    /**
-     * Helper builder for configuring a [Node] from Java.
-     *
-     * @param providedName Optional name of the node, which will be its legal name in [Party]. Defaults to something
-     *     random. Note that this must be unique as the driver uses it as a primary key!
-     * @param rpcUsers List of users who are authorised to use the RPC system. Defaults to a single user with
-     *     all permissions.
-     * @param verifierType The type of transaction verifier to use. See: [VerifierType]
-     * @param customOverrides A map of custom node configuration overrides.
-     * @param startInSameProcess Determines if the node should be started inside the same process the Driver is running
-     *     in. If null the Driver-level value will be used.
-     * @param maximumHeapSize The maximum JVM heap size to use for the node.
-     * @param additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
-     * @param regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
-     */
-    constructor(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Set<TestCordapp> = emptySet(),
-            regenerateCordappsOnStart: Boolean = false
-    ) : this(
-            providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            null,
-            additionalCordapps,
-            regenerateCordappsOnStart)
-
-    fun copy(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String
-    ) = this.copy(
-            providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            null)
-
-    fun copy(
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            logLevel: String?
-    ) = this.copy(
-            providedName,
-            rpcUsers,
-            verifierType,
-            customOverrides,
-            startInSameProcess,
-            maximumHeapSize,
-            logLevel,
-            additionalCordapps = additionalCordapps,
-            regenerateCordappsOnStart = regenerateCordappsOnStart)
-
-    fun withProvidedName(providedName: CordaX500Name?): NodeParameters = copy(providedName = providedName)
-    fun withRpcUsers(rpcUsers: List<User>): NodeParameters = copy(rpcUsers = rpcUsers)
-    fun withVerifierType(verifierType: VerifierType): NodeParameters = copy(verifierType = verifierType)
-    fun withCustomOverrides(customOverrides: Map<String, Any?>): NodeParameters = copy(customOverrides = customOverrides)
-    fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
-    fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
-    fun withLogLevel(logLevel: String?): NodeParameters = copy(logLevel = logLevel)
-    fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
-    fun withDeleteExistingCordappsDirectory(regenerateCordappsOnStart: Boolean): NodeParameters = copy(regenerateCordappsOnStart = regenerateCordappsOnStart)
 }
 
 /**
