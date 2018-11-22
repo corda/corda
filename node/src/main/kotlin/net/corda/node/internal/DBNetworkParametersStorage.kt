@@ -17,7 +17,7 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils
@@ -90,7 +90,7 @@ class DBNetworkParametersStorage(
         return if (networkMapClient != null) {
             try {
                 val signedParams = networkMapClient.getNetworkParameters(parametersHash)
-                val networkParameters = signedParams.verifiedNetworkMapCert(trustRoot)
+                val networkParameters = signedParams.verifiedNetworkParametersCert(trustRoot)
                 saveParameters(signedParams)
                 networkParameters
             } catch (e: Exception) {

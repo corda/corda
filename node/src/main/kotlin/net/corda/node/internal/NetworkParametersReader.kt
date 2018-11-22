@@ -9,7 +9,7 @@ import net.corda.node.services.network.NetworkMapClient
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
