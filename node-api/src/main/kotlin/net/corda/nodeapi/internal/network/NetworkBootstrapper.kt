@@ -395,7 +395,6 @@ internal constructor(private val initSerEnv: Boolean,
             val newNetParams = existingNetParams
                     .copy(notaries = notaryInfos, whitelistedContractImplementations = whitelist)
                     .overrideWith(networkParametersOverrides)
-                    .copy()
             if (newNetParams != existingNetParams) {
                 newNetParams.copy(
                         modifiedTime = Instant.now(),

@@ -87,8 +87,8 @@ fun CordaCliWrapper.start(args: Array<String>) {
         if (this.verbose || this.subCommands().any { it.verbose }) {
             throwable.printStackTrace()
         } else {
-            (throwable.rootMessage ?: "Use --verbose for more details").printError()
         }
+        printError(throwable.rootMessage ?: "Use --verbose for more details")
         exitProcess(ExitCodes.FAILURE)
     }
 }
@@ -141,8 +141,6 @@ abstract class CliWrapperBase(val alias: String, val description: String) : Call
         return runProgram()
     }
 
-    fun String.printError() = System.err.println("${ShellConstants.RED}$this${ShellConstants.RESET}")
-
     val specifiedLogLevel: String by lazy { System.getProperty("log4j2.level")?.toLowerCase(Locale.ENGLISH) ?: loggingLevel.name.toLowerCase(Locale.ENGLISH) }
 }
 
@@ -190,7 +188,9 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
 
 }
 
-fun printWarning(message: String) = System.err.println(message)
+fun printWarning(message: String) = System.err.println("${ShellConstants.YELLOW}$message${ShellConstants.RESET}")
+fun printError(message: String) = System.err.println("${ShellConstants.RED}$message${ShellConstants.RESET}")
+
 
 /**
  * Useful commonly used constants applicable to many CLI tools
