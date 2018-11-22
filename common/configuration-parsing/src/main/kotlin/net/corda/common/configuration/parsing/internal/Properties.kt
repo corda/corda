@@ -75,37 +75,7 @@ private class ListProperty<TYPE : Any>(delegate: StandardProperty<TYPE>) : Requi
         return Validated.withResult(target, errors)
     }
 
-    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
-
-        // TODO sollecitom see if you can extract this
-        return object : Configuration.Property.Definition.Required<MAPPED> {
-
-            override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = this@ListProperty.describe(configuration, serialiseValue)
-
-            override fun valueIn(configuration: Config) = convert.invoke(this@ListProperty.valueIn(configuration)).value()
-
-            override fun optional(): Configuration.Property.Definition.Optional<MAPPED> = OptionalDelegatedProperty(this)
-
-            override fun validate(target: Config, options: Configuration.Validation.Options): Validated<Config, Configuration.Validation.Error> {
-
-                val errors = mutableSetOf<Configuration.Validation.Error>()
-                errors += this@ListProperty.validate(target, options).errors
-                if (errors.isEmpty()) {
-                    errors += convert.invoke(this@ListProperty.valueIn(target)).mapErrors { error -> error.with(delegate.key, mappedTypeName) }.errors
-                }
-                return Validated.withResult(target, errors)
-            }
-
-            override val typeName: String = mappedTypeName
-
-            override val key = delegate.key
-            override val isMandatory = delegate.isMandatory
-            override val isSensitive = delegate.isSensitive
-            override val schema = delegate.schema
-
-            override fun toString() = "\"$key\": \"$typeName\""
-        }
-    }
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> = ListMappingProperty(this, mappedTypeName, convert)
 
     override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
 
@@ -203,37 +173,7 @@ private class FunctionalListProperty<RAW, TYPE>(delegate: FunctionalProperty<RAW
         return delegate.schema?.let { schema -> valueDescription(valueIn(configuration).asSequence().map { element -> valueDescription(element, serialiseValue) }.map { it as ConfigObject }.map(ConfigObject::toConfig).map { schema.describe(it, serialiseValue) }.toList(), serialiseValue) } ?: valueDescription(valueIn(configuration), serialiseValue)
     }
 
-    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> {
-
-        // TODO sollecitom see if you can extract this
-        return object : Configuration.Property.Definition.Required<MAPPED> {
-
-            override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = this@FunctionalListProperty.describe(configuration, serialiseValue)
-
-            override fun valueIn(configuration: Config) = convert.invoke(this@FunctionalListProperty.valueIn(configuration)).value()
-
-            override fun optional(): Configuration.Property.Definition.Optional<MAPPED> = OptionalDelegatedProperty(this)
-
-            override fun validate(target: Config, options: Configuration.Validation.Options): Validated<Config, Configuration.Validation.Error> {
-
-                val errors = mutableSetOf<Configuration.Validation.Error>()
-                errors += this@FunctionalListProperty.validate(target, options).errors
-                if (errors.isEmpty()) {
-                    errors += convert.invoke(this@FunctionalListProperty.valueIn(target)).mapErrors { error -> error.with(delegate.key, mappedTypeName) }.errors
-                }
-                return Validated.withResult(target, errors)
-            }
-
-            override val typeName: String = mappedTypeName
-
-            override val key = delegate.key
-            override val isMandatory = delegate.isMandatory
-            override val isSensitive = delegate.isSensitive
-            override val schema = delegate.schema
-
-            override fun toString() = "\"$key\": \"$typeName\""
-        }
-    }
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>): Configuration.Property.Definition.Required<MAPPED> = ListMappingProperty(this, mappedTypeName, convert)
 }
 
 private abstract class DelegatedProperty<TYPE, DELEGATE : Configuration.Property.Metadata>(protected val delegate: DELEGATE) : Configuration.Property.Metadata by delegate, Configuration.Property.Definition<TYPE> {
@@ -277,6 +217,34 @@ private class OptionalDelegatedProperty<TYPE>(private val delegate: Configuratio
 private abstract class RequiredDelegatedProperty<TYPE, DELEGATE : Configuration.Property.Definition.Required<*>>(delegate: DELEGATE) : DelegatedProperty<TYPE, DELEGATE>(delegate), Configuration.Property.Definition.Required<TYPE> {
 
     final override fun optional(): Configuration.Property.Definition.Optional<TYPE> = OptionalDelegatedProperty(this)
+}
+
+private class ListMappingProperty<TYPE, MAPPED>(private val delegate: Configuration.Property.Definition.RequiredList<TYPE>, private val mappedTypeName: String, private val convert: (List<TYPE>) -> Validated<MAPPED, Configuration.Validation.Error>) : Configuration.Property.Definition.Required<MAPPED> {
+
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue? = delegate.describe(configuration, serialiseValue)
+
+    override fun valueIn(configuration: Config) = convert.invoke(delegate.valueIn(configuration)).value()
+
+    override fun optional(): Configuration.Property.Definition.Optional<MAPPED> = OptionalDelegatedProperty(this)
+
+    override fun validate(target: Config, options: Configuration.Validation.Options): Validated<Config, Configuration.Validation.Error> {
+
+        val errors = mutableSetOf<Configuration.Validation.Error>()
+        errors += delegate.validate(target, options).errors
+        if (errors.isEmpty()) {
+            errors += convert.invoke(delegate.valueIn(target)).mapErrors { error -> error.with(delegate.key, mappedTypeName) }.errors
+        }
+        return Validated.withResult(target, errors)
+    }
+
+    override val typeName: String = mappedTypeName
+
+    override val key = delegate.key
+    override val isMandatory = delegate.isMandatory
+    override val isSensitive = delegate.isSensitive
+    override val schema = delegate.schema
+
+    override fun toString() = "\"$key\": \"$typeName\""
 }
 
 fun ConfigException.toValidationError(keyName: String? = null, typeName: String): Configuration.Validation.Error {
