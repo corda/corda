@@ -3,6 +3,7 @@ package net.corda.core.internal.rules
 import net.corda.core.contracts.ContractState
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
+import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
@@ -20,7 +21,7 @@ import java.util.jar.Manifest
  */
 object StateContractValidationEnforcementRule {
 
-    private val logger = contextLogger()
+    private val logger = LoggerFactory.getLogger(StateContractValidationEnforcementRule::class.java)
 
     private val targetVersionCache = ConcurrentHashMap<URL, Int>()
 
