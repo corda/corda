@@ -26,13 +26,16 @@ object SuggestedDetails {
     )
 
     private var cursor = 0
-    private val nextIndex: Int get() = cursor++ % banks.size
 
-    val nextBank: Pair<String, String> get() = banks[nextIndex]
-
-    fun excludeNames(exists: (String) -> Boolean) {
-        cursor = 0
-        for (bank in banks) if (!exists(bank.first)) break else nextIndex
+    fun nextBank(exists: (String) -> Boolean): Pair<String, String> {
+        for (i in 0 until banks.size) {
+            val bank = banks[cursor]
+            if (!exists(bank.first)) {
+                return bank
+            }
+            cursor = (cursor + 1) % banks.size
+        }
+        return banks[cursor]
     }
 }
 
