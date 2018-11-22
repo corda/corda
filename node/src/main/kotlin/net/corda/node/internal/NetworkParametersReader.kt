@@ -6,10 +6,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
-import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
+import net.corda.nodeapi.internal.network.*
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
@@ -93,7 +90,9 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
     // By passing in just the SignedNetworkParameters object, this class guarantees that the networkParameters property
     // could have only been derived from it.
     class NetworkParametersAndSigned(val signed: SignedNetworkParameters, trustRoot: X509Certificate) {
-        val networkParameters: NetworkParameters = signed.verifiedNetworkMapCert(trustRoot)
+        // for backwards compatibility we allow netparams to be signed with the networkmap cert,
+        // but going forwards we also accept the distinct netparams cert as well
+        val networkParameters: NetworkParameters = signed.verifiedNetworkParametersCert(trustRoot)
         operator fun component1() = networkParameters
         operator fun component2() = signed
     }
