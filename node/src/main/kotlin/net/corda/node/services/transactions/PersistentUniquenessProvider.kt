@@ -1,6 +1,6 @@
 package net.corda.node.services.transactions
 
-import com.codahale.metrics.Meter
+import com.codahale.metrics.SlidingWindowReservoir
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -13,7 +13,12 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.*
+import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.internal.notary.isConsumedByTheSameTx
+import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -27,11 +32,18 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.LinkedHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.EmbeddedId
+import javax.persistence.Entity
+import javax.persistence.GeneratedValue
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.MappedSuperclass
 import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
@@ -88,22 +100,27 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
     private val nrQueuedStates = AtomicInteger(0)
 
-    /** Measured in states per second. */
-    private val throughputMeter = Meter()
+    /**
+     * Measured in states per minute, with a minimum of 1. We take an average of the last 100 commits.
+     * Minutes was chosen to increase accuracy by 60x over seconds, given we have to use longs here.
+     */
+    private val throughputHistory = SlidingWindowReservoir(100)
+    @Volatile
+    var throughput: Double = 0.0
 
     /**
      * Estimated time of request processing.
      * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
      * It checks that there is actual traffic going on (i.e. a non-trivial number of states are queued and there
-     * is actual throughput) and then returns the expected wait time scaled up by a factor to give a probable
+     * is actual throughput) and then returns the expected wait time scaled up by a factor of 2 to give a probable
      * upper bound.
      */
     override fun eta(): Duration {
-        val rate = throughputMeter.oneMinuteRate
+        val rate = throughput
         val nrStates = nrQueuedStates.get()
         log.debug { "rate: $rate, queueSize: $nrStates" }
-        if (rate > 1.0 && nrStates > 100) {
-            return Duration.ofSeconds((2 * nrStates / rate).toLong())
+        if (rate > 0.0 && nrStates > 0) {
+            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
@@ -242,16 +259,21 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
         }
     }
 
-    private fun updateThroughputMeter(request: CommitRequest) {
+    private fun decrementQueueSize(request: CommitRequest): Int {
         val nrStates = request.states.size + request.references.size
-        throughputMeter.mark(nrStates.toLong())
         nrQueuedStates.addAndGet(-nrStates)
+        return nrStates
     }
 
     private fun processRequest(request: CommitRequest) {
-        updateThroughputMeter(request)
+        val numStates = decrementQueueSize(request)
         try {
-            commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+            val duration = elapsedTime {
+                commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+            }
+            val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
+            throughputHistory.update(maxOf(statesPerMinute, 1))
+            throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.
             respondWithSuccess(request)
         } catch (e: Exception) {
             log.warn("Error processing commit request", e)
