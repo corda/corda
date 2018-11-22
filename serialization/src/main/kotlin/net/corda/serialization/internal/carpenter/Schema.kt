@@ -74,7 +74,7 @@ fun EnumMap<SchemaFlags, Boolean>.simpleFieldAccess(): Boolean {
 class ClassSchema(
         name: String,
         fields: Map<String, Field>,
-        superclass: Schema? = null,
+        superclass: Schema? = null, // always null for now, but retained because non-null superclass is supported by carpenter.
         interfaces: List<Class<*>> = emptyList()
 ) : Schema(name, fields, superclass, interfaces, { newName, field -> field.name = newName }) {
     override fun generateFields(cw: ClassWriter) {
@@ -128,11 +128,10 @@ object CarpenterSchemaFactory {
     fun newInstance(
             name: String,
             fields: Map<String, Field>,
-            superclass: Schema? = null,
             interfaces: List<Class<*>> = emptyList(),
             isInterface: Boolean = false
     ): Schema =
-            if (isInterface) InterfaceSchema(name, fields, superclass, interfaces)
-            else ClassSchema(name, fields, superclass, interfaces)
+            if (isInterface) InterfaceSchema(name, fields, null, interfaces)
+            else ClassSchema(name, fields, null, interfaces)
 }
 

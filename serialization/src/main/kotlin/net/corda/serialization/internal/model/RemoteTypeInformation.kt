@@ -1,9 +1,5 @@
 package net.corda.serialization.internal.model
 
-import net.corda.serialization.internal.amqp.Transform
-import net.corda.serialization.internal.amqp.TransformTypes
-import java.util.*
-
 typealias TypeDescriptor = String
 
 /**
@@ -88,9 +84,9 @@ sealed class RemoteTypeInformation {
     /**
      * The [RemoteTypeInformation] emitted if we hit a cycle while traversing the graph of related types.
      */
-    data class Cycle(override val typeIdentifier: TypeIdentifier, private val _follow: () -> RemoteTypeInformation) : RemoteTypeInformation() {
-        override val typeDescriptor = typeIdentifier.name
-        val follow: RemoteTypeInformation get() = _follow()
+    data class Cycle(override val typeIdentifier: TypeIdentifier) : RemoteTypeInformation() {
+        override val typeDescriptor by lazy { follow.typeDescriptor }
+        lateinit var follow: RemoteTypeInformation
 
         override fun equals(other: Any?): Boolean = other is Cycle && other.typeIdentifier == typeIdentifier
         override fun hashCode(): Int = typeIdentifier.hashCode()
@@ -176,14 +172,14 @@ private data class RemoteTypeInformationPrettyPrinter(private val simplifyClassN
             }
 
     private fun printProperties(properties: Map<String, RemotePropertyInformation>) =
-            properties.entries.sortedBy { it.key }.joinToString("\n", "\n", "") {
+            properties.entries.joinToString("\n", "\n", "") {
                 it.prettyPrint()
             }
 
     private fun Map.Entry<String, RemotePropertyInformation>.prettyPrint(): String =
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
-                    ": " + value.type.prettyPrint(simplifyClassNames)
+                    ": " + prettyPrint(value.type)
 }
 
 data class EnumTransforms(val defaults: Map<String, String>, val renames: Map<String, String>) {

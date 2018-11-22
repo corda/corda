@@ -43,6 +43,19 @@ class TypeIdentifierTests {
                 TypeIdentifier.forGenericType(fieldType, HasStringArray::class.java).prettyPrint())
     }
 
+    @Test
+    fun `roundtrip`() {
+        assertRoundtrips(Int::class.javaPrimitiveType!!)
+        assertRoundtrips<Int>()
+        assertRoundtrips<IntArray>()
+        assertRoundtrips(List::class.java)
+        assertRoundtrips<List<String>>()
+        assertRoundtrips<Array<List<String>>>()
+        assertRoundtrips<HasStringArray>()
+        assertRoundtrips(HasArray::class.java)
+        assertRoundtrips<HasArray<String>>()
+    }
+
     private fun assertIdentified(type: Type, expected: String) =
             assertEquals(expected, TypeIdentifier.forGenericType(type).prettyPrint())
 
@@ -50,4 +63,12 @@ class TypeIdentifierTests {
             assertEquals(expected, TypeIdentifier.forGenericType(typeOf<T>()).prettyPrint())
 
     private inline fun <reified T> typeOf() = object : TypeToken<T>() {}.type
+
+    private inline fun <reified T> assertRoundtrips() = assertRoundtrips(typeOf<T>())
+
+    private fun assertRoundtrips(original: Type) {
+        val identifier = TypeIdentifier.forGenericType(original)
+        val localType = identifier.getLocalType(classLoader = ClassLoader.getSystemClassLoader())
+        assertIdentified(localType, identifier.prettyPrint())
+    }
 }
