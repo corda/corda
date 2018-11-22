@@ -51,9 +51,11 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
     )
     from configurations.capsuleRuntime.files.collect { zipTree(it) }
 
+    // Exclude the binaries for the Utimaco HSM as we cannot distribute them.
+    exclude('**/CryptoServer*.jar')
+
     capsuleManifest {
         applicationVersion = corda_release_version
-
         // See experimental/quasar-hook/README.md for how to generate.
         javaAgents = ["quasar-core-${quasar_version}-jdk8.jar=${quasarExcludeExpression}"]
         systemProperties['visualvm.display.name'] = 'CordaEnterprise'

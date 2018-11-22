@@ -196,7 +196,7 @@ class DriverDSLImpl(
         }
     }
 
-    override fun startNode(defaultParameters: NodeParameters,
+    override fun  startNode(defaultParameters: NodeParameters,
                            providedName: CordaX500Name?,
                            rpcUsers: List<User>,
                            verifierType: VerifierType,
@@ -262,7 +262,7 @@ class DriverDSLImpl(
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config())
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config(), customOverrides)
         } else {
             doneFuture(Unit)
         }
@@ -324,21 +324,23 @@ class DriverDSLImpl(
     private fun startNodeRegistration(
             providedName: CordaX500Name,
             rootCert: X509Certificate,
-            networkServicesConfig: NetworkServicesConfig
+            networkServicesConfig: NetworkServicesConfig,
+            customOverrides: Map<String, Any?> = mapOf()
     ): CordaFuture<NodeConfig> {
         val baseDirectory = baseDirectory(providedName).createDirectories()
+        val overrides = configOf(
+                "p2pAddress" to portAllocation.nextHostAndPort().toString(),
+                "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
+                "myLegalName" to providedName.toString(),
+                "rpcSettings" to mapOf(
+                        "address" to portAllocation.nextHostAndPort().toString(),
+                        "adminAddress" to portAllocation.nextHostAndPort().toString()
+                ),
+                "devMode" to false) + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
-                configOverrides = configOf(
-                        "p2pAddress" to portAllocation.nextHostAndPort().toString(),
-                        "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
-                        "myLegalName" to providedName.toString(),
-                        "rpcSettings" to mapOf(
-                                "address" to portAllocation.nextHostAndPort().toString(),
-                                "adminAddress" to portAllocation.nextHostAndPort().toString()
-                        ),
-                        "devMode" to false)
+                configOverrides = overrides
         )).checkAndOverrideForInMemoryDB()
 
         val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")

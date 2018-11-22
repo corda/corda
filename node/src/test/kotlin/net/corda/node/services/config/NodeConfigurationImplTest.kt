@@ -19,6 +19,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
@@ -223,7 +224,7 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `validation has error on non-null cryptoServiceConf for null cryptoServiceName`() {
-        val configuration = testConfiguration.copy(cryptoServiceConf = "unsupported.conf")
+        val configuration = testConfiguration.copy(cryptoServiceConf = File("unsupported.conf").toPath())
 
         val errors = configuration.validate()
 

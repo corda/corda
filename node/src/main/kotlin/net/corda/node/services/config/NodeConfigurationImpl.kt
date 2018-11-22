@@ -82,7 +82,7 @@ data class NodeConfigurationImpl(
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
         override val cryptoServiceName: SupportedCryptoServices? = Defaults.cryptoServiceName,
-        override val cryptoServiceConf: String? = Defaults.cryptoServiceConf,
+        override val cryptoServiceConf: Path? = Defaults.cryptoServiceConf,
         override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
 ) : NodeConfiguration {
     internal object Defaults {
@@ -119,7 +119,7 @@ data class NodeConfigurationImpl(
         val enableSNI: Boolean = true
         val useOpenSsl: Boolean = false
         val cryptoServiceName: SupportedCryptoServices? = null
-        val cryptoServiceConf: String? = null
+        val cryptoServiceConf: Path? = null
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)

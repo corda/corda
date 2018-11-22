@@ -1,0 +1,20 @@
+provider = {
+  host = "127.0.0.1"
+  port = 3001
+  connectionTimeout = 60000
+  endSessionOnShutdown = false
+  keepSessionAlive = true
+  keyGroup = "*"
+  keySpecifier = 2
+  storeKeysExternal = false
+}
+keyGeneration = {
+  keyOverride = false
+  keyExport = false
+  keyGenMechanism = 4
+}
+authThreshold = 1
+authentication = {
+  username = foo
+  password = bar
+}

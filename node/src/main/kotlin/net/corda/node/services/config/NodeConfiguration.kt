@@ -14,6 +14,10 @@ import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
+import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
+import net.corda.nodeapi.BrokerRpcSslOptions
+import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
+import net.corda.nodeapi.internal.config.*
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.tools.shell.SSHDConfiguration
@@ -89,7 +93,7 @@ interface NodeConfiguration {
     // TODO At the moment this is just an identifier for the desired CryptoService engine. Consider using a classname to
     //      to allow for pluggable implementations.
     val cryptoServiceName: SupportedCryptoServices?
-    val cryptoServiceConf: String? // Location for the cryptoService conf file.
+    val cryptoServiceConf: Path? // Location for the cryptoService conf file.
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
@@ -115,8 +119,9 @@ interface NodeConfiguration {
 
     fun makeCryptoService(): CryptoService {
         return when(cryptoServiceName) {
-            // Pick default BCCryptoService when null.
-            SupportedCryptoServices.BC_SIMPLE, null -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
+            SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
+            SupportedCryptoServices.UTIMACO -> UtimacoCryptoService.fromConfigurationFile(cryptoServiceConf)
+            null -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore) // Pick default BCCryptoService when null.
         }
     }
 }

@@ -75,6 +75,10 @@ dependencies {
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
 
+    // Utimaco HSM
+    compileOnly fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+    testCompile fileTree(dir: 'lib', include: 'CryptoServer*.jar')
+
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
@@ -182,6 +186,9 @@ dependencies {
     testCompile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-servlet-core:${jersey_version}"
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
+
+    // Spotify Docker client for using docker containers in integration tests
+    testCompile "com.spotify:docker-client:8.9.1"
 
     // Add runtime-only dependency on the JDBC driver for the specified DB provider (used in database integration tests)
     def DB_PROVIDER = System.getProperty("custom.databaseProvider")

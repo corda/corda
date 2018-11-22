@@ -9,11 +9,8 @@ import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.DigitalSignature
-import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.isCRLDistributionPointBlacklisted
+import net.corda.core.crypto.*
 import net.corda.core.crypto.internal.AliasPrivateKey
-import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -55,6 +52,7 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.keys.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
 import net.corda.node.services.network.NetworkMapClient
@@ -952,7 +950,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 
-    protected open fun generateKeyPair(alias: String) = cryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+    protected open fun generateKeyPair(alias: String) = when (cryptoService) {
+        is UtimacoCryptoService -> cryptoService.generateKeyPair(alias, UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+        else -> cryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+    }
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
