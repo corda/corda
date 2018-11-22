@@ -208,7 +208,7 @@ The node will shutdown now.""")
             return
         }
         val newSignedNetParams = networkMapClient.getNetworkParameters(update.newParametersHash)
-        val newNetParams = newSignedNetParams.verifiedNetworkMapCert(trustRoot)
+        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
         logger.info("Downloaded new network parameters: $newNetParams from the update: $update")
         newNetworkParameters = Pair(update, newSignedNetParams)
         val updateInfo = ParametersUpdateInfo(
@@ -233,7 +233,7 @@ The node will shutdown now.""")
         // Add persisting of newest parameters from update.
         val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
-        val newNetParams = signedNewNetParams.verifiedNetworkMapCert(trustRoot)
+        val newNetParams = signedNewNetParams.verifiedNetworkParametersCert(trustRoot)
         val newParametersHash = signedNewNetParams.raw.hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.
