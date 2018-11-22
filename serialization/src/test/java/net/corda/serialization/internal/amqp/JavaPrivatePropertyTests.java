@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp;
 
+import net.corda.serialization.internal.amqp.testutils.TestDescriptorBasedSerializerRegistry;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 
@@ -133,8 +134,9 @@ public class JavaPrivatePropertyTests {
     }
 
     @Test
-    public void singlePrivateWithConstructor() throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = testDefaultFactory();
+    public void singlePrivateWithConstructor() throws NotSerializableException {
+        TestDescriptorBasedSerializerRegistry registry = new TestDescriptorBasedSerializerRegistry();
+        SerializerFactory factory = testDefaultFactory(registry);
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -144,22 +146,14 @@ public class JavaPrivatePropertyTests {
 
         assertEquals (c.a, c2.a);
 
-        //
-        // Now ensure we actually got a private property serializer
-        //
-        Map<Object, AMQPSerializer<Object>> serializersByDescriptor = factory.getSerializersByDescriptor();
-
-        assertEquals(1, serializersByDescriptor.size());
-        ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
-        assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
-        Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
-        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PrivatePropertyReader);
+        assertEquals(1, registry.getContents().size());
     }
 
     @Test
     public void singlePrivateWithConstructorAndGetter()
-            throws NotSerializableException, NoSuchFieldException, IllegalAccessException {
-        SerializerFactory factory = testDefaultFactory();
+            throws NotSerializableException {
+        TestDescriptorBasedSerializerRegistry registry = new TestDescriptorBasedSerializerRegistry();
+        SerializerFactory factory = testDefaultFactory(registry);
 
         SerializationOutput ser = new SerializationOutput(factory);
         DeserializationInput des = new DeserializationInput(factory);
@@ -169,15 +163,6 @@ public class JavaPrivatePropertyTests {
 
         assertEquals (c.a, c2.a);
 
-        //
-        // Now ensure we actually got a private property serializer
-        //
-        Map<Object, AMQPSerializer<Object>> serializersByDescriptor = factory.getSerializersByDescriptor();
-
-        assertEquals(1, serializersByDescriptor.size());
-        ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
-        assertEquals(1, cSerializer.getPropertySerializers().getSerializationOrder().size());
-        Object[] propertyReaders = cSerializer.getPropertySerializers().getSerializationOrder().toArray();
-        assertTrue (((PropertyAccessor)propertyReaders[0]).getSerializer().getPropertyReader() instanceof PublicPropertyReader);
+        assertEquals(1, registry.getContents().size());
     }
 }

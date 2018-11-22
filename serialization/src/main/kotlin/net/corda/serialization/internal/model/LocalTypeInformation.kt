@@ -56,8 +56,19 @@ sealed class LocalTypeInformation {
          * @param type The [Type] to obtain [LocalTypeInformation] for.
          * @param lookup The [LocalTypeLookup] to use to find previously-constructed [LocalTypeInformation].
          */
-        fun forType(type: Type, lookup: LocalTypeLookup): LocalTypeInformation =
-                LocalTypeInformationBuilder(lookup).build(type, TypeIdentifier.forGenericType(type))
+        fun forType(type: Type, lookup: LocalTypeLookup): LocalTypeInformation {
+            val builder =  LocalTypeInformationBuilder(lookup)
+            val result = builder.build(type, TypeIdentifier.forGenericType(type))
+
+            // Patch every cyclic reference with a `follow` property pointing to the type information it refers to.
+            builder.cycles.forEach { cycle ->
+                cycle.follow = lookup.findOrBuild(cycle.observedType, cycle.typeIdentifier) {
+                    throw IllegalStateException("Should not be attempting to build new type information when populating a cycle")
+                }
+            }
+
+            return result
+        }
     }
 
     /**
@@ -70,6 +81,29 @@ sealed class LocalTypeInformation {
      * [RemoteTypeInformation].
      */
     abstract val typeIdentifier: TypeIdentifier
+
+    /**
+     * Get the map of [LocalPropertyInformation], for all types that have it, or an empty map otherwise.
+     */
+    val propertiesOrEmptyMap: Map<PropertyName, LocalPropertyInformation> get() = when(this) {
+        is LocalTypeInformation.Composable -> properties
+        is LocalTypeInformation.Abstract -> properties
+        is LocalTypeInformation.AnInterface -> properties
+        is LocalTypeInformation.NonComposable -> properties
+        is LocalTypeInformation.Opaque -> expand.propertiesOrEmptyMap
+        else -> emptyMap()
+    }
+
+    /**
+     * Get the list of interfaces, for all types that have them, or an empty list otherwise.
+     */
+    val interfacesOrEmptyList: List<LocalTypeInformation> get() = when(this) {
+        is LocalTypeInformation.Composable -> interfaces
+        is LocalTypeInformation.Abstract -> interfaces
+        is LocalTypeInformation.AnInterface -> interfaces
+        is LocalTypeInformation.NonComposable -> interfaces
+        else -> emptyList()
+    }
 
     /**
      * Obtain a multi-line, recursively-indented representation of this type information.
@@ -101,11 +135,10 @@ sealed class LocalTypeInformation {
      */
     data class Cycle(
             override val observedType: Type,
-            override val typeIdentifier: TypeIdentifier,
-            private val _follow: () -> LocalTypeInformation) : LocalTypeInformation() {
-        val follow: LocalTypeInformation get() = _follow()
+            override val typeIdentifier: TypeIdentifier) : LocalTypeInformation() {
+        lateinit var follow: LocalTypeInformation
 
-        // Custom equals / hashcode because otherwise the "follow" lambda makes equality harder to reason about.
+        // Custom equals / hashcode omitting "follow"
         override fun equals(other: Any?): Boolean =
                 other is Cycle &&
                         other.observedType == observedType &&
@@ -121,7 +154,10 @@ sealed class LocalTypeInformation {
      */
     data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier,
                       private val _expand: () -> LocalTypeInformation) : LocalTypeInformation() {
-        val expand: LocalTypeInformation get() = _expand()
+        /**
+         * In some rare cases, e.g. during Exception serialisation, we may want to "look inside" an opaque type.
+         */
+        val expand: LocalTypeInformation by lazy { _expand() }
 
         // Custom equals / hashcode because otherwise the "expand" lambda makes equality harder to reason about.
         override fun equals(other: Any?): Boolean =
@@ -202,6 +238,7 @@ sealed class LocalTypeInformation {
      *
      * @param constructor [LocalConstructorInformation] for the constructor used when building instances of this type
      * out of dictionaries of typed values.
+     * @param evolutionConstructors Evolution constructors in ascending version order.
      * @param properties [LocalPropertyInformation] for the properties of the interface.
      * @param superclass [LocalTypeInformation] for the superclass of the underlying class of this type.
      * @param interfaces [LocalTypeInformation] for the interfaces extended by this interface.
@@ -211,7 +248,7 @@ sealed class LocalTypeInformation {
             override val observedType: Type,
             override val typeIdentifier: TypeIdentifier,
             val constructor: LocalConstructorInformation,
-            val evolverConstructors: List<EvolverConstructorInformation>,
+            val evolutionConstructors: List<EvolutionConstructorInformation>,
             val properties: Map<PropertyName, LocalPropertyInformation>,
             val superclass: LocalTypeInformation,
             val interfaces: List<LocalTypeInformation>,
@@ -312,7 +349,7 @@ data class LocalConstructorInformation(
  * Represents information about a constructor that is specifically to be used for evolution, and is potentially matched
  * with a different set of properties to the regular constructor.
  */
-data class EvolverConstructorInformation(
+data class EvolutionConstructorInformation(
         val constructor: LocalConstructorInformation,
         val properties: Map<String, LocalPropertyInformation>)
 
@@ -330,16 +367,16 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
         with(typeInformation) {
             when (this) {
                 is LocalTypeInformation.Abstract ->
-                    typeIdentifier.prettyPrint() +
+                    typeIdentifier.prettyPrint(simplifyClassNames) +
                             printInheritsFrom(interfaces, superclass) +
                             indentAnd { printProperties(properties) }
                 is LocalTypeInformation.AnInterface ->
-                    typeIdentifier.prettyPrint() + printInheritsFrom(interfaces)
-                is LocalTypeInformation.Composable -> typeIdentifier.prettyPrint() +
+                    typeIdentifier.prettyPrint(simplifyClassNames) + printInheritsFrom(interfaces)
+                is LocalTypeInformation.Composable -> typeIdentifier.prettyPrint(simplifyClassNames) +
                         printConstructor(constructor) +
                         printInheritsFrom(interfaces, superclass) +
                         indentAnd { printProperties(properties) }
-                else -> typeIdentifier.prettyPrint()
+                else -> typeIdentifier.prettyPrint(simplifyClassNames)
             }
         }
 
@@ -366,7 +403,7 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
             "  ".repeat(indent) + key +
                     (if(!value.isMandatory) " (optional)" else "") +
                     (if (value.isCalculated) " (calculated)" else "") +
-                    ": " + value.type.prettyPrint(simplifyClassNames)
+                    ": " + prettyPrint(value.type)
 
     private inline fun indentAnd(block: LocalTypeInformationPrettyPrinter.() -> String) =
             copy(indent = indent + 1).block()

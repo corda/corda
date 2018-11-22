@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import java.util.*
+import kotlin.collections.LinkedHashMap
 
 /**
  * Interprets AMQP [Schema] information to obtain [RemoteTypeInformation], caching by [TypeDescriptor].
@@ -35,18 +36,23 @@ class AMQPRemoteTypeModel {
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
 
-        return byTypeDescriptor.mapValues { (typeDescriptor, typeNotation) ->
+        val result = byTypeDescriptor.mapValues { (typeDescriptor, typeNotation) ->
             cache.getOrPut(typeDescriptor) { interpretationState.run { typeNotation.name.typeIdentifier.interpretIdentifier() } }
         }
+        val typesByIdentifier = result.values.associateBy { it.typeIdentifier }
+        result.values.forEach { typeInformation ->
+            if (typeInformation is RemoteTypeInformation.Cycle) {
+                typeInformation.follow = typesByIdentifier[typeInformation.typeIdentifier] ?:
+                        throw NotSerializableException("Cannot resolve cyclic reference to ${typeInformation.typeIdentifier}")
+            }
+        }
+        return result
     }
 
     data class InterpretationState(val notationLookup: Map<TypeIdentifier, TypeNotation>,
                                    val enumTransformsLookup: Map<TypeIdentifier, EnumTransforms>,
                                    val cache: MutableMap<TypeDescriptor, RemoteTypeInformation>,
                                    val seen: Set<TypeIdentifier>) {
-
-        private inline fun <T> forgetSeen(block: InterpretationState.() -> T): T =
-                withSeen(emptySet(), block)
 
         private inline fun <T> withSeen(typeIdentifier: TypeIdentifier, block: InterpretationState.() -> T): T =
                 withSeen(seen + typeIdentifier, block)
@@ -62,7 +68,7 @@ class AMQPRemoteTypeModel {
          * know we have hit a cycle and respond accordingly.
          */
         fun TypeIdentifier.interpretIdentifier(): RemoteTypeInformation =
-            if (this in seen) RemoteTypeInformation.Cycle(this) { forgetSeen { interpretIdentifier() } }
+            if (this in seen) RemoteTypeInformation.Cycle(this)
             else withSeen(this) {
                 val identifier = this@interpretIdentifier
                 notationLookup[identifier]?.interpretNotation(identifier) ?: interpretNoNotation()
@@ -85,7 +91,7 @@ class AMQPRemoteTypeModel {
          * [RemoteTypeInformation].
          */
         private fun CompositeType.interpretComposite(identifier: TypeIdentifier): RemoteTypeInformation {
-            val properties = fields.asSequence().map { it.interpret() }.toMap()
+            val properties = fields.asSequence().sortedBy { it.name }.map { it.interpret() }.toMap(LinkedHashMap())
             val typeParameters = identifier.interpretTypeParameters()
             val interfaceIdentifiers = provides.map { name -> name.typeIdentifier }
             val isInterface = identifier in interfaceIdentifiers
@@ -175,6 +181,11 @@ class AMQPRemoteTypeModel {
     }
 }
 
+fun LocalTypeInformation.getEnumTransforms(factory: LocalSerializerFactory): EnumTransforms {
+    val transformsSchema = TransformsSchema.get(typeIdentifier.name, factory)
+    return interpretTransformSet(transformsSchema)
+}
+
 private fun interpretTransformSet(transformSet: EnumMap<TransformTypes, MutableList<Transform>>): EnumTransforms {
     val defaultTransforms = transformSet[TransformTypes.EnumDefault]?.toList() ?: emptyList()
     val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
@@ -185,7 +196,7 @@ private fun interpretTransformSet(transformSet: EnumMap<TransformTypes, MutableL
 }
 
 private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?:
-    throw NotSerializableException("Type notation has no type descriptor: $this")
+throw NotSerializableException("Type notation has no type descriptor: $this")
 
 private val String.typeIdentifier get(): TypeIdentifier = AMQPTypeIdentifierParser.parse(this)
 

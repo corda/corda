@@ -1,24 +1,21 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.SerializationContext
-import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
-import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 /**
  * Our definition of an enum with the AMQP spec is a list (of two items, a string and an int) that is
  * a restricted type with a number of choices associated with it
  */
-class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: SerializerFactory) : AMQPSerializer<Any> {
+class EnumSerializer(declaredType: Type, declaredClass: Class<*>, factory: LocalSerializerFactory) : AMQPSerializer<Any> {
     override val type: Type = declaredType
     private val typeNotation: TypeNotation
-    override val typeDescriptor = Symbol.valueOf(
-            "$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")!!
+    override val typeDescriptor = factory.createDescriptor(type)
 
     init {
         typeNotation = RestrictedType(
-                SerializerFactory.nameForType(declaredType),
+                AMQPTypeIdentifiers.nameForType(declaredType),
                 null, emptyList(), "list", Descriptor(typeDescriptor),
                 declaredClass.enumConstants.zip(IntRange(0, declaredClass.enumConstants.size)).map {
                     Choice(it.first.toString(), it.second.toString())

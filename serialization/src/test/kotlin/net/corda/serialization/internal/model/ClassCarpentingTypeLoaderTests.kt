@@ -54,7 +54,7 @@ class ClassCarpentingTypeLoaderTests {
         val person = personType.make("Arthur Putey", 42, address, listOf(previousAddress))
         val personJson = ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(person)
                 .replace("\r\n", "\n")
-        
+
         assertEquals("""
             {
               "name" : "Arthur Putey",
