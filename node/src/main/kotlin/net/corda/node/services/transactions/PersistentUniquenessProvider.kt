@@ -74,6 +74,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_transactions")
     class CommittedTransaction(
             @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
             val transactionId: String
     )
 

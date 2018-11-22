@@ -5,7 +5,7 @@
 
     <changeSet author="R3.Corda" id="create-notary-committed-transactions-table">
         <createTable tableName="node_notary_committed_transactions">
-            <column name="transaction_id" type="NVARCHAR(255)">
+            <column name="transaction_id" type="NVARCHAR(64)">
                 <constraints nullable="false"/>
             </column>
         </createTable>
