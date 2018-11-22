@@ -72,6 +72,8 @@ dependencies {
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')
+    compile project(':common-validation')
+    compile project(':common-configuration-parsing')
 
     // Log4J: logging framework (with SLF4J bindings)
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
@@ -94,9 +96,6 @@ dependencies {
 
     // For async logging
     compile "com.lmax:disruptor:$disruptor_version"
-
-    // JOpt: for command line flags.
-    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
 
     // Artemis: for reliable p2p message queues.
     // TODO: remove the forced update of commons-collections and beanutils when artemis updates them
@@ -152,6 +151,7 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
+    testCompile "co.paralleluniverse:capsule:$capsule_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

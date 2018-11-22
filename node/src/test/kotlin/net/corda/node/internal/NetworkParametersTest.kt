@@ -1,24 +1,24 @@
 package net.corda.node.internal
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.node.JavaPackageName
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
-import net.corda.node.services.config.NotaryConfig
-import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
-import net.corda.core.node.NotaryInfo
-import net.corda.core.utilities.days
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.node.*
+import net.corda.testing.node.MockNetNotaryConfig
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
@@ -28,6 +28,7 @@ import org.junit.After
 import org.junit.Test
 import java.nio.file.Path
 import java.time.Instant
+import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
 class NetworkParametersTest {
@@ -66,29 +67,14 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
-        val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, configOverrides = {
-            val notary = NotaryConfig(false)
-            doReturn(notary).whenever(it).notary
-        }))
+        val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME,
+                configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating = false))))
         val fakeNotaryId = fakeNotary.info.singleIdentity()
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)
         assertFails {
             alice.services.startFlow(CashIssueFlow(500.DOLLARS, OpaqueBytes.of(0x01), fakeNotaryId)).resultFuture.getOrThrow()
         }
-    }
-
-    @Test
-    fun `maxTransactionSize must be bigger than maxMesssageSize`() {
-        assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
-            NetworkParameters(1,
-                    emptyList(),
-                    2000,
-                    2001,
-                    Instant.now(),
-                    1,
-                    emptyMap())
-        }.withMessage("maxTransactionSize cannot be bigger than maxMessageSize")
     }
 
     @Test
@@ -105,11 +91,9 @@ class NetworkParametersTest {
                     1,
                     emptyMap(),
                     Int.MAX_VALUE.days,
-                    mapOf(
-                            JavaPackageName("com.!example.stuff") to key2
-                    )
+                    mapOf("com.!example.stuff" to key2)
             )
-        }.withMessageContaining("Attempting to whitelist illegal java package")
+        }.withMessageContaining("Invalid Java package name")
 
         assertThatExceptionOfType(IllegalArgumentException::class.java).isThrownBy {
             NetworkParameters(1,
@@ -121,13 +105,13 @@ class NetworkParametersTest {
                     emptyMap(),
                     Int.MAX_VALUE.days,
                     mapOf(
-                            JavaPackageName("com.example") to key1,
-                            JavaPackageName("com.example.stuff") to key2
+                            "com.example" to key1,
+                            "com.example.stuff" to key2
                     )
             )
         }.withMessage("multiple packages added to the packageOwnership overlap.")
 
-        NetworkParameters(1,
+        val params = NetworkParameters(1,
                 emptyList(),
                 2001,
                 2000,
@@ -136,15 +120,51 @@ class NetworkParametersTest {
                 emptyMap(),
                 Int.MAX_VALUE.days,
                 mapOf(
-                        JavaPackageName("com.example") to key1,
-                        JavaPackageName("com.examplestuff") to key2
+                        "com.example" to key1,
+                        "com.examplestuff" to key2
                 )
         )
 
-        assert(JavaPackageName("com.example").owns("com.example.something.MyClass"))
-        assert(!JavaPackageName("com.example").owns("com.examplesomething.MyClass"))
-        assert(!JavaPackageName("com.exam").owns("com.example.something.MyClass"))
+        assertEquals(params.getOwnerOf("com.example.something.MyClass"), key1)
+        assertEquals(params.getOwnerOf("com.examplesomething.MyClass"), null)
+        assertEquals(params.getOwnerOf("com.examplestuff.something.MyClass"), key2)
+        assertEquals(params.getOwnerOf("com.exam.something.MyClass"), null)
+    }
 
+    @Test
+    fun `auto acceptance checks are correct`() {
+        val packageOwnership = mapOf(
+                "com.example1" to generateKeyPair().public,
+                "com.example2" to generateKeyPair().public)
+        val whitelistedContractImplementations = mapOf(
+                "example1" to listOf(AttachmentId.randomSHA256()),
+                "example2" to listOf(AttachmentId.randomSHA256()))
+
+        val netParams = testNetworkParameters()
+        val netParamsAutoAcceptable = netParams.copy(
+                packageOwnership = packageOwnership,
+                whitelistedContractImplementations = whitelistedContractImplementations)
+        val netParamsNotAutoAcceptable = netParamsAutoAcceptable.copy(
+                maxMessageSize = netParams.maxMessageSize + 1)
+
+        assert(netParams.canAutoAccept(netParams, emptySet())) {
+            "auto-acceptable if identical"
+        }
+        assert(netParams.canAutoAccept(netParams, NetworkParameters.autoAcceptablePropertyNames)) {
+            "auto acceptable if identical regardless of exclusions"
+        }
+        assert(netParams.canAutoAccept(netParamsAutoAcceptable, emptySet())) {
+            "auto-acceptable if only AutoAcceptable params have changed"
+        }
+        assert(netParams.canAutoAccept(netParamsAutoAcceptable, setOf("modifiedTime"))) {
+            "auto-acceptable if only AutoAcceptable params have changed and excluded param has not changed"
+        }
+        assert(!netParams.canAutoAccept(netParamsNotAutoAcceptable, emptySet())) {
+            "not auto-acceptable if non-AutoAcceptable param has changed"
+        }
+        assert(!netParams.canAutoAccept(netParamsAutoAcceptable, setOf("whitelistedContractImplementations"))) {
+            "not auto-acceptable if only AutoAcceptable params have changed but one has been added to the exclusion set"
+        }
     }
 
     // Helpers

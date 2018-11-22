@@ -8,6 +8,7 @@ import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.LoggerFactory
@@ -32,17 +33,11 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
-    private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
-
     /**
      * {@inheritDoc}
-     *
-     * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
      */
     override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val classLoader = builder.build(attachmentHashes) ?: return this
-        return withClassLoader(classLoader)
+        return this
     }
 
     override fun withProperty(property: Any, value: Any): SerializationContext {
@@ -70,34 +65,6 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     override fun withEncodingWhitelist(encodingWhitelist: EncodingWhitelist) = copy(encodingWhitelist = encodingWhitelist)
 }
 
-/*
- * This class is internal rather than private so that serialization-deterministic
- * can replace it with an alternative version.
- */
-@DeleteForDJVM
-internal class AttachmentsClassLoaderBuilder(private val properties: Map<Any, Any>, private val deserializationClassLoader: ClassLoader) {
-    private val cache: Cache<List<SecureHash>, AttachmentsClassLoader> = Caffeine.newBuilder().weakValues().maximumSize(1024).build()
-
-    fun build(attachmentHashes: List<SecureHash>): AttachmentsClassLoader? {
-        val serializationContext = properties[serializationContextKey] as? SerializeAsTokenContext ?: return null // Some tests don't set one.
-        try {
-            return cache.get(attachmentHashes) {
-                val missing = ArrayList<SecureHash>()
-                val attachments = ArrayList<Attachment>()
-                attachmentHashes.forEach { id ->
-                    serializationContext.serviceHub.attachments.openAttachment(id)?.let { attachments += it }
-                        ?: run { missing += id }
-                }
-                missing.isNotEmpty() && throw MissingAttachmentsException(missing)
-                AttachmentsClassLoader(attachments, parent = deserializationClassLoader)
-            }!!
-        } catch (e: ExecutionException) {
-            // Caught from within the cache get, so unwrap.
-            throw e.cause!!
-        }
-    }
-}
-
 @KeepForDJVM
 open class SerializationFactoryImpl(
     // TODO: This is read-mostly. Probably a faster implementation to be found.
@@ -120,12 +87,13 @@ open class SerializationFactoryImpl(
         // truncate sequence to at most magicSize, and make sure it's a copy to avoid holding onto large ByteArrays
         val magic = CordaSerializationMagic(byteSequence.slice(end = magicSize).copyBytes())
         val lookupKey = magic to target
-        return schemes.computeIfAbsent(lookupKey) {
+        // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
+        return (schemes[lookupKey] ?: schemes.computeIfAbsent(lookupKey) {
             registeredSchemes.filter { it.canDeserializeVersion(magic, target) }.forEach { return@computeIfAbsent it } // XXX: Not single?
             logger.warn("Cannot find serialization scheme for: [$lookupKey, " +
                     "${if (magic == amqpMagic) "AMQP" else "UNKNOWN MAGIC"}] registeredSchemes are: $registeredSchemes")
             throw UnsupportedOperationException("Serialization scheme $lookupKey not supported.")
-        } to magic
+        }) to magic
     }
 
     @Throws(NotSerializableException::class)

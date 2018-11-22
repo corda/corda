@@ -193,7 +193,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 "Transaction context is missing. This might happen if a suspendable method is not annotated with @Suspendable annotation."
             }
         } else {
-            require(contextTransactionOrNull == null)
+            require(contextTransactionOrNull == null){"Transaction is marked as not present, but is not null"}
         }
     }
 
@@ -219,9 +219,13 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val result = logic.call()
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
-        } catch (throwable: Throwable) {
-            logger.info("Flow threw exception... sending it to flow hospital", throwable)
-            Try.Failure<R>(throwable)
+        } catch (t: Throwable) {
+            if(t is VirtualMachineError) {
+                logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
+                Runtime.getRuntime().halt(1)
+            }
+            logger.info("Flow raised an error... sending it to flow hospital", t)
+            Try.Failure<R>(t)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -373,8 +377,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.checkpointSerialize(context = serializationContext.value)
                 )
-            } catch (throwable: Throwable) {
-                Event.Error(throwable)
+            } catch (exception: Exception) {
+                Event.Error(exception)
             }
 
             // We must commit the database transaction before returning from this closure otherwise Quasar may schedule
@@ -384,7 +388,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents)
+            require(continuation == FlowContinuation.ProcessEvents){"Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation "}
             unpark(SERIALIZER_BLOCKER)
         }
         return uncheckedCast(processEventsUntilFlowIsResumed(

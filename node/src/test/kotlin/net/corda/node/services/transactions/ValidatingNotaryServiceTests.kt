@@ -99,9 +99,10 @@ class ValidatingNotaryServiceTests {
     @Test
     fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
+            val inputStates = issueStates(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
+                    .addInputState(inputStates[0])
+                    .addInputState(inputStates[1])
                     .addCommand(dummyCommand(alice.owningKey))
                     .setTimeWindow(Instant.now(), 30.seconds)
             aliceNode.services.signInitialTransaction(tx)
@@ -332,6 +333,15 @@ class ValidatingNotaryServiceTests {
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         serviceHub.recordTransactions(stx)
-        return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
+        return StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0))
+    }
+
+    private fun issueStates(serviceHub: ServiceHub, identity: Party): List<StateAndRef<*>> {
+        val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
+        val signedByNode = serviceHub.signInitialTransaction(tx)
+        val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
+        serviceHub.recordTransactions(stx)
+        return listOf(StateAndRef(stx.coreTransaction.outputs[0], StateRef(stx.id, 0)),
+                StateAndRef(stx.coreTransaction.outputs[1], StateRef(stx.id, 1)))
     }
 }

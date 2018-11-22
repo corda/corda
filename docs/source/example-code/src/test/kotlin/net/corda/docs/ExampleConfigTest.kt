@@ -3,6 +3,7 @@ package net.corda.docs
 import net.corda.core.internal.toPath
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.parseAsNodeConfiguration
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -27,14 +28,9 @@ class ExampleConfigTest {
 
     @Test
     fun `example node_confs parses fine`() {
-        readAndCheckConfigurations(
-                "example-node.conf"
-        ) {
+        readAndCheckConfigurations("example-node.conf") {
             val baseDirectory = Paths.get("some-example-base-dir")
-            ConfigHelper.loadConfig(
-                    baseDirectory = baseDirectory,
-                    configFile = it
-            ).parseAsNodeConfiguration()
+            assertThat(ConfigHelper.loadConfig(baseDirectory = baseDirectory, configFile = it).parseAsNodeConfiguration().isValid).isTrue()
         }
     }
 }

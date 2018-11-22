@@ -1,6 +1,7 @@
 package net.corda.node.services.config
 
 import com.typesafe.config.*
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -33,14 +34,16 @@ class NodeConfigurationImplTest {
     fun `can't have tlsCertCrlDistPoint null when tlsCertCrlIssuer is given`() {
         val configValidationResult = configTlsCertCrlOptions(null, "C=US, L=New York, OU=Corda, O=R3 HoldCo LLC, CN=Corda Root CA").validate()
         assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when tlsCertCrlIssuer is not NULL")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlIssuer")
     }
 
     @Test
     fun `can't have tlsCertCrlDistPoint null when crlCheckSoftFail is false`() {
         val configValidationResult = configTlsCertCrlOptions(null, null, false).validate()
         assertTrue { configValidationResult.isNotEmpty() }
-        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint needs to be specified when crlCheckSoftFail is FALSE")
+        assertThat(configValidationResult.first()).contains("tlsCertCrlDistPoint")
+        assertThat(configValidationResult.first()).contains("crlCheckSoftFail")
     }
 
     @Test
@@ -108,12 +111,11 @@ class NodeConfigurationImplTest {
 
     private fun getConfig(cfgName: String, overrides: Config = ConfigFactory.empty()): Config {
         val path = this::class.java.classLoader.getResource(cfgName).toPath()
-        val cfg = ConfigHelper.loadConfig(
+        return ConfigHelper.loadConfig(
                 baseDirectory = path.parent,
                 configFile = path,
                 configOverrides = overrides
         )
-        return cfg
     }
 
     @Test
@@ -144,9 +146,9 @@ class NodeConfigurationImplTest {
         val missingPropertyPath = "rpcSettings.address"
         rawConfig = rawConfig.withoutPath(missingPropertyPath)
 
-        assertThatThrownBy { rawConfig.parseAsNodeConfiguration() }.isInstanceOfSatisfying(ConfigException.Missing::class.java) { exception ->
-            assertThat(exception.message).isNotNull()
-            assertThat(exception.message).contains(missingPropertyPath)
+        assertThat(rawConfig.parseAsNodeConfiguration().errors.single()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
+            assertThat(error.message).contains(missingPropertyPath)
+            assertThat(error.typeName).isEqualTo(NodeConfiguration::class.java.simpleName)
         }
     }
 
@@ -178,12 +180,33 @@ class NodeConfigurationImplTest {
     }
 
     @Test
+    fun `validation has error on non-null cryptoServiceConf for null cryptoServiceName`() {
+        val configuration = testConfiguration.copy(cryptoServiceConf = "unsupported.conf")
+
+        val errors = configuration.validate()
+
+        assertThat(errors).hasOnlyOneElementSatisfying {
+            error -> error.contains("cryptoServiceName is null, but cryptoServiceConf is set to unsupported.conf")
+        }
+    }
+
+    @Test
+    fun `fail on wrong cryptoServiceName`() {
+        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
+        rawConfig = rawConfig.withValue("cryptoServiceName", ConfigValueFactory.fromAnyRef("UNSUPPORTED"))
+
+        val config = rawConfig.parseAsNodeConfiguration()
+
+        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("has no constant of the name 'UNSUPPORTED'") }.toList()).isNotEmpty
+    }
+
+    @Test
     fun `rpcAddress and rpcSettings_address are equivalent`() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         rawConfig = rawConfig.withoutPath("rpcSettings.address")
         rawConfig = rawConfig.withValue("rpcAddress", ConfigValueFactory.fromAnyRef("localhost:4444"))
 
-        assertThatCode { rawConfig.parseAsNodeConfiguration() }.doesNotThrowAnyException()
+        assertThat(rawConfig.parseAsNodeConfiguration().isValid).isTrue()
     }
 
     @Test
@@ -193,11 +216,11 @@ class NodeConfigurationImplTest {
 
         val config = rawConfig.parseAsNodeConfiguration()
 
-        assertThat(config.validate().filter { it.contains("rpcSettings.adminAddress") }).isNotEmpty
+        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("rpcSettings.adminAddress") }.toList()).isNotEmpty
     }
 
     @Test
-    fun `compatiilityZoneURL populates NetworkServices`() {
+    fun `compatibilityZoneURL populates NetworkServices`() {
         val compatibilityZoneURL = URI.create("https://r3.com").toURL()
         val configuration = testConfiguration.copy(
                 devMode = false,
@@ -210,8 +233,8 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `jmxReporterType is null and defaults to Jokolia`() {
-        var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }
 
@@ -219,7 +242,7 @@ class NodeConfigurationImplTest {
     fun `jmxReporterType is not null and is set to New Relic`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("NEW_RELIC"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.NEW_RELIC.toString() == nodeConfig.jmxReporterType.toString())
     }
 
@@ -227,15 +250,15 @@ class NodeConfigurationImplTest {
     fun `jmxReporterType is not null and set to Jokolia`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration()
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
     }
 
-    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfiguration {
+    private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
         return testConfiguration.copy(devMode = devMode, devModeOptions = devModeOptions)
     }
 
-    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfiguration {
+    private fun configTlsCertCrlOptions(tlsCertCrlDistPoint: URL?, tlsCertCrlIssuer: String?, crlCheckSoftFail: Boolean = true): NodeConfigurationImpl {
         return testConfiguration.copy(tlsCertCrlDistPoint = tlsCertCrlDistPoint, tlsCertCrlIssuer = tlsCertCrlIssuer?.let { X500Principal(it) }, crlCheckSoftFail = crlCheckSoftFail)
     }
 

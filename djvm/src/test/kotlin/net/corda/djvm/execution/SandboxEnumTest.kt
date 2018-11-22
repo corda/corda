@@ -8,7 +8,7 @@ import java.util.function.Function
 
 class SandboxEnumTest : TestBase() {
     @Test
-    fun `test enum inside sandbox`() = sandbox(DEFAULT) {
+    fun `test enum inside sandbox`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<Int, Array<String>>(configuration)
         contractExecutor.run<TransformEnum>(0).apply {
             assertThat(result).isEqualTo(arrayOf("ONE", "TWO", "THREE"))
@@ -16,7 +16,7 @@ class SandboxEnumTest : TestBase() {
     }
 
     @Test
-    fun `return enum from sandbox`() = sandbox(DEFAULT) {
+    fun `return enum from sandbox`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<String, ExampleEnum>(configuration)
         contractExecutor.run<FetchEnum>("THREE").apply {
             assertThat(result).isEqualTo(ExampleEnum.THREE)
@@ -24,7 +24,7 @@ class SandboxEnumTest : TestBase() {
     }
 
     @Test
-    fun `test we can identify class as Enum`() = sandbox(DEFAULT) {
+    fun `test we can identify class as Enum`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<ExampleEnum, Boolean>(configuration)
         contractExecutor.run<AssertEnum>(ExampleEnum.THREE).apply {
             assertThat(result).isTrue()
@@ -32,7 +32,7 @@ class SandboxEnumTest : TestBase() {
     }
 
     @Test
-    fun `test we can create EnumMap`() = sandbox(DEFAULT) {
+    fun `test we can create EnumMap`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<ExampleEnum, Int>(configuration)
         contractExecutor.run<UseEnumMap>(ExampleEnum.TWO).apply {
             assertThat(result).isEqualTo(1)
@@ -40,7 +40,7 @@ class SandboxEnumTest : TestBase() {
     }
 
     @Test
-    fun `test we can create EnumSet`() = sandbox(DEFAULT) {
+    fun `test we can create EnumSet`() = parentedSandbox {
         val contractExecutor = DeterministicSandboxExecutor<ExampleEnum, Boolean>(configuration)
         contractExecutor.run<UseEnumSet>(ExampleEnum.ONE).apply {
             assertThat(result).isTrue()

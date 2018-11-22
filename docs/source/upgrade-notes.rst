@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Upgrading a CorDapp to a new platform version
 =============================================
 
@@ -34,21 +40,120 @@ do this by connecting directly to the node's ``persistence.mv.db`` file. See :re
 UNRELEASED
 ----------
 
-* Database upgrade - Change the type of the ``checkpoint_value``.
-This will address the issue that the `vacuum` function is unable to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
+FinalityFlow
+^^^^^^^^^^^^
+
+The previous ``FinalityFlow`` API is insecure. It requires a handler flow in the counterparty node which accepts any and
+all signed transactions that are sent to it, without checks. It is **highly** recommended that existing CorDapps migrate
+away to the new API.
+
+As an example, let's take a very simple flow that finalises a transaction without the involvement of a counterpart flow:
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/FinalityFlowMigration.kt
+        :language: kotlin
+        :start-after: DOCSTART SimpleFlowUsingOldApi
+        :end-before: DOCEND SimpleFlowUsingOldApi
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/FinalityFlowMigration.java
+        :language: java
+        :start-after: DOCSTART SimpleFlowUsingOldApi
+        :end-before: DOCEND SimpleFlowUsingOldApi
+        :dedent: 4
+
+To use the new API, this flow needs to be annotated with ``InitiatingFlow`` and a ``FlowSession`` to the participant of the transaction must be
+passed to ``FinalityFlow`` :
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/FinalityFlowMigration.kt
+        :language: kotlin
+        :start-after: DOCSTART SimpleFlowUsingNewApi
+        :end-before: DOCEND SimpleFlowUsingNewApi
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/FinalityFlowMigration.java
+        :language: java
+        :start-after: DOCSTART SimpleFlowUsingNewApi
+        :end-before: DOCEND SimpleFlowUsingNewApi
+        :dedent: 4
+
+If there are more than one transaction participants then a session to each one must be initiated, excluding the local party
+and the notary.
+
+A responder flow has to be introduced, which will automatically run on the other participants' nodes, which will call ``ReceiveFinalityFlow``
+to record the finalised transaction:
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/FinalityFlowMigration.kt
+        :language: kotlin
+        :start-after: DOCSTART SimpleNewResponderFlow
+        :end-before: DOCEND SimpleNewResponderFlow
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/FinalityFlowMigration.java
+        :language: java
+        :start-after: DOCSTART SimpleNewResponderFlow
+        :end-before: DOCEND SimpleNewResponderFlow
+        :dedent: 4
+
+For flows which are already initiating counterpart flows then it's a simple matter of using the existing flow session.
+Note however, the new ``FinalityFlow`` is inlined and so the sequence of sends and receives between the two flows will
+change and will be incompatible with your current flows. You can use the flow version API to write your flows in a
+backwards compatible way.
+
+Here's what an upgraded initiating flow may look like:
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/FinalityFlowMigration.kt
+        :language: kotlin
+        :start-after: DOCSTART ExistingInitiatingFlow
+        :end-before: DOCEND ExistingInitiatingFlow
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/FinalityFlowMigration.java
+        :language: java
+        :start-after: DOCSTART ExistingInitiatingFlow
+        :end-before: DOCEND ExistingInitiatingFlow
+        :dedent: 4
+
+For the responder flow, insert a call to ``ReceiveFinalityFlow`` at the location where it's expecting to receive the
+finalised transaction. If the initiator is written in a backwards compatible way then so must the responder.
+
+.. container:: codeset
+
+    .. literalinclude:: example-code/src/main/kotlin/net/corda/docs/kotlin/FinalityFlowMigration.kt
+        :language: kotlin
+        :start-after: DOCSTART ExistingResponderFlow
+        :end-before: DOCEND ExistingResponderFlow
+        :dedent: 8
+
+    .. literalinclude:: example-code/src/main/java/net/corda/docs/java/FinalityFlowMigration.java
+        :language: java
+        :start-after: DOCSTART ExistingResponderFlow
+        :end-before: DOCEND ExistingResponderFlow
+        :dedent: 12
+
+The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
+This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
+
+Database schema changes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The type of the ``checkpoint_value`` column has changed. This will address the issue that the `vacuum` function is unable
+to clean up deleted checkpoints as they are still referenced from the ``pg_shdepend`` table.
 
 For Postgres:
 
-  .. sourcecode:: sql
+.. sourcecode:: sql
 
     ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type bytea;
 
 For H2:
 
-  .. sourcecode:: sql
+.. sourcecode:: sql
 
     ALTER TABLE node_checkpoints ALTER COLUMN checkpoint_value set data type VARBINARY(33554432);
-
 
 * API change: ``net.corda.core.schemas.PersistentStateRef`` fields (``index`` and ``txId``) incorrectly marked as nullable are now non-nullable,
   :doc:`changelog` contains the explanation.
@@ -83,6 +188,28 @@ For H2:
 
   No action is needed for default node tables as ``PersistentStateRef`` is used as Primary Key only and the backing columns are automatically not nullable
   or custom Cordapp entities using ``PersistentStateRef`` as Primary Key.
+
+* MockNetwork: ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration``
+  object. Use a ``MockNetworkConfigOverrides`` object instead.
+
+* Finance CorDapp (*corda-finance-XXX.jar*) is now build as a sealed and signed JAR file.
+  This means classes in your CorDapps cannot be placed under the following packages:
+
+  .. sourcecode:: java
+
+     net.corda.finance
+     net.corda.finance.contracts
+     net.corda.finance.contracts.asset.cash.selection
+     net.corda.finance.contracts.asset
+     net.corda.finance.contracts.math
+     net.corda.finance.flows
+     net.corda.finance.internal
+     net.corda.finance.plugin
+     net.corda.finance.schemas
+     net.corda.finance.utils
+
+  Refactor any classes by moving them into a new package, e.g. *net/corda/finance/flows.MyClass.java* can be moved to *net/corda/finance/flows/company/MyClass.java*.
+  Also your classes are no longer able to access non-public members of Finance CorDapp classes.
 
 V3.2 to v3.3
 ------------

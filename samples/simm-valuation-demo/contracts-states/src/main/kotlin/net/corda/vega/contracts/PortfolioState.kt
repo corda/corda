@@ -40,7 +40,7 @@ data class PortfolioState(val portfolio: List<StateRef>,
     }
 
     override fun generateRevision(notary: Party, oldState: StateAndRef<*>, updatedValue: Update): TransactionBuilder {
-        require(oldState.state.data == this)
+        require(oldState.state.data == this){"Old state data does not match current state data"}
         val portfolio = updatedValue.portfolio ?: portfolio
         val valuation = updatedValue.valuation ?: valuation
 

@@ -8,8 +8,8 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
 import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * When set as the serialization scheme, defines the RPC Server serialization scheme as using the Corda
@@ -17,9 +17,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AMQPServerSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
     constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap { 128 })
+    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
 
     constructor() : this(emptySet(), AccessOrderLinkedHashMap { 128 })
 
@@ -28,7 +29,7 @@ class AMQPServerSerializationScheme(
     }
 
     override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
-        return SerializerFactory(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
+        return SerializerFactoryBuilder.build(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled).apply {
             register(RpcServerObservableSerializer())
             register(RpcServerCordaFutureSerializer(this))
             register(RxNotificationSerializer(this))

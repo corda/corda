@@ -166,6 +166,7 @@ class ArtemisMessagingTest {
 
         assertNull(receivedMessages.poll(200, MILLISECONDS))
     }
+
     @Test
     fun `server should not process if incoming message exceed maxMessageSize limit`() {
         val (messagingClient, receivedMessages) = createAndStartClientAndServer(clientMaxMessageSize = 100_000, serverMaxMessageSize = 50_000)

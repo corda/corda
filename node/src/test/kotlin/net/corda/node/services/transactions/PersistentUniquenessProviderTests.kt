@@ -8,14 +8,15 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.flows.NotaryError
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
@@ -49,29 +50,30 @@ class PersistentUniquenessProviderTests {
     }
 
     @Test
-    fun `should commit a transaction with unused inputs without exception`() {
+    fun `should successfully commit a transaction with unused inputs`() {
         val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
-            val inputState = generateStateRef()
+        val inputState = generateStateRef()
 
-            provider.commit(listOf(inputState), txID, identity, requestSignature)
+        val result = provider.commit(listOf(inputState), txID, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result)
     }
 
     @Test
     fun `should report a conflict for a transaction with previously used inputs`() {
         val provider = PersistentUniquenessProvider(Clock.systemUTC(), database, TestingNamedCacheFactory())
-            val inputState = generateStateRef()
+        val inputState = generateStateRef()
 
-            val inputs = listOf(inputState)
-            val firstTxId = txID
-            provider.commit(inputs, firstTxId, identity, requestSignature)
+        val inputs = listOf(inputState)
+        val firstTxId = txID
+        val result = provider.commit(inputs, firstTxId, identity, requestSignature).get()
+        assertEquals(UniquenessProvider.Result.Success, result)
 
-            val secondTxId = SecureHash.randomSHA256()
-            val ex = assertFailsWith<NotaryInternalException> {
-                provider.commit(inputs, secondTxId, identity, requestSignature)
-            }
-            val error = ex.error as NotaryError.Conflict
+        val secondTxId = SecureHash.randomSHA256()
 
-            val conflictCause = error.consumedStates[inputState]!!
-            assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
-        }
+        val response:UniquenessProvider.Result  = provider.commit(inputs, secondTxId, identity, requestSignature).get()
+        val error = (response as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
+
+        val conflictCause = error.consumedStates[inputState]!!
+        assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
+    }
 }

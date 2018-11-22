@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
 import net.corda.core.flows.FlowLogic
@@ -71,6 +72,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -133,7 +135,7 @@ class DriverDSLImpl(
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
             val jdbcUrl = "jdbc:h2:mem:persistence${inMemoryCounter.getAndIncrement()};DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100"
             corda.dataSourceProperties.setProperty("dataSource.url", jdbcUrl)
-            NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)), corda = corda)
+            NodeConfig(typesafe = typesafe + mapOf("dataSourceProperties" to mapOf("dataSource.url" to jdbcUrl)))
         } else {
             this
         }
@@ -316,7 +318,7 @@ class DriverDSLImpl(
                         config.corda,
                         HTTPNetworkRegistrationService(networkServicesConfig, versionInfo),
                         NodeRegistrationOption(rootTruststorePath, rootTruststorePassword)
-                ).buildKeystore()
+                ).generateKeysAndRegister()
                 config
             }
         } else {
@@ -395,6 +397,13 @@ class DriverDSLImpl(
             notaryInfos.zip(listOfFutureNodeHandles) { (identity, validating), nodeHandlesFuture ->
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
+        }
+        try {
+            _notaries.map { notary -> notary.map { handle -> handle.nodeHandles } }.getOrThrow(notaryHandleTimeout).forEach { future -> future.getOrThrow(notaryHandleTimeout) }
+        } catch (e: ListenProcessDeathException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        } catch (e: TimeoutException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
         }
     }
 
@@ -595,7 +604,12 @@ class DriverDSLImpl(
             emptyList()
         }
 
-        val cordappDirectories = existingCorDappDirectoriesOption + (cordappsForAllNodes + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
+        // Instead of using cordappsForAllNodes we get only these that are missing from additionalCordapps
+        // This way we prevent errors when we want the same CordApp but with different config
+        val appOverrides = additionalCordapps.map { it.name to it.version}.toSet()
+        val baseCordapps = cordappsForAllNodes.filter { !appOverrides.contains(it.name to it.version) }
+
+        val cordappDirectories = existingCorDappDirectoriesOption + (baseCordapps + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
 
         val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
 
@@ -688,16 +702,14 @@ class DriverDSLImpl(
      * Simple holder class to capture the node configuration both as the raw [Config] object and the parsed [NodeConfiguration].
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
-    private class NodeConfig(val typesafe: Config, val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration()) {
-        init {
-            val errors = corda.validate()
-            require(errors.isEmpty()) { "Invalid node configuration. Errors where:\n${errors.joinToString("\n")}" }
-        }
+    private class NodeConfig(val typesafe: Config) {
+        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().value()
     }
 
     companion object {
         internal val log = contextLogger()
 
+        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
@@ -777,6 +789,7 @@ class DriverDSLImpl(
                     "visualvm.display.name" to "corda-${config.corda.myLegalName}"
             )
             debugPort?.let {
+                systemProperties += "log4j2.level" to "debug"
                 systemProperties += "log4j2.debug" to "true"
             }
 
@@ -818,7 +831,7 @@ class DriverDSLImpl(
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
+                    arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },

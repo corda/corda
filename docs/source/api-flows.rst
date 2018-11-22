@@ -522,6 +522,9 @@ An example is the ``@InitiatingFlow InitiatorFlow``/``@InitiatedBy ResponderFlow
 
 .. note:: Initiating flows are versioned separately from their parents.
 
+.. note:: The only exception to this rule is ``FinalityFlow`` which is annotated with ``@InitiatingFlow`` but is an inlined flow. This flow
+   was previously initiating and the annotation exists to maintain backwards compatibility with old code.
+
 Core initiating subflows
 ~~~~~~~~~~~~~~~~~~~~~~~~
 Corda-provided initiating subflows are a little different to standard ones as they are versioned together with the
@@ -532,8 +535,6 @@ Library flows
 ^^^^^^^^^^^^^
 Corda installs four initiating subflow pairs on each node by default:
 
-* ``FinalityFlow``/``FinalityHandler``, which should be used to notarise and record a transaction and broadcast it to
-  all relevant parties
 * ``NotaryChangeFlow``/``NotaryChangeHandler``, which should be used to change a state's notary
 * ``ContractUpgradeFlow.Initiate``/``ContractUpgradeHandler``, which should be used to change a state's contract
 * ``SwapIdentitiesFlow``/``SwapIdentitiesHandler``, which is used to exchange confidential identities with a
@@ -546,10 +547,13 @@ Corda installs four initiating subflow pairs on each node by default:
 Corda also provides a number of built-in inlined subflows that should be used for handling common tasks. The most
 important are:
 
-* ``CollectSignaturesFlow`` (inlined), which should be used to collect a transaction's required signatures
-* ``SendTransactionFlow`` (inlined), which should be used to send a signed transaction if it needed to be resolved on
+* ``FinalityFlow`` which is used to notarise, record locally and then broadcast a signed transaction to its participants
+  and any extra parties.
+* ``ReceiveFinalityFlow`` to receive these notarised transactions from the ``FinalityFlow`` sender and record locally.
+* ``CollectSignaturesFlow`` , which should be used to collect a transaction's required signatures
+* ``SendTransactionFlow`` , which should be used to send a signed transaction if it needed to be resolved on
   the other side.
-* ``ReceiveTransactionFlow`` (inlined), which should be used receive a signed transaction
+* ``ReceiveTransactionFlow``, which should be used receive a signed transaction
 
 Let's look at some of these flows in more detail.
 
@@ -588,20 +592,26 @@ We can also choose to send the transaction to additional parties who aren't one 
         :end-before: DOCEND 10
         :dedent: 12
 
-Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It does
-**not** need to be called by each participant individually.
+Only one party has to call ``FinalityFlow`` for a given transaction to be recorded by all participants. It **must not**
+be called by every participant. Instead, every other particpant **must** call ``ReceiveFinalityFlow`` in their responder
+flow to receive the transaction:
 
-Because the transaction has already been notarised and the input states consumed, if the participants when receiving the
-transaction fail to verify it, or the receiving flow (the finality handler) fails due to some other error, we then have
-the scenario where not all parties have the correct up to date view of the ledger. To recover from this the finality handler
-is automatically sent to the flow hospital where it's suspended and retried from its last checkpoint on node restart.
-This gives the node operator the opportunity to recover from the error. Until the issue is resolved the node will continue
-to retry the flow on each startup.
+.. container:: codeset
 
-.. note:: It's possible to forcibly terminate the erroring finality handler using the ``killFlow`` RPC but at the risk
-   of an inconsistent view of the ledger.
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
+        :language: kotlin
+        :start-after: DOCSTART ReceiveFinalityFlow
+        :end-before: DOCEND ReceiveFinalityFlow
+        :dedent: 8
 
-.. note:: A future release will allow retrying hospitalised flows without restarting the node, i.e. via RPC.
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
+        :language: java
+        :start-after: DOCSTART ReceiveFinalityFlow
+        :end-before: DOCEND ReceiveFinalityFlow
+        :dedent: 12
+
+``idOfTxWeSigned`` is an optional parameter used to confirm that we got the right transaction. It comes from using ``SignTransactionFlow``
+which is described below.
 
 CollectSignaturesFlow/SignTransactionFlow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -788,28 +798,36 @@ HTTP, database and other calls to external resources are allowed in flows. Howev
 
 Concurrency, Locking and Waiting
 --------------------------------
-This is an advanced topic.  Because Corda is designed to:
+Corda is designed to:
 
-* run many flows in parallel,
-* may persist flows to storage and resurrect those flows much later,
-* (in the future) migrate flows between JVMs,
+* run many flows in parallel
+* persist flows to storage and resurrect those flows much later
+* (in the future) migrate flows between JVMs
 
-flows should avoid use of locks and typically not even attempt to interact with objects shared between flows (except
-``ServiceHub`` and other carefully crafted services such as Oracles.  See :doc:`oracles`).
-Locks will significantly reduce the scalability of the node, in the best case, and can cause the node to deadlock if they
-remain locked across flow context switch boundaries (such as sending and receiving
-from peers discussed above, and the sleep discussed below).
+Because of this, care must be taken when performing locking or waiting operations.
 
-If you need activities that are scheduled, you should investigate the use of ``SchedulableState``.
-However, we appreciate that Corda support for some more advanced patterns is still in the future, and if there is a need
-for brief pauses in flows then you should use ``FlowLogic.sleep`` in place of where you might have used ``Thread.sleep``.
-Flows should expressly not use ``Thread.sleep``, since this will prevent the node from processing other flows
-in the meantime, significantly impairing the performance of the node.
-Even ``FlowLogic.sleep`` is not to be used to create long running flows, since the Corda ethos is for short lived flows
-(otherwise upgrading nodes or CorDapps is much more complicated), or as a substitute to using the ``SchedulableState`` scheduler.
+Locking
+^^^^^^^
+Flows should avoid using locks or interacting with objects that are shared between flows (except for ``ServiceHub`` and other 
+carefully crafted services such as Oracles.  See :doc:`oracles`). Locks will significantly reduce the scalability of the 
+node, and can cause the node to deadlock if they remain locked across flow context switch boundaries (such as when sending 
+and receiving from peers, as discussed above, or sleeping, as discussed below).
 
-Currently the ``finance`` package uses ``FlowLogic.sleep`` to make several attempts at coin selection, where necessary,
-when many states are soft locked and we wish to wait for those, or other new states in their place, to become unlocked.
+Waiting
+^^^^^^^
+A flow can wait until a specific transaction has been received and verified by the node using `FlowLogic.waitForLedgerCommit`. 
+Outside of this, scheduling an activity to occur at some future time should be achieved using ``SchedulableState``.
+
+However, if there is a need for brief pauses in flows, you have the option of using ``FlowLogic.sleep`` in place of where you
+might have used ``Thread.sleep``. Flows should expressly not use ``Thread.sleep``, since this will prevent the node from 
+processing other flows in the meantime, significantly impairing the performance of the node.
+
+Even ``FlowLogic.sleep`` should not be used to create long running flows or as a substitute to using the ``SchedulableState``
+scheduler, since the Corda ethos is for short-lived flows (long-lived flows make upgrading nodes or CorDapps much more 
+complicated).
+
+For example, the ``finance`` package currently uses ``FlowLogic.sleep`` to make several attempts at coin selection when 
+many states are soft locked, to wait for states to become unlocked:
 
     .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/cash/selection/AbstractCashSelection.kt
         :language: kotlin

@@ -1,7 +1,9 @@
 package net.corda.nodeapi.internal.network
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -17,6 +19,7 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
+import net.corda.core.utilities.filterNotNullValues
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
@@ -27,9 +30,12 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
+import java.io.File
 import java.io.InputStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
@@ -92,19 +98,34 @@ internal constructor(private val initSerEnv: Boolean,
 
         private fun generateNodeInfo(nodeDir: Path): Path {
             val logsDir = (nodeDir / LOGS_DIR_NAME).createDirectories()
+            val nodeInfoGenFile = (logsDir / "node-info-gen.log").toFile()
             val process = ProcessBuilder(nodeInfoGenCmd)
                     .directory(nodeDir.toFile())
                     .redirectErrorStream(true)
-                    .redirectOutput((logsDir / "node-info-gen.log").toFile())
+                    .redirectOutput(nodeInfoGenFile)
                     .apply { environment()["CAPSULE_CACHE_DIR"] = "../.cache" }
                     .start()
             if (!process.waitFor(3, TimeUnit.MINUTES)) {
                 process.destroyForcibly()
-                throw IllegalStateException("Error while generating node info file. Please check the logs in $logsDir.")
+                printNodeInfoGenLogToConsole(nodeInfoGenFile)
             }
-            check(process.exitValue() == 0) { "Error while generating node info file. Please check the logs in $logsDir." }
+            printNodeInfoGenLogToConsole(nodeInfoGenFile) { process.exitValue() == 0 }
             return nodeDir.list { paths ->
                 paths.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.findFirst().get()
+            }
+        }
+
+        private fun printNodeInfoGenLogToConsole(nodeInfoGenFile: File, check: (() -> Boolean) = { true }) {
+            if (!check.invoke()) {
+                val nodeDir = nodeInfoGenFile.parent
+                val nodeIdentifier = try {
+                    ConfigFactory.parseFile((nodeDir / "node.conf").toFile()).getString("myLegalName")
+                } catch (e: ConfigException) {
+                    nodeDir
+                }
+                System.err.println("#### Error while generating node info file $nodeIdentifier ####")
+                nodeInfoGenFile.inputStream().copyTo(System.err)
+                throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
             }
         }
     }
@@ -138,7 +159,7 @@ internal constructor(private val initSerEnv: Boolean,
     private fun isBFTNotary(config: Config): Boolean {
         // TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map
         //       specifying the notary identities and the type (single-node, CFT, BFT) of each notary to set up.
-        return config.getString ("notary.className").contains("BFT", true)
+        return config.getString("notary.className").contains("BFT", true)
     }
 
     private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
@@ -168,14 +189,14 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int) {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<String, PublicKey?> = emptyMap()) {
         require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidently include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
             paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion, packageOwnership = packageOwnership)
     }
 
     private fun bootstrap(
@@ -183,7 +204,8 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            minimumPlatformVersion: Int = PLATFORM_VERSION
+            minimumPlatformVersion: Int = PLATFORM_VERSION,
+            packageOwnership: Map<String, PublicKey?> = emptyMap()
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -204,7 +226,13 @@ internal constructor(private val initSerEnv: Boolean,
             println("Copying CorDapp JARs into node directories")
             for (nodeDir in nodeDirs) {
                 val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                cordappJars.forEach { it.copyToDirectory(cordappsDir) }
+                cordappJars.forEach {
+                    try {
+                        it.copyToDirectory(cordappsDir)
+                    } catch (e: FileAlreadyExistsException) {
+                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                    }
+                }
             }
         }
         generateServiceIdentitiesForNotaryClusters(configs)
@@ -223,7 +251,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion, packageOwnership)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -355,17 +383,30 @@ internal constructor(private val initSerEnv: Boolean,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            minimumPlatformVersion: Int
+            minimumPlatformVersion: Int,
+            packageOwnership: Map<String, PublicKey?>
     ): NetworkParameters {
-        // TODO Add config for minimumPlatformVersion, maxMessageSize and maxTransactionSize
+        // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
-            if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos) {
+            if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos &&
+                    existingNetParams.packageOwnership.entries.containsAll(packageOwnership.entries)) {
                 existingNetParams
             } else {
+                var updatePackageOwnership = mutableMapOf(*existingNetParams.packageOwnership.map { Pair(it.key, it.value) }.toTypedArray())
+                packageOwnership.forEach { key, value ->
+                    if (value == null) {
+                        if (updatePackageOwnership.remove(key) != null)
+                            println("Unregistering package $key")
+                    } else {
+                        if (updatePackageOwnership.put(key, value) == null)
+                            println("Registering package $key for owner ${value.toStringShort()}")
+                    }
+                }
                 existingNetParams.copy(
                         notaries = notaryInfos,
                         modifiedTime = Instant.now(),
                         whitelistedContractImplementations = whitelist,
+                        packageOwnership = updatePackageOwnership,
                         epoch = existingNetParams.epoch + 1
                 )
             }
@@ -375,8 +416,9 @@ internal constructor(private val initSerEnv: Boolean,
                     notaries = notaryInfos,
                     modifiedTime = Instant.now(),
                     maxMessageSize = 10485760,
-                    maxTransactionSize = 10485760,
+                    maxTransactionSize = 524288000,
                     whitelistedContractImplementations = whitelist,
+                    packageOwnership = packageOwnership.filterNotNullValues(),
                     epoch = 1,
                     eventHorizon = 30.days
             )
@@ -388,10 +430,10 @@ internal constructor(private val initSerEnv: Boolean,
 
     private fun NodeInfo.notaryIdentity(): Party {
         return when (legalIdentities.size) {
-        // Single node notaries have just one identity like all other nodes. This identity is the notary identity
+            // Single node notaries have just one identity like all other nodes. This identity is the notary identity
             1 -> legalIdentities[0]
-        // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
-        // cluster and is shared by all the other members. This is the notary identity.
+            // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
+            // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
             else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
         }

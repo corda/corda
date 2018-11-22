@@ -1,6 +1,10 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.KeepForDJVM
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -8,11 +12,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import net.corda.core.utilities.OpaqueBytes
 import org.slf4j.MDC
 
 // *Internal* Corda-specific utilities
@@ -20,12 +27,15 @@ import org.slf4j.MDC
 const val PLATFORM_VERSION = 4
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
-    val currentMinPlatformVersion = networkParameters.minimumPlatformVersion
-    if (currentMinPlatformVersion < requiredMinPlatformVersion) {
+    checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
+}
+
+fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatformVersion: Int, feature: String) {
+    if (minimumPlatformVersion < requiredMinPlatformVersion) {
         throw ZoneVersionTooLowException(
                 "$feature requires all nodes on the Corda compatibility zone to be running at least platform version " +
                         "$requiredMinPlatformVersion. The current zone is only enforcing a minimum platform version of " +
-                        "$currentMinPlatformVersion. Please contact your zone operator."
+                        "$minimumPlatformVersion. Please contact your zone operator."
         )
     }
 }
@@ -57,3 +67,24 @@ fun Class<out FlowLogic<*>>.isIdempotentFlow(): Boolean {
 internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
 }
+
+/**
+ * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
+ * Size is very cheap as it doesn't call [transform].
+ */
+class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
+    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
+
+    override val size = originalList.size
+
+    override fun get(index: Int) = partialResolvedList[index]
+            ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+}
+
+/**
+ * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
+ * The [serializedState] is the actual component from the original transaction.
+ */
+@KeepForDJVM
+@CordaSerializable
+data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef)

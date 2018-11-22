@@ -114,31 +114,43 @@ class NodeTabView : Fragment() {
 
                 fieldset("Additional configuration") {
                     styleClass.addAll("services-panel")
-                    val extraServices = if (nodeController.hasNotary()) {
-                        listOf(USD, GBP, CHF, EUR).map { CurrencyIssuer(it) }
-                    } else {
-                        listOf(NotaryService(true), NotaryService(false))
-                    }
-
-                    val servicesList = CheckListView(extraServices.observable()).apply {
-                        vboxConstraints { vGrow = Priority.ALWAYS }
-                        model.item.extraServices.set(checkModel.checkedItems)
-                        if (!nodeController.hasNotary()) {
-                            checkModel.check(0)
-                            checkModel.checkedItems.addListener(ListChangeListener { change ->
-                                while (change.next()) {
-                                    if (change.wasAdded()) {
-                                        val item = change.addedSubList.last()
-                                        val idx = checkModel.getItemIndex(item)
-                                        checkModel.checkedIndices.forEach {
-                                            if (it != idx) checkModel.clearCheck(it)
+                    if (nodeController.hasNotary()) {
+                        val extraServices: List<ExtraService> = listOf(USD, GBP, CHF, EUR).map { CurrencyIssuer(it) }
+                        val servicesList = CheckListView(extraServices.observable()).apply {
+                            vboxConstraints { vGrow = Priority.ALWAYS }
+                            model.item.extraServices.set(checkModel.checkedItems)
+                            if (!nodeController.hasNotary()) {
+                                checkModel.check(0)
+                                checkModel.checkedItems.addListener(ListChangeListener { change ->
+                                    while (change.next()) {
+                                        if (change.wasAdded()) {
+                                            val item = change.addedSubList.last()
+                                            val idx = checkModel.getItemIndex(item)
+                                            checkModel.checkedIndices.forEach {
+                                                if (it != idx) checkModel.clearCheck(it)
+                                            }
                                         }
                                     }
-                                }
-                            })
+                                })
+                            }
+                        }
+                        add(servicesList)
+                    } else {
+                        val notaryTypes = listOf(NotaryService(true), NotaryService(false))
+                        val notaryTypeToggleGroup = togglegroup()
+                        notaryTypeToggleGroup.selectedValueProperty<NotaryService>().addListener { observValue, oldValue, newValue ->
+                            oldValue?.let {
+                                model.item.extraServices.removeAll(it)
+                            }
+                            newValue?.let {
+                                model.item.extraServices.add(it)
+                            }
+                        }
+                        notaryTypes.forEachIndexed { index, notaryType ->
+                            val toggle = radiobutton(notaryType.toString(), notaryTypeToggleGroup, notaryType)
+                            toggle.isSelected = index == 0
                         }
                     }
-                    add(servicesList)
                 }
             }
 

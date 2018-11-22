@@ -147,10 +147,7 @@ public class JavaPrivatePropertyTests {
         //
         // Now ensure we actually got a private property serializer
         //
-        Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
-        f.setAccessible(true);
-
-        Map<?, AMQPSerializer<?>> serializersByDescriptor = uncheckedCast(f.get(factory));
+        Map<Object, AMQPSerializer<Object>> serializersByDescriptor = factory.getSerializersByDescriptor();
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);
@@ -175,9 +172,7 @@ public class JavaPrivatePropertyTests {
         //
         // Now ensure we actually got a private property serializer
         //
-        Field f = SerializerFactory.class.getDeclaredField("serializersByDescriptor");
-        f.setAccessible(true);
-        Map<?, AMQPSerializer<?>> serializersByDescriptor = uncheckedCast(f.get(factory));
+        Map<Object, AMQPSerializer<Object>> serializersByDescriptor = factory.getSerializersByDescriptor();
 
         assertEquals(1, serializersByDescriptor.size());
         ObjectSerializer cSerializer = ((ObjectSerializer)serializersByDescriptor.values().toArray()[0]);

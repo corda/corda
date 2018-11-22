@@ -1,6 +1,5 @@
 package net.corda.node.internal
 
-import com.typesafe.config.ConfigException
 import io.netty.channel.unix.Errors
 import net.corda.cliutils.*
 import net.corda.core.crypto.Crypto
@@ -15,12 +14,13 @@ import net.corda.node.*
 import net.corda.node.internal.Node.Companion.isInvalidJavaVersion
 import net.corda.node.internal.cordapp.MultipleCordappsForFlowException
 import net.corda.node.internal.subcommands.*
+import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logConfigurationErrors
+import net.corda.node.internal.subcommands.ValidateConfigurationCli.Companion.logRawConfig
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.shouldStartLocalShell
 import net.corda.node.services.config.shouldStartSSHDaemon
 import net.corda.node.utilities.registration.NodeRegistrationException
 import net.corda.nodeapi.internal.addShutdownHook
-import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
@@ -35,7 +35,6 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
-import java.util.*
 
 /** An interface that can be implemented to tell the node what to do once it's intitiated. */
 interface RunAfterNodeInitialisation {
@@ -56,15 +55,19 @@ abstract class NodeCliCommand(alias: String, description: String, val startup: N
 
 /** Main corda entry point. */
 open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
-    val startup = NodeStartup()
-    private val networkCacheCli = ClearNetworkCacheCli(startup)
-    private val justGenerateNodeInfoCli = GenerateNodeInfoCli(startup)
-    private val justGenerateRpcSslCertsCli = GenerateRpcSslCertsCli(startup)
-    private val initialRegistrationCli = InitialRegistrationCli(startup)
+    open val startup = NodeStartup()
+    @Mixin
+    val cmdLineOptions = NodeCmdLineOptions()
+
+    private val networkCacheCli by lazy { ClearNetworkCacheCli(startup) }
+    private val justGenerateNodeInfoCli by lazy { GenerateNodeInfoCli(startup) }
+    private val justGenerateRpcSslCertsCli by lazy { GenerateRpcSslCertsCli(startup) }
+    private val initialRegistrationCli by lazy { InitialRegistrationCli(startup) }
+    private val validateConfigurationCli by lazy { ValidateConfigurationCli() }
 
     override fun initLogging() = this.initLogging(cmdLineOptions.baseDirectory)
 
-    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli)
+    override fun additionalSubCommands() = setOf(networkCacheCli, justGenerateNodeInfoCli, justGenerateRpcSslCertsCli, initialRegistrationCli, validateConfigurationCli)
 
     override fun runProgram(): Int {
         return when {
@@ -103,9 +106,6 @@ open class NodeStartupCli : CordaCliWrapper("corda", "Runs a Corda Node") {
             })
         }
     }
-
-    @Mixin
-    val cmdLineOptions = NodeCmdLineOptions()
 }
 
 /** This class provides a common set of functionality for starting a Node from command line arguments. */
@@ -139,13 +139,8 @@ open class NodeStartup : NodeStartupLogging {
         Node.printBasicNodeInfo(LOGS_CAN_BE_FOUND_IN_STRING, System.getProperty("log-path"))
 
         // Step 5. Load and validate node configuration.
-        val configuration = (attempt { cmdLineOptions.loadConfig() }.doOnException(handleConfigurationLoadingError(cmdLineOptions.configFile)) as? Try.Success)?.let(Try.Success<NodeConfiguration>::value)
-                ?: return ExitCodes.FAILURE
-        val errors = configuration.validate()
-        if (errors.isNotEmpty()) {
-            logger.error("Invalid node configuration. Errors were:${System.lineSeparator()}${errors.joinToString(System.lineSeparator())}")
-            return ExitCodes.FAILURE
-        }
+        val rawConfig = cmdLineOptions.rawConfiguration().doOnErrors(cmdLineOptions::logRawConfigurationErrors).optional ?: return ExitCodes.FAILURE
+        val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
         attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
@@ -195,7 +190,7 @@ open class NodeStartup : NodeStartupLogging {
                 node.startupComplete.then {
                     try {
                         InteractiveShell.runLocalShell(node::stop)
-                    } catch (e: Throwable) {
+                    } catch (e: Exception) {
                         logger.error("Shell failed to start", e)
                     }
                 }
@@ -429,30 +424,12 @@ interface NodeStartupLogging {
             else -> error.logAsUnexpected("Exception during node startup")
         }
     }
-
-    fun handleConfigurationLoadingError(configFile: Path) = { error: Exception ->
-        when (error) {
-            is UnknownConfigurationKeysException -> error.logAsExpected()
-            is ConfigException.IO -> error.logAsExpected(configFileNotFoundMessage(configFile), ::println)
-            else -> error.logAsUnexpected("Unexpected error whilst reading node configuration")
-        }
-    }
-
-    private fun configFileNotFoundMessage(configFile: Path): String {
-        return """
-                Unable to load the node config file from '$configFile'.
-
-                Try setting the --base-directory flag to change which directory the node
-                is looking in, or use the --config-file flag to specify it explicitly.
-            """.trimIndent()
-    }
 }
 
 fun CliWrapperBase.initLogging(baseDirectory: Path) {
-    val loggingLevel = loggingLevel.name.toLowerCase(Locale.ENGLISH)
-    System.setProperty("defaultLogLevel", loggingLevel) // These properties are referenced from the XML config file.
+    System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
-        System.setProperty("consoleLogLevel", loggingLevel)
+        System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
     System.setProperty("log-path", (baseDirectory / NodeCliCommand.LOGS_DIRECTORY_NAME).toString())

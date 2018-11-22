@@ -298,7 +298,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
                                                           issueCommand: CommandData): Set<PublicKey> {
             check(tx.inputStates().isEmpty())
             check(tx.outputStates().map { it.data }.filterIsInstance(transactionState.javaClass).isEmpty())
-            require(transactionState.data.amount.quantity > 0)
+            require(transactionState.data.amount.quantity > 0){"Amount to issue must be greater than zero"}
             val at = transactionState.data.amount.token.issuer
             val commandSigner = at.party.owningKey
             tx.addOutputState(transactionState)

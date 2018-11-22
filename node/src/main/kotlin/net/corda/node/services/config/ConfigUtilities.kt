@@ -67,10 +67,11 @@ object ConfigHelper {
  * Strictly for dev only automatically construct a server certificate/private key signed from
  * the CA certs in Node resources. Then provision KeyStores into certificates folder under node path.
  */
-// TODO Move this to KeyStoreConfigHelpers
+// TODO Move this to KeyStoreConfigHelpers.
+// TODO consider taking CryptoService as an input.
 fun NodeConfiguration.configureWithDevSSLCertificate() = p2pSslOptions.configureDevKeyAndTrustStores(myLegalName, signingCertificateStore, certificatesDirectory)
 
-// TODO Move this to KeyStoreConfigHelpers
+// TODO Move this to KeyStoreConfigHelpers.
 fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500Name, signingCertificateStore: FileBasedCertificateStoreSupplier, certificatesDirectory: Path) {
 
     val specifiedTrustStore = trustStore.getOptional()
@@ -85,7 +86,7 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
         loadDevCaTrustStore().copyTo(trustStore.get(true))
     }
 
-    if (keyStore.getOptional() == null || signingCertificateStore.getOptional() == null) {
+    if (specifiedKeyStore == null || specifiedSigningStore == null) {
         val signingKeyStore = FileBasedCertificateStoreSupplier(signingCertificateStore.path, signingCertificateStore.storePassword, signingCertificateStore.entryPassword).get(true).also { it.registerDevSigningCertificates(myLegalName) }
 
         FileBasedCertificateStoreSupplier(keyStore.path, keyStore.storePassword, keyStore.entryPassword).get(true).also { it.registerDevP2pCertificates(myLegalName) }

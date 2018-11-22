@@ -53,6 +53,12 @@ operator fun <T : Any> Config.getValue(receiver: Any, metadata: KProperty<*>): T
     return getValueInternal(metadata.name, metadata.returnType, UnknownConfigKeysPolicy.IGNORE::handle)
 }
 
+// Problems:
+// - Forces you to have a primary constructor with all fields of name and type matching the configuration file structure.
+// - Encourages weak bean-like types.
+// - Cannot support a many-to-one relationship between configuration file structures and configuration domain type. This is essential for versioning of the configuration files.
+// - It's complicated and based on reflection, meaning problems with it are typically found at runtime.
+// - It doesn't support validation errors in a structured way. If something goes wrong, it throws exceptions, which doesn't support good usability practices like displaying all the errors at once.
 fun <T : Any> Config.parseAs(clazz: KClass<T>, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit) = UnknownConfigKeysPolicy.FAIL::handle, nestedPath: String? = null): T {
     // Use custom parser if provided, instead of treating the object as data class.
     clazz.findAnnotation<CustomConfigParser>()?.let { return uncheckedCast(it.parser.createInstance().parse(this)) }
@@ -218,6 +224,8 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
  */
 fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
 
+fun Any.toConfigValue(): ConfigValue = if (this is ConfigValue) this else ConfigValueFactory.fromAnyRef(convertValue(this))
+
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.
 private fun Any.toConfigMap(): Map<String, Any> {
@@ -249,6 +257,28 @@ private fun Any.toConfigMap(): Map<String, Any> {
     return values
 }
 
+private fun convertValue(value: Any): Any {
+
+    return if (value is String || value is Boolean || value is Number) {
+        // These types are supported by Config as use as is
+        value
+    } else if (value is Temporal || value is NetworkHostAndPort || value is CordaX500Name || value is Path || value is URL || value is UUID || value is X500Principal) {
+        // These types make sense to be represented as Strings and the exact inverse parsing function for use in parseAs
+        value.toString()
+    } else if (value is Enum<*>) {
+        // Expicitly use the Enum's name in case the toString is overridden, which would make parsing problematic.
+        value.name
+    } else if (value is Properties) {
+        // For Properties we treat keys with . as nested configs
+        ConfigFactory.parseMap(uncheckedCast(value)).root()
+    } else if (value is Iterable<*>) {
+        value.toConfigIterable()
+    } else {
+        // Else this is a custom object recursed over
+        value.toConfigMap()
+    }
+}
+
 // For Iterables figure out the type parameter and apply the same logic as above on the individual elements.
 private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     val elementType = (field.genericType as ParameterizedType).actualTypeArguments[0] as Class<*>
@@ -276,6 +306,8 @@ private fun Iterable<*>.toConfigIterable(field: Field): Iterable<Any?> {
     }
 }
 
+private fun Iterable<*>.toConfigIterable(): Iterable<Any?> = map { element -> element?.let(::convertValue) }
+
 // The typesafe .getBoolean function is case sensitive, this is a case insensitive version
 fun Config.getBooleanCaseInsensitive(path: String): Boolean {
     try {
@@ -294,7 +326,6 @@ private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.config"
 enum class UnknownConfigKeysPolicy(private val handle: (Set<String>, logger: Logger) -> Unit) {
 
     FAIL({ unknownKeys, _ -> throw UnknownConfigurationKeysException.of(unknownKeys) }),
-    WARN({ unknownKeys, logger -> logger.warn("Unknown configuration keys found: ${unknownKeys.joinToString(", ", "[", "]")}.") }),
     IGNORE({ _, _ -> });
 
     fun handle(unknownKeys: Set<String>, logger: Logger) {

@@ -20,8 +20,7 @@ public class CordaCaplet extends Capsule {
     }
 
     private Config parseConfigFile(List<String> args) {
-        String baseDirOption = getOption(args, "--base-directory");
-        this.baseDir = Paths.get((baseDirOption == null) ? "." : baseDirOption).toAbsolutePath().normalize().toString();
+        this.baseDir = getBaseDirectory(args);
         String config = getOption(args, "--config-file");
         File configFile = (config == null) ? new File(baseDir, "node.conf") : new File(config);
         try {
@@ -36,13 +35,40 @@ public class CordaCaplet extends Capsule {
         }
     }
 
+    File getConfigFile(List<String> args, String baseDir) {
+        String config = getOptionMultiple(args, Arrays.asList("--config-file", "-f"));
+        return (config == null || config.equals("")) ? new File(baseDir, "node.conf") : new File(config);
+    }
+
+    String getBaseDirectory(List<String> args) {
+        String baseDir = getOptionMultiple(args, Arrays.asList("--base-directory", "-b"));
+        return Paths.get((baseDir == null) ? "." : baseDir).toAbsolutePath().normalize().toString();
+    }
+
+    private String getOptionMultiple(List<String> args, List<String> possibleOptions) {
+        String result = null;
+        for(String option: possibleOptions) {
+            result = getOption(args, option);
+            if (result != null) break;
+        }
+        return result;
+    }
+
     private String getOption(List<String> args, String option) {
         final String lowerCaseOption = option.toLowerCase();
         int index = 0;
         for (String arg : args) {
             if (arg.toLowerCase().equals(lowerCaseOption)) {
-                if (index < args.size() - 1) {
+                if (index < args.size() - 1 && !args.get(index + 1).startsWith("-")) {
                     return args.get(index + 1);
+                } else {
+                    return null;
+                }
+            }
+
+            if (arg.toLowerCase().startsWith(lowerCaseOption)) {
+                if (arg.length() > option.length() && arg.substring(option.length(), option.length() + 1).equals("=")) {
+                    return arg.substring(option.length() + 1);
                 } else {
                     return null;
                 }
@@ -54,6 +80,7 @@ public class CordaCaplet extends Capsule {
 
     @Override
     protected ProcessBuilder prelaunch(List<String> jvmArgs, List<String> args) {
+        checkJavaVersion();
         nodeConfig = parseConfigFile(args);
         return super.prelaunch(jvmArgs, args);
     }
@@ -81,9 +108,10 @@ public class CordaCaplet extends Capsule {
 
             File cordappsDir = new File(baseDir, "cordapps");
             // Create cordapps directory if it doesn't exist.
-            requireCordappsDirExists(cordappsDir);
-            // Add additional directories of JARs to the classpath (at the end), e.g., for JDBC drivers.
-            augmentClasspath((List<Path>) cp, cordappsDir);
+            if (!checkIfCordappDirExists(cordappsDir)) {
+                // If it fails, just return the existing class path. The main Corda jar will detect the error and fail gracefully.
+                return cp;
+            }
             try {
                 List<String> jarDirs = nodeConfig.getStringList("jarDirs");
                 log(LOG_VERBOSE, "Configured JAR directories = " + jarDirs);
@@ -143,17 +171,26 @@ public class CordaCaplet extends Capsule {
         }
     }
 
-    private void requireCordappsDirExists(File dir) {
+    private static void checkJavaVersion() {
+        String version = System.getProperty("java.version");
+        if (version == null || !version.startsWith("1.8")) {
+            System.err.printf("Error: Unsupported Java version %s; currently only version 1.8 is supported.\n", version);
+            System.exit(1);
+        }
+    }
+
+    private Boolean checkIfCordappDirExists(File dir) {
         try {
             if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
                 logOnFailedCordappDir();
-                throw new RuntimeException("Cordapps dir could not be created"); // Let Capsule handle the error (log error, clean up, die).
+                return false;
             }
         }
         catch (SecurityException | NullPointerException e) {
             logOnFailedCordappDir();
-            throw e; // Let Capsule handle the error (log error, clean up, die).
+            return false;
         }
+        return true;
     }
 
     private void logOnFailedCordappDir() {

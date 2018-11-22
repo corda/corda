@@ -48,7 +48,9 @@ class StaticInitialisationOfSerializedObjectTest {
     fun kotlinObjectWithCompanionObject() {
         data class D(val c: C)
 
-        val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val sf = SerializerFactoryBuilder.build(AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())
+        )
 
         val typeMap = sf::class.java.getDeclaredField("serializersByType")
         typeMap.isAccessible = true
@@ -63,9 +65,9 @@ class StaticInitialisationOfSerializedObjectTest {
         // we can't actually construct one
         sf.get(null, D::class.java)
 
-        // post creation of the serializer we should have one element in the map, this
+        // post creation of the serializer we should have two elements in the map, this
         // proves we didn't statically construct an instance of C when building the serializer
-        assertEquals(1, serialisersByType.size)
+        assertEquals(2, serialisersByType.size)
     }
 
     @Test
@@ -87,7 +89,10 @@ class StaticInitialisationOfSerializedObjectTest {
                             ".StaticInitialisationOfSerializedObjectTest\$deserializeTest\$D"
         }
 
-        val sf2 = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val whitelist = WL()
+        val sf2 = SerializerFactoryBuilder.build(whitelist,
+                ClassCarpenterImpl(whitelist, ClassLoader.getSystemClassLoader())
+        )
         val bytes = url.readBytes()
 
         assertThatThrownBy {
@@ -97,8 +102,8 @@ class StaticInitialisationOfSerializedObjectTest {
 
     // Version of a serializer factory that will allow the class carpenter living on the
     // factory to have a different whitelist applied to it than the factory
-    class TestSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) :
-            SerializerFactory(wl1, ClassCarpenterImpl(wl2, ClassLoader.getSystemClassLoader()))
+    private fun testSerializerFactory(wl1: ClassWhitelist, wl2: ClassWhitelist) =
+            SerializerFactoryBuilder.build(wl1, ClassCarpenterImpl(wl2, ClassLoader.getSystemClassLoader()))
 
     // This time have the serialization factory and the carpenter use different whitelists
     @Test
@@ -126,7 +131,7 @@ class StaticInitialisationOfSerializedObjectTest {
             override fun hasListed(type: Class<*>) = true
         }
 
-        val sf2 = TestSerializerFactory(WL1(), WL2())
+        val sf2 = testSerializerFactory(WL1(), WL2())
         val bytes = url.readBytes()
 
         // Deserializing should throw because C is not on the whitelist NOT because

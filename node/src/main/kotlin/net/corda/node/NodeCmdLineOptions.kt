@@ -1,12 +1,18 @@
 package net.corda.node
 
 import com.typesafe.config.Config
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigRenderOptions
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
+import net.corda.common.configuration.parsing.internal.Configuration
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
+import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.internal.div
+import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.NodeConfigurationImpl
+import net.corda.node.services.config.Valid
 import net.corda.node.services.config.parseAsNodeConfiguration
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import picocli.CommandLine.Option
@@ -14,8 +20,11 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 open class SharedNodeCmdLineOptions {
+    private companion object {
+        private val logger by lazy { loggerFor<SharedNodeCmdLineOptions>() }
+    }
     @Option(
-            names = ["-b", "--base-directory"],
+            names = ["-b", BASE_DIR],
             description = ["The node working directory where all the files are kept."]
     )
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()
@@ -39,19 +48,18 @@ open class SharedNodeCmdLineOptions {
     )
     var devMode: Boolean? = null
 
-    open fun loadConfig(): NodeConfiguration {
-        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle)
+    open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+
+        val option = Configuration.Validation.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
+        return configuration.parseAsNodeConfiguration(option)
     }
 
-    protected fun getRawConfig(): Config {
-        val rawConfig = ConfigHelper.loadConfig(
-                baseDirectory,
-                configFile
-        )
-        if (devMode == true) {
-            println("Config:\n${rawConfig.root().render(ConfigRenderOptions.defaults())}")
+    open fun rawConfiguration(): Validated<Config, ConfigException> {
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile))
+        } catch (e: ConfigException) {
+            return invalid(e)
         }
-        return rawConfig
     }
 
     fun copyFrom(other: SharedNodeCmdLineOptions) {
@@ -60,11 +68,32 @@ open class SharedNodeCmdLineOptions {
         unknownConfigKeysPolicy= other.unknownConfigKeysPolicy
         devMode = other.devMode
     }
+
+    fun logRawConfigurationErrors(errors: Set<ConfigException>) {
+        if (errors.isNotEmpty()) {
+            logger.error("There were error(s) while attempting to load the node configuration:")
+        }
+        errors.forEach { error ->
+            when (error) {
+                is ConfigException.IO -> logger.error(configFileNotFoundMessage(configFile))
+                else -> logger.error(error.message)
+            }
+        }
+    }
+
+    private fun configFileNotFoundMessage(configFile: Path): String {
+        return """
+                Unable to load the node config file from '$configFile'.
+
+                Try setting the --base-directory flag to change which directory the node
+                is looking in, or use the --config-file flag to specify it explicitly.
+            """.trimIndent()
+    }
 }
 
 class InitialRegistrationCmdLineOptions : SharedNodeCmdLineOptions() {
-    override fun loadConfig(): NodeConfiguration {
-        return getRawConfig().parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             require(!config.devMode) { "Registration cannot occur in development mode" }
             require(config.compatibilityZoneURL != null || config.networkServices != null) {
                 "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
@@ -134,21 +163,30 @@ open class NodeCmdLineOptions : SharedNodeCmdLineOptions() {
     )
     var networkRootTrustStorePassword: String? = null
 
-    override fun loadConfig(): NodeConfiguration {
-        val rawConfig = ConfigHelper.loadConfig(
-                baseDirectory,
-                configFile,
-                configOverrides = ConfigFactory.parseMap(mapOf("noLocalShell" to this.noLocalShell) +
-                        if (sshdServer) mapOf("sshd" to mapOf("port" to sshdServerPort.toString())) else emptyMap<String, Any>() +
-                                if (devMode != null) mapOf("devMode" to this.devMode) else emptyMap())
-        )
-        return rawConfig.parseAsNodeConfiguration(unknownConfigKeysPolicy::handle).also { config ->
+    override fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
+        return super.parseConfiguration(configuration).doIfValid { config ->
             if (isRegistration) {
                 require(!config.devMode) { "Registration cannot occur in development mode" }
                 require(config.compatibilityZoneURL != null || config.networkServices != null) {
                     "compatibilityZoneURL or networkServices must be present in the node configuration file in registration mode."
                 }
             }
+        }
+    }
+
+    override fun rawConfiguration(): Validated<Config, ConfigException> {
+        val configOverrides = mutableMapOf<String, Any>()
+        configOverrides += "noLocalShell" to noLocalShell
+        if (sshdServer) {
+            configOverrides += "sshd" to mapOf("port" to sshdServerPort.toString())
+        }
+        devMode?.let {
+            configOverrides += "devMode" to it
+        }
+        return try {
+            valid(ConfigHelper.loadConfig(baseDirectory, configFile, configOverrides = ConfigFactory.parseMap(configOverrides)))
+        } catch (e: ConfigException) {
+            return invalid(e)
         }
     }
 }

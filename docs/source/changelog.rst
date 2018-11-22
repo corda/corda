@@ -7,9 +7,34 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
-* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
+* Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
+  and is configurable via the node config. See :doc:`network-map` for more information.
+  
+* Deprecated `SerializationContext.withAttachmentsClassLoader`. This functionality has always been disabled by flags
+and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
 
-* Introduce minimum and target platform version for CorDapps.
+* Deprecated the `LedgerTransaction` constructor. No client code should call it directly. LedgerTransactions can be created from WireTransactions if required.
+
+* Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
+  to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
+
+* New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
+
+* CorDapps now have the ability to specify a minimum platform version in their MANIFEST.MF to prevent old nodes from loading them.
+
+* CorDapps have the ability to specify a target platform version in their MANIFEST.MF as a means of indicating to the node
+  the app was designed and tested on that version.
+
+* Nodes will no longer automatically reject flow initiation requests for flows they don't know about. Instead the request will remain
+  un-acknowledged in the message broker. This enables the recovery scenerio whereby any missing CorDapp can be installed and retried on node
+  restart. As a consequence the initiating flow will be blocked until the receiving node has resolved the issue.
+
+* ``FinalityFlow`` is now an inlined flow and no longer requires a handler flow in the counterparty. This is to fix the
+  security problem with the handler flow as it accepts any transaction it receives without any checks. Existing CorDapp
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that
+  CorDapps switch to this new API. See :doc:`upgrade-notes` for further details.
+
+* Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
 * BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
   their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
@@ -186,7 +211,7 @@ Unreleased
 * Configuration file changes:
 
   * Added program line argument ``on-unknown-config-keys`` to allow specifying behaviour on unknown node configuration property keys.
-    Values are: [FAIL, WARN, IGNORE], default to FAIL if unspecified.
+    Values are: [FAIL, IGNORE], default to FAIL if unspecified.
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
@@ -256,6 +281,12 @@ Unreleased
 
 * `issuer_ref` column in `FungibleStateSchema` was updated to be nullable to support the introduction of the
   `FungibleState` interface. The `vault_fungible_states` table can hold both `FungibleAssets` and `FungibleStates`.
+
+* CorDapps built by ``corda-gradle-plugins`` are now signed and sealed JAR files.
+  Signing can be configured or disabled, and it defaults to using the Corda development certificate.
+
+* Finance CorDapp is now build as a sealed and signed JAR file.
+  Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
 
 Version 3.3
 -----------

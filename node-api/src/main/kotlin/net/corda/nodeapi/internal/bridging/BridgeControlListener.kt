@@ -55,6 +55,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
             } catch (ex: Exception) {
                 log.error("Unable to process bridge control message", ex)
             }
+            msg.acknowledge()
         }
         val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
         val bridgeRequest = artemisSession.createMessage(false)

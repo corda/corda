@@ -4,7 +4,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.list
 import net.corda.core.internal.write
 import net.corda.nodeapi.eventually
-import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.NODE_INFO_DIRECTORY
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule

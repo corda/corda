@@ -2,10 +2,7 @@ package net.corda.testMessage
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.*
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowLogicRefFactory
-import net.corda.core.flows.SchedulableFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -16,6 +13,7 @@ import java.util.*
 import kotlin.reflect.jvm.jvmName
 
 @SchedulableFlow
+@InitiatingFlow
 class ScheduledFlow(private val stateRef: StateRef) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
@@ -35,7 +33,15 @@ class ScheduledFlow(private val stateRef: StateRef) : FlowLogic<Unit>() {
                 .addOutputState(newStateOutput, DummyContract.PROGRAM_ID)
                 .addCommand(dummyCommand(ourIdentity.owningKey))
         val tx = serviceHub.signInitialTransaction(builder)
-        subFlow(FinalityFlow(tx, setOf(scheduledState.destination)))
+        subFlow(FinalityFlow(tx, initiateFlow(scheduledState.destination)))
+    }
+}
+
+@InitiatedBy(ScheduledFlow::class)
+class ScheduledResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(ReceiveFinalityFlow(otherSide))
     }
 }
 

@@ -6,13 +6,11 @@ import com.google.common.hash.HashCode
 import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
-import net.corda.core.ClientRelevantError
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.node.ServicesForResolution
@@ -231,7 +229,7 @@ class NodeAttachmentService(
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
-                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers
+                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
                             ?: emptyList())
                 } else {
                     it
@@ -286,6 +284,14 @@ class NodeAttachmentService(
         return import(jar, uploader, filename)
     }
 
+    override fun privilegedImportOrGetAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
+        return try {
+            import(jar, uploader, filename)
+        } catch (faee: java.nio.file.FileAlreadyExistsException) {
+            AttachmentId.parse(faee.message!!)
+        }
+    }
+
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
@@ -294,7 +300,7 @@ class NodeAttachmentService(
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
-                require(inputStream !is JarInputStream)
+                require(inputStream !is JarInputStream){"Input stream must not be a JarInputStream"}
 
                 // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
                 // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
@@ -306,9 +312,7 @@ class NodeAttachmentService(
                 val id = bytes.sha256()
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
-
                     val jarSigners = getSigners(bytes)
-
                     val session = currentDBSession()
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
@@ -318,14 +322,24 @@ class NodeAttachmentService(
                             contractClassNames = contractClassNames,
                             signers = jarSigners
                     )
-
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
-                    id
-                } else {
-                    throw DuplicateAttachmentException(id.toString())
+                    return@withContractsInJar id
                 }
+                if (isUploaderTrusted(uploader)) {
+                    val session = currentDBSession()
+                    val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+                    // update the `upLoader` field (as the existing attachment may have been resolved from a peer)
+                    if (attachment.uploader != uploader) {
+                        attachment.uploader = uploader
+                        session.saveOrUpdate(attachment)
+                        log.info("Updated attachment $id with uploader $uploader")
+                        attachmentCache.invalidate(id)
+                        attachmentContentCache.invalidate(id)
+                    }
+                }
+                throw DuplicateAttachmentException(id.toString())
             }
         }
     }

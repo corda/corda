@@ -154,6 +154,11 @@ data class TestTransactionDSLInterpreter private constructor(
     override fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>){
         attachment((services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage, attachmentId, signers))
     }
+
+    override fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>, jarManifestAttributes: Map<String,String>){
+        attachment((services.cordappProvider as MockCordappProvider).addMockCordapp(contractClassName, services.attachments as MockAttachmentStorage, attachmentId, signers, jarManifestAttributes))
+    }
+
 }
 
 data class TestLedgerDSLInterpreter private constructor(

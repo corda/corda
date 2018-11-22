@@ -2,6 +2,7 @@
 @file:Suppress("unused")
 package sandbox.java.lang
 
+import net.corda.djvm.SandboxRuntimeContext
 import net.corda.djvm.analysis.AnalysisConfiguration.Companion.JVM_EXCEPTIONS
 import net.corda.djvm.analysis.ExceptionResolver.Companion.getDJVMException
 import net.corda.djvm.rules.implementation.*
@@ -42,14 +43,15 @@ fun Any.sandbox(): Any {
 private fun Array<*>.fromDJVMArray(): Array<*> = Object.fromDJVM(this)
 
 /**
- * These functions use the "current" classloader, i.e. classloader
- * that owns this DJVM class.
+ * Use [Class.forName] so that we can also fetch classes for arrays of primitive types.
+ * Also use the sandbox's classloader explicitly here, because this invoking class
+ * might belong to a shared parent classloader.
  */
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage())
+internal fun Class<*>.toDJVMType(): Class<*> = Class.forName(name.toSandboxPackage(), false, SandboxRuntimeContext.instance.classLoader)
 
 @Throws(ClassNotFoundException::class)
-internal fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage())
+internal fun Class<*>.fromDJVMType(): Class<*> = Class.forName(name.fromSandboxPackage(), false, SandboxRuntimeContext.instance.classLoader)
 
 private fun kotlin.String.toSandboxPackage(): kotlin.String {
     return if (startsWith(SANDBOX_PREFIX)) {
@@ -139,6 +141,21 @@ private val allEnums: sandbox.java.util.Map<Class<out Enum<*>>, Array<out Enum<*
 private val allEnumDirectories: sandbox.java.util.Map<Class<out Enum<*>>, sandbox.java.util.Map<String, out Enum<*>>> = sandbox.java.util.LinkedHashMap()
 
 /**
+ * Replacement function for Object.hashCode(), because some objects
+ * (i.e. arrays) cannot be replaced by [sandbox.java.lang.Object].
+ */
+fun hashCode(obj: Any?): Int {
+    return if (obj is Object) {
+        obj.hashCode()
+    } else if (obj != null) {
+        System.identityHashCode(obj)
+    } else {
+        // Throw the same exception that the JVM would throw in this case.
+        throw NullPointerException().sanitise()
+    }
+}
+
+/**
  * Replacement functions for Class<*>.forName(...) which protect
  * against users loading classes from outside the sandbox.
  */
@@ -160,7 +177,7 @@ fun classForName(className: kotlin.String, initialize: kotlin.Boolean, classLoad
  */
 private fun toSandbox(className: kotlin.String): kotlin.String {
     if (bannedClasses.any { it.matches(className) }) {
-        throw ClassNotFoundException(className)
+        throw ClassNotFoundException(className).sanitise()
     }
     return SANDBOX_PREFIX + className
 }
@@ -190,15 +207,16 @@ fun fromDJVM(t: Throwable?): kotlin.Throwable {
             val sandboxedName = t!!.javaClass.name
             if (Type.getInternalName(t.javaClass) in JVM_EXCEPTIONS) {
                 // We map these exceptions to their equivalent JVM classes.
-                Class.forName(sandboxedName.fromSandboxPackage()).createJavaThrowable(t)
+                SandboxRuntimeContext.instance.classLoader.loadClass(sandboxedName.fromSandboxPackage())
+                        .createJavaThrowable(t)
             } else {
                 // Whereas the sandbox creates a synthetic throwable wrapper for these.
-                Class.forName(getDJVMException(sandboxedName))
+                SandboxRuntimeContext.instance.classLoader.loadClass(getDJVMException(sandboxedName))
                     .getDeclaredConstructor(sandboxThrowable)
                     .newInstance(t) as kotlin.Throwable
             }
         } catch (e: Exception) {
-            RuleViolationError(e.message)
+            RuleViolationError(e.message).sanitise()
         }
     }
 }
@@ -223,8 +241,18 @@ fun catch(t: kotlin.Throwable): Throwable {
     try {
         return t.toDJVMThrowable()
     } catch (e: Exception) {
-        throw RuleViolationError(e.message)
+        throw RuleViolationError(e.message).sanitise()
     }
+}
+
+/**
+ * Clean up exception stack trace for throwing.
+ */
+private fun <T: kotlin.Throwable> T.sanitise(): T {
+    stackTrace = stackTrace.let {
+        it.sliceArray(1 until findEntryPointIndex(it))
+    }
+    return this
 }
 
 /**
@@ -264,12 +292,16 @@ private fun Class<*>.createJavaThrowable(t: Throwable): kotlin.Throwable {
     }
 }
 
-private fun sanitiseToDJVM(source: Array<java.lang.StackTraceElement>): Array<StackTraceElement> {
+private fun findEntryPointIndex(source: Array<java.lang.StackTraceElement>): Int {
     var idx = 0
     while (idx < source.size && !isEntryPoint(source[idx])) {
         ++idx
     }
-    return copyToDJVM(source, 0, idx)
+    return idx
+}
+
+private fun sanitiseToDJVM(source: Array<java.lang.StackTraceElement>): Array<StackTraceElement> {
+    return copyToDJVM(source, 0, findEntryPointIndex(source))
 }
 
 internal fun copyToDJVM(source: Array<java.lang.StackTraceElement>, fromIdx: Int, toIdx: Int): Array<StackTraceElement> {

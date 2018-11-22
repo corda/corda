@@ -12,13 +12,12 @@ import net.corda.core.contracts.PrivacySalt
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
+import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.uncheckedCast
-import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.serialization.internal.checkUseCase
 import net.corda.serialization.internal.serializationContextKey
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -73,8 +72,9 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     val constructor = klass.primaryConstructor!!
 
     init {
-        // Verify that this class is immutable (all properties are final)
-        require(props.none { it is KMutableProperty<*> })
+        props.forEach {
+            require(it !is KMutableProperty<*>) { "$it mutable property of class: ${klass} is unsupported" }
+        }
     }
 
     // Just a utility to help us catch cases where nodes are running out of sync versions.
@@ -486,4 +486,12 @@ class ThrowableSerializer<T>(kryo: Kryo, type: Class<T>) : Serializer<Throwable>
     }
 
     private fun Throwable.setSuppressedToSentinel() = suppressedField.set(this, sentinelValue)
+}
+
+/** For serializing the utility [LazyMappedList]. It will serialize the fully resolved object.*/
+@ThreadSafe
+@SuppressWarnings("ALL")
+object LazyMappedListSerializer : Serializer<List<*>>() {
+    override fun write(kryo: Kryo, output: Output, obj: List<*>) = kryo.writeClassAndObject(output, obj.toList())
+    override fun read(kryo: Kryo, input: Input, type: Class<List<*>>) = kryo.readClassAndObject(input) as List<*>
 }

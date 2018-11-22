@@ -1,5 +1,6 @@
 package sandbox.java.lang;
 
+import net.corda.djvm.SandboxRuntimeContext;
 import org.jetbrains.annotations.NotNull;
 import sandbox.java.nio.charset.Charset;
 import sandbox.java.util.Comparator;
@@ -8,7 +9,6 @@ import sandbox.java.util.Locale;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
-import java.util.Map;
 
 @SuppressWarnings("unused")
 public final class String extends Object implements Comparable<String>, CharSequence, Serializable {
@@ -24,7 +24,6 @@ public final class String extends Object implements Comparable<String>, CharSequ
     private static final String TRUE = new String("true");
     private static final String FALSE = new String("false");
 
-    private static final Map<java.lang.String, String> INTERNAL = new java.util.HashMap<>();
     private static final Constructor SHARED;
 
     static {
@@ -335,7 +334,7 @@ public final class String extends Object implements Comparable<String>, CharSequ
         return toDJVM(value.trim());
     }
 
-    public String intern() { return INTERNAL.computeIfAbsent(value, s -> this); }
+    public String intern() { return (String) SandboxRuntimeContext.getInstance().intern(value, this); }
 
     public char[] toCharArray() {
         return value.toCharArray();

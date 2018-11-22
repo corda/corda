@@ -50,9 +50,9 @@ a JVM client.
 Searching for attachments
 -------------------------
 
-Attachments metadata can be used to query, in the similar manner as :doc:`api-vault-query`.
+Attachment metadata can be queried in a similar way to the vault (see :doc:`api-vault-query`).
 
-``AttachmentQueryCriteria`` can be used to build a query, utilizing set of operations per column, namely:
+``AttachmentQueryCriteria`` can be used to build a query using the following set of column operations:
 
 * Binary logical (AND, OR)
 * Comparison (LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL)
@@ -61,9 +61,11 @@ Attachments metadata can be used to query, in the similar manner as :doc:`api-va
 * Nullability (IS_NULL, NOT_NULL)
 * Collection based (IN, NOT_IN)
 
-``And`` and ``or`` operators can be used to build queries of arbitrary complexity. Example of such query:
+The ``and`` and ``or`` operators can be used to build complex queries. For example:
 
-.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/persistence/NodeAttachmentStorageTest.kt
+.. container:: codeset
+
+    .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/persistence/NodeAttachmentServiceTest.kt
         :language: kotlin
         :start-after: DOCSTART AttachmentQueryExample1
         :end-before: DOCEND AttachmentQueryExample1

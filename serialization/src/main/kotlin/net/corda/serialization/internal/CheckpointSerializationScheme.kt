@@ -2,8 +2,11 @@ package net.corda.serialization.internal
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
-import net.corda.core.serialization.*
+import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.EncodingWhitelist
+import net.corda.core.serialization.SerializationEncoding
 import net.corda.core.serialization.internal.CheckpointSerializationContext
+import java.lang.UnsupportedOperationException
 
 @KeepForDJVM
 data class CheckpointSerializationContextImpl @JvmOverloads constructor(
@@ -13,19 +16,6 @@ data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) : CheckpointSerializationContext {
-    private val builder = AttachmentsClassLoaderBuilder(properties, deserializationClassLoader)
-
-    /**
-     * {@inheritDoc}
-     *
-     * We need to cache the AttachmentClassLoaders to avoid too many contexts, since the class loader is part of cache key for the context.
-     */
-    override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): CheckpointSerializationContext {
-        properties[attachmentsClassLoaderEnabledPropertyName] as? Boolean == true || return this
-        val classLoader = builder.build(attachmentHashes) ?: return this
-        return withClassLoader(classLoader)
-    }
-
     override fun withProperty(property: Any, value: Any): CheckpointSerializationContext {
         return copy(properties = properties + (property to value))
     }

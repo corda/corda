@@ -1,5 +1,5 @@
-Network map
-===========
+The network map
+===============
 
 .. contents::
 
@@ -44,6 +44,8 @@ The set of REST end-points for the network map service are as follows.
 | GET            | /network-map/node-info/{hash}           | Retrieve a signed ``NodeInfo`` as specified in the network map object.                                                                       |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 | GET            | /network-map/network-parameters/{hash}  | Retrieve the signed network parameters (see below). The entire object is signed with the network map certificate which is also attached.     |
++----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
+| GET            | /network-map/my-hostname                | Retrieve the IP address of the caller (and **not** of the network map).                                                                      |
 +----------------+-----------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+
 
 HTTP is used for the network map service instead of Corda's own AMQP based peer to peer messaging protocol to
@@ -157,14 +159,55 @@ The fact a new set of parameters is being advertised shows up in the node logs w
 the ``CordaRPCOps.networkParametersFeed`` method. Typically a zone operator would also email node operators to let them
 know about the details of the impending change, along with the justification, how to object, deadlines and so on.
 
-.. container:: codeset
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
-    .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/messaging/CordaRPCOps.kt
-        :language: kotlin
-        :start-after: DOCSTART 1
-        :end-before: DOCEND 1
+Auto Acceptance
+```````````````
 
-The node administrator can review the change and decide if they are going to accept it. The approval should be do
+If the only changes between the current and new parameters are for auto-acceptable parameters then, unless configured otherwise, the new
+parameters will be accepted without user input. The following parameters with the ``@AutoAcceptable`` annotation are auto-acceptable:
+
+.. literalinclude:: ../../core/src/main/kotlin/net/corda/core/node/NetworkParameters.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
+
+This behaviour can be turned off by setting the optional node configuration property ``NetworkParameterAcceptanceSettings.autoAcceptEnabled``
+to ``false``. For example:
+
+.. sourcecode:: guess
+
+    ...
+    NetworkParameterAcceptanceSettings {
+        autoAcceptEnabled = false
+    }
+    ...
+
+It is also possible to switch off this behaviour at a more granular parameter level. This can be achieved by specifying the set of
+``@AutoAcceptable`` parameters that should not be auto-acceptable in the optional
+``NetworkParameterAcceptanceSettings.excludedAutoAcceptableParameters`` node configuration property.
+
+For example, auto-acceptance can be switched off for any updates that change the ``packageOwnership`` map by adding the following to the
+node configuration:
+
+.. sourcecode:: guess
+
+    ...
+    NetworkParameterAcceptanceSettings {
+        excludedAutoAcceptableParameters: ["packageOwnership"]
+    }
+    ...
+
+Manual Acceptance
+`````````````````
+
+If the auto-acceptance behaviour is turned off via the configuration or the network parameters change involves parameters that are
+not auto-acceptable then manual approval is required.
+
+In this case the node administrator can review the change and decide if they are going to accept it. The approval should be done
 before the update Deadline. Nodes that don't approve before the deadline will likely be removed from the network map by
 the zone operator, but that is a decision that is left to the operator's discretion. For example the operator might also
 choose to change the deadline instead.

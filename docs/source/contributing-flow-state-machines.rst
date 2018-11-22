@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-How to extend the state machine
-===============================
+Extending the state machine
+===========================
 
 This article explains how to extend the state machine code that underlies flow execution. It is intended for Corda
 contributors.
@@ -85,12 +85,12 @@ flow with a full node.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../docs/source/example-code/src/integration-test/kotlin/net/corda/docs/TutorialFlowAsyncOperationTest.kt
+    .. literalinclude:: ../../docs/source/example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/TutorialFlowAsyncOperationTest.kt
         :language: kotlin
         :start-after: DOCSTART summingWorks
         :end-before: DOCEND summingWorks
 
-    .. literalinclude:: ../../docs/source/example-code/src/integration-test/java/net/corda/docs/java/TutorialFlowAsyncOperationTest.java
+    .. literalinclude:: ../../docs/source/example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/TutorialFlowAsyncOperationTest.java
         :language: java
         :start-after: DOCSTART summingWorks
         :end-before: DOCEND summingWorks

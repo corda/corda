@@ -119,7 +119,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 /**
  * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to its vault.
  *
- * Todo Fails with a serialization exception if it is not a list. Why?
+ * TODO Fails with a serialization exception if it is not a list. Why?
  */
 @CordaSerializable
 object RetrieveAnyTransactionPayload : ArrayList<Any>()

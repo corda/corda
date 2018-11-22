@@ -102,14 +102,13 @@ class SerializationPropertyOrdering {
 
         // Test needs to look at a bunch of private variables, change the access semantics for them
         val fields : Map<String, java.lang.reflect.Field> = mapOf (
-                "serializersByDesc" to SerializerFactory::class.java.getDeclaredField("serializersByDescriptor"),
                 "setter" to PropertyAccessorGetterSetter::class.java.getDeclaredField("setter")).apply {
             this.values.forEach {
                 it.isAccessible = true
             }
         }
 
-        val serializersByDescriptor = fields["serializersByDesc"]!!.get(sf) as ConcurrentHashMap<Any, AMQPSerializer<Any>>
+        val serializersByDescriptor = sf.serializersByDescriptor
         val schemaDescriptor = output.schema.types.first().descriptor.name
 
         // make sure that each property accessor has a setter to ensure we're using getter / setter instantiation

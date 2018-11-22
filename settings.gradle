@@ -14,6 +14,7 @@ include 'client:jfx'
 include 'client:mock'
 include 'client:rpc'
 include 'djvm'
+include 'docker'
 include 'djvm:cli'
 include 'webserver'
 include 'webserver:webcapsule'
@@ -21,7 +22,6 @@ include 'experimental'
 include 'experimental:avalanche'
 include 'experimental:behave'
 include 'experimental:quasar-hook'
-include 'experimental:kryo-hook'
 include 'experimental:corda-utils'
 include 'experimental:notary-raft'
 include 'experimental:notary-bft-smart'
@@ -62,6 +62,14 @@ include 'samples:cordapp-configuration'
 include 'samples:network-verifier'
 include 'serialization'
 
+// Common libraries - start
+include 'common-validation'
+project(":common-validation").projectDir = new File("$settingsDir/common/validation")
+
+include 'common-configuration-parsing'
+project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+// Common libraries - end
+
 apply from: 'buildCacheSettings.gradle'
 
 if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
@@ -71,3 +79,4 @@ if (JavaVersion.current() == JavaVersion.VERSION_1_8) {
     include 'core-deterministic:testing:verifier'
     include 'serialization-deterministic'
 }
+

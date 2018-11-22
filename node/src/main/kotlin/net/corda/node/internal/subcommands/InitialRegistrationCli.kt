@@ -17,7 +17,7 @@ import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
 
-class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Starts initial node registration with Corda network to obtain certificate from the permissioning server.") {
+class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
     var networkRootTrustStorePathParameter: Path? = null
 
@@ -71,7 +71,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
                 HTTPNetworkRegistrationService(
                         requireNotNull(conf.networkServices),
                         versionInfo),
-                nodeRegistration).buildKeystore()
+                nodeRegistration).generateKeysAndRegister()
 
         // Minimal changes to make registration tool create node identity.
         // TODO: Move node identity generation logic from node to registration helper.
@@ -107,4 +107,3 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
         initialRegistration(node.configuration)
     }
 }
-
