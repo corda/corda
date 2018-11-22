@@ -217,7 +217,8 @@ class DriverDSLImpl(
             maximumHeapSize: String,
             additionalCordapps: Collection<TestCordapp>,
             regenerateCordappsOnStart: Boolean,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
+            signCordapp: Boolean
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -234,7 +235,7 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart, flowOverrides)
+                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart, flowOverrides, signCordapp)
             }
         }
     }
@@ -249,7 +250,8 @@ class DriverDSLImpl(
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
                                     additionalCordapps: Collection<TestCordapp> = emptySet(),
                                     regenerateCordappsOnStart: Boolean = false,
-                                    flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()): CordaFuture<NodeHandle> {
+                                    flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
+                                    signCordapp: Boolean = false): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
@@ -279,7 +281,7 @@ class DriverDSLImpl(
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         )).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, regenerateCordappsOnStart)
+        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, regenerateCordappsOnStart, signCordapp)
     }
 
     private fun startNodeRegistration(
@@ -583,7 +585,8 @@ class DriverDSLImpl(
                                   maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
                                   additionalCordapps: Collection<TestCordapp>,
-                                  regenerateCordappsOnStart: Boolean = false): CordaFuture<NodeHandle> {
+                                  regenerateCordappsOnStart: Boolean = false,
+                                  signCordapp: Boolean = false): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
         val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
@@ -609,7 +612,7 @@ class DriverDSLImpl(
         val appOverrides = additionalCordapps.map { it.name to it.version}.toSet()
         val baseCordapps = cordappsForAllNodes.filter { !appOverrides.contains(it.name to it.version) }
 
-        val cordappDirectories = existingCorDappDirectoriesOption + (baseCordapps + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
+        val cordappDirectories = existingCorDappDirectoriesOption + (baseCordapps + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it, signJar = signCordapp).toString() }
 
         val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
 

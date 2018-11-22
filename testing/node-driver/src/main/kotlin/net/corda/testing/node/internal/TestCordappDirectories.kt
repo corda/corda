@@ -2,12 +2,11 @@ package net.corda.testing.node.internal
 
 import com.typesafe.config.ConfigValueFactory
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
-import net.corda.core.internal.writeText
+import net.corda.core.internal.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
+import net.corda.testing.core.JarSignatureTestUtils.signJar
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
 import net.corda.testing.node.TestCordapp
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -21,7 +20,7 @@ object TestCordappDirectories {
 
     private val testCordappsCache = ConcurrentHashMap<TestCordappImpl, Path>()
 
-    fun getJarDirectory(cordapp: TestCordapp, cordappsDirectory: Path = defaultCordappsDirectory): Path {
+    fun getJarDirectory(cordapp: TestCordapp, cordappsDirectory: Path = defaultCordappsDirectory, signJar: Boolean = false): Path {
         cordapp as TestCordappImpl
         return testCordappsCache.computeIfAbsent(cordapp) {
             val configString = ConfigValueFactory.fromMap(cordapp.config).toConfig().root().render()
@@ -37,6 +36,16 @@ object TestCordappDirectories {
             val configDir = (cordappDir / "config").createDirectories()
             val jarFile = cordappDir / "$filename.jar"
             cordapp.packageAsJar(jarFile)
+            if (signJar) {
+                val testKeystore = "_teststore"
+                val alias = "Test"
+                val pwd = "secret!"
+                if (!(cordappsDirectory / testKeystore).exists()) {
+                    cordappsDirectory.generateKey(alias, pwd, "O=Test Company Ltd,OU=Test,L=London,C=GB")
+                }
+                (cordappsDirectory / testKeystore).copyTo(cordappDir / testKeystore)
+                cordappDir.signJar("$filename.jar", alias, pwd)
+            }
             (configDir / "$filename.conf").writeText(configString)
             logger.debug { "$cordapp packaged into $jarFile" }
             cordappDir
