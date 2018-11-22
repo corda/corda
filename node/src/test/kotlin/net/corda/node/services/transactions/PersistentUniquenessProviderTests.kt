@@ -77,7 +77,7 @@ class PersistentUniquenessProviderTests {
         val error = (response as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
 
         val conflictCause = error.consumedStates[inputState]!!
-        assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
+        assertEquals(firstTxId.sha256(), conflictCause.hashOfTransactionId)
     }
 
     @Test
@@ -88,7 +88,7 @@ class PersistentUniquenessProviderTests {
         val timeWindow = TimeWindow.fromOnly(Clock.systemUTC().instant().plus(30.minutes))
         val result = provider.commit(listOf(inputState1), firstTxId, identity, requestSignature, timeWindow).get()
         val error = (result as UniquenessProvider.Result.Failure).error as NotaryError.TimeWindowInvalid
-        assertTrue { error.txTimeWindow == timeWindow }
+        assertEquals(timeWindow, error.txTimeWindow)
     }
 
     @Test
@@ -133,7 +133,7 @@ class PersistentUniquenessProviderTests {
         val error = (result2 as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
         val conflictCause = error.consumedStates[inputState1]!!
         assertEquals(conflictCause.hashOfTransactionId, firstTxId.sha256())
-        assertEquals(conflictCause.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+        assertEquals(StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE, conflictCause.type)
 
         // Re-notarisation works.
         val result3 = provider.commit(listOf(inputState1), firstTxId, identity, requestSignature, references = listOf(inputState2)).get()
@@ -165,6 +165,6 @@ class PersistentUniquenessProviderTests {
         val error = (result4 as UniquenessProvider.Result.Failure).error as NotaryError.Conflict
         val conflictCause = error.consumedStates[inputState1]!!
         assertEquals(conflictCause.hashOfTransactionId, secondTxId.sha256())
-        assertEquals(conflictCause.type, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+        assertEquals(StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE, conflictCause.type)
     }
 }
