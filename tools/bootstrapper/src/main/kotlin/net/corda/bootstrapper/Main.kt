@@ -35,13 +35,13 @@ class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a l
     @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
     var noCopy: Boolean = false
 
-    @Option(names = ["--minimum-platform-version"], description = ["The minimumPlatformVersion to use in the network-parameters. Current default is $PLATFORM_VERSION."])
+    @Option(names = ["--minimum-platform-version"], description = ["The minimum platform version to use in the network-parameters. Current default is $PLATFORM_VERSION."])
     val minimumPlatformVersion: Int? = null
 
-    @Option(names = ["--max-message-size"], description = ["The maximum message size to use in the network-parameters, in bytes. Default is $DEFAULT_MAX_MESSAGE_SIZE."])
+    @Option(names = ["--max-message-size"], description = ["The maximum message size to use in the network-parameters, in bytes. Current default is $DEFAULT_MAX_MESSAGE_SIZE."])
     val maxMessageSize: Int? = null
 
-    @Option(names = ["--max-transaction-size"], description = ["The maximum transaction size to use in the network-parameters, in bytes. Default is $DEFAULT_MAX_TRANSACTION_SIZE."])
+    @Option(names = ["--max-transaction-size"], description = ["The maximum transaction size to use in the network-parameters, in bytes. Current default is $DEFAULT_MAX_TRANSACTION_SIZE."])
     val maxTransactionSize: Int? = null
 
     @Option(names = ["--event-horizon"], description = ["The event horizon to use in the network-parameters. Default is 30 days."])

@@ -76,8 +76,8 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
     }
 
     override fun parseValid(configuration: Config): Valid<NetworkParametersOverrides> {
-        val packageOwnership = configuration[packageOwnership] as List<PackageOwner>
-        if (!noOverlap(packageOwnership.map { it.javaPackageName })) return  Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of("Package namespaces must not overlap", keyName = "packageOwnership", containingPath = listOf())).toSet())
+        val packageOwnership = configuration[packageOwnership]
+        if (packageOwnership != null && !noOverlap(packageOwnership.map { it.javaPackageName })) return  Validated.invalid(sequenceOf(Configuration.Validation.Error.BadValue.of("Package namespaces must not overlap", keyName = "packageOwnership", containingPath = listOf())).toSet())
         return valid(NetworkParametersOverrides(
                 minimumPlatformVersion = configuration[minimumPlatformVersion],
                 maxMessageSize = configuration[maxMessageSize],
