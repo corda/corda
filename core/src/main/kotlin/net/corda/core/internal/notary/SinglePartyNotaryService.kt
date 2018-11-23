@@ -4,7 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
@@ -61,7 +65,12 @@ abstract class SinglePartyNotaryService : NotaryService() {
         }
     }
 
-    override fun getEstimatedWaitTime(): Duration = uniquenessProvider.eta()
+    /**
+     * Estimate the wait time to be notarised and start taking into account the new request size.
+     *
+     * @param numStates The number of states we're about to request be notarised.
+     */
+    fun getEstimatedWaitTimeAndAddPendingRequest(numStates: Int): Duration = uniquenessProvider.getEtaAndAddPendingRequest(numStates)
 
     /**
      * Required for the flow to be able to suspend until the commit is complete.

@@ -601,6 +601,7 @@ class SingleThreadedStateMachineManager(
             logger.debug { "Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is shorter than default of ${serviceHub.configuration.flowTimeout.timeout.seconds} seconds." }
             return
         }
+        logger.debug { "Processing request to set time-out on timed flow $flowId to $timeoutSeconds seconds." }
         mutex.locked {
             resetCustomTimeout(flowId, timeoutSeconds)
         }

@@ -25,12 +25,14 @@ interface UniquenessProvider {
     ): CordaFuture<Result>
 
     /**
-     *    Estimated time of request processing. A uniqueness provider that is aware of their own throughput can return
-     *    an estimate how long requests will be queued before they can be processed. Notary services use this information
-     *    to potentially update clients with an expected wait time in order to avoid spamming by retries when the notary
-     *    gets busy.
+     * Estimated time of request processing. A uniqueness provider that is aware of their own throughput can return
+     * an estimate how long requests will be queued before they can be processed. Notary services use this information
+     * to potentially update clients with an expected wait time in order to avoid spamming by retries when the notary
+     * gets busy.
+     *
+     * @param numStates The number of states (input + reference) in the new request, to be added to the pending count.
      */
-    fun eta(): Duration {
+    fun getEtaAndAddPendingRequest(numStates: Int): Duration {
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
 

@@ -4,7 +4,17 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotarisationResponse
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
 import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.utilities.seconds
@@ -56,7 +66,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
-            val eta = service.getEstimatedWaitTime()
+            val eta = service.getEstimatedWaitTimeAndAddPendingRequest(tx.inputs.size + tx.references.size)
             if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
                 otherSideSession.send(WaitTimeUpdate(eta))
             }

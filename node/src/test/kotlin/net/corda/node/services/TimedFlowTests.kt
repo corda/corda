@@ -277,7 +277,7 @@ class TimedFlowTests {
                 }
             }
 
-            override fun eta(): Duration = waitETA
+            override fun getEtaAndAddPendingRequest(numStates: Int): Duration = waitETA
         }
 
         @Suspendable

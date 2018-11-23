@@ -111,15 +111,17 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     /**
      * Estimated time of request processing.
      * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
-     * It checks that there is actual traffic going on (i.e. a non-trivial number of states are queued and there
+     * It checks that there is actual traffic going on (i.e. a non-zero number of states are queued and there
      * is actual throughput) and then returns the expected wait time scaled up by a factor of 2 to give a probable
      * upper bound.
+     *
+     * @param numStates The number of states (input + reference) we're about to request be notarised.
      */
-    override fun eta(): Duration {
+    override fun getEtaAndAddPendingRequest(numStates: Int): Duration {
         val rate = throughput
-        val nrStates = nrQueuedStates.get()
+        val nrStates = nrQueuedStates.getAndAdd(numStates)
         log.debug { "rate: $rate, queueSize: $nrStates" }
-        if (rate > 0.0 && nrStates > 100) {
+        if (rate > 0.0 && nrStates > 0) {
             return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
@@ -181,7 +183,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     ): CordaFuture<UniquenessProvider.Result> {
         val future = openFuture<UniquenessProvider.Result>()
         val request = CommitRequest(states, txId, callerIdentity, requestSignature, timeWindow, references, future)
-        nrQueuedStates.addAndGet(states.size + references.size)
         requestQueue.put(request)
         return future
     }
