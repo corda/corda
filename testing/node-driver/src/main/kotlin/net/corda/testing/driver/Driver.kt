@@ -137,7 +137,6 @@ abstract class PortAllocation {
  * @property logLevel Logging level threshold.
  * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
  * @property regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
- * @param signCordapps Signs Cordapp JARs with a dummy key, required for creating contracts with signature constraint. By default Cordapps are unsigned.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -150,8 +149,7 @@ data class NodeParameters(
         val logLevel: String? = null,
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val regenerateCordappsOnStart: Boolean = false,
-        val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
-        val signCordapps: Boolean = false
+        val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
 ) {
     /**
      * Helper builder for configuring a [Node] from Java.
@@ -346,7 +344,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    signCordapps = false
             ),
             coerce = { it },
             dsl = dsl,

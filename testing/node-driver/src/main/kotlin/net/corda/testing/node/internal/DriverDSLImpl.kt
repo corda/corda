@@ -94,7 +94,8 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordapp>
+        val cordappsForAllNodes: Collection<TestCordapp>,
+        val signCordapps: Boolean
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -217,8 +218,7 @@ class DriverDSLImpl(
             maximumHeapSize: String,
             additionalCordapps: Collection<TestCordapp>,
             regenerateCordappsOnStart: Boolean,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>,
-            signCordapps: Boolean
+            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
     ): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
@@ -1062,7 +1062,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    signCordapps = false
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1156,6 +1157,7 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordapp> = DriverParameters().cordappsForAllNodes(),
+        signCordapps: Boolean = false,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1174,7 +1176,8 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    signCordapps = signCordapps
             ),
             coerce = { it },
             dsl = dsl,
