@@ -2,6 +2,7 @@ package net.corda.testing.node.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.ThreadBox
 import net.corda.core.messaging.MessageRecipients
 import net.corda.core.node.services.PartyInfo
@@ -243,7 +244,7 @@ class MockNodeMessagingService(private val configuration: NodeConfiguration,
         return InMemoryReceivedMessage(
                 message.topic,
                 OpaqueBytes(message.data.bytes.copyOf()), // Kryo messes with the buffer so give each client a unique copy
-                1,
+                PLATFORM_VERSION,
                 message.uniqueMessageId,
                 message.debugTimestamp,
                 sender.name
