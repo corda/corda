@@ -17,14 +17,14 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class InternalKeystoreGeneratorTest {
-    private val generator = InternalKeystoreGenerator()
 
     @Rule
     @JvmField
     val tempFolder: TemporaryFolder = TemporaryFolder()
 
     @Test
-    fun `generate keystores correctly`() {
+    fun `generate tunnel keystores correctly`() {
+        val generator = InternalTunnelKeystoreGenerator()
         val workingDirectory = tempFolder.root.toPath()
         val keyStorePassword = "keyStorePassword"
         val entryPassword = "entryPassword"
@@ -57,6 +57,22 @@ class InternalKeystoreGeneratorTest {
             assertTrue(internal.isCertificateEntry(CORDA_ROOT_CA))
             assertFalse(internal.isKeyEntry(CORDA_ROOT_CA))
         }
+    }
+
+    @Test
+    fun `generate Artemis keystores correctly`() {
+        val generator = InternalArtemisKeystoreGenerator()
+        val workingDirectory = tempFolder.root.toPath()
+        val keyStorePassword = "keyStorePassword"
+        val trustStorePassword = "trustStorePassword"
+        CommandLine.populateCommand(generator,
+                BASE_DIR, workingDirectory.toString(),
+                "--keyStorePassword", keyStorePassword,
+                "--trustStorePassword", trustStorePassword)
+        assertEquals(workingDirectory, generator.baseDirectory)
+        assertEquals(keyStorePassword, generator.keyStorePassword)
+        assertEquals(trustStorePassword, generator.trustStorePassword)
+        generator.runProgram()
 
         listOf("bridge.jks", "artemis.jks", "artemis-client.jks").map { workingDirectory / "artemis" / it }.forEach {
             assertTrue(it.exists())

@@ -9,7 +9,7 @@ fun main(args: Array<String>) {
 }
 
 class HAUtilities : CordaCliWrapper("ha-utilities", "HA utilities contains tools to help setting up corda firewall services.") {
-    override fun additionalSubCommands() = setOf(RegistrationTool(), BridgeSSLKeyTool(), InternalKeystoreGenerator())
+    override fun additionalSubCommands() = setOf(RegistrationTool(), BridgeSSLKeyTool(), InternalArtemisKeystoreGenerator(), InternalTunnelKeystoreGenerator())
 
     override fun runProgram(): Int {
         printHelp()

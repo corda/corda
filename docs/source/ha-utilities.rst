@@ -23,7 +23,8 @@ Sub-commands
 
 ``node-registration``: Corda registration tool for registering 1 or more node with the corda network, using provided node configuration.
 ``import-ssl-key``: Key copying tool for creating bridge SSL keystore or add new node SSL identity to existing bridge SSL keystore.
-``generate-internal-ssl-keystores``: Generate self-signed root and SSL certificates for bridge, external artemis broker and float, for internal communication between the services.
+``generate-internal-artemis-ssl-keystores``: Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.
+``generate-internal-tunnel-ssl-keystores``: Generate self-signed root and SSL certificates for internal communication between Bridge and Float.
 ``install-shell-extensions``: Install alias and autocompletion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 
@@ -70,22 +71,45 @@ Command-line options
 * ``-V``, ``--version`` :Print version information and exit.
 
 
-Self signed internal SSL keystore
----------------------------------
+Self signed internal Artemis SSL keystore
+-----------------------------------------
 
-TLS is used to ensure communications between firewall components are secured. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+TLS is used to ensure communications between various components connected to standalone Artemis. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+Please note that for Artemis to work correctly with keystores, the password for the store and the password for the private will be set to the same value.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
 .. code-block:: shell
 
-      ha-utilities generate-internal-ssl-keystores [-hvV] [--logging-level=<loggingLevel>] [-b=<baseDirectory>] [-c=<country>] [-l=<locality>] [-o=<organization>] [-p=<password>]
+      ha-utilities generate-internal-artemis-ssl-keystores [-hvV] [--logging-level=<loggingLevel>] [-b=<baseDirectory>] [-c=<country>] [-l=<locality>] [-o=<organization>] [-p=<keyStorePassword>] [-t=<trustStorePassword>]
+
+* ``-v``, ``--verbose``, ``--log-to-console``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO
+* ``-p``, ``--keyStorePassword=<keyStorePassword>``: Password for all generated keystores. Default: changeit
+* ``-t``, ``--trustStorePassword=<trustStorePassword>``: Password for the trust store. Default: changeit
+* ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
+* ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
+* ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
+* ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
+* ``-h``, ``--help``: Show this help message and exit.
+* ``-V``, ``--version``: Print version information and exit.
+
+Self signed internal Tunnel SSL keystore
+-----------------------------------------
+
+TLS is used to for communications between Bridge and Float components. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+
+Command-line options
+~~~~~~~~~~~~~~~~~~~~
+.. code-block:: shell
+
+      ha-utilities generate-internal-tunnel-ssl-keystores [-hvV] [--logging-level=<loggingLevel>] [-b=<baseDirectory>] [-c=<country>] [-l=<locality>] [-o=<organization>] [-p=<keyStorePassword>] [-e=<entryPassword>] [-t=<trustStorePassword>]
 
 * ``-v``, ``--verbose``, ``--log-to-console``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO
 * ``-p``, ``--keyStorePassword=<keyStorePassword>``: Password for all generated keystores. Default: changeit
 * ``-e``, ``--entryPassword=<entryPassword>``: Password for all the keystores private keys. Default: changeit
-* ``-t``, ``--trustStorePassword=<trustStorePassword>``: Password for all the trust stores. Default: changeit
+* ``-t``, ``--trustStorePassword=<trustStorePassword>``: Password for the trust store. Default: changeit
 * ``-o``, ``--organization=<organization>``: X500Name's organization attribute. Default: Corda
 * ``-l``, ``--locality=<locality>``: X500Name's locality attribute. Default: London
 * ``-c``, ``--country=<country>``: X500Name's country attribute. Default: GB
