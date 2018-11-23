@@ -34,8 +34,6 @@ as follows:
 How to manually test each of these areas differs and is currently not fully specified. For now the best thing to do is to ensure the
 program starts, that you can interact with it, and that no exceptions are generated in normal operation.
 
-TODO: Add instructions on manual testing
-
 External Database Testing
 -------------------------
 
