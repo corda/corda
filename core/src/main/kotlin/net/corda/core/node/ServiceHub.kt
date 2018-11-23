@@ -65,7 +65,7 @@ interface ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 
-    //TODO non-downgrade-rule check if this could be replaced by invoking series of existing service hyb methods
+    //TODO non-downgrade-rule check if this could be replaced by invoking series of existing service hub methods
     @Throws(TransactionResolutionException::class)
     fun loadContractAttachment(stateRef: StateRef): Attachment?
 }

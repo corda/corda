@@ -36,19 +36,19 @@ data class ServicesForResolutionImpl(
         }.toSet()
     }
 
-    override fun loadContractAttachment (stateRef: StateRef): Attachment? {
-            val stx = validatedTransactions.getTransaction(stateRef.txhash)
-            if (stx!= null) {
-                val transactionState = loadState(stateRef)
-                if (stx.coreTransaction is WireTransaction) {
-                    for (attachmentId in stx.tx.attachments) {
-                        val attachment = attachments.openAttachment(attachmentId)
-                        if (attachment is ContractAttachment && transactionState.contract == attachment.contract) {
-                            return attachment
-                        }
+    override fun loadContractAttachment(stateRef: StateRef): Attachment? {
+        val stx = validatedTransactions.getTransaction(stateRef.txhash)
+        if (stx != null) {
+            val transactionState = loadState(stateRef)
+            if (stx.coreTransaction is WireTransaction) {
+                for (attachmentId in stx.tx.attachments) {
+                    val attachment = attachments.openAttachment(attachmentId)
+                    if (attachment is ContractAttachment && transactionState.contract == attachment.contract) {
+                        return attachment
                     }
                 }
             }
-            return null
+        }
+        return null
     }
 }

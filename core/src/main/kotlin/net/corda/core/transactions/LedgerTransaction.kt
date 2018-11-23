@@ -101,22 +101,29 @@ private constructor(
         }
 
         /**
-         * Verify that versions contract class version of output states is not lower that versions of relevant input states.
+         * Verify that contract class version of output states is not lower that versions of input states.
          */
-        //TODO non-downgrade-rule throw generic error and do not wrap in Transaction one here, so txId doesn't need to be passed
+        @Throws(IllegalStateException::class)
         @CordaInternal
-        fun requireCompatibleContractClassVersions(contractClassName: ContractClassName, inputContractClassVersions: Set<Version>?, outputAttachment: Attachment, txId : SecureHash?) {
+        fun requireCompatibleContractClassVersions(inputContractClassVersions: Set<Version>?, outputAttachment: Attachment) {
             if (inputContractClassVersions != null && inputContractClassVersions.isNotEmpty()) {
-                val implementationVersion = outputAttachment.openAsJAR()
-                        .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, "UNKNOWN")
+                val manifest = outputAttachment.openAsJAR().manifest
+                        ?: throw IllegalStateException("The attachment for output state contract has no Jar index file. " +
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                val mainAttributes = manifest.mainAttributes
+                        ?: throw IllegalStateException("The attachment for output state contract has empty Jar index file. " +
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                val implementationVersion = mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
+                        ?: throw IllegalStateException("The attachment for output state contract has no \"Implementation-Version\" field in JAR index file. " +
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
                 val version = try {
                     Version(implementationVersion)
                 } catch (e: IllegalArgumentException) {
-                    throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, implementationVersion)
+                    throw IllegalStateException("Cannot parse the output state contract version $implementationVersion. " +
+                            "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
                 }
                 if (inputContractClassVersions.any { version < it }) {
-                    throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, version.toString())
+                    throw IllegalStateException("The output state contract version $version is lower that the version of the input state ($inputContractClassVersions).")
                 }
             }
         }
@@ -171,10 +178,15 @@ private constructor(
     /**
      * Verify that contract class versions of output states are not lower that versions of relevant input states.
      */
+    @Throws(TransactionVerificationException::class)
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         contractAttachmentsByContract.forEach { contractClassName, attachment ->
             val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
-            requireCompatibleContractClassVersions(contractClassName, contractClassVersions, attachment, this.id)
+            try {
+                requireCompatibleContractClassVersions(contractClassVersions, attachment)
+            } catch (e: Exception) {
+                throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, e.message ?: e.toString())
+            }
         }
     }
 

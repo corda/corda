@@ -325,7 +325,13 @@ open class TransactionBuilder @JvmOverloads constructor(
         //TODO non-downgrade-rule modify to search only for specific ContractClass not all
         val inputContractClassToJarVersion = resolveContractAttachmentVersion(states = inputStateRefs?.map { Pair(services.loadState(it).contract, it) } ?: emptyList(),
                 resolveContractAttachment = { services.loadContractAttachment(it) })
-        requireCompatibleContractClassVersions(contractClassName, inputContractClassToJarVersion[contractClassName], attachmentToUse, SecureHash.zeroHash)
+        requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
+        try {
+            requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
+        } catch (e: IllegalStateException) {
+            throw IllegalStateException("No-Downgrade Rule has been breached for contract class $contractClassName, reason: ${e.message
+                    ?: e.toString()}")
+        }
 
         return Pair(setOf(selectedAttachmentId), resolvedOutputStates)
     }

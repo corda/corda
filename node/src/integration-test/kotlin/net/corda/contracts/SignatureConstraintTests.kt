@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class SignatureConstrainsTests {
+class SignatureConstraintTests {
 
     private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
     private val oldCordapp = base.withImplementationVersion("2.0")
