@@ -17,16 +17,20 @@ interface PropertyDelegate<TYPE> {
         fun optional(): PropertyDelegate.Optional<TYPE>
     }
 
-//    interface RequiredList<TYPE>: Required<List<TYPE>> {
-//
-//        override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>>
-//    }
+    interface RequiredList<TYPE>: Required<List<TYPE>> {
+
+        override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>>
+
+        fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): Required<MAPPED>
+
+        fun <MAPPED> map(mappedTypeName: String, convert: (List<TYPE>) -> MAPPED): Required<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
+    }
 
     interface Single<TYPE> {
 
         operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Single<TYPE>>
 
-        fun list(): Required<List<TYPE>>
+        fun list(): RequiredList<TYPE>
     }
 
     interface Optional<TYPE> {
@@ -79,7 +83,7 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val p
         }
     }
 
-    override fun list(): PropertyDelegate.Required<List<TYPE>> = ListPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).list() })
+    override fun list(): PropertyDelegate.RequiredList<TYPE> = ListPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).list() })
 
     override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
 
@@ -114,7 +118,7 @@ private class OptionalWithDefaultPropertyDelegateImpl<TYPE>(private val key: Str
     }
 }
 
-private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.RequiredList<TYPE>) : PropertyDelegate.Required<List<TYPE>> {
+private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.RequiredList<TYPE>) : PropertyDelegate.RequiredList<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>> {
 
@@ -127,4 +131,8 @@ private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private v
     }
 
     override fun optional(): PropertyDelegate.Optional<List<TYPE>> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
+
+    // TODO sollecitom
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = TODO("implement")
+//    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
 }

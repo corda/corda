@@ -9,6 +9,10 @@ inline fun <TYPE, reified MAPPED> PropertyDelegate.Standard<TYPE>.mapValid(noinl
 
 inline fun <TYPE, reified MAPPED> PropertyDelegate.Standard<TYPE>.map(noinline convert: (TYPE) -> MAPPED): PropertyDelegate.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
 
+inline fun <TYPE, reified MAPPED> PropertyDelegate.RequiredList<TYPE>.mapValid(noinline convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
+
+inline fun <TYPE, reified MAPPED> PropertyDelegate.RequiredList<TYPE>.map(noinline convert: (List<TYPE>) -> MAPPED): PropertyDelegate.Required<MAPPED> = map(MAPPED::class.java.simpleName, convert)
+
 inline fun <TYPE, reified MAPPED> Configuration.Property.Definition.Standard<TYPE>.mapValid(noinline convert: (TYPE) -> Valid<MAPPED>): Configuration.Property.Definition.Standard<MAPPED> = mapValid(MAPPED::class.java.simpleName, convert)
 
 inline fun <TYPE, reified MAPPED> Configuration.Property.Definition.Standard<TYPE>.map(noinline convert: (TYPE) -> MAPPED): Configuration.Property.Definition.Standard<MAPPED> = map(MAPPED::class.java.simpleName, convert)
