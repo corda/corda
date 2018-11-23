@@ -5229,7 +5229,7 @@ public final class net.corda.core.transactions.WireTransaction extends net.corda
   public final java.util.Set<java.security.PublicKey> getRequiredSigningKeys()
   public int hashCode()
   @NotNull
-  public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(kotlin.jvm.functions.Function1<? super java.security.PublicKey, net.corda.core.identity.Party>, kotlin.jvm.functions.Function1<? super net.corda.core.crypto.SecureHash, ? extends net.corda.core.contracts.Attachment>, kotlin.jvm.functions.Function1<? super net.corda.core.contracts.StateRef, ? extends net.corda.core.contracts.TransactionState<?>>, kotlin.jvm.functions.Function1<? super net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>, ? extends net.corda.core.crypto.SecureHash>, kotlin.jvm.functions.Function1<? super net.corda.core.contracts.StateRef,  extends net.corda.core.contracts.Attachment>)
+  public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(kotlin.jvm.functions.Function1<? super java.security.PublicKey, net.corda.core.identity.Party>, kotlin.jvm.functions.Function1<? super net.corda.core.crypto.SecureHash, ? extends net.corda.core.contracts.Attachment>, kotlin.jvm.functions.Function1<? super net.corda.core.contracts.StateRef, ? extends net.corda.core.contracts.TransactionState<?>>, kotlin.jvm.functions.Function1<? super net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>, ? extends net.corda.core.crypto.SecureHash>)
   @NotNull
   public final net.corda.core.transactions.LedgerTransaction toLedgerTransaction(net.corda.core.node.ServicesForResolution)
   @NotNull
