@@ -244,7 +244,6 @@ data class NodeConfigurationImpl(
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
-        errors += validateCryptoService()
         return errors
     }
 
@@ -265,17 +264,6 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
         if (h2port != null && h2Settings != null) {
             errors += "cannot specify both 'h2port' and 'h2Settings'"
-        }
-        return errors
-    }
-
-    private fun validateCryptoService(): List<String> {
-        val errors = mutableListOf<String>()
-        if (cryptoServiceName == null && cryptoServiceConf != null) {
-            errors += "'cryptoServiceName' is mandatory when 'cryptoServiceConf' is specified"
-        }
-        if (notary != null && !(cryptoServiceName == null || cryptoServiceName == SupportedCryptoServices.BC_SIMPLE)) {
-            errors += "Notary node with a non supported 'cryptoServiceName' has been detected"
         }
         return errors
     }

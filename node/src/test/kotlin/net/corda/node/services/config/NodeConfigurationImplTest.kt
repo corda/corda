@@ -19,7 +19,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
@@ -278,7 +277,7 @@ class NodeConfigurationImplTest {
     fun `jmxReporterType is null and defaults to Jokolia`() {
         val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
-        assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
+        assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     @Test
@@ -286,7 +285,7 @@ class NodeConfigurationImplTest {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("NEW_RELIC"))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
-        assertTrue(JmxReporterType.NEW_RELIC.toString() == nodeConfig.jmxReporterType.toString())
+        assertEquals(JmxReporterType.NEW_RELIC.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     @Test
@@ -294,7 +293,7 @@ class NodeConfigurationImplTest {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
-        assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
+        assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {
