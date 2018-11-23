@@ -8,5 +8,6 @@
 
     <include file="migration/node-notary.changelog-v1.xml"/>
     <include file="migration/node-notary.changelog-pkey.xml"/>
+    <include file="migration/node-notary.changelog-committed-transactions-table.xml" />
 
 </databaseChangeLog>
