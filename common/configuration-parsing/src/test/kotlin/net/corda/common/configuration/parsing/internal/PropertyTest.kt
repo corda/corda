@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicLong
 
 class PropertyTest {
 
@@ -54,6 +55,68 @@ class PropertyTest {
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
         assertThat(property.valueIn(configuration)).isEqualTo(value)
+    }
+
+    @Test
+    fun present_value_of_list_type_with_whole_list_mapping() {
+
+        val key = "a.b.c"
+        val value = listOf(1L, 3L, 2L)
+        val configuration = configObject(key to value).toConfig()
+
+        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max() }
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.isMandatory).isTrue()
+        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(value.max())
+    }
+
+    @Test
+    fun absent_value_of_list_type_with_whole_list_mapping() {
+
+        val key = "a.b.c"
+        val configuration = configObject().toConfig()
+
+        val property = Configuration.Property.Definition.long(key).list().map { list -> list.max() }.optional()
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.isMandatory).isFalse()
+        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+        assertThat(property.valueIn(configuration)).isEqualTo(null)
+    }
+
+    @Test
+    fun present_value_of_list_type_with_single_element_and_whole_list_mapping() {
+
+        val key = "a.b.c"
+        val value = listOf(1L, 3L, 2L)
+        val configuration = configObject(key to value).toConfig()
+
+        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max() }
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.isMandatory).isTrue()
+        assertThat(property.isSpecifiedBy(configuration)).isTrue()
+        assertThat(property.valueIn(configuration)).isEqualTo(value.max())
+    }
+
+    @Test
+    fun absent_value_of_list_type_with_single_element_and_whole_list_mapping() {
+
+        val key = "a.b.c"
+        val configuration = configObject().toConfig()
+
+        val property = Configuration.Property.Definition.long(key).map(::AtomicLong).list().map { list -> list.map(AtomicLong::get).max() }.optional()
+        println(property)
+
+        assertThat(property.key).isEqualTo(key)
+        assertThat(property.isMandatory).isFalse()
+        assertThat(property.isSpecifiedBy(configuration)).isFalse()
+        assertThat(property.valueIn(configuration)).isEqualTo(null)
     }
 
     @Test
