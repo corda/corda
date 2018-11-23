@@ -19,6 +19,7 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
