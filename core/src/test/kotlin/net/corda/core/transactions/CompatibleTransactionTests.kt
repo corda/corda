@@ -39,6 +39,7 @@ class CompatibleTransactionTests {
     private val notary = DUMMY_NOTARY
     private val timeWindow = TimeWindow.fromOnly(Instant.now())
     private val privacySalt: PrivacySalt = PrivacySalt()
+    private val paramsHash = SecureHash.randomSHA256()
 
     private val inputGroup by lazy { ComponentGroup(INPUTS_GROUP.ordinal, inputs.map { it.serialize() }) }
     private val outputGroup by lazy { ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.map { it.serialize() }) }
@@ -47,6 +48,7 @@ class CompatibleTransactionTests {
     private val notaryGroup by lazy { ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary.serialize())) }
     private val timeWindowGroup by lazy { ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow.serialize())) }
     private val signersGroup by lazy { ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers.serialize() }) }
+    private val networkParamsGroup by lazy { ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(paramsHash.serialize())) }
 
     private val newUnknownComponentGroup = ComponentGroup(100, listOf(OpaqueBytes(secureRandomBytes(4)), OpaqueBytes(secureRandomBytes(8))))
     private val newUnknownComponentEmptyGroup = ComponentGroup(101, emptyList())
@@ -212,6 +214,7 @@ class CompatibleTransactionTests {
         ftxAll.checkAllComponentsVisible(NOTARY_GROUP)
         ftxAll.checkAllComponentsVisible(TIMEWINDOW_GROUP)
         ftxAll.checkAllComponentsVisible(SIGNERS_GROUP)
+        ftxAll.checkAllComponentsVisible(PARAMETERS_GROUP)
 
         // Filter inputs only.
         fun filtering(elem: Any): Boolean {
@@ -262,6 +265,8 @@ class CompatibleTransactionTests {
         assertEquals(3, ftxCompatible.filteredComponentGroups.firstOrNull { it.groupIndex == INPUTS_GROUP.ordinal }!!.components.size)
         assertEquals(3, ftxCompatible.filteredComponentGroups.firstOrNull { it.groupIndex == INPUTS_GROUP.ordinal }!!.nonces.size)
         assertNotNull(ftxCompatible.filteredComponentGroups.firstOrNull { it.groupIndex == INPUTS_GROUP.ordinal }!!.partialMerkleTree)
+        assertNull(wireTransactionCompatibleA.networkParametersHash)
+        assertNull(ftxCompatible.networkParametersHash)
 
         // Now, let's allow everything, including the new component type that we cannot process.
         val ftxCompatibleAll = wireTransactionCompatibleA.buildFilteredTransaction(Predicate { true }) // All filtered, including the unknown component.
@@ -547,6 +552,35 @@ class CompatibleTransactionTests {
         assertFailsWith<FilteredTransactionVerificationException> { ftxAlterSignerB.verify() }
         // Also, checkAllComponentsVisible() will not pass (top level Merkle tree cannot be verified against transaction's id).
         assertFailsWith<ComponentVisibilityException> { ftxAlterSignerB.checkCommandVisibility(DUMMY_KEY_1.public) }
+    }
+
+    @Test
+    fun `parameters hash visibility`() {
+        fun paramsFilter(elem: Any): Boolean = elem is NetworkParametersHash && elem.hash == paramsHash
+        fun attachmentFilter(elem: Any): Boolean = elem is SecureHash && elem == paramsHash
+        val attachments = ComponentGroup(ATTACHMENTS_GROUP.ordinal, listOf(paramsHash.serialize())) // Same hash as network parameters
+        val componentGroups = listOf(
+                inputGroup,
+                outputGroup,
+                attachments,
+                commandGroup,
+                notaryGroup,
+                timeWindowGroup,
+                signersGroup,
+                networkParamsGroup
+        )
+        val wtx = WireTransaction(componentGroups, privacySalt)
+        val ftx1 = wtx.buildFilteredTransaction(Predicate(::paramsFilter)) // Filter only network parameters hash.
+        ftx1.verify()
+        assertEquals(wtx.id, ftx1.id)
+        ftx1.checkAllComponentsVisible(PARAMETERS_GROUP)
+        assertFailsWith<ComponentVisibilityException> { ftx1.checkAllComponentsVisible(ATTACHMENTS_GROUP) }
+        // Filter only attachment.
+        val ftx2 = wtx.buildFilteredTransaction(Predicate(::attachmentFilter))
+        ftx2.verify()
+        assertEquals(wtx.id, ftx2.id)
+        ftx2.checkAllComponentsVisible(ATTACHMENTS_GROUP)
+        assertFailsWith<ComponentVisibilityException> { ftx2.checkAllComponentsVisible(PARAMETERS_GROUP) }
     }
 }
 

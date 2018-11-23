@@ -13,10 +13,7 @@ import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.ReferenceStateRef
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
@@ -101,12 +98,8 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                // TODO networkParametersHash type overlaps with the attachments type - it is problematic in filtering.
-                //  We want to be sure that attachment with the same hash as network parameters isn't revealed by accident (or vice versa).
-                //  The same applies to reference and input states.
-                //  Also, we want to ensure in this case that the componentGroup for the parameters hash is always included.
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
-                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal
+                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is NetworkParametersHash
                 })
                 else -> ctx
             }

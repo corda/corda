@@ -157,8 +157,9 @@ class FilteredTransaction internal constructor(
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
                 // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
                 // when filtering. Thus, to filter-in all [references] based on type, one should use the wrapper type [ReferenceStateRef] and not [StateRef].
+                // Similar situation is for network parameters hash and attachments, one should use wrapper [NetworkParametersHash] and not [SecureHash].
                 wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
-                wtx.networkParametersHash?.let { filter(Pair(it, PARAMETERS_GROUP.ordinal), PARAMETERS_GROUP.ordinal, 0) }
+                wtx.networkParametersHash?.let { filter(NetworkParametersHash(it), PARAMETERS_GROUP.ordinal, 0) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one
@@ -360,3 +361,8 @@ class FilteredTransactionVerificationException(val id: SecureHash, val reason: S
 @KeepForDJVM
 @CordaSerializable
 data class ReferenceStateRef(val stateRef: StateRef)
+
+/** Wrapper over [SecureHash] to be used when filtering network parameters hash. */
+@KeepForDJVM
+@CordaSerializable
+data class NetworkParametersHash(val hash: SecureHash)
