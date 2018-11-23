@@ -16,7 +16,7 @@ interface ObjectSerializer : AMQPSerializer<Any> {
         fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
             if (typeInformation is LocalTypeInformation.NonComposable)
                 throw NotSerializableException(
-                        "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint()}, " +
+                        "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint(false)}, " +
                         "but it is not constructible from its public properties, and so requires a custom serialiser.")
 
             val typeDescriptor = factory.createDescriptor(typeInformation)

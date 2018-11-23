@@ -1,9 +1,13 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
+import java.io.NotSerializableException
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFailsWith
+import kotlin.test.fail
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple
 // deserialization operations would've blown up with type mismatch errors where the deserlized
@@ -528,11 +532,63 @@ class DeserializeSimpleTypesTests {
         DeserializationInput(sf2).deserialize(serializedA.obj)
     }
 
+    @CordaSerializable
+    class Garbo private constructor(value: Int) {
+        companion object {
+            fun make(value: Int) = Garbo(value)
+        }
+    }
+
+    @CordaSerializable
+    class Greta(val garbo: Garbo)
+
+    @CordaSerializable
+    class Owner(val value: PropertyWithoutCordaSerializable)
+
+    class PropertyWithoutCordaSerializable(val value: Int)
+
     @Test
     fun classHasNoPublicConstructor() {
-        assertFails("Trying to build an object serializer for Optional (erased), " +
+        assertFailsWithMessage("Trying to build an object serializer for ${Garbo::class.java.name}, " +
                 "but it is not constructible from its public properties, and so requires a custom serialiser.") {
-            TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(java.util.Optional.of(1))
+            TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Garbo.make(1))
+        }
+    }
+
+    @Test
+    fun propertyClassHasNoPublicConstructor() {
+        assertFailsWithMessage("Trying to build an object serializer for ${Greta::class.java.name}, " +
+                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+            TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Greta(Garbo.make(1)))
+        }
+    }
+
+    @Test
+    fun notWhitelistedError() {
+        val factory = testDefaultFactoryWithWhitelist()
+        assertFailsWithMessage(
+                "Class \"class ${PropertyWithoutCordaSerializable::class.java.name}\" " +
+                "is not on the whitelist or annotated with @CordaSerializable.") {
+            TestSerializationOutput(VERBOSE, factory).serialize(PropertyWithoutCordaSerializable(1))
+        }
+    }
+
+    @Test
+    fun propertyClassNotWhitelistedError() {
+        val factory = testDefaultFactoryWithWhitelist()
+        assertFailsWithMessage(
+                "Class \"class ${PropertyWithoutCordaSerializable::class.java.name}\" " +
+                        "is not on the whitelist or annotated with @CordaSerializable.") {
+            TestSerializationOutput(VERBOSE, factory).serialize(Owner(PropertyWithoutCordaSerializable(1)))
+        }
+    }
+
+    private fun assertFailsWithMessage(expectedMessage: String, block: () -> Unit) {
+        try {
+            block()
+            fail("Expected an exception, but none was thrown")
+        } catch (e: Exception) {
+            assertEquals(expectedMessage, e.message)
         }
     }
 
