@@ -101,7 +101,7 @@ interface DriverDSL {
      *     megabytes, and 'g' or 'G' to indicate gigabytes. The default value is "512m" = 512 megabytes.
      * @param additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
      * @param regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
-     * @param signCordapp Signs Cordapp JARs with a dummy key, required for creating contracts with signature constraint. By default Cordapp are unsigned.
+     * @param signCordapp Signs Cordapp JARs with a dummy key, required for creating contracts with signature constraint. By default Cordapps are unsigned.
      * @return A [CordaFuture] on the [NodeHandle] to the node. The future will complete when the node is available and
      * it sees all previously started nodes, including the notaries.
      */
