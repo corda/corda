@@ -12,23 +12,22 @@ namespace corda {
 namespace core {
 namespace contracts {
 
-class ContractState {
+class ContractState : public net::corda::Any {
 public:
     
 
     ContractState() = default;
 
     explicit ContractState(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "interface net.corda.core.contracts.ContractState", descriptor(), 0);
         
     }
-
-    virtual const std::string descriptor() { return "net.corda:Z2i2Bmo52EfucFXZ8B2CPQ=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration28("net.corda:Z2i2Bmo52EfucFXZ8B2CPQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::ContractState(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

@@ -30,7 +30,7 @@ namespace corda {
 namespace core {
 namespace contracts {
 
-template <class T> class Command {
+template <class T> class Command : public net::corda::Any {
 public:
     std::list<net::corda::ptr<java::security::PublicKey>> signers;
     net::corda::ptr<T> value;
@@ -38,12 +38,9 @@ public:
     Command() = default;
 
     explicit Command(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "net.corda.core.contracts.Command<?>", descriptor(), 2);
         net::corda::Parser::read_to(decoder, signers);
         net::corda::Parser::read_to(decoder, value);
     }
-
-    virtual const std::string descriptor();
 };
 
 }
@@ -51,6 +48,7 @@ public:
 }
 }
 
-template<> const std::string net::corda::core::contracts::Command<void *>::descriptor() { return "net.corda:+8JPOg3TmkKZMh1QVVm3QA=="; }
+net::corda::TypeRegistration Registration11("net.corda:+8JPOg3TmkKZMh1QVVm3QA==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::Command<net::corda::Any>(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration12("net.corda:MtyVix+F6TOq6oXfQY8+kg==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::Command<net::corda::core::contracts::CommandData>(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

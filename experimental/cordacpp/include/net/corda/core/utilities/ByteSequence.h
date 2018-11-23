@@ -12,7 +12,7 @@ namespace corda {
 namespace core {
 namespace utilities {
 
-class ByteSequence {
+class ByteSequence : public net::corda::Any {
 public:
     int32_t offset;
     int32_t size;
@@ -20,17 +20,16 @@ public:
     ByteSequence() = default;
 
     explicit ByteSequence(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.utilities.ByteSequence", descriptor(), 2);
         net::corda::Parser::read_to(decoder, offset);
         net::corda::Parser::read_to(decoder, size);
     }
-
-    virtual const std::string descriptor() { return "net.corda:0UvJuq940P0jrySmql4EPg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration22("net.corda:0UvJuq940P0jrySmql4EPg==", [](proton::codec::decoder &decoder) { return new net::corda::core::utilities::ByteSequence(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

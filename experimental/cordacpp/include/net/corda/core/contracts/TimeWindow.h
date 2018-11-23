@@ -12,23 +12,22 @@ namespace corda {
 namespace core {
 namespace contracts {
 
-class TimeWindow {
+class TimeWindow : public net::corda::Any {
 public:
     
 
     TimeWindow() = default;
 
     explicit TimeWindow(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.contracts.TimeWindow", descriptor(), 0);
         
     }
-
-    virtual const std::string descriptor() { return "net.corda:vCzptpAY4Dzmk+ZJ0z0hgg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration17("net.corda:vCzptpAY4Dzmk+ZJ0z0hgg==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::TimeWindow(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

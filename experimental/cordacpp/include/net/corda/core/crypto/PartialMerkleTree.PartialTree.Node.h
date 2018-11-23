@@ -12,6 +12,7 @@ namespace corda {
 namespace core {
 namespace crypto {
 class PartialMerkleTree$PartialTree;
+class PartialMerkleTree$PartialTree$Node;
 }
 }
 }
@@ -29,17 +30,16 @@ public:
     PartialMerkleTree$PartialTree$Node() = default;
 
     explicit PartialMerkleTree$PartialTree$Node(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.PartialMerkleTree$PartialTree$Node", descriptor(), 2);
         net::corda::Parser::read_to(decoder, left);
         net::corda::Parser::read_to(decoder, right);
     }
-
-    virtual const std::string descriptor() { return "net.corda:+9m0e4uQH5GsqOuIcFfLyw=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration32("net.corda:+9m0e4uQH5GsqOuIcFfLyw==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree$PartialTree$Node(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

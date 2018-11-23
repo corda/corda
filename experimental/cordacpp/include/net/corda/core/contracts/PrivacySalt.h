@@ -28,16 +28,15 @@ public:
     PrivacySalt() = default;
 
     explicit PrivacySalt(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.contracts.PrivacySalt", descriptor(), 1);
         net::corda::Parser::read_to(decoder, bytes);
     }
-
-    virtual const std::string descriptor() { return "net.corda:1skUfBacU1AgmLX8M1z83A=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration4("net.corda:1skUfBacU1AgmLX8M1z83A==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::PrivacySalt(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

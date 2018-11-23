@@ -12,6 +12,7 @@ namespace corda {
 namespace core {
 namespace utilities {
 class ByteSequence;
+class OpaqueBytes;
 }
 }
 }
@@ -28,16 +29,15 @@ public:
     OpaqueBytes() = default;
 
     explicit OpaqueBytes(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.utilities.OpaqueBytes", descriptor(), 1);
         net::corda::Parser::read_to(decoder, bytes);
     }
-
-    virtual const std::string descriptor() { return "net.corda:pgT0Kc3t/bvnzmgu/nb4Cg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration9("net.corda:pgT0Kc3t/bvnzmgu/nb4Cg==", [](proton::codec::decoder &decoder) { return new net::corda::core::utilities::OpaqueBytes(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

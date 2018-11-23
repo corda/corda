@@ -15,23 +15,22 @@ namespace corda {
 namespace core {
 namespace identity {
 
-class AbstractParty {
+class AbstractParty : public net::corda::Any {
 public:
     net::corda::ptr<java::security::PublicKey> owning_key;
 
     AbstractParty() = default;
 
     explicit AbstractParty(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.identity.AbstractParty", descriptor(), 1);
         net::corda::Parser::read_to(decoder, owning_key);
     }
-
-    virtual const std::string descriptor() { return "net.corda:jOvdaZkV+4P+ZufeAnkHJg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration26("net.corda:jOvdaZkV+4P+ZufeAnkHJg==", [](proton::codec::decoder &decoder) { return new net::corda::core::identity::AbstractParty(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

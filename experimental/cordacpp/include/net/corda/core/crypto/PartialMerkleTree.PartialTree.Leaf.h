@@ -13,6 +13,7 @@ namespace core {
 namespace crypto {
 class SecureHash;
 class PartialMerkleTree$PartialTree;
+class PartialMerkleTree$PartialTree$Leaf;
 }
 }
 }
@@ -29,16 +30,15 @@ public:
     PartialMerkleTree$PartialTree$Leaf() = default;
 
     explicit PartialMerkleTree$PartialTree$Leaf(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.PartialMerkleTree$PartialTree$Leaf", descriptor(), 1);
         net::corda::Parser::read_to(decoder, hash);
     }
-
-    virtual const std::string descriptor() { return "net.corda:b0I7redabq3docLLQ0qZVg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration31("net.corda:b0I7redabq3docLLQ0qZVg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree$PartialTree$Leaf(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

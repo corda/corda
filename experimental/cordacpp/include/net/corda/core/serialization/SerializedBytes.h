@@ -37,11 +37,8 @@ public:
     SerializedBytes() = default;
 
     explicit SerializedBytes(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "net.corda.core.serialization.SerializedBytes<net.corda.core.transactions.CoreTransaction>", descriptor(), 1);
         net::corda::Parser::read_to(decoder, bytes);
     }
-
-    virtual const std::string descriptor();
 };
 
 }
@@ -49,6 +46,7 @@ public:
 }
 }
 
-template<> const std::string net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>::descriptor() { return "net.corda:tfE4ru/0RkQp8D2wkDqzRQ=="; }
+net::corda::TypeRegistration Registration7("net.corda:tfE4ru/0RkQp8D2wkDqzRQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration8("net.corda:LY55YUDjxO84OlwSwUzvSA==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::Any>(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

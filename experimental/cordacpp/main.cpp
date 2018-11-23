@@ -22,5 +22,8 @@ int main() {
 
     cout << corda::dump(bits) << endl;
     auto wtx = corda::parse<net::corda::core::transactions::WireTransaction>(bits);
+    cout << "This wtx has " << wtx->component_groups.size() << " component groups." << endl;
+    cout << "The privacy salt is " << wtx->privacy_salt->bytes.size() << " bytes long." << endl;
+
     return 0;
 }

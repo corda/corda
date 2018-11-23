@@ -28,6 +28,7 @@ namespace corda {
 namespace core {
 namespace transactions {
 class CoreTransaction;
+class SignedTransaction;
 }
 }
 }
@@ -37,7 +38,7 @@ namespace corda {
 namespace core {
 namespace transactions {
 
-class SignedTransaction {
+class SignedTransaction : public net::corda::Any {
 public:
     std::list<net::corda::ptr<net::corda::core::crypto::TransactionSignature>> sigs;
     net::corda::ptr<net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>> tx_bits;
@@ -45,17 +46,16 @@ public:
     SignedTransaction() = default;
 
     explicit SignedTransaction(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.SignedTransaction", descriptor(), 2);
         net::corda::Parser::read_to(decoder, sigs);
         net::corda::Parser::read_to(decoder, tx_bits);
     }
-
-    virtual const std::string descriptor() { return "net.corda:7mttgXO2HdBLwATyV7pCpg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration2("net.corda:7mttgXO2HdBLwATyV7pCpg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::SignedTransaction(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

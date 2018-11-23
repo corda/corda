@@ -28,16 +28,15 @@ public:
     DigitalSignature() = default;
 
     explicit DigitalSignature(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.DigitalSignature", descriptor(), 1);
         net::corda::Parser::read_to(decoder, bytes);
     }
-
-    virtual const std::string descriptor() { return "net.corda:de8amhp5gGpyflz2aiXnLg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration21("net.corda:de8amhp5gGpyflz2aiXnLg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::DigitalSignature(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

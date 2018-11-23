@@ -13,6 +13,7 @@ namespace core {
 namespace identity {
 class CordaX500Name;
 class AbstractParty;
+class Party;
 }
 }
 }
@@ -35,17 +36,16 @@ public:
     Party() = default;
 
     explicit Party(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.identity.Party", descriptor(), 2);
         net::corda::Parser::read_to(decoder, name);
         net::corda::Parser::read_to(decoder, owning_key);
     }
-
-    virtual const std::string descriptor() { return "net.corda:H9KOi8agUusgKKi3MEB3xg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration14("net.corda:H9KOi8agUusgKKi3MEB3xg==", [](proton::codec::decoder &decoder) { return new net::corda::core::identity::Party(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

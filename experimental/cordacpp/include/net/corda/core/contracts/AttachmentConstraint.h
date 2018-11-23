@@ -12,23 +12,22 @@ namespace corda {
 namespace core {
 namespace contracts {
 
-class AttachmentConstraint {
+class AttachmentConstraint : public net::corda::Any {
 public:
     
 
     AttachmentConstraint() = default;
 
     explicit AttachmentConstraint(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "interface net.corda.core.contracts.AttachmentConstraint", descriptor(), 0);
         
     }
-
-    virtual const std::string descriptor() { return "net.corda:Mgf6/s2AjkZaT8/bU9nNSQ=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration27("net.corda:Mgf6/s2AjkZaT8/bU9nNSQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::AttachmentConstraint(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

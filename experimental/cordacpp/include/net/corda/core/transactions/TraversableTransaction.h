@@ -16,19 +16,6 @@ class SecureHash;
 }
 }
 }
-namespace net {
-namespace corda {
-namespace core {
-namespace contracts {
-template <class T> class Command;
-class StateRef;
-template <class T> class TransactionState;
-class ContractState;
-class TimeWindow;
-}
-}
-}
-}
 namespace java {
 namespace lang {
 class Object;
@@ -37,9 +24,23 @@ class Object;
 namespace net {
 namespace corda {
 namespace core {
+namespace contracts {
+template <class T> class Command;
+class StateRef;
+class ContractState;
+template <class T> class TransactionState;
+class TimeWindow;
+}
+}
+}
+}
+namespace net {
+namespace corda {
+namespace core {
 namespace transactions {
 class ComponentGroup;
 class CoreTransaction;
+class TraversableTransaction;
 }
 }
 }
@@ -61,7 +62,7 @@ namespace transactions {
 class TraversableTransaction : public net::corda::core::transactions::CoreTransaction {
 public:
     std::list<net::corda::ptr<net::corda::core::crypto::SecureHash>> attachments;
-    std::list<net::corda::ptr<net::corda::core::contracts::Command<void *>>> commands;
+    std::list<net::corda::ptr<net::corda::core::contracts::Command<net::corda::Any>>> commands;
     std::list<net::corda::ptr<net::corda::core::transactions::ComponentGroup>> component_groups;
     std::list<net::corda::ptr<net::corda::core::contracts::StateRef>> inputs;
     net::corda::ptr<net::corda::core::identity::Party> notary;
@@ -72,7 +73,6 @@ public:
     TraversableTransaction() = default;
 
     explicit TraversableTransaction(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.TraversableTransaction", descriptor(), 8);
         net::corda::Parser::read_to(decoder, attachments);
         net::corda::Parser::read_to(decoder, commands);
         net::corda::Parser::read_to(decoder, component_groups);
@@ -82,13 +82,13 @@ public:
         net::corda::Parser::read_to(decoder, references);
         if (decoder.next_type() != proton::NULL_TYPE) net::corda::Parser::read_to(decoder, time_window); else decoder.next();
     }
-
-    virtual const std::string descriptor() { return "net.corda:7uh5OkEW1sLz08a+OOUFJg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration5("net.corda:7uh5OkEW1sLz08a+OOUFJg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::TraversableTransaction(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

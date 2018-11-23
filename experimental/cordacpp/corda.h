@@ -1,3 +1,5 @@
+#include <utility>
+
 #ifndef CORDA_H
 #define CORDA_H
 
@@ -29,6 +31,12 @@ public:
     ptr() : std::unique_ptr<T>() {}
 };
 
+/** The root class of a generated message hierarchy. Does nothing. */
+class Any {
+public:
+    virtual ~Any() {};   // Must have at least one virtual function to force vtable generation.
+};
+
 enum SchemaDescriptor {
     UNKNOWN = -1,
     ENVELOPE = 1,
@@ -51,17 +59,18 @@ enum SchemaDescriptor {
  */
 class Parser {
 public:
-    explicit Parser(const std::string &bytes) : indent_(0), bytes_(bytes) {};
+    explicit Parser(const std::string &bytes) : indent_(0), bytes(bytes) {};
 
     /** Returns a string containing a multi-line debug representation of the message stream. */
-    std::string dump(bool resolve_descriptors = true);
+    std::string dump();
 
     template<class T>
     std::unique_ptr<T> parse() {
         proton::codec::decoder decoder = prepare_decoder();
-        std::unique_ptr<T> t = std::make_unique<T>(decoder);
+        ptr<T> t;
+        decoder >> t;
         decoder >> proton::codec::finish();
-        return t;
+        return std::unique_ptr<T>(t.release());
     }
 
     template<class T>
@@ -93,7 +102,9 @@ public:
     }
 
 private:
-    const std::string &bytes_;
+    const std::string &bytes;
+    std::map<proton::symbol, std::string> schema_mappings;
+    void resolve_descriptors();
 
     // Returns bytes_ but with the header truncated if valid, otherwise throws.
     std::string check_corda_amqp();
@@ -101,7 +112,7 @@ private:
     proton::codec::decoder prepare_decoder();
 
     // Dumping support.
-    int indent_;
+    unsigned long indent_;
     std::stringstream ss;
 
     void dump_process(proton::codec::decoder &decoder, const std::map<proton::symbol, std::string> &schema_mappings, bool need_indent = true, bool need_newline = true);
@@ -145,31 +156,49 @@ public:
 protected:
     bool pop_second = false;
     proton::codec::decoder &decoder;
-    size_t num_fields = -1;
+    size_t num_fields = 0;
 };
 
+/**
+ * Enters a composite type and checks the fingerprint and number of fields is as expected, throws if not.
+ */
 class CompositeTypeGuard : public EnterCompositeType {
 public:
     CompositeTypeGuard(proton::codec::decoder &decoder, const char *name, const proton::symbol &expected, int expected_fields);
 };
 
+/**
+ * A TypeRegistry maps descriptors to functions that construct objects for them. It allows you to map from descriptor
+ * to decoded object. There is a global instance in which the generated code registers itself.
+ */
+class TypeRegistry {
+public:
+    static TypeRegistry &GLOBAL();
 
-template<class T>
-proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<T> &out) {
-    out = corda::ptr<T>(new T(d));
-    return d;
-}
+    typedef std::function<Any*(proton::codec::decoder&)> TypeConstructor;
 
-// Used for cases where we could deserialize *any* potential object.
-inline proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<void *> &out) {
-    out.reset(nullptr);
-    // Just skip this as we don't yet know how to read it yet.
-    // TODO: We need a different approach for this type of polymorphism - check what descriptor we actually find and look up how to instantiate it.
-    proton::codec::start s;
-    d >> s;
-    d >> proton::codec::finish();
-    return d;
-}
+    void add(const std::string &descriptor, TypeConstructor constructor) {
+        registrations.insert(std::make_pair(descriptor, constructor));
+    }
+
+    TypeConstructor *get(const std::string &descriptor) {
+        if (registrations.find(descriptor) == registrations.end())
+            return nullptr;
+        else
+            return &registrations[descriptor];
+    }
+
+private:
+    std::map<std::string, TypeConstructor> registrations;
+};
+
+/** This class is intended to be instantiated at top level, to auto-register generated types at startup. */
+class TypeRegistration {
+public:
+    explicit TypeRegistration(const char *descriptor, TypeRegistry::TypeConstructor constructor) {
+        TypeRegistry::GLOBAL().add(descriptor, constructor);
+    }
+};
 
 template<class K, class V>
 proton::codec::decoder &operator>>(proton::codec::decoder &d, std::map<K, ptr<V>> &r) {
@@ -240,6 +269,17 @@ struct msg {
 
 inline std::ostream &operator<<(std::ostream &o, const msg &m) { return o << m.str(); }
 
+template<class T>
+proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<T> &out) {
+    // Enter a composite of unknown type.
+    EnterCompositeType entry(d, nullptr, true);
+    // Look up a constructor for the descriptor, if we know it.
+    auto ctor = TypeRegistry::GLOBAL().get(entry.sym);
+    if (ctor == nullptr)
+        throw std::invalid_argument(msg() << "Unknown descriptor " << entry.sym << " so cannot construct");
+    out = corda::ptr<T>(dynamic_cast<T*>((*ctor)(d)));
+    return d;
+}
 
 }
 }

@@ -12,7 +12,7 @@ namespace corda {
 namespace core {
 namespace crypto {
 
-class SignatureMetadata {
+class SignatureMetadata : public net::corda::Any {
 public:
     int32_t platform_version;
     int32_t scheme_number_i_d;
@@ -20,17 +20,16 @@ public:
     SignatureMetadata() = default;
 
     explicit SignatureMetadata(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.SignatureMetadata", descriptor(), 2);
         net::corda::Parser::read_to(decoder, platform_version);
         net::corda::Parser::read_to(decoder, scheme_number_i_d);
     }
-
-    virtual const std::string descriptor() { return "net.corda:IzFt8cRKytsJq3vQ+yjsGg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration20("net.corda:IzFt8cRKytsJq3vQ+yjsGg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SignatureMetadata(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

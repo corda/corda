@@ -12,23 +12,22 @@ namespace corda {
 namespace core {
 namespace transactions {
 
-class CoreTransaction {
+class CoreTransaction : public net::corda::Any {
 public:
     
 
     CoreTransaction() = default;
 
     explicit CoreTransaction(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.CoreTransaction", descriptor(), 0);
         
     }
-
-    virtual const std::string descriptor() { return "net.corda:jEgCUtI5OFh9Bzx98/Absw=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration18("net.corda:jEgCUtI5OFh9Bzx98/Absw==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::CoreTransaction(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

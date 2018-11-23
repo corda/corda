@@ -19,7 +19,7 @@ namespace corda {
 namespace core {
 namespace transactions {
 
-class ComponentGroup {
+class ComponentGroup : public net::corda::Any {
 public:
     std::list<net::corda::ptr<net::corda::core::utilities::OpaqueBytes>> components;
     int32_t group_index;
@@ -27,17 +27,16 @@ public:
     ComponentGroup() = default;
 
     explicit ComponentGroup(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.ComponentGroup", descriptor(), 2);
         net::corda::Parser::read_to(decoder, components);
         net::corda::Parser::read_to(decoder, group_index);
     }
-
-    virtual const std::string descriptor() { return "net.corda:HneSPA89MGhpizVLE3wcOg=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration3("net.corda:HneSPA89MGhpizVLE3wcOg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::ComponentGroup(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

@@ -4,85 +4,87 @@
 namespace net {
 namespace corda {
 
+// TODO: Full support for polymorphism.
 // TODO: Handle back-references
 // TODO: Allow serialization, not just deserialization
-// TODO: Support lists, maps
 // TODO: Testing with other types
 
 using namespace std;
 
-string Parser::dump(bool resolve_descriptors) {
-    const string amqp_bits = check_corda_amqp();
+TypeRegistry &TypeRegistry::GLOBAL() {
+    static TypeRegistry global;
+    return global;
+}
+
+string Parser::dump() {
     // First pass: read the schema to build a map of descriptor->type names.
-    map<proton::symbol, string> schema_mappings;
-    if (resolve_descriptors) {
-        proton::value v;
-        proton::codec::decoder decoder(v);
-        decoder.decode(amqp_bits);
-        // Descend into the envelope.
-        if (decoder.next_type() != proton::DESCRIBED)
-            throw invalid_argument(msg() << "Did not find a composite type at the top level, got " << decoder.next_type());
-        proton::codec::start s;
-        decoder >> s;
-        unsigned long descriptor_id;
-        decoder >> descriptor_id;
-        SchemaDescriptor id = corda_schema_descriptor_id(descriptor_id);
-        if (id != ENVELOPE)
-            throw invalid_argument(msg() << "Expected an envelope but got " << id);
-        decoder >> s;
-        decoder.next();
-        // Descend into the schema.
+    resolve_descriptors();
+
+    // Second pass: now dump everything, using the name mappings we got from the schema.
+    proton::value v;
+    proton::codec::decoder decoder(v);
+    decoder.decode(check_corda_amqp());
+    indent_ = 0;
+    ss.clear();
+    dump_process(decoder, schema_mappings);
+    return ss.str();
+}
+
+void Parser::resolve_descriptors() {
+    proton::value v;
+    proton::codec::decoder decoder(v);
+    decoder.decode(check_corda_amqp());
+    // Descend into the envelope.
+    if (decoder.next_type() != proton::DESCRIBED)
+        throw invalid_argument(msg() << "Did not find a composite type at the top level, got " << decoder.next_type());
+    proton::codec::start s;
+    decoder >> s;
+    unsigned long descriptor_id;
+    decoder >> descriptor_id;
+    SchemaDescriptor id = corda_schema_descriptor_id(descriptor_id);
+    if (id != ENVELOPE)
+        throw invalid_argument(msg() << "Expected an envelope but got " << id);
+    decoder >> s;
+    decoder.next();
+    // Descend into the schema.
+    decoder >> s;
+    decoder >> descriptor_id;
+    id = corda_schema_descriptor_id(descriptor_id);
+    if (id != SCHEMA)
+        throw invalid_argument(msg() << "Expected a schema but got " << id);
+    // Iterate over each element of the schema.
+    decoder >> s;
+    decoder >> s;
+    size_t num_schema_elems = s.size;
+    for (int i = 0; i < num_schema_elems; ++i) {
+        // Enter the schema element.
         decoder >> s;
         decoder >> descriptor_id;
         id = corda_schema_descriptor_id(descriptor_id);
-        if (id != SCHEMA)
-            throw invalid_argument(msg() << "Expected a schema but got " << id);
-        // Iterate over each element of the schema.
-        decoder >> s;
-        decoder >> s;
-        size_t num_schema_elems = s.size;
-        ss << "There are " << num_schema_elems << " schema elements defined" << endl;
-        for (int i = 0; i < num_schema_elems; ++i) {
-            // Enter the schema element.
+        if (id == COMPOSITE_TYPE || id == RESTRICTED_TYPE) {
+            decoder >> s;
+            string name;
+            decoder >> name;
+            decoder.next(); // Label
+            decoder.next(); // Provides
+            if (id == RESTRICTED_TYPE) {
+                decoder.next();  // Source type.
+            }
             decoder >> s;
             decoder >> descriptor_id;
             id = corda_schema_descriptor_id(descriptor_id);
-            if (id == COMPOSITE_TYPE || id == RESTRICTED_TYPE) {
-                decoder >> s;
-                string name;
-                decoder >> name;
-                decoder.next(); // Label
-                decoder.next(); // Provides
-                if (id == RESTRICTED_TYPE) {
-                    decoder.next();  // Source type.
-                }
-                decoder >> s;
-                decoder >> descriptor_id;
-                id = corda_schema_descriptor_id(descriptor_id);
-                if (id != OBJECT_DESCRIPTOR)
-                    throw invalid_argument(msg() << "Expected an object descriptor but got " << id);
-                decoder >> s;
-                proton::symbol symbol;
-                decoder >> symbol;
-                decoder >> proton::codec::finish();  // Exit object descriptor list.
-                decoder >> proton::codec::finish();  // Exit object descriptor composite type.
-                decoder >> proton::codec::finish();  // Exit composite type list.
-                schema_mappings[symbol] = name;
-            }
-            decoder >> proton::codec::finish();
+            if (id != OBJECT_DESCRIPTOR)
+                throw invalid_argument(msg() << "Expected an object descriptor but got " << id);
+            decoder >> s;
+            proton::symbol symbol;
+            decoder >> symbol;
+            decoder >> proton::codec::finish();  // Exit object descriptor list.
+            decoder >> proton::codec::finish();  // Exit object descriptor composite type.
+            decoder >> proton::codec::finish();  // Exit composite type list.
+            schema_mappings[symbol] = name;
         }
+        decoder >> proton::codec::finish();
     }
-
-    // Second pass: now dump everything, using the name mappings we got from the schema.
-    {
-        proton::value v;
-        proton::codec::decoder decoder(v);
-        decoder.decode(amqp_bits);
-        indent_ = 0;
-        ss.clear();
-        dump_process(decoder, schema_mappings);
-    }
-    return ss.str();
 }
 
 void Parser::dump_process(proton::codec::decoder &decoder, const map<proton::symbol, string> &schema_mappings, bool need_indent, bool need_newline) {
@@ -217,7 +219,7 @@ void Parser::dump_scalar(proton::codec::decoder &decoder, const proton::type_id 
 }
 
 std::string Parser::check_corda_amqp() {
-    const string &magic = bytes_.substr(0, 7);
+    const string &magic = bytes.substr(0, 7);
     if (magic[0] != 'c' ||
         magic[1] != 'o' ||
         magic[2] != 'r' ||
@@ -228,7 +230,7 @@ std::string Parser::check_corda_amqp() {
         magic[7] != '\0') {
         throw invalid_argument("Bad magic or version");
     }
-    return bytes_.substr(8);
+    return bytes.substr(8);
 }
 
 proton::codec::decoder Parser::prepare_decoder() {
@@ -251,12 +253,17 @@ proton::codec::decoder Parser::prepare_decoder() {
 }
 
 EnterCompositeType::EnterCompositeType(::proton::codec::decoder &decoder, const char *name, bool has_contents) : decoder(decoder) {
-    if (decoder.next_type() != proton::DESCRIBED)
-        throw std::invalid_argument(msg() << "Expected a described element, but got " << decoder.next_type() << " whilst decoding a " << name);
+    if (decoder.next_type() != proton::DESCRIBED) {
+        auto m = msg() << "Expected a described element, but got " << decoder.next_type();
+        if (name) m << " whilst decoding a " << name;
+        throw std::invalid_argument(m);
+    }
     proton::codec::start start;
     decoder >> start;
     decoder >> sym;
-    if (has_contents > 0) {
+    if (has_contents) {
+        // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
+        // then the list inside "thing", so we have to pop up twice.
         pop_second = true;
         decoder >> block;
         num_fields = block.size;
@@ -267,7 +274,7 @@ EnterCompositeType::~EnterCompositeType()  {
     decoder >> proton::codec::finish();
     if (pop_second) {
         // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
-        // then the list inside "thing", so we have to pop up twice here.
+        // then the list inside "thing", so we have to pop up twice.
         decoder >> proton::codec::finish();
     }
 }

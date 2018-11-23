@@ -13,6 +13,7 @@ namespace core {
 namespace transactions {
 class ComponentGroup;
 class TraversableTransaction;
+class WireTransaction;
 }
 }
 }
@@ -39,17 +40,16 @@ public:
     WireTransaction() = default;
 
     explicit WireTransaction(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.transactions.WireTransaction", descriptor(), 2);
         net::corda::Parser::read_to(decoder, component_groups);
         net::corda::Parser::read_to(decoder, privacy_salt);
     }
-
-    virtual const std::string descriptor() { return "net.corda:XOo5Xrn01mcVjokIlH1ekA=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration1("net.corda:XOo5Xrn01mcVjokIlH1ekA==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::WireTransaction(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

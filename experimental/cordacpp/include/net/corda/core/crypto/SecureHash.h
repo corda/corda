@@ -12,6 +12,7 @@ namespace corda {
 namespace core {
 namespace crypto {
 class SecureHash$SHA256;
+class SecureHash;
 }
 }
 }
@@ -39,18 +40,17 @@ public:
     SecureHash() = default;
 
     explicit SecureHash(proton::codec::decoder &decoder) {
-        net::corda::CompositeTypeGuard guard(decoder, "class net.corda.core.crypto.SecureHash", descriptor(), 3);
         net::corda::Parser::read_to(decoder, bytes);
         net::corda::Parser::read_to(decoder, offset);
         net::corda::Parser::read_to(decoder, size);
     }
-
-    virtual const std::string descriptor() { return "net.corda:b79PeMBLsHxu2A23yDYRaA=="; }
 };
 
 }
 }
 }
 }
+
+net::corda::TypeRegistration Registration10("net.corda:b79PeMBLsHxu2A23yDYRaA==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif
