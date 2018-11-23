@@ -36,6 +36,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration19("net.corda:QZFO4s8ng/jneOx6aC95/Q==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration14("net.corda:QZFO4s8ng/jneOx6aC95/Q==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

@@ -61,6 +61,8 @@ enum SchemaDescriptor {
  */
 class Parser {
 public:
+    static __thread Parser* current;
+
     explicit Parser(const std::string &bytes) : indent_(0), bytes(bytes) {};
 
     /** Returns a string containing a multi-line debug representation of the message stream. */
@@ -68,11 +70,18 @@ public:
 
     template<class T>
     std::shared_ptr<T> parse() {
-        proton::codec::decoder decoder = prepare_decoder();
-        ptr<T> t;
-        decoder >> t;
-        decoder >> proton::codec::finish();
-        return t;
+        try {
+            current = this;
+            proton::codec::decoder decoder = prepare_decoder();
+            ptr<T> t;
+            decoder >> t;
+            decoder >> proton::codec::finish();
+            current = nullptr;
+            return t;
+        } catch (const std::invalid_argument &e) {
+            current = nullptr;
+            throw e;
+        };
     }
 
     template<class T>
@@ -101,6 +110,16 @@ public:
         decoder >> out;
         decoder >> proton::codec::finish();
         decoder >> proton::codec::finish();
+    }
+
+    const std::string lookup(proton::symbol sym) {
+        if (schema_mappings.empty())
+            resolve_descriptors();
+
+        if (schema_mappings.find(sym) == schema_mappings.end())
+            return "";
+        else
+            return schema_mappings[sym];
     }
 
 private:
@@ -140,26 +159,6 @@ private:
 /** A quick convenience for parsing bytes to an object. */
 template <class T> inline std::shared_ptr<T> parse(const std::string &bytes) { return Parser(bytes).parse<T>(); }
 inline std::string dump(const std::string &bytes) { return Parser(bytes).dump(); }
-
-/**
- * A scoped object that verifies the next object in the stream matches the given descriptor, and then sets up the
- * stream for reading by entering the composite type (which is a described list). When it goes out of scope,
- * it will pop up a frame and exit the composite type.
- */
-class EnterCompositeType {
-public:
-    proton::symbol sym;
-    proton::codec::start block;
-
-    explicit EnterCompositeType(proton::codec::decoder &decoder, const char *name, bool has_contents);
-
-    virtual ~EnterCompositeType();
-
-protected:
-    bool pop_second = false;
-    proton::codec::decoder &decoder;
-    size_t num_fields = 0;
-};
 
 /**
  * A TypeRegistry maps descriptors to functions that construct objects for them. It allows you to map from descriptor
@@ -280,8 +279,10 @@ proton::codec::decoder &operator>>(proton::codec::decoder &decoder, ptr<T> &out)
     decoder >> block;
     // Look up a constructor for the descriptor, if we know it.
     auto ctor = net::corda::TypeRegistry::GLOBAL().get(sym);
-    if (ctor == nullptr)
-        throw std::invalid_argument(msg() << "Unknown descriptor " << sym << " so cannot construct");
+    if (ctor == nullptr) {
+        const std::string &classname = Parser::current->lookup(sym);
+        throw std::invalid_argument(msg() << "Unknown descriptor " << sym << " for '" << classname << "' so cannot construct");
+    }
     out = net::corda::ptr<T>(dynamic_cast<T*>((*ctor)(decoder)));
     decoder >> proton::codec::finish();
     decoder >> proton::codec::finish();

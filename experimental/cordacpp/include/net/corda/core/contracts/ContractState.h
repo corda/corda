@@ -28,6 +28,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration28("net.corda:Z2i2Bmo52EfucFXZ8B2CPQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::ContractState(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration4("net.corda:Z2i2Bmo52EfucFXZ8B2CPQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::ContractState(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

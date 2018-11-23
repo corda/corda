@@ -37,6 +37,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration12("net.corda:HneSPA89MGhpizVLE3wcOg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::ComponentGroup(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration5("net.corda:HneSPA89MGhpizVLE3wcOg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::ComponentGroup(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

@@ -38,6 +38,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration29("net.corda:qoLLhCY17PZwVNR6EWxfBg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree$PartialTree(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration20("net.corda:qoLLhCY17PZwVNR6EWxfBg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::PartialMerkleTree$PartialTree(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

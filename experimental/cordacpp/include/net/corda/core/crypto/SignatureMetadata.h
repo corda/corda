@@ -30,6 +30,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration20("net.corda:IzFt8cRKytsJq3vQ+yjsGg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SignatureMetadata(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration15("net.corda:IzFt8cRKytsJq3vQ+yjsGg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SignatureMetadata(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

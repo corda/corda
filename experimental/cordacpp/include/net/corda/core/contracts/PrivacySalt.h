@@ -23,12 +23,9 @@ namespace contracts {
 
 class PrivacySalt : public net::corda::core::utilities::OpaqueBytes {
 public:
-    
-
     PrivacySalt() = default;
 
     explicit PrivacySalt(proton::codec::decoder &decoder) : net::corda::core::utilities::OpaqueBytes(decoder) {
-        
     }
 };
 
@@ -37,6 +34,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration3("net.corda:1skUfBacU1AgmLX8M1z83A==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::PrivacySalt(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration6("net.corda:1skUfBacU1AgmLX8M1z83A==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::PrivacySalt(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

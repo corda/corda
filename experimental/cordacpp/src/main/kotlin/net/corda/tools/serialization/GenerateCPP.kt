@@ -79,12 +79,12 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
     private fun Type.mangleToCPPSyntax() = this.typeName.replace(".", "::").replace("?", "net::corda::Any")
 
     override fun runProgram(): Int {
-        val classes = classNames.map { Class.forName(it) }
-
         try {
             println("Initializing ...")
             initSerialization()
             //makeTestData()
+
+            val classes = classNames.map { Class.forName(it) }
 
             val outPath = Paths.get(outputDirectory)
             Files.createDirectories(outPath)
@@ -179,12 +179,16 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     regCounter++
                     return """net::corda::TypeRegistration Registration$regCounter("$descriptor", [](proton::codec::decoder &decoder) { return new $newStr(decoder); }); // NOLINT(cert-err58-cpp)"""
                 }
-                specializations.getOrPut(baseName) { LinkedHashSet() } += registrationTemplate(type.mangleToCPPSyntax(), result.descriptor)
-                if (type is ParameterizedType) {
+
+                val typeParams = arrayOfTypeVariables(type)
+                val rawType = type.baseClass
+                specializations.getOrPut(baseName) { LinkedHashSet() } += if (typeParams.isNotEmpty()) {
                     // Need to erase generics to their bounds at the type level or use ? for Object.
-                    val params = (type.rawType as Class<*>).typeParameters.map { it.bounds.first() }.map { it: Type? -> if (it == Any::class.java) "net::corda::Any" else it!!.mangleToCPPSyntax() }
-                    val descriptor = serializerFactory.createDescriptor(serializerFactory.getTypeInformation(type.rawType))
-                    specializations.getOrPut(baseName) { LinkedHashSet() } += registrationTemplate(type.rawType.typeName.replace(".", "::") + "<" + params.joinToString(", ") + ">", descriptor)
+                    val params = typeParams.map { it.bounds.first() }.map { it: Type? -> if (it == Any::class.java) "net::corda::Any" else it!!.mangleToCPPSyntax() }
+                    val descriptor = serializerFactory.createDescriptor(serializerFactory.getTypeInformation(rawType))
+                    registrationTemplate(rawType.typeName.replace(".", "::") + "<" + params.joinToString(", ") + ">", descriptor)
+                } else {
+                    registrationTemplate(type.mangleToCPPSyntax(), result.descriptor)
                 }
                 predeclarationsNeeded += type.allMentionedClasses
                 classPredeclarations.getOrPut(baseName) { LinkedHashSet() }.addAll(predeclarationsNeeded)
@@ -309,7 +313,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 if (kclass.isSealed)
                     dependencies += kclass.nestedClasses.filter { kclass in it.superclasses }.map { it.java }
 
-                typeInformation.properties
+                emptyMap()
             }
             is LocalTypeInformation.Composable -> typeInformation.properties
             is LocalTypeInformation.AnInterface -> emptyMap()   // Don't care about generating interfaces at the moment.
@@ -321,14 +325,6 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         // Calculate the body of the class where field are declared and initialised in the constructor.
         for ((javaName, propInfo) in properties) {
-            if (propInfo is LocalPropertyInformation.HasObservedGetter) {
-                try {
-                    type.baseClass.getDeclaredMethod("get" + javaName.capitalize())
-                } catch (e: NoSuchMethodException) {
-                    continue  // Generated in a superclass.
-                }
-            }
-
             val name = javaToCPPName(javaName)
             val genericReturnType = if (propInfo is LocalPropertyInformation.HasObservedGetter) propInfo.observedGetter.genericReturnType else null
             val (declType, newDeps) = convertType(propInfo.type.observedType, genericReturnType)
@@ -343,7 +339,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         // We have fully specified generics here, as used in the parameter types e.g. kotlin.Pair<Person, Person>
         // but we want to generate generic C++, so we have to put the type variables back
-        val typeParameters = ((type as? ParameterizedType)?.rawType as? Class<*>)?.typeParameters ?: emptyArray()
+        val typeParameters = arrayOfTypeVariables(type)
 
         // Bail out early without generating code if we already did this class. We had to scan it anyway to discover
         // if there were any new dependencies as a result of the template substitution.
@@ -387,6 +383,9 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     |$namespaceClosings
                 """.trimMargin(), dependencies, descriptorSymbol, supers.map { it.observedType }.toSet())
     }
+
+    private fun arrayOfTypeVariables(type: Type) =
+            (type as? Class<*>)?.typeParameters ?: ((type as? ParameterizedType)?.rawType as? Class<*>)?.typeParameters ?: emptyArray()
 
     // Java type to C++ type. See SerializerFactory.primitiveTypeNames and https://qpid.apache.org/releases/qpid-proton-0.26.0/proton/cpp/api/types_page.html
     private fun convertType(resolved: Type, genericReturnType: Type?): Pair<String, Set<Type>> {

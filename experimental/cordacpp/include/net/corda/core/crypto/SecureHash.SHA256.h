@@ -24,12 +24,12 @@ namespace crypto {
 
 class SecureHash$SHA256 : public net::corda::core::crypto::SecureHash {
 public:
-    
+    proton::binary bytes;
 
     SecureHash$SHA256() = default;
 
     explicit SecureHash$SHA256(proton::codec::decoder &decoder) : net::corda::core::crypto::SecureHash(decoder) {
-        
+        net::corda::Parser::read_to(decoder, bytes);
     }
 };
 
@@ -38,6 +38,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration23("net.corda:7YZSUU3tC6YvtX33Klo9Jg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash$SHA256(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration25("net.corda:7YZSUU3tC6YvtX33Klo9Jg==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash$SHA256(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

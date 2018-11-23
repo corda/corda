@@ -47,6 +47,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration9("net.corda:b79PeMBLsHxu2A23yDYRaA==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration24("net.corda:b79PeMBLsHxu2A23yDYRaA==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

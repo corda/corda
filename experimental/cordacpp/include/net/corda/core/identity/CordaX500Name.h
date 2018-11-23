@@ -38,6 +38,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration25("net.corda:ngdwbt6kRT0l5nn16uf87A==", [](proton::codec::decoder &decoder) { return new net::corda::core::identity::CordaX500Name(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration17("net.corda:ngdwbt6kRT0l5nn16uf87A==", [](proton::codec::decoder &decoder) { return new net::corda::core::identity::CordaX500Name(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

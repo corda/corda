@@ -28,6 +28,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration18("net.corda:jEgCUtI5OFh9Bzx98/Absw==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::CoreTransaction(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration13("net.corda:jEgCUtI5OFh9Bzx98/Absw==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::CoreTransaction(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

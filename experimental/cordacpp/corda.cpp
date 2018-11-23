@@ -11,6 +11,8 @@ namespace corda {
 
 using namespace std;
 
+__thread Parser* Parser::current = nullptr;
+
 TypeRegistry &TypeRegistry::GLOBAL() {
     static TypeRegistry global;
     return global;
@@ -235,6 +237,7 @@ std::string Parser::check_corda_amqp() {
 
 proton::codec::decoder Parser::prepare_decoder() {
     const std::string amqp_bits = check_corda_amqp();
+    resolve_descriptors();
     proton::value v;
     proton::codec::decoder decoder(v);
     decoder.decode(amqp_bits);
@@ -252,36 +255,11 @@ proton::codec::decoder Parser::prepare_decoder() {
     return decoder;
 }
 
-EnterCompositeType::EnterCompositeType(::proton::codec::decoder &decoder, const char *name, bool has_contents) : decoder(decoder) {
-    if (decoder.next_type() != proton::DESCRIBED) {
-        auto m = msg() << "Expected a described element, but got " << decoder.next_type();
-        if (name) m << " whilst decoding a " << name;
-        throw std::invalid_argument(m);
-    }
-    proton::codec::start start;
-    decoder >> start;
-    decoder >> sym;
-    if (has_contents) {
-        // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
-        // then the list inside "thing", so we have to pop up twice.
-        pop_second = true;
-        decoder >> block;
-        num_fields = block.size;
-    }
-}
-
-EnterCompositeType::~EnterCompositeType()  {
-    decoder >> proton::codec::finish();
-    if (pop_second) {
-        // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
-        // then the list inside "thing", so we have to pop up twice.
-        decoder >> proton::codec::finish();
-    }
-}
-
 }
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 net::corda::TypeRegistration PublicKeyRegistration("java.security.PublicKey", [](proton::codec::decoder &decoder) {
     return new java::security::PublicKey(decoder);
 });
@@ -289,3 +267,4 @@ net::corda::TypeRegistration PublicKeyRegistration("java.security.PublicKey", []
 net::corda::TypeRegistration InstantRegistration("java.time.Instant", [](proton::codec::decoder &decoder) {
     return new java::time::Instant(decoder);
 }); // NOLINT(cert-err58-cpp)
+#pragma clang diagnostic pop

@@ -10,8 +10,10 @@
 namespace net {
 namespace corda {
 namespace core {
-namespace contracts {
-class PrivacySalt;
+namespace transactions {
+class ComponentGroup;
+class TraversableTransaction;
+class WireTransaction;
 }
 }
 }
@@ -19,9 +21,8 @@ class PrivacySalt;
 namespace net {
 namespace corda {
 namespace core {
-namespace transactions {
-class TraversableTransaction;
-class WireTransaction;
+namespace contracts {
+class PrivacySalt;
 }
 }
 }
@@ -33,11 +34,13 @@ namespace transactions {
 
 class WireTransaction : public net::corda::core::transactions::TraversableTransaction {
 public:
+    std::vector<net::corda::ptr<net::corda::core::transactions::ComponentGroup>> component_groups;
     net::corda::ptr<net::corda::core::contracts::PrivacySalt> privacy_salt;
 
     WireTransaction() = default;
 
     explicit WireTransaction(proton::codec::decoder &decoder) : net::corda::core::transactions::TraversableTransaction(decoder) {
+        net::corda::Parser::read_to(decoder, component_groups);
         net::corda::Parser::read_to(decoder, privacy_salt);
     }
 };

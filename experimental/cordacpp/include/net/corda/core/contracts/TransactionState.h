@@ -54,7 +54,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration15("net.corda:EXC6szFsBMi53/1So8maDg==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::TransactionState<net::corda::core::contracts::ContractState>(decoder); }); // NOLINT(cert-err58-cpp)
-net::corda::TypeRegistration Registration16("net.corda:Q0zUGN/K6wwwyuIlNf3Raw==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::TransactionState<net::corda::core::contracts::ContractState>(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration3("net.corda:Q0zUGN/K6wwwyuIlNf3Raw==", [](proton::codec::decoder &decoder) { return new net::corda::core::contracts::TransactionState<net::corda::core::contracts::ContractState>(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif
