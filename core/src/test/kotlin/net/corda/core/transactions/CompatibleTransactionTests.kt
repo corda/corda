@@ -6,6 +6,7 @@ import net.corda.core.crypto.*
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
@@ -125,7 +126,7 @@ class CompatibleTransactionTests {
 
     @Test
     fun `WireTransaction constructors and compatibility`() {
-        val groups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList())
+        val groups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
         val wireTransactionOldConstructor = WireTransaction(groups, privacySalt)
         assertEquals(wireTransactionA, wireTransactionOldConstructor)
 

@@ -258,7 +258,6 @@ private constructor(
         throw TransactionVerificationException.ContractCreationError(id, className, e)
     }
 
-// TODO FIX REBASE
     private fun createLtxForVerification(): LedgerTransaction {
         val serializedInputs = this.serializedInputs
         val serializedReferences = this.serializedReferences
@@ -756,7 +755,6 @@ private constructor(
      */
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 
-    // TODO REBASE FIX
     operator fun component1(): List<StateAndRef<ContractState>> = inputs
     operator fun component2(): List<TransactionState<ContractState>> = outputs
     operator fun component3(): List<CommandWithParties<CommandData>> = commands
@@ -791,18 +789,18 @@ private constructor(
     //
     // Stuff that we can't remove and so is deprecated instead
     //
-// TODO REBASE FIX
-    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
+//// TODO FIX this constructor
+//    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
+//    constructor(
+//            inputs: List<StateAndRef<ContractState>>,
+//            outputs: List<TransactionState<ContractState>>,
+//            commands: List<CommandWithParties<CommandData>>,
+//            attachments: List<Attachment>,
+//            id: SecureHash,
+//            notary: Party?,
+//            timeWindow: TimeWindow?,
+//            privacySalt: PrivacySalt
+//    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     @DeprecatedConstructorForDeserialization(1)
@@ -815,7 +813,7 @@ private constructor(
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?
+            networkParameters: NetworkParameters
     ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")

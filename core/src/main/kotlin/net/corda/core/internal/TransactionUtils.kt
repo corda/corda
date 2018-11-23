@@ -130,7 +130,8 @@ fun createComponentGroups(inputs: List<StateRef>,
                           attachments: List<SecureHash>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
-                          references: List<StateRef>): List<ComponentGroup> {
+                          references: List<StateRef>,
+                          networkParametersHash: SecureHash?): List<ComponentGroup> {
     val serialize = { value: Any, _: Int -> value.serialize() }
     val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
     if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
@@ -144,6 +145,7 @@ fun createComponentGroups(inputs: List<StateRef>,
     // Adding signers to their own group. This is required for command visibility purposes: a party receiving
     // a FilteredTransaction can now verify it sees all the commands it should sign.
     if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
+    if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
     return componentGroupMap
 }
 

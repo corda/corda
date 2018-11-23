@@ -66,7 +66,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList()), privacySalt)
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -300,11 +300,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                                   attachments: List<SecureHash>,
                                   notary: Party?,
                                   timeWindow: TimeWindow?): List<ComponentGroup> {
-            //TODO rebase
-            // todo references?
-//            networkParametersHash: SecureHash? = null
-//            if (networkParametersHash != null) componentGroupMap.add(ComponentGroup(PARAMETERS_GROUP.ordinal, listOf(networkParametersHash.serialize())))
-            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList())
+            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
         }
 
         /**

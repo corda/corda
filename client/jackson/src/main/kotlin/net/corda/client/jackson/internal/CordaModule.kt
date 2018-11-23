@@ -190,7 +190,7 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.attachments,
                 value.references,
                 value.privacySalt,
-                value.networkParametersHash,
+                value.networkParametersHash
         ))
     }
 }
