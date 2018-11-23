@@ -17,6 +17,11 @@ interface PropertyDelegate<TYPE> {
         fun optional(): PropertyDelegate.Optional<TYPE>
     }
 
+//    interface RequiredList<TYPE>: Required<List<TYPE>> {
+//
+//        override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>>
+//    }
+
     interface Single<TYPE> {
 
         operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Single<TYPE>>
@@ -109,17 +114,17 @@ private class OptionalWithDefaultPropertyDelegateImpl<TYPE>(private val key: Str
     }
 }
 
-private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
+private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.RequiredList<TYPE>) : PropertyDelegate.Required<List<TYPE>> {
 
-    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
+    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>> {
 
         val shortName = key ?: property.name
         val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
-        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
+        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.RequiredList<TYPE>> {
 
-            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Required<TYPE> = prop
+            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.RequiredList<TYPE> = prop
         }
     }
 
-    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
+    override fun optional(): PropertyDelegate.Optional<List<TYPE>> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
 }
