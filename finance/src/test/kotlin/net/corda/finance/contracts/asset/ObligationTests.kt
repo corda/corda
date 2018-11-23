@@ -81,7 +81,10 @@ class ObligationTests {
             beneficiary = CHARLIE
     )
     private val outState = inState.copy(beneficiary = AnonymousParty(BOB_PUBKEY))
-    private val miniCorpServices = MockServices(listOf("net.corda.finance.contracts.asset"), miniCorp, rigorousMock<IdentityService>())
+    private val miniCorpServices = object : MockServices(listOf("net.corda.finance.contracts.asset"), miniCorp, rigorousMock<IdentityService>()) {
+        override fun loadState(stateRef: StateRef): TransactionState<*> = TransactionState(inState, Cash.PROGRAM_ID, dummyNotary.party) // Simulates the sate is recorded in node service
+    }
+
     private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), dummyNotary.keyPair)
     private val identityService = rigorousMock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
