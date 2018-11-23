@@ -1,6 +1,7 @@
 package net.corda.core.cordapp
 
-//TODO non-downgrade-rule comments
+//TODO non-downgrade-rule docs, replace this with a stronger Version type in future.
+//Note: this is public API so need to beware of future backwards compatibility.
 class Version(val version: String) : Comparable<Version> {
 
     init {

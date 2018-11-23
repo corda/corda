@@ -66,8 +66,12 @@ class TransactionSerializationTests {
     val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef )
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
-    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
-    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
+    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY) {
+        override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
+    }
+    val notaryServices = object : MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY) {
+        override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
+    }
     lateinit var tx: TransactionBuilder
 
     @Before

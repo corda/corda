@@ -109,14 +109,14 @@ private constructor(
             if (inputContractClassVersions != null && inputContractClassVersions.isNotEmpty()) {
                 val implementationVersion = outputAttachment.openAsJAR()
                         .manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, "UNKNOWN")
+                        ?: throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, "UNKNOWN")
                 val version = try {
                     Version(implementationVersion)
                 } catch (e: IllegalArgumentException) {
-                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, implementationVersion)
+                    throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, implementationVersion)
                 }
                 if (inputContractClassVersions.any { version < it }) {
-                    throw TransactionVerificationException.TransactionContractClassVersionDowngrading(txId ?: SecureHash.zeroHash, contractClassName, version.toString())
+                    throw TransactionVerificationException.TransactionVerificationVersionException(txId ?: SecureHash.zeroHash, contractClassName, version.toString())
                 }
             }
         }
