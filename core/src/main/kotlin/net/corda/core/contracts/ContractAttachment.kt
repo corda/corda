@@ -18,7 +18,7 @@ class ContractAttachment @JvmOverloads constructor(
         val contract: ContractClassName,
         val additionalContracts: Set<ContractClassName> = emptySet(),
         val uploader: String? = null,
-        override val signers: List<PublicKey> = emptyList()) : Attachment by attachment {
+        override val signerKeys: List<PublicKey> = emptyList()) : Attachment by attachment {
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 

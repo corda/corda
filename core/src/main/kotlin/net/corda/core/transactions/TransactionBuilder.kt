@@ -24,7 +24,6 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
@@ -347,7 +346,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             attachmentToUse: ContractAttachment,
             services: ServicesForResolution): AttachmentConstraint = when {
         inputStates != null -> attachmentConstraintsTransition(inputStates.groupBy { it.constraint }.keys, attachmentToUse)
-        attachmentToUse.signers.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
+        attachmentToUse.signerKeys.isNotEmpty() && services.networkParameters.minimumPlatformVersion < 4 -> {
             log.warnOnce("Signature constraints not available on network requiring a minimum platform version of 4. Current is: ${services.networkParameters.minimumPlatformVersion}.")
             if (useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters)) {
                 log.warnOnce("Reverting back to using whitelisted zone constraints for contract $contractClassName")
@@ -357,7 +356,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                 HashAttachmentConstraint(attachmentToUse.id)
             }
         }
-        attachmentToUse.signers.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signers)
+        attachmentToUse.signerKeys.isNotEmpty() -> makeSignatureAttachmentConstraint(attachmentToUse.signerKeys)
         useWhitelistedByZoneAttachmentConstraint(contractClassName, services.networkParameters) -> WhitelistedByZoneAttachmentConstraint
         else -> HashAttachmentConstraint(attachmentToUse.id)
     }
@@ -398,8 +397,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         constraints.any { it is SignatureAttachmentConstraint } && constraints.any { it is WhitelistedByZoneAttachmentConstraint } -> {
             val signatureConstraint = constraints.mapNotNull { it as? SignatureAttachmentConstraint }.single()
             when {
-                attachmentToUse.signers.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
-                signatureConstraint.key.keys.containsAll(attachmentToUse.signers) -> signatureConstraint
+                attachmentToUse.signerKeys.isEmpty() -> throw IllegalArgumentException("Cannot mix a state with the WhitelistedByZoneAttachmentConstraint and a state with the SignatureAttachmentConstraint, when the latest attachment is not signed. Please contact your Zone operator.")
+                signatureConstraint.key.keys.containsAll(attachmentToUse.signerKeys) -> signatureConstraint
                 else -> throw IllegalArgumentException("Attempting to transition a WhitelistedByZoneAttachmentConstraint state backed by an attachment signed by multiple parties to a weaker SignatureConstraint that does not require all those signatures. Please contact your Zone operator.")
             }
         }
