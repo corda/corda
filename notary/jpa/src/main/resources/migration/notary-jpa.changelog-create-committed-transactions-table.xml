@@ -9,6 +9,6 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addPrimaryKey columnNames="transaction_id" constraintName="node_jpa_notary_committed_transactions_pkey" tableName="node_jpa_notary_committed_transaction"/>
+        <addPrimaryKey columnNames="transaction_id" constraintName="node_jpa_notary_committed_transactions_pkey" tableName="node_jpa_notary_committed_transactions"/>
     </changeSet>
 </databaseChangeLog>
