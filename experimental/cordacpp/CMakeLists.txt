@@ -9,6 +9,6 @@ include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
 add_definitions(${ProtonCpp_DEFINITIONS})
 
-add_executable(CordaCPP main.cpp main.h corda.cpp corda.h corda-std-serializers.h include)
+add_executable(CordaCPP main.cpp main.h corda.cpp corda.h corda-core.h include)
 target_include_directories(CordaCPP PRIVATE include)
 target_include_directories(CordaCPP PRIVATE .)

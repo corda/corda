@@ -33,16 +33,12 @@ namespace crypto {
 
 class SecureHash : public net::corda::core::utilities::OpaqueBytes {
 public:
-    proton::binary bytes;
-    int32_t offset;
-    int32_t size;
+    
 
     SecureHash() = default;
 
-    explicit SecureHash(proton::codec::decoder &decoder) {
-        net::corda::Parser::read_to(decoder, bytes);
-        net::corda::Parser::read_to(decoder, offset);
-        net::corda::Parser::read_to(decoder, size);
+    explicit SecureHash(proton::codec::decoder &decoder) : net::corda::core::utilities::OpaqueBytes(decoder) {
+        
     }
 };
 
@@ -51,6 +47,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration10("net.corda:b79PeMBLsHxu2A23yDYRaA==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration9("net.corda:b79PeMBLsHxu2A23yDYRaA==", [](proton::codec::decoder &decoder) { return new net::corda::core::crypto::SecureHash(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

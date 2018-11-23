@@ -29,7 +29,7 @@ public:
 
     PartialMerkleTree$PartialTree$Node() = default;
 
-    explicit PartialMerkleTree$PartialTree$Node(proton::codec::decoder &decoder) {
+    explicit PartialMerkleTree$PartialTree$Node(proton::codec::decoder &decoder) : net::corda::core::crypto::PartialMerkleTree$PartialTree(decoder) {
         net::corda::Parser::read_to(decoder, left);
         net::corda::Parser::read_to(decoder, right);
     }

@@ -28,7 +28,7 @@ public:
 
     OpaqueBytes() = default;
 
-    explicit OpaqueBytes(proton::codec::decoder &decoder) {
+    explicit OpaqueBytes(proton::codec::decoder &decoder) : net::corda::core::utilities::ByteSequence(decoder) {
         net::corda::Parser::read_to(decoder, bytes);
     }
 };
@@ -38,6 +38,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration9("net.corda:pgT0Kc3t/bvnzmgu/nb4Cg==", [](proton::codec::decoder &decoder) { return new net::corda::core::utilities::OpaqueBytes(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration8("net.corda:pgT0Kc3t/bvnzmgu/nb4Cg==", [](proton::codec::decoder &decoder) { return new net::corda::core::utilities::OpaqueBytes(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

@@ -17,6 +17,14 @@ namespace corda {
 // TODO: Map kotlin.Pair to std::pair
 
 /**
+ * The root class of a generated message hierarchy. Does nothing, but is useful for code generation.
+ */
+class Any {
+public:
+    virtual ~Any() {};   // Must have at least one virtual function to force vtable generation.
+};
+
+/**
  * We define a custom name for std::unique_ptr so that we can distinguish in the type system fields that are meant to
  * be coming from the deserialisation engine. This allows us to define overloads to adapt Proton deserialisation to
  * the generated classes, which expect to be given the decoder as a constructor input.
@@ -24,17 +32,11 @@ namespace corda {
  * @tparam T
  */
 template<class T>
-class ptr : public std::unique_ptr<T> {
+class ptr : public std::shared_ptr<T> {
 public:
-    explicit ptr(T *p) : std::unique_ptr<T>(p) {}
+    explicit ptr(T *p) : std::shared_ptr<T>(p) {}
 
-    ptr() : std::unique_ptr<T>() {}
-};
-
-/** The root class of a generated message hierarchy. Does nothing. */
-class Any {
-public:
-    virtual ~Any() {};   // Must have at least one virtual function to force vtable generation.
+    ptr() : std::shared_ptr<T>() {}
 };
 
 enum SchemaDescriptor {
@@ -65,12 +67,12 @@ public:
     std::string dump();
 
     template<class T>
-    std::unique_ptr<T> parse() {
+    std::shared_ptr<T> parse() {
         proton::codec::decoder decoder = prepare_decoder();
         ptr<T> t;
         decoder >> t;
         decoder >> proton::codec::finish();
-        return std::unique_ptr<T>(t.release());
+        return t;
     }
 
     template<class T>
@@ -80,7 +82,7 @@ public:
 
     // We can't add this additional wrapping without read_to.
     template<class T>
-    inline static void read_to(proton::codec::decoder &decoder, std::list<ptr<T>> &out) {
+    inline static void read_to(proton::codec::decoder &decoder, std::vector<ptr<T>> &out) {
         // Unwrap the descriptor surrounding the list.
         proton::codec::start start;
         decoder >> start;
@@ -136,7 +138,7 @@ private:
 };
 
 /** A quick convenience for parsing bytes to an object. */
-template <class T> inline std::unique_ptr<T> parse(const std::string &bytes) { return Parser(bytes).parse<T>(); }
+template <class T> inline std::shared_ptr<T> parse(const std::string &bytes) { return Parser(bytes).parse<T>(); }
 inline std::string dump(const std::string &bytes) { return Parser(bytes).dump(); }
 
 /**
@@ -157,14 +159,6 @@ protected:
     bool pop_second = false;
     proton::codec::decoder &decoder;
     size_t num_fields = 0;
-};
-
-/**
- * Enters a composite type and checks the fingerprint and number of fields is as expected, throws if not.
- */
-class CompositeTypeGuard : public EnterCompositeType {
-public:
-    CompositeTypeGuard(proton::codec::decoder &decoder, const char *name, const proton::symbol &expected, int expected_fields);
 };
 
 /**
@@ -270,16 +264,64 @@ struct msg {
 inline std::ostream &operator<<(std::ostream &o, const msg &m) { return o << m.str(); }
 
 template<class T>
-proton::codec::decoder &operator>>(proton::codec::decoder &d, ptr<T> &out) {
-    // Enter a composite of unknown type.
-    EnterCompositeType entry(d, nullptr, true);
+proton::codec::decoder &operator>>(proton::codec::decoder &decoder, ptr<T> &out) {
+    // Enter the composite.
+    if (decoder.next_type() != proton::DESCRIBED) {
+        auto m = msg() << "Expected a described element, but got " << decoder.next_type();
+        throw std::invalid_argument(m);
+    }
+    proton::codec::start start;
+    decoder >> start;
+    proton::symbol sym;
+    decoder >> sym;
+    // Composite types have two levels of nesting, the one that contains the "description, thing" pair, and
+    // then the list inside "thing", so we have to pop up twice.
+    proton::codec::start block;
+    decoder >> block;
     // Look up a constructor for the descriptor, if we know it.
-    auto ctor = TypeRegistry::GLOBAL().get(entry.sym);
+    auto ctor = net::corda::TypeRegistry::GLOBAL().get(sym);
     if (ctor == nullptr)
-        throw std::invalid_argument(msg() << "Unknown descriptor " << entry.sym << " so cannot construct");
-    out = corda::ptr<T>(dynamic_cast<T*>((*ctor)(d)));
-    return d;
+        throw std::invalid_argument(msg() << "Unknown descriptor " << sym << " so cannot construct");
+    out = net::corda::ptr<T>(dynamic_cast<T*>((*ctor)(decoder)));
+    decoder >> proton::codec::finish();
+    decoder >> proton::codec::finish();
+    return decoder;
 }
+
+}
+}
+
+// Standard serialisers that don't follow the regular AMQP format for various reasons.
+
+namespace java {
+namespace security {
+
+class PublicKey : public net::corda::Any {
+public:
+    proton::binary x509_bits;
+
+    explicit PublicKey(proton::codec::decoder &decoder) {
+        decoder >> x509_bits;
+    }
+};
+
+
+}  // security
+
+namespace time {
+
+class Instant : public net::corda::Any {
+public:
+    int64_t epoch_seconds;
+    int32_t nanos;
+
+    Instant() : epoch_seconds(0), nanos(0) {}
+
+    explicit Instant(proton::codec::decoder &decoder) : epoch_seconds(0), nanos(0) {
+        decoder >> epoch_seconds;
+        decoder >> nanos;
+    }
+};
 
 }
 }

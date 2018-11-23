@@ -6,9 +6,10 @@
 #include <sstream>
 
 using namespace std;
+using namespace net::corda;
 
-namespace corda = net::corda;
 namespace transactions = net::corda::core::transactions;
+namespace contracts = net::corda::core::contracts;
 
 int main() {
     //ifstream stream("/Users/mike/Corda/open/stx1");
@@ -20,10 +21,20 @@ int main() {
         return 1;
     }
 
-    cout << corda::dump(bits) << endl;
-    auto wtx = corda::parse<net::corda::core::transactions::WireTransaction>(bits);
+    cout << dump(bits) << endl;
+    auto wtx = parse<transactions::WireTransaction>(bits);
     cout << "This wtx has " << wtx->component_groups.size() << " component groups." << endl;
     cout << "The privacy salt is " << wtx->privacy_salt->bytes.size() << " bytes long." << endl;
+
+    auto inputs = wtx->component_groups[ComponentGroupEnum::INPUTS]->components;
+    auto outputs = wtx->component_groups[ComponentGroupEnum::OUTPUTS]->components;
+    cout << "There are " << inputs.size() << " inputs and " << outputs.size() << " outputs." << endl;
+
+    int out_index = 0;
+    for (auto &out_slot : outputs) {
+        auto output = parse<contracts::TransactionState<contracts::ContractState>>(out_slot->bytes);
+        cout << "  Output " << out_index++ << " is governed by contract " << output->contract << endl;
+    }
 
     return 0;
 }

@@ -1,4 +1,4 @@
-#include "corda-std-serializers.h"
+#include "corda-core.h"
 #include "net/corda/core/contracts/AttachmentConstraint.h"
 #include "net/corda/core/contracts/Command.h"
 #include "net/corda/core/contracts/CommandData.h"

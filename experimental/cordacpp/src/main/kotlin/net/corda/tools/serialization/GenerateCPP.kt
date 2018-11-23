@@ -98,7 +98,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 allHeaders += path.toString()
             }
 
-            val uberHeader = listOf("#include \"corda-std-serializers.h\"") + allHeaders.map { "#include \"$it\"" }.sorted()
+            val uberHeader = listOf("#include \"corda-core.h\"") + allHeaders.map { "#include \"$it\"" }.sorted()
             val uberHeaderPath = outPath.resolve("all-messages.h")
             Files.write(uberHeaderPath, uberHeader)
             println("Generated $uberHeaderPath")
@@ -312,10 +312,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 typeInformation.properties
             }
             is LocalTypeInformation.Composable -> typeInformation.properties
-            is LocalTypeInformation.AnInterface -> {
-                println("Emitting skip class for interface $type / $descriptorSymbol")
-                emptyMap()
-            }
+            is LocalTypeInformation.AnInterface -> emptyMap()   // Don't care about generating interfaces at the moment.
             else -> {
                 println("Need to write code for custom serializer '$type' / $descriptorSymbol")
                 return null
@@ -324,6 +321,14 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         // Calculate the body of the class where field are declared and initialised in the constructor.
         for ((javaName, propInfo) in properties) {
+            if (propInfo is LocalPropertyInformation.HasObservedGetter) {
+                try {
+                    type.baseClass.getDeclaredMethod("get" + javaName.capitalize())
+                } catch (e: NoSuchMethodException) {
+                    continue  // Generated in a superclass.
+                }
+            }
+
             val name = javaToCPPName(javaName)
             val genericReturnType = if (propInfo is LocalPropertyInformation.HasObservedGetter) propInfo.observedGetter.genericReturnType else null
             val (declType, newDeps) = convertType(propInfo.type.observedType, genericReturnType)
@@ -363,6 +368,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             "public net::corda::Any"
         else
             supers.map { it.observedType.mangleToCPPSyntax() }.joinToString(", ") { "public $it" }
+        val ctorSuperCall = if (supers.isEmpty()) "" else ": " + supers.joinToString(", ") { "${it.observedType.mangleToCPPSyntax()}(decoder)" } + " "
 
         return GenResult("""
                     |$namespaceOpenings
@@ -373,7 +379,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     |
                     |    $undecoratedName() = default;
                     |
-                    |    explicit $undecoratedName(proton::codec::decoder &decoder) {
+                    |    explicit $undecoratedName(proton::codec::decoder &decoder) $ctorSuperCall{
                     |        ${fieldReads.joinToString(System.lineSeparator() + (" ".repeat(8)))}
                     |    }
                     |};
@@ -431,7 +437,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     if (innerType is WildcardType) innerType = innerType.upperBounds.first()
                     val (innerName, innerDeps) = convertType(innerType, innerType)
                     dependencies += innerDeps
-                    "std::list<$innerName>"
+                    "std::vector<$innerName>"
                 }
                 "java.util.Map" -> {
                     resolved as ParameterizedType

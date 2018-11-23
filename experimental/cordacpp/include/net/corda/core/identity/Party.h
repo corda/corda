@@ -18,11 +18,6 @@ class Party;
 }
 }
 }
-namespace java {
-namespace security {
-class PublicKey;
-}
-}
 namespace net {
 namespace corda {
 namespace core {
@@ -31,13 +26,11 @@ namespace identity {
 class Party : public net::corda::core::identity::AbstractParty {
 public:
     net::corda::ptr<net::corda::core::identity::CordaX500Name> name;
-    net::corda::ptr<java::security::PublicKey> owning_key;
 
     Party() = default;
 
-    explicit Party(proton::codec::decoder &decoder) {
+    explicit Party(proton::codec::decoder &decoder) : net::corda::core::identity::AbstractParty(decoder) {
         net::corda::Parser::read_to(decoder, name);
-        net::corda::Parser::read_to(decoder, owning_key);
     }
 };
 

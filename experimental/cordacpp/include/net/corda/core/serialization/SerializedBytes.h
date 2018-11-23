@@ -32,12 +32,12 @@ namespace serialization {
 
 template <class T> class SerializedBytes : public net::corda::core::utilities::OpaqueBytes {
 public:
-    proton::binary bytes;
+    
 
     SerializedBytes() = default;
 
-    explicit SerializedBytes(proton::codec::decoder &decoder) {
-        net::corda::Parser::read_to(decoder, bytes);
+    explicit SerializedBytes(proton::codec::decoder &decoder) : net::corda::core::utilities::OpaqueBytes(decoder) {
+        
     }
 };
 
@@ -46,7 +46,7 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration7("net.corda:tfE4ru/0RkQp8D2wkDqzRQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>(decoder); }); // NOLINT(cert-err58-cpp)
-net::corda::TypeRegistration Registration8("net.corda:LY55YUDjxO84OlwSwUzvSA==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::Any>(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration6("net.corda:tfE4ru/0RkQp8D2wkDqzRQ==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration7("net.corda:LY55YUDjxO84OlwSwUzvSA==", [](proton::codec::decoder &decoder) { return new net::corda::core::serialization::SerializedBytes<net::corda::Any>(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif

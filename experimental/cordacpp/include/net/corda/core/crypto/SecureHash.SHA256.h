@@ -24,12 +24,12 @@ namespace crypto {
 
 class SecureHash$SHA256 : public net::corda::core::crypto::SecureHash {
 public:
-    proton::binary bytes;
+    
 
     SecureHash$SHA256() = default;
 
-    explicit SecureHash$SHA256(proton::codec::decoder &decoder) {
-        net::corda::Parser::read_to(decoder, bytes);
+    explicit SecureHash$SHA256(proton::codec::decoder &decoder) : net::corda::core::crypto::SecureHash(decoder) {
+        
     }
 };
 

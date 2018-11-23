@@ -40,7 +40,7 @@ namespace transactions {
 
 class SignedTransaction : public net::corda::Any {
 public:
-    std::list<net::corda::ptr<net::corda::core::crypto::TransactionSignature>> sigs;
+    std::vector<net::corda::ptr<net::corda::core::crypto::TransactionSignature>> sigs;
     net::corda::ptr<net::corda::core::serialization::SerializedBytes<net::corda::core::transactions::CoreTransaction>> tx_bits;
 
     SignedTransaction() = default;

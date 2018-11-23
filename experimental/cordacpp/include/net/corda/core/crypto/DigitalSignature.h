@@ -23,12 +23,12 @@ namespace crypto {
 
 class DigitalSignature : public net::corda::core::utilities::OpaqueBytes {
 public:
-    proton::binary bytes;
+    
 
     DigitalSignature() = default;
 
-    explicit DigitalSignature(proton::codec::decoder &decoder) {
-        net::corda::Parser::read_to(decoder, bytes);
+    explicit DigitalSignature(proton::codec::decoder &decoder) : net::corda::core::utilities::OpaqueBytes(decoder) {
+        
     }
 };
 

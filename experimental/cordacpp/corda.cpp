@@ -279,13 +279,13 @@ EnterCompositeType::~EnterCompositeType()  {
     }
 }
 
-CompositeTypeGuard::CompositeTypeGuard(proton::codec::decoder &decoder, const char *name,
-                                       const proton::symbol &expected, int expected_fields) : EnterCompositeType(decoder, name, expected_fields > 0) {
-    if (sym != expected)
-        throw std::invalid_argument(msg() << "Expected descriptor " << expected << " but got " << sym << " for " << name);
-    if (num_fields != expected_fields)
-        throw std::invalid_argument(msg() << "Expected " << expected_fields << " fields but got " << num_fields << " for " << name);
+}
 }
 
-}
-}
+net::corda::TypeRegistration PublicKeyRegistration("java.security.PublicKey", [](proton::codec::decoder &decoder) {
+    return new java::security::PublicKey(decoder);
+});
+
+net::corda::TypeRegistration InstantRegistration("java.time.Instant", [](proton::codec::decoder &decoder) {
+    return new java::time::Instant(decoder);
+}); // NOLINT(cert-err58-cpp)

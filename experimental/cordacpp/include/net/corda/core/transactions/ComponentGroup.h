@@ -21,7 +21,7 @@ namespace transactions {
 
 class ComponentGroup : public net::corda::Any {
 public:
-    std::list<net::corda::ptr<net::corda::core::utilities::OpaqueBytes>> components;
+    std::vector<net::corda::ptr<net::corda::core::utilities::OpaqueBytes>> components;
     int32_t group_index;
 
     ComponentGroup() = default;
@@ -37,6 +37,6 @@ public:
 }
 }
 
-net::corda::TypeRegistration Registration3("net.corda:HneSPA89MGhpizVLE3wcOg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::ComponentGroup(decoder); }); // NOLINT(cert-err58-cpp)
+net::corda::TypeRegistration Registration12("net.corda:HneSPA89MGhpizVLE3wcOg==", [](proton::codec::decoder &decoder) { return new net::corda::core::transactions::ComponentGroup(decoder); }); // NOLINT(cert-err58-cpp)
 
 #endif
