@@ -20,6 +20,7 @@ object TestCordappDirectories {
 
     private val testCordappsCache = ConcurrentHashMap<TestCordappImpl, Path>()
 
+    //TODO In future, we may wish to associate a signer attribute to TestCordapp interface itself, and trigger signing from that.
     fun getJarDirectory(cordapp: TestCordapp, cordappsDirectory: Path = defaultCordappsDirectory, signJar: Boolean = false): Path {
         cordapp as TestCordappImpl
         return testCordappsCache.computeIfAbsent(cordapp) {
@@ -36,6 +37,7 @@ object TestCordappDirectories {
             val configDir = (cordappDir / "config").createDirectories()
             val jarFile = cordappDir / "$filename.jar"
             cordapp.packageAsJar(jarFile)
+            //TODO in future we may extend the signing with user-defined key-stores/certs/keys.
             if (signJar) {
                 val testKeystore = "_teststore"
                 val alias = "Test"

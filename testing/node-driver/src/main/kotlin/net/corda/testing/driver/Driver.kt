@@ -137,7 +137,7 @@ abstract class PortAllocation {
  * @property logLevel Logging level threshold.
  * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes managed by the [DriverDSL].
  * @property regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping and restarting the same node.
- * @param signCordapp Signs Cordapp JARs with a dummy key, required for creating contracts with signature constraint. By default Cordapps are unsigned.
+ * @param signCordapps Signs Cordapp JARs with a dummy key, required for creating contracts with signature constraint. By default Cordapps are unsigned.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -151,7 +151,7 @@ data class NodeParameters(
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
         val regenerateCordappsOnStart: Boolean = false,
         val flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
-        val signCordapp: Boolean = false
+        val signCordapps: Boolean = false
 ) {
     /**
      * Helper builder for configuring a [Node] from Java.
