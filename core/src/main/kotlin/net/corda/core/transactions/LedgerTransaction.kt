@@ -320,7 +320,7 @@ private constructor(
                     when {
                         attachmentSet == null -> mutableSetOf(attachment)
                         attachmentSet.contains(attachment) -> attachmentSet
-                        !attachmentSet.contains(attachment) && attachment.isSigned -> attachmentSet.plus(attachment)
+                        !attachmentSet.contains(attachment) -> attachmentSet.plus(attachment)
                         // In case multiple attachments have been added for the same contract, fail because this
                         // transaction will not be able to be verified because it will break the no-overlap rule
                         // that we have implemented in our Classloaders
