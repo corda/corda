@@ -87,7 +87,7 @@ buildscript {
         jcenter()
         // This repository is needed for Dokka until 0.9.16 is released.
         maven {
-            url 'https://dl.bintray.com/kotlin/kotlin-eap/'
+            url 'https://kotlin.bintray.com/kotlinx'
         }
         maven {
             url "$artifactory_contextUrl/corda-releases"
