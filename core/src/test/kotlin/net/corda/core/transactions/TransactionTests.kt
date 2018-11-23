@@ -124,7 +124,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        val transaction = LedgerTransaction(
+        val transaction = LedgerTransaction.create(
                 inputs,
                 outputs,
                 commands,
@@ -133,7 +133,8 @@ class TransactionTests {
                 null,
                 timeWindow,
                 privacySalt,
-                testNetworkParameters()
+                testNetworkParameters(),
+                emptyList()
         )
 
         transaction.verify()
@@ -166,7 +167,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        fun buildTransaction() = LedgerTransaction(
+        fun buildTransaction() = LedgerTransaction.create(
                 inputs,
                 outputs,
                 commands,
@@ -174,7 +175,9 @@ class TransactionTests {
                 id,
                 notary,
                 timeWindow,
-                privacySalt
+                privacySalt,
+                null,
+                emptyList()
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }

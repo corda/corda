@@ -10,6 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
@@ -154,7 +155,7 @@ fun createWireTransaction(inputs: List<StateRef>,
                           notary: Party?,
                           timeWindow: TimeWindow?,
                           privacySalt: PrivacySalt = PrivacySalt()): WireTransaction {
-    val componentGroups = WireTransaction.createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow)
+    val componentGroups = createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList())
     return WireTransaction(componentGroups, privacySalt)
 }
 
