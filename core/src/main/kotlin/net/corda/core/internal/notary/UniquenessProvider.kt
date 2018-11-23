@@ -32,7 +32,7 @@ interface UniquenessProvider {
      *
      * @param numStates The number of states (input + reference) in the new request, to be added to the pending count.
      */
-    fun getEtaAndAddPendingRequest(numStates: Int): Duration {
+    fun getEta(numStates: Int): Duration {
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
 

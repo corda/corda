@@ -66,7 +66,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
-            val eta = service.getEstimatedWaitTimeAndAddPendingRequest(tx.inputs.size + tx.references.size)
+            val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
             if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
                 otherSideSession.send(WaitTimeUpdate(eta))
             }

@@ -66,11 +66,11 @@ abstract class SinglePartyNotaryService : NotaryService() {
     }
 
     /**
-     * Estimate the wait time to be notarised and start taking into account the new request size.
+     * Estimate the wait time to be notarised taking into account the new request size.
      *
      * @param numStates The number of states we're about to request be notarised.
      */
-    fun getEstimatedWaitTimeAndAddPendingRequest(numStates: Int): Duration = uniquenessProvider.getEtaAndAddPendingRequest(numStates)
+    fun getEstimatedWaitTime(numStates: Int): Duration = uniquenessProvider.getEta(numStates)
 
     /**
      * Required for the flow to be able to suspend until the commit is complete.

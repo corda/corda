@@ -117,7 +117,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
      *
      * @param numStates The number of states (input + reference) we're about to request be notarised.
      */
-    override fun getEtaAndAddPendingRequest(numStates: Int): Duration {
+    override fun getEta(numStates: Int): Duration {
         val rate = throughput
         val nrStates = nrQueuedStates.getAndAdd(numStates)
         log.debug { "rate: $rate, queueSize: $nrStates" }
