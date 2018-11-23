@@ -57,7 +57,7 @@ private constructor(
         /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>,
-        val inputStatesContractClassNameToVersions: Map<ContractClassName,Set<Version>>
+        private val inputStatesContractClassNameToVersions: Map<ContractClassName,Set<Version>>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
