@@ -82,10 +82,15 @@ class NetworkBootstrapperRunnerTests {
             dirAlice.deleteRecursively()
         }
     }
+
+    private fun getRunner(): Pair<NetworkBootstrapperRunner, NetworkBootstrapperWithOverridableParameters> {
+        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        return Pair(NetworkBootstrapperRunner(mockBootstrapper), mockBootstrapper)
+    }
+
     @Test
     fun `test when defaults are run bootstrapper is called correctly`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also { it.bootstrapper = mockBootstrapper }
+        val (runner, mockBootstrapper) = getRunner()
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides())
         assertEquals(0, exitCode)
@@ -93,12 +98,9 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when base directory is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val tempDir = createTempDir()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.dir = tempDir.toPath()
-        }
+        runner.dir = tempDir.toPath()
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(tempDir.toPath().toAbsolutePath().normalize(), true, NetworkParametersOverrides())
         assertEquals(0, exitCode)
@@ -106,11 +108,8 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when copy cordapps is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.noCopy = true
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.noCopy = true
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), false, NetworkParametersOverrides())
         assertEquals(0, exitCode)
@@ -118,11 +117,8 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when min platform version is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.minimumPlatformVersion = 1
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.minimumPlatformVersion = 1
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(minimumPlatformVersion = 1))
         assertEquals(0, exitCode)
@@ -130,22 +126,16 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when min platform version is invalid it fails to run with a sensible error message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.minimumPlatformVersion = 0
-        }
+        val runner = getRunner().first
+        runner.minimumPlatformVersion = 0
         val exception = assertFailsWith<IllegalArgumentException> { runner.runProgram() }
         assertEquals("The --minimum-platform-version parameter must be at least 1", exception.message)
     }
 
     @Test
     fun `test when max message size is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.maxMessageSize = 1
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.maxMessageSize = 1
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(maxMessageSize = 1))
         assertEquals(0, exitCode)
@@ -153,22 +143,16 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when max message size is invalid it fails to run with a sensible error message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.maxMessageSize = 0
-        }
+        val runner = getRunner().first
+        runner.maxMessageSize = 0
         val exception = assertFailsWith<IllegalArgumentException> { runner.runProgram() }
         assertEquals("The --max-message-size parameter must be at least 1", exception.message)
     }
 
     @Test
     fun `test when max transaction size is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.maxTransactionSize = 1
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.maxTransactionSize = 1
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(maxTransactionSize = 1))
         assertEquals(0, exitCode)
@@ -176,22 +160,16 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when max transaction size is invalid it fails to run with a sensible error message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.maxTransactionSize = 0
-        }
+        val runner = getRunner().first
+        runner.maxTransactionSize = 0
         val exception = assertFailsWith<IllegalArgumentException> { runner.runProgram() }
         assertEquals("The --max-transaction-size parameter must be at least 1", exception.message)
     }
 
     @Test
     fun `test when event horizon is specified it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.eventHorizon = 7.days
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.eventHorizon = 7.days
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(eventHorizon = 7.days))
         assertEquals(0, exitCode)
@@ -199,23 +177,17 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when event horizon is invalid it fails to run with a sensible error message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.eventHorizon = (-7).days
-        }
+        val runner = getRunner().first
+        runner.eventHorizon = (-7).days
         val exception = assertFailsWith<IllegalArgumentException> { runner.runProgram() }
         assertEquals("The --event-horizon parameter must be a positive value", exception.message)
     }
 
     @Test
     fun `test when a network parameters is specified the values are passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val conf = correctNetworkFile.copyToTestDir()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = conf
-        }
+        runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(
                 maxMessageSize = 10000,
@@ -228,12 +200,9 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when a package is specified in the network parameters file it is passed through to the bootstrapper`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val conf = aliceConfigFile.copyToTestDir()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = conf
-        }
+        runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKey))
@@ -243,12 +212,9 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when a package is specified in the network parameters file it is passed through to the bootstrapper EC`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val conf = aliceConfigFile.copyToTestDir(dirAliceEC)
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = conf
-        }
+        runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKeyEC))
@@ -256,15 +222,11 @@ class NetworkBootstrapperRunnerTests {
         assertEquals(0, exitCode)
     }
 
-
     @Test
     fun `test when a package is specified in the network parameters file it is passed through to the bootstrapper DSA`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val conf = aliceConfigFile.copyToTestDir(dirAliceDSA)
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = conf
-        }
+        runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), true, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKeyDSA))
@@ -274,12 +236,9 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when packages overlap that the bootstrapper fails with a sensible message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
+        val (runner, mockBootstrapper) = getRunner()
         val conf = packageOverlapConfigFile.copyToTestDir()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = conf
-        }
+        runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
         val output = errContent.toString()
         assert(output.contains("Error parsing packageOwnership: Package namespaces must not overlap"))
@@ -288,11 +247,8 @@ class NetworkBootstrapperRunnerTests {
 
     @Test
     fun `test when keyfile does not exist then bootstrapper fails with a sensible message`() {
-        val mockBootstrapper = mock<NetworkBootstrapperWithOverridableParameters>()
-        val runner = NetworkBootstrapperRunner().also {
-            it.bootstrapper = mockBootstrapper
-            it.networkParametersFile = dirAlice / "filename-that-doesnt-exist"
-        }
+        val (runner, mockBootstrapper) = getRunner()
+        runner.networkParametersFile = dirAlice / "filename-that-doesnt-exist"
         val exception = assertFailsWith<FileNotFoundException> { runner.runProgram() }
         assert(exception.message!!.startsWith("Unable to find specified network parameters config file at"))
     }

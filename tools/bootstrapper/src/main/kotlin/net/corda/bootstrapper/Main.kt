@@ -24,10 +24,7 @@ fun main(args: Array<String>) {
     NetworkBootstrapperRunner().start(args)
 }
 
-class NetworkBootstrapperRunner : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
-    //exposed for testing
-    var bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()
-
+class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWithOverridableParameters = NetworkBootstrapper()) : CordaCliWrapper("bootstrapper", "Bootstrap a local test Corda network using a set of node configuration files and CorDapp JARs") {
     @Option(names = ["--dir"],
             description = [ "Root directory containing the node configuration files and CorDapp JARs that will form the test network.",
                 "It may also contain existing node directories."])
