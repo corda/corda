@@ -461,6 +461,17 @@ class EvolvabilityTests {
         assertEquals(oa, outer.a)
         assertEquals(ia, outer.b.a)
         assertEquals(null, outer.b.b)
+
+        // Repeat, but receiving a message with the newer version of Inner
+        val newVersion = SerializationOutput(sf).serializeAndReturnSchema(Outer(oa, Inner(ia, "new value")))
+        val model = AMQPRemoteTypeModel()
+        val remoteTypeInfo = model.interpret(SerializationSchemas(newVersion.schema, newVersion.transformsSchema))
+        println(remoteTypeInfo)
+
+        val newOuter = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(newVersion.obj.bytes))
+        assertEquals(oa, newOuter.a)
+        assertEquals(ia, newOuter.b.a)
+        assertEquals("new value", newOuter.b.b)
     }
 
     @Test

@@ -32,7 +32,10 @@ import kotlin.reflect.jvm.javaType
  * this is not a [MutableSet], as we want to be able to backtrack while traversing through the graph of related types, and
  * will find it useful to revert to earlier states of knowledge about which types have been visited on a given branch.
  */
-internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val resolutionContext: Type? = null, val visited: Set<TypeIdentifier> = emptySet()) {
+internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
+                                                val resolutionContext: Type? = null,
+                                                val visited: Set<TypeIdentifier> = emptySet(),
+                                                val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf()) {
 
     companion object {
         private val logger = contextLogger()
@@ -42,9 +45,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
      */
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
-        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier) {
-            LocalTypeInformationBuilder(lookup, resolutionContext).build(type, typeIdentifier)
-        }
+        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier).apply { cycles.add(this) }
         else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
             copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
         }
@@ -184,13 +185,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup, val
                     interfaceInformation, typeParameterInformation)
         }
 
-        val evolverConstructors = evolverConstructors(type).map { ctor ->
+        val evolutionConstructors = evolutionConstructors(type).map { ctor ->
             val constructorInformation = buildConstructorInformation(type, ctor)
-            val evolverProperties = buildObjectProperties(rawType, constructorInformation)
-            EvolverConstructorInformation(constructorInformation, evolverProperties)
+            val evolutionProperties = buildObjectProperties(rawType, constructorInformation)
+            EvolutionConstructorInformation(constructorInformation, evolutionProperties)
         }
 
-        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolverConstructors, properties,
+        return LocalTypeInformation.Composable(type, typeIdentifier, constructorInformation, evolutionConstructors, properties,
                 superclassInformation, interfaceInformation, typeParameterInformation)
     }
 
@@ -395,7 +396,10 @@ private fun constructorForDeserialization(type: Type): KFunction<Any>? {
     }
 }
 
-private fun evolverConstructors(type: Type): List<KFunction<Any>> {
+/**
+ * Obtain evolution constructors in ascending version order.
+ */
+private fun evolutionConstructors(type: Type): List<KFunction<Any>> {
     val clazz = type.asClass()
     if (!clazz.isConcreteClass || clazz.isSynthetic) return emptyList()
 

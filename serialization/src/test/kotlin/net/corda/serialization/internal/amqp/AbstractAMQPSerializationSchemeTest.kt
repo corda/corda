@@ -37,7 +37,7 @@ class AbstractAMQPSerializationSchemeTest {
                 null)
 
 
-        val factory = TestSerializerFactory(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
+        val factory = SerializerFactoryBuilder.build(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
         val maxFactories = 512
         val backingMap = AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>({ maxFactories })
         val scheme = object : AbstractAMQPSerializationScheme(emptySet(), backingMap, createSerializerFactoryFactory()) {
@@ -54,7 +54,6 @@ class AbstractAMQPSerializationSchemeTest {
             }
 
         }
-
 
         IntStream.range(0, 2048).parallel().forEach {
             val context = if (ThreadLocalRandom.current().nextBoolean()) {

@@ -2,10 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import net.corda.core.internal.createDirectories
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readObject
+import net.corda.core.internal.*
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
@@ -64,7 +61,7 @@ class NetworkParametersReaderTest {
         // Parameters from update should be moved to `network-parameters` file.
         val parametersFromFile = (baseDirectory / NETWORK_PARAMS_FILE_NAME)
                 .readObject<SignedNetworkParameters>()
-                .verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
+                .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
         assertEquals(server.networkParameters, parametersFromFile)
     }
 

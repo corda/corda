@@ -8,8 +8,6 @@ import kotlin.test.assertTrue
 class AddressUtilsTests {
     @Test
     fun `correctly determines if the provided address is public`() {
-        val hostName = InetAddress.getLocalHost()
-        assertFalse { AddressUtils.isPublic(hostName) }
         assertFalse { AddressUtils.isPublic("localhost") }
         assertFalse { AddressUtils.isPublic("127.0.0.1") }
         assertFalse { AddressUtils.isPublic("::1") }

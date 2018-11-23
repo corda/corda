@@ -1,8 +1,7 @@
 package net.corda.node.internal
 
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.internal.div
-import net.corda.node.InitialRegistrationCmdLineOptions
-import net.corda.node.internal.subcommands.InitialRegistrationCli
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.BeforeClass
@@ -44,7 +43,7 @@ class NodeStartupTest {
 
     @Test
     fun `--base-directory`() {
-        CommandLine.populateCommand(startup, "--base-directory", (workingDirectory / "another-base-dir").toString())
+        CommandLine.populateCommand(startup, BASE_DIR, (workingDirectory / "another-base-dir").toString())
         assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
         assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
         assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)

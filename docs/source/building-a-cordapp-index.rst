@@ -15,6 +15,7 @@ CorDapps
    upgrade-notes
    upgrading-cordapps
    secure-coding-guidelines
+   flow-overriding
    corda-api
    flow-cookbook
    cheat-sheet

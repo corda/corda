@@ -2,6 +2,7 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.*
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 import java.util.*
 
@@ -9,8 +10,9 @@ object AMQPTypeIdentifiers {
     fun isPrimitive(type: Type): Boolean = isPrimitive(TypeIdentifier.forGenericType(type))
     fun isPrimitive(typeIdentifier: TypeIdentifier) = typeIdentifier in primitiveTypeNamesByName
 
-    fun primitiveTypeName(type: Type): String? =
-            primitiveTypeNamesByName[TypeIdentifier.forGenericType(type)]
+    fun primitiveTypeName(type: Type): String =
+            primitiveTypeNamesByName[TypeIdentifier.forGenericType(type)] ?:
+                    throw NotSerializableException("Primitive type name requested for non-primitive type $type")
 
     private val primitiveTypeNamesByName = sequenceOf(
             Character::class to "char",

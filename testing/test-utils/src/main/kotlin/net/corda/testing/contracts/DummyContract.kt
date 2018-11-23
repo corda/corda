@@ -60,8 +60,9 @@ data class DummyContract(val blank: Any? = null) : Contract {
         fun generateInitial(magicNumber: Int, notary: Party, owner: PartyAndReference, vararg otherOwners: PartyAndReference): TransactionBuilder {
             val owners = listOf(owner) + otherOwners
             return if (owners.size == 1) {
-                val state = SingleOwnerState(magicNumber, owners.first().party)
-                TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
+                val items = arrayOf(StateAndContract(SingleOwnerState(magicNumber, owners.first().party), PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey),
+                        StateAndContract(SingleOwnerState(magicNumber, owners.first().party), PROGRAM_ID), Command(Commands.Create(), owners.first().party.owningKey))
+                TransactionBuilder(notary).withItems(*items)
             } else {
                 val state = MultiOwnerState(magicNumber, owners.map { it.party })
                 TransactionBuilder(notary).withItems(StateAndContract(state, PROGRAM_ID), Command(Commands.Create(), owners.map { it.party.owningKey }))

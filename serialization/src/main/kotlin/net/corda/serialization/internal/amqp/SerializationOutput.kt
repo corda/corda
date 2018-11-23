@@ -7,10 +7,12 @@ import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.byteArrayOutput
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.io.OutputStream
 import java.lang.reflect.Type
+import java.lang.reflect.WildcardType
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -28,7 +30,7 @@ data class BytesAndSchemas<T : Any>(
  */
 @KeepForDJVM
 open class SerializationOutput constructor(
-        internal val serializerFactory: SerializerFactory
+        internal val serializerFactory: LocalSerializerFactory
 ) {
     companion object {
         private val logger = contextLogger()
@@ -118,7 +120,7 @@ open class SerializationOutput constructor(
         if (obj == null) {
             data.putNull()
         } else {
-            writeObject(obj, data, if (type == SerializerFactory.AnyType) obj.javaClass else type, context, debugIndent)
+            writeObject(obj, data, if (type == TypeIdentifier.UnknownType.getLocalType()) obj.javaClass else type, context, debugIndent)
         }
     }
 
@@ -148,8 +150,15 @@ open class SerializationOutput constructor(
     }
 
     internal open fun requireSerializer(type: Type) {
-        if (type != SerializerFactory.AnyType && type != Object::class.java) {
-            val serializer = serializerFactory.get(null, type)
+        if (type != Object::class.java && type.typeName != "?") {
+            val resolvedType = when(type) {
+                is WildcardType ->
+                    if (type.upperBounds.size == 1) type.upperBounds[0]
+                    else throw NotSerializableException("Cannot obtain upper bound for type $type")
+                else -> type
+            }
+
+            val serializer = serializerFactory.get(resolvedType)
             if (serializer !in serializerHistory) {
                 serializerHistory.add(serializer)
                 serializer.writeClassInfo(this)
