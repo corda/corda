@@ -13,6 +13,7 @@ import org.junit.Test
 import net.corda.node.hsm.HsmSimulator
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.testing.core.DUMMY_BANK_A_NAME
+import org.junit.Ignore
 import java.io.IOException
 import java.time.Duration
 import java.util.*
@@ -30,6 +31,7 @@ class UtimacoCryptoServiceIntegrationTest {
     val config = testConfig(hsmSimulator.port)
     val login = { UtimacoCryptoService.UtimacoCredentials("INTEGRATION_TEST", "INTEGRATION_TEST".toByteArray()) }
 
+    @Ignore
     @Test
     fun `When credentials are incorrect, should throw UtimacoHSMException`() {
         val config = testConfig(hsmSimulator.port)
@@ -40,6 +42,7 @@ class UtimacoCryptoServiceIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `When credentials become incorrect, should throw UtimacoHSMException`() {
         var pw = "INTEGRATION_TEST"
@@ -49,6 +52,7 @@ class UtimacoCryptoServiceIntegrationTest {
         assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("foo", Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID) }
     }
 
+    @Ignore
     @Test
     fun `When connection cannot be established, should throw ConnectionException`() {
         val invalidConfig = testConfig(1)
@@ -57,6 +61,7 @@ class UtimacoCryptoServiceIntegrationTest {
         }
     }
 
+    @Ignore
     @Test
     fun `When alias contains illegal characters, should throw `() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -64,6 +69,7 @@ class UtimacoCryptoServiceIntegrationTest {
         assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID) }
     }
 
+    @Ignore
     @Test
     fun `Handles re-authentication properly`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -77,6 +83,7 @@ class UtimacoCryptoServiceIntegrationTest {
         Crypto.doVerify(pubKey, signed, data)
     }
 
+    @Ignore
     @Test
     fun `Generate ECDSA key with r1 curve, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -88,6 +95,7 @@ class UtimacoCryptoServiceIntegrationTest {
         Crypto.doVerify(pubKey, signed, data)
     }
 
+    @Ignore
     @Test
     fun `Generate ECDSA key with k1 curve, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -99,6 +107,7 @@ class UtimacoCryptoServiceIntegrationTest {
         Crypto.doVerify(pubKey, signed, data)
     }
 
+    @Ignore
     @Test
     fun `Generate RSA key, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -110,6 +119,7 @@ class UtimacoCryptoServiceIntegrationTest {
         Crypto.doVerify(pubKey, signed, data)
     }
 
+    @Ignore
     @Test
     fun `When key does not exist, signing should throw`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -119,6 +129,7 @@ class UtimacoCryptoServiceIntegrationTest {
         assertFailsWith<CryptoServiceException> { cryptoService.sign(alias, data) }
     }
 
+    @Ignore
     @Test
     fun `When key does not exist, getPublicKey should return null`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -127,6 +138,7 @@ class UtimacoCryptoServiceIntegrationTest {
         assertNull(cryptoService.getPublicKey(alias))
     }
 
+    @Ignore
     @Test
     fun `When key does not exist, getContentSigner should throw`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config)
@@ -136,6 +148,7 @@ class UtimacoCryptoServiceIntegrationTest {
         assertFailsWith<CryptoServiceException> { cryptoService.getSigner(alias) }
     }
 
+    @Ignore
     @Test
     fun `Content signer works with X509Utilities`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
@@ -159,6 +172,7 @@ class UtimacoCryptoServiceIntegrationTest {
         ourCertificate.checkValidity()
     }
 
+    @Ignore
     @Test
     fun `login with key file`() {
         // the admin user of the simulator is set up with key-file login

@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import net.corda.node.hsm.HsmSimulator
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import java.io.File
 import java.net.URL
 import java.nio.charset.Charset
@@ -60,6 +61,7 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
     }
 
+    @Ignore
     @Test
     fun `node registration with one node backed by Utimaco HSM`() {
 
