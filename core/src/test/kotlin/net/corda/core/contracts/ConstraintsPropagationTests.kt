@@ -121,6 +121,9 @@ class ConstraintsPropagationTests {
             }
 
         val unsignedAttachmentId = cordappAttachmentIds.first().first
+        println("Unsigned: $unsignedAttachmentId")
+        val signedAttachmentId = cordappAttachmentIds.first().second
+        println("Signed: $signedAttachmentId")
 
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
@@ -130,7 +133,7 @@ class ConstraintsPropagationTests {
                 verifies()
             }
             transaction {
-                attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
+                attachment(Cash.PROGRAM_ID, signedAttachmentId)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())

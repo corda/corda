@@ -15,14 +15,10 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
-import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.lazyMapped
 import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
@@ -149,7 +145,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
             networkParameters: NetworkParameters?
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, networkParameters, null)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, networkParameters)
     }
 
     private fun toLedgerTransactionInternal(
@@ -174,22 +170,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
 
-        // HashConstraint -> SignatureConstraint migration
-        val signatureConstrainedOutputs = outputs.filter { it.constraint is SignatureAttachmentConstraint }
-        val hashConstrainedInputs = resolvedInputs.filter { it.state.constraint is HashAttachmentConstraint }
-        val extraAttachmentIds =
-                if (hashConstrainedInputs.isNotEmpty() && signatureConstrainedOutputs.isNotEmpty()) {
-                    val unsignedContractClassNames = hashConstrainedInputs.map { it.state.contract }
-                    log.debug { "Hash->Signature constraints migration: Ledger txn unsigned contractClassNames = $unsignedContractClassNames" }
-                    checkNotNull(attachmentStorage)
-                    // TODO: filter query by contract version
-                    val attachmentQueryCriteria = AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(unsignedContractClassNames), isSignedCondition = Builder.equal(true))
-                    val signedAttachmentIds = attachmentStorage!!.queryAttachments(attachmentQueryCriteria)
-                    log.debug { "Hash->Signature constraints migration: Ledger txn signed attachmentIds = $signedAttachmentIds" }
-                    signedAttachmentIds
-                } else emptyList()
-
-        val resolvedAttachments = (attachments + extraAttachmentIds).lazyMapped { att, _ ->
+        val attachments = attachments.lazyMapped { att, _ ->
             resolveAttachment(att) ?: throw AttachmentResolutionException(att)
         }
 
@@ -199,7 +180,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedInputs,
                 outputs,
                 authenticatedCommands,
-                resolvedAttachments,
+                attachments,
                 id,
                 notary,
                 timeWindow,

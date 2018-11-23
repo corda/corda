@@ -13,9 +13,12 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
@@ -188,7 +191,23 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.map { it.first } + refStateContractAttachments
 
-        return Pair(attachments, resolvedOutputStatesInTheOriginalOrder)
+        // HashConstraint -> SignatureConstraint migration required both unsigned and signed version of contract attachment
+        val signatureConstrainedContractClasses = outputs.filter { it.constraint is SignatureAttachmentConstraint }.map { it.contract }
+        val extraAttachmentIds =
+                signatureConstrainedContractClasses.map { contractClass ->
+                    val hashConstrainedInputs = inputs.map { services.loadState(it) }.
+                            filter { state -> state.constraint is HashAttachmentConstraint && state.contract == contractClass}
+                    if (hashConstrainedInputs.isNotEmpty()) {
+                        log.debug { "Hash->Signature constraints migration for contractClassName = $contractClass" }
+                        // TODO: filter query by contract version
+                        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClass)), isSignedCondition = Builder.equal(false))
+                        val unsignedAttachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
+                        log.debug { "Hash->Signature constraints migration adding additional attachmentIds: $unsignedAttachmentIds for contractClassName = $contractClass" }
+                        unsignedAttachmentIds
+                    } else emptyList()
+                }.flatten()
+
+        return Pair(attachments + extraAttachmentIds, resolvedOutputStatesInTheOriginalOrder)
     }
 
     private val automaticConstraints = setOf(AutomaticPlaceholderConstraint, AutomaticHashConstraint)
@@ -232,11 +251,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         // Check that states with the HashConstraint don't conflict between themselves or with an explicitly set attachment.
         require(hashAttachments.size <= 1) {
             "Transaction was built with $contractClassName states with multiple HashConstraints. This is illegal, because it makes it impossible to validate with a single version of the contract code."
-        }
-        if (explicitContractAttachment != null && hashAttachments.singleOrNull() != null) {
-            require(explicitContractAttachment == (hashAttachments.single() as ContractAttachment).attachment.id) {
-                "An attachment has been explicitly set for contract $contractClassName in the transaction builder which conflicts with the HashConstraint of a state."
-            }
         }
 
         // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.

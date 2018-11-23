@@ -73,7 +73,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                             if (path in classLoaderEntries.keys) {
                                 // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
                                 val contentHash = readAttachment(attachment, path).sha256()
-                                val originalAttachment = classLoaderEntries[path] ?: throw OverlappingAttachments(path)
+                                val originalAttachment = classLoaderEntries[path]!!
                                 val originalContentHash = readAttachment(originalAttachment, path).sha256()
                                 if (contentHash == originalContentHash) {
                                     log.debug { "Duplicate entry $path has same content hash $contentHash" }
