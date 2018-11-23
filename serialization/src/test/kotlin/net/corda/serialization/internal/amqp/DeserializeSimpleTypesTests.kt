@@ -3,6 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple
 // deserialization operations would've blown up with type mismatch errors where the deserlized
@@ -525,6 +526,14 @@ class DeserializeSimpleTypesTests {
 
         // This not throwing is the point of the test
         DeserializationInput(sf2).deserialize(serializedA.obj)
+    }
+
+    @Test
+    fun classHasNoPublicConstructor() {
+        assertFails("Trying to build an object serializer for Optional (erased), " +
+                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+            TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(java.util.Optional.of(1))
+        }
     }
 
 }
