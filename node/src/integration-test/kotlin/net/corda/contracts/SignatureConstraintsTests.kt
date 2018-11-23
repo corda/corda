@@ -19,10 +19,9 @@ import net.corda.testMessage.Message
 import net.corda.testMessage.MessageState
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappForPackages
+import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
 import java.lang.management.ManagementFactory
@@ -38,16 +37,14 @@ class SignatureConstrainsTests {
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
     private val message = Message("Hello world!")
     private val transformetMessage = Message(message.value + "A")
-    private val driverParameters = DriverParameters(
-            inMemoryDB = false,
-            startNodesInProcess = isQuasarAgentSpecified(),
-            networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4))
 
-    //@Test
+    @Test
     fun `can evolve from lower contract class version to higer one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
-        val stateAndRef: StateAndRef<MessageState>? = driver(driverParameters) {
+        val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
+                startNodesInProcess = isQuasarAgentSpecified(),
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
             var nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true /*, signCordapp = true*/).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
@@ -83,7 +80,9 @@ class SignatureConstrainsTests {
     fun `cannot evolve from higher contract class version to lower one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
-        val stateAndRef: StateAndRef<MessageState>? = driver(driverParameters) {
+        val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
+                startNodesInProcess = isQuasarAgentSpecified(),
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
             var nodeName = {
                 val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true/*, signCordapp = true*/).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
