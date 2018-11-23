@@ -1,6 +1,5 @@
 package net.corda.testing.common.internal
 
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.AttachmentId
@@ -19,7 +18,7 @@ fun testNetworkParameters(
         whitelistedContractImplementations: Map<String, List<AttachmentId>> = emptyMap(),
         epoch: Int = 1,
         eventHorizon: Duration = 30.days,
-        packageOwnership: Map<JavaPackageName, PublicKey> = emptyMap()
+        packageOwnership: Map<String, PublicKey> = emptyMap()
 ): NetworkParameters {
     return NetworkParameters(
             minimumPlatformVersion = minimumPlatformVersion,

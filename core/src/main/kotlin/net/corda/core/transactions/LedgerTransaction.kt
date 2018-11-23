@@ -191,10 +191,10 @@ private constructor(
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->
-            val attachment = contractAttachmentsByContract[contract]!!.filter { it.isSigned }.firstOrNull()
-            if (attachment == null || !owner.isFulfilledBy(attachment.signerKeys)) {
-                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
-            }
+            contractAttachmentsByContract[contract]?.forEach { attachment ->
+                if (!owner.isFulfilledBy(attachment.signerKeys))
+                    throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            } ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
         }
     }
 
