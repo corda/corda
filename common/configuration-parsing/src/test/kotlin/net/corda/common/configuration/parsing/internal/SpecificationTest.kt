@@ -125,7 +125,8 @@ class SpecificationTest {
         assertThat(result.errors).hasSize(1)
         assertThat(result.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
 
-            assertThat(error.path).containsExactly("elements cannot be less than or equal to 1")
+            assertThat(error.path).containsExactly("elements")
+            assertThat(error.message).contains("elements cannot be less than or equal to 1")
         }
     }
 

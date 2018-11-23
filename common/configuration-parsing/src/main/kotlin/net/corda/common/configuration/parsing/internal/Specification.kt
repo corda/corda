@@ -90,6 +90,21 @@ private class PropertyDelegateImpl<TYPE>(private val key: String?, private val p
     override fun <MAPPED> mapValid(mappedTypeName: String, convert: (TYPE) -> Valid<MAPPED>): PropertyDelegate.Standard<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
 }
 
+private class RequiredPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Required<TYPE>) : PropertyDelegate.Required<TYPE> {
+
+    override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
+
+        val shortName = key ?: property.name
+        val prop = construct.invoke(prefix?.let { "$prefix.$shortName" } ?: shortName, sensitive).also(addToProperties)
+        return object : ReadOnlyProperty<Any?, Configuration.Property.Definition.Required<TYPE>> {
+
+            override fun getValue(thisRef: Any?, property: KProperty<*>): Configuration.Property.Definition.Required<TYPE> = prop
+        }
+    }
+
+    override fun optional(): PropertyDelegate.Optional<TYPE> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
+}
+
 private class OptionalPropertyDelegateImpl<TYPE>(private val key: String?, private val prefix: String?, private val sensitive: Boolean = false, private val addToProperties: (Configuration.Property.Definition<*>) -> Unit, private val construct: (String, Boolean) -> Configuration.Property.Definition.Optional<TYPE>) : PropertyDelegate.Optional<TYPE> {
 
     override operator fun provideDelegate(thisRef: Any?, property: KProperty<*>): ReadOnlyProperty<Any?, Configuration.Property.Definition.Optional<TYPE>> {
@@ -132,7 +147,5 @@ private class ListPropertyDelegateImpl<TYPE>(private val key: String?, private v
 
     override fun optional(): PropertyDelegate.Optional<List<TYPE>> = OptionalPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).optional() })
 
-    // TODO sollecitom
-    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = TODO("implement")
-//    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = PropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
+    override fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Valid<MAPPED>): PropertyDelegate.Required<MAPPED> = RequiredPropertyDelegateImpl(key, prefix, sensitive, addToProperties, { k, s -> construct.invoke(k, s).mapValid(mappedTypeName) { value -> convert.invoke(value) } })
 }
