@@ -2,13 +2,11 @@ package net.corda.bootstrapper
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigParseOptions
-import net.corda.cliutils.CordaCliWrapper
-import net.corda.cliutils.ExitCodes
-import net.corda.cliutils.printError
-import net.corda.cliutils.start
+import net.corda.cliutils.*
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.exists
+import net.corda.nodeapi.internal.network.CopyCordapps
 import net.corda.nodeapi.internal.network.NetworkBootstrapper
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_MESSAGE_SIZE
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_TRANSACTION_SIZE
@@ -30,8 +28,11 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
                 "It may also contain existing node directories."])
     var dir: Path = Paths.get(".")
 
-    @Option(names = ["--no-copy"], description = ["""Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
-    var noCopy: Boolean = false
+    @Option(names = ["--no-copy"], hidden = true, description = ["""DEPRECATED. Don't copy the CorDapp JARs into the nodes' "cordapps" directories."""])
+    var noCopy: Boolean? = null
+
+    @Option(names = ["--copy-cordapps"], description = ["Whether or not to copy the CorDapp JARs into the nodes' 'cordapps' directory. \${COMPLETION-CANDIDATES}"])
+    var copyCordapps: CopyCordapps = CopyCordapps.OnFirstRun
 
     @Option(names = ["--minimum-platform-version"], description = ["The minimum platform version to use in the network-parameters. Current default is $PLATFORM_VERSION."])
     var minimumPlatformVersion: Int? = null
@@ -85,10 +86,14 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
     }
 
     override fun runProgram(): Int {
+        if (noCopy != null) {
+            printWarning("The --no-copy parameter has been deprecated and been replaced with the --copy-cordapps parameter.")
+            copyCordapps = if (noCopy == true) CopyCordapps.No else CopyCordapps.Yes
+        }
         verifyInputs()
         val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors(::reportErrors).optional ?: return ExitCodes.FAILURE
         bootstrapper.bootstrap(dir.toAbsolutePath().normalize(),
-                copyCordapps = !noCopy,
+                copyCordapps = copyCordapps,
                 networkParameterOverrides = networkParameterOverrides
         )
         return ExitCodes.SUCCESS

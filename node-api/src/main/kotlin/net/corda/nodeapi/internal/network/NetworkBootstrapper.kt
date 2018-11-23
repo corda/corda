@@ -75,6 +75,8 @@ internal constructor(private val initSerEnv: Boolean,
 
         private const val LOGS_DIR_NAME = "logs"
 
+        private val jarsThatArentCordapps = setOf("corda.jar", "runnodes.jar")
+
         private fun extractEmbeddedCordaJar(): InputStream {
             return Thread.currentThread().contextClassLoader.getResourceAsStream("corda.jar")
         }
@@ -182,21 +184,21 @@ internal constructor(private val initSerEnv: Boolean,
      * TODO: Remove once the gradle plugins are updated to 4.0.30
      */
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, copyCordapps = true, fromCordform = true)
+        bootstrap(directory, cordappJars, CopyCordapps.Yes, fromCordform = true)
     }
 
     /** Entry point for Cordform */
     fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, copyCordapps = false, fromCordform = true)
+        bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true)
     }
 
     /** Entry point for the tool */
-    override fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides) {
+    override fun bootstrap(directory: Path, copyCordapps: CopyCordapps, networkParameterOverrides: NetworkParametersOverrides) {
         require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }
+            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && !jarsThatArentCordapps.contains(it.fileName.toString().toLowerCase()) }
                     .toList()
         }
         bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParameterOverrides)
@@ -205,7 +207,7 @@ internal constructor(private val initSerEnv: Boolean,
     private fun bootstrap(
             directory: Path,
             cordappJars: List<Path>,
-            copyCordapps: Boolean,
+            copyCordapps: CopyCordapps,
             fromCordform: Boolean,
             networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides()
     ) {
@@ -214,7 +216,7 @@ internal constructor(private val initSerEnv: Boolean,
         if (!fromCordform) {
             println("Found the following CorDapps: ${cordappJars.map { it.fileName }}")
         }
-        createNodeDirectoriesIfNeeded(directory, fromCordform)
+        val networkAlreadyExists = createNodeDirectoriesIfNeeded(directory, fromCordform)
         val nodeDirs = gatherNodeDirectories(directory)
 
         require(nodeDirs.isNotEmpty()) { "No nodes found" }
@@ -224,7 +226,7 @@ internal constructor(private val initSerEnv: Boolean,
 
         val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
         checkForDuplicateLegalNames(configs.values)
-        if (copyCordapps && cordappJars.isNotEmpty()) {
+        if ((copyCordapps == CopyCordapps.Yes || (copyCordapps == CopyCordapps.OnFirstRun && !networkAlreadyExists)) && cordappJars.isNotEmpty()) {
             println("Copying CorDapp JARs into node directories")
             for (nodeDir in nodeDirs) {
                 val cordappsDir = (nodeDir / "cordapps").createDirectories()
@@ -268,7 +270,8 @@ internal constructor(private val initSerEnv: Boolean,
         }
     }
 
-    private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean) {
+    private fun createNodeDirectoriesIfNeeded(directory: Path, fromCordform: Boolean): Boolean {
+        var networkAlreadyExists = false
         val cordaJar = directory / "corda.jar"
         var usingEmbedded = false
         if (!cordaJar.exists()) {
@@ -284,6 +287,10 @@ internal constructor(private val initSerEnv: Boolean,
         for (confFile in confFiles) {
             val nodeName = confFile.fileName.toString().removeSuffix("_node.conf")
             println("Generating node directory for $nodeName")
+            if ((directory / nodeName).exists()) {
+                //directory already exists, so assume this network has been bootstrapped before
+                networkAlreadyExists = true
+            }
             val nodeDir = (directory / nodeName).createDirectories()
             confFile.copyTo(nodeDir / "node.conf", REPLACE_EXISTING)
             webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }
@@ -306,6 +313,7 @@ internal constructor(private val initSerEnv: Boolean,
         if (fromCordform || usingEmbedded) {
             cordaJar.delete()
         }
+        return networkAlreadyExists
     }
 
     private fun gatherNodeDirectories(directory: Path): List<Path> {
@@ -467,7 +475,8 @@ fun NetworkParameters.overrideWith(override: NetworkParametersOverrides): Networ
             maxMessageSize = override.maxMessageSize ?: this.maxMessageSize,
             maxTransactionSize = override.maxTransactionSize ?: this.maxTransactionSize,
             eventHorizon = override.eventHorizon ?: this.eventHorizon,
-            packageOwnership = override.packageOwnership?.map { it.javaPackageName to it.publicKey }?.toMap() ?: this.packageOwnership
+            packageOwnership = override.packageOwnership?.map { it.javaPackageName to it.publicKey }?.toMap()
+                    ?: this.packageOwnership
     )
 }
 
@@ -482,5 +491,7 @@ data class NetworkParametersOverrides(
 )
 
 interface NetworkBootstrapperWithOverridableParameters {
-    fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
+    fun bootstrap(directory: Path, copyCordapps: CopyCordapps, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
 }
+
+enum class CopyCordapps { OnFirstRun, Yes, No }
