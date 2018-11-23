@@ -89,17 +89,9 @@ interface AttachmentConstraint {
                 val signedAttachment = attachment.signedContractAttachment
                 if (signedAttachment != null) {
                     // rule 1
-                    if (signedAttachment.signers.isEmpty()) {
-                        log.warn("Missing signers in signed attachment: $signedAttachment (input constraint = $input, output constraint = $output)")
-                        return false
-                    }
                     val packageOwnerPK = attachment.networkParameters.packageOwnership[JavaPackageName(signedAttachment.contract)]
                     if (packageOwnerPK == null) {
                         log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
-                        return false
-                    }
-                    if (!packageOwnerPK.isFulfilledBy(signedAttachment.signers)) {
-                        log.warn("Attachment signers ${signedAttachment.signers} do not match registered java package owner key ${packageOwnerPK}for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
                         return false
                     }
                     // rule 2
