@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.MissingContractAttachments
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -223,7 +222,7 @@ class ConstraintsPropagationTests {
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
         val attachment = mock<ContractAttachment>()
-        whenever(attachment.signers).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
 
         // Exhaustive positive check
         assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))

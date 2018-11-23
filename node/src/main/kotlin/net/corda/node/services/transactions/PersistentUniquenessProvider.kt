@@ -70,6 +70,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             var requestDate: Instant
     )
 
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_transactions")
+    class CommittedTransaction(
+            @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
+            val transactionId: String
+    )
+
     private data class CommitRequest(
             val states: List<StateRef>,
             val txId: SecureHash,
@@ -190,11 +198,30 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             logRequest(txId, callerIdentity, requestSignature)
             val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
-                handleConflicts(txId, conflictingStates)
+                if (states.isEmpty()) {
+                    handleReferenceConflicts(txId, conflictingStates)
+                } else {
+                    handleConflicts(txId, conflictingStates)
+                }
             } else {
                 handleNoConflicts(timeWindow, states, txId, commitLog)
             }
         }
+    }
+
+    private fun previouslyCommitted(txId: SecureHash): Boolean {
+        val session = currentDBSession()
+        return session.find(CommittedTransaction::class.java, txId.toString()) != null
+    }
+
+    private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+        val session = currentDBSession()
+        if (!previouslyCommitted(txId)) {
+            val conflictError = NotaryError.Conflict(txId, conflictingStates)
+            log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            throw NotaryInternalException(conflictError)
+        }
+        log.debug { "Transaction $txId already notarised" }
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
@@ -214,8 +241,13 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             states.forEach { stateRef ->
                 commitLog[stateRef] = txId
             }
+            val session = currentDBSession()
+            session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
         } else {
+            if (states.isEmpty() && previouslyCommitted(txId)) {
+                return
+            }
             throw NotaryInternalException(outsideTimeWindowError)
         }
     }

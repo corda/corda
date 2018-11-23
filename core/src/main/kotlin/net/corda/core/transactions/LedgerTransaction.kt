@@ -8,10 +8,11 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.deserialize
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
-import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
@@ -28,12 +29,13 @@ import kotlin.collections.HashSet
  *
  * All the above refer to inputs using a (txhash, output index) pair.
  */
-// TODO LedgerTransaction is not supposed to be serialisable as it references attachments, etc. The verification logic
-// currently sends this across to out-of-process verifiers. We'll need to change that first.
-// DOCSTART 1
 @KeepForDJVM
 @CordaSerializable
-data class LedgerTransaction private constructor(
+class LedgerTransaction
+@ConstructorForDeserialization
+// LedgerTransaction is not meant to be created directly from client code, but rather via WireTransaction.toLedgerTransaction
+private constructor(
+        // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,
         override val outputs: List<TransactionState<ContractState>>,
@@ -46,39 +48,15 @@ data class LedgerTransaction private constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        private val networkParameters: NetworkParameters?,
-        override val references: List<StateAndRef<ContractState>>,
-        val componentGroups: List<ComponentGroup>?,
-        val resolvedInputBytes: List<SerializedStateAndRef>?,
-        val resolvedReferenceBytes: List<SerializedStateAndRef>?
+        val networkParameters: NetworkParameters?,
+        override val references: List<StateAndRef<ContractState>>
+        //DOCEND 1
 ) : FullTransaction() {
+    // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
+    private var componentGroups: List<ComponentGroup>? = null
+    private var serializedInputs: List<SerializedStateAndRef>? = null
+    private var serializedReferences: List<SerializedStateAndRef>? = null
 
-    @Deprecated("Client code should not instantiate LedgerTransaction.")
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList(), null, null, null)
-
-    @Deprecated("Client code should not instantiate LedgerTransaction.")
-    constructor(
-            inputs: List<StateAndRef<ContractState>>,
-            outputs: List<TransactionState<ContractState>>,
-            commands: List<CommandWithParties<CommandData>>,
-            attachments: List<Attachment>,
-            id: SecureHash,
-            notary: Party?,
-            timeWindow: TimeWindow?,
-            privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), null, null, null)
-
-    //DOCEND 1
     init {
         checkBaseInvariants()
         if (timeWindow != null) check(notary != null) { "Transactions with time-windows must be notarised" }
@@ -87,10 +65,10 @@ data class LedgerTransaction private constructor(
     }
 
     companion object {
-        private val logger = loggerFor<LedgerTransaction>()
+        private val logger = contextLogger()
 
         @CordaInternal
-        internal fun makeLedgerTransaction(
+        internal fun create(
                 inputs: List<StateAndRef<ContractState>>,
                 outputs: List<TransactionState<ContractState>>,
                 commands: List<CommandWithParties<CommandData>>,
@@ -101,10 +79,16 @@ data class LedgerTransaction private constructor(
                 privacySalt: PrivacySalt,
                 networkParameters: NetworkParameters?,
                 references: List<StateAndRef<ContractState>>,
-                componentGroups: List<ComponentGroup>,
-                resolvedInputBytes: List<SerializedStateAndRef>,
-                resolvedReferenceBytes: List<SerializedStateAndRef>
-        ) = LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, componentGroups, resolvedInputBytes, resolvedReferenceBytes)
+                componentGroups: List<ComponentGroup>? = null,
+                serializedInputs: List<SerializedStateAndRef>? = null,
+                serializedReferences: List<SerializedStateAndRef>? = null
+        ): LedgerTransaction {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
+                this.componentGroups = componentGroups
+                this.serializedInputs = serializedInputs
+                this.serializedReferences = serializedReferences
+            }
+        }
     }
 
     val inputStates: List<ContractState> get() = inputs.map { it.state.data }
@@ -137,7 +121,7 @@ data class LedgerTransaction private constructor(
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
 
-            val internalTx = createInternalLedgerTransaction()
+            val internalTx = createLtxForVerification()
 
             // TODO - verify for version downgrade
             validatePackageOwnership(contractAttachmentsByContract)
@@ -166,7 +150,7 @@ data class LedgerTransaction private constructor(
 
         contractsAndOwners.forEach { contract, owner ->
             val attachment = contractAttachmentsByContract[contract]!!
-            if (!owner.isFulfilledBy(attachment.signers)) {
+            if (!owner.isFulfilledBy(attachment.signerKeys)) {
                 throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
             }
         }
@@ -195,7 +179,9 @@ data class LedgerTransaction private constructor(
      * * Constraints should be one of the valid supported ones.
      * * Constraints should propagate correctly if not marked otherwise.
      */
-    private fun verifyConstraintsValidity(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>, transactionClassLoader: ClassLoader) {
+    private fun verifyConstraintsValidity(internalTx: LedgerTransaction,
+                                          contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>,
+                                          transactionClassLoader: ClassLoader) {
         // First check that the constraints are valid.
         for (state in internalTx.allStates) {
             checkConstraintValidity(state)
@@ -277,30 +263,38 @@ data class LedgerTransaction private constructor(
         throw TransactionVerificationException.ContractCreationError(id, className, e)
     }
 
-    private fun createInternalLedgerTransaction(): LedgerTransaction {
-        return if (resolvedInputBytes != null && resolvedReferenceBytes != null && componentGroups != null) {
+    private fun createLtxForVerification(): LedgerTransaction {
+        val serializedInputs = this.serializedInputs
+        val serializedReferences = this.serializedReferences
+        val componentGroups = this.componentGroups
 
+        return if (serializedInputs != null && serializedReferences != null && componentGroups != null) {
             // Deserialize all relevant classes in the transaction classloader.
-            val resolvedDeserializedInputs = resolvedInputBytes.map { StateAndRef(it.serializedState.deserialize(), it.ref) }
-            val resolvedDeserializedReferences = resolvedReferenceBytes.map { StateAndRef(it.serializedState.deserialize(), it.ref) }
+            val deserializedInputs = serializedInputs.map { it.toStateAndRef() }
+            val deserializedReferences = serializedReferences.map { it.toStateAndRef() }
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            val deserializedCommands = deserialiseCommands(this.componentGroups, forceDeserialize = true)
-            val authenticatedArgs = deserializedCommands.map { cmd ->
+            val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true)
+            val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
                 val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
                 CommandWithParties(cmd.signers, parties, cmd.value)
             }
 
-            val ledgerTransactionToVerify = this.copy(
-                    inputs = resolvedDeserializedInputs,
+            LedgerTransaction(
+                    inputs = deserializedInputs,
                     outputs = deserializedOutputs,
-                    commands = authenticatedArgs,
-                    references = resolvedDeserializedReferences)
-
-            ledgerTransactionToVerify
+                    commands = authenticatedDeserializedCommands,
+                    attachments = this.attachments,
+                    id = this.id,
+                    notary = this.notary,
+                    timeWindow = this.timeWindow,
+                    privacySalt = this.privacySalt,
+                    networkParameters = this.networkParameters,
+                    references = deserializedReferences
+            )
         } else {
             // This branch is only present for backwards compatibility.
-            // TODO - it should be removed once the constructor of LedgerTransaction is no longer public api.
-            logger.warn("The LedgerTransaction should not be instantiated directly from client code. Please use WireTransaction.toLedgerTransaction. The result of the verify method might not be accurate.")
+            logger.warn("The LedgerTransaction should not be instantiated directly from client code. Please use WireTransaction.toLedgerTransaction." +
+                    "The result of the verify method might not be accurate.")
             this
         }
     }
@@ -766,7 +760,92 @@ data class LedgerTransaction private constructor(
      */
     fun getAttachment(id: SecureHash): Attachment = attachments.first { it.id == id }
 
-    @JvmOverloads
+    operator fun component1(): List<StateAndRef<ContractState>> = inputs
+    operator fun component2(): List<TransactionState<ContractState>> = outputs
+    operator fun component3(): List<CommandWithParties<CommandData>> = commands
+    operator fun component4(): List<Attachment> = attachments
+    operator fun component5(): SecureHash = id
+    operator fun component6(): Party? = notary
+    operator fun component7(): TimeWindow? = timeWindow
+    operator fun component8(): PrivacySalt = privacySalt
+    operator fun component9(): NetworkParameters? = networkParameters
+    operator fun component10(): List<StateAndRef<ContractState>> = references
+
+    override fun equals(other: Any?): Boolean = this === other || other is LedgerTransaction && this.id == other.id
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return """LedgerTransaction(
+            |    id=$id
+            |    inputs=$inputs
+            |    outputs=$outputs
+            |    commands=$commands
+            |    attachments=$attachments
+            |    notary=$notary
+            |    timeWindow=$timeWindow
+            |    references=$references
+            |    networkParameters=$networkParameters
+            |    privacySalt=$privacySalt
+            |)""".trimMargin()
+    }
+
+
+    //
+    // Stuff that we can't remove and so is deprecated instead
+    //
+
+    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
+
+    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt,
+            networkParameters: NetworkParameters?
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
+
+    @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
+    fun copy(inputs: List<StateAndRef<ContractState>>,
+             outputs: List<TransactionState<ContractState>>,
+             commands: List<CommandWithParties<CommandData>>,
+             attachments: List<Attachment>,
+             id: SecureHash,
+             notary: Party?,
+             timeWindow: TimeWindow?,
+             privacySalt: PrivacySalt
+    ): LedgerTransaction {
+        return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references
+        )
+    }
+
+    @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     fun copy(inputs: List<StateAndRef<ContractState>> = this.inputs,
              outputs: List<TransactionState<ContractState>> = this.outputs,
              commands: List<CommandWithParties<CommandData>> = this.commands,
@@ -776,16 +855,18 @@ data class LedgerTransaction private constructor(
              timeWindow: TimeWindow? = this.timeWindow,
              privacySalt: PrivacySalt = this.privacySalt,
              networkParameters: NetworkParameters? = this.networkParameters
-    ) = copy(inputs = inputs,
-            outputs = outputs,
-            commands = commands,
-            attachments = attachments,
-            id = id,
-            notary = notary,
-            timeWindow = timeWindow,
-            privacySalt = privacySalt,
-            networkParameters = networkParameters,
-            references = references
-    )
+    ): LedgerTransaction {
+        return LedgerTransaction(
+                inputs = inputs,
+                outputs = outputs,
+                commands = commands,
+                attachments = attachments,
+                id = id,
+                notary = notary,
+                timeWindow = timeWindow,
+                privacySalt = privacySalt,
+                networkParameters = networkParameters,
+                references = references
+        )
+    }
 }
-
