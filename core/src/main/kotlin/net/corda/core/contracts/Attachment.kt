@@ -1,6 +1,8 @@
 package net.corda.core.contracts
 
+import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
+import net.corda.core.identity.Party
 import net.corda.core.internal.extractFile
 import net.corda.core.serialization.CordaSerializable
 import java.io.FileNotFoundException
@@ -31,6 +33,7 @@ import java.util.jar.JarInputStream
  */
 @KeepForDJVM
 @CordaSerializable
+@DoNotImplement
 interface Attachment : NamedByHash {
     fun open(): InputStream
 
@@ -52,10 +55,19 @@ interface Attachment : NamedByHash {
     fun extractFile(path: String, outputTo: OutputStream) = openAsJAR().use { it.extractFile(path, outputTo) }
 
     /**
+     * The parties that have correctly signed the whole attachment.
+     * Even though this returns a list of party objects, it is not required that these parties exist on the network, but rather they are a mapping from the signing key to the X.500 name.
+     *
+     * Note: Anyone can sign attachments, not only Corda parties. It's recommended to use [signerKeys].
+     */
+    @Deprecated("Use signerKeys. There is no requirement that attachment signers are Corda parties.")
+    val signers: List<Party>
+
+    /**
      * The keys that have correctly signed the whole attachment.
      * Can be empty, for example non-contract attachments won't be necessarily be signed.
      */
-    val signers: List<PublicKey>
+    val signerKeys: List<PublicKey>
 
     /**
      * Attachment size in bytes.

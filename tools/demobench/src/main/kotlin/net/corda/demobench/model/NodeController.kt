@@ -165,6 +165,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
         nodeInfoFilesCopier.reset()
         notaryIdentity = null
         networkParametersCopier = null
+        SuggestedDetails.reset()
     }
 
     /**

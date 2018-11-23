@@ -27,6 +27,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
 import net.corda.core.identity.*
 import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializedBytes
@@ -187,9 +188,9 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.commands,
                 value.timeWindow,
                 value.attachments,
+                value.references,
                 value.privacySalt,
                 value.networkParametersHash,
-                value.references
         ))
     }
 }
@@ -197,7 +198,7 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
 private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): WireTransaction {
         val wrapper = parser.readValueAs<WireTransactionJson>()
-        val componentGroups = WireTransaction.createComponentGroups(
+        val componentGroups = createComponentGroups(
                 wrapper.inputs,
                 wrapper.outputs,
                 wrapper.commands,
@@ -218,9 +219,9 @@ private class WireTransactionJson(val id: SecureHash,
                                   val commands: List<Command<*>>,
                                   val timeWindow: TimeWindow?,
                                   val attachments: List<SecureHash>,
+                                  val references: List<StateRef>,
                                   val privacySalt: PrivacySalt,
-                                  val networkParametersHash: SecureHash?,
-                                  val references: List<StateRef>)
+                                  val networkParametersHash: SecureHash?)
 
 private interface TransactionStateMixin {
     @get:JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)

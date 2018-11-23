@@ -12,7 +12,7 @@ if [ ! -f $apiCurrent ]; then
 fi
 
 # Remove the two header lines from the diff output.
-diffContents=`diff -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt | tail -n +3`
+diffContents=`diff --minimal -u $apiCurrent $APIHOME/../build/api/api-corda-*.txt | tail -n +3`
 echo "Diff contents:"
 echo "$diffContents"
 echo

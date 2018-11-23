@@ -1,18 +1,13 @@
 package net.corda.core.internal
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
-import net.corda.core.serialization.MissingAttachmentsException
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializationFactory
-import net.corda.core.serialization.serialize
-import net.corda.core.transactions.ComponentGroup
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.FilteredComponentGroup
-import net.corda.core.transactions.NotaryChangeWireTransaction
+import net.corda.core.serialization.*
+import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.lazyMapped
 import java.io.ByteArrayOutputStream
@@ -123,4 +118,40 @@ fun deserialiseCommands(componentGroups: List<ComponentGroup>,
         }
         commandDataList.lazyMapped { commandData, index -> Command(commandData, signersList[index]) }
     }
+}
+
+/**
+ * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
+ * for backwards compatibility purposes.
+ */
+fun createComponentGroups(inputs: List<StateRef>,
+                          outputs: List<TransactionState<ContractState>>,
+                          commands: List<Command<*>>,
+                          attachments: List<SecureHash>,
+                          notary: Party?,
+                          timeWindow: TimeWindow?,
+                          references: List<StateRef>): List<ComponentGroup> {
+    val serialize = { value: Any, _: Int -> value.serialize() }
+    val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
+    if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
+    if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
+    if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
+    // Adding commandData only to the commands group. Signers are added in their own group.
+    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
+    if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
+    if (notary != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
+    if (timeWindow != null) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
+    // Adding signers to their own group. This is required for command visibility purposes: a party receiving
+    // a FilteredTransaction can now verify it sees all the commands it should sign.
+    if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(ComponentGroupEnum.SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
+    return componentGroupMap
+}
+
+/**
+ * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
+ * The [serializedState] is the actual component from the original wire transaction.
+ */
+@KeepForDJVM
+data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
+    fun toStateAndRef(): StateAndRef<ContractState> = StateAndRef(serializedState.deserialize(), ref)
 }

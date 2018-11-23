@@ -56,7 +56,7 @@ class TransactionBuilderTest {
         doReturn(contractAttachmentId).whenever(attachment).id
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
-        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
     }
 
     @Test
@@ -135,12 +135,12 @@ class TransactionBuilderTest {
     private val unsignedAttachment = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<PublicKey> get() = emptyList()
+        override val signerKeys: List<PublicKey> get() = emptyList()
     }, DummyContract.PROGRAM_ID)
 
     private fun signedAttachment(vararg parties: Party) = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<PublicKey> get() = parties.map { it.owningKey }
-    }, DummyContract.PROGRAM_ID, signers = parties.map { it.owningKey })
+        override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
+    }, DummyContract.PROGRAM_ID, signerKeys = parties.map { it.owningKey })
 }

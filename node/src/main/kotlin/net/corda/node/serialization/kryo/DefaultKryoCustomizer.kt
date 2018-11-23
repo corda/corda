@@ -211,7 +211,7 @@ object DefaultKryoCustomizer {
             output.writeString(obj.contract)
             kryo.writeClassAndObject(output, obj.additionalContracts)
             output.writeString(obj.uploader)
-            kryo.writeClassAndObject(output, obj.signers)
+            kryo.writeClassAndObject(output, obj.signerKeys)
         }
 
         @Suppress("UNCHECKED_CAST")

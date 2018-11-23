@@ -87,7 +87,7 @@ class AttachmentsClassLoaderStaticContractTests {
         doReturn(it.cordappProvider.getContractAttachmentID(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).id
         doReturn(setOf(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
-        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
     }
 
     @Test
