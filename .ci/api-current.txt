@@ -431,7 +431,9 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public void extractFile(String, java.io.OutputStream)
   @NotNull
-  public abstract java.util.List<java.security.PublicKey> getSigners()
+  public abstract java.util.List<java.security.PublicKey> getSignerKeys()
+  @NotNull
+  public abstract java.util.List<net.corda.core.identity.Party> getSigners()
   public abstract int getSize()
   @NotNull
   public abstract java.io.InputStream open()
@@ -542,7 +544,7 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   @NotNull
   public net.corda.core.crypto.SecureHash getId()
   @NotNull
-  public java.util.List<java.security.PublicKey> getSigners()
+  public java.util.List<net.corda.core.identity.Party> getSigners()
   public int getSize()
   @Nullable
   public final String getUploader()
@@ -4041,7 +4043,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$Fungi
   @Nullable
   public final java.util.List<net.corda.core.identity.AbstractParty> getOwner()
   @Nullable
-  public final java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
+  public java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<Long> getQuantity()
   @NotNull
@@ -4078,7 +4080,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$Linea
   @Nullable
   public final java.util.List<String> getExternalId()
   @Nullable
-  public final java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
+  public java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
   @NotNull
   public net.corda.core.node.services.Vault$StateStatus getStatus()
   @Nullable
@@ -4305,16 +4307,16 @@ public abstract class net.corda.core.node.services.vault.SortAttribute extends j
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.SortAttribute$Custom extends net.corda.core.node.services.vault.SortAttribute
-  public <init>(Class<? extends net.corda.core.schemas.PersistentState>, String)
+  public <init>(Class<? extends net.corda.core.schemas.StatePersistable>, String)
   @NotNull
-  public final Class<? extends net.corda.core.schemas.PersistentState> component1()
+  public final Class<? extends net.corda.core.schemas.StatePersistable> component1()
   @NotNull
   public final String component2()
   @NotNull
-  public final net.corda.core.node.services.vault.SortAttribute$Custom copy(Class<? extends net.corda.core.schemas.PersistentState>, String)
+  public final net.corda.core.node.services.vault.SortAttribute$Custom copy(Class<? extends net.corda.core.schemas.StatePersistable>, String)
   public boolean equals(Object)
   @NotNull
-  public final Class<? extends net.corda.core.schemas.PersistentState> getEntityStateClass()
+  public final Class<? extends net.corda.core.schemas.StatePersistable> getEntityStateClass()
   @NotNull
   public final String getEntityStateColumnName()
   public int hashCode()
