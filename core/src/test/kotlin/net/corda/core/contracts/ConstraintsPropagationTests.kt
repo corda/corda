@@ -9,7 +9,8 @@ import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AttachmentWithContext
-import net.corda.core.node.NotaryInfo
+import net.corda.core.internal.inputStream
+import net.corda.core.internal.toPath
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
@@ -294,12 +295,12 @@ class ConstraintsPropagationTests {
         // signed attachment (for signature constraint)
         val attachmentSigned = mock<ContractAttachment>()
         val attachmentIdSigned = zeroHash
-        whenever(attachmentSigned.signers).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
         whenever(attachmentSigned.contract).thenReturn(propagatingContractClassName)
 
         // network parameters
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf(JavaPackageName(propagatingContractClassName) to ALICE_PARTY.owningKey))
+                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
 
         // attachment with context (both unsigned and signed attachments representing same contract)
         val attachmentWithContext = mock<AttachmentWithContext>()
@@ -318,7 +319,7 @@ class ConstraintsPropagationTests {
     @Test
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
-        val attachment = mock<ContractAttachment>()
+        val attachment = mock<AttachmentWithContext>()
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
 
         // Exhaustive positive check

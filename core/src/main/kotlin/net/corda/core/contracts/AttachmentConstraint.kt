@@ -9,7 +9,6 @@ import net.corda.core.crypto.keys
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.core.node.JavaPackageName
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
@@ -89,14 +88,14 @@ interface AttachmentConstraint {
                 val signedAttachment = attachment.signedContractAttachment
                 if (signedAttachment != null) {
                     // rule 1
-                    val packageOwnerPK = attachment.networkParameters.packageOwnership[JavaPackageName(signedAttachment.contract)]
+                    val packageOwnerPK = attachment.networkParameters.packageOwnership[signedAttachment.contract]
                     if (packageOwnerPK == null) {
                         log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
                         return false
                     }
                     // rule 2
-                    if (!output.key.isFulfilledBy(signedAttachment.signers)) {
-                        log.warn("Attachment signers ${signedAttachment.signers} do not contain output constraint signer ${output.key} for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
+                    if (!output.key.isFulfilledBy(signedAttachment.signerKeys)) {
+                        log.warn("Attachment signers ${signedAttachment.signerKeys} do not contain output constraint signer ${output.key} for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
                         return false
                     }
                     return true
