@@ -23,7 +23,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
-val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
+const val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
 
 class ReferenceStateTests {
     private companion object {

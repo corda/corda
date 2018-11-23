@@ -155,7 +155,9 @@ class FilteredTransaction internal constructor(
                 wtx.attachments.forEachIndexed { internalIndex, it -> filter(it, ATTACHMENTS_GROUP.ordinal, internalIndex) }
                 if (wtx.notary != null) filter(wtx.notary, NOTARY_GROUP.ordinal, 0)
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
-                wtx.references.forEachIndexed { internalIndex, it -> filter(it, REFERENCES_GROUP.ordinal, internalIndex) }
+                // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
+                // when filtering. Thus, to filter-in all [references] based on type, one should use the wrapper type [ReferenceStateRef] and not [StateRef].
+                wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
                 wtx.networkParametersHash?.let { filter(Pair(it, PARAMETERS_GROUP.ordinal), PARAMETERS_GROUP.ordinal, 0) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
@@ -263,8 +265,7 @@ class FilteredTransaction internal constructor(
         } else {
             visibilityCheck(group.groupIndex < groupHashes.size) { "There is no matching component group hash for group ${group.groupIndex}" }
             val groupPartialRoot = groupHashes[group.groupIndex]
-            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) })
-                    .hash
+            val groupFullRoot = MerkleTree.getMerkleTree(group.components.mapIndexed { index, component -> componentHash(group.nonces[index], component) }).hash
             visibilityCheck(groupPartialRoot == groupFullRoot) { "Some components for group ${group.groupIndex} are not visible" }
             // Verify the top level Merkle tree from groupHashes.
             visibilityCheck(MerkleTree.getMerkleTree(groupHashes).hash == id) {
@@ -354,3 +355,8 @@ class ComponentVisibilityException(val id: SecureHash, val reason: String) : Cor
 @KeepForDJVM
 @CordaSerializable
 class FilteredTransactionVerificationException(val id: SecureHash, val reason: String) : CordaException("Transaction with id:$id cannot be verified. Reason: $reason")
+
+/** Wrapper over [StateRef] to be used when filtering reference states. */
+@KeepForDJVM
+@CordaSerializable
+data class ReferenceStateRef(val stateRef: StateRef)

@@ -34,7 +34,8 @@ object NodeNotarySchema
 object NodeNotarySchemaV1 : MappedSchema(schemaFamily = NodeNotarySchema.javaClass, version = 1,
         mappedTypes = listOf(PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
-                PersistentUniquenessProvider.CommittedState::class.java
+                PersistentUniquenessProvider.CommittedState::class.java,
+                PersistentUniquenessProvider.CommittedTransaction::class.java
         )) {
     override val migrationResource = "node-notary.changelog-master"
 }

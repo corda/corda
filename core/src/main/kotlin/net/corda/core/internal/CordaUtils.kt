@@ -15,7 +15,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import org.slf4j.MDC
 
-// *Internal* Corda-specific utilities
+// *Internal* Corda-specific utilities.
 
 const val PLATFORM_VERSION = 4
 
@@ -33,13 +33,13 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
     }
 }
 
-/** Provide access to internal method for AttachmentClassLoaderTests */
+/** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
-/** Provide access to internal method for AttachmentClassLoaderTests */
+/** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
     return toLedgerTransactionWithContext(services, serializationContext)

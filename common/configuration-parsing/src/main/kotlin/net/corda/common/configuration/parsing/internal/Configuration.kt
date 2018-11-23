@@ -1,10 +1,6 @@
 package net.corda.common.configuration.parsing.internal
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigException
-import com.typesafe.config.ConfigObject
-import com.typesafe.config.ConfigValue
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import net.corda.common.configuration.parsing.internal.versioned.VersionExtractor
 import net.corda.common.validation.internal.Validated
 import net.corda.common.validation.internal.Validated.Companion.invalid
@@ -25,7 +21,7 @@ object Configuration {
         /**
          * Describes a [Config] hiding sensitive data.
          */
-        fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }): ConfigValue?
+        fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue = { value -> ConfigValueFactory.fromAnyRef(value.toString()) }): ConfigValue?
     }
 
     object Value {
@@ -132,6 +128,22 @@ object Configuration {
             }
 
             /**
+             * Defines a required property with a collection of values.
+             */
+            interface RequiredList<TYPE> : Required<List<TYPE>> {
+
+                /**
+                 * Passes the value to a validating mapping function, provided this is valid in the first place.
+                 */
+                fun <MAPPED> mapValid(mappedTypeName: String, convert: (List<TYPE>) -> Validated<MAPPED, Validation.Error>): Required<MAPPED>
+
+                /**
+                 * Passes the value to a non-validating mapping function, provided this is valid in the first place.
+                 */
+                fun <MAPPED> map(mappedTypeName: String, convert: (List<TYPE>) -> MAPPED): Required<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
+            }
+
+            /**
              * Defines a property that must provide a single value or produce an error in case multiple values are specified for the relevant key.
              */
             interface Single<TYPE> : Definition<TYPE> {
@@ -139,7 +151,7 @@ object Configuration {
                 /**
                  * Returns a required property expecting multiple values for the relevant key.
                  */
-                fun list(): Required<List<TYPE>>
+                fun list(): RequiredList<TYPE>
             }
 
             /**
@@ -161,12 +173,12 @@ object Configuration {
                 /**
                  * Passes the value to a validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> mapValid(mappedTypeName: String, convert: (TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
+                fun <MAPPED> mapValid(mappedTypeName: String, convert: (TYPE) -> Validated<MAPPED, Validation.Error>): Standard<MAPPED>
 
                 /**
                  * Passes the value to a non-validating mapping function, provided this is valid in the first place.
                  */
-                fun <MAPPED : Any> map(mappedTypeName: String, convert: (TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
+                fun <MAPPED> map(mappedTypeName: String, convert: (TYPE) -> MAPPED): Standard<MAPPED> = mapValid(mappedTypeName) { value -> valid(convert.invoke(value)) }
             }
 
             override fun parse(configuration: Config, options: Configuration.Validation.Options): Validated<TYPE, Validation.Error> {
@@ -268,7 +280,7 @@ object Configuration {
          */
         fun validate(target: Config): Valid<Config> = validate(target, Configuration.Validation.Options.defaults)
 
-        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue
+        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue
 
         companion object {
 
@@ -358,7 +370,7 @@ object Configuration {
 
         override fun validate(target: Config, options: Validation.Options) = schema.validate(target, options)
 
-        override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue) = schema.describe(configuration, serialiseValue)
+        override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue) = schema.describe(configuration, serialiseValue)
 
         final override fun parse(configuration: Config, options: Configuration.Validation.Options): Valid<VALUE> = validate(configuration, options).mapValid(::parseValid)
 

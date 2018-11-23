@@ -14,6 +14,7 @@ import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -105,7 +106,7 @@ class NotaryFlow {
                 //  The same applies to reference and input states.
                 //  Also, we want to ensure in this case that the componentGroup for the parameters hash is always included.
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
-                    it is StateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal
+                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is Pair<*, *> && it.first is SecureHash && it.second == ComponentGroupEnum.PARAMETERS_GROUP.ordinal
                 })
                 else -> ctx
             }
