@@ -461,6 +461,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             "java.util.UUID" -> "proton::uuid"
             "byte[]" -> "proton::binary"
             "java.lang.String" -> "std::string"
+            "java.math.BigDecimal" -> "std::string"
 
             // Classes, containers and other custom types.
             else -> when (resolved.baseClass.name) {
