@@ -292,39 +292,4 @@ proton::codec::decoder &operator>>(proton::codec::decoder &decoder, ptr<T> &out)
 }
 }
 
-// Standard serialisers that don't follow the regular AMQP format for various reasons.
-
-namespace java {
-namespace security {
-
-class PublicKey : public net::corda::Any {
-public:
-    proton::binary x509_bits;
-
-    explicit PublicKey(proton::codec::decoder &decoder) {
-        decoder >> x509_bits;
-    }
-};
-
-
-}  // security
-
-namespace time {
-
-class Instant : public net::corda::Any {
-public:
-    int64_t epoch_seconds;
-    int32_t nanos;
-
-    Instant() : epoch_seconds(0), nanos(0) {}
-
-    explicit Instant(proton::codec::decoder &decoder) : epoch_seconds(0), nanos(0) {
-        decoder >> epoch_seconds;
-        decoder >> nanos;
-    }
-};
-
-}
-}
-
 #endif
