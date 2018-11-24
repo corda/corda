@@ -246,7 +246,10 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         val nl = System.lineSeparator()
         for ((baseName, genResult) in classSources) {
-            fun header(className: String) = className.replace('.', File.separatorChar).replace('$', '.') + ".h"
+            fun header(className: String) = if (className == "net.corda.core.utilities.OpaqueBytes")
+                "corda-core.h"
+            else
+                className.replace('.', File.separatorChar).replace('$', '.') + ".h"
             val path = Paths.get(header(baseName))
             val guardName = baseName.toUpperCase().replace('.', '_').replace('$', '_') + "_H"
             val predeclarations = classPredeclarations[baseName]?.let { formatPredeclarations(it, baseName) } ?: ""
@@ -321,7 +324,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             return result
         }
 
-    val Type.isCordaSerializable: Boolean get() = baseClass.isAnnotationPresent(CordaSerializable::class.java)
+    private val Type.isCordaSerializable: Boolean get() = baseClass.isAnnotationPresent(CordaSerializable::class.java)
 
     private fun generateClassFor(type: Type, serializerFactory: LocalSerializerFactory, seenSoFar: Set<String>): GenResult? {
         val fieldDeclarations = mutableListOf<String>()
