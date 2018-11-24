@@ -3,10 +3,8 @@ package net.corda.tools.serialization
 import io.github.classgraph.ClassGraph
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.start
-import net.corda.core.contracts.PrivacySalt
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.serialize
@@ -16,7 +14,10 @@ import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.LocalSerializerFactory
+import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.model.LocalPropertyInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
 import net.corda.serialization.internal.model.PropertyName
@@ -107,11 +108,16 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     .enableAnnotationInfo()
                     .scan()
                     .use { scanResult ->
-                scanResult.getClassesWithAnnotation("net.corda.core.serialization.CordaSerializable").names.map {
-                    println("Loading $it")
-                    Class.forName(it)
-                }
-            }
+                        val classesWithAnnotation = scanResult.getClassesWithAnnotation("net.corda.core.serialization.CordaSerializable")
+
+                        val directlyAnnotated = classesWithAnnotation.names.map {
+                            println("Loading $it")
+                            Class.forName(it)
+                        }
+
+                        val implementingAnnotatedInterface = classesWithAnnotation.interfaces.flatMap { scanResult.getClassesImplementing(it.name) }.map { Class.forName(it.name) }
+                        directlyAnnotated + implementingAnnotatedInterface
+                    }
 
             val outPath = Paths.get(outputDirectory)
             Files.createDirectories(outPath)
@@ -211,7 +217,8 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 val rawType = type.baseClass
                 specializations.getOrPut(baseName) { LinkedHashSet() } += if (typeParams.isNotEmpty()) {
                     // Need to erase generics to their bounds at the type level or use ? for Object.
-                    val params = typeParams.map { it.bounds.first() }.map { it: Type? -> if (it == Any::class.java) "net::corda::Any" else it!!.mangleToCPPSyntax() }
+                    val params = typeParams.map { it.bounds.first() }
+                            .map { it: Type? -> if (it == Any::class.java) "net::corda::Any" else it!!.mangleToCPPSyntax() }
                     val descriptor = serializerFactory.createDescriptor(serializerFactory.getTypeInformation(rawType))
                     registrationTemplate(rawType.typeName.replace(".", "::") + "<" + params.joinToString(", ") + ">", descriptor)
                 } else {
@@ -246,7 +253,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             val inclusions = genResult.inheritanceDependencies
                     .flatMap { it.allMentionedClasses }
                     .map { header(it.baseClass.name) }
-                    .joinToString(nl) { """#include "$it""""}
+                    .joinToString(nl) { """#include "$it"""" }
             block(path, """
                 |////////////////////////////////////////////////////////////////////////////////////////////////////////
                 |// Auto-generated code. Do not edit.
@@ -343,6 +350,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             }
             is LocalTypeInformation.Composable -> typeInformation.properties
             is LocalTypeInformation.AnInterface -> emptyMap()   // Don't care about generating interfaces at the moment.
+            is LocalTypeInformation.Singleton -> emptyMap()
             else -> {
                 println("Need to write code for custom serializer '$type' / $descriptorSymbol")
                 return null
