@@ -13,6 +13,10 @@ cordapp {
         // but the jar signer doesn't support that yet.
         enabled false
     }
+    sealing {
+        // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
+        enabled false
+    }
 }
 
 configurations {
