@@ -12,8 +12,7 @@ You will need to install Apache Qpid Proton C++ and cmake to be able to compile 
 
 # TODO
 
-- [ ] Can't yet parse a SignedTransaction due to some descriptor / context mismatch issue
-- [ ] Need to descend into sealed classes to get PartialMerkleTree right
+- [ ] Still working on parsing a full cash movement transaction
 - [ ] Enums
 - [ ] Evolution
 - [ ] Back-references

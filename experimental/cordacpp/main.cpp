@@ -32,7 +32,7 @@ int main() {
 
     int out_index = 0;
     for (auto &out_slot : outputs) {
-        auto output = parse<contracts::TransactionState<contracts::ContractState>>(out_slot->bytes);
+        auto output = parse<contracts::TransactionState<contracts::ContractState>>(dynamic_cast<core::serialization::SerializedBytes<Any>*>(out_slot.get())->bytes);
         cout << "  Output " << out_index++ << " is governed by contract " << output->contract << endl;
     }
 

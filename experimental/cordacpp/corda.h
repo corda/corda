@@ -279,8 +279,8 @@ proton::codec::decoder &operator>>(proton::codec::decoder &decoder, ptr<T> &out)
     decoder >> block;
     // Look up a constructor for the descriptor, if we know it.
     auto ctor = net::corda::TypeRegistry::GLOBAL().get(sym);
+    const std::string &classname = Parser::current->lookup(sym);
     if (ctor == nullptr) {
-        const std::string &classname = Parser::current->lookup(sym);
         throw std::invalid_argument(msg() << "Unknown descriptor " << sym << " for '" << classname << "' so cannot construct");
     }
     out = net::corda::ptr<T>(dynamic_cast<T*>((*ctor)(decoder)));
