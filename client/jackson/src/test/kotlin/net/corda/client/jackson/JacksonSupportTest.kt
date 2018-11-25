@@ -93,7 +93,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         services = rigorousMock()
         cordappProvider = rigorousMock()
         doReturn(cordappProvider).whenever(services).cordappProvider
-        doReturn(testNetworkParameters()).whenever(services).networkParameters
+        doReturn(testNetworkParameters(minimumPlatformVersion = 4)).whenever(services).networkParameters
         doReturn(attachments).whenever(services).attachments
     }
 
@@ -234,7 +234,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         val attachment = rigorousMock<ContractAttachment>()
         doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
         doReturn(attachmentId).whenever(attachment).id
-        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
 
@@ -245,6 +245,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
                 outputs = mutableListOf(createTransactionState()),
                 commands = mutableListOf(Command(DummyCommandData, listOf(BOB_PUBKEY))),
                 window = TimeWindow.fromStartAndDuration(Instant.now(), 1.hours),
+                references = mutableListOf(StateRef(SecureHash.randomSHA256(), 0)),
                 privacySalt = net.corda.core.contracts.PrivacySalt()
         ).toWireTransaction(services)
         val stx = sign(wtx)
@@ -253,7 +254,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         println(mapper.writeValueAsString(json))
         val (wtxJson, signaturesJson) = json.assertHasOnlyFields("wire", "signatures")
         assertThat(signaturesJson.childrenAs<TransactionSignature>(mapper)).isEqualTo(stx.sigs)
-        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "privacySalt")
+        val wtxFields = wtxJson.assertHasOnlyFields("id", "notary", "inputs", "attachments", "outputs", "commands", "timeWindow", "references", "privacySalt")
         assertThat(wtxFields[0].valueAs<SecureHash>(mapper)).isEqualTo(wtx.id)
         assertThat(wtxFields[1].valueAs<Party>(mapper)).isEqualTo(wtx.notary)
         assertThat(wtxFields[2].childrenAs<StateRef>(mapper)).isEqualTo(wtx.inputs)
@@ -261,7 +262,8 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         assertThat(wtxFields[4].childrenAs<TransactionState<*>>(mapper)).isEqualTo(wtx.outputs)
         assertThat(wtxFields[5].childrenAs<Command<*>>(mapper)).isEqualTo(wtx.commands)
         assertThat(wtxFields[6].valueAs<TimeWindow>(mapper)).isEqualTo(wtx.timeWindow)
-        assertThat(wtxFields[7].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
+        assertThat(wtxFields[7].childrenAs<StateRef>(mapper)).isEqualTo(wtx.references)
+        assertThat(wtxFields[8].valueAs<PrivacySalt>(mapper)).isEqualTo(wtx.privacySalt)
         assertThat(mapper.convertValue<WireTransaction>(wtxJson)).isEqualTo(wtx)
         assertThat(mapper.convertValue<SignedTransaction>(json)).isEqualTo(stx)
     }

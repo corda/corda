@@ -72,7 +72,7 @@ interface AttachmentConstraint {
 
             // You can transition from the WhitelistConstraint to the SignatureConstraint only if all signers of the JAR are required to sign in the future.
             input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
-                attachment.signers.isNotEmpty() && output.key.keys.containsAll(attachment.signers)
+                attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
             else -> false
         }
@@ -180,5 +180,5 @@ data class SignatureAttachmentConstraint(
         val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
-        key.isFulfilledBy(attachment.signers.map { it })
+        key.isFulfilledBy(attachment.signerKeys.map { it })
 }

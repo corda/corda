@@ -431,7 +431,9 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public void extractFile(String, java.io.OutputStream)
   @NotNull
-  public abstract java.util.List<java.security.PublicKey> getSigners()
+  public abstract java.util.List<java.security.PublicKey> getSignerKeys()
+  @NotNull
+  public abstract java.util.List<net.corda.core.identity.Party> getSigners()
   public abstract int getSize()
   @NotNull
   public abstract java.io.InputStream open()
@@ -542,7 +544,7 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   @NotNull
   public net.corda.core.crypto.SecureHash getId()
   @NotNull
-  public java.util.List<java.security.PublicKey> getSigners()
+  public java.util.List<net.corda.core.identity.Party> getSigners()
   public int getSize()
   @Nullable
   public final String getUploader()
