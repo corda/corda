@@ -91,8 +91,8 @@ sealed class TypeIdentifier {
                         type.ownerType?.let { forGenericType(it) },
                         type.actualTypeArguments.map {
                             val resolved = it.resolveAgainst(resolutionContext)
-                            if (resolved == type) UnknownType else
-                            forGenericType(resolved)
+                            // Avoid cycles, e.g. Enum<E> where E resolves to Enum<E>
+                            if (resolved == type) UnknownType else forGenericType(resolved)
                         })
                 is Class<*> -> forClass(type)
                 is GenericArrayType -> ArrayOf(forGenericType(type.genericComponentType.resolveAgainst(resolutionContext)))
