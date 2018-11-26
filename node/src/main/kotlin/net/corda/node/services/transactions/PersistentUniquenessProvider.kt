@@ -114,7 +114,7 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
      */
     private val throughputHistory = SlidingWindowReservoir(100)
     @Volatile
-    var throughput: Double = 0.0
+    private var throughput: Double = 0.0
 
     /**
      * Estimated time of request processing.
