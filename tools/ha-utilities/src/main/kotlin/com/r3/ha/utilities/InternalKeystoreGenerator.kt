@@ -17,7 +17,7 @@ import javax.security.auth.x500.X500Principal
 
 private const val DEFAULT_PASSWORD = "changeit"
 
-internal class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
+class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-artemis-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.") {
 
     override fun createKeyStores() {
         println("Generating Artemis keystores")
@@ -30,7 +30,7 @@ internal class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenera
     }
 }
 
-internal class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-tunnel-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between Bridge and Float.") {
+class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerator("generate-internal-tunnel-ssl-keystores", "Generate self-signed root and SSL certificates for internal communication between Bridge and Float.") {
 
     @Option(names = ["-e", "--entryPassword"], description = ["Password for all the keystores private keys."], defaultValue = DEFAULT_PASSWORD)
     lateinit var entryPassword: String
@@ -47,7 +47,7 @@ internal class InternalTunnelKeystoreGenerator : AbstractInternalKeystoreGenerat
     }
 }
 
-internal abstract class AbstractInternalKeystoreGenerator(alias: String, description: String) : CliWrapperBase(alias, description) {
+abstract class AbstractInternalKeystoreGenerator(alias: String, description: String) : CliWrapperBase(alias, description) {
 
     @Option(names = ["-b", BASE_DIR], description = ["The node working directory where all the files are kept."])
     var baseDirectory: Path = Paths.get(".").toAbsolutePath().normalize()

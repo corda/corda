@@ -89,6 +89,7 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.apache.curator:curator-test:${curator_version}"
     testCompile project(':test-utils')
+    integrationTestCompile project(':tools:ha-utilities')
 }
 
 task integrationTest(type: Test) {
