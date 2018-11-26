@@ -7,9 +7,6 @@ import java.security.InvalidKeyException
 import java.security.PublicKey
 import java.security.SignatureException
 
-// TODO: Is there a use-case for bare DigitalSignature, or is everything a DigitalSignature.WithKey? If there's no
-//       actual use-case, we should merge the with key version into the parent class. In that case CompositeSignatureWithKeys
-//       should be renamed to match.
 /** A wrapper around a digital signature. */
 @CordaSerializable
 @KeepForDJVM

@@ -14,7 +14,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.extractFile
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
@@ -31,6 +30,7 @@ import net.corda.finance.GBP
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
@@ -56,20 +56,22 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.util.jar.JarInputStream
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 // Mock an AuthorizingSubject instance sticking to a fixed set of permissions
-private fun buildSubject(principal: String, permissionStrings: Set<String>) =
-        RPCSecurityManagerImpl.fromUserList(
-                id = AuthServiceId("TEST"),
-                users = listOf(User(username = principal,
-                        password = "",
-                        permissions = permissionStrings)))
-                .buildSubject(principal)
+private fun buildSubject(principal: String, permissionStrings: Set<String>): AuthorizingSubject {
+    return RPCSecurityManagerImpl.fromUserList(
+            id = AuthServiceId("TEST"),
+            users = listOf(User(
+                    username = principal,
+                    password = "",
+                    permissions = permissionStrings
+            ))
+    ).buildSubject(principal)
+}
 
 class CordaRPCOpsImplTest {
     private companion object {
@@ -87,7 +89,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
@@ -163,11 +165,13 @@ class CordaRPCOpsImplTest {
     @Test
     fun `issue and move`() {
         @Suppress("DEPRECATION")
-        withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
+        withPermissions(
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
                 startFlow<CashIssueFlow>(),
-                startFlow<CashPaymentFlow>()) {
+                startFlow<CashPaymentFlow>()
+        ) {
             aliceNode.database.transaction {
                 stateMachineUpdates = rpc.stateMachinesFeed().updates
                 transactions = rpc.internalVerifiedTransactionsFeed().updates
@@ -183,7 +187,8 @@ class CordaRPCOpsImplTest {
             mockNet.runNetwork()
 
             var issueSmId: StateMachineRunId? = null
-            var moveSmId: StateMachineRunId? = null
+            var paymentSmId: StateMachineRunId? = null
+            var paymentRecSmId: StateMachineRunId? = null
             stateMachineUpdates.expectEvents {
                 sequence(
                         // ISSUE
@@ -191,14 +196,20 @@ class CordaRPCOpsImplTest {
                             issueSmId = add.id
                         },
                         expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == issueSmId)
+                            assertThat(remove.id).isEqualTo(issueSmId)
                         },
-                        // MOVE
+                        // PAYMENT
                         expect { add: StateMachineUpdate.Added ->
-                            moveSmId = add.id
+                            paymentSmId = add.id
+                        },
+                        expect { add: StateMachineUpdate.Added ->
+                            paymentRecSmId = add.id
                         },
                         expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == moveSmId)
+                            assertThat(remove.id).isEqualTo(paymentRecSmId)
+                        },
+                        expect { remove: StateMachineUpdate.Removed ->
+                            assertThat(remove.id).isEqualTo(paymentSmId)
                         }
                 )
             }
