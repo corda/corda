@@ -94,12 +94,11 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type))
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
-            else -> if (isOpaque) {
-                LocalTypeInformation.Opaque(
+            isOpaque -> LocalTypeInformation.Opaque(
                         type,
                         typeIdentifier,
                         buildNonAtomic(type, type, typeIdentifier, emptyList(), true))
-            } else buildNonAtomic(type, type, typeIdentifier, emptyList())
+            else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
     }
 
@@ -118,12 +117,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            else -> if (isOpaque) {
-                LocalTypeInformation.Opaque(
-                        rawType,
+            isOpaque -> LocalTypeInformation.Opaque(rawType,
                         typeIdentifier,
                         buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type), true))
-            } else buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
+            else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }
 
