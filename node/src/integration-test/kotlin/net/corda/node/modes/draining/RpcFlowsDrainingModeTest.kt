@@ -8,8 +8,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.mainPortAllocation
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
@@ -17,7 +17,7 @@ import org.junit.Test
 
 class RpcFlowsDrainingModeTest {
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = mainPortAllocation()
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

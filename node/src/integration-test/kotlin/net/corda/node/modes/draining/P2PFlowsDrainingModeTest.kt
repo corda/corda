@@ -1,11 +1,7 @@
 package net.corda.node.modes.draining
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.InitiatedBy
-import net.corda.core.flows.InitiatingFlow
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
@@ -18,8 +14,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.mainPortAllocation
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.waitForShutdown
@@ -38,7 +34,7 @@ class P2PFlowsDrainingModeTest {
         private val logger = contextLogger()
     }
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = mainPortAllocation()
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

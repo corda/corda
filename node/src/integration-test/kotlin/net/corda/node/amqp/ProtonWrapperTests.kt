@@ -29,6 +29,7 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.mainPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
@@ -49,7 +50,7 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = mainPortAllocation()
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()

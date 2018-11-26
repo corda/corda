@@ -360,11 +360,11 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
     )
 }
 
-private fun mainPortAllocation(port: Int = 10_000, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_MAIN"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+fun mainPortAllocation(port: Int = 10_000, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_MAIN"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
 
-private fun debugPortAllocation(port: Int = 5_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_DEBUG"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+fun debugPortAllocation(port: Int = 5_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_DEBUG"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
 
-private fun jmxPortAllocation(port: Int = 7_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_JMX"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+fun jmxPortAllocation(port: Int = 7_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_JMX"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
 
 /**
  * Builder for configuring a [driver].

@@ -22,8 +22,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.mainPortAllocation
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -33,7 +33,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
 class FlowsDrainingModeContentionTest {
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = mainPortAllocation()
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
 
