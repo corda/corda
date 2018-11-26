@@ -49,7 +49,9 @@ private constructor(
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
         /** Network parameters that were in force when the transaction was notarised. */
-        override val networkParameters: NetworkParameters,
+        // TODO Network parameters should never be null on LedgerTransaction, this is left only because of deprecated constructors. We should decide to
+        //  get rid of them.
+        override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>
         //DOCEND 1
 ) : FullTransaction() {
@@ -118,6 +120,11 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
+        if (networkParameters == null) {
+            // For backwards compatibility only.
+            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
+                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
+        }
         val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
@@ -136,9 +143,14 @@ private constructor(
     /**
      * Verify that package ownership is respected.
      *
-     * TODO - revisit once transaction contains network parameters.
+     * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
+     *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
     private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+        // This should never happen once we have network parameters in the transaction.
+        if (networkParameters == null) {
+            return
+        }
         val contractsAndOwners = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
             networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
@@ -219,10 +231,10 @@ private constructor(
                     ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
-                    networkParameters.whitelistedContractImplementations)
+                    networkParameters?.whitelistedContractImplementations)
 
             if (state.constraint is SignatureAttachmentConstraint)
-                checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, 4, "Signature constraints")
+                checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
@@ -763,7 +775,7 @@ private constructor(
     operator fun component6(): Party? = notary
     operator fun component7(): TimeWindow? = timeWindow
     operator fun component8(): PrivacySalt = privacySalt
-    operator fun component9(): NetworkParameters = networkParameters
+    operator fun component9(): NetworkParameters? = networkParameters
     operator fun component10(): List<StateAndRef<ContractState>> = references
 
     override fun equals(other: Any?): Boolean = this === other || other is LedgerTransaction && this.id == other.id
@@ -785,22 +797,19 @@ private constructor(
             |)""".trimMargin()
     }
 
-
-    //
     // Stuff that we can't remove and so is deprecated instead
     //
-//// TODO FIX this constructor
-//    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
-//    constructor(
-//            inputs: List<StateAndRef<ContractState>>,
-//            outputs: List<TransactionState<ContractState>>,
-//            commands: List<CommandWithParties<CommandData>>,
-//            attachments: List<Attachment>,
-//            id: SecureHash,
-//            notary: Party?,
-//            timeWindow: TimeWindow?,
-//            privacySalt: PrivacySalt
-//    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
+    @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            outputs: List<TransactionState<ContractState>>,
+            commands: List<CommandWithParties<CommandData>>,
+            attachments: List<Attachment>,
+            id: SecureHash,
+            notary: Party?,
+            timeWindow: TimeWindow?,
+            privacySalt: PrivacySalt
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     @DeprecatedConstructorForDeserialization(1)
@@ -849,7 +858,7 @@ private constructor(
              notary: Party? = this.notary,
              timeWindow: TimeWindow? = this.timeWindow,
              privacySalt: PrivacySalt = this.privacySalt,
-             networkParameters: NetworkParameters = this.networkParameters
+             networkParameters: NetworkParameters? = this.networkParameters
     ): LedgerTransaction {
         return LedgerTransaction(
                 inputs = inputs,

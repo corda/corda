@@ -79,8 +79,9 @@ data class NotaryChangeWireTransaction(
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
         val hashToResolve = networkParametersHash ?: services.networkParametersStorage.defaultParametersHash
-        val resolvedNetworkParameters = services.networkParametersStorage.readParametersFromHash(hashToResolve) ?: throw TransactionResolutionException(id)
-        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
+        val resolvedNetworkParameters = services.networkParametersStorage.readParametersFromHash(hashToResolve)
+                ?: throw TransactionResolutionException(id)
+        return NotaryChangeLedgerTransaction.create(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
@@ -115,14 +116,29 @@ data class NotaryChangeWireTransaction(
  * needed for signature verification.
  */
 @KeepForDJVM
-data class NotaryChangeLedgerTransaction(
+class NotaryChangeLedgerTransaction
+private constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val newNotary: Party,
         override val id: SecureHash,
         override val sigs: List<TransactionSignature>,
-        override val networkParameters: NetworkParameters
+        // TODO Network parameters should never be null on NotaryChangeLedgerTransaction, this is left only because of deprecated constructors. We should decide to
+        //  get rid of them.
+        override val networkParameters: NetworkParameters?
 ) : FullTransaction(), TransactionWithSignatures {
+    companion object {
+        @CordaInternal
+        internal fun create(inputs: List<StateAndRef<ContractState>>,
+                            notary: Party,
+                            newNotary: Party,
+                            id: SecureHash,
+                            sigs: List<TransactionSignature>,
+                            networkParameters: NetworkParameters): NotaryChangeLedgerTransaction {
+            return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs, networkParameters)
+        }
+    }
+
     init {
         checkEncumbrances()
     }
@@ -167,5 +183,55 @@ data class NotaryChangeLedgerTransaction(
                 }
             }
         }
+    }
+
+    operator fun component1(): List<StateAndRef<ContractState>> = inputs
+    operator fun component2(): Party = notary
+    operator fun component3(): Party = newNotary
+    operator fun component4(): SecureHash = id
+    operator fun component5(): List<TransactionSignature> = sigs
+    operator fun component6(): NetworkParameters? = networkParameters
+
+    override fun equals(other: Any?): Boolean = this === other || other is NotaryChangeLedgerTransaction && this.id == other.id
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return """NotaryChangeLedgerTransaction(
+            |    id=$id
+            |    inputs=$inputs
+            |    notary=$notary
+            |    newNotary=$newNotary
+            |    sigs=$sigs
+            |    networkParameters=$networkParameters
+            |)""".trimMargin()
+    }
+
+    // Things that we can't remove after `data class` removal from this class, so it is deprecated instead.
+    //
+    @Deprecated("NotaryChangeLedgerTransaction should not be created directly, use NotaryChangeWireTransaction.resolve instead.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            newNotary: Party,
+            id: SecureHash,
+            sigs: List<TransactionSignature>
+    ) : this(inputs, notary, newNotary, id, sigs, null)
+
+    @Deprecated("NotaryChangeLedgerTransaction should not be created directly, use NotaryChangeWireTransaction.resolve instead.")
+    fun copy(inputs: List<StateAndRef<ContractState>> = this.inputs,
+             notary: Party = this.notary,
+             newNotary: Party = this.newNotary,
+             id: SecureHash = this.id,
+             sigs: List<TransactionSignature> = this.sigs
+    ): NotaryChangeLedgerTransaction {
+        return NotaryChangeLedgerTransaction(
+                inputs,
+                notary,
+                newNotary,
+                id,
+                sigs,
+                this.networkParameters
+        )
     }
 }
