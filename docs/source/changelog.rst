@@ -18,6 +18,8 @@ Unreleased
   .. note:: V3 and V4 of confidential-identities are not compatible and confidential-identities V3 will not work with a V4 Corda node. CorDapps
      in such scenarios using confidential-identities must be updated.
 
+  The ``confidential-identities`` dependency in your CorDapp must now be ``compile`` and not ``cordaCompile``.
+
 * Marked the ``Attachment`` interface as ``@DoNotImplement`` because it is not meant to be extended by CorDapp developers. If you have already
   done so, please get in contact on the usual communication channels.
 
