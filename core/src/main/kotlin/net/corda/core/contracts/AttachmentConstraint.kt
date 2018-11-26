@@ -82,20 +82,13 @@ interface AttachmentConstraint {
                 attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
             // Transition from Hash to Signature constraint (via CZ whitelisting) requires
-            // 1. Signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
-            // 2. Signature constraint key must be one of keys used to sign contract JAR.
+            // signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
                 val signedAttachment = attachment.signedContractAttachment
                 if (signedAttachment != null) {
-                    // rule 1
                     val packageOwnerPK = attachment.networkParameters.packageOwnership[signedAttachment.contract]
                     if (packageOwnerPK == null) {
                         log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
-                        return false
-                    }
-                    // rule 2
-                    if (!output.key.isFulfilledBy(signedAttachment.signerKeys)) {
-                        log.warn("Attachment signers ${signedAttachment.signerKeys} do not contain output constraint signer ${output.key} for ${signedAttachment.contract} (input constraint = $input, output constraint = $output)")
                         return false
                     }
                     return true
