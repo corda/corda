@@ -337,7 +337,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         @CordaInternal
         fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName, StateRef>>, resolveContractAttachment: (StateRef) -> Attachment?)
-                : Map<ContractClassName, Set<Version>> {
+                : Map<ContractClassName, Version> {
 
             val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
                 Pair(it.first, resolveContractAttachment(it.second))
@@ -348,10 +348,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     .filter { it.second != null && it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION) != null }
 
             val contractClassAndVersion: List<Pair<ContractClassName, Version>> = contractClassAndManifest
-                    .map { Pair(it.first, Version(it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION))) }
+                    .map { Pair(it.first, Integer.parseInt(it.second.mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION))) }
 
             return contractClassAndVersion.groupBy { it.first }
-                    .mapValues { it.value.map { p -> p.second }.toSet() }
+                    .mapValues { it.value.map { p -> p.second }.toSet().max()!! }
         }
     }
 

@@ -60,9 +60,9 @@ open class TransactionBuilder @JvmOverloads constructor(
         private val log = contextLogger()
     }
 
-    private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
-    private val contractClassNameToInputStateRef = mutableMapOf<ContractClassName, MutableSet<StateRef>>()
+
     /**
      * Creates a copy of the builder.
      */
@@ -124,7 +124,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val (allContractAttachments: Collection<SecureHash>, resolvedOutputs: List<TransactionState<ContractState>>) = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
 
         // Final sanity check that all states have the correct constraints.
-        for (state in (inputsWithTransactionState + resolvedOutputs)) {
+        for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs)) {
             checkConstraintValidity(state)
         }
 
@@ -167,7 +167,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
 
-        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.groupBy { it.contract }
+        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map {it.state}.groupBy { it.contract }
         val outputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = outputs.groupBy { it.contract }
 
         val allContracts: Set<ContractClassName> = inputContractGroups.keys + outputContractGroups.keys
@@ -180,6 +180,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                 .map { refStateEntry ->
                     selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, services)
                 }
+
+        val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?>> = allContracts.toSet()
@@ -325,7 +327,6 @@ open class TransactionBuilder @JvmOverloads constructor(
         //TODO non-downgrade-rule modify to search only for specific ContractClass not all
         val inputContractClassToJarVersion = resolveContractAttachmentVersion(states = inputStateRefs?.map { Pair(services.loadState(it).contract, it) } ?: emptyList(),
                 resolveContractAttachment = { services.loadContractAttachment(it) })
-        requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
         try {
             requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
         } catch (e: IllegalStateException) {
@@ -539,15 +540,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     open fun addInputState(stateAndRef: StateAndRef<*>) = apply {
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
-        inputsWithTransactionState.add(stateAndRef.state)
-        contractClassNameToInputStateRef.compute(stateAndRef.state.contract) { _, set ->
-            if (set == null) {
-                mutableSetOf(stateAndRef.ref)
-            } else {
-                set.add(stateAndRef.ref)
-                set
-            }
-        }
+        inputsWithTransactionState.add(stateAndRef)
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */

@@ -57,7 +57,7 @@ private constructor(
         /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>,
-        private val inputStatesContractClassNameToVersions: Map<ContractClassName,Set<Version>>
+        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName,Version>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -91,9 +91,9 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                inputStatesContractClassNameToVersions: Map<ContractClassName, Set<Version>>
+                inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToVersions).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
@@ -105,25 +105,25 @@ private constructor(
          */
         @Throws(IllegalStateException::class)
         @CordaInternal
-        fun requireCompatibleContractClassVersions(inputContractClassVersions: Set<Version>?, outputAttachment: Attachment) {
-            if (inputContractClassVersions != null && inputContractClassVersions.isNotEmpty()) {
+        fun requireCompatibleContractClassVersions(inputContractClassVersion: Version?, outputAttachment: Attachment) {
+            if (inputContractClassVersion != null) {
                 val manifest = outputAttachment.openAsJAR().manifest
                         ?: throw IllegalStateException("The attachment for output state contract has no Jar index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val mainAttributes = manifest.mainAttributes
                         ?: throw IllegalStateException("The attachment for output state contract has empty Jar index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val implementationVersion = mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
                         ?: throw IllegalStateException("The attachment for output state contract has no \"Implementation-Version\" field in JAR index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val version = try {
-                    Version(implementationVersion)
+                    Integer.parseInt(implementationVersion)
                 } catch (e: IllegalArgumentException) {
                     throw IllegalStateException("Cannot parse the output state contract version $implementationVersion. " +
-                            "The version cannot be compared with the version(s) of the input state ($inputContractClassVersions).")
+                            "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 }
-                if (inputContractClassVersions.any { version < it }) {
-                    throw IllegalStateException("The output state contract version $version is lower that the version of the input state ($inputContractClassVersions).")
+                if (version < inputContractClassVersion) {
+                    throw IllegalStateException("The output state contract version $version is lower that the version of the input state ($inputContractClassVersion).")
                 }
             }
         }
@@ -181,7 +181,7 @@ private constructor(
     @Throws(TransactionVerificationException::class)
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val contractClassVersions = inputStatesContractClassNameToVersions[contractClassName]
+            val contractClassVersions = inputStatesContractClassNameToMaxVersion[contractClassName]
             try {
                 requireCompatibleContractClassVersions(contractClassVersions, attachment)
             } catch (e: Exception) {
@@ -399,7 +399,7 @@ private constructor(
                     privacySalt = this.privacySalt,
                     networkParameters = this.networkParameters,
                     references = deserializedReferences,
-                    inputStatesContractClassNameToVersions = emptyMap()
+                    inputStatesContractClassNameToMaxVersion = emptyMap()
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -949,7 +949,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                inputStatesContractClassNameToVersions = emptyMap()
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
     }
 
@@ -975,7 +975,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                inputStatesContractClassNameToVersions = emptyMap()
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
     }
 }
