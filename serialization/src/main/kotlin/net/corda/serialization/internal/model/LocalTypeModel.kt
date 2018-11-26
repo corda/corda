@@ -41,12 +41,6 @@ interface LocalTypeModel {
      * @param type The [Type] to get [LocalTypeInformation] for.
      */
     fun inspect(type: Type): LocalTypeInformation
-
-    /**
-     * Get [LocalTypeInformation] directly from the registry by [TypeIdentifier], returning null if no type information
-     * is registered for that identifier.
-     */
-    operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation?
 }
 
 /**
@@ -55,20 +49,51 @@ interface LocalTypeModel {
  *
  * @param typeModelConfiguration Configuration controlling the behaviour of the [LocalTypeModel]'s type inspection.
  */
-class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration): LocalTypeModel, LocalTypeLookup {
+class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeModelConfiguration): LocalTypeModel {
 
     private val typeInformationCache = DefaultCacheProvider.createCache<TypeIdentifier, LocalTypeInformation>()
 
-    override fun isExcluded(type: Type): Boolean = typeModelConfiguration.isExcluded(type)
+    /**
+     * We need to provide the [TypeInformationBuilder] with a temporary local cache, so that it doesn't leak
+     * [LocalTypeInformation] with unpatched cycles into the global cache where other threads can access them
+     * before we've patched the cycles up.
+     */
+    private class BuilderLookup(
+            private val globalCache: MutableMap<TypeIdentifier, LocalTypeInformation>,
+            private val typeModelConfiguration: LocalTypeModelConfiguration) : LocalTypeLookup {
 
-    override fun inspect(type: Type): LocalTypeInformation = LocalTypeInformation.forType(type, this)
+        private val localCache: MutableMap<TypeIdentifier, LocalTypeInformation> = mutableMapOf()
 
-    override fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: (Boolean) -> LocalTypeInformation): LocalTypeInformation =
-            this[typeIdentifier] ?: builder(typeModelConfiguration.isOpaque(type)).apply {
-                typeInformationCache.putIfAbsent(typeIdentifier, this)
+        /**
+         * Read from the global cache (which contains only cycle-resolved type information), falling through
+         * to the local cache if the type isn't there yet.
+         */
+        override fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: (Boolean) -> LocalTypeInformation): LocalTypeInformation =
+                globalCache[typeIdentifier] ?:
+                localCache.getOrPut(typeIdentifier) { builder(typeModelConfiguration.isOpaque(type)) }
+
+        override fun isExcluded(type: Type): Boolean = typeModelConfiguration.isExcluded(type)
+
+        /**
+         * Merge the local cache back into the global cache, once we've finished traversal (and patched all cycles).
+         */
+        fun merge() {
+            localCache.forEach { (identifier, information) ->
+                globalCache.putIfAbsent(identifier, information)
             }
+        }
+    }
 
-    override operator fun get(typeIdentifier: TypeIdentifier): LocalTypeInformation? = typeInformationCache[typeIdentifier]
+    override fun inspect(type: Type): LocalTypeInformation {
+        val typeIdentifier = TypeIdentifier.forGenericType(type)
+
+        return typeInformationCache.getOrPut(typeIdentifier) {
+            val lookup = BuilderLookup(typeInformationCache, typeModelConfiguration)
+            val result = LocalTypeInformation.forType(type, typeIdentifier, lookup)
+            lookup.merge()
+            result
+        }
+    }
 }
 
 /**

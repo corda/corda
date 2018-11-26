@@ -25,7 +25,7 @@ open class SignedData<T : Any>(val raw: SerializedBytes<T>, val sig: DigitalSign
      */
     @Throws(SignatureException::class)
     fun verified(): T {
-        sig.by.verify(raw.bytes, sig)
+        sig.verify(raw)
         val data: T = uncheckedCast(raw.deserialize<Any>())
         verifyData(data)
         return data

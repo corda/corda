@@ -11,10 +11,10 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import java.util.*
 
 @StartableByRPC
@@ -40,12 +40,13 @@ class CashPaymentFromKnownStatesFlow(
         fun deriveState(txState: TransactionState<Cash.State>, amt: Amount<Issued<Currency>>, owner: AbstractParty) = txState.copy(data = txState.data.copy(amount = amt, owner = owner))
 
         progressTracker.currentStep = AbstractCashFlow.Companion.GENERATING_ID
-        val txIdentities = if (anonymous) {
-            subFlow(SwapIdentitiesFlow(recipient))
+        val recipientSession = initiateFlow(recipient)
+        recipientSession.send(anonymous)
+        val anonymousRecipient = if (anonymous) {
+            subFlow(SwapIdentitiesFlow(recipientSession)).theirIdentity
         } else {
-            emptyMap<Party, AnonymousParty>()
+            recipient
         }
-        val anonymousRecipient = txIdentities[recipient] ?: recipient
         progressTracker.currentStep = AbstractCashFlow.Companion.GENERATING_TX
         val builder = TransactionBuilder(notary = null)
 
@@ -65,8 +66,8 @@ class CashPaymentFromKnownStatesFlow(
         val tx = serviceHub.signInitialTransaction(spendTx, keysForSigning)
 
         progressTracker.currentStep = AbstractCashFlow.Companion.FINALISING_TX
-        val sessions = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(initiateFlow(recipient))
-        val notarised = finaliseTx(tx, sessions, "Unable to notarise spend")
+        val sessionsForFinality = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(recipientSession)
+        val notarised = finaliseTx(tx, sessionsForFinality, "Unable to notarise spend")
         return AbstractCashFlow.Result(notarised.id, anonymousRecipient)
     }
 }
@@ -75,6 +76,13 @@ class CashPaymentFromKnownStatesFlow(
 class CashPaymentFromKnownStatesResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        subFlow(ReceiveFinalityFlow(otherSide))
+        val anonymous = otherSide.receive<Boolean>().unwrap { it }
+        if (anonymous) {
+            subFlow(SwapIdentitiesFlow(otherSide))
+        }
+        // Not ideal that we have to do this check, but we must as FinalityFlow does not send locally
+        if (!serviceHub.myInfo.isLegalIdentity(otherSide.counterparty)) {
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
     }
 }
