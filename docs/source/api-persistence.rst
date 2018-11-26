@@ -86,7 +86,7 @@ other ``MappedSchema``.
 Custom schema registration
 --------------------------
 Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan for states that implement
-the Queryable state interface. Tables are then created as specified by the ``MappedSchema``s identified by each states ``supportedSchemas`` method.
+the Queryable state interface. Tables are then created as specified by the ``MappedSchemas`` identified by each states ``supportedSchemas`` method.
 
 For testing purposes it is necessary to manually register the packages containing custom schemas as follows:
 
@@ -121,7 +121,7 @@ Several examples of entities and mappings are provided in the codebase, includin
 
 Persisting Hierarchical Data
 ----------------------------
-States may contain data with hierarchical relationships, which must be persisted. To persist hierarchical data, multiple ``PersistentState``
+States may represent data with hierarchical relationships, which must be persisted. To persist hierarchical data, multiple ``PersistentState``
 subclasses may be implemented. The relationship between these classes is defined using JPA annotations. It is important to note that the ``MappedSchema`` constructor requires a list of
 *all* subclasses.
 
@@ -245,6 +245,56 @@ An example Schema implementing hierarchical relationships with JPA annotations h
 
         }
 
+    .. sourcecode:: kotlin
+
+        @CordaSerializable
+        object SchemaV1 : MappedSchema(schemaFamily = Schema::class.java, version = 1, mappedTypes = listOf(PersistentParentToken::class.java, PersistentChildToken::class.java)) {
+
+            @Entity
+            @Table(name = "parent_data")
+            class PersistentParentToken(
+                    @Column(name = "owner")
+                    var owner: String,
+
+                    @Column(name = "issuer")
+                    var issuer: String,
+
+                    @Column(name = "amount")
+                    var currency: Int,
+
+                    @Column(name = "linear_id")
+                    var linear_id: UUID,
+
+                    @JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")
+
+                    var listOfPersistentChildTokens: MutableList<PersistentChildToken>
+            ) : PersistentState()
+
+            @Entity
+            @CordaSerializable
+            @Table(name = "child_data")
+            class PersistentChildToken(
+                    @Id
+                    var Id: UUID = UUID.randomUUID(),
+
+                    @Column(name = "owner")
+                    var owner: String,
+
+                    @Column(name = "issuer")
+                    var issuer: String,
+
+                    @Column(name = "amount")
+                    var currency: Int,
+
+                    @Column(name = "linear_id")
+                    var linear_id: UUID,
+
+                    @ManyToOne(targetEntity = PersistentParentToken::class)
+                    var persistentParentToken: TokenState
+
+            ) : PersistentState()
+
+
 Identity mapping
 ----------------
 Schema entity attributes defined by identity types (``AbstractParty``, ``Party``, ``AnonymousParty``) are automatically
@@ -284,7 +334,7 @@ which is then referenced within a custom flow:
 
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
-JPA Support (Available in Corda 4)
+JPA Support (Available in Corda 4+)
 ----------------------------------
 In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
 method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
