@@ -321,7 +321,12 @@ class JmxPolicy private constructor(
     operator fun component1(): Boolean = startJmxHttpServer
     @Deprecated("jmxHttpServerPortAllocation is deprecated and no longer does anything. Use httpPort instead.")
     operator fun component2(): PortAllocation? = jmxHttpServerPortAllocation
-    operator fun component3(): Int = httpPort
+
+    @Deprecated("startJmxHttpServer and jmxHttpServerPortAllocation are both deprecated.")
+    fun copy(startJmxHttpServer: Boolean = this.startJmxHttpServer,
+             jmxHttpServerPortAllocation: PortAllocation? = this.jmxHttpServerPortAllocation): JmxPolicy {
+        return JmxPolicy(startJmxHttpServer, jmxHttpServerPortAllocation)
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
