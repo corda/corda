@@ -4,9 +4,22 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
+import net.corda.core.flows.FlowException
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.NotarisationPayload
+import net.corda.core.flows.NotarisationRequest
+import net.corda.core.flows.NotarisationRequestSignature
+import net.corda.core.flows.NotarisationResponse
+import net.corda.core.flows.NotaryError
+import net.corda.core.flows.NotaryException
+import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.WaitTimeUpdate
 import net.corda.core.identity.Party
+import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import java.time.Duration
 
 /**
  * A flow run by a notary service that handles notarisation requests.
@@ -15,15 +28,29 @@ import net.corda.core.utilities.unwrap
  * if any of the input states have been previously committed.
  *
  * Additional transaction validation logic can be added when implementing [validateRequest].
+ *
+ * @param otherSideSession The session with the notary client.
+ * @param service The notary service to utilise.
+ * @param etaThreshold If the ETA for processing the request, according to the service, is greater than this, notify the client.
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000
+
+        /**
+         * This is default wait time estimate for notaries/uniqueness providers that do not estimate wait times.
+         * Also used as default eta message threshold so that a default wait time/default threshold will never
+         * lead to an update message being sent.
+         */
+        val defaultEstimatedWaitTime: Duration = 10.seconds
     }
 
     private var transactionId: SecureHash? = null
+
+    @Suspendable
+    private fun counterpartyCanHandleBackPressure() = otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 
     @Suspendable
     override fun call(): Void? {
@@ -38,6 +65,11 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             validateRequestSignature(request, requestPayload.requestSignature)
 
             verifyTransaction(requestPayload)
+
+            val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
+            if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
+                otherSideSession.send(WaitTimeUpdate(eta))
+            }
 
             service.commitInputStates(
                     tx.inputs,
