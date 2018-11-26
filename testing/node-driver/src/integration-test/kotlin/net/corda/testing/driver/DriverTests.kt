@@ -2,13 +2,10 @@ package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.CertRole
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
-import net.corda.core.internal.list
-import net.corda.core.internal.readLines
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
@@ -25,6 +22,7 @@ import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
+import java.nio.file.Path
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -120,17 +118,22 @@ class DriverTests {
 
     @Test
     fun `started node, which is not waited for in the driver, is shutdown when the driver exits`() {
-        // First check that the process-id file is created by the node on startup, so that we can be sure our check that
-        // it's deleted on shutdown isn't a false-positive.
-        driver {
-            val baseDirectory = defaultNotaryNode.getOrThrow().baseDirectory
-            assertThat(baseDirectory / "process-id").exists()
-        }
+        fun Path.hasCordaProcessRunning() = (this / "process-id").exists()
 
-        val baseDirectory = internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME))) {
-            baseDirectory(DUMMY_NOTARY_NAME)
+        // Node waited for in the driver
+        val (name, baseDirectory) = driver {
+            val node = startNode().getOrThrow()
+            assertThat(node.baseDirectory.hasCordaProcessRunning()).isTrue()
+            node.nodeInfo.legalIdentities.single().name to node.baseDirectory
         }
-        assertThat(baseDirectory / "process-id").doesNotExist()
+        assertThat(baseDirectory.hasCordaProcessRunning()).isFalse()
+
+        // Node not waited for in the driver
+        val baseDirectoryNoWaited = driver {
+            startNode(NodeParameters(providedName = name))
+            baseDirectory(nodeName = name)
+        }
+        assertThat(baseDirectoryNoWaited.hasCordaProcessRunning()).isFalse()
     }
 
     @Test
