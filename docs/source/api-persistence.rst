@@ -335,7 +335,7 @@ which is then referenced within a custom flow:
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
 JPA Support (Available in Corda 4+)
-----------------------------------
+-----------------------------------
 In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
 method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
 useful if off-ledger data must be maintained in conjunction with on-ledger state data.
