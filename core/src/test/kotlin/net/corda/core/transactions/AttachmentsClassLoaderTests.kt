@@ -2,6 +2,7 @@ package net.corda.core.transactions
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.declaredField
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.testing.internal.fakeAttachment
@@ -65,7 +66,7 @@ class AttachmentsClassLoaderTests {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        assertFailsWith(AttachmentsClassLoader.Companion.OverlappingAttachments::class) {
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
             AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }

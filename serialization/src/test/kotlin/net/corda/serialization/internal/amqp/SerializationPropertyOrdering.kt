@@ -1,12 +1,8 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
-import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
-import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
+import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import org.apache.qpid.proton.amqp.Symbol
 import java.lang.reflect.Method
@@ -17,7 +13,8 @@ class SerializationPropertyOrdering {
     companion object {
         val VERBOSE get() = false
 
-        val sf = testDefaultFactoryNoEvolution()
+        val registry = TestDescriptorBasedSerializerRegistry()
+        val sf = testDefaultFactoryNoEvolution(registry)
     }
 
     // Force object references to be ued to ensure we go through that code path
@@ -98,25 +95,6 @@ class SerializationPropertyOrdering {
             assertEquals("c", this.fields[2].name)
             assertEquals("d", this.fields[3].name)
             assertEquals("e", this.fields[4].name)
-        }
-
-        // Test needs to look at a bunch of private variables, change the access semantics for them
-        val fields : Map<String, java.lang.reflect.Field> = mapOf (
-                "setter" to PropertyAccessorGetterSetter::class.java.getDeclaredField("setter")).apply {
-            this.values.forEach {
-                it.isAccessible = true
-            }
-        }
-
-        val serializersByDescriptor = sf.serializersByDescriptor
-        val schemaDescriptor = output.schema.types.first().descriptor.name
-
-        // make sure that each property accessor has a setter to ensure we're using getter / setter instantiation
-        serializersByDescriptor.filterKeys { (it as Symbol) == schemaDescriptor }.values.apply {
-            assertEquals(1, this.size)
-            assertTrue(this.first() is ObjectSerializer)
-            val propertyAccessors = (this.first() as ObjectSerializer).propertySerializers.serializationOrder as List<PropertyAccessorGetterSetter>
-            propertyAccessors.forEach { property -> assertNotNull(fields["setter"]!!.get(property) as Method?) }
         }
 
         val input = DeserializationInput(sf).deserialize(output.obj)

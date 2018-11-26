@@ -59,9 +59,9 @@ class LocalTypeModelTests {
         assertInformation<Nested>("""
             Nested(collectionHolder: StringKeyedCollectionHolder<Integer>?, intArray: int[], optionalParam: Short?)
               collectionHolder (optional): StringKeyedCollectionHolder<Integer>(list: List<Integer>, map: Map<String, Integer>, array: List<Integer>[]): CollectionHolder<String, Integer>
-              array: List<Integer>[]
-              list: List<Integer>
-              map: Map<String, Integer>
+                array: List<Integer>[]
+                list: List<Integer>
+                map: Map<String, Integer>
               intArray: int[]
         """)
 

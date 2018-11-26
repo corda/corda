@@ -42,7 +42,8 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     P2PMessageDeduplicator.ProcessedMessage::class.java,
                     PersistentIdentityService.PersistentIdentity::class.java,
                     PersistentIdentityService.PersistentIdentityNames::class.java,
-                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java
+                    ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
+                    PersistentKeyManagementService.PublicKeyHashToExternalId::class.java
             )) {
         override val migrationResource = "node-core.changelog-master"
     }
@@ -55,7 +56,10 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                   Pair(NodeCoreV1, SchemaOptions()))
 
     fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
-        schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" }
+        schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||
+                schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1" ||
+                schema::class.qualifiedName == "net.corda.node.services.transactions.NodeNotarySchemaV1"
+    }
 
     override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = requiredSchemas + extraSchemas.associateBy({ it }, { SchemaOptions() })
 
@@ -77,17 +81,11 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     // Because schema is always one supported by the state, just delegate.
     override fun generateMappedObject(state: ContractState, schema: MappedSchema): PersistentState {
         if ((schema === VaultSchemaV1) && (state is LinearState))
-            return VaultSchemaV1.VaultLinearStates(state.linearId, state.participants)
+            return VaultSchemaV1.VaultLinearStates(state.linearId)
         if ((schema === VaultSchemaV1) && (state is FungibleAsset<*>))
-            return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference, state.participants)
+            return VaultSchemaV1.VaultFungibleStates(state.owner, state.amount.quantity, state.amount.token.issuer.party, state.amount.token.issuer.reference)
         if ((schema === VaultSchemaV1) && (state is FungibleState<*>))
-            return VaultSchemaV1.VaultFungibleStates(
-                    participants = state.participants.toMutableSet(),
-                    owner = null,
-                    quantity = state.amount.quantity,
-                    issuer = null,
-                    issuerRef = null
-            )
+            return VaultSchemaV1.VaultFungibleStates(owner = null, quantity = state.amount.quantity, issuer = null, issuerRef = null)
         return (state as QueryableState).generateMappedObject(schema)
     }
 

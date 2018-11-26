@@ -111,7 +111,8 @@ class AttachmentSerializationTest {
 
     private class CustomAttachment(override val id: SecureHash, internal val customContent: String) : Attachment {
         override fun open() = throw UnsupportedOperationException("Not implemented.")
-        override val signers get() = throw UnsupportedOperationException()
+        override val signerKeys get() = throw UnsupportedOperationException()
+        override val signers: List<Party> get() = throw UnsupportedOperationException()
         override val size get() = throw UnsupportedOperationException()
     }
 

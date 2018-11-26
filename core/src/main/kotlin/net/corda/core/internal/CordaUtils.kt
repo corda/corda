@@ -1,10 +1,6 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
-import net.corda.core.KeepForDJVM
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
@@ -12,17 +8,14 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.SerializedBytes
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
-import net.corda.core.utilities.OpaqueBytes
 import org.slf4j.MDC
 
-// *Internal* Corda-specific utilities
+// *Internal* Corda-specific utilities.
 
 const val PLATFORM_VERSION = 4
 
@@ -40,13 +33,13 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
     }
 }
 
-/** Provide access to internal method for AttachmentClassLoaderTests */
+/** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
     return toWireTransactionWithContext(services, serializationContext)
 }
 
-/** Provide access to internal method for AttachmentClassLoaderTests */
+/** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
     return toLedgerTransactionWithContext(services, serializationContext)
@@ -80,11 +73,3 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
     override fun get(index: Int) = partialResolvedList[index]
             ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
 }
-
-/**
- * A SerializedStateAndRef is a pair (BinaryStateRepresentation, StateRef).
- * The [serializedState] is the actual component from the original transaction.
- */
-@KeepForDJVM
-@CordaSerializable
-data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef)

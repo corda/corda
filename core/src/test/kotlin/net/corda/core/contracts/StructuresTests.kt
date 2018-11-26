@@ -3,6 +3,7 @@ package net.corda.core.contracts
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.spy
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.identity.Party
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -30,7 +31,8 @@ class AttachmentTest {
         val attachment = object : Attachment {
             override val id get() = throw UnsupportedOperationException()
             override fun open() = inputStream
-            override val signers get() = throw UnsupportedOperationException()
+            override val signerKeys get() = throw UnsupportedOperationException()
+            override val signers: List<Party> get() = throw UnsupportedOperationException()
             override val size: Int = 512
         }
         try {

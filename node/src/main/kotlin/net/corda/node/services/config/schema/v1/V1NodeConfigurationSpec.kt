@@ -25,7 +25,6 @@ import net.corda.node.services.config.schema.parsers.toPrincipal
 import net.corda.node.services.config.schema.parsers.toProperties
 import net.corda.node.services.config.schema.parsers.toURL
 import net.corda.node.services.config.schema.parsers.toUUID
-import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 
 internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfiguration>("NodeConfiguration") {
     private val myLegalName by string().mapValid(::toCordaX500Name)
@@ -74,8 +73,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
-    private val cryptoServiceName by enum(SupportedCryptoServices::class).optional()
-    private val cryptoServiceConf by string().optional()
     @Suppress("unused")
     private val custom by nestedObject().optional()
 
@@ -131,9 +128,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
-                    cryptoServiceName = configuration[cryptoServiceName],
-                    cryptoServiceConf = configuration[cryptoServiceConf]
+                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
             ))
         } catch (e: Exception) {
             return when (e) {

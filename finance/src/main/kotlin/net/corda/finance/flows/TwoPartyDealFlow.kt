@@ -55,9 +55,7 @@ object TwoPartyDealFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession.counterparty))
-            val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
-            val anonymousCounterparty = txIdentities[otherSideSession.counterparty] ?: otherSideSession.counterparty.anonymise()
+            val (anonymousMe, anonymousCounterparty) = subFlow(SwapIdentitiesFlow(otherSideSession))
             // DOCEND 2
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
@@ -131,6 +129,7 @@ object TwoPartyDealFlow {
 
         @Suspendable
         private fun receiveAndValidateHandshake(): Handshake<U> {
+            subFlow(SwapIdentitiesFlow(otherSideSession))
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
             val handshake = otherSideSession.receive<Handshake<U>>()

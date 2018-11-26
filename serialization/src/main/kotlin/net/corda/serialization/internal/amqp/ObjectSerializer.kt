@@ -1,185 +1,209 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.internal.isConcreteClass
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.serialize
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
-import net.corda.serialization.internal.amqp.SerializerFactory.Companion.nameForType
+import net.corda.serialization.internal.model.*
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
-import java.lang.reflect.Constructor
-import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Type
-import kotlin.reflect.jvm.javaConstructor
 
-/**
- * Responsible for serializing and deserializing a regular object instance via a series of properties
- * (matched with a constructor).
- */
-open class ObjectSerializer(val clazz: Type, factory: SerializerFactory) : AMQPSerializer<Any> {
-    override val type: Type get() = clazz
-    open val kotlinConstructor = if (clazz.asClass().isConcreteClass) constructorForDeserialization(clazz) else null
-    val javaConstructor by lazy { kotlinConstructor?.javaConstructor }
+interface ObjectSerializer : AMQPSerializer<Any> {
+
+    val propertySerializers: Map<String, PropertySerializer>
+    val fields: List<Field>
 
     companion object {
-        private val logger = contextLogger()
+        fun make(typeInformation: LocalTypeInformation, factory: LocalSerializerFactory): ObjectSerializer {
+            if (typeInformation is LocalTypeInformation.NonComposable)
+                throw NotSerializableException(
+                        "Trying to build an object serializer for ${typeInformation.typeIdentifier.prettyPrint(false)}, " +
+                        "but it is not constructible from its public properties, and so requires a custom serialiser.")
+
+            val typeDescriptor = factory.createDescriptor(typeInformation)
+            val typeNotation = TypeNotationGenerator.getTypeNotation(typeInformation, typeDescriptor)
+
+            return when (typeInformation) {
+                is LocalTypeInformation.Composable ->
+                    makeForComposable(typeInformation, typeNotation, typeDescriptor, factory)
+                is LocalTypeInformation.AnInterface,
+                is LocalTypeInformation.Abstract ->
+                    makeForAbstract(typeNotation, typeInformation, typeDescriptor, factory)
+                else -> throw NotSerializableException("Cannot build object serializer for $typeInformation")
+            }
+        }
+
+        private fun makeForAbstract(typeNotation: CompositeType,
+                                    typeInformation: LocalTypeInformation,
+                                    typeDescriptor: Symbol,
+                                    factory: LocalSerializerFactory): AbstractObjectSerializer {
+            val propertySerializers = makePropertySerializers(typeInformation.propertiesOrEmptyMap, factory)
+            val writer = ComposableObjectWriter(typeNotation, typeInformation.interfacesOrEmptyList, propertySerializers)
+            return AbstractObjectSerializer(typeInformation.observedType, typeDescriptor, propertySerializers,
+                    typeNotation.fields, writer)
+        }
+
+        private fun makeForComposable(typeInformation: LocalTypeInformation.Composable,
+                                      typeNotation: CompositeType,
+                                      typeDescriptor: Symbol,
+                                      factory: LocalSerializerFactory): ComposableObjectSerializer {
+            val propertySerializers = makePropertySerializers(typeInformation.properties, factory)
+            val reader = ComposableObjectReader(
+                    typeInformation.typeIdentifier,
+                    propertySerializers,
+                    ObjectBuilder.makeProvider(typeInformation))
+
+            val writer = ComposableObjectWriter(
+                    typeNotation,
+                    typeInformation.interfaces,
+                    propertySerializers)
+
+            return ComposableObjectSerializer(
+                    typeInformation.observedType,
+                    typeDescriptor,
+                    propertySerializers,
+                    typeNotation.fields,
+                    reader,
+                    writer)
+        }
+
+        private fun makePropertySerializers(properties: Map<PropertyName, LocalPropertyInformation>,
+                                            factory: LocalSerializerFactory): Map<String, PropertySerializer> =
+                properties.mapValues { (name, property) ->
+                    ComposableTypePropertySerializer.make(name, property, factory)
+                }
     }
+}
 
-    open val propertySerializers: PropertySerializers by lazy {
-        propertiesForSerialization(kotlinConstructor, clazz, factory)
-    }
+class ComposableObjectSerializer(
+        override val type: Type,
+        override val typeDescriptor: Symbol,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
+        override val fields: List<Field>,
+        private val reader: ComposableObjectReader,
+        private val writer: ComposableObjectWriter): ObjectSerializer {
 
-    private val typeName = nameForType(clazz)
+    override fun writeClassInfo(output: SerializationOutput) = writer.writeClassInfo(output)
 
-    override val typeDescriptor: Symbol = Symbol.valueOf("$DESCRIPTOR_DOMAIN:${factory.fingerPrinter.fingerprint(type)}")
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+            writer.writeObject(obj, data, type, output, context, debugIndent)
 
-    // We restrict to only those annotated or whitelisted
-    private val interfaces = interfacesForSerialization(clazz, factory)
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            reader.readObject(obj, schemas, input, context)
+}
 
-    internal open val typeNotation: TypeNotation by lazy {
-        CompositeType(typeName, null, generateProvides(), Descriptor(typeDescriptor), generateFields())
-    }
-
-    override fun writeClassInfo(output: SerializationOutput) {
+class ComposableObjectWriter(
+        private val typeNotation: TypeNotation,
+        private val interfaces: List<LocalTypeInformation>,
+        private val propertySerializers: Map<PropertyName, PropertySerializer>
+) {
+    fun writeClassInfo(output: SerializationOutput) {
         if (output.writeTypeNotations(typeNotation)) {
             for (iface in interfaces) {
-                output.requireSerializer(iface)
+                output.requireSerializer(iface.observedType)
             }
 
-            propertySerializers.serializationOrder.forEach { property ->
-                property.serializer.writeClassInfo(output)
+            propertySerializers.values.forEach { serializer ->
+                serializer.writeClassInfo(output)
             }
         }
     }
 
-    override fun writeObject(
-            obj: Any,
-            data: Data,
-            type: Type,
-            output: SerializationOutput,
-            context: SerializationContext,
-            debugIndent: Int) = ifThrowsAppend({ clazz.typeName }
-    ) {
-        if (propertySerializers.deserializableSize != javaConstructor?.parameterCount &&
-                javaConstructor?.parameterCount ?: 0 > 0
-        ) {
-            throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
-                    + "${javaConstructor?.parameterCount} parameters but we have ${propertySerializers.size} "
-                    + "properties to serialize.")
-        }
-
-        // Write described
+    fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) {
         data.withDescribed(typeNotation.descriptor) {
-            // Write list
             withList {
-                propertySerializers.serializationOrder.forEach { property ->
-                    property.serializer.writeProperty(obj, this, output, context, debugIndent + 1)
+                propertySerializers.values.forEach { propertySerializer ->
+                    propertySerializer.writeProperty(obj, this, output, context, debugIndent + 1)
                 }
             }
         }
     }
+}
 
-    override fun readObject(
-            obj: Any,
-            schemas: SerializationSchemas,
-            input: DeserializationInput,
-            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
-        if (obj is List<*>) {
-            if (obj.size != propertySerializers.size) {
-                throw AMQPNotSerializableException(type, "${obj.size} objects to deserialize, but " +
-                        "${propertySerializers.size} properties in described type $typeName")
-            }
+class ComposableObjectReader(
+        val typeIdentifier: TypeIdentifier,
+        private val propertySerializers: Map<PropertyName, PropertySerializer>,
+        private val objectBuilderProvider: () -> ObjectBuilder
+) {
 
-            return if (propertySerializers.byConstructor) {
-                readObjectBuildViaConstructor(obj, schemas, input, context)
-            } else {
-                readObjectBuildViaSetters(obj, schemas, input, context)
-            }
-        } else {
-            throw AMQPNotSerializableException(type, "Body of described type is unexpected $obj")
-        }
-    }
-
-    private fun readObjectBuildViaConstructor(
-            obj: List<*>,
-            schemas: SerializationSchemas,
-            input: DeserializationInput,
-            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
-        logger.trace { "Calling construction based construction for ${clazz.typeName}" }
-
-        return construct(propertySerializers.serializationOrder
-                .zip(obj)
-                .mapNotNull { (accessor, obj) ->
-                    // Ensure values get read out of input no matter what
-                    val value = accessor.serializer.readProperty(obj, schemas, input, context)
-
-                    when(accessor) {
-                        is PropertyAccessorConstructor -> accessor.initialPosition to value
-                        is CalculatedPropertyAccessor -> null
-                        else -> throw UnsupportedOperationException(
-                                "${accessor::class.simpleName} accessor not supported " +
-                                        "for constructor-based object building")
-                    }
+    fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            ifThrowsAppend({ typeIdentifier.prettyPrint(false) }) {
+                if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
+                if (obj.size < propertySerializers.size) {
+                    throw NotSerializableException("${obj.size} objects to deserialize, but " +
+                            "${propertySerializers.size} properties in described type ${typeIdentifier.prettyPrint(false)}")
                 }
-                .sortedWith(compareBy { it.first })
-                .map { it.second })
-    }
 
-    private fun readObjectBuildViaSetters(
-            obj: List<*>,
-            schemas: SerializationSchemas,
-            input: DeserializationInput,
-            context: SerializationContext): Any = ifThrowsAppend({ clazz.typeName }) {
-        logger.trace { "Calling setter based construction for ${clazz.typeName}" }
+                val builder = objectBuilderProvider()
+                builder.initialize()
+                obj.asSequence().zip(propertySerializers.values.asSequence())
+                        // Read _all_ properties from the stream
+                        .map { (item, property) -> property to property.readProperty(item, schemas, input, context) }
+                        // Throw away any calculated properties
+                        .filter { (property, _) -> !property.isCalculated }
+                        // Write the rest into the builder
+                        .forEachIndexed { slot, (_, propertyValue) -> builder.populate(slot, propertyValue) }
+                return builder.build()
+            }
+}
 
-        val instance: Any = javaConstructor?.newInstanceUnwrapped() ?: throw AMQPNotSerializableException(
-                type,
-                "Failed to instantiate instance of object $clazz")
+class AbstractObjectSerializer(
+        override val type: Type,
+        override val typeDescriptor: Symbol,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
+        override val fields: List<Field>,
+        private val writer: ComposableObjectWriter): ObjectSerializer {
+    override fun writeClassInfo(output: SerializationOutput) =
+        writer.writeClassInfo(output)
 
-        // read the properties out of the serialised form, since we're invoking the setters the order we
-        // do it in doesn't matter
-        val propertiesFromBlob = obj
-                .zip(propertySerializers.serializationOrder)
-                .map { it.second.serializer.readProperty(it.first, schemas, input, context) }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+        writer.writeObject(obj, data, type, output, context, debugIndent)
 
-        // one by one take a property and invoke the setter on the class
-        propertySerializers.serializationOrder.zip(propertiesFromBlob).forEach {
-            it.first.set(instance, it.second)
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+        throw UnsupportedOperationException("Cannot deserialize abstract type ${type.typeName}")
+}
+
+class EvolutionObjectSerializer(
+        override val type: Type,
+        override val typeDescriptor: Symbol,
+        override val propertySerializers: Map<PropertyName, PropertySerializer>,
+        private val reader: ComposableObjectReader): ObjectSerializer {
+
+    companion object {
+        fun make(localTypeInformation: LocalTypeInformation.Composable, remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
+                 properties: Map<String, LocalPropertyInformation>, classLoader: ClassLoader): EvolutionObjectSerializer {
+            val propertySerializers = makePropertySerializers(properties, remoteTypeInformation.properties, classLoader)
+            val reader = ComposableObjectReader(
+                    localTypeInformation.typeIdentifier,
+                    propertySerializers,
+                    EvolutionObjectBuilder.makeProvider(localTypeInformation.typeIdentifier, constructor, properties, remoteTypeInformation.properties.keys.sorted()))
+
+            return EvolutionObjectSerializer(
+                    localTypeInformation.observedType,
+                    Symbol.valueOf(remoteTypeInformation.typeDescriptor),
+                    propertySerializers,
+                    reader)
         }
 
-        return instance
+        private fun makePropertySerializers(localProperties: Map<String, LocalPropertyInformation>,
+                                            remoteProperties: Map<String, RemotePropertyInformation>,
+                                            classLoader: ClassLoader): Map<String, PropertySerializer> =
+                remoteProperties.mapValues { (name, property) ->
+                    val localProperty = localProperties[name]
+                    val isCalculated = localProperty?.isCalculated ?: false
+                    val type = localProperty?.type?.observedType ?: property.type.typeIdentifier.getLocalType(classLoader)
+                    ComposableTypePropertySerializer.makeForEvolution(name, isCalculated, property.type.typeIdentifier, type)
+                }
     }
 
-    private fun generateFields(): List<Field> {
-        return propertySerializers.serializationOrder.map {
-            Field(it.serializer.name, it.serializer.type, it.serializer.requires, it.serializer.default, null, it.serializer.mandatory, false)
-        }
-    }
+    override val fields: List<Field> get() = emptyList()
 
-    private fun generateProvides(): List<String> = interfaces.map { nameForType(it) }
+    override fun writeClassInfo(output: SerializationOutput) =
+            throw UnsupportedOperationException("Evolved types cannot be written")
 
-    fun construct(properties: List<Any?>): Any {
-        logger.trace { "Calling constructor: '$javaConstructor' with properties '$properties'" }
+    override fun writeObject(obj: Any, data: Data, type: Type, output: SerializationOutput, context: SerializationContext, debugIndent: Int) =
+            throw UnsupportedOperationException("Evolved types cannot be written")
 
-        if (properties.size != javaConstructor?.parameterCount) {
-            throw AMQPNotSerializableException(type, "Serialization constructor for class $type expects "
-                    + "${javaConstructor?.parameterCount} parameters but we have ${properties.size} "
-                    + "serialized properties.")
-        }
+    override fun readObject(obj: Any, schemas: SerializationSchemas, input: DeserializationInput, context: SerializationContext): Any =
+            reader.readObject(obj, schemas, input, context)
 
-        return javaConstructor?.newInstanceUnwrapped(*properties.toTypedArray())
-                ?: throw AMQPNotSerializableException(
-                        type,
-                        "Attempt to deserialize an interface: $clazz. Serialized form is invalid.")
-    }
-
-    private fun <T> Constructor<T>.newInstanceUnwrapped(vararg args: Any?): T {
-        try {
-            return newInstance(*args)
-        } catch (e: InvocationTargetException) {
-            throw e.cause!!
-        }
-    }
 }

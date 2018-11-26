@@ -7,13 +7,28 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
+  whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
+  also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities
+  with a node at will with no checks.
+
+  The result type has changed to a simple wrapper class, instead of a Map, to make extracting the identities easier. Also, the wire protocol
+  of the flow has slightly changed.
+
+  .. note:: V3 and V4 of confidential-identities are not compatible and confidential-identities V3 will not work with a V4 Corda node. CorDapps
+     in such scenarios using confidential-identities must be updated.
+
+* Marked the ``Attachment`` interface as ``@DoNotImplement`` because it is not meant to be extended by CorDapp developers. If you have already
+  done so, please get in contact on the usual communication channels.
+
 * Added auto-acceptance of network parameters for network updates. This behaviour is available for a subset of the network parameters
   and is configurable via the node config. See :doc:`network-map` for more information.
-  
-* Deprecated `SerializationContext.withAttachmentsClassLoader`. This functionality has always been disabled by flags
-and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
 
-* Deprecated the `LedgerTransaction` constructor. No client code should call it directly. LedgerTransactions can be created from WireTransactions if required.
+* Deprecated ``SerializationContext.withAttachmentsClassLoader``. This functionality has always been disabled by flags
+  and there is no reason for a CorDapp developer to use it. It is just an internal implementation detail of Corda.
+
+* Deprecated all means to directly create a ``LedgerTransaction`` instance, as client code is only meant to get hold of a ``LedgerTransaction``
+  via ``WireTransaction.toLedgerTransaction``.
 
 * Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
@@ -29,10 +44,10 @@ and there is no reason for a CorDapp developer to use it. It is just an internal
   un-acknowledged in the message broker. This enables the recovery scenerio whereby any missing CorDapp can be installed and retried on node
   restart. As a consequence the initiating flow will be blocked until the receiving node has resolved the issue.
 
-* ``FinalityFlow`` is now an inlined flow and no longer requires a handler flow in the counterparty. This is to fix the
-  security problem with the handler flow as it accepts any transaction it receives without any checks. Existing CorDapp
-  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that
-  CorDapps switch to this new API. See :doc:`upgrade-notes` for further details.
+* ``FinalityFlow`` is now an inlined flow and requires ``FlowSession`` s to each party intended to receive the transaction. This is to fix the
+  security problem with the old API that required every node to accept any transaction it received without any checks. Existing CorDapp
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that CorDapps switch to
+  this new API. See :doc:`upgrade-notes` for further details.
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
@@ -272,6 +287,11 @@ and there is no reason for a CorDapp developer to use it. It is just an internal
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
+
+* A new wrapper class over ``StateRef`` is introduced, called ``ReferenceStateRef``. Although "reference input states" are stored as
+  ``StateRef`` objects in ``WireTransaction``, we needed a way to distinguish between "input states" and "reference input states" when
+  required to filter by object type. Thus, when one wants to filter-in all "reference input states" in a ``FilteredTransaction``
+  then he/she should check if it is of type ``ReferenceStateRef``.
 
 * Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
   as well as `FungibleAsset`. This _might_ cause a compile failure in some obscure cases due to the removal of the type

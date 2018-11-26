@@ -3,7 +3,7 @@
 package net.corda.client.jackson.internal
 
 import com.fasterxml.jackson.annotation.*
-import com.fasterxml.jackson.annotation.JsonCreator.Mode.DISABLED
+import com.fasterxml.jackson.annotation.JsonCreator.Mode.*
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.core.JsonParseException
@@ -27,6 +27,7 @@ import net.corda.core.crypto.*
 import net.corda.core.crypto.PartialMerkleTree.PartialTree
 import net.corda.core.identity.*
 import net.corda.core.internal.DigitalSignatureWithCert
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.SerializedBytes
@@ -38,10 +39,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.serialization.internal.amqp.constructorForDeserialization
-import net.corda.serialization.internal.amqp.hasCordaSerializable
-import net.corda.serialization.internal.amqp.propertiesForSerialization
+import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.model.LocalTypeInformation
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath
@@ -95,10 +94,11 @@ private class CordaSerializableBeanSerializerModifier : BeanSerializerModifier()
                                   beanProperties: MutableList<BeanPropertyWriter>): MutableList<BeanPropertyWriter> {
         val beanClass = beanDesc.beanClass
         if (hasCordaSerializable(beanClass) && beanClass.kotlinObjectInstance == null) {
-            val ctor = constructorForDeserialization(beanClass)
-            val amqpProperties = propertiesForSerialization(ctor, beanClass, serializerFactory)
-                    .serializationOrder
-                    .mapNotNull { if (it.isCalculated) null else it.serializer.name }
+            val typeInformation = serializerFactory.getTypeInformation(beanClass)
+            val properties = typeInformation.propertiesOrEmptyMap
+            val amqpProperties = properties.mapNotNull { (name, property) ->
+                if (property.isCalculated) null else name
+            }
             val propertyRenames = beanDesc.findProperties().associateBy({ it.name }, { it.internalName })
             (amqpProperties - propertyRenames.values).let {
                 check(it.isEmpty()) { "Jackson didn't provide serialisers for $it" }
@@ -188,6 +188,7 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
                 value.commands,
                 value.timeWindow,
                 value.attachments,
+                value.references,
                 value.privacySalt
         ))
     }
@@ -196,13 +197,14 @@ private class WireTransactionSerializer : JsonSerializer<WireTransaction>() {
 private class WireTransactionDeserializer : JsonDeserializer<WireTransaction>() {
     override fun deserialize(parser: JsonParser, ctxt: DeserializationContext): WireTransaction {
         val wrapper = parser.readValueAs<WireTransactionJson>()
-        val componentGroups = WireTransaction.createComponentGroups(
+        val componentGroups = createComponentGroups(
                 wrapper.inputs,
                 wrapper.outputs,
                 wrapper.commands,
                 wrapper.attachments,
                 wrapper.notary,
-                wrapper.timeWindow
+                wrapper.timeWindow,
+                wrapper.references
         )
         return WireTransaction(componentGroups, wrapper.privacySalt)
     }
@@ -215,6 +217,7 @@ private class WireTransactionJson(val id: SecureHash,
                                   val commands: List<Command<*>>,
                                   val timeWindow: TimeWindow?,
                                   val attachments: List<SecureHash>,
+                                  val references: List<StateRef>,
                                   val privacySalt: PrivacySalt)
 
 private interface TransactionStateMixin {

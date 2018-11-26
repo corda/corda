@@ -5,6 +5,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.amqp.AMQPNotSerializableException
 import net.corda.serialization.internal.amqp.CustomSerializer
+import net.corda.serialization.internal.amqp.LocalSerializerFactory
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.custom.ClassSerializer.ClassProxy
 
@@ -12,7 +13,7 @@ import net.corda.serialization.internal.amqp.custom.ClassSerializer.ClassProxy
  * A serializer for [Class] that uses [ClassProxy] proxy object to write out
  */
 class ClassSerializer(
-        factory: SerializerFactory
+        factory: LocalSerializerFactory
 ) : CustomSerializer.Proxy<Class<*>, ClassSerializer.ClassProxy>(
         Class::class.java,
         ClassProxy::class.java,

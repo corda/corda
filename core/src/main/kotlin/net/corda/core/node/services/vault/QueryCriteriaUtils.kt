@@ -10,6 +10,7 @@ import net.corda.core.node.services.vault.ColumnPredicate.*
 import net.corda.core.node.services.vault.EqualityComparisonOperator.*
 import net.corda.core.node.services.vault.LikenessOperator.*
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
 import kotlin.jvm.internal.CallableReference
@@ -234,7 +235,7 @@ sealed class SortAttribute {
      * [entityStateColumnName] should reference an entity attribute name as defined by the associated mapped schema
      * (for example, [CashSchemaV1.PersistentCashState::currency.name])
      */
-    data class Custom(val entityStateClass: Class<out PersistentState>,
+    data class Custom(val entityStateClass: Class<out StatePersistable>,
                       val entityStateColumnName: String) : SortAttribute()
 }
 
