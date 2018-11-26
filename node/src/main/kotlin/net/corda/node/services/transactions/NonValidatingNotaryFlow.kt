@@ -18,7 +18,7 @@ import java.time.Duration
  * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
  * undo the commit of the input states (the exact mechanism still needs to be worked out).
  */
-class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
+class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val tx = requestPayload.coreTransaction
         return when (tx) {
