@@ -335,7 +335,7 @@ class JmxPolicy private constructor(
     }
 
     override fun hashCode(): Int {
-        var result = startJmxHttpServer.hashCode()
+        var result = httpPort.hashCode()
         result = 31 * result + httpPort
         return result
     }
