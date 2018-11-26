@@ -42,13 +42,12 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas", "net.corda.notary.raft"),
-                notarySpecs = listOf(
-                        NotarySpec(
-                                DUMMY_NOTARY_NAME,
-                                rpcUsers = listOf(testUser),
-                                cluster = DummyClusterSpec(clusterSize = 3, compositeServiceIdentity = compositeIdentity))
-                )
+                extraCordappPackagesToScan = listOf("net.corda.finance", "net.corda.notary.raft"),
+                notarySpecs = listOf(NotarySpec(
+                        DUMMY_NOTARY_NAME,
+                        rpcUsers = listOf(testUser),
+                        cluster = DummyClusterSpec(clusterSize = 3, compositeServiceIdentity = compositeIdentity)
+                ))
         )) {
             alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser)).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
