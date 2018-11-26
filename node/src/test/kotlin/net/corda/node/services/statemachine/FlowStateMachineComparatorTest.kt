@@ -142,6 +142,10 @@ class FlowStateMachineComparatorTest {
             get() = throw NotImplementedError()
         override val ourSenderUUID: String?
             get() = throw NotImplementedError()
+
+        override fun updateTimedFlowTimeout(timeoutSeconds: Long) {
+            throw NotImplementedError()
+        }
     }
 
     @Test
