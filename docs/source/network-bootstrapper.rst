@@ -273,7 +273,7 @@ Or alternatively, by using the short form version:
 ``java -jar network-bootstrapper-VERSION.jar -n=<path_to_file>``
 
 The network parameter overrides file is a HOCON file with the following fields, all of which are optional. Any field that is not provided will be
-ignored. If a field is not provided and you are bootstrapping a new network, a sensible default value will be used. If a field is not provided, and you
+ignored. If a field is not provided and you are bootstrapping a new network, a sensible default value will be used. If a field is not provided and you
 are updating an existing network, the value in the existing network parameters file will be used.
 
 .. note:: All fields can be used with placeholders for environment variables. For example: ``${KEY_STORE_PASSWORD}`` would be replaced by the contents of environment
@@ -288,8 +288,8 @@ The available configuration fields are listed below:
 :maxTransactionSize: The maximum permitted transaction size, in bytes.
 
 :eventHorizon: The time after which nodes will be removed from the network map if they have not been seen during this period. This parameter uses
-the Java `Duration.parse` function to interpret the data. See `here <https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence->`_
-for information on valid inputs.
+    the ``parse`` function on the ``java.time.Duration`` class to interpret the data. See `here <https://docs.oracle.com/javase/8/docs/api/java/time/Duration.html#parse-java.lang.CharSequence->`_
+    for information on valid inputs.
 
 :packageOwnership: A list of package owners. See `Package namespace ownership`_ for more information. For each package owner, the following fields
     are required:
