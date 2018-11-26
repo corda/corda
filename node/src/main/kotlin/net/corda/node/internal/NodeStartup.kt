@@ -276,6 +276,7 @@ open class NodeStartup : NodeStartupLogging {
             // when our process shuts down, but we try in stop() anyway just to be nice.
             addShutdownHook {
                 pidFileLock.release()
+                pidFile.delete()
             }
             val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
             pidFileRw.setLength(0)
@@ -284,6 +285,7 @@ open class NodeStartup : NodeStartupLogging {
             val appUser = System.getProperty("user.name")
             println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
+            pidFile.delete()
             System.exit(1)
         }
     }
