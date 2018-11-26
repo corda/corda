@@ -2,6 +2,7 @@ package net.corda.notary.mysql
 
 import com.codahale.metrics.Gauge
 import com.codahale.metrics.MetricRegistry
+import com.codahale.metrics.SlidingWindowReservoir
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
 import com.google.common.collect.Queues
@@ -20,11 +21,9 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.notary.*
 import net.corda.core.internal.notary.UniquenessProvider.Result
-import net.corda.core.internal.notary.isConsumedByTheSameTx
-import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
@@ -34,10 +33,12 @@ import net.corda.core.utilities.trace
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import java.sql.*
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
@@ -125,6 +126,14 @@ class MySQLUniquenessProvider(
     private val dataSource = HikariDataSource(HikariConfig(config.dataSource))
     private val connectionRetries = config.connectionRetries
 
+    /**
+     * Measured in states per minute, with a minimum of 1. We take an average of the last 100 commits.
+     * Minutes was chosen to increase accuracy by 60x over seconds, given we have to use longs here.
+     */
+    private val throughputHistory = SlidingWindowReservoir(100)
+    @Volatile
+    private var throughput: Double = 0.0
+
     /** Attempts to obtain a database connection with number of retries specified in [connectionRetries]. */
     @VisibleForTesting
     val connection: Connection
@@ -150,6 +159,8 @@ class MySQLUniquenessProvider(
         }
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(config.maxQueueSize)
+    private val nrQueuedStates = AtomicInteger(0)
+
     private val requestFutures = ConcurrentHashMap<UUID, OpenFuture<Result>>()
 
     /** Track the request queue size. */
@@ -167,6 +178,31 @@ class MySQLUniquenessProvider(
         } catch (e: InterruptedException) {
         }
         log.debug { "Shutting down with ${requestQueue.size} in-flight requests unprocessed." }
+    }
+
+    /**
+     * Estimated time of request processing.
+     * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
+     * It checks that there is actual traffic going on (i.e. a non-zero number of states are queued and there
+     * is actual throughput) and then returns the expected wait time scaled up by a factor of 2 to give a probable
+     * upper bound.
+     *
+     * @param numStates The number of states (input + reference) we're about to request be notarised.
+     */
+    override fun getEta(numStates: Int): Duration {
+        val rate = throughput
+        val nrStates = nrQueuedStates.getAndAdd(numStates)
+        log.debug { "rate: $rate, queueSize: $nrStates" }
+        if (rate > 0.0 && nrStates > 0) {
+            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+        }
+        return NotaryServiceFlow.defaultEstimatedWaitTime
+    }
+
+    private fun decrementQueueSize(requests: List<CommitRequest>): Int {
+        val nrStates = requests.map { it.states.size + it.references.size }.sum()
+        nrQueuedStates.addAndGet(-nrStates)
+        return nrStates
     }
 
     /**
@@ -221,21 +257,27 @@ class MySQLUniquenessProvider(
      * inputs is over [maxBatchInputStates].
      */
     private fun processBuffer(buffer: LinkedList<CommitRequest>) {
+        val numStates = decrementQueueSize(buffer)
         var inputStateCount = 0
         val batch = ArrayList<CommitRequest>()
-        while (buffer.isNotEmpty()) {
-            while (buffer.isNotEmpty() && inputStateCount + buffer.peek().states.size <= config.maxBatchInputStates) {
-                val request = buffer.poll()
-                batch.add(request)
-                inputStateCount += request.states.size
+        val duration = elapsedTime {
+            while (buffer.isNotEmpty()) {
+                while (buffer.isNotEmpty() && inputStateCount + buffer.peek().states.size <= config.maxBatchInputStates) {
+                    val request = buffer.poll()
+                    batch.add(request)
+                    inputStateCount += request.states.size
+                }
+                log.debug { "Processing a batch of size: ${batch.size}, input states: $inputStateCount" }
+                processBatch(batch)
+                processedBatchSize.update(batch.size)
+                inputStatesMeter.mark(inputStateCount.toLong())
+                batch.clear()
+                inputStateCount = 0
             }
-            log.debug { "Processing a batch of size: ${batch.size}, input states: $inputStateCount" }
-            processBatch(batch)
-            processedBatchSize.update(batch.size)
-            inputStatesMeter.mark(inputStateCount.toLong())
-            batch.clear()
-            inputStateCount = 0
         }
+        val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
+        throughputHistory.update(maxOf(statesPerMinute, 1))
+        throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.
     }
 
     private fun processBatch(requests: List<CommitRequest>) {

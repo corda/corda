@@ -1,5 +1,6 @@
 package net.corda.notary.jpa
 
+import com.codahale.metrics.SlidingWindowReservoir
 import com.google.common.collect.Queues
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
@@ -12,10 +13,8 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.internal.notary.isConsumedByTheSameTx
-import net.corda.core.internal.notary.validateTimeWindow
+import net.corda.core.internal.elapsedTime
+import net.corda.core.internal.notary.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -28,10 +27,12 @@ import net.corda.serialization.internal.CordaSerializationEncoding
 import org.hibernate.Session
 import java.sql.SQLException
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 import kotlin.concurrent.thread
@@ -45,6 +46,14 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     // This is the prefix of the ID in the request log table, to allow running multiple instances that access the
     // same table.
     val instanceId = UUID.randomUUID().toString()
+
+    /**
+     * Measured in states per minute, with a minimum of 1. We take an average of the last 100 commits.
+     * Minutes was chosen to increase accuracy by 60x over seconds, given we have to use longs here.
+     */
+    private val throughputHistory = SlidingWindowReservoir(100)
+    @Volatile
+    private var throughput: Double = 0.0
 
     @Entity
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_request_log")
@@ -98,8 +107,34 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     )
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
+    private val nrQueuedStates = AtomicInteger(0)
 
     // TODO: Collect metrics.
+
+    /**
+     * Estimated time of request processing.
+     * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
+     * It checks that there is actual traffic going on (i.e. a non-zero number of states are queued and there
+     * is actual throughput) and then returns the expected wait time scaled up by a factor of 2 to give a probable
+     * upper bound.
+     *
+     * @param numStates The number of states (input + reference) we're about to request be notarised.
+     */
+    override fun getEta(numStates: Int): Duration {
+        val rate = throughput
+        val nrStates = nrQueuedStates.getAndAdd(numStates)
+        log.debug { "rate: $rate, queueSize: $nrStates" }
+        if (rate > 0.0 && nrStates > 0) {
+            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+        }
+        return NotaryServiceFlow.defaultEstimatedWaitTime
+    }
+
+    private fun decrementQueueSize(requests: List<CommitRequest>): Int {
+        val nrStates = requests.map { it.states.size + it.references.size }.sum()
+        nrQueuedStates.addAndGet(-nrStates)
+        return nrStates
+    }
 
     /** A requestEntitiy processor thread. */
     private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {
@@ -225,7 +260,6 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     }
 
     private fun processRequest(session: Session, request: CommitRequest, allConflicts: MutableMap<StateRef, StateConsumptionDetails>, toCommit: MutableList<CommitRequest>): UniquenessProvider.Result {
-
         val conflicts = (request.states + request.references).mapNotNull {
             if (allConflicts.containsKey(it)) it to allConflicts[it]!!
             else null
@@ -266,33 +300,39 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     }
 
     private fun processRequests(requests: List<CommitRequest>) {
-        try {
-            // Note that there is an additional retry mechanism within the transaction itself.
-            withRetry {
-                database.transaction {
-                    val em = session.entityManagerFactory.createEntityManager()
-                    em.unwrap(Session::class.java).jdbcBatchSize = jdbcBatchSize
+        val numStates = decrementQueueSize(requests)
+        val duration = elapsedTime {
+            try {
+                // Note that there is an additional retry mechanism within the transaction itself.
+                withRetry {
+                    database.transaction {
+                        val em = session.entityManagerFactory.createEntityManager()
+                        em.unwrap(Session::class.java).jdbcBatchSize = jdbcBatchSize
 
-                    val toCommit = mutableListOf<CommitRequest>()
-                    val allConflicts = findAllConflicts(session, requests)
+                        val toCommit = mutableListOf<CommitRequest>()
+                        val allConflicts = findAllConflicts(session, requests)
 
-                    val results = requests.map { request ->
-                        processRequest(session, request, allConflicts, toCommit)
-                    }
-                    logRequests(requests)
-                    commitRequests(session, toCommit)
+                        val results = requests.map { request ->
+                            processRequest(session, request, allConflicts, toCommit)
+                        }
+                        logRequests(requests)
+                        commitRequests(session, toCommit)
 
-                    for ((request, result) in requests.zip(results)) {
-                        request.future.set(result)
+                        for ((request, result) in requests.zip(results)) {
+                            request.future.set(result)
+                        }
                     }
                 }
-            }
-        } catch (e: Exception) {
-            log.warn("Error processing commit requests", e)
-            for (request in requests) {
-                respondWithError(request, e)
+            } catch (e: Exception) {
+                log.warn("Error processing commit requests", e)
+                for (request in requests) {
+                    respondWithError(request, e)
+                }
             }
         }
+        val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
+        throughputHistory.update(maxOf(statesPerMinute, 1))
+        throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.
     }
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {

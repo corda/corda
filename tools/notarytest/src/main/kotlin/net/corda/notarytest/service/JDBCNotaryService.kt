@@ -11,6 +11,7 @@ import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
@@ -28,8 +29,9 @@ class JDBCNotaryService(override val services: AppServiceHub, override val notar
     private val appConfig = ConfigHelper.loadConfig(Paths.get(".")).getConfig("custom")
 
     override val uniquenessProvider: MySQLUniquenessProvider = createUniquenessProvider()
+    private val etaMessageThreshold = 10.seconds
 
-    override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this)
+    override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, etaMessageThreshold)
 
     override fun start() {
         uniquenessProvider.createTable()

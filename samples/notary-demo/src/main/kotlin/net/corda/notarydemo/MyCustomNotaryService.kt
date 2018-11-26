@@ -34,7 +34,7 @@ class MyCustomValidatingNotaryService(override val services: ServiceHubInternal,
 
 @Suppress("UNUSED_PARAMETER")
 // START 2
-class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : ValidatingNotaryFlow(otherSide, service) {
+class MyValidatingNotaryFlow(otherSide: FlowSession, service: MyCustomValidatingNotaryService) : ValidatingNotaryFlow(otherSide, service, defaultEstimatedWaitTime) {
     override fun verifyTransaction(requestPayload: NotarisationPayload) {
         try {
             val stx = requestPayload.signedTransaction
