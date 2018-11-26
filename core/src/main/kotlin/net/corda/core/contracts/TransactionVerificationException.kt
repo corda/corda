@@ -201,4 +201,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+
+    /**
+     * Thrown when multiple attachments provide the same file when building the AttachmentsClassloader for a transaction.
+     */
+    @CordaSerializable
+    @KeepForDJVM
+    class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
 }
