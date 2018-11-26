@@ -91,6 +91,6 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
                 copyCordapps = !noCopy,
                 networkParameterOverrides = networkParameterOverrides
         )
-        return ExitCodes.SUCCESS //exit code
+        return ExitCodes.SUCCESS
     }
 }

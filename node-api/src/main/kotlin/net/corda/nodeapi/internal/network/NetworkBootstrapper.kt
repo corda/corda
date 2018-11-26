@@ -197,7 +197,8 @@ internal constructor(private val initSerEnv: Boolean,
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
+            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }
+                    .toList()
         }
         bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParameterOverrides)
     }
@@ -382,6 +383,21 @@ internal constructor(private val initSerEnv: Boolean,
         throw IllegalStateException(msg.toString())
     }
 
+    private fun defaultNetworkParametersWith(notaryInfos: List<NotaryInfo>,
+                                             whitelist: Map<String, List<AttachmentId>>): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion = PLATFORM_VERSION,
+                notaries = notaryInfos,
+                modifiedTime = Instant.now(),
+                maxMessageSize = DEFAULT_MAX_MESSAGE_SIZE,
+                maxTransactionSize = DEFAULT_MAX_TRANSACTION_SIZE,
+                whitelistedContractImplementations = whitelist,
+                packageOwnership = emptyMap(),
+                epoch = 1,
+                eventHorizon = 30.days
+        )
+    }
+
     private fun installNetworkParameters(
             notaryInfos: List<NotaryInfo>,
             whitelist: Map<String, List<AttachmentId>>,
@@ -402,17 +418,7 @@ internal constructor(private val initSerEnv: Boolean,
                 existingNetParams
             }
         } else {
-            NetworkParameters(
-                    minimumPlatformVersion = PLATFORM_VERSION,
-                    notaries = notaryInfos,
-                    modifiedTime = Instant.now(),
-                    maxMessageSize = DEFAULT_MAX_MESSAGE_SIZE,
-                    maxTransactionSize = DEFAULT_MAX_TRANSACTION_SIZE,
-                    whitelistedContractImplementations = whitelist,
-                    packageOwnership = emptyMap(),
-                    epoch = 1,
-                    eventHorizon = 30.days
-            ).overrideWith(networkParametersOverrides)
+            defaultNetworkParametersWith(notaryInfos, whitelist).overrideWith(networkParametersOverrides)
         }
         val copier = NetworkParametersCopier(netParams, overwriteFile = true)
         nodeDirs.forEach(copier::install)

@@ -8,7 +8,6 @@ import net.corda.common.configuration.parsing.internal.nested
 import net.corda.common.validation.internal.Validated
 import net.corda.core.internal.div
 import net.corda.core.internal.requirePackageValid
-import net.corda.core.internal.toPath
 import net.corda.core.node.NetworkParameters
 import net.corda.nodeapi.internal.crypto.loadKeyStore
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
@@ -49,7 +48,7 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
                     suppliedKeystorePath
                 } else {
                     //If a relative path is supplied, make it relative to the location of the config file
-                    Paths.get(configuration.origin().filename()).parent / suppliedKeystorePath.toString()
+                    Paths.get(configuration.origin().filename()).resolveSibling(suppliedKeystorePath.toString())
                 }.toAbsolutePath()
                 val ks = loadKeyStore(absoluteKeystorePath, keystorePassword)
                 return try {
@@ -77,11 +76,8 @@ internal object NetworkParameterOverridesSpec : Configuration.Specification<Netw
         private fun toPath(rawValue: String): Validated<Path, Configuration.Validation.Error> {
             return try {
                 valid(Paths.get(rawValue))
-            } catch (e: Exception) {
-                when (e) {
-                    is InvalidPathException -> badValue("Path $rawValue not found")
-                    else -> throw e
-                }
+            } catch (e: InvalidPathException) {
+                return badValue("Path $rawValue not found")
             }
         }
     }
