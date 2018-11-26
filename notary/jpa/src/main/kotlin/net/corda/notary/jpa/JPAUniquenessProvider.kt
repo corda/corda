@@ -93,6 +93,7 @@ class JPAUniquenessProvider(val clock: Clock, val database: CordaPersistence, va
     @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}jpa_notary_committed_transactions")
     class CommittedTransaction(
             @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
             val transactionId: String
     )
 
