@@ -310,6 +310,7 @@ class VaultFiller @JvmOverloads constructor(
 
 
 /** A state representing a commodity claim against some party */
+@BelongsToContract(Obligation::class)
 data class CommodityState(
         override val amount: Amount<Issued<Commodity>>,
 

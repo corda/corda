@@ -17,6 +17,7 @@ const val PORTFOLIO_SWAP_PROGRAM_ID = "net.corda.vega.contracts.PortfolioSwap"
  * Represents an aggregate set of trades agreed between two parties and a possible valuation of that portfolio at a
  * given point in time. This state can be consumed to create a new state with a mutated valuation or portfolio.
  */
+@BelongsToContract(PortfolioSwap::class)
 data class PortfolioState(val portfolio: List<StateRef>,
                           val _parties: Pair<AbstractParty, AbstractParty>,
                           val valuationDate: LocalDate,
