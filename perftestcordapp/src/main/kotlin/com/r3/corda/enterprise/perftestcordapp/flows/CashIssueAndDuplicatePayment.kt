@@ -12,12 +12,12 @@ import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.contracts.*
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
-import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.unwrap
 import java.util.*
 
 /**
@@ -50,12 +50,13 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
         val cashStateAndRef: StateAndRef<Cash.State> = uncheckedCast(serviceHub.loadStates(setOf(StateRef(issueResult.id, 0))).single())
 
         progressTracker.currentStep = GENERATING_ID
-        val txIdentities = if (anonymous) {
-            subFlow(SwapIdentitiesFlow(recipient))
+        val recipientSession = initiateFlow(recipient)
+        recipientSession.send(anonymous)
+        val anonymousRecipient = if (anonymous) {
+            subFlow(SwapIdentitiesFlow(recipientSession)).theirIdentity
         } else {
-            emptyMap<Party, AnonymousParty>()
+            recipient
         }
-        val anonymousRecipient = txIdentities[recipient] ?: recipient
 
         val changeIdentity = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
 
@@ -70,9 +71,9 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
         val tx = serviceHub.signInitialTransaction(spendTx, keysForSigning)
 
         progressTracker.currentStep = FINALISING_TX
-        val sessions = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(initiateFlow(recipient))
-        finaliseTx(tx, sessions, "Unable to notarise spend first time")
-        val notarised2 = finaliseTx(tx, sessions, "Unable to notarise spend second time")
+        val sessionsForFinality = if (serviceHub.myInfo.isLegalIdentity(recipient)) emptyList() else listOf(recipientSession)
+        finaliseTx(tx, sessionsForFinality, "Unable to notarise spend first time")
+        val notarised2 = finaliseTx(tx, sessionsForFinality, "Unable to notarise spend second time")
 
         return Result(notarised2.id, recipient)
     }
@@ -82,7 +83,14 @@ class CashIssueAndDuplicatePayment(val amount: Amount<Currency>,
 class CashIssueAndDuplicatePaymentResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        subFlow(ReceiveFinalityFlow(otherSide))
-        subFlow(ReceiveFinalityFlow(otherSide))
+        val anonymous = otherSide.receive<Boolean>().unwrap { it }
+        if (anonymous) {
+            subFlow(SwapIdentitiesFlow(otherSide))
+        }
+        // Not ideal that we have to do this check, but we must as FinalityFlow does not send locally
+        if (!serviceHub.myInfo.isLegalIdentity(otherSide.counterparty)) {
+            subFlow(ReceiveFinalityFlow(otherSide))
+            subFlow(ReceiveFinalityFlow(otherSide))
+        }
     }
 }

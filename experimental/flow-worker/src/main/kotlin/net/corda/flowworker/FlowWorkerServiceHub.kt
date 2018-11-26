@@ -5,8 +5,6 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.jcabi.manifests.Manifests
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.confidential.SwapIdentitiesFlow
-import net.corda.confidential.SwapIdentitiesHandler
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
@@ -65,7 +63,6 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.apache.activemq.artemis.utils.ReusableLatch
@@ -363,7 +360,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
         installCoreFlow(FinalityFlow::class, ::FinalityHandler)
         installCoreFlow(NotaryChangeFlow::class, ::NotaryChangeHandler)
         installCoreFlow(ContractUpgradeFlow.Initiate::class, ::ContractUpgradeHandler)
-        installCoreFlow(SwapIdentitiesFlow::class, ::SwapIdentitiesHandler)
     }
 
     private fun initialiseSerialization() {
