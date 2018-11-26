@@ -26,7 +26,6 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
@@ -116,7 +115,6 @@ fun <A> rpcDriver(
         waitForNodesToFinish: Boolean = false,
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
@@ -135,7 +133,7 @@ fun <A> rpcDriver(
                             startNodesInProcess = startNodesInProcess,
                             waitForAllNodesToFinish = waitForNodesToFinish,
                             notarySpecs = notarySpecs,
-                            jmxPolicy = jmxPolicy,
+                            jmxPolicy = null,
                             compatibilityZone = null,
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,

@@ -298,16 +298,45 @@ data class NodeParameters(
 }
 
 /**
- * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver]
+ * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver].
  *
- * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
- * JMX monitoring using HTTP/JSON
- * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
- * Defaults to incremental.
+ * @property httpPort The port to use for remote Jolokia/JMX monitoring over HTTP. Defaults to 7006.
  */
-data class JmxPolicy(val startJmxHttpServer: Boolean = false,
-                     val jmxHttpServerPortAllocation: PortAllocation? =
-                             if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+@Suppress("DEPRECATION")
+class JmxPolicy private constructor(
+        @Deprecated("This is no longer needed to turn on monitoring.")
+        val startJmxHttpServer: Boolean,
+        @Deprecated("This has been replaced by httpPort which makes it clear to the calling code which port to connect to.")
+        val jmxHttpServerPortAllocation: PortAllocation?,
+        val httpPort: Int
+) {
+    @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified.")
+    constructor() : this(false, null, 7006)
+    @Deprecated("Use constructor that takes in the httpPort")
+    constructor(startJmxHttpServer: Boolean = false, jmxHttpServerPortAllocation: PortAllocation? = null) : this(startJmxHttpServer, jmxHttpServerPortAllocation, 7006)
+    /** Create a JmxPolicy that turns on monitoring on the given [httpPort]. */
+    constructor(httpPort: Int) : this(true, null, httpPort)
+
+    @Deprecated("startJmxHttpServer is deprecated as it's no longer needed to turn on monitoring.")
+    operator fun component1(): Boolean = startJmxHttpServer
+    @Deprecated("jmxHttpServerPortAllocation is deprecated and no longer does anything. Use httpPort instead.")
+    operator fun component2(): PortAllocation? = jmxHttpServerPortAllocation
+    operator fun component3(): Int = httpPort
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is JmxPolicy) return false
+        return this.httpPort == other.httpPort
+    }
+
+    override fun hashCode(): Int {
+        var result = startJmxHttpServer.hashCode()
+        result = 31 * result + httpPort
+        return result
+    }
+
+    override fun toString(): String = "JmxPolicy(httpPort=$httpPort)"
+}
 
 /**
  * [driver] allows one to start up nodes like this:

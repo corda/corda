@@ -88,7 +88,7 @@ class DriverDSLImpl(
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
         val waitForAllNodesToFinish: Boolean,
-        val jmxPolicy: JmxPolicy,
+        val jmxPolicy: JmxPolicy?,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
@@ -129,8 +129,6 @@ class DriverDSLImpl(
 
     //TODO: remove this once we can bundle quasar properly.
     private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
-
-    private val jolokiaJarPath: String by lazy { resolveJar(".*jolokia-jvm-.*-agent\\.jar$") }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
@@ -265,7 +263,10 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
-        val flowOverrideConfig = flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) }.let { FlowOverrideConfig(it) }
+        val jmxPort = jmxPolicy?.httpPort
+        val jmxConfig = if (jmxPort != null) mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPort) else emptyMap()
+
+        val flowOverrideConfig = FlowOverrideConfig(flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) })
         val overrides = configOf(
                 NodeConfiguration::myLegalName.name to name.toString(),
                 NodeConfiguration::p2pAddress.name to p2pAddress.toString(),
@@ -275,7 +276,7 @@ class DriverDSLImpl(
                 NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
                 NodeConfiguration::verifierType.name to verifierType.name,
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
-        ) + czUrlConfig + customOverrides
+        ) + czUrlConfig + jmxConfig + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
@@ -333,12 +334,6 @@ class DriverDSLImpl(
                     "--network-root-truststore-password=$rootTruststorePassword"
             ).map { config }
         }
-    }
-
-    private enum class ClusterType(val validating: Boolean, val clusterName: CordaX500Name) {
-        VALIDATING_RAFT(true, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_RAFT(false, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
     }
 
     @Suppress("DEPRECATION")
@@ -564,13 +559,10 @@ class DriverDSLImpl(
      */
     private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
                 quasarJarPath,
                 debugPort,
-                jolokiaJarPath,
-                monitorPort,
                 systemProperties,
                 "512m",
                 *extraCmdLineFlag
@@ -645,8 +637,7 @@ class DriverDSLImpl(
             return nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, systemProperties, maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -776,16 +767,11 @@ class DriverDSLImpl(
                 config: NodeConfig,
                 quasarJarPath: String,
                 debugPort: Int?,
-                jolokiaJarPath: String,
-                monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
                 vararg extraCmdLineFlag: String
         ): Process {
-
-            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
-                    "debug port is " + (debugPort ?: "not enabled") + ", " +
-                    "jolokia monitoring port is " + (monitorPort ?: "not enabled"))
+            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
             writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
 
@@ -811,7 +797,6 @@ class DriverDSLImpl(
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
-            val jolokiaAgent = monitorPort?.let { "-javaagent:$jolokiaJarPath=port=$monitorPort,host=localhost" }
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
             val arguments = mutableListOf(
@@ -825,7 +810,7 @@ class DriverDSLImpl(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
+                    extraJvmArguments = extraJvmArguments,
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize
             )
@@ -955,7 +940,7 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }, { _ ->
+            }, {
                 // Nothing to do on errors here.
             })
             return future
@@ -1153,7 +1138,6 @@ fun <A> internalDriver(
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
-        jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
@@ -1173,7 +1157,7 @@ fun <A> internalDriver(
                     startNodesInProcess = startNodesInProcess,
                     waitForAllNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
-                    jmxPolicy = jmxPolicy,
+                    jmxPolicy = null,
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
