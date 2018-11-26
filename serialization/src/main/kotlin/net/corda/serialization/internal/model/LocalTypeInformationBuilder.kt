@@ -166,7 +166,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
 
         if (observedConstructor == null) {
             if (!suppressWarning) {
-                logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
+                logger.warn("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
             }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
                     superclassInformation, interfaceInformation, typeParameterInformation)
@@ -180,9 +180,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
             if (!suppressWarning) {
                 if (hasNonComposableProperties) {
-                    logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
+                    logger.warn("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
                 } else {
-                    logger.info("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
+                    logger.warn("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
                 }
             }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
