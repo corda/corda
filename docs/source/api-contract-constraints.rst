@@ -72,12 +72,13 @@ the transition of the ``ContractState`` will be verified against the business ru
 There are two mechanisms for indicating ownership. One is to annotate the ``ContractState`` with the ``BelongsToContract`` annotation,
 indicating the ``Contract`` class to which it is tied:
 
-// sourcecode:: java
+.. sourcecode:: java
 
     @BelongToContract(MyContract.class)
     public class MyState implements ContractState {
         // implementation goes here
     }
+
 
 .. sourcecode:: kotlin
 
@@ -85,6 +86,7 @@ indicating the ``Contract`` class to which it is tied:
     data class MyState(val value: Int) : ContractState {
         // implementation goes here
     }
+
 
 The other is to define the ``ContractState`` class as an inner class of the ``Contract`` class
 
@@ -105,6 +107,7 @@ The other is to define the ``ContractState`` class as an inner class of the ``Co
     class MyContract : Contract {
         data class MyState(val value: Int) : ContractState
     }
+    
 
 If a ``ContractState``'s owning ``Contract`` cannot be identified by either of these mechanisms, and the ``targetVersion`` of the
 CorDapp is 4 or greater, then transaction verification will fail with a ``TransactionRequiredContractUnspecifiedException``. If
