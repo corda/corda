@@ -80,7 +80,7 @@ interface TestCordapp {
              * default values, which can be changed with the wither methods.
              */
             @JvmStatic
-            fun fromPackages(packageNames: Collection<String>, implementationVersion: String = "1.0"): TestCordapp {
+            fun fromPackages(packageNames: Collection<String>, implementationVersion: String = "1"): TestCordapp {
                 return TestCordappImpl(
                         name = "test-name",
                         version = "1.0",
