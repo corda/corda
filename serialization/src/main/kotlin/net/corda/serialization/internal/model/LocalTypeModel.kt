@@ -69,8 +69,8 @@ class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeMo
          * to the local cache if the type isn't there yet.
          */
         override fun findOrBuild(type: Type, typeIdentifier: TypeIdentifier, builder: (Boolean) -> LocalTypeInformation): LocalTypeInformation =
-                globalCache[typeIdentifier] ?:
-                localCache.getOrPut(typeIdentifier) { builder(typeModelConfiguration.isOpaque(type)) }
+            globalCache[typeIdentifier] ?:
+            localCache.getOrPut(typeIdentifier) { builder(typeModelConfiguration.isOpaque(type)) }
 
         override fun isExcluded(type: Type): Boolean = typeModelConfiguration.isExcluded(type)
 
@@ -86,7 +86,7 @@ class ConfigurableLocalTypeModel(private val typeModelConfiguration: LocalTypeMo
 
     override fun inspect(type: Type): LocalTypeInformation {
         val typeIdentifier = TypeIdentifier.forGenericType(type)
-
+        
         return typeInformationCache.getOrPut(typeIdentifier) {
             val lookup = BuilderLookup(typeInformationCache, typeModelConfiguration)
             val result = LocalTypeInformation.forType(type, typeIdentifier, lookup)
