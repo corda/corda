@@ -7,7 +7,6 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.model.LocalConstructorInformation
-import net.corda.serialization.internal.model.LocalPropertyInformation
 import net.corda.serialization.internal.model.LocalTypeInformation
 import java.io.NotSerializableException
 
@@ -26,7 +25,7 @@ class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Pr
         is LocalTypeInformation.NonComposable -> constructor ?:
                 throw NotSerializableException("$this has no deserialization constructor")
         is LocalTypeInformation.Composable -> constructor
-        is LocalTypeInformation.Opaque -> expand.constructor
+        is LocalTypeInformation.Opaque -> wrapped.constructor
         else -> throw NotSerializableException("$this has no deserialization constructor")
     }
 
