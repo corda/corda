@@ -259,7 +259,6 @@ private constructor(
      * @throws TransactionVerificationException if the constraints fail to verify
      */
     private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>, hashToSignatureConstrainedContracts: MutableSet<ContractClassName>) {
-        // TODO: shouldn't this only process internalTx.inputAndOutputStates ?
         for (state in internalTx.allStates) {
             if (state.constraint is SignatureAttachmentConstraint)
                 checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
@@ -277,7 +276,7 @@ private constructor(
                         state.data in inputStates -> AttachmentWithContext(unsignedAttachment, state.contract, networkParameters!!)
                         // use signed attachment if signature-constrained output state
                         state.data in outputStates -> AttachmentWithContext(signedAttachment, state.contract, networkParameters!!)
-                        else -> throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
+                        else -> throw IllegalStateException("${state.contract} must use either signed or unsigned attachment in hash to signature constraints migration")
                     }
                 }
                 // standard processing logic
@@ -321,10 +320,7 @@ private constructor(
                         attachmentSet == null -> mutableSetOf(attachment)
                         attachmentSet.contains(attachment) -> attachmentSet
                         !attachmentSet.contains(attachment) -> attachmentSet.plus(attachment)
-                        // In case multiple attachments have been added for the same contract, fail because this
-                        // transaction will not be able to be verified because it will break the no-overlap rule
-                        // that we have implemented in our Classloaders
-                        else -> throw TransactionVerificationException.ConflictingAttachmentsRejection(id, contract)
+                        else -> throw IllegalStateException("Unable to include new attachment $attachment for $contract")
                     }
                 }
             }

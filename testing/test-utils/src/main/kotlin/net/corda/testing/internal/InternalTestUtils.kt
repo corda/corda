@@ -194,3 +194,16 @@ fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<St
     }
     return bs.toByteArray()
 }
+
+fun fakeAttachments(vararg filepathAndContent: Pair<String, String>): ByteArray {
+    val bs = ByteArrayOutputStream()
+    val manifest = Manifest()
+    JarOutputStream(bs, manifest).use { js ->
+        filepathAndContent.forEach {
+            js.putNextEntry(ZipEntry(it.first))
+            js.writer().apply { append(it.second); flush() }
+            js.closeEntry()
+        }
+    }
+    return bs.toByteArray()
+}
