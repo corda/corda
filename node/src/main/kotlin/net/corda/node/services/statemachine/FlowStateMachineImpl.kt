@@ -72,7 +72,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
             val checkpointSerializationContext: CheckpointSerializationContext,
-            val unfinishedFibers: ReusableLatch
+            val unfinishedFibers: ReusableLatch,
+            val waitTimeUpdateHook: (id: StateMachineRunId, timeout: Long) -> Unit
     )
 
     internal var transientValues: TransientReference<TransientValues>? = null
@@ -413,6 +414,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override fun snapshot(): StateMachineState {
         return transientState!!.value
+    }
+
+    /**
+     * Hook to allow a timed flow to update its own timeout (i.e. how long it can be suspended before it gets
+     * retried.
+     */
+    override fun updateTimedFlowTimeout(timeoutSeconds: Long) {
+        getTransientField(TransientValues::waitTimeUpdateHook).invoke(id, timeoutSeconds)
     }
 
     override val stateMachine get() = getTransientField(TransientValues::stateMachine)

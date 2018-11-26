@@ -277,6 +277,11 @@ Unreleased
   normal state when it occurs in an input or output position. *This feature is only available on Corda networks running
   with a minimum platform version of 4.*
 
+* A new wrapper class over ``StateRef`` is introduced, called ``ReferenceStateRef``. Although "reference input states" are stored as
+  ``StateRef`` objects in ``WireTransaction``, we needed a way to distinguish between "input states" and "reference input states" when
+  required to filter by object type. Thus, when one wants to filter-in all "reference input states" in a ``FilteredTransaction``
+  then he/she should check if it is of type ``ReferenceStateRef``.
+
 * Removed type parameter `U` from `tryLockFungibleStatesForSpending` to allow the function to be used with `FungibleState`
   as well as `FungibleAsset`. This _might_ cause a compile failure in some obscure cases due to the removal of the type
   parameter from the method. If your CorDapp does specify types explicitly when using this method then updating the types

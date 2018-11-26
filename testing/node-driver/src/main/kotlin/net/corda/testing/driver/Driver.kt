@@ -345,6 +345,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
                     cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    signCordapps = false,
                     enableSNI = defaultParameters.enableSNI
             ),
             coerce = { it },
