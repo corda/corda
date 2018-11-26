@@ -9,16 +9,16 @@ API: Persistence
 
 .. contents::
 
-Corda offers developers the option to expose all or some parts of a contract state  to an *Object Relational Mapping*
+Corda offers developers the option to expose all or some parts of a contract state to an *Object Relational Mapping*
 (ORM) tool to be persisted in a *Relational Database Management System* (RDBMS).
 
-The purpose of this, is to assist `Vault <https://docs.corda.net/vault.html>`_
-development and allow for the persistence of flexible representations of state data. Persisted Contract States held in the
+The purpose of this, is to assist `vault <https://docs.corda.net/vault.html>`_
+development and allow for the persistence of state data to a local database. Persisted Contract States held in the
 vault are indexed for the purposes of executing queries. This also allows for relational joins between Corda data and private data local to
 the organization owning a node.
 
 The Object Relational Mapping is specified using `Java Persistence API <https://en.wikipedia.org/wiki/Java_Persistence_API>`_
-(JPA) annotations. This mapping is persisted to the database as a table row (a single, implicitly structured data item in a table) by the node
+(JPA) annotations. This mapping is persisted to the database as a table row (a single, implicitly structured data item) by the node
 automatically every time a state is recorded in the node's local vault as part of a transaction.
 
 .. note:: Presently, the node includes an instance of the H2 database, but any database that supports *Java Database Connectivity* JDBC is a
@@ -28,7 +28,7 @@ automatically every time a state is recorded in the node's local vault as part o
 
 Schemas
 --------------------------
-Every ``ContractState`` may implement the ``QueryableState`` interface if it wishes to be inserted in the node's local
+Every ``ContractState`` may implement the ``QueryableState`` interface if it wishes to be inserted into the node's local
 database and made accessible using SQL.
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/schemas/PersistentTypes.kt
@@ -41,8 +41,8 @@ instance in situations where the schema has evolved. Each relational schema is r
 object returned by the state's ``supportedSchemas`` method.
 
 Nodes have an internal ``SchemaService`` which decides what data to persist by selecting the ``MappedSchema`` to use.
-Once a ``MappedSchema`` is selected, the ``SchemaService`` will delegate to the ``QueryableState`` to generate a corresponding mapped object
-via the ``generateMappedObject`` method, the output of which is then passed to the *ORM*.
+Once a ``MappedSchema`` is selected, the ``SchemaService`` will delegate to the ``QueryableState`` to generate a corresponding
+representation (mapped object) via the ``generateMappedObject`` method, the output of which is then passed to the *ORM*.
 
 .. literalinclude:: ../../node/src/main/kotlin/net/corda/node/services/api/SchemaService.kt
     :language: kotlin
