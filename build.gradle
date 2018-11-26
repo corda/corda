@@ -85,7 +85,6 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        // This repository is needed for Dokka until 0.9.16 is released.
         maven {
             url 'https://kotlin.bintray.com/kotlinx'
         }
