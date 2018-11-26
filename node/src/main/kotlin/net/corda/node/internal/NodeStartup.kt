@@ -143,21 +143,19 @@ open class NodeStartup : NodeStartupLogging {
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } as? Try.Success
-                ?: return ExitCodes.FAILURE
+        if (attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } !is Try.Success) return ExitCodes.FAILURE
 
         // Step 7. Any actions required before starting up the Corda network layer.
-        attempt { preNetworkRegistration(configuration) }.doOnException(::handleRegistrationError) as? Try.Success
-                ?: return ExitCodes.FAILURE
+        if (attempt { preNetworkRegistration(configuration) }.doOnException(::handleRegistrationError) !is Try.Success) return ExitCodes.FAILURE
 
         // Step 8. Log startup info.
         logStartupInfo(versionInfo, configuration)
 
         // Step 9. Start node: create the node, check for other command-line options, add extra logging etc.
-        attempt {
-            cmdLineOptions.baseDirectory.createDirectories()
-            afterNodeInitialisation.run(createNode(configuration, versionInfo))
-        }.doOnException(::handleStartError) as? Try.Success ?: return ExitCodes.FAILURE
+        if (attempt {
+                    cmdLineOptions.baseDirectory.createDirectories()
+                    afterNodeInitialisation.run(createNode(configuration, versionInfo))
+                }.doOnException(::handleStartError) !is Try.Success) return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
     }

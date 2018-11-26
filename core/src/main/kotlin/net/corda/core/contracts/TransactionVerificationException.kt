@@ -149,7 +149,7 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             "is not satisfied. Encumbered states should also be referenced as an encumbrance of another state to form " +
             "a full cycle. Offending indices $nonMatching", null)
 
-    /**
+    /**HEAD
      * All encumbered states should be assigned to the same notary. This is due to the fact that multi-notary
      * transactions are not supported and thus two encumbered states with different notaries cannot be consumed
      * in the same transaction.
@@ -158,6 +158,36 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class TransactionNotaryMismatchEncumbranceException(txId: SecureHash, encumberedIndex: Int, encumbranceIndex: Int, encumberedNotary: Party, encumbranceNotary: Party)
         : TransactionVerificationException(txId, "Encumbered output states assigned to different notaries found. " +
             "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]", null)
+
+    /**
+     * If a state is identified as belonging to a contract, either because the state class is defined as an inner class
+     * of the contract class or because the state class is annotated with [BelongsToContract], then it must not be
+     * bundled in a [TransactionState] with a different contract.
+     *
+     * @param state The [TransactionState] whose bundled state and contract are in conflict.
+     * @param requiredContractClassName The class name of the contract to which the state belongs.
+     */
+    @KeepForDJVM
+    class TransactionContractConflictException(txId: SecureHash, state: TransactionState<ContractState>, requiredContractClassName: String)
+        : TransactionVerificationException(txId,
+            """
+            State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+            is bundled in TransactionState with ${state.contract}.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+            """.trimIndent().replace('\n', ' '), null)
+
+    // TODO: add reference to documentation
+    @KeepForDJVM
+    class TransactionRequiredContractUnspecifiedException(txId: SecureHash, state: TransactionState<ContractState>)
+        : TransactionVerificationException(txId,
+            """
+            State of class ${state.data::class.java.typeName} does not have a specified owning contract.
+            Add the @BelongsToContract annotation to this class to ensure that it can only be bundled in a TransactionState
+            with the correct contract.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+            """.trimIndent(), null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable

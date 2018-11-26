@@ -448,7 +448,7 @@ object Configuration {
 
             override fun toString(): String {
 
-                return "(keyName='$keyName', typeName='$typeName', path=$path, message='$message')"
+                return "$message: (keyName='$keyName', typeName='$typeName', path=$path)"
             }
 
             /**

@@ -94,7 +94,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
             val semanticParts = declaredBashVersion().split(".")
             semanticParts.firstOrNull()?.toIntOrNull()?.let { major ->
                 if (major < minSupportedBashVersion) {
-                    parent.printlnWarn("Cannot install shell extension for bash major version earlier than $minSupportedBashVersion. Please upgrade your bash version. Aliases should still work.")
+                    printWarning("Cannot install shell extension for bash major version earlier than $minSupportedBashVersion. Please upgrade your bash version. Aliases should still work.")
                     generateAutoCompleteFile = false
                 }
             }

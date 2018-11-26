@@ -94,12 +94,11 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type))
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
-            else -> when {
-                isOpaque -> LocalTypeInformation.Opaque(type, typeIdentifier) {
-                    buildNonAtomic(type, type, typeIdentifier, emptyList())
-                }
-                else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
-            }
+            isOpaque -> LocalTypeInformation.Opaque(
+                        type,
+                        typeIdentifier,
+                        buildNonAtomic(type, type, typeIdentifier, emptyList(), true))
+            else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
     }
 
@@ -118,12 +117,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             }
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
-            else -> when {
-                isOpaque -> LocalTypeInformation.Opaque(rawType, typeIdentifier) {
-                        buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
-                    }
-                else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
-            }
+            isOpaque -> LocalTypeInformation.Opaque(rawType,
+                        typeIdentifier,
+                        buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type), true))
+            else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }
 
@@ -159,13 +156,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
      * Rather than throwing an exception if a type is [NonComposable], we capture its type information so that it can
      * still be used to _serialize_ values, or as the basis for deciding on an evolution strategy.
      */
-    private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>): LocalTypeInformation {
+    private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>, suppressWarning: Boolean = false): LocalTypeInformation {
         val superclassInformation = buildSuperclassInformation(type)
         val interfaceInformation = buildInterfaceInformation(type)
         val observedConstructor = constructorForDeserialization(type)
 
         if (observedConstructor == null) {
-            logger.warn("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
+            if (!suppressWarning) {
+                logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
+            }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
                     superclassInformation, interfaceInformation, typeParameterInformation)
         }
@@ -176,10 +175,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
 
         if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
-            if (hasNonComposableProperties) {
-                logger.warn("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
-            } else {
-                logger.warn("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
+            if (!suppressWarning) {
+                if (hasNonComposableProperties) {
+                    logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
+                } else {
+                    logger.info("Properties of type ${type.typeName} do not satisfy its constructor, type has been marked as non-composable")
+                }
             }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, constructorInformation, properties, superclassInformation,
                     interfaceInformation, typeParameterInformation)

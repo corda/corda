@@ -3,6 +3,7 @@ package net.corda.testing.core
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.loadKeyStore
+import net.corda.testing.core.JarSignatureTestUtils.signJar
 import java.io.FileInputStream
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -40,6 +41,11 @@ object JarSignatureTestUtils {
 
     fun Path.signJar(fileName: String, alias: String, storePassword: String, keyPassword: String = storePassword): PublicKey {
         executeProcess("jarsigner", "-keystore", "_teststore", "-storepass", storePassword, "-keypass", keyPassword, fileName, alias)
+        val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
+        return ks.getCertificate(alias).publicKey
+    }
+
+    fun Path.getPublicKey(alias: String, storePassword: String) : PublicKey {
         val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey
     }

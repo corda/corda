@@ -1,9 +1,6 @@
 package net.corda.vega.contracts
 
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.ContractClassName
-import net.corda.core.contracts.StateAndContract
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
@@ -16,6 +13,7 @@ const val IRS_PROGRAM_ID: ContractClassName = "net.corda.vega.contracts.OGTrade"
  *
  * TODO: Merge with the existing demo IRS code.
  */
+@BelongsToContract(OGTrade::class)
 data class IRSState(val swap: SwapData,
                     val buyer: AbstractParty,
                     val seller: AbstractParty,

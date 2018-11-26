@@ -54,11 +54,12 @@ sealed class LocalTypeInformation {
          * types beginning the with provided [Type] and construct a complete set of [LocalTypeInformation] for that type.
          *
          * @param type The [Type] to obtain [LocalTypeInformation] for.
+         * @param typeIdentifier The [TypeIdentifier] for the [Type] to obtain [LocalTypeInformation] for.
          * @param lookup The [LocalTypeLookup] to use to find previously-constructed [LocalTypeInformation].
          */
-        fun forType(type: Type, lookup: LocalTypeLookup): LocalTypeInformation {
+        fun forType(type: Type, typeIdentifier: TypeIdentifier, lookup: LocalTypeLookup): LocalTypeInformation {
             val builder =  LocalTypeInformationBuilder(lookup)
-            val result = builder.build(type, TypeIdentifier.forGenericType(type))
+            val result = builder.build(type, typeIdentifier)
 
             // Patch every cyclic reference with a `follow` property pointing to the type information it refers to.
             builder.cycles.forEach { cycle ->
@@ -90,7 +91,7 @@ sealed class LocalTypeInformation {
         is LocalTypeInformation.Abstract -> properties
         is LocalTypeInformation.AnInterface -> properties
         is LocalTypeInformation.NonComposable -> properties
-        is LocalTypeInformation.Opaque -> expand.propertiesOrEmptyMap
+        is LocalTypeInformation.Opaque -> wrapped.propertiesOrEmptyMap
         else -> emptyMap()
     }
 
@@ -153,22 +154,7 @@ sealed class LocalTypeInformation {
      * May in fact be a more complex class, but is treated as if atomic, i.e. we don't further expand its properties.
      */
     data class Opaque(override val observedType: Class<*>, override val typeIdentifier: TypeIdentifier,
-                      private val _expand: () -> LocalTypeInformation) : LocalTypeInformation() {
-        /**
-         * In some rare cases, e.g. during Exception serialisation, we may want to "look inside" an opaque type.
-         */
-        val expand: LocalTypeInformation by lazy { _expand() }
-
-        // Custom equals / hashcode because otherwise the "expand" lambda makes equality harder to reason about.
-        override fun equals(other: Any?): Boolean =
-                other is Cycle &&
-                        other.observedType == observedType &&
-                        other.typeIdentifier == typeIdentifier
-
-        override fun hashCode(): Int = Objects.hash(observedType, typeIdentifier)
-
-        override fun toString(): String = "Opaque($observedType, $typeIdentifier)"
-    }
+                      val wrapped: LocalTypeInformation) : LocalTypeInformation()
 
     /**
      * Represents a scalar type such as [Int].
