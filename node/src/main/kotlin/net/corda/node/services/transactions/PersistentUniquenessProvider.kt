@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.SlidingWindowReservoir
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -12,8 +13,10 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
-import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.internal.elapsedTime
 import net.corda.core.internal.notary.NotaryInternalException
+import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
 import net.corda.core.schemas.PersistentStateRef
@@ -27,11 +30,20 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
-import java.util.*
+import java.util.LinkedHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.*
+import javax.persistence.Column
+import javax.persistence.EmbeddedId
+import javax.persistence.Entity
+import javax.persistence.GeneratedValue
+import javax.persistence.Id
+import javax.persistence.Lob
+import javax.persistence.MappedSuperclass
 import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
@@ -70,6 +82,14 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             var requestDate: Instant
     )
 
+    @Entity
+    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}notary_committed_transactions")
+    class CommittedTransaction(
+            @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
+            val transactionId: String
+    )
+
     private data class CommitRequest(
             val states: List<StateRef>,
             val txId: SecureHash,
@@ -86,6 +106,34 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     private val commitLog = createMap(cacheFactory)
 
     private val requestQueue = LinkedBlockingQueue<CommitRequest>(requestQueueSize)
+    private val nrQueuedStates = AtomicInteger(0)
+
+    /**
+     * Measured in states per minute, with a minimum of 1. We take an average of the last 100 commits.
+     * Minutes was chosen to increase accuracy by 60x over seconds, given we have to use longs here.
+     */
+    private val throughputHistory = SlidingWindowReservoir(100)
+    @Volatile
+    var throughput: Double = 0.0
+
+    /**
+     * Estimated time of request processing.
+     * This uses performance metrics to gauge how long the wait time for a newly queued state will probably be.
+     * It checks that there is actual traffic going on (i.e. a non-zero number of states are queued and there
+     * is actual throughput) and then returns the expected wait time scaled up by a factor of 2 to give a probable
+     * upper bound.
+     *
+     * @param numStates The number of states (input + reference) we're about to request be notarised.
+     */
+    override fun getEta(numStates: Int): Duration {
+        val rate = throughput
+        val nrStates = nrQueuedStates.getAndAdd(numStates)
+        log.debug { "rate: $rate, queueSize: $nrStates" }
+        if (rate > 0.0 && nrStates > 0) {
+            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+        }
+        return NotaryServiceFlow.defaultEstimatedWaitTime
+    }
 
     /** A request processor thread. */
     private val processorThread = thread(name = "Notary request queue processor", isDaemon = true) {
@@ -190,11 +238,30 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             logRequest(txId, callerIdentity, requestSignature)
             val conflictingStates = findAlreadyCommitted(states, references, commitLog)
             if (conflictingStates.isNotEmpty()) {
-                handleConflicts(txId, conflictingStates)
+                if (states.isEmpty()) {
+                    handleReferenceConflicts(txId, conflictingStates)
+                } else {
+                    handleConflicts(txId, conflictingStates)
+                }
             } else {
                 handleNoConflicts(timeWindow, states, txId, commitLog)
             }
         }
+    }
+
+    private fun previouslyCommitted(txId: SecureHash): Boolean {
+        val session = currentDBSession()
+        return session.find(CommittedTransaction::class.java, txId.toString()) != null
+    }
+
+    private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+        val session = currentDBSession()
+        if (!previouslyCommitted(txId)) {
+            val conflictError = NotaryError.Conflict(txId, conflictingStates)
+            log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            throw NotaryInternalException(conflictError)
+        }
+        log.debug { "Transaction $txId already notarised" }
     }
 
     private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
@@ -214,15 +281,32 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             states.forEach { stateRef ->
                 commitLog[stateRef] = txId
             }
+            val session = currentDBSession()
+            session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
         } else {
+            if (states.isEmpty() && previouslyCommitted(txId)) {
+                return
+            }
             throw NotaryInternalException(outsideTimeWindowError)
         }
     }
 
+    private fun decrementQueueSize(request: CommitRequest): Int {
+        val nrStates = request.states.size + request.references.size
+        nrQueuedStates.addAndGet(-nrStates)
+        return nrStates
+    }
+
     private fun processRequest(request: CommitRequest) {
+        val numStates = decrementQueueSize(request)
         try {
-            commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+            val duration = elapsedTime {
+                commitOne(request.states, request.txId, request.callerIdentity, request.requestSignature, request.timeWindow, request.references)
+            }
+            val statesPerMinute = numStates.toLong() * TimeUnit.MINUTES.toNanos(1) / duration.toNanos()
+            throughputHistory.update(maxOf(statesPerMinute, 1))
+            throughput = throughputHistory.snapshot.median // Median deemed more stable / representative than mean.
             respondWithSuccess(request)
         } catch (e: Exception) {
             log.warn("Error processing commit request", e)
@@ -231,11 +315,11 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun respondWithError(request: CommitRequest, exception: Exception) {
-            if (exception is NotaryInternalException) {
-                request.future.set(UniquenessProvider.Result.Failure(exception.error))
-            } else {
-                request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
-            }
+        if (exception is NotaryInternalException) {
+            request.future.set(UniquenessProvider.Result.Failure(exception.error))
+        } else {
+            request.future.setException(NotaryInternalException(NotaryError.General(Exception("Internal service error."))))
+        }
     }
 
     private fun respondWithSuccess(request: CommitRequest) {

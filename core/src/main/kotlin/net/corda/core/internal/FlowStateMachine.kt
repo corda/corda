@@ -36,6 +36,8 @@ interface FlowStateMachine<FLOWRETURN> {
     @Suspendable
     fun persistFlowStackSnapshot(flowClass: Class<out FlowLogic<*>>)
 
+    fun updateTimedFlowTimeout(timeoutSeconds: Long)
+
     val logic: FlowLogic<FLOWRETURN>
     val serviceHub: ServiceHub
     val logger: Logger

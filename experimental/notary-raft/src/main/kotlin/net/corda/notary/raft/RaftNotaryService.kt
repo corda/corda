@@ -3,6 +3,7 @@ package net.corda.notary.raft
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
@@ -36,8 +37,8 @@ class RaftNotaryService(
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
-            ValidatingNotaryFlow(otherPartySession, this)
-        } else NonValidatingNotaryFlow(otherPartySession, this)
+            ValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
+        } else NonValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
     }
 
     override fun start() {

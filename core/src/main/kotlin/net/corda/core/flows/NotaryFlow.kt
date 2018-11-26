@@ -7,12 +7,13 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.BackpressureAwareTimedFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.ContractUpgradeWireTransaction
+import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
@@ -36,7 +37,7 @@ class NotaryFlow {
     open class Client(
             private val stx: SignedTransaction,
             override val progressTracker: ProgressTracker
-    ) : FlowLogic<List<TransactionSignature>>(), TimedFlow {
+    ) : BackpressureAwareTimedFlow<List<TransactionSignature>>() {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
@@ -90,7 +91,7 @@ class NotaryFlow {
         private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
-            return session.receive()
+            return receiveResultOrTiming(session)
         }
 
         @Suspendable
@@ -98,10 +99,11 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty })
                 else -> ctx
             }
-            return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
+            session.send(NotarisationPayload(tx, signature))
+            return receiveResultOrTiming(session)
         }
 
         /** Checks that the notary's signature(s) is/are valid. */

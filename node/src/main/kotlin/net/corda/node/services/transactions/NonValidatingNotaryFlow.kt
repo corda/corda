@@ -8,6 +8,7 @@ import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.transactions.ContractUpgradeFilteredTransaction
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
+import java.time.Duration
 
 /**
  * The received transaction is not checked for contract-validity, as that would require fully
@@ -17,7 +18,7 @@ import net.corda.core.transactions.NotaryChangeWireTransaction
  * the caller, it is possible to raise a dispute and verify the validity of the transaction and subsequently
  * undo the commit of the input states (the exact mechanism still needs to be worked out).
  */
-class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService) : NotaryServiceFlow(otherSideSession, service) {
+class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePartyNotaryService, etaThreshold: Duration = defaultEstimatedWaitTime) : NotaryServiceFlow(otherSideSession, service, etaThreshold) {
     override fun extractParts(requestPayload: NotarisationPayload): TransactionParts {
         val tx = requestPayload.coreTransaction
         return when (tx) {

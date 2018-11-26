@@ -49,6 +49,7 @@ class CheckAllTheTestFlows {
                 notaryCustomOverrides = driverParameters.notaryCustomOverrides,
                 inMemoryDB = driverParameters.inMemoryDB,
                 cordappsForAllNodes = DriverDSLImpl.cordappsInCurrentAndAdditionalPackages(driverParameters.extraCordappPackagesToScan),
+                signCordapps = false,
                 enableSNI = driverParameters.enableSNI
         )
 

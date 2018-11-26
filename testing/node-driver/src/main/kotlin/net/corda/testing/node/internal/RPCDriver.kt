@@ -142,6 +142,7 @@ fun <A> rpcDriver(
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
                             cordappsForAllNodes = cordappsForAllNodes,
+                            signCordapps = false,
                             enableSNI = enableSNI
                     ), externalTrace
             ),

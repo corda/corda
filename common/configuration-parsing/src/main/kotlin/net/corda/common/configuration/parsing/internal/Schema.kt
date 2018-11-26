@@ -47,7 +47,7 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
         return description.toString()
     }
 
-    override fun describe(configuration: Config, serialiseValue: (Any) -> ConfigValue): ConfigValue {
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
 
         return properties.asSequence().map { it.key to it.describe(configuration, serialiseValue) }.filter { it.second != null }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
     }

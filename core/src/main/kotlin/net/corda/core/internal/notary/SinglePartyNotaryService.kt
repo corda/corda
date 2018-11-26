@@ -4,7 +4,11 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
-import net.corda.core.crypto.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.identity.Party
@@ -14,6 +18,7 @@ import net.corda.core.internal.notary.UniquenessProvider.Result
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.contextLogger
 import org.slf4j.Logger
+import java.time.Duration
 
 /** Base implementation for a notary service operated by a singe party. */
 abstract class SinglePartyNotaryService : NotaryService() {
@@ -42,6 +47,7 @@ abstract class SinglePartyNotaryService : NotaryService() {
 
         val callingFlow = FlowLogic.currentTopLevel
                 ?: throw IllegalStateException("This method should be invoked in a flow context.")
+
         val result = callingFlow.executeAsync(
                 CommitOperation(
                         this,
@@ -58,6 +64,13 @@ abstract class SinglePartyNotaryService : NotaryService() {
             throw NotaryInternalException(result.error)
         }
     }
+
+    /**
+     * Estimate the wait time to be notarised taking into account the new request size.
+     *
+     * @param numStates The number of states we're about to request be notarised.
+     */
+    fun getEstimatedWaitTime(numStates: Int): Duration = uniquenessProvider.getEta(numStates)
 
     /**
      * Required for the flow to be able to suspend until the commit is complete.
