@@ -114,11 +114,19 @@ abstract class PortAllocation {
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
-    class Incremental(startingPort: Int) : PortAllocation() {
+    open class Incremental(startingPort: Int) : PortAllocation() {
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
 
         override fun nextPort() = portCounter.andIncrement
+    }
+
+    internal class IncrementalConfigurable(environmentVariableName: String, startingPortDefault: Int): Incremental(initialPort(environmentVariableName, startingPortDefault)) {
+
+        private companion object {
+
+            private fun initialPort(environmentVariableName: String, startingPortDefault: Int): Int = System.getenv(environmentVariableName)?.toIntOrNull() ?: startingPortDefault
+        }
     }
 }
 
@@ -306,8 +314,7 @@ data class NodeParameters(
  * Defaults to incremental.
  */
 data class JmxPolicy(val startJmxHttpServer: Boolean = false,
-                     val jmxHttpServerPortAllocation: PortAllocation? =
-                             if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
+                     val jmxHttpServerPortAllocation: PortAllocation? = if (startJmxHttpServer) jmxPortAllocation() else null)
 
 /**
  * [driver] allows one to start up nodes like this:
@@ -353,6 +360,12 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
     )
 }
 
+private fun mainPortAllocation(port: Int = 10_000, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_MAIN"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+
+private fun debugPortAllocation(port: Int = 5_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_DEBUG"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+
+private fun jmxPortAllocation(port: Int = 7_005, envVariable: String = "CORDA_CONFIG_TESTS_PORT_ALLOCATION_JMX"): PortAllocation = PortAllocation.IncrementalConfigurable(envVariable, port)
+
 /**
  * Builder for configuring a [driver].
  *
@@ -388,8 +401,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val portAllocation: PortAllocation = mainPortAllocation(),
+        val debugPortAllocation: PortAllocation = debugPortAllocation(),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
@@ -406,8 +419,8 @@ data class DriverParameters(
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-            portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-            debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+            portAllocation: PortAllocation = mainPortAllocation(),
+            debugPortAllocation: PortAllocation = debugPortAllocation(),
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
