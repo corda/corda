@@ -42,7 +42,11 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         private val logger = contextLogger()
     }
 
-    fun <T> suppressingWarnings(block: LocalTypeInformationBuilder.() -> T): T =
+    /**
+     * If we are examining the type of a read-only property, or a type flagged as [Opaque], then we do not need to warn
+     * if the [LocalTypeInformation] for that type (or any of its related types) is [LocalTypeInformation.NonComposable].
+     */
+    private fun <T> suppressingWarnings(block: LocalTypeInformationBuilder.() -> T): T =
             copy(warnIfNonComposable = false).block()
 
     /**
