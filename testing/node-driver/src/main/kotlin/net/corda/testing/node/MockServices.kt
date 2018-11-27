@@ -10,7 +10,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -23,6 +22,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
@@ -38,7 +38,6 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
@@ -120,7 +119,7 @@ open class MockServices private constructor(
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
                     override val vaultService: VaultService = makeVaultService(schemaService, database)
-                    override val networkParametersStorage get() = MockNetworkParametersStorage(networkParameters)
+                    override val networkParametersStorage: NetworkParametersStorage get() = MockNetworkParametersStorage(networkParameters)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
                                 validatedTransactions as WritableTransactionStorage,
@@ -323,20 +322,4 @@ fun <T : SerializeAsToken> createMockCordaService(serviceHub: MockServices, serv
         }
     }
     return MockAppServiceHubImpl(serviceHub, serviceConstructor).serviceInstance
-}
-
-class MockNetworkParametersStorage(val currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorage {
-    private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
-    init {
-        hashToParametersMap[currentParametersHash] = currentParameters
-    }
-    override val currentParametersHash: SecureHash get() = currentParameters.serialize().hash
-    override val defaultParametersHash: SecureHash get() = currentParametersHash
-    override fun getEpochFromHash(hash: SecureHash): Int?  = readParametersFromHash(hash)?.epoch
-    override fun readParametersFromHash(hash: SecureHash): NetworkParameters? = hashToParametersMap[hash]
-    override fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>) {
-        val networkParameters = signedNetworkParameters.verified()
-        val hash = signedNetworkParameters.raw.hash
-        hashToParametersMap[hash] = networkParameters
-    }
 }

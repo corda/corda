@@ -13,13 +13,13 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
-import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.VersionInfo
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -65,7 +65,7 @@ class NetworkMapUpdaterTest {
     private val networkMapCache = createMockNetworkMapCache()
     private lateinit var ourKeyPair: KeyPair
     private lateinit var ourNodeInfo: SignedNodeInfo
-    private val networkParametersStorage: NetworkParametersStorage = mock()
+    private val networkParametersStorage: NetworkParametersStorageInternal = mock()
     private lateinit var server: NetworkMapServer
     private lateinit var networkMapClient: NetworkMapClient
     private lateinit var updater: NetworkMapUpdater
