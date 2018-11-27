@@ -4,12 +4,10 @@ import net.corda.testing.driver.PortAllocation
 
 fun incrementalPortAllocation(startingPortIfNoEnv: Int): PortAllocation {
 
-    return GlobalTestPortAllocation
-    // TODO sollecitom remove above and uncomment this
-//    return when {
-//        System.getenv(GlobalTestPortAllocation.enablingEnvVar)?.toBoolean() == true -> GlobalTestPortAllocation
-//        else -> PortAllocation.Incremental(startingPortIfNoEnv)
-//    }
+    return when {
+        System.getenv(GlobalTestPortAllocation.enablingEnvVar)?.toBoolean() == true -> GlobalTestPortAllocation
+        else -> PortAllocation.Incremental(startingPortIfNoEnv)
+    }
 }
 
 private object GlobalTestPortAllocation : PortAllocation.Incremental(startingPort = startingPort) {
