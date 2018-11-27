@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.RateLimiter
 import net.corda.client.mock.Generator
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.toBase58String
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
@@ -170,7 +170,7 @@ fun runLoadTests(configuration: LoadTestConfiguration, tests: List<Pair<LoadTest
         }
     }
 
-    connectToNodes(remoteNodes, PortAllocation.Incremental(configuration.localTunnelStartingPort)) { connections ->
+    connectToNodes(remoteNodes, incrementalPortAllocation(configuration.localTunnelStartingPort)) { connections ->
         log.info("Connected to all nodes!")
         val hostNodeMap = ConcurrentHashMap<String, NodeConnection>()
         connections.parallelStream().forEach { connection ->

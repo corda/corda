@@ -18,7 +18,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -58,7 +58,7 @@ class ArtemisMessagingTest {
     val temporaryFolder = TemporaryFolder()
 
     // THe
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val serverPort = portAllocation.nextPort()
     private val identity = generateKeyPair()
 
