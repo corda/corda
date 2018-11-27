@@ -8,7 +8,9 @@ import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import com.spotify.docker.client.messages.RegistryAuth
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
+import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.testing.driver.PortAllocation
 import org.junit.Assume.assumeFalse
 import org.junit.rules.ExternalResource
@@ -31,7 +33,8 @@ data class CryptoUserCredentials(val username: String, val password: String)
  * Since the above setup is not a strong requirement for the integration tests to be executed it is intended that this
  * rule is used together with the assumption mechanism in tests.
  */
-class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
+class HsmSimulator(portAllocation: PortAllocation,
+                   private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
                    private val imageRepoTag: String = DEFAULT_IMAGE_REPO_TAG,
                    private val imageVersion: String = DEFAULT_IMAGE_VERSION,
                    private val pullImage: Boolean = DEFAULT_PULL_IMAGE,
@@ -39,7 +42,7 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
                    private val registryPass: String? = REGISTRY_PASSWORD) : ExternalResource() {
 
     private companion object {
-        val DEFAULT_SERVER_ADDRESS = "corda.azurecr.io"
+        const val DEFAULT_SERVER_ADDRESS = "corda.azurecr.io"
         /*
          * Currently we have following images:
          * 1) corda.azurecr.io/network-management/hsm-simulator - having only one user configured:
@@ -57,32 +60,39 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
          *    - INTEGRATION_TEST_OPS_CERT (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.CERT.*
          *    - INTEGRATION_TEST_OPS_NETMAP (password: INTEGRATION_TEST) with the CXI_GROUP=TEST.CORDACONNECT.OPS.NETMAP.*
          */
-        val DEFAULT_IMAGE_REPO_TAG = "corda.azurecr.io/network-management/hsm-simulator-with-groups"
-        val DEFAULT_IMAGE_VERSION = "latest"
-        val DEFAULT_PULL_IMAGE = true
+        const val DEFAULT_IMAGE_REPO_TAG = "corda.azurecr.io/network-management/hsm-simulator-with-groups"
+        const val DEFAULT_IMAGE_VERSION = "latest"
+        const val DEFAULT_PULL_IMAGE = true
 
-        val HSM_SIMULATOR_PORT = "3001/tcp"
-        val CONTAINER_KILL_TIMEOUT_SECONDS = 10
+        const val HSM_SIMULATOR_PORT = "3001/tcp"
+        const val CONTAINER_KILL_TIMEOUT_SECONDS = 10
 
-        val CRYPTO_USER = System.getProperty("CRYPTO_USER", "INTEGRATION_TEST")
-        val CRYPTO_PASSWORD = System.getProperty("CRYPTO_PASSWORD", "INTEGRATION_TEST")
+        val CRYPTO_USER: String = System.getProperty("CRYPTO_USER", "INTEGRATION_TEST")
+        val CRYPTO_PASSWORD: String = System.getProperty("CRYPTO_PASSWORD", "INTEGRATION_TEST")
 
-        val REGISTRY_USERNAME = System.getenv("AZURE_CR_USER")
-        val REGISTRY_PASSWORD = System.getenv("AZURE_CR_PASS")
+        val REGISTRY_USERNAME: String? = System.getenv("AZURE_CR_USER")
+        val REGISTRY_PASSWORD: String? = System.getenv("AZURE_CR_PASS")
 
-        val log = loggerFor<HsmSimulator>()
+        val log = contextLogger()
 
-        private val HSM_STARTUP_SLEEP_INTERVAL_MS = 500L
-        private val HSM_STARTUP_POLL_MAX_COUNT = 10;
+        private const val HSM_STARTUP_SLEEP_INTERVAL_MS = 500L
+        private const val HSM_STARTUP_POLL_MAX_COUNT = 10
     }
 
-    private val localHostAndPortBinding = PortAllocation.Incremental(10000).nextHostAndPort()
+    val address = portAllocation.nextHostAndPort()
     private lateinit var docker: DockerClient
     private var containerId: String? = null
 
     override fun before() {
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
         assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
+        addShutdownHook {
+            try {
+                docker.stopAndRemoveHsmSimulatorContainer()
+            } catch (e: Exception) {
+                log.debug(e.message, e)
+            }
+        }
         docker = DefaultDockerClient.fromEnv().build()
         if (pullImage) {
             docker.pullHsmSimulatorImageFromRepository()
@@ -94,16 +104,6 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
     override fun after() {
         docker.stopAndRemoveHsmSimulatorContainer()
     }
-
-    /**
-     * Retrieves the port at which simulator is listening at.
-     */
-    val port get(): Int = localHostAndPortBinding.port
-
-    /**
-     * Retrieves the host IP address, which the simulator is listening at.
-     */
-    val host get(): String = localHostAndPortBinding.host
 
     /**
      * Retrieves the HSM user credentials. Those are supposed to be preconfigured on the HSM itself. Thus, when
@@ -133,7 +133,7 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
 
     private fun pollAndWaitForHsmSimulator() {
         val config = CryptoServerProviderConfig(
-                Device = "${localHostAndPortBinding.port}@${localHostAndPortBinding.host}",
+                Device = "${address.port}@${address.host}",
                 KeyGroup = "*",
                 KeySpecifier = -1
         )
@@ -167,7 +167,7 @@ class HsmSimulator(private val serverAddress: String = DEFAULT_SERVER_ADDRESS,
     }
 
     private fun DockerClient.createContainer(): String? {
-        val portBindings = mapOf(HSM_SIMULATOR_PORT to listOf(PortBinding.create(localHostAndPortBinding.host, localHostAndPortBinding.port.toString())))
+        val portBindings = mapOf(HSM_SIMULATOR_PORT to listOf(PortBinding.create(address.host, address.port.toString())))
         val hostConfig = HostConfig.builder().portBindings(portBindings).build()
         val containerConfig = ContainerConfig.builder()
                 .hostConfig(hostConfig)

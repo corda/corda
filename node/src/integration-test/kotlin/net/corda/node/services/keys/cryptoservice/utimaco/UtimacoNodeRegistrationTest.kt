@@ -9,10 +9,12 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.node.hsm.HsmSimulator
 import net.corda.node.utilities.registration.TestDoorman
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.PortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -21,23 +23,16 @@ import net.corda.testing.node.internal.DriverDSLImpl
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import org.apache.commons.io.FileUtils
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import net.corda.node.hsm.HsmSimulator
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
 import java.io.File
 import java.net.URL
 import java.nio.charset.Charset
 
 class UtimacoNodeRegistrationTest : IntegrationTest() {
-
-    @Rule
-    @JvmField
-    val doorman: TestDoorman = TestDoorman()
 
     @Rule
     @JvmField
@@ -47,9 +42,15 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
+    private val portAllocation = PortAllocation.Incremental(13400)
+
     @Rule
     @JvmField
-    val hsmSimulator: HsmSimulator = HsmSimulator()
+    val doorman = TestDoorman(portAllocation)
+
+    @Rule
+    @JvmField
+    val hsmSimulator = HsmSimulator(portAllocation)
 
     companion object {
         @ClassRule
@@ -61,10 +62,8 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
     }
 
-    @Ignore
     @Test
     fun `node registration with one node backed by Utimaco HSM`() {
-
         val tmpUtimacoConfig = createTempUtimacoConfig()
 
         val compatibilityZone = SharedCompatibilityZoneParams(
@@ -73,7 +72,7 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
                 publishNotaries = { doorman.server.networkParameters = testNetworkParameters(it) },
                 rootCert = DEV_ROOT_CA.certificate)
         internalDriver(
-                portAllocation = doorman.portAllocation,
+                portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
@@ -89,12 +88,6 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
                     startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
             ).transpose().getOrThrow()
 
-            Assertions.assertThat(doorman.registrationHandler.idsPolled).containsOnly(
-                    aliceName.organisation,
-                    genevieveName.organisation,
-                    notaryName.organisation)
-
-            // Check the nodes can communicate among themselves (and the notary).
             val anonymous = false
             val result = alice.rpc.startFlow(
                     ::CashIssueAndPaymentFlow,
@@ -109,14 +102,14 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
             val utimacoCryptoService = UtimacoCryptoService.fromConfigurationFile(File(tmpUtimacoConfig).toPath())
             val alicePubKey = utimacoCryptoService.getPublicKey("identity-private-key")
             assertThat(alicePubKey).isNotNull()
-            assertThat(result.stx.sigs.map { it.by.encoded }.filter { it.contentEquals(alicePubKey!!.encoded) }).hasSize(1)
-            assertThat(result.stx.sigs.single { it.by.encoded.contentEquals(alicePubKey!!.encoded) }.isValid(result.stx.id))
+            assertThat(result.stx.sigs.map { it.by.encoded!! }.filter { it.contentEquals(alicePubKey!!.encoded) }).hasSize(1)
+            assertThat(result.stx.sigs.single { it.by.encoded!!.contentEquals(alicePubKey!!.encoded) }.isValid(result.stx.id))
         }
     }
 
     private fun createTempUtimacoConfig(): String {
         val utimacoConfig = ConfigFactory.parseFile(javaClass.getResource("utimaco_config.yml").toPath().toFile())
-        val portConfig = ConfigFactory.parseMap(mapOf("provider.port" to hsmSimulator.port))
+        val portConfig = ConfigFactory.parseMap(mapOf("provider.port" to hsmSimulator.address.port))
         val config = portConfig.withFallback(utimacoConfig)
         val tmpConfigFile = configFolder.newFile("utimaco_config.yml")
         FileUtils.writeStringToFile(tmpConfigFile, config.root().render(), Charset.defaultCharset())
