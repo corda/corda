@@ -88,7 +88,7 @@ class DriverDSLImpl(
         val isDebug: Boolean,
         val startNodesInProcess: Boolean,
         val waitForAllNodesToFinish: Boolean,
-        val jmxPolicy: JmxPolicy?,
+        val jmxPolicy: JmxPolicy,
         val notarySpecs: List<NotarySpec>,
         val compatibilityZone: CompatibilityZoneParams?,
         val networkParameters: NetworkParameters,
@@ -263,8 +263,12 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
-        val jmxPort = jmxPolicy?.httpPort
-        val jmxConfig = if (jmxPort != null) mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPort) else emptyMap()
+        @Suppress("DEPRECATION")
+        val jmxConfig = if (jmxPolicy.startJmxHttpServer) {
+            mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPolicy.httpPort)
+        } else {
+            emptyMap()
+        }
 
         val flowOverrideConfig = FlowOverrideConfig(flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) })
         val overrides = configOf(
@@ -1138,6 +1142,7 @@ fun <A> internalDriver(
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
+        jmxPolicy: JmxPolicy = DriverParameters().jmxPolicy,
         networkParameters: NetworkParameters = DriverParameters().networkParameters,
         compatibilityZone: CompatibilityZoneParams? = null,
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
@@ -1157,7 +1162,7 @@ fun <A> internalDriver(
                     startNodesInProcess = startNodesInProcess,
                     waitForAllNodesToFinish = waitForAllNodesToFinish,
                     notarySpecs = notarySpecs,
-                    jmxPolicy = null,
+                    jmxPolicy = jmxPolicy,
                     compatibilityZone = compatibilityZone,
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,

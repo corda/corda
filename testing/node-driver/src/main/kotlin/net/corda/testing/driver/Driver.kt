@@ -298,52 +298,6 @@ data class NodeParameters(
 }
 
 /**
- * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver].
- *
- * @property httpPort The port to use for remote Jolokia/JMX monitoring over HTTP. Defaults to 7006.
- */
-@Suppress("DEPRECATION")
-class JmxPolicy private constructor(
-        @Deprecated("This is no longer needed to turn on monitoring.")
-        val startJmxHttpServer: Boolean,
-        @Deprecated("This has been replaced by httpPort which makes it clear to the calling code which port to connect to.")
-        val jmxHttpServerPortAllocation: PortAllocation?,
-        val httpPort: Int
-) {
-    @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified.")
-    constructor() : this(false, null, 7006)
-    @Deprecated("Use constructor that takes in the httpPort")
-    constructor(startJmxHttpServer: Boolean = false, jmxHttpServerPortAllocation: PortAllocation? = null) : this(startJmxHttpServer, jmxHttpServerPortAllocation, 7006)
-    /** Create a JmxPolicy that turns on monitoring on the given [httpPort]. */
-    constructor(httpPort: Int) : this(true, null, httpPort)
-
-    @Deprecated("startJmxHttpServer is deprecated as it's no longer needed to turn on monitoring.")
-    operator fun component1(): Boolean = startJmxHttpServer
-    @Deprecated("jmxHttpServerPortAllocation is deprecated and no longer does anything. Use httpPort instead.")
-    operator fun component2(): PortAllocation? = jmxHttpServerPortAllocation
-
-    @Deprecated("startJmxHttpServer and jmxHttpServerPortAllocation are both deprecated.")
-    fun copy(startJmxHttpServer: Boolean = this.startJmxHttpServer,
-             jmxHttpServerPortAllocation: PortAllocation? = this.jmxHttpServerPortAllocation): JmxPolicy {
-        return JmxPolicy(startJmxHttpServer, jmxHttpServerPortAllocation)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is JmxPolicy) return false
-        return this.httpPort == other.httpPort
-    }
-
-    override fun hashCode(): Int {
-        var result = httpPort.hashCode()
-        result = 31 * result + httpPort
-        return result
-    }
-
-    override fun toString(): String = "JmxPolicy(httpPort=$httpPort)"
-}
-
-/**
  * [driver] allows one to start up nodes like this:
  *   driver {
  *     val noService = startNode(providedName = DUMMY_BANK_A.name)
@@ -430,7 +384,7 @@ data class DriverParameters(
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
-        val jmxPolicy: JmxPolicy = JmxPolicy(),
+        @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
@@ -448,7 +402,7 @@ data class DriverParameters(
             waitForAllNodesToFinish: Boolean = false,
             notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
             extraCordappPackagesToScan: List<String> = emptyList(),
-            jmxPolicy: JmxPolicy = JmxPolicy(),
+            @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
             networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
             notaryCustomOverrides: Map<String, Any?> = emptyMap(),
             initialiseSerialization: Boolean = true,
