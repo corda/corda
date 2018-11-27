@@ -88,6 +88,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
                            private val ourKeyPair: KeyPair,
                            private val trustRoot: X509Certificate,
                            private val nodeCa: X509Certificate,
+                           override val networkParametersStorage: DBNetworkParametersStorage,
                            private val signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned) : ServiceHubInternal, SingletonSerializeAsToken() {
 
     override val networkParameters: NetworkParameters = signedNetworkParameters.networkParameters
@@ -147,7 +148,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments).tokenize()
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database).tokenize()
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
@@ -165,7 +166,8 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
             ),
             networkMapClient,
             configuration.baseDirectory,
-            configuration.extraNetworkMapKeys
+            configuration.extraNetworkMapKeys,
+            networkParametersStorage
     ).closeOnStop()
 
     private val transactionVerifierWorkerCount = 4
@@ -395,8 +397,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
         installCoreFlows()
         registerCordappFlows()
-
-        servicesForResolution.start(networkParameters)
 
         val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
