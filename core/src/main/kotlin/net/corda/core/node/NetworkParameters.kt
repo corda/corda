@@ -107,8 +107,8 @@ data class NetworkParameters(
         private fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
 
         // Make sure that packages don't overlap so that ownership is clear.
-        private fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
-            packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("${currentPackage}.") }
+        fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
+            packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("$currentPackage.") }
         }
 
         private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
@@ -117,14 +117,14 @@ data class NetworkParameters(
     }
 
     init {
-        require(minimumPlatformVersion > 0) { "minimumPlatformVersion must be at least 1" }
+        require(minimumPlatformVersion > 0) { "Minimum platform level must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
-        require(epoch > 0) { "epoch must be at least 1" }
-        require(maxMessageSize > 0) { "maxMessageSize must be at least 1" }
-        require(maxTransactionSize > 0) { "maxTransactionSize must be at least 1" }
-        require(!eventHorizon.isNegative) { "eventHorizon must be positive value" }
+        require(epoch > 0) { "Epoch must be at least 1" }
+        require(maxMessageSize > 0) { "Maximum message size must be at least 1" }
+        require(maxTransactionSize > 0) { "Maximum transaction size must be at least 1" }
+        require(!eventHorizon.isNegative) { "Event Horizon must be a positive value" }
         packageOwnership.keys.forEach(::requirePackageValid)
-        require(noOverlap(packageOwnership.keys)) { "multiple packages added to the packageOwnership overlap." }
+        require(noOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -217,3 +217,7 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  * version.
  */
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
+
+private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
+    return this.findAnnotation<AutoAcceptable>() != null
+}

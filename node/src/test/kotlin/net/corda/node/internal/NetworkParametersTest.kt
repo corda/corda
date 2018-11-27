@@ -109,7 +109,7 @@ class NetworkParametersTest {
                             "com.example.stuff" to key2
                     )
             )
-        }.withMessage("multiple packages added to the packageOwnership overlap.")
+        }.withMessage("Multiple packages added to the packageOwnership overlap.")
 
         val params = NetworkParameters(1,
                 emptyList(),

@@ -23,6 +23,6 @@ public class StartShellCommand extends InteractiveShellCommand {
 
         logger.info("Executing command \"start {} {}\",", name, (input != null) ? input.stream().collect(joining(" ")) : "<no arguments>");
         ANSIProgressRenderer ansiProgressRenderer = ansiProgressRenderer();
-        FlowShellCommand.startFlow(name, input, out, ops(), ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHANSIProgressRenderer(out), objectMapper());
+        FlowShellCommand.startFlow(name, input, out, ops(), ansiProgressRenderer != null ? ansiProgressRenderer : new CRaSHANSIProgressRenderer(out), objectMapper(null));
     }
 }

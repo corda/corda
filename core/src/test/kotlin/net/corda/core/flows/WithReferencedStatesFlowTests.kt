@@ -14,8 +14,6 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.contracts.DummyContract
-import net.corda.testing.contracts.DummyState
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.cordappsForPackages
@@ -106,15 +104,15 @@ internal class UseRefState(private val linearId: UniqueIdentifier) : FlowLogic<S
                 relevancyStatus = Vault.RelevancyStatus.ALL
         )
         val referenceState = serviceHub.vaultService.queryBy<ContractState>(query).states.single()
+
         val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = notary).apply {
             addReferenceState(referenceState.referenced())
-            addOutputState(DummyState(), DummyContract.PROGRAM_ID)
-            addCommand(DummyContract.Commands.Create(), listOf(ourIdentity.owningKey))
+            addOutputState(RefState.State(ourIdentity), RefState.CONTRACT_ID)
+            addCommand(RefState.Create(), listOf(ourIdentity.owningKey))
         })
         return subFlow(FinalityFlow(stx, emptyList()))
     }
 }
-
 
 class WithReferencedStatesFlowTests {
     companion object {
