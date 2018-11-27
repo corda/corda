@@ -1,17 +1,18 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureMetadata
+import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.transactions.*
 import net.corda.core.utilities.seconds
 import net.corda.finance.POUNDS
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
@@ -56,14 +57,16 @@ class TransactionSerializationTests {
 
         interface Commands : CommandData {
             class Move : TypeOnlyCommandData(), Commands
+            class Issue : TypeOnlyCommandData(), Commands
         }
     }
 
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
     // It refers to a fake TX/state that we don't bother creating here.
     val depositRef = MINI_CORP.ref(1)
-    val fakeStateRef = generateStateRef()
-    val inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef )
+    val signatures = listOf(TransactionSignature(ByteArray(1), MEGA_CORP_KEY.public, SignatureMetadata(1, Crypto.findSignatureScheme(MEGA_CORP_KEY.public).schemeNumberID)))
+
+    lateinit var inputState : StateAndRef<ContractState> //= StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef )
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY) {
@@ -76,9 +79,10 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
-        tx = TransactionBuilder(DUMMY_NOTARY).withItems(
-                inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey))
-        )
+        val dummyTransaction = TransactionBuilder(notary = DUMMY_NOTARY).withItems(outputState, Command(TestCash.Commands.Issue(), arrayListOf(MEGA_CORP.owningKey))).toLedgerTransaction(megaCorpServices)
+        val fakeStateRef = StateRef(dummyTransaction.id,0)
+        inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef)
+        tx = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey)))
     }
 
     @Test

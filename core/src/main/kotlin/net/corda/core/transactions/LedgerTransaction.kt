@@ -114,8 +114,9 @@ private constructor(
                         ?: throw IllegalStateException("The attachment for output state contract has empty Jar index file. " +
                                 "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val implementationVersion = mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: throw IllegalStateException("The attachment for output state contract has no \"Implementation-Version\" field in JAR index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
+                        ?: return //It's ok to lack IMPLEMENTATION_VERSION, it means base 0 version
+                //throw IllegalStateException("The attachment for output state contract has no \"Implementation-Version\" field in JAR index file. " +
+                                //"The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val version = try {
                     Integer.parseInt(implementationVersion)
                 } catch (e: IllegalArgumentException) {
