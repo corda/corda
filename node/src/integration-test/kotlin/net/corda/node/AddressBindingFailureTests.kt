@@ -1,12 +1,12 @@
 package net.corda.node
 
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.errors.AddressBindingException
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.internal.errors.AddressBindingException
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.NotarySpec
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -17,7 +17,7 @@ import java.net.ServerSocket
 class AddressBindingFailureTests {
 
     companion object {
-        private val portAllocation = PortAllocation.Incremental(20_000)
+        private val portAllocation = incrementalPortAllocation(20_000)
     }
 
     @Test

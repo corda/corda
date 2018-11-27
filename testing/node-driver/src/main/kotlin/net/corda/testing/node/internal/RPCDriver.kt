@@ -27,6 +27,7 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
@@ -101,8 +102,8 @@ val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
-private val globalPortAllocation = PortAllocation.Incremental(10000)
-private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+private val globalPortAllocation = incrementalPortAllocation(10000)
+private val globalDebugPortAllocation = incrementalPortAllocation(5005)
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
