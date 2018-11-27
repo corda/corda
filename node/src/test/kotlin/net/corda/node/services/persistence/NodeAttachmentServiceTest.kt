@@ -4,8 +4,6 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -20,7 +18,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.JarSignatureTestUtils.createJar
 import net.corda.testing.core.JarSignatureTestUtils.generateKey
@@ -33,7 +30,10 @@ import net.corda.testing.node.MockServices.Companion.makeTestDataSourcePropertie
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
-import org.junit.*
+import org.junit.After
+import org.junit.Before
+import org.junit.Ignore
+import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.OutputStream
@@ -52,7 +52,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
-
 class NodeAttachmentServiceTest {
 
     // Use an in memory file system for testing attachment storage.
@@ -68,8 +67,6 @@ class NodeAttachmentServiceTest {
         val dataSourceProperties = makeTestDataSourceProperties()
         database = configureDatabase(dataSourceProperties, DatabaseConfig(), { null }, { null })
         fs = Jimfs.newFileSystem(Configuration.unix())
-
-        doReturn(testNetworkParameters()).whenever(services).networkParameters
 
         storage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database).also {
             database.transaction {
@@ -427,5 +424,4 @@ class NodeAttachmentServiceTest {
             return Paths.get(fileManager.list(StandardLocation.CLASS_OUTPUT, "", setOf(JavaFileObject.Kind.CLASS), true).single().name)
         }
     }
-
 }

@@ -40,6 +40,7 @@ class MaxTransactionSizeTests {
         mockNet = MockNetwork(listOf("net.corda.testing.contracts"), networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
+        bobNode.registerInitiatedFlow(ReceiveLargeTransactionFlow::class.java)
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()

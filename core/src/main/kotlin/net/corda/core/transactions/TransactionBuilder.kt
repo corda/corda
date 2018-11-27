@@ -130,8 +130,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                             (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
                             notary,
                             window,
-                            referenceStates
-                    ),
+                            referenceStates,
+                            services.networkParametersStorage.currentHash),
                     privacySalt
             )
         }

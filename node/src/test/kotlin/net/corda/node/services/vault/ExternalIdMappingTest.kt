@@ -19,6 +19,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.util.*
@@ -37,19 +38,25 @@ class ExternalIdMappingTest {
 
     private val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     private val notary = TestIdentity(CordaX500Name("NotaryService", "London", "GB"), 1337L)
-    private val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
-            cordappPackages = cordapps,
-            identityService = rigorousMock<IdentityServiceInternal>().also {
-                doReturn(notary.party).whenever(it).partyFromKey(notary.publicKey)
-                doReturn(notary.party).whenever(it).wellKnownPartyFromAnonymous(notary.party)
-                doReturn(notary.party).whenever(it).wellKnownPartyFromX500Name(notary.name)
-            },
-            initialIdentity = myself,
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-    )
 
-    private val services: MockServices = databaseAndServices.second
-    private val database: CordaPersistence = databaseAndServices.first
+    lateinit var services: MockServices
+    lateinit var database: CordaPersistence
+
+    @Before
+    fun setUp() {
+        val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
+                cordappPackages = cordapps,
+                identityService = rigorousMock<IdentityServiceInternal>().also {
+                    doReturn(notary.party).whenever(it).partyFromKey(notary.publicKey)
+                    doReturn(notary.party).whenever(it).wellKnownPartyFromAnonymous(notary.party)
+                    doReturn(notary.party).whenever(it).wellKnownPartyFromX500Name(notary.name)
+                },
+                initialIdentity = myself,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+        )
+        services = mockServices
+        database = db
+    }
 
     private fun freshKeyForExternalId(externalId: UUID): AnonymousParty {
         val anonymousParty = freshKey()
