@@ -48,6 +48,12 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
         timeWindows.firstOrNull()
     }
 
+    override val networkParametersHash: SecureHash? = let {
+        val parametersHashes = deserialiseComponentGroup(componentGroups, SecureHash::class, PARAMETERS_GROUP)
+        check(parametersHashes.size <= 1) { "Invalid Transaction. More than 1 network parameters hash detected." }
+        parametersHashes.firstOrNull()
+    }
+
     /**
      * Returns a list of all the component groups that are present in the transaction, excluding the privacySalt,
      * in the following order (which is the same with the order in [ComponentGroupEnum]:
@@ -58,12 +64,14 @@ abstract class TraversableTransaction(open val componentGroups: List<ComponentGr
      * - The notary [Party], if present (list with one element)
      * - The time-window of the transaction, if present (list with one element)
      * - list of each reference input that is present
+     * - network parameters hash if present
      */
     val availableComponentGroups: List<List<Any>>
         get() {
             val result = mutableListOf(inputs, outputs, commands, attachments, references)
             notary?.let { result += listOf(it) }
             timeWindow?.let { result += listOf(it) }
+            networkParametersHash?.let { result += listOf(it) }
             return result
         }
 }
@@ -149,7 +157,9 @@ class FilteredTransaction internal constructor(
                 if (wtx.timeWindow != null) filter(wtx.timeWindow, TIMEWINDOW_GROUP.ordinal, 0)
                 // Note that because [inputs] and [references] share the same type [StateRef], we use a wrapper for references [ReferenceStateRef],
                 // when filtering. Thus, to filter-in all [references] based on type, one should use the wrapper type [ReferenceStateRef] and not [StateRef].
+                // Similar situation is for network parameters hash and attachments, one should use wrapper [NetworkParametersHash] and not [SecureHash].
                 wtx.references.forEachIndexed { internalIndex, it -> filter(ReferenceStateRef(it), REFERENCES_GROUP.ordinal, internalIndex) }
+                wtx.networkParametersHash?.let { filter(NetworkParametersHash(it), PARAMETERS_GROUP.ordinal, 0) }
                 // It is highlighted that because there is no a signers property in TraversableTransaction,
                 // one cannot specifically filter them in or out.
                 // The above is very important to ensure someone won't filter out the signers component group if at least one
@@ -351,3 +361,8 @@ class FilteredTransactionVerificationException(val id: SecureHash, val reason: S
 @KeepForDJVM
 @CordaSerializable
 data class ReferenceStateRef(val stateRef: StateRef)
+
+/** Wrapper over [SecureHash] to be used when filtering network parameters hash. */
+@KeepForDJVM
+@CordaSerializable
+data class NetworkParametersHash(val hash: SecureHash)

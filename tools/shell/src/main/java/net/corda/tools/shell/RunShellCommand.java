@@ -38,13 +38,13 @@ public class RunShellCommand extends InteractiveShellCommand {
     @Usage("runs a method from the CordaRPCOps interface on the node.")
     public Object main(InvocationContext<Map> context, @Usage("The command to run") @Argument(unquote = false) List<String> command) {
         logger.info("Executing command \"run {}\",", (command != null) ? command.stream().collect(joining(" ")) : "<no arguments>");
-        StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper());
+        StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
         if (command == null) {
             emitHelp(context, parser);
             return null;
         }
-        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper());
+        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(InteractiveShell.getCordappsClassloader()));
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

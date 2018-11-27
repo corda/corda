@@ -6,7 +6,10 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.network.NetworkMapClient
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
@@ -23,7 +26,7 @@ class NetworkParametersReader(private val trustRoot: X509Certificate,
         class NetworkMapNotConfigured : Error("Node hasn't been configured to connect to a network map from which to get the network parameters.")
         class OldParamsAndUpdate : Error(
                 "Both network parameters and network parameters update files don't match" +
-                "parameters advertised by network map. Please update node to use correct network parameters file."
+                        "parameters advertised by network map. Please update node to use correct network parameters file."
         )
         class OldParams(previousParametersHash: SecureHash, advertisedParametersHash: SecureHash) : Error(
                 "Node uses parameters with hash: $previousParametersHash but network map is advertising: " +
