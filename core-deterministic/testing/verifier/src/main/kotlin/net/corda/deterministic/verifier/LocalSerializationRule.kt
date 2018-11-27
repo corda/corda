@@ -67,7 +67,7 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private class AMQPSerializationScheme(
             cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-            serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+            serializerFactoriesForContexts: AccessOrderLinkedHashMap<Triple<ClassWhitelist, ClassLoader, Boolean>, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
         override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
             throw UnsupportedOperationException()

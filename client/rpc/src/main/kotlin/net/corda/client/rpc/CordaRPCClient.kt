@@ -17,6 +17,7 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
+import net.corda.serialization.internal.amqp.CacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 
@@ -296,7 +297,7 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                AMQPClientSerializationScheme.initialiseSerialization(classLoader, Caffeine.newBuilder().maximumSize(128).build<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>().asMap())
+                AMQPClientSerializationScheme.initialiseSerialization(classLoader, Caffeine.newBuilder().maximumSize(128).build<CacheKey, SerializerFactory>().asMap())
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }

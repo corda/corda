@@ -56,6 +56,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
+import net.corda.serialization.internal.amqp.CacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
@@ -474,8 +475,8 @@ open class Node(configuration: NodeConfiguration,
         val classloader = cordappLoader.appClassLoader
         nodeSerializationEnv = SerializationEnvironment.with(
                 SerializationFactoryImpl().apply {
-                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>().asMap()))
-                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>().asMap()))
+                    registerScheme(AMQPServerSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<CacheKey, SerializerFactory>().asMap()))
+                    registerScheme(AMQPClientSerializationScheme(cordappLoader.cordapps, Caffeine.newBuilder().maximumSize(128).build<CacheKey, SerializerFactory>().asMap()))
                 },
                 p2pContext = AMQP_P2P_CONTEXT.withClassLoader(classloader),
                 rpcServerContext = AMQP_RPC_SERVER_CONTEXT.withClassLoader(classloader),

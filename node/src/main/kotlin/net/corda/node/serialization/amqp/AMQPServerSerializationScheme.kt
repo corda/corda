@@ -6,10 +6,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
 
 /**
@@ -18,12 +15,12 @@ import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
  */
 class AMQPServerSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
+        serializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised())
-    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<CacheKey, SerializerFactory>(128).toSynchronised())
+    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
 
-    constructor() : this(emptySet(), AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised() )
+    constructor() : this(emptySet(), AccessOrderLinkedHashMap<CacheKey, SerializerFactory>(128).toSynchronised() )
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()
