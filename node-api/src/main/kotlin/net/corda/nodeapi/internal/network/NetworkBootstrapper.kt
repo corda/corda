@@ -213,9 +213,6 @@ internal constructor(private val initSerEnv: Boolean,
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
-        if (!fromCordform) {
-            println("Found the following CorDapps: ${cordappJars.map { it.fileName }}")
-        }
         val networkAlreadyExists = createNodeDirectoriesIfNeeded(directory, fromCordform)
         val nodeDirs = gatherNodeDirectories(directory)
 
@@ -226,19 +223,9 @@ internal constructor(private val initSerEnv: Boolean,
 
         val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
         checkForDuplicateLegalNames(configs.values)
-        if ((copyCordapps == CopyCordapps.Yes || (copyCordapps == CopyCordapps.OnFirstRun && !networkAlreadyExists)) && cordappJars.isNotEmpty()) {
-            println("Copying CorDapp JARs into node directories")
-            for (nodeDir in nodeDirs) {
-                val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                cordappJars.forEach {
-                    try {
-                        it.copyToDirectory(cordappsDir)
-                    } catch (e: FileAlreadyExistsException) {
-                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
-                    }
-                }
-            }
-        }
+
+        cordappJars.copy(nodeDirs, copyCordapps, networkAlreadyExists, fromCordform)
+
         generateServiceIdentitiesForNotaryClusters(configs)
         if (initSerEnv) {
             initialiseSerialization()
@@ -266,6 +253,31 @@ internal constructor(private val initSerEnv: Boolean,
         } finally {
             if (initSerEnv) {
                 _contextSerializationEnv.set(null)
+            }
+        }
+    }
+
+    private fun List<Path>.copy(nodeDirs: List<Path>, copyCordapps: CopyCordapps, networkAlreadyExists: Boolean, fromCordform: Boolean) {
+        if (!fromCordform) {
+            println("Found the following CorDapps: ${this.map { it.fileName }}")
+        }
+        if (copyCordapps == CopyCordapps.OnFirstRun && networkAlreadyExists) {
+            println("Not copying CorDapp JARs as --copy-cordapps is set to OnFirstRun, and it looks like this network has already been bootstrapped.")
+        }
+        if (copyCordapps == CopyCordapps.No) {
+            println("Not copying CorDapp JARs as --copy-cordapps is set to No.")
+        }
+        if ((copyCordapps == CopyCordapps.Yes || (copyCordapps == CopyCordapps.OnFirstRun && !networkAlreadyExists)) && this.isNotEmpty()) {
+            println("Copying CorDapp JARs into node directories")
+            for (nodeDir in nodeDirs) {
+                val cordappsDir = (nodeDir / "cordapps").createDirectories()
+                this.forEach {
+                    try {
+                        it.copyToDirectory(cordappsDir)
+                    } catch (e: FileAlreadyExistsException) {
+                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                    }
+                }
             }
         }
     }
