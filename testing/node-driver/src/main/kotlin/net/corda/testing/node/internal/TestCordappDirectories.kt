@@ -37,8 +37,7 @@ object TestCordappDirectories {
             val configDir = (cordappDir / "config").createDirectories()
             val jarFile = cordappDir / "$filename.jar"
             cordapp.packageAsJar(jarFile)
-            //TODO in future we may extend the signing with user-defined key-stores/certs/keys.
-            if (signJar) {
+            if (cordapp.signJar) {
                 val testKeystore = "_teststore"
                 val alias = "Test"
                 val pwd = "secret!"
@@ -46,8 +45,9 @@ object TestCordappDirectories {
                     cordappsDirectory.generateKey(alias, pwd, "O=Test Company Ltd,OU=Test,L=London,C=GB")
                 }
                 (cordappsDirectory / testKeystore).copyTo(cordappDir / testKeystore)
-                cordappDir.signJar("$filename.jar", alias, pwd)
-            }
+                val pk = cordappDir.signJar("$filename.jar", alias, pwd)
+                println("Signed Jar: $cordappDir/$filename.jar with public key $pk")
+            } else println("Unsigned Jar: $cordappDir/$filename.jar")
             (configDir / "$filename.conf").writeText(configString)
             logger.debug { "$cordapp packaged into $jarFile" }
             cordappDir
