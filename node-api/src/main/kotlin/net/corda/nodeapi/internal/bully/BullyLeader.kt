@@ -39,7 +39,7 @@ class BullyLeaderClient(val artemis: ArtemisSessionProvider,
 
 
     @CordaSerializable
-    private enum class MessageType {
+    enum class MessageType {
         ELECTION_REQUEST,
         ELECTION_REJECT,
         LEADER_ANNOUNCE,
@@ -47,7 +47,7 @@ class BullyLeaderClient(val artemis: ArtemisSessionProvider,
     }
 
     @CordaSerializable
-    private data class LeaderMessage(val msgType: MessageType,
+    data class LeaderMessage(val msgType: MessageType,
                                      val term: Int,
                                      val proposedLeader: String,
                                      val leaderPriority: Int)
