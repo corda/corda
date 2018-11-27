@@ -37,7 +37,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
             @Usage("The data to pass as input") @Argument(unquote = false) List<String> input
     ) {
         logger.info("Executing command \"flow start {} {}\",", name, (input != null) ? input.stream().collect(joining(" ")) : "<no arguments>");
-        startFlow(name, input, out, ops(), ansiProgressRenderer(), objectMapper());
+        startFlow(name, input, out, ops(), ansiProgressRenderer(), objectMapper(null));
     }
 
     // TODO Limit number of flows shown option?
