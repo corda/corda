@@ -3,7 +3,6 @@ package net.corda.nodeapi.internal.network
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
-import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -19,7 +18,6 @@ import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.days
-import net.corda.core.utilities.filterNotNullValues
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.*
@@ -36,6 +34,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.security.PublicKey
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executors
@@ -56,7 +55,7 @@ class NetworkBootstrapper
 internal constructor(private val initSerEnv: Boolean,
                      private val embeddedCordaJar: () -> InputStream,
                      private val nodeInfosGenerator: (List<Path>) -> List<Path>,
-                     private val contractsJarConverter: (Path) -> ContractsJar) {
+                     private val contractsJarConverter: (Path) -> ContractsJar) : NetworkBootstrapperWithOverridableParameters {
 
     constructor() : this(
             initSerEnv = true,
@@ -128,6 +127,9 @@ internal constructor(private val initSerEnv: Boolean,
                 throw IllegalStateException("Error while generating node info file. Please check the logs in $nodeDir.")
             }
         }
+
+        const val DEFAULT_MAX_MESSAGE_SIZE: Int = 10485760
+        const val DEFAULT_MAX_TRANSACTION_SIZE: Int = 524288000
     }
 
     sealed class NotaryCluster {
@@ -189,14 +191,15 @@ internal constructor(private val initSerEnv: Boolean,
     }
 
     /** Entry point for the tool */
-    fun bootstrap(directory: Path, copyCordapps: Boolean, minimumPlatformVersion: Int, packageOwnership: Map<String, PublicKey?> = emptyMap()) {
-        require(minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
-        // Don't accidently include the bootstrapper jar as a CorDapp!
+    override fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides) {
+        require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
+        // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
         val cordappJars = directory.list { paths ->
-            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }.toList()
+            paths.filter { it.toString().endsWith(".jar") && !it.isSameAs(bootstrapperJar) && it.fileName.toString() != "corda.jar" }
+                    .toList()
         }
-        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, minimumPlatformVersion = minimumPlatformVersion, packageOwnership = packageOwnership)
+        bootstrap(directory, cordappJars, copyCordapps, fromCordform = false, networkParametersOverrides = networkParameterOverrides)
     }
 
     private fun bootstrap(
@@ -204,8 +207,7 @@ internal constructor(private val initSerEnv: Boolean,
             cordappJars: List<Path>,
             copyCordapps: Boolean,
             fromCordform: Boolean,
-            minimumPlatformVersion: Int = PLATFORM_VERSION,
-            packageOwnership: Map<String, PublicKey?> = emptyMap()
+            networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides()
     ) {
         directory.createDirectories()
         println("Bootstrapping local test network in $directory")
@@ -250,8 +252,9 @@ internal constructor(private val initSerEnv: Boolean,
             println("Gathering notary identities")
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
+            // Only add contracts to the whitelist from unsigned jars
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), cordappJars.filter { !isSigned(it) }.map(contractsJarConverter))
-            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, minimumPlatformVersion, packageOwnership)
+            val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, networkParametersOverrides)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
             } else {
@@ -283,7 +286,8 @@ internal constructor(private val initSerEnv: Boolean,
             println("Generating node directory for $nodeName")
             val nodeDir = (directory / nodeName).createDirectories()
             confFile.copyTo(nodeDir / "node.conf", REPLACE_EXISTING)
-            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }?.copyTo(nodeDir / "web-server.conf", REPLACE_EXISTING)
+            webServerConfFiles.firstOrNull { directory.relativize(it).toString().removeSuffix("_web-server.conf") == nodeName }
+                    ?.copyTo(nodeDir / "web-server.conf", REPLACE_EXISTING)
             cordaJar.copyToDirectory(nodeDir, REPLACE_EXISTING)
         }
 
@@ -378,50 +382,42 @@ internal constructor(private val initSerEnv: Boolean,
         throw IllegalStateException(msg.toString())
     }
 
+    private fun defaultNetworkParametersWith(notaryInfos: List<NotaryInfo>,
+                                             whitelist: Map<String, List<AttachmentId>>): NetworkParameters {
+        return NetworkParameters(
+                minimumPlatformVersion = PLATFORM_VERSION,
+                notaries = notaryInfos,
+                modifiedTime = Instant.now(),
+                maxMessageSize = DEFAULT_MAX_MESSAGE_SIZE,
+                maxTransactionSize = DEFAULT_MAX_TRANSACTION_SIZE,
+                whitelistedContractImplementations = whitelist,
+                packageOwnership = emptyMap(),
+                epoch = 1,
+                eventHorizon = 30.days
+        )
+    }
+
     private fun installNetworkParameters(
             notaryInfos: List<NotaryInfo>,
             whitelist: Map<String, List<AttachmentId>>,
             existingNetParams: NetworkParameters?,
             nodeDirs: List<Path>,
-            minimumPlatformVersion: Int,
-            packageOwnership: Map<String, PublicKey?>
+            networkParametersOverrides: NetworkParametersOverrides
     ): NetworkParameters {
-        // TODO Add config for maxMessageSize and maxTransactionSize
         val netParams = if (existingNetParams != null) {
-            if (existingNetParams.whitelistedContractImplementations == whitelist && existingNetParams.notaries == notaryInfos &&
-                    existingNetParams.packageOwnership.entries.containsAll(packageOwnership.entries)) {
-                existingNetParams
-            } else {
-                var updatePackageOwnership = mutableMapOf(*existingNetParams.packageOwnership.map { Pair(it.key, it.value) }.toTypedArray())
-                packageOwnership.forEach { key, value ->
-                    if (value == null) {
-                        if (updatePackageOwnership.remove(key) != null)
-                            println("Unregistering package $key")
-                    } else {
-                        if (updatePackageOwnership.put(key, value) == null)
-                            println("Registering package $key for owner ${value.toStringShort()}")
-                    }
-                }
-                existingNetParams.copy(
-                        notaries = notaryInfos,
+            val newNetParams = existingNetParams
+                    .copy(notaries = notaryInfos, whitelistedContractImplementations = whitelist)
+                    .overrideWith(networkParametersOverrides)
+            if (newNetParams != existingNetParams) {
+                newNetParams.copy(
                         modifiedTime = Instant.now(),
-                        whitelistedContractImplementations = whitelist,
-                        packageOwnership = updatePackageOwnership,
                         epoch = existingNetParams.epoch + 1
                 )
+            } else {
+                existingNetParams
             }
         } else {
-            NetworkParameters(
-                    minimumPlatformVersion = minimumPlatformVersion,
-                    notaries = notaryInfos,
-                    modifiedTime = Instant.now(),
-                    maxMessageSize = 10485760,
-                    maxTransactionSize = 524288000,
-                    whitelistedContractImplementations = whitelist,
-                    packageOwnership = packageOwnership.filterNotNullValues(),
-                    epoch = 1,
-                    eventHorizon = 30.days
-            )
+            defaultNetworkParametersWith(notaryInfos, whitelist).overrideWith(networkParametersOverrides)
         }
         val copier = NetworkParametersCopier(netParams, overwriteFile = true)
         nodeDirs.forEach(copier::install)
@@ -435,7 +431,7 @@ internal constructor(private val initSerEnv: Boolean,
             // Nodes which are part of a distributed notary have a second identity which is the composite identity of the
             // cluster and is shared by all the other members. This is the notary identity.
             2 -> legalIdentities[1]
-            else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenerio: $this")
+            else -> throw IllegalArgumentException("Not sure how to get the notary identity in this scenario: $this")
         }
     }
 
@@ -463,4 +459,28 @@ internal constructor(private val initSerEnv: Boolean,
             JarSignatureCollector.collectSigningParties(it).isNotEmpty()
         }
     }
+}
+
+fun NetworkParameters.overrideWith(override: NetworkParametersOverrides): NetworkParameters {
+    return this.copy(
+            minimumPlatformVersion = override.minimumPlatformVersion ?: this.minimumPlatformVersion,
+            maxMessageSize = override.maxMessageSize ?: this.maxMessageSize,
+            maxTransactionSize = override.maxTransactionSize ?: this.maxTransactionSize,
+            eventHorizon = override.eventHorizon ?: this.eventHorizon,
+            packageOwnership = override.packageOwnership?.map { it.javaPackageName to it.publicKey }?.toMap() ?: this.packageOwnership
+    )
+}
+
+data class PackageOwner(val javaPackageName: String, val publicKey: PublicKey)
+
+data class NetworkParametersOverrides(
+        val minimumPlatformVersion: Int? = null,
+        val maxMessageSize: Int? = null,
+        val maxTransactionSize: Int? = null,
+        val packageOwnership: List<PackageOwner>? = null,
+        val eventHorizon: Duration? = null
+)
+
+interface NetworkBootstrapperWithOverridableParameters {
+    fun bootstrap(directory: Path, copyCordapps: Boolean, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
 }

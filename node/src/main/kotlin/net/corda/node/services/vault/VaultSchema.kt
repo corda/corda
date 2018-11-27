@@ -167,14 +167,14 @@ object VaultSchemaV1 : MappedSchema(
             @Id
             @GeneratedValue
             @Column(name = "id", unique = true, nullable = false)
-            var id: Long? = null,
+            val id: Long?,
 
             // Foreign key.
             @Column(name = "state_ref")
-            var stateRef: PersistentStateRef,
+            val stateRef: PersistentStateRef,
 
             @Column(name = "public_key_hash", nullable = false)
-            var publicKeyHash: String,
+            val publicKeyHash: String,
 
             @Column(name = "x500_name", nullable = true)
             var x500Name: AbstractParty? = null
@@ -190,17 +190,18 @@ object VaultSchemaV1 : MappedSchema(
             @Id
             @GeneratedValue
             @Column(name = "id", unique = true, nullable = false)
-            var id: Long? = null,
+            val id: Long,
 
             // Foreign key.
             @Column(name = "state_ref")
-            var stateRef: PersistentStateRef,
+            val stateRef: PersistentStateRef,
 
             @Column(name = "public_key_hash")
-            var publicKeyHash: String,
+            val publicKeyHash: String,
 
             @Column(name = "external_id")
-            var externalId: UUID
+            @Type(type = "uuid-char")
+            val externalId: UUID
     ) : StatePersistable
 }
 

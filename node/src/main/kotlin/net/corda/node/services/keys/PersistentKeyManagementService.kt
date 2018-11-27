@@ -11,6 +11,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
+import org.hibernate.annotations.Type
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -50,13 +51,14 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
             @Id
             @GeneratedValue
             @Column(name = "id", unique = true, nullable = false)
-            var key: Long? = null,
+            val key: Long?,
 
             @Column(name = "external_id", nullable = false)
-            var externalId: UUID,
+            @Type(type = "uuid-char")
+            val externalId: UUID,
 
             @Column(name = "public_key_hash", nullable = false)
-            var publicKeyHash: String
+            val publicKeyHash: String
     ) {
         constructor(accountId: UUID, publicKey: PublicKey)
                 : this(null, accountId, publicKey.toStringShort())
