@@ -411,7 +411,7 @@ The Network Bootstrapper can be started with the following command line options:
 * ``--dir=<dir>``: Root directory containing the node configuration files and CorDapp JARs that will form the test network.
   It may also contain existing node directories. Defaults to the current directory.
 * ``--copy-cordapps=<copyCordapps>``: Whether or not to copy the CorDapp JARs into the nodes' 'cordapps' directory. Possible values:
-  OnFirstRun, Yes, No. Default: OnFirstRun.
+  FirstRunOnly, Yes, No. Default: FirstRunOnly.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--help``, ``-h``: Show this help message and exit.

@@ -305,7 +305,7 @@ class NetworkBootstrapperTest {
         return bytes
     }
 
-    private fun bootstrap(copyCordapps: CopyCordapps = CopyCordapps.OnFirstRun,
+    private fun bootstrap(copyCordapps: CopyCordapps = CopyCordapps.FirstRunOnly,
                           packageOwnership: Map<String, PublicKey>? = emptyMap(),
                           minimumPlatformVerison: Int? = PLATFORM_VERSION,
                           maxMessageSize: Int? = DEFAULT_MAX_MESSAGE_SIZE,

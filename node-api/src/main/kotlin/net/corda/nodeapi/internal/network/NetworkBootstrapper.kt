@@ -184,16 +184,16 @@ internal constructor(private val initSerEnv: Boolean,
      * TODO: Remove once the gradle plugins are updated to 4.0.30
      */
     fun bootstrap(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, CopyCordapps.Yes, fromCordform = true)
+        bootstrap(directory, cordappJars, CordappCopierOption.CopyCordapps(), fromCordform = true)
     }
 
     /** Entry point for Cordform */
     fun bootstrapCordform(directory: Path, cordappJars: List<Path>) {
-        bootstrap(directory, cordappJars, CopyCordapps.No, fromCordform = true)
+        bootstrap(directory, cordappJars, CordappCopierOption.DontCopyCordapps(), fromCordform = true)
     }
 
     /** Entry point for the tool */
-    override fun bootstrap(directory: Path, copyCordapps: CopyCordapps, networkParameterOverrides: NetworkParametersOverrides) {
+    override fun bootstrap(directory: Path, copyCordapps: CordappCopierOption, networkParameterOverrides: NetworkParametersOverrides) {
         require(networkParameterOverrides.minimumPlatformVersion == null || networkParameterOverrides.minimumPlatformVersion <= PLATFORM_VERSION) { "Minimum platform version cannot be greater than $PLATFORM_VERSION" }
         // Don't accidentally include the bootstrapper jar as a CorDapp!
         val bootstrapperJar = javaClass.location.toPath()
@@ -207,7 +207,7 @@ internal constructor(private val initSerEnv: Boolean,
     private fun bootstrap(
             directory: Path,
             cordappJars: List<Path>,
-            copyCordapps: CopyCordapps,
+            copyCordapps: CordappCopierOption,
             fromCordform: Boolean,
             networkParametersOverrides: NetworkParametersOverrides = NetworkParametersOverrides()
     ) {
@@ -224,7 +224,7 @@ internal constructor(private val initSerEnv: Boolean,
         val configs = nodeDirs.associateBy({ it }, { ConfigFactory.parseFile((it / "node.conf").toFile()) })
         checkForDuplicateLegalNames(configs.values)
 
-        cordappJars.copy(nodeDirs, copyCordapps, networkAlreadyExists, fromCordform)
+        copyCordapps.copy(cordappJars, nodeDirs, networkAlreadyExists, fromCordform)
 
         generateServiceIdentitiesForNotaryClusters(configs)
         if (initSerEnv) {
@@ -253,31 +253,6 @@ internal constructor(private val initSerEnv: Boolean,
         } finally {
             if (initSerEnv) {
                 _contextSerializationEnv.set(null)
-            }
-        }
-    }
-
-    private fun List<Path>.copy(nodeDirs: List<Path>, copyCordapps: CopyCordapps, networkAlreadyExists: Boolean, fromCordform: Boolean) {
-        if (!fromCordform) {
-            println("Found the following CorDapps: ${this.map { it.fileName }}")
-        }
-        if (copyCordapps == CopyCordapps.OnFirstRun && networkAlreadyExists) {
-            println("Not copying CorDapp JARs as --copy-cordapps is set to OnFirstRun, and it looks like this network has already been bootstrapped.")
-        }
-        if (copyCordapps == CopyCordapps.No) {
-            println("Not copying CorDapp JARs as --copy-cordapps is set to No.")
-        }
-        if ((copyCordapps == CopyCordapps.Yes || (copyCordapps == CopyCordapps.OnFirstRun && !networkAlreadyExists)) && this.isNotEmpty()) {
-            println("Copying CorDapp JARs into node directories")
-            for (nodeDir in nodeDirs) {
-                val cordappsDir = (nodeDir / "cordapps").createDirectories()
-                this.forEach {
-                    try {
-                        it.copyToDirectory(cordappsDir)
-                    } catch (e: FileAlreadyExistsException) {
-                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
-                    }
-                }
             }
         }
     }
@@ -503,7 +478,50 @@ data class NetworkParametersOverrides(
 )
 
 interface NetworkBootstrapperWithOverridableParameters {
-    fun bootstrap(directory: Path, copyCordapps: CopyCordapps, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
+    fun bootstrap(directory: Path, copyCordapps: CordappCopierOption, networkParameterOverrides: NetworkParametersOverrides = NetworkParametersOverrides())
 }
 
-enum class CopyCordapps { OnFirstRun, Yes, No }
+abstract class CordappCopierOption {
+    protected fun List<Path>.copy(nodeDirs: List<Path>) {
+        if (this.isNotEmpty()) {
+            println("Copying CorDapp JARs into node directories")
+            for (nodeDir in nodeDirs) {
+                val cordappsDir = (nodeDir / "cordapps").createDirectories()
+                this.forEach {
+                    try {
+                        it.copyToDirectory(cordappsDir)
+                    } catch (e: FileAlreadyExistsException) {
+                        println("WARNING: ${it.fileName} already exists in $cordappsDir, ignoring and leaving existing CorDapp untouched")
+                    }
+                }
+            }
+        }
+    }
+
+    protected abstract fun copy(cordapps: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean)
+
+    fun copy(cordapps: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean, fromCordform: Boolean) {
+        if (!fromCordform) {
+            println("Found the following CorDapps: ${cordapps.map { it.fileName }}")
+        }
+        this.copy(cordapps, nodeDirs, networkAlreadyExists)
+    }
+
+    class FirstRunOnly: CordappCopierOption() {
+        override fun copy(cordapps: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) {
+            if (networkAlreadyExists) {
+                println("Not copying CorDapp JARs as --copy-cordapps is set to FirstRunOnly, and it looks like this network has already been bootstrapped.")
+                return
+            }
+            cordapps.copy(nodeDirs)
+        }
+    }
+
+    class CopyCordapps: CordappCopierOption() {
+        override fun copy(cordapps: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) = cordapps.copy(nodeDirs)
+    }
+
+    class DontCopyCordapps: CordappCopierOption() {
+        override fun copy(cordapps: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) = println("Not copying CorDapp JARs as --copy-cordapps is set to No.")
+    }
+}

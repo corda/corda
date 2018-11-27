@@ -6,13 +6,11 @@ import net.corda.cliutils.*
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.exists
-import net.corda.nodeapi.internal.network.CopyCordapps
-import net.corda.nodeapi.internal.network.NetworkBootstrapper
+import net.corda.nodeapi.internal.network.*
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_MESSAGE_SIZE
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_TRANSACTION_SIZE
-import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridableParameters
-import net.corda.nodeapi.internal.network.NetworkParametersOverrides
 import picocli.CommandLine.Option
+import picocli.CommandLine.defaultExceptionHandler
 import java.io.FileNotFoundException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -32,7 +30,7 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
     var noCopy: Boolean? = null
 
     @Option(names = ["--copy-cordapps"], description = ["Whether or not to copy the CorDapp JARs into the nodes' 'cordapps' directory. \${COMPLETION-CANDIDATES}"])
-    var copyCordapps: CopyCordapps = CopyCordapps.OnFirstRun
+    var copyCordapps: CopyCordapps = CopyCordapps.FirstRunOnly
 
     @Option(names = ["--minimum-platform-version"], description = ["The minimum platform version to use in the network-parameters. Current default is $PLATFORM_VERSION."])
     var minimumPlatformVersion: Int? = null
@@ -93,9 +91,21 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
         verifyInputs()
         val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors(::reportErrors).optional ?: return ExitCodes.FAILURE
         bootstrapper.bootstrap(dir.toAbsolutePath().normalize(),
-                copyCordapps = copyCordapps,
+                copyCordapps = copyCordapps.toCordappCopierOption(),
                 networkParameterOverrides = networkParameterOverrides
         )
         return ExitCodes.SUCCESS
+    }
+}
+
+enum class CopyCordapps {
+    FirstRunOnly, Yes, No;
+}
+
+fun CopyCordapps.toCordappCopierOption() : CordappCopierOption {
+    return when(this) {
+        CopyCordapps.FirstRunOnly -> CordappCopierOption.FirstRunOnly()
+        CopyCordapps.Yes -> CordappCopierOption.CopyCordapps()
+        else -> CordappCopierOption.DontCopyCordapps()
     }
 }
