@@ -23,7 +23,7 @@ import net.corda.core.utilities.ProgressTracker
  *
  * A list of [FlowSession]s is required for each non-local participant of the transaction. These participants will receive
  * the final notarised transaction by calling [ReceiveFinalityFlow] in their counterpart flows. Sessions with non-participants
- * can also be included, but they must specifiy [StatesToRecord.ALL_VISIBLE] for statesToRecortd if they wish to record the
+ * can also be included, but they must specify [StatesToRecord.ALL_VISIBLE] for statesToRecord if they wish to record the
  * contract states into their vaults.
  *
  * The flow returns the same transaction but with the additional signatures from the notary.
@@ -34,7 +34,7 @@ import net.corda.core.utilities.ProgressTracker
  * @param sessions A collection of [FlowSession]s who will be given the notarised transaction. This list **must** include
  * all participants in the transaction (excluding the local identity).
  */
-// To maintain backwards compatibility with the old API, FinalityFlow can act both as an intiating flow and as an inlined flow.
+// To maintain backwards compatibility with the old API, FinalityFlow can act both as an initiating flow and as an inlined flow.
 // This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
 @InitiatingFlow
