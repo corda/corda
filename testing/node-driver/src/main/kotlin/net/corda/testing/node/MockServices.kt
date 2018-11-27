@@ -323,7 +323,7 @@ open class MockServices private constructor(
     override fun loadState(stateRef: StateRef) = servicesForResolution.loadState(stateRef)
     override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
 
-    override fun loadContractAttachment(stateRef: StateRef) = servicesForResolution.loadContractAttachment(stateRef)
+    override fun loadContractAttachment(stateRef: StateRef) = try { servicesForResolution.loadContractAttachment(stateRef) } catch (e: Exception) { null }
 }
 
 /**
