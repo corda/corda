@@ -1,6 +1,7 @@
 package net.corda.client.rpc.internal.serialization.amqp
 
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.internal.toSynchronised
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase
@@ -19,19 +20,19 @@ class AMQPClientSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*,*>>,
         serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap { 128 })
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised())
     constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
 
     @Suppress("UNUSED")
-    constructor() : this(emptySet(), AccessOrderLinkedHashMap { 128 })
+    constructor() : this(emptySet(), AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised())
 
     companion object {
         /** Call from main only. */
-        fun initialiseSerialization(classLoader: ClassLoader? = null, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory> = AccessOrderLinkedHashMap { 128 }) {
+        fun initialiseSerialization(classLoader: ClassLoader? = null, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory> = AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised()) {
             nodeSerializationEnv = createSerializationEnv(classLoader, serializerFactoriesForContexts)
         }
 
-        fun createSerializationEnv(classLoader: ClassLoader? = null, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory> = AccessOrderLinkedHashMap { 128 }): SerializationEnvironment {
+        fun createSerializationEnv(classLoader: ClassLoader? = null, serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory> = AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised()): SerializationEnvironment {
             return SerializationEnvironment.with(
                     SerializationFactoryImpl().apply {
                         registerScheme(AMQPClientSerializationScheme(emptyList(), serializerFactoriesForContexts))

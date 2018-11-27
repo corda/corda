@@ -29,6 +29,7 @@ import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
@@ -90,17 +91,19 @@ class NodeVaultServiceTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
+        val parameters = testNetworkParameters()
         val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),
-                megaCorp)
+                megaCorp,
+                parameters)
         database = databaseAndServices.first
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>())
-        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock<IdentityService>())
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>(), parameters)
+        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock<IdentityService>(), parameters)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
@@ -571,7 +574,6 @@ class NodeVaultServiceTest {
     }
 
     // TODO: Unit test linear state relevancy checks
-
     @Test
     fun `correct updates are generated for general transactions`() {
         val notary = identity.party
@@ -647,7 +649,7 @@ class NodeVaultServiceTest {
         // Change notary
         services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
-        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary).build()
+        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary, services.networkParametersStorage.currentHash).build()
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {

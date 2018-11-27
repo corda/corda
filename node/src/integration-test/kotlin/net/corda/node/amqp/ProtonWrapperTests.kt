@@ -28,7 +28,7 @@ import net.corda.nodeapi.internal.protonwrapper.netty.init
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.createDevIntermediateCaCertPath
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
@@ -68,7 +68,7 @@ class ProtonWrapperTests(val sslSetup: SslSetup) {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()

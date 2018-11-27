@@ -19,7 +19,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -48,7 +48,7 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
     val temporaryFolder = TemporaryFolder()
     private val log = loggerFor<LoopbackBridgeTest>()
     private val BOB = TestIdentity(BOB_NAME)
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

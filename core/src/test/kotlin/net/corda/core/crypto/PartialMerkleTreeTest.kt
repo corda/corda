@@ -162,6 +162,7 @@ class PartialMerkleTreeTest {
         assertEquals(1, ftx.commands.size)
         assertNull(ftx.notary)
         assertNotNull(ftx.timeWindow)
+        assertNull(ftx.networkParametersHash)
         ftx.verify()
     }
 
@@ -186,6 +187,7 @@ class PartialMerkleTreeTest {
         assertTrue(ftxNothing.outputs.isEmpty())
         assertNull(ftxNothing.timeWindow)
         assertTrue(ftxNothing.availableComponentGroups.flatten().isEmpty())
+        assertNull(ftxNothing.networkParametersHash)
         ftxNothing.verify() // We allow empty ftx transactions (eg from a timestamp authority that blindly signs).
     }
 

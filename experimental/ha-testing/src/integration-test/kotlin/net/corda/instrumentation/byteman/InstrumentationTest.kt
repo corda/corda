@@ -15,8 +15,12 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.*
-import net.corda.testing.driver.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.OutOfProcess
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -67,7 +71,7 @@ class InstrumentationTest : IntegrationTest() {
     }
     private fun setup(inMemoryDB: Boolean = true, testBlock: InternalDriverDSL.() -> Unit) {
 
-        val portAllocation = PortAllocation.Incremental(10000)
+        val portAllocation = incrementalPortAllocation(10000)
 
         internalDriver(
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.finance.schemas"),

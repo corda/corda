@@ -165,16 +165,18 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
     val cryptoService = configuration.makeCryptoService()
+    val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
-    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, transactionStorage).also {
+    val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, transactionStorage).also {
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+    // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
             NodeInfoWatcher(
@@ -185,7 +187,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             ),
             networkMapClient,
             configuration.baseDirectory,
-            configuration.extraNetworkMapKeys
+            configuration.extraNetworkMapKeys,
+            networkParametersStorage
     ).closeOnStop()
     @Suppress("LeakingThis")
     val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount).tokenize()
@@ -323,7 +326,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         check(netParams.minimumPlatformVersion <= versionInfo.platformVersion) {
             "Node's platform version is lower than network's required minimumPlatformVersion"
         }
-        servicesForResolution.start(netParams)
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
@@ -366,6 +368,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         return database.transaction {
+            networkParametersStorage.start(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
             cordappProvider.start(netParams.whitelistedContractImplementations)
@@ -1019,6 +1022,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
+        override val networkParametersStorage: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

@@ -23,8 +23,11 @@ import net.corda.nodeapi.internal.ArtemisMessagingClient
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.protonwrapper.messages.MessageStatus
 import net.corda.nodeapi.internal.protonwrapper.netty.*
-import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.CHARLIE_NAME
+import net.corda.testing.core.MAX_MESSAGE_SIZE
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -41,7 +44,7 @@ class SocksTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocator = PortAllocation.Incremental(10000)
+    private val portAllocator = incrementalPortAllocation(10000)
     private val socksPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
     private val serverPort2 = portAllocator.nextPort()

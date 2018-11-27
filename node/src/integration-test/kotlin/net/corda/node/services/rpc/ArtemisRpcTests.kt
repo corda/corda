@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.internal.p2pSslOptions
@@ -37,7 +38,7 @@ import java.nio.file.Path
 import javax.security.auth.x500.X500Principal
 
 class ArtemisRpcTests {
-    private val ports: PortAllocation = PortAllocation.Incremental(10000)
+    private val ports: PortAllocation = incrementalPortAllocation(10000)
 
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)

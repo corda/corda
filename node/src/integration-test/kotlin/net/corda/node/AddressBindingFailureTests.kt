@@ -8,8 +8,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -29,7 +29,7 @@ class AddressBindingFailureTests: IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_A_NAME.toDatabaseSchemaName())
 
-        private val portAllocation = PortAllocation.Incremental(20_000)
+        private val portAllocation = incrementalPortAllocation(20_000)
     }
 
     @Test
@@ -56,8 +56,8 @@ class AddressBindingFailureTests: IntegrationTest() {
 
             assertThatThrownBy {
                 driver(DriverParameters(startNodesInProcess = false,
-                    notarySpecs = listOf(NotarySpec(notaryName)),
-                    notaryCustomOverrides = mapOf("p2pAddress" to address.toString()),
+                        notarySpecs = listOf(NotarySpec(notaryName)),
+                        notaryCustomOverrides = mapOf("p2pAddress" to address.toString()),
                         portAllocation = portAllocation)
                 ) {} }.isInstanceOfSatisfying(IllegalStateException::class.java) { error ->
 

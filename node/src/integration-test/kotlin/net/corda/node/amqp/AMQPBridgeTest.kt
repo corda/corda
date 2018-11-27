@@ -18,7 +18,7 @@ import net.corda.nodeapi.internal.bridging.BridgeManager
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPConfiguration
 import net.corda.nodeapi.internal.protonwrapper.netty.AMQPServer
 import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.Message.HDR_DUPLICATE_DETECTION_ID
@@ -81,7 +81,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
 
     private val BOB = TestIdentity(BOB_NAME)
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val artemisAddress = portAllocation.nextHostAndPort()
     private val amqpAddress = portAllocation.nextHostAndPort()
 

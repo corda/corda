@@ -7,15 +7,18 @@ import net.corda.client.rpc.RPCException
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.services.config.*
+import net.corda.node.services.config.EnterpriseConfiguration
+import net.corda.node.services.config.MutualExclusionConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.configureWithDevSSLCertificate
 import net.corda.node.services.messaging.ArtemisMessagingServer
 import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.rigorousMock
@@ -42,7 +45,7 @@ class ExternalBrokertests : IntegrationTest() {
     @JvmField
     val tempFolder = TemporaryFolder()
 
-    private val portAllocator = PortAllocation.Incremental(10000)
+    private val portAllocator = incrementalPortAllocation(10000)
 
     private abstract class AbstractNodeConfiguration : NodeConfiguration
 

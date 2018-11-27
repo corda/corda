@@ -18,6 +18,10 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
     companion object {
         @ClassRule
         @JvmField
+        val testSerialization = SerializationEnvironmentRule()
+
+        @ClassRule
+        @JvmField
         val rule = object : VaultQueryTestRule() {
             override val cordappPackages = listOf(
                     "net.corda.testing.contracts",
@@ -25,10 +29,6 @@ class VaultQueryExceptionsTests : VaultQueryParties by rule {
                     DummyLinearStateSchemaV1::class.packageName)
         }
     }
-
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
 
     @Rule
     @JvmField

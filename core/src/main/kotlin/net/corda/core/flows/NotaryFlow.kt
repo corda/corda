@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
+import net.corda.core.contracts.ComponentGroupEnum
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
@@ -12,10 +13,7 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.ReferenceStateRef
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
@@ -30,7 +28,8 @@ class NotaryFlow {
      * signatures will be returned – one from each replica that accepted the input state commit.
      *
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
-     *                         by another transaction or the time-window is invalid.
+     *                         by another transaction or the time-window is invalid or
+     *                         the parameters used for this transaction are no longer in force in the network.
      */
     @DoNotImplement
     @InitiatingFlow
@@ -99,7 +98,9 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
+                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is NetworkParametersHash
+                })
                 else -> ctx
             }
             session.send(NotarisationPayload(tx, signature))

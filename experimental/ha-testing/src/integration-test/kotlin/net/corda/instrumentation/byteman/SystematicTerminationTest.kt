@@ -7,7 +7,9 @@ import net.corda.core.contracts.withoutIssuer
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
 import net.corda.finance.POUNDS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.OnLedgerAsset
@@ -20,7 +22,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.InternalDriverDSL
@@ -101,7 +103,7 @@ class SystematicTerminationTest(private val terminationData: TerminationData) : 
 
     private fun setup(testBlock: InternalDriverDSL.() -> Unit) {
 
-        val portAllocation = PortAllocation.Incremental(10000)
+        val portAllocation = incrementalPortAllocation(10000)
 
         internalDriver(
                 cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.finance.schemas"),

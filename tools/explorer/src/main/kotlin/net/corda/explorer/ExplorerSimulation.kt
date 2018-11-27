@@ -29,6 +29,7 @@ import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListCont
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import net.corda.testing.node.internal.BUSINESS_NETWORK_CORDAPP
@@ -77,7 +78,7 @@ class ExplorerSimulation(private val options: OptionSet) {
     }
 
     private fun startDemoNodes() {
-        val portAllocation = PortAllocation.Incremental(20000)
+        val portAllocation = incrementalPortAllocation(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
                 cordappsForAllNodes = listOf(FINANCE_CORDAPP, BUSINESS_NETWORK_CORDAPP),

@@ -5,7 +5,6 @@ import io.netty.handler.ssl.ClientAuth
 import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.SslProvider
 import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.*
 import net.corda.core.crypto.Crypto.COMPOSITE_KEY
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
@@ -13,6 +12,8 @@ import net.corda.core.crypto.Crypto.EDDSA_ED25519_SHA512
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.Crypto.SPHINCS256_SHA256
 import net.corda.core.crypto.Crypto.generateKeyPair
+import net.corda.core.crypto.SignatureScheme
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.serialization.SerializationContext
@@ -33,7 +34,7 @@ import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.NettyTestClient
 import net.corda.testing.internal.NettyTestHandler
 import net.corda.testing.internal.NettyTestServer
@@ -75,7 +76,7 @@ class X509UtilitiesTest {
                 "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
         )
 
-        val portAllocation = PortAllocation.Incremental(10000)
+        val portAllocation = incrementalPortAllocation(10000)
 
         // We ensure that all of the algorithms are both used (at least once) as first and second in the following [Pair]s.
         // We also add [DEFAULT_TLS_SIGNATURE_SCHEME] and [DEFAULT_IDENTITY_SIGNATURE_SCHEME] combinations for consistency.

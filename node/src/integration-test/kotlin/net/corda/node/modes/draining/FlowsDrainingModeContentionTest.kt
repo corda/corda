@@ -23,8 +23,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -43,7 +43,7 @@ class FlowsDrainingModeContentionTest : IntegrationTest() {
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val user = User("mark", "dadada", setOf(all()))
     private val users = listOf(user)
 
