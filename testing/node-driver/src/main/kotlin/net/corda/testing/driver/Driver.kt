@@ -114,7 +114,7 @@ abstract class PortAllocation {
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
-    class Incremental(startingPort: Int) : PortAllocation() {
+    open class Incremental(startingPort: Int) : PortAllocation() {
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
 
