@@ -201,7 +201,7 @@ abstract class AbstractAMQPSerializationScheme(
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        // The above comment.
+        // See the above comment.
 //        var contextToUse = context
 //        if (context.useCase == SerializationContext.UseCase.RPCClient) {
 //            contextToUse = context.withClassLoader(getContextClassLoader())
