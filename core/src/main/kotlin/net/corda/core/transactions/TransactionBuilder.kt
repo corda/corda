@@ -330,8 +330,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         try {
             requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
         } catch (e: IllegalStateException) {
-            throw IllegalStateException("No-Downgrade Rule has been breached for contract class $contractClassName, reason: ${e.message
-                    ?: e.toString()}")
+            throw IllegalStateException("No-Downgrade Rule has been breached for contract class $contractClassName, reason: ${e.message ?: e.toString()}")
         }
 
         return Pair(setOf(selectedAttachmentId), resolvedOutputStates)

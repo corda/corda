@@ -32,8 +32,8 @@ import kotlin.test.assertNotNull
 class SignatureConstraintTests {
 
     private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
-    private val oldCordapp = base.withImplementationVersion("2.0")
-    private val newCordapp = base.withImplementationVersion("3.0")
+    private val oldCordapp = base.withImplementationVersion("2")
+    private val newCordapp = base.withImplementationVersion("3")
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
     private val message = Message("Hello world!")
     private val transformetMessage = Message(message.value + "A")
@@ -44,9 +44,9 @@ class SignatureConstraintTests {
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
             var nodeName = {
-                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true /*, signCordapp = true*/).getOrThrow()
+                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -55,7 +55,7 @@ class SignatureConstraintTests {
                 nodeName
             }()
             var result = {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true/*, signCordapp = true*/).getOrThrow()
+                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true).getOrThrow()
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
                     page.states.singleOrNull()
@@ -76,15 +76,15 @@ class SignatureConstraintTests {
         assertEquals(transformetMessage, stateAndRef!!.state.data.message)
     }
 
-    //@Test
+    @Test
     fun `cannot evolve from higher contract class version to lower one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
             var nodeName = {
-                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true/*, signCordapp = true*/).getOrThrow()
+                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -93,7 +93,7 @@ class SignatureConstraintTests {
                 nodeName
             }()
             var result = {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true/*, signCordapp = true*/).getOrThrow()
+                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true).getOrThrow()
 
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
