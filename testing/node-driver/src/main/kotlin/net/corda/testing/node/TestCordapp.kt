@@ -31,6 +31,9 @@ interface TestCordapp {
     /** Returns the set of package names scanned for this test CorDapp. */
     val packages: Set<String>
 
+    /** Returns whether the CorDapp should be jar signed. */
+    val signJar: Boolean
+
     /** Return a copy of this [TestCordapp] but with the specified name. */
     fun withName(name: String): TestCordapp
 
@@ -48,6 +51,9 @@ interface TestCordapp {
 
     /** Returns a copy of this [TestCordapp] but with the specified CorDapp config. */
     fun withConfig(config: Map<String, Any>): TestCordapp
+
+    /** Returns a copy of this [TestCordapp] but with the jar signing enabled. */
+    fun signJar(signed: Boolean): TestCordappImpl
 
     class Factory {
         companion object {
