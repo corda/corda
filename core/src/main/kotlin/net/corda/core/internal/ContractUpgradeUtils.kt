@@ -21,7 +21,7 @@ object ContractUpgradeUtils {
             else -> getContractAttachmentId(stateAndRef.state.contract, services)
         }
         val upgradedContractAttachmentId = getContractAttachmentId(upgradedContractClass.name, services)
-        val networkParametersHash = services.networkParametersStorage.currentParametersHash
+        val networkParametersHash = services.networkParametersStorage.currentHash
 
         val inputs = listOf(stateAndRef.ref)
         return ContractUpgradeTransactionBuilder(

@@ -78,17 +78,17 @@ class DBNetworkParametersStorage(
     }
 
     private lateinit var _currentHash: SecureHash
-    override val currentParametersHash: SecureHash get() = _currentHash
+    override val currentHash: SecureHash get() = _currentHash
     // TODO Have network map serve special "starting" parameters as parameters for resolution for older transactions?
-    override val defaultParametersHash: SecureHash get() = currentParametersHash
+    override val defaultHash: SecureHash get() = currentHash
 
     private val hashToParameters = createParametersMap(cacheFactory)
 
-    override fun readParametersFromHash(hash: SecureHash): NetworkParameters? {
+    override fun lookup(hash: SecureHash): NetworkParameters? {
         return database.transaction { hashToParameters[hash]?.raw?.deserialize() } ?: tryDownloadUnknownParameters(hash)
     }
 
-    override fun getEpochFromHash(hash: SecureHash): Int? = readParametersFromHash(hash)?.epoch
+    override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
 
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }

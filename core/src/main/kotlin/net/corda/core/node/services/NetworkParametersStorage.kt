@@ -15,16 +15,16 @@ interface NetworkParametersStorage {
     /**
      * Hash of the current parameters for the network.
      */
-    val currentParametersHash: SecureHash
+    val currentHash: SecureHash
 
     /**
      * For backwards compatibility, this parameters hash will be used for resolving historical transactions in the chain.
      */
-    val defaultParametersHash: SecureHash
+    val defaultHash: SecureHash
 
     /**
      * Return network parameters for the given hash. Null if there are no parameters for this hash in the storage and we are unable to
      * get them from network map.
      */
-    fun readParametersFromHash(hash: SecureHash): NetworkParameters?
+    fun lookup(hash: SecureHash): NetworkParameters?
 }

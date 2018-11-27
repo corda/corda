@@ -19,7 +19,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.internal.*
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -75,7 +74,7 @@ class NotaryServiceTests {
         val ex = assertFailsWith<NotaryException> { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
         assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: $hash, " +
-                "but current network parameters are: ${notaryServices.networkParametersStorage.currentParametersHash}")
+                "but current network parameters are: ${notaryServices.networkParametersStorage.currentHash}")
     }
 
     internal companion object {
@@ -90,7 +89,7 @@ class NotaryServiceTests {
 
         private fun generateTransaction(node: TestStartedNode,
                                         party: Party, notary: Party,
-                                        paramsHash: SecureHash? = node.services.networkParametersStorage.currentParametersHash,
+                                        paramsHash: SecureHash? = node.services.networkParametersStorage.currentHash,
                                         numberOfInputs: Int = 10_005): SignedTransaction {
             val txHash = SecureHash.randomSHA256()
             val inputs = (1..numberOfInputs).map { StateRef(txHash, it) }

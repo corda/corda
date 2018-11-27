@@ -76,8 +76,8 @@ class AttachmentLoadingTests {
         override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
         override val networkParameters: NetworkParameters = testNetworkParameters
         override val networkParametersStorage: NetworkParametersStorage get() = rigorousMock<NetworkParametersStorage>().apply {
-            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentParametersHash
-            doReturn(testNetworkParameters).whenever(this).readParametersFromHash(any())
+            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentHash
+            doReturn(testNetworkParameters).whenever(this).lookup(any())
         }
     }
 

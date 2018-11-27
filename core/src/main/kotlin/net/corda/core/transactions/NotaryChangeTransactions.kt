@@ -78,8 +78,8 @@ data class NotaryChangeWireTransaction(
     @DeleteForDJVM
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        val hashToResolve = networkParametersHash ?: services.networkParametersStorage.defaultParametersHash
-        val resolvedNetworkParameters = services.networkParametersStorage.readParametersFromHash(hashToResolve)
+        val hashToResolve = networkParametersHash ?: services.networkParametersStorage.defaultHash
+        val resolvedNetworkParameters = services.networkParametersStorage.lookup(hashToResolve)
                 ?: throw TransactionResolutionException(id)
         return NotaryChangeLedgerTransaction.create(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
     }

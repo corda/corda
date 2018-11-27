@@ -99,7 +99,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     @Suspendable
     protected fun checkParametersHash(networkParametersHash: SecureHash?) {
         if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
-        val notaryParametersHash = serviceHub.networkParametersStorage.currentParametersHash
+        val notaryParametersHash = serviceHub.networkParametersStorage.currentHash
         require (notaryParametersHash == networkParametersHash) {
             "Transaction for notarisation was tagged with parameters with hash: $networkParametersHash, but current network parameters are: $notaryParametersHash"
         }

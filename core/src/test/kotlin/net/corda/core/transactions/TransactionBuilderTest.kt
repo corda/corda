@@ -44,7 +44,7 @@ class TransactionBuilderTest {
         val cordappProvider = rigorousMock<CordappProvider>()
         val networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
         doReturn(networkParametersStorage).whenever(services).networkParametersStorage
-        doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentParametersHash
+        doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentHash
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(networkParameters).whenever(services).networkParameters
@@ -73,7 +73,7 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
-        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersStorage.currentParametersHash)
+        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersStorage.currentHash)
     }
 
     @Test

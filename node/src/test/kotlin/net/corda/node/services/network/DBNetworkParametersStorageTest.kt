@@ -75,21 +75,21 @@ class DBNetworkParametersStorageTest {
 
     @Test
     fun `set current parameters`() {
-        assertThat(nodeParametersStorage.currentParametersHash).isEqualTo(hash1)
-        assertThat(nodeParametersStorage.readParametersFromHash(hash1)).isEqualTo(netParams1.verified())
+        assertThat(nodeParametersStorage.currentHash).isEqualTo(hash1)
+        assertThat(nodeParametersStorage.lookup(hash1)).isEqualTo(netParams1.verified())
     }
 
     @Test
     fun `get default parameters`() {
         // TODO After implementing default endpoint on network map check it is correct, for now we set it to current.
-        assertThat(nodeParametersStorage.defaultParametersHash).isEqualTo(hash1)
+        assertThat(nodeParametersStorage.defaultHash).isEqualTo(hash1)
     }
 
     @Test
     fun `download parameters from network map server`() {
         database.transaction {
-            val netParams = nodeParametersStorage.readParametersFromHash(hash2)
-            assertThat(nodeParametersStorage.readParametersFromHash(hash2)).isEqualTo(netParams)
+            val netParams = nodeParametersStorage.lookup(hash2)
+            assertThat(nodeParametersStorage.lookup(hash2)).isEqualTo(netParams)
             verify(networkMapClient, times(1)).getNetworkParameters(hash2)
 
         }
@@ -99,7 +99,7 @@ class DBNetworkParametersStorageTest {
     fun `try save parameters with incorrect signature`() {
         database.transaction {
             val consoleOutput = interceptConsoleOutput {
-                nodeParametersStorage.readParametersFromHash(hash3)
+                nodeParametersStorage.lookup(hash3)
             }
             assertThat(consoleOutput).anySatisfy {
                 it.contains("Caused by: java.security.cert.CertPathValidatorException: subject/issuer name chaining check failed")

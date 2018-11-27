@@ -95,7 +95,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         cordappProvider = rigorousMock()
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         val networkParametersStorage = rigorousMock<NetworkParametersStorage>().also {
-            doReturn(networkParameters.serialize().hash).whenever(it).currentParametersHash
+            doReturn(networkParameters.serialize().hash).whenever(it).currentHash
         }
         doReturn(networkParametersStorage).whenever(services).networkParametersStorage
         doReturn(cordappProvider).whenever(services).cordappProvider

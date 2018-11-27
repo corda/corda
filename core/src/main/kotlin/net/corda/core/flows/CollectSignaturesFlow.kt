@@ -213,9 +213,9 @@ abstract class SignTransactionFlow @JvmOverloads constructor(val otherSideSessio
         // Receive transaction and resolve dependencies, check sufficient signatures is disabled as we don't have all signatures.
         val stx = subFlow(ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = false))
         // TODO ENT-2666: Have time period for checking the parameters (because of the delay of propagation of new network data).
-        check(stx.networkParametersHash == serviceHub.networkParametersStorage.currentParametersHash) {
+        check(stx.networkParametersHash == serviceHub.networkParametersStorage.currentHash) {
             "Received transaction for signing with invalid network parameters hash: ${stx.networkParametersHash}." +
-                    "Node's parameters hash: ${serviceHub.networkParametersStorage.currentParametersHash}"
+                    "Node's parameters hash: ${serviceHub.networkParametersStorage.currentHash}"
         }
         // Receive the signing key that the party requesting the signature expects us to sign with. Having this provided
         // means we only have to check we own that one key, rather than matching all keys in the transaction against all
