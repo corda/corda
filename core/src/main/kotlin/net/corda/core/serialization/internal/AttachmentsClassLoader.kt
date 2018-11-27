@@ -2,7 +2,7 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -10,8 +10,6 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.toSynchronised
-import net.corda.core.internal.toSynchronised
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
@@ -20,8 +18,8 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
-import java.util.jar.Manifest
 import java.util.jar.JarInputStream
+import java.util.jar.Manifest
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -58,7 +56,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             val attachmentContentMTHashes = mutableSetOf<SecureHash>()
             for (attachment in attachments) {
                 attachment.openAsJAR().use { jar ->
-                    val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                     val attachmentEntries = calculateEntriesHashes(attachment, jar)
                     if (attachmentEntries.isNotEmpty()) {
                         val contentHashMT = MerkleTree.getMerkleTree(attachmentEntries.map { it.value }).hash
@@ -72,7 +69,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                                     if (contentHash == originalContentHash) {
                                         log.debug { "Duplicate entry $path has same content hash $contentHash" }
                                     } else
-                                        throw OverlappingAttachments(path)
+                                        throw OverlappingAttachmentsException(path)
                                 }
                             }
                             attachmentContentMTHashes.add(contentHashMT)
@@ -81,18 +78,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                     }
                 }
             }
-
-            // This was reused from: https://github.com/corda/corda/pull/4240.
-            // TODO - Once that is merged it should be extracted to a utility.
-            private val Manifest.targetPlatformVersion: Int
-            get() {
-                val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
-                return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
-            }
         }
 
         fun calculateEntriesHashes(attachment: Attachment, jar: JarInputStream): Map<String, SecureHash> {
             val contentHashes = mutableMapOf<String, SecureHash>()
+            val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
             while (true) {
                 val entry = jar.nextJarEntry ?: break
                 if (entry.isDirectory) continue
@@ -112,6 +102,14 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             }
             return contentHashes
         }
+
+        // This was reused from: https://github.com/corda/corda/pull/4240.
+        // TODO - Once that is merged it should be extracted to a utility.
+        private val Manifest.targetPlatformVersion: Int
+            get() {
+                val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
+                return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
+            }
 
         @VisibleForTesting
         private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
