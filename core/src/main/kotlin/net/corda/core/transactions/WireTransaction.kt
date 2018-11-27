@@ -135,19 +135,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
     }
 
-    // TODO: changes required by ongoing usage within core-deterministic. Should this be annotated as @Deprecated ?
-    @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
-    @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    fun toLedgerTransaction(
-            resolveIdentity: (PublicKey) -> Party?,
-            resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-            networkParameters: NetworkParameters?
-    ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, networkParameters)
-    }
-
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,

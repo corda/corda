@@ -88,7 +88,7 @@ class AttachmentsClassLoaderTests {
         val att1 = storage.importAttachment(fakeAttachments( Pair("file1.txt", "some data"), Pair("file2.txt", "some more data")).inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachments( Pair("file1.txt", "some data"), Pair("file2.txt", "some more data2")).inputStream(), "app", "file2.jar")
 
-        assertFailsWith(AttachmentsClassLoader.Companion.OverlappingAttachments::class) {
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
             AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
