@@ -50,6 +50,7 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
 import net.corda.node.services.keys.cryptoservice.BCCryptoService
+import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.messaging.MessagingService
@@ -965,6 +966,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun generateKeyPair(alias: String) = when (cryptoService) {
         is UtimacoCryptoService -> cryptoService.generateKeyPair(alias, UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+        is AzureKeyVaultCryptoService -> cryptoService.generateKeyPair(alias, AzureKeyVaultCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID) // Azure KeyVault does not support EdDSA.
         else -> cryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
     }
 

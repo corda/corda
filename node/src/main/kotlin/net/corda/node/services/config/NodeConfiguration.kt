@@ -12,6 +12,7 @@ import net.corda.node.services.config.rpc.NodeRpcOptions
 import net.corda.node.services.config.schema.v1.V1NodeConfigurationSpec
 import net.corda.node.services.keys.cryptoservice.BCCryptoService
 import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
+import net.corda.node.services.keys.cryptoservice.azure.AzureKeyVaultCryptoService
 import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -116,9 +117,13 @@ interface NodeConfiguration {
     }
 
     fun makeCryptoService(): CryptoService {
-        return when(cryptoServiceName) {
+        return when (cryptoServiceName) {
             SupportedCryptoServices.BC_SIMPLE -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore)
             SupportedCryptoServices.UTIMACO -> UtimacoCryptoService.fromConfigurationFile(cryptoServiceConf)
+            SupportedCryptoServices.AZURE_KEY_VAULT -> {
+                val configPath = requireNotNull(cryptoServiceConf) { "When cryptoServiceName is set to AZURE_KEY_VAULT, cryptoServiceConf must specify the path to the configuration file."}
+                AzureKeyVaultCryptoService.fromConfigurationFile(configPath)
+            }
             null -> BCCryptoService(this.myLegalName.x500Principal, this.signingCertificateStore) // Pick default BCCryptoService when null.
         }
     }

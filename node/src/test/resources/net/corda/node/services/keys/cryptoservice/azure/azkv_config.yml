@@ -1,0 +1,6 @@
+path="foo.pkcs12"
+password="asdf"
+alias="my-alias"
+clientId="my-client-id"
+keyVaultURL="nothing"
+protection=HARDWARE

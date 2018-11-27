@@ -13,7 +13,9 @@ dependencies {
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // Corda integration dependencies
-    cordaCompile project(':node')
+    cordaCompile(project(':node')) {
+        exclude group: 'com.microsoft.azure'
+    }
 
     // Java Atomix: RAFT library
     compile 'io.atomix.copycat:copycat-client:1.2.8'
