@@ -13,22 +13,21 @@ Corda offers developers the option to expose all or some parts of a contract sta
 (ORM) tool to be persisted in a *Relational Database Management System* (RDBMS).
 
 The purpose of this, is to assist `vault <https://docs.corda.net/vault.html>`_
-development and allow for the persistence of state data to a local database. Persisted Contract States held in the
-vault are indexed for the purposes of executing queries. This also allows for relational joins between Corda data and private data local to
-the organization owning a node.
+development and allow for the persistence of state data to a custom database table. Persisted states held in the
+vault are indexed for the purposes of executing queries. This also allows for relational joins between default Corda tables
+and the node's own tables containing other relevant data persisted by the organization.
 
 The Object Relational Mapping is specified using `Java Persistence API <https://en.wikipedia.org/wiki/Java_Persistence_API>`_
 (JPA) annotations. This mapping is persisted to the database as a table row (a single, implicitly structured data item) by the node
 automatically every time a state is recorded in the node's local vault as part of a transaction.
 
-.. note:: Presently, the node includes an instance of the H2 database, but any database that supports *Java Database Connectivity* JDBC is a
-          candidate and the node will in the future support a range of database implementations via their respective JDBC drivers. Much
-          of the node's internal state is also persisted here. You can access the internal H2 database via JDBC, please see the
-          info in ":doc:`node-administration`" for details.
+.. note:: By default, nodes use an H2 database which is accessed using *Java Database Connectivity* JDBC. Any database
+          with a JDBC driver is a candidate and several integrations have been contributed to by the community.
+          Please see the info in ":doc:`node-database`" for details.
 
 Schemas
---------------------------
-Every ``ContractState`` may implement the ``QueryableState`` interface if it wishes to be inserted into the node's local
+-------
+Every ``ContractState`` may implement the ``QueryableState`` interface if it wishes to be inserted into a custom table in the node's
 database and made accessible using SQL.
 
 .. literalinclude:: ../../core/src/main/kotlin/net/corda/core/schemas/PersistentTypes.kt
@@ -104,7 +103,7 @@ unconsumed states in the vault.
 
 The ``PersistentState`` subclass should be marked up as a JPA 2.1 *Entity* with a defined table name and having
 properties (in Kotlin, getters/setters in Java) annotated to map to the appropriate columns and SQL types. Additional
-entities can be included to model these properties where they are more complex, for example collections (see Persisting Hierarchical Data), so
+entities can be included to model these properties where they are more complex, for example collections (:ref:`Persisting Hierarchical Data<persisting-hierarchical-data>`), so
 the mapping does not have to be *flat*. The ``MappedSchema`` constructor accepts a list of all JPA entity classes for that schema in
 the ``MappedTypes`` parameter. It must provide this list in order to initialise the ORM layer.
 
@@ -121,9 +120,12 @@ Several examples of entities and mappings are provided in the codebase, includin
 
 Persisting Hierarchical Data
 ----------------------------
-States may represent data with hierarchical relationships, which must be persisted. To persist hierarchical data, multiple ``PersistentState``
-subclasses may be implemented. The relationship between these classes is defined using JPA annotations. It is important to note that the ``MappedSchema`` constructor requires a list of
-*all* subclasses.
+
+You may wish to persist hierarchical relationships within states using multiple database tables
+
+You may wish to persist hierarchical relationships within state data using multiple database tables. In order to facillitate this, multiple ``PersistentState``
+subclasses may be implemented. The relationship between these classes is defined using JPA annotations. It is important to note that the ``MappedSchema``
+constructor requires a list of *all* of these subclasses.
 
 An example Schema implementing hierarchical relationships with JPA annotations has been implemented below.
 
@@ -265,7 +267,7 @@ An example Schema implementing hierarchical relationships with JPA annotations h
                     @Column(name = "linear_id")
                     var linear_id: UUID,
 
-                    @JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id")
+                     @JoinColumns(JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"), JoinColumn(name = "output_index", referencedColumnName = "output_index"))
 
                     var listOfPersistentChildTokens: MutableList<PersistentChildToken>
             ) : PersistentState()
@@ -334,13 +336,13 @@ which is then referenced within a custom flow:
 
 For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
-JPA Support (Available in Corda 4+)
------------------------------------
+JPA Support
+-----------
 In addition to ``jdbcSession``, ``ServiceHub`` also exposes the Java Persistence API to flows via the ``withEntityManager``
 method. This method can be used to persist and query entities which inherit from ``MappedSchema``. This is particularly
 useful if off-ledger data must be maintained in conjunction with on-ledger state data.
 
-    .. note:: Your entity must be included as a mappedType as part of a MappedSchema for it to be added to Hibernate
+    .. note:: Your entity must be included as a mappedType as part of a ``MappedSchema`` for it to be added to Hibernate
               as a custom schema. If it's not included as a mappedType, a corresponding table will not be created. See Samples below.
 
 The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. Note that ``PersistentFoo`` is added to
