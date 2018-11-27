@@ -347,11 +347,12 @@ data class TestLedgerDSLInterpreter private constructor(
     val transactionsToVerify: List<WireTransaction> get() = transactionWithLocations.values.map { it.transaction }
     val transactionsUnverified: List<WireTransaction> get() = nonVerifiedTransactionWithLocations.values.map { it.transaction }
 
+    private val alicePublicKey = TestIdentity(CordaX500Name("ALICE", "London", "GB")).publicKey
+    private val signatures = listOf(TransactionSignature(ByteArray(1), alicePublicKey, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID)))
+
     private fun saveOptionallyAsMockSignedTransaction(wireTransaction: WireTransaction) {
         val transactionStorage = services.validatedTransactions
         if (transactionStorage is WritableTransactionStorage) {
-            val alicePublicKey = TestIdentity(CordaX500Name("ALICE", "London", "GB")).publicKey
-            val signatures = listOf(TransactionSignature(ByteArray(1), alicePublicKey, SignatureMetadata(1, Crypto.findSignatureScheme(alicePublicKey).schemeNumberID)))
             transactionStorage.addTransaction(SignedTransaction(wireTransaction, signatures))
         }
     }
