@@ -14,8 +14,8 @@ Corda offers developers the option to expose all or some parts of a contract sta
 
 The purpose of this, is to assist `vault <https://docs.corda.net/vault.html>`_
 development and allow for the persistence of state data to a custom database table. Persisted states held in the
-vault are indexed for the purposes of executing queries. This also allows for relational joins between default Corda tables
-and the node's own tables containing other relevant data persisted by the organization.
+vault are indexed for the purposes of executing queries. This also allows for relational joins between Corda tables
+and the organization's existing data.
 
 The Object Relational Mapping is specified using `Java Persistence API <https://en.wikipedia.org/wiki/Java_Persistence_API>`_
 (JPA) annotations. This mapping is persisted to the database as a table row (a single, implicitly structured data item) by the node
@@ -69,7 +69,7 @@ to encourage re-use of a common set within a particular business area or Cordapp
    The detailed messages incorporate information about what schemas, entities and fields are involved.
 
 ``MappedSchema`` offer a family name that is disambiguated using Java package style name-spacing derived from the
-class name of a *schema family* class that is consistent across versions, allowing the ``SchemaService`` to select a
+class name of a *schema family* class that is constant across versions, allowing the ``SchemaService`` to select a
 preferred version of a schema.
 
 The ``SchemaService`` is also responsible for the ``SchemaOptions`` that can be configured for a particular
@@ -85,7 +85,7 @@ other ``MappedSchema``.
 Custom schema registration
 --------------------------
 Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan for states that implement
-the Queryable state interface. Tables are then created as specified by the ``MappedSchemas`` identified by each states ``supportedSchemas`` method.
+the Queryable state interface. Tables are then created as specified by the ``MappedSchema``s identified by each states ``supportedSchemas`` method.
 
 For testing purposes it is necessary to manually register the packages containing custom schemas as follows:
 
@@ -127,7 +127,9 @@ You may wish to persist hierarchical relationships within state data using multi
 subclasses may be implemented. The relationship between these classes is defined using JPA annotations. It is important to note that the ``MappedSchema``
 constructor requires a list of *all* of these subclasses.
 
-An example Schema implementing hierarchical relationships with JPA annotations has been implemented below.
+An example Schema implementing hierarchical relationships with JPA annotations has been implemented below. This Schema will cause ``parent_data`` and ``child_data` tables to be
+inserted. The column names and expected data types are designated with the ``@Column`` annotation. The hierarchical relationships are
+designated with the ``@OneToMany``, ``@ManyToOne``, and ``@JoinColumns`` annotations.
 
 .. container:: codeset
 
