@@ -2,7 +2,7 @@ package net.corda.node.internal
 
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.identity.Party
+import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -12,10 +12,7 @@ import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.WireTransaction
-import java.io.ByteArrayOutputStream
-import java.util.jar.JarFile
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
+import net.corda.core.transactions.WireTransaction.Companion.resolveStateRefBinaryComponent
 
 data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
@@ -42,7 +39,8 @@ data class ServicesForResolutionImpl(
         }.toSet()
     }
 
-    override fun loadContractAttachment(stateRef: StateRef): Attachment? {
+    @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
+    override fun loadContractAttachment(stateRef: StateRef, interestedContractClassName : ContractClassName?): Attachment {
         val coreTransaction = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
                 ?: throw TransactionResolutionException(stateRef.txhash)
         when (coreTransaction) {
@@ -50,10 +48,7 @@ data class ServicesForResolutionImpl(
                 val transactionState = coreTransaction.outRef<ContractState>(stateRef.index).state
                 for (attachmentId in coreTransaction.attachments) {
                     val attachment = attachments.openAttachment(attachmentId)
-                    if (attachment is ContractAttachment && transactionState.contract == attachment.contract) {
-                        return attachment
-                    }
-                    if (attachment is ContractAttachment && transactionState.contract in attachment.additionalContracts) {
+                    if (attachment is ContractAttachment && (interestedContractClassName ?: transactionState.contract) in attachment.allContracts) {
                         return attachment
                     }
                 }
@@ -63,27 +58,9 @@ data class ServicesForResolutionImpl(
                 return attachments.openAttachment(coreTransaction.upgradedContractAttachmentId) ?: throw AttachmentResolutionException(stateRef.txhash)
             }
             is NotaryChangeWireTransaction -> {
-//                coreTransaction.outRef<ContractState>(stateRef.index).state
-//                for (attachmentId in coreTransaction) {
-//                    val attachment = attachments.openAttachment(attachmentId)
-//                    if (attachment is ContractAttachment && transactionState.contract == attachment.contract) {
-//                        return attachment
-//                    }
-//                }
-                val inputStream = ByteArrayOutputStream().apply {
-                    ZipOutputStream(this).use {
-                        with(it) {
-                            putNextEntry(ZipEntry(JarFile.MANIFEST_NAME))
-                        }
-                    }
-                }.toByteArray().inputStream()
-                return object : Attachment {
-                    override val id get() = throw UnsupportedOperationException()
-                    override fun open() = inputStream
-                    override val signerKeys get() = throw UnsupportedOperationException()
-                    override val signers: List<Party> get() = throw UnsupportedOperationException()
-                    override val size: Int = 512
-                }
+                val transactionState = SerializedStateAndRef(resolveStateRefBinaryComponent(stateRef, this)!!, stateRef).toStateAndRef().state
+                //TODO check only one (or until one is resolved successfully), max recursive invocations check?
+                return coreTransaction.inputs.map { loadContractAttachment(it, transactionState.contract) }.firstOrNull() ?: throw AttachmentResolutionException(stateRef.txhash)
             }
             else -> throw UnsupportedOperationException("Attempting to resolve attachment ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
         }

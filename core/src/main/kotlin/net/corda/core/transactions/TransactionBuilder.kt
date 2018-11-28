@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
+import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -20,7 +21,6 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.transactions.LedgerTransaction.Companion.requireCompatibleContractClassVersions
 import net.corda.core.transactions.WireTransaction.Companion.resolveContractAttachmentVersion
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
@@ -327,10 +327,10 @@ open class TransactionBuilder @JvmOverloads constructor(
         //TODO non-downgrade-rule modify to search only for specific ContractClass not all
         val inputContractClassToJarVersion = resolveContractAttachmentVersion(states = inputStateRefs?.map { Pair(services.loadState(it).contract, it) } ?: emptyList(),
                 resolveContractAttachment = { services.loadContractAttachment(it) })
-        try {
-            requireCompatibleContractClassVersions(inputContractClassToJarVersion[contractClassName], attachmentToUse)
-        } catch (e: IllegalStateException) {
-            throw IllegalStateException("No-Downgrade Rule has been breached for contract class $contractClassName, reason: ${e.message ?: e.toString()}")
+        val inputMaxVersion = inputContractClassToJarVersion[contractClassName] ?: 0
+        val outputVersion = getContractVersion(attachmentToUse)
+        require (inputMaxVersion <= outputVersion) {
+            "No-Downgrade Rule has been breached for contract class $contractClassName. The output state contract version $outputVersion is lower that the version of the input state ($inputMaxVersion)."
         }
 
         return Pair(setOf(selectedAttachmentId), resolvedOutputStates)

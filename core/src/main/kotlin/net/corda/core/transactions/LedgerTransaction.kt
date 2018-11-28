@@ -3,9 +3,10 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
-import net.corda.core.cordapp.Version
+import net.corda.core.contracts.Version
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
@@ -21,7 +22,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
-import java.util.jar.Attributes
 import kotlin.collections.HashSet
 
 /**
@@ -57,7 +57,7 @@ private constructor(
         /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>,
-        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName,Version>
+        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -97,33 +97,6 @@ private constructor(
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
-            }
-        }
-
-        /**
-         * Verify that contract class version of output states is not lower that versions of input states.
-         */
-        @Throws(IllegalStateException::class)
-        @CordaInternal
-        fun requireCompatibleContractClassVersions(inputContractClassVersion: Version?, outputAttachment: Attachment) {
-            if (inputContractClassVersion != null) {
-                val manifest = outputAttachment.openAsJAR().manifest
-                        ?: throw IllegalStateException("The attachment for output state contract has no Jar index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
-                val mainAttributes = manifest.mainAttributes
-                        ?: throw IllegalStateException("The attachment for output state contract has empty Jar index file. " +
-                                "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
-                val implementationVersion = mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: return //It's ok to lack IMPLEMENTATION_VERSION, no version is lower that any other version
-                val version = try {
-                    Integer.parseInt(implementationVersion)
-                } catch (e: IllegalArgumentException) {
-                    throw IllegalStateException("Cannot parse the output state contract version $implementationVersion. " +
-                            "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
-                }
-                if (version < inputContractClassVersion) {
-                    throw IllegalStateException("The output state contract version $version is lower that the version of the input state ($inputContractClassVersion).")
-                }
             }
         }
     }
@@ -180,11 +153,10 @@ private constructor(
     @Throws(TransactionVerificationException::class)
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val contractClassVersions = inputStatesContractClassNameToMaxVersion[contractClassName]
-            try {
-                requireCompatibleContractClassVersions(contractClassVersions, attachment)
-            } catch (e: Exception) {
-                throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, e.message ?: e.toString())
+            val inputMaxVersion = inputStatesContractClassNameToMaxVersion[contractClassName] ?: 0
+            val outputVersion = getContractVersion(attachment)
+            if (inputMaxVersion > outputVersion) {
+                throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$inputMaxVersion", "$outputVersion")
             }
         }
     }

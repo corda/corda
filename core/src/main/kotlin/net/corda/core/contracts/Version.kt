@@ -1,4 +1,4 @@
-package net.corda.core.cordapp
+package net.corda.core.contracts
 
 /**
  * Contract version and flow versions are integers.
