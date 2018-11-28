@@ -194,7 +194,9 @@ class DriverDSLImpl(
         }
     }
 
-    override fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> {
+    override fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> = startNode(parameters, bytemanPort = null)
+
+    override fun startNode(parameters: NodeParameters, bytemanPort: Int?): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
         val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
@@ -978,16 +980,7 @@ interface InternalDriverDSL : DriverDSL {
     fun shutdown()
 
     fun startNode(
-            defaultParameters: NodeParameters = NodeParameters(),
-            providedName: CordaX500Name? = defaultParameters.providedName,
-            rpcUsers: List<User> = defaultParameters.rpcUsers,
-            verifierType: VerifierType = defaultParameters.verifierType,
-            customOverrides: Map<String, Any?> = defaultParameters.customOverrides,
-            startInSameProcess: Boolean? = defaultParameters.startInSameProcess,
-            maximumHeapSize: String = defaultParameters.maximumHeapSize,
-            additionalCordapps: Collection<TestCordapp> = defaultParameters.additionalCordapps,
-            regenerateCordappsOnStart: Boolean = defaultParameters.regenerateCordappsOnStart,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap(),
+            parameters: NodeParameters = NodeParameters(),
             bytemanPort: Int? = null
     ): CordaFuture<NodeHandle>
 }

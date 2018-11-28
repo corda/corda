@@ -21,6 +21,7 @@ import net.corda.node.services.statemachine.ActionExecutorImpl
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
@@ -112,7 +113,7 @@ class SystematicTerminationTest(private val terminationData: TerminationData) : 
                 //, isDebug = true
         ) {
             bytemanPort = portAllocation.nextPort()
-            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser), bytemanPort = bytemanPort).getOrThrow()
+            alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(testUser)), bytemanPort = bytemanPort).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
 
             aliceProxy = connectRpc(alice)
@@ -192,7 +193,7 @@ ENDRULE
 
             // Restart node
             alice.stop() // this should perform un-registration in the NetworkMap
-            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser), bytemanPort = bytemanPort).getOrThrow()
+            alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(testUser)), bytemanPort = bytemanPort).getOrThrow()
             aliceProxy = connectRpc(alice)
 
             logger.info("Node re-started successfully")

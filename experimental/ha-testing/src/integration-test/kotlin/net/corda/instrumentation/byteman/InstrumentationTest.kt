@@ -19,6 +19,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
@@ -86,7 +87,7 @@ class InstrumentationTest : IntegrationTest() {
         ) {
 
             bytemanPort = portAllocation.nextPort()
-            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser), bytemanPort = bytemanPort).getOrThrow()
+            alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(testUser)), bytemanPort = bytemanPort).getOrThrow()
             raftNotaryIdentity = defaultNotaryIdentity
             notaryNodes = defaultNotaryHandle.nodeHandles.getOrThrow().map { it as OutOfProcess }
 
@@ -203,7 +204,7 @@ ENDRULE
 
             // Restart node
             alice.stop() // this should perform un-registration in the NetworkMap
-            alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(testUser), bytemanPort = bytemanPort).getOrThrow()
+            alice = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(testUser)), bytemanPort = bytemanPort).getOrThrow()
             aliceProxy = connectRpc(alice)
 
             // Check that all 11 transactions are present
