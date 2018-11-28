@@ -39,7 +39,7 @@ class TestNotaryTypes(val validating: Boolean, @Suppress("UNUSED_PARAMETER") des
 
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = validating, cluster = DummyClusterSpec(3))),
-                extraCordappPackagesToScan = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp"),
+                extraCordappPackagesToScan = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp", "net.corda.notary.raft"),
                 startNodesInProcess = true
         )) {
             val nodeA = startNode(rpcUsers = listOf(testUser)).getOrThrow()

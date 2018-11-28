@@ -1,7 +1,11 @@
 package net.corda.notaryhealthcheck.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.*
+import com.codahale.metrics.Gauge
+import com.codahale.metrics.MetricRegistry
+import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.flows.NotaryFlow.Client.Companion.REQUESTING
@@ -15,8 +19,10 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.notaryhealthcheck.contract.NullContract
 import net.corda.notaryhealthcheck.utils.Monitorable
+import java.util.concurrent.atomic.AtomicLong
 import java.util.function.Predicate
 
 @StartableByService
@@ -62,6 +68,7 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
             val session = initiateFlow(party)
             val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
             progressTracker.currentStep = REQUESTING
+            setWaitTimeGauge((serviceHub as ServiceHubInternal).configuration.flowTimeout.timeout.seconds)
             val result = if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
                 sendAndReceiveValidating(session, requestSignature)
             } else {
@@ -71,12 +78,23 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
             return validateResponse(result, notaryParty)
         }
 
+        class WaitTimeLatchedGauge(var currentWaitTime: AtomicLong) : Gauge<Long> {
+            override fun getValue(): Long {
+                return currentWaitTime.get()
+            }
+        }
+
+        private fun setWaitTimeGauge(value: Long) {
+            val name = MetricRegistry.name(ScheduledCheckFlow.cleanX500forMetrics(party.name), "reportedWaitTimeSeconds")
+            val gauge = (serviceHub as ServiceHubInternal).monitoringService.metrics.gauge(name, { WaitTimeLatchedGauge(AtomicLong(value)) })
+            (gauge as WaitTimeLatchedGauge).currentWaitTime.set(value)
+        }
 
         @Suspendable
         private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
-            return session.receive()
+            return receiveResultOrTiming(session)
         }
 
         @Suspendable
@@ -87,9 +105,14 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
                 is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
                 else -> ctx
             }
-            return session.sendAndReceive(NotarisationPayload(tx, signature))
+            session.send(NotarisationPayload(tx, signature))
+            return receiveResultOrTiming(session)
         }
 
+        override fun applyWaitTimeUpdate(session: FlowSession, update: WaitTimeUpdate) {
+            setWaitTimeGauge(update.waitTime.seconds)
+            super.applyWaitTimeUpdate(session, update)
+        }
 
         /**
          * The [NotarySendTransactionFlow] flow is similar to [SendTransactionFlow], but uses [NotarisationPayload] as the
@@ -103,4 +126,3 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
         }
     }
 }
-

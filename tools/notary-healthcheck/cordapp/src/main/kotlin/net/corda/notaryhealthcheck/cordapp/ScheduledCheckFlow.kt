@@ -40,7 +40,7 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
 
         private val X500CleanUpRegex = Regex("[^a-zA-Z\\d]")
 
-        private fun cleanX500forMetrics(name: CordaX500Name): String {
+        fun cleanX500forMetrics(name: CordaX500Name): String {
             return name.toString().replace(X500CleanUpRegex, "_")
         }
 
