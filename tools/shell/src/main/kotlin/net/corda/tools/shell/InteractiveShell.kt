@@ -231,7 +231,7 @@ object InteractiveShell {
     }
 
     // TODO: This should become the default renderer rather than something used specifically by commands.
-    private val outputMapper by lazy { createOutputMapper(OutputFormat.YAML) }
+    private val outputMapper by lazy { createOutputMapper(OutputFormat.JSON) }
 
     @VisibleForTesting
     lateinit var latch: CountDownLatch
