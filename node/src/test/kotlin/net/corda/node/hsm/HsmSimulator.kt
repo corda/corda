@@ -4,6 +4,8 @@ import CryptoServerAPI.CryptoServerException
 import CryptoServerJCE.CryptoServerProvider
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.exceptions.DockerException
+import com.spotify.docker.client.exceptions.DockerRequestException
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
@@ -81,24 +83,34 @@ class HsmSimulator(portAllocation: PortAllocation,
 
     val address = portAllocation.nextHostAndPort()
     private lateinit var docker: DockerClient
-    private var containerId: String? = null
+    private val containerId: String = "hsm_simulator"
 
     override fun before() {
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
         assumeFalse("Docker registry password is not set!. Skipping the test.", registryPass.isNullOrBlank())
-        addShutdownHook {
-            try {
-                docker.stopAndRemoveHsmSimulatorContainer()
-            } catch (e: Exception) {
-                log.debug(e.message, e)
-            }
-        }
+
         docker = DefaultDockerClient.fromEnv().build()
         if (pullImage) {
             docker.pullHsmSimulatorImageFromRepository()
         }
-        containerId = docker.createContainer()
+        cleanUpExisting()
+        docker.createContainer()
         docker.startHsmSimulatorContainer()
+    }
+
+    /**
+     * There may be a container present from previous test runs. This should not happen, but it's possible, for example if the JVM is killed
+     * before the cleanup in the `after` method happens.
+     * If we find any container listening on our port and using the same image, we assume this is the case and we stop and remove them.
+     */
+    private fun cleanUpExisting() {
+        docker.listContainers()
+                .filter { it.ports()?.filter { it.publicPort() == address.port }?.size ?:0 > 0 }
+                .filter { it.image() == imageRepoTag }
+                .forEach {
+                    docker.killContainer(it.id())
+                    docker.removeContainer(it.id())
+                }
     }
 
     override fun after() {
@@ -175,7 +187,7 @@ class HsmSimulator(portAllocation: PortAllocation,
                 .image(getImageFullName())
                 .exposedPorts(HSM_SIMULATOR_PORT)
                 .build()
-        val containerCreation = this.createContainer(containerConfig)
+        val containerCreation = this.createContainer(containerConfig, containerId)
         return containerCreation.id()
     }
 

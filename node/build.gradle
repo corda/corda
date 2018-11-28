@@ -187,7 +187,7 @@ dependencies {
     testCompile "org.glassfish.jersey.containers:jersey-container-jetty-http:${jersey_version}"
 
     // Spotify Docker client for using docker containers in integration tests
-    testCompile "com.spotify:docker-client:8.9.1"
+    testCompile "com.spotify:docker-client:8.14.5"
 
     // Add runtime-only dependency on the JDBC driver for the specified DB provider (used in database integration tests)
     def DB_PROVIDER = System.getProperty("custom.databaseProvider")
