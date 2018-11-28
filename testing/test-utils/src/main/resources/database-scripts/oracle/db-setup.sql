@@ -19,6 +19,7 @@ DROP TABLE ${schema}.node_scheduled_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_nodes CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_subscribers CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_notary_committed_states CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_notary_committed_transactions CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_notary_request_log CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_transaction_mappings CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_fungible_states_parts CASCADE CONSTRAINTS
@@ -67,5 +68,8 @@ DROP TABLE ${schema}.network_map CASCADE CONSTRAINTS
 DROP TABLE ${schema}.parameters_update CASCADE CONSTRAINTS
 DROP TABLE ${schema}.network_parameters CASCADE CONSTRAINTS
 DROP TABLE ${schema}.private_network CASCADE CONSTRAINTS
+DROP TABLE ${schema}.pk_hash_to_ext_id_map CASCADE CONSTRAINTS
+DROP TABLE ${schema}.state_party CASCADE CONSTRAINTS
 DROP TABLE ${schema}.foos CASCADE CONSTRAINTS
+DROP VIEW ${schema}.v_pkey_hash_ex_id_map CASCADE CONSTRAINTS
 DROP SEQUENCE ${schema}.hibernate_sequence
