@@ -27,7 +27,7 @@ private class ConstructorCaller(constructor: LocalConstructorInformation): (Arra
 
     override fun invoke(parameters: Array<Any?>): Any =
         try {
-            javaConstructor.newInstance(*parameters)
+            javaConstructor.apply { isAccessible = true }.newInstance(*parameters)
         } catch (e: InvocationTargetException) {
             throw NotSerializableException(
                     "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
@@ -45,7 +45,7 @@ private class ConstructorCaller(constructor: LocalConstructorInformation): (Arra
 private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
     override fun invoke(target: Any, value: Any?) {
         try {
-            setter.invoke(target, value)
+            setter.apply { isAccessible = true }.invoke(target, value)
         } catch (e: InvocationTargetException) {
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
