@@ -1,10 +1,9 @@
 package net.corda.testing.internal
 
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.DoNotImplement
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal._inheritableContextSerializationEnv
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoCheckpointSerializer
@@ -29,7 +28,7 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
     }
 }
 
-internal fun createTestSerializationEnv(): SerializationEnvironment {
+fun createTestSerializationEnv(): SerializationEnvironment {
     val factory = SerializationFactoryImpl().apply {
         registerScheme(AMQPClientSerializationScheme(emptyList()))
         registerScheme(AMQPServerSerializationScheme(emptyList()))
@@ -43,32 +42,5 @@ internal fun createTestSerializationEnv(): SerializationEnvironment {
             KRYO_CHECKPOINT_CONTEXT,
             KryoCheckpointSerializer
     )
-}
-
-/**
- * Should only be used by Driver and MockNode.
- * @param armed true to install, false to do nothing and return a dummy env.
- */
-fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
-    return if (armed) {
-        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv() {
-            override fun unset() {
-                _globalSerializationEnv.set(null)
-                inVMExecutors.remove(this)
-            }
-        }.also {
-            _globalSerializationEnv.set(it)
-        }
-    } else {
-        rigorousMock<GlobalSerializationEnvironment>().also {
-            doNothing().whenever(it).unset()
-        }
-    }
-}
-
-@DoNotImplement
-interface GlobalSerializationEnvironment : SerializationEnvironment {
-    /** Unset this environment. */
-    fun unset()
 }
 

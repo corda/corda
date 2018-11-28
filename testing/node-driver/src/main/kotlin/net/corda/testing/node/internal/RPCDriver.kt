@@ -146,8 +146,7 @@ fun <A> rpcDriver(
                     ), externalTrace
             ),
             coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = false
+            dsl = dsl
     )
 }
 

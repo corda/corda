@@ -56,7 +56,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
@@ -169,11 +168,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     private val networkId = random63BitValue()
     private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = try {
-        setGlobalSerialization(true)
-    } catch (e: IllegalStateException) {
-        throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
-    }
+    private val serializationEnv = checkNotNull(setDriverSerialization()) { "Using more than one mock network simultaneously is not supported." }
     private val sharedUserCount = AtomicInteger(0)
 
     /** A read only view of the current set of nodes. */
@@ -566,10 +561,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     fun stopNodes() {
-        try {
+        // Serialization env must be unset even if other parts of this method fail.
+        serializationEnv.use {
             nodes.forEach { it.started?.dispose() }
-        } finally {
-            serializationEnv.unset() // Must execute even if other parts of this method fail.
         }
         messagingNetwork.stop()
     }
