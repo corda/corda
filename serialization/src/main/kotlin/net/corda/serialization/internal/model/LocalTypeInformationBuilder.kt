@@ -308,10 +308,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                                               name: String,
                                               descriptor: PropertyDescriptor,
                                               constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
-        val constructorIndex = constructorParameterIndices[name] ?:
         // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
         // and cannot infer whether the property name should be capitalised or not.
-        constructorParameterIndices[name.decapitalize()] ?: return null
+        val constructorIndex = constructorParameterIndices[name] ?: constructorParameterIndices[name.decapitalize()]
+        if (constructorIndex == null) return null
 
         if (descriptor.getter == null) {
             if (descriptor.field == null) return null
