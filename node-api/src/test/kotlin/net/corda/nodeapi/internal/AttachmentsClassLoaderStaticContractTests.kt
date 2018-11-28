@@ -4,13 +4,12 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.AbstractAttachment
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -67,19 +66,18 @@ class AttachmentsClassLoaderStaticContractTests {
         }
     }
 
-    private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
-        override val id: SecureHash get() = throw UnsupportedOperationException()
+    private val networkParameters = testNetworkParameters()
+
+    private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
+        doReturn(networkParameters.serialize().hash).whenever(it).currentHash
     }
 
-    private val attachments = rigorousMock<AttachmentStorage>().also {
-            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
-    }
-
-    private val serviceHub = rigorousMock<ServicesForResolution>().also {
+    private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
-        doReturn(testNetworkParameters()).whenever(it).networkParameters
+        doReturn(networkParametersStorage).whenever(it).networkParametersStorage
+        doReturn(networkParameters).whenever(it).networkParameters
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(it).attachments
         val attachment = rigorousMock<ContractAttachment>()

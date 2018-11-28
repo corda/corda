@@ -3,6 +3,8 @@ package net.corda.core.transactions
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
+import net.corda.core.crypto.SecureHash
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 
 /**
@@ -16,13 +18,24 @@ abstract class CoreTransaction : BaseTransaction() {
     abstract override val inputs: List<StateRef>
     /** The reference inputs of this transaction, containing the state references only. **/
     abstract override val references: List<StateRef>
+    /**
+     * Hash of the network parameters that were in force when the transaction was notarised. Null means, that the transaction
+     * was created on older version of Corda (before 4), resolution will default to initial parameters.
+     */
+    abstract val networkParametersHash: SecureHash?
 }
 
 /** A transaction with fully resolved components, such as input states. */
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
     abstract override val references: List<StateAndRef<ContractState>>
-
+    // TODO NetworkParameters field is nullable only because of the API stability and the fact that our ledger transactions exposed constructors
+    //  (they were data classes). This should be revisited.
+    /**
+     * Network parameters that were in force when this transaction was created. Resolved from the hash of network parameters on the corresponding
+     * wire transaction.
+     */
+    abstract val networkParameters: NetworkParameters?
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()
         checkInputsAndReferencesHaveSameNotary()

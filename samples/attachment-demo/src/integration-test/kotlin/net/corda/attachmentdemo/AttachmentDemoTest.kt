@@ -6,8 +6,8 @@ import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
@@ -17,7 +17,7 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(DriverParameters(portAllocation = PortAllocation.Incremental(20000), startNodesInProcess = true)) {
+        driver(DriverParameters(portAllocation = incrementalPortAllocation(20000), startNodesInProcess = true)) {
             val demoUser = listOf(User("demo", "demo", setOf(all())))
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),

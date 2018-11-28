@@ -176,7 +176,7 @@ class TransactionTests {
                 notary,
                 timeWindow,
                 privacySalt,
-                null,
+                testNetworkParameters(),
                 emptyList()
         )
 

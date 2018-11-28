@@ -16,7 +16,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.Node
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.driver.PortAllocation.Incremental
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
@@ -114,7 +114,7 @@ abstract class PortAllocation {
     /**
      * An implementation of [PortAllocation] which allocates ports sequentially
      */
-    class Incremental(startingPort: Int) : PortAllocation() {
+    open class Incremental(startingPort: Int) : PortAllocation() {
         /** The backing [AtomicInteger] used to keep track of the currently allocated port */
         val portCounter = AtomicInteger(startingPort)
 
@@ -298,18 +298,6 @@ data class NodeParameters(
 }
 
 /**
- * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver]
- *
- * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
- * JMX monitoring using HTTP/JSON
- * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
- * Defaults to incremental.
- */
-data class JmxPolicy(val startJmxHttpServer: Boolean = false,
-                     val jmxHttpServerPortAllocation: PortAllocation? =
-                             if (startJmxHttpServer) PortAllocation.Incremental(7005) else null)
-
-/**
  * [driver] allows one to start up nodes like this:
  *   driver {
  *     val noService = startNode(providedName = DUMMY_BANK_A.name)
@@ -388,15 +376,15 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 data class DriverParameters(
         val isDebug: Boolean = false,
         val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-        val portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-        val debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+        val portAllocation: PortAllocation = incrementalPortAllocation(10000),
+        val debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
         val systemProperties: Map<String, String> = emptyMap(),
         val useTestClock: Boolean = false,
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         val extraCordappPackagesToScan: List<String> = emptyList(),
-        val jmxPolicy: JmxPolicy = JmxPolicy(),
+        @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         val initialiseSerialization: Boolean = true,
@@ -406,15 +394,15 @@ data class DriverParameters(
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-            portAllocation: PortAllocation = PortAllocation.Incremental(10000),
-            debugPortAllocation: PortAllocation = PortAllocation.Incremental(5005),
+            portAllocation: PortAllocation = incrementalPortAllocation(10000),
+            debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
             systemProperties: Map<String, String> = emptyMap(),
             useTestClock: Boolean = false,
             startNodesInProcess: Boolean = false,
             waitForAllNodesToFinish: Boolean = false,
             notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
             extraCordappPackagesToScan: List<String> = emptyList(),
-            jmxPolicy: JmxPolicy = JmxPolicy(),
+            @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
             networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
             notaryCustomOverrides: Map<String, Any?> = emptyMap(),
             initialiseSerialization: Boolean = true,

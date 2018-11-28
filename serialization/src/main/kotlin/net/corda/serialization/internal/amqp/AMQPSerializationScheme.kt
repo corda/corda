@@ -9,6 +9,7 @@ import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.isAbstractClass
 import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
@@ -44,7 +45,7 @@ abstract class AbstractAMQPSerializationScheme(
         val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     @DeleteForDJVM
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap(128))
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised())
 
     // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
     private val serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory> = if (maybeNotConcurrentSerializerFactoriesForContexts is AccessOrderLinkedHashMap<*, *>) {
@@ -189,20 +190,24 @@ abstract class AbstractAMQPSerializationScheme(
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {
-        var contextToUse = context
-        if (context.useCase == SerializationContext.UseCase.RPCClient) {
-            contextToUse = context.withClassLoader(getContextClassLoader())
-        }
-        val serializerFactory = getSerializerFactory(contextToUse)
+        // This is a hack introduced in version 3 to fix a spring boot issue - CORDA-1747.
+        // It breaks the shell because it overwrites the CordappClassloader with the system classloader that doesn't know about any CorDapps.
+        // In case a spring boot serialization issue with generics is found, a better solution needs to be found to address it.
+//        var contextToUse = context
+//        if (context.useCase == SerializationContext.UseCase.RPCClient) {
+//            contextToUse = context.withClassLoader(getContextClassLoader())
+//        }
+        val serializerFactory = getSerializerFactory(context)
         return DeserializationInput(serializerFactory).deserialize(byteSequence, clazz, context)
     }
 
     override fun <T : Any> serialize(obj: T, context: SerializationContext): SerializedBytes<T> {
-        var contextToUse = context
-        if (context.useCase == SerializationContext.UseCase.RPCClient) {
-            contextToUse = context.withClassLoader(getContextClassLoader())
-        }
-        val serializerFactory = getSerializerFactory(contextToUse)
+        // See the above comment.
+//        var contextToUse = context
+//        if (context.useCase == SerializationContext.UseCase.RPCClient) {
+//            contextToUse = context.withClassLoader(getContextClassLoader())
+//        }
+        val serializerFactory = getSerializerFactory(context)
         return SerializationOutput(serializerFactory).serialize(obj, context)
     }
 

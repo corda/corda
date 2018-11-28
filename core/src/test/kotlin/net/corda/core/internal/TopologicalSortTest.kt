@@ -13,6 +13,7 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import org.junit.Rule
@@ -31,6 +32,7 @@ class TopologicalSortTest {
         override val outputs: List<TransactionState<ContractState>> = (1..numberOfOutputs).map {
             TransactionState(DummyState(), "", notary)
         }
+        override val networkParametersHash: SecureHash? = testNetworkParameters().serialize().hash
     }
 
     class DummyState : ContractState {
