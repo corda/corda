@@ -7,6 +7,7 @@ import net.corda.core.contracts.LinearState
 import net.corda.core.schemas.*
 import net.corda.core.schemas.MappedSchemaValidator.crossReferencesToOtherMappedSchema
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.internal.schemas.NodeInfoSchemaV1
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.SchemaService.SchemaOptions
@@ -45,6 +46,7 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
                     PersistentIdentityService.PersistentIdentityNames::class.java,
                     ContractUpgradeServiceImpl.DBContractUpgrade::class.java,
                     RunOnceService.MutualExclusion::class.java,
+                    DBNetworkParametersStorage.PersistentNetworkParameters::class.java,
                     PersistentKeyManagementService.PublicKeyHashToExternalId::class.java
             )) {
         override val migrationResource = "node-core.changelog-master"
@@ -53,9 +55,9 @@ class NodeSchemaService(private val extraSchemas: Set<MappedSchema> = emptySet()
     // Required schemas are those used by internal Corda services
     private val requiredSchemas: Map<MappedSchema, SchemaService.SchemaOptions> =
             mapOf(Pair(CommonSchemaV1, SchemaOptions()),
-                  Pair(VaultSchemaV1, SchemaOptions()),
-                  Pair(NodeInfoSchemaV1, SchemaOptions()),
-                  Pair(NodeCoreV1, SchemaOptions()))
+                    Pair(VaultSchemaV1, SchemaOptions()),
+                    Pair(NodeInfoSchemaV1, SchemaOptions()),
+                    Pair(NodeCoreV1, SchemaOptions()))
 
     fun internalSchemas() = requiredSchemas.keys + extraSchemas.filter { schema -> // when mapped schemas from the finance module are present, they are considered as internal ones
         schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" ||

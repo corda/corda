@@ -52,7 +52,10 @@ private constructor(
         override val notary: Party?,
         val timeWindow: TimeWindow?,
         val privacySalt: PrivacySalt,
-        val networkParameters: NetworkParameters?,
+        /** Network parameters that were in force when the transaction was notarised. */
+        // TODO Network parameters should never be null on LedgerTransaction, this is left only because of deprecated constructors. We should decide to
+        //  get rid of them.
+        override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>
         //DOCEND 1
 ) : FullTransaction() {
@@ -81,7 +84,7 @@ private constructor(
                 notary: Party?,
                 timeWindow: TimeWindow?,
                 privacySalt: PrivacySalt,
-                networkParameters: NetworkParameters?,
+                networkParameters: NetworkParameters,
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
@@ -121,6 +124,11 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
+        if (networkParameters == null) {
+            // For backwards compatibility only.
+            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
+                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
+        }
         val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
@@ -169,14 +177,14 @@ private constructor(
     /**
      * Verify that for each contract the network wide package owner is respected.
      *
-     * TODO - revisit once transaction contains network parameters.
+     * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
+     *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
     private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         // This should never happen once we have network parameters in the transaction.
         if (networkParameters == null) {
             return
         }
-
         val contractsAndOwners = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
             networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
@@ -243,7 +251,6 @@ private constructor(
 
             if (state.constraint is SignatureAttachmentConstraint)
                 checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
-
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
@@ -806,11 +813,8 @@ private constructor(
             |)""".trimMargin()
     }
 
-
-    //
     // Stuff that we can't remove and so is deprecated instead
     //
-
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     constructor(
             inputs: List<StateAndRef<ContractState>>,
@@ -834,7 +838,7 @@ private constructor(
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
-            networkParameters: NetworkParameters?
+            networkParameters: NetworkParameters
     ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")

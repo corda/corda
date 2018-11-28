@@ -50,7 +50,6 @@ import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.serialization.internal.*
 import org.slf4j.Logger
@@ -112,7 +111,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions)
+    override val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory)
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
@@ -127,7 +127,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
             ),
             networkMapClient,
             configuration.baseDirectory,
-            configuration.extraNetworkMapKeys
+            configuration.extraNetworkMapKeys,
+            networkParametersStorage
     ).closeOnStop()
 
     override val networkParameters = signedNetworkParameters.networkParameters
@@ -234,7 +235,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
         networkMapClient?.start(trustRoot)
 
-        servicesForResolution.start(networkParameters)
+        networkParametersStorage.start(signedNetworkParameters.signed, trustRoot)
 
         val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys

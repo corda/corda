@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.CordaRuntimeException
@@ -13,7 +14,9 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
@@ -69,6 +72,7 @@ class AttachmentLoadingTests : IntegrationTest() {
     }
 
     private val services = object : ServicesForResolution {
+        private val testNetworkParameters = testNetworkParameters()
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
@@ -76,7 +80,11 @@ class AttachmentLoadingTests : IntegrationTest() {
         }
         override val attachments: AttachmentStorage get() = this@AttachmentLoadingTests.attachments
         override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
-        override val networkParameters: NetworkParameters = testNetworkParameters()
+        override val networkParameters: NetworkParameters = testNetworkParameters
+        override val networkParametersStorage: NetworkParametersStorage get() = rigorousMock<NetworkParametersStorage>().apply {
+            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentHash
+            doReturn(testNetworkParameters).whenever(this).lookup(any())
+        }
     }
 
     @Test

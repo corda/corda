@@ -9,7 +9,7 @@ import net.corda.core.crypto.SignatureScheme
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.nodeapi.internal.crypto.*
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.NettyTestClient
 import net.corda.testing.internal.NettyTestHandler
 import net.corda.testing.internal.NettyTestServer
@@ -52,7 +52,7 @@ class NettyEngineBasedTlsAuthenticationTests(val sslSetup: SslSetup) {
     private fun tempFile(name: String): Path = tempFolder.root.toPath() / name
 
     companion object {
-        private val portAllocation = PortAllocation.Incremental(10000)
+        private val portAllocation = incrementalPortAllocation(10000)
 
         data class SslSetup(val clientNative: Boolean, val serverNative: Boolean) {
             override fun toString(): String = "Client: ${if (clientNative) "openSsl" else "javaSsl"} Server: ${if (serverNative) "openSsl" else "javaSsl"} "

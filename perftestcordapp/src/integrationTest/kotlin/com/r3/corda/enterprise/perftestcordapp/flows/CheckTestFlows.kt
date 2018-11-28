@@ -9,7 +9,7 @@ import net.corda.finance.DOLLARS
 import net.corda.node.services.Permissions
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
@@ -31,7 +31,7 @@ class CheckAllTheTestFlows {
         val driverParameters = DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("com.r3.corda.enterprise.perftestcordapp"),
-                portAllocation = PortAllocation.Incremental(20000)
+                portAllocation = incrementalPortAllocation(20000)
         )
         val driver = DriverDSLImpl(
                 portAllocation = driverParameters.portAllocation,

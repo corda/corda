@@ -10,9 +10,9 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.driver.PortAllocation
-import org.junit.Test
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import org.junit.ClassRule
+import org.junit.Test
 import java.io.IOException
 import java.time.Duration
 import java.util.*
@@ -26,7 +26,7 @@ class UtimacoCryptoServiceIntegrationTest {
     companion object {
         @ClassRule
         @JvmField
-        val hsmSimulator: HsmSimulator = HsmSimulator(PortAllocation.Incremental(12300))
+        val hsmSimulator: HsmSimulator = HsmSimulator(incrementalPortAllocation(12300))
     }
 
     private val config = testConfig(hsmSimulator.address.port)

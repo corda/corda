@@ -9,8 +9,8 @@ import net.corda.node.services.Permissions
 import net.corda.nodeapi.exceptions.RejectedCommandException
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -28,7 +28,7 @@ class RpcFlowsDrainingModeTest : IntegrationTest() {
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val user = User("mark", "dadada", setOf(Permissions.all()))
     private val users = listOf(user)
 

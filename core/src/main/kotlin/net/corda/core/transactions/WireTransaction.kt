@@ -66,7 +66,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList()), privacySalt)
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -106,7 +106,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
-                networkParameters = services.networkParameters
+                resolveParameters = {
+                    val hashToResolve = it ?: services.networkParametersStorage.defaultHash
+                    services.networkParametersStorage.lookup(hashToResolve)
+                }
         )
     }
 
@@ -119,21 +122,24 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    @JvmOverloads
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+            resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, null)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
     }
+
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
-            networkParameters: NetworkParameters?
+            resolveParameters: (SecureHash?) -> NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -153,6 +159,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
+        val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
+
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
                 outputs,
@@ -162,14 +170,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 notary,
                 timeWindow,
                 privacySalt,
-                networkParameters,
+                resolvedNetworkParameters,
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences
         )
 
-        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: DEFAULT_MAX_TX_SIZE, serializedResolvedInputs, serializedResolvedReferences)
+        checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
 
         return ltx
     }
@@ -286,8 +294,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
-        private const val DEFAULT_MAX_TX_SIZE = 10485760
-
         @CordaInternal
         @Deprecated("Do not use, this is internal API")
         fun createComponentGroups(inputs: List<StateRef>,
@@ -296,7 +302,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                                   attachments: List<SecureHash>,
                                   notary: Party?,
                                   timeWindow: TimeWindow?): List<ComponentGroup> {
-            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList())
+            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
         }
 
         /**
@@ -345,6 +351,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         for (attachment in attachments) {
             val emoji = Emoji.paperclip
             buf.appendln("${emoji}ATTACHMENT: $attachment")
+        }
+        if (networkParametersHash != null) {
+            buf.appendln("PARAMETERS HASH:  $networkParametersHash")
         }
         return buf.toString()
     }

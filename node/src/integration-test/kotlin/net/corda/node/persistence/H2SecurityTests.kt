@@ -9,8 +9,8 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
 import org.junit.Assume.assumeTrue
@@ -23,7 +23,7 @@ import kotlin.test.assertTrue
 
 class H2SecurityTests {
     companion object {
-        private val port = PortAllocation.Incremental(21_000)
+        private val port = incrementalPortAllocation(21_000)
         private fun getFreePort() = port.nextPort()
         private const val h2AddressKey = "h2Settings.address"
         private const val dbPasswordKey = "dataSourceProperties.dataSource.password"

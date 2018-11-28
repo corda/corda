@@ -32,7 +32,7 @@ import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import net.corda.testing.node.internal.TestCordappDirectories
@@ -54,7 +54,7 @@ class FlowWorkerStartStopTest {
     @JvmField
     val serializationEnvironment = SerializationEnvironmentRule(true)
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
 
     companion object {
 

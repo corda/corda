@@ -9,6 +9,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -16,10 +17,12 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
@@ -40,9 +43,11 @@ import net.corda.testing.services.MockAttachmentStorage
 import java.security.KeyPair
 import java.sql.Connection
 import java.time.Clock
+import java.time.Instant
 import java.util.*
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import kotlin.collections.HashMap
 
 /**
  * Returns a simple [InMemoryIdentityService] containing the supplied [identities].
@@ -101,7 +106,7 @@ open class MockServices private constructor(
         fun makeTestDatabaseAndMockServices(cordappPackages: List<String>,
                                             identityService: IdentityService,
                                             initialIdentity: TestIdentity,
-                                            networkParameters: NetworkParameters = testNetworkParameters(),
+                                            networkParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN),
                                             vararg moreKeys: KeyPair): Pair<CordaPersistence, MockServices> {
 
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
@@ -111,7 +116,7 @@ open class MockServices private constructor(
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
                     override val vaultService: VaultService = makeVaultService(schemaService, database)
-
+                    override val networkParametersStorage: NetworkParametersStorage get() = MockNetworkParametersStorage(networkParameters)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
                                 validatedTransactions as WritableTransactionStorage,
@@ -161,7 +166,7 @@ open class MockServices private constructor(
                 initialIdentity: TestIdentity,
                 identityService: IdentityService = makeTestIdentityService(),
                 vararg moreKeys: KeyPair) :
-            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(), initialIdentity, moreKeys)
+            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(modifiedTime = Instant.MIN), initialIdentity, moreKeys)
 
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
@@ -249,15 +254,14 @@ open class MockServices private constructor(
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
-        it.start( networkParameters.whitelistedContractImplementations)
+        it.start(networkParameters.whitelistedContractImplementations)
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
+    override val networkParametersStorage: NetworkParametersStorage get() = MockNetworkParametersStorage(networkParameters)
 
     protected val servicesForResolution: ServicesForResolution
         get() {
-            return ServicesForResolutionImpl(identityService, attachments, cordappProvider, validatedTransactions).also {
-                it.start(networkParameters)
-            }
+            return ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
         }
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {

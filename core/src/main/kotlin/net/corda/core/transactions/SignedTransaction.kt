@@ -76,6 +76,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     val references: List<StateRef> get() = coreTransaction.references
     /** Helper to access the notary of the contained transaction. */
     val notary: Party? get() = coreTransaction.notary
+    /** Helper to access the network parameters hash for the contained transaction. */
+    val networkParametersHash: SecureHash? get() = coreTransaction.networkParametersHash
 
     override val requiredSigningKeys: Set<PublicKey> get() = tx.requiredSigningKeys
 

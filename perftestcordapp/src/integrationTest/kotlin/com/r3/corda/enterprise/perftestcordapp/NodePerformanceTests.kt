@@ -15,8 +15,8 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -127,7 +127,7 @@ class NodePerformanceTests : IntegrationTest() {
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("net.corda.finance", "com.r3.corda.enterprise.perftestcordapp"),
-                portAllocation = PortAllocation.Incremental(20000)
+                portAllocation = incrementalPortAllocation(20000)
         )) {
             val notary = defaultNotaryNode.getOrThrow() as InProcess
             val metricRegistry = startReporter((this as InternalDriverDSL).shutdownManager, notary.internalServices.monitoringService.metrics)
@@ -151,7 +151,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
-                portAllocation = PortAllocation.Incremental(20000)
+                portAllocation = incrementalPortAllocation(20000)
         )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val alice = aliceFuture.getOrThrow() as InProcess
@@ -176,7 +176,7 @@ class NodePerformanceTests : IntegrationTest() {
         driver(DriverParameters(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
                 startNodesInProcess = true,
-                portAllocation = PortAllocation.Incremental(20000)
+                portAllocation = incrementalPortAllocation(20000)
         )) {
             val aliceFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bobFuture = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))

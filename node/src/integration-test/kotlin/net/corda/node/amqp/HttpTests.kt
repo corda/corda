@@ -15,28 +15,30 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
-import org.junit.*
-import org.junit.rules.TemporaryFolder
-import kotlin.test.assertEquals
-import org.eclipse.jetty.proxy.ProxyServlet
-import org.eclipse.jetty.servlet.ServletContextHandler.SESSIONS
 import org.eclipse.jetty.proxy.ConnectHandler
+import org.eclipse.jetty.proxy.ProxyServlet
 import org.eclipse.jetty.server.Connector
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.servlet.ServletContextHandler.SESSIONS
 import org.eclipse.jetty.servlet.ServletHolder
-
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import kotlin.test.assertEquals
 
 class HttpTests {
     @Rule
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocator = PortAllocation.Incremental(10000)
+    private val portAllocator = incrementalPortAllocation(10000)
     private val httpProxyPort = portAllocator.nextPort()
     private val serverPort = portAllocator.nextPort()
     private val serverPort2 = portAllocator.nextPort()

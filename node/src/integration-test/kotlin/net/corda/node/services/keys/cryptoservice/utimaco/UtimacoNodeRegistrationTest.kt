@@ -14,7 +14,7 @@ import net.corda.node.utilities.registration.TestDoorman
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -42,7 +42,7 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
     @JvmField
     val testSerialization = SerializationEnvironmentRule(true)
 
-    private val portAllocation = PortAllocation.Incremental(13400)
+    private val portAllocation = incrementalPortAllocation(13400)
 
     @Rule
     @JvmField

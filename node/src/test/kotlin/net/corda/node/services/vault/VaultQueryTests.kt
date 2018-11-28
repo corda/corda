@@ -99,7 +99,6 @@ interface VaultQueryParties {
 }
 
 open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
-
     override val alice = TestIdentity(ALICE_NAME, 70)
     override val bankOfCorda = TestIdentity(BOC_NAME)
     override val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))

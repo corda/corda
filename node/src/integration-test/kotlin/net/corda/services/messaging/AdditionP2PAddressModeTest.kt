@@ -14,8 +14,8 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
@@ -32,7 +32,7 @@ class AdditionP2PAddressModeTest : IntegrationTest() {
                 DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
-    private val portAllocation = PortAllocation.Incremental(27182)
+    private val portAllocation = incrementalPortAllocation(27182)
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))

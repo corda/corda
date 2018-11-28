@@ -24,7 +24,7 @@ import net.corda.client.rpc.internal.ObservableContext as ClientObservableContex
 class AMQPRoundTripRPCSerializationScheme(
         private val serializationContext: SerializationContext,
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>)
+        serializerFactoriesForContexts: MutableMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>)
     : AbstractAMQPSerializationScheme(
         cordappCustomSerializers, serializerFactoriesForContexts
 ) {
