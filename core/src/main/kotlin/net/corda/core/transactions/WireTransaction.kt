@@ -133,13 +133,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
             resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters, {  object : AbstractAttachment({ byteArrayOf() }){
-            override val id: SecureHash get() = throw UnsupportedOperationException()
-        } })
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters, { null })
     }
 
     private fun toLedgerTransactionInternal(
@@ -147,7 +145,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -339,12 +337,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
 
         @CordaInternal
-        fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName, StateRef>>, resolveContractAttachment: (StateRef) -> Attachment)
+        fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName, StateRef>>, resolveContractAttachment: (StateRef) -> Attachment?)
                 : Map<ContractClassName, Version> {
 
             val contractClassAndAttachment: List<Pair<ContractClassName, Attachment>> = states.map {
                 Pair(it.first, resolveContractAttachment(it.second))
-            }.map { Pair(it.first, it.second) }
+            }.filter { it.second != null }. map { Pair(it.first, it.second as Attachment) }
 
             val contractClassAndManifest: List<Pair<ContractClassName, Manifest>> = contractClassAndAttachment
                     .map { Pair(it.first, it.second.openAsJAR().manifest) }

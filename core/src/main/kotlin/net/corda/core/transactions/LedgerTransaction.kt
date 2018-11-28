@@ -114,9 +114,7 @@ private constructor(
                         ?: throw IllegalStateException("The attachment for output state contract has empty Jar index file. " +
                                 "The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
                 val implementationVersion = mainAttributes.getValue(Attributes.Name.IMPLEMENTATION_VERSION)
-                        ?: return //It's ok to lack IMPLEMENTATION_VERSION, it means base 0 version
-                //throw IllegalStateException("The attachment for output state contract has no \"Implementation-Version\" field in JAR index file. " +
-                                //"The version cannot be compared with the version(s) of the input state ($inputContractClassVersion).")
+                        ?: return //It's ok to lack IMPLEMENTATION_VERSION, no version is lower that any other version
                 val version = try {
                     Integer.parseInt(implementationVersion)
                 } catch (e: IllegalArgumentException) {
@@ -927,7 +925,7 @@ private constructor(
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
             networkParameters: NetworkParameters
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(),emptyMap())
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), emptyMap())
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     fun copy(inputs: List<StateAndRef<ContractState>>,

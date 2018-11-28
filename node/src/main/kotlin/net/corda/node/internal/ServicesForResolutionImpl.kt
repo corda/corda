@@ -42,7 +42,7 @@ data class ServicesForResolutionImpl(
         }.toSet()
     }
 
-    override fun loadContractAttachment(stateRef: StateRef): Attachment {
+    override fun loadContractAttachment(stateRef: StateRef): Attachment? {
         val coreTransaction = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
                 ?: throw TransactionResolutionException(stateRef.txhash)
         when (coreTransaction) {
@@ -58,7 +58,6 @@ data class ServicesForResolutionImpl(
                     }
                 }
                 throw AttachmentResolutionException(stateRef.txhash)
-                //return null
             }
             is ContractUpgradeWireTransaction -> {
                 return attachments.openAttachment(coreTransaction.upgradedContractAttachmentId) ?: throw AttachmentResolutionException(stateRef.txhash)
@@ -85,7 +84,6 @@ data class ServicesForResolutionImpl(
                     override val signers: List<Party> get() = throw UnsupportedOperationException()
                     override val size: Int = 512
                 }
-                //throw TransactionResolutionException(stateRef.txhash)
             }
             else -> throw UnsupportedOperationException("Attempting to resolve attachment ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
         }
