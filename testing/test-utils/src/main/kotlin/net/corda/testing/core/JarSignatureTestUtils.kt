@@ -1,5 +1,6 @@
 package net.corda.testing.core
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.JarSignatureCollector
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
@@ -42,7 +43,9 @@ object JarSignatureTestUtils {
                 .waitFor())
     }
 
-    fun Path.generateKey(alias: String, storePassword: String, name: String, keyalg: String = "RSA", keyPassword: String = storePassword, storeName: String = "_teststore") : PublicKey {
+    val CODE_SIGNER = CordaX500Name("Test Code Signing Service", "London", "GB")
+
+    fun Path.generateKey(alias: String = "Test", storePassword: String = "secret!", name: String = CODE_SIGNER.toString(), keyalg: String = "RSA", keyPassword: String = storePassword, storeName: String = "_teststore") : PublicKey {
         executeProcess("keytool", "-genkeypair", "-keystore", storeName, "-storepass", storePassword, "-keyalg", keyalg, "-alias", alias, "-keypass", keyPassword, "-dname", name)
         val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
         return ks.getCertificate(alias).publicKey

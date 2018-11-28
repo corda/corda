@@ -1,6 +1,7 @@
 package net.corda.testing.node.internal
 
 import net.corda.testing.node.TestCordapp
+import java.nio.file.Path
 
 data class TestCordappImpl(override val name: String,
                            override val version: String,
@@ -10,6 +11,7 @@ data class TestCordappImpl(override val name: String,
                            override val config: Map<String, Any>,
                            override val packages: Set<String>,
                            override val signJar: Boolean = false,
+                           val keyStorePath: Path? = null,
                            val classes: Set<Class<*>>
                            ) : TestCordapp {
 
@@ -25,7 +27,7 @@ data class TestCordappImpl(override val name: String,
 
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
-    override fun signJar(signJar: Boolean): TestCordappImpl = copy(signJar = signJar)
+    override fun signJar(keyStorePath: Path?): TestCordappImpl = copy(signJar = true, keyStorePath = keyStorePath)
 
     fun withClasses(vararg classes: Class<*>): TestCordappImpl {
         return copy(classes = classes.filter { clazz -> packages.none { clazz.name.startsWith("$it.") } }.toSet())

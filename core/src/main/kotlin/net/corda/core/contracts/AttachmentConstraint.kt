@@ -86,7 +86,7 @@ interface AttachmentConstraint {
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
                 val signedAttachment = attachment.signedContractAttachment
                 if (signedAttachment != null) {
-                    val packageOwnerPK = attachment.networkParameters.packageOwnership[signedAttachment.contract]
+                    val packageOwnerPK = attachment.networkParameters.getOwnerOf(signedAttachment.allContracts)
                     if (packageOwnerPK == null) {
                         log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
                         return false

@@ -237,20 +237,22 @@ open class TransactionBuilder @JvmOverloads constructor(
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
         // identify if any input-output pairs are transitioning from hash to signature constraints.
-        val inputConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        val outputConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        var signedAttachmentId: AttachmentId? = null
-        if (inputConstraints.isNotEmpty() && outputConstraints.isNotEmpty()) {
-            val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)), isSignedCondition = Builder.equal(true))
-            val signedAttachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
-            if (signedAttachmentIds.isNotEmpty()) {
-                signedAttachmentId = signedAttachmentIds.first()
-                log.warn("Hash to Signature constraint migration using signed attachment given by $signedAttachmentId")
-                val signedAttachment = services.attachments.openAttachment(signedAttachmentId)
-                signedAttachment?.let {signedAttachment ->
-                    log.warn("Switching output states from hash to signed attachment: $signedAttachment")
-                    outputs.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+        val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+        val outputsHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+        if (inputsHashConstraints.isNotEmpty() && outputsHashConstraints.isNotEmpty()) {
+            val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
+            val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
+            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2)  {
+                val attachmentsToUse = attachmentIds.map {
+                    services.attachments.openAttachment(it)?.let { it as ContractAttachment }
+                            ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
                 }
+                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull() ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
+                log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
+                val outputsSignatureConstraints = outputsHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+                outputs.addAll(outputsSignatureConstraints)
+                outputs.removeAll(outputsHashConstraints)
+                return Pair(attachmentIds.toSet(), outputsSignatureConstraints)
             }
         }
 
@@ -272,7 +274,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         }
 
         // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.
-        val forcedAttachmentId = explicitContractAttachment ?: signedAttachmentId ?: hashAttachments.singleOrNull()?.id
+        val forcedAttachmentId = explicitContractAttachment ?: hashAttachments.singleOrNull()?.id
 
         fun selectAttachment() = selectAttachmentThatSatisfiesConstraints(
                 false,
@@ -293,8 +295,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         // If there are no automatic constraints, there is nothing to resolve.
         if (outputStates.none { it.constraint in automaticConstraints }) {
-            val attachmentIdSet = signedAttachmentId?.let { setOf(hashAttachments.first()!!.id, signedAttachmentId) } ?: setOf(selectedAttachmentId)
-            return Pair(attachmentIdSet, outputStates)
+            return Pair(setOf(selectedAttachmentId), outputStates)
         }
 
         // The final step is to resolve AutomaticPlaceholderConstraint.
@@ -324,8 +325,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             }
         }
 
-        val attachmentIdSet = signedAttachmentId?.let { setOf(hashAttachments.first()!!.id, signedAttachmentId) } ?: setOf(selectedAttachmentId)
-        return Pair(attachmentIdSet, resolvedOutputStates)
+        return Pair(setOf(selectedAttachmentId), resolvedOutputStates)
     }
 
     /**

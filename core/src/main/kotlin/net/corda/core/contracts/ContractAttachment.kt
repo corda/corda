@@ -23,7 +23,7 @@ class ContractAttachment @JvmOverloads constructor(
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 
-    val isSigned: Boolean get() = signers.isNotEmpty()
+    val isSigned: Boolean get() = signerKeys.isNotEmpty()
 
     /**
      * Contract version
