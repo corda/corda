@@ -88,7 +88,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
                            private val ourKeyPair: KeyPair,
                            private val trustRoot: X509Certificate,
                            private val nodeCa: X509Certificate,
-                           override val networkParametersStorage: DBNetworkParametersStorage,
                            private val signedNetworkParameters: NetworkParametersReader.NetworkParametersAndSigned) : ServiceHubInternal, SingletonSerializeAsToken() {
 
     override val networkParameters: NetworkParameters = signedNetworkParameters.networkParameters
@@ -148,14 +147,15 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     override val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(emptyList()), attachments).tokenize()
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database).tokenize()
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
-    @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
 
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
+    override val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
+    @Suppress("LeakingThis")
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
     override val networkMapUpdater= NetworkMapUpdater(
             networkMapCache,
             NodeInfoWatcher(
@@ -403,7 +403,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
-
+        networkParametersStorage.start(signedNetworkParameters.signed, trustRoot)
         database.transaction {
             networkMapCache.start(networkParameters.notaries)
         }
