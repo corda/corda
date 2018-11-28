@@ -195,6 +195,14 @@ node by running:
 
 Some RPCs return a stream of events that will be shown on screen until you press Ctrl-C.
 
+You can choose the format of the output, using the ``--format`` option, i.e. by running:
+
+``run --format json networkMapSnapshot``
+
+The output formats currently supported are: ``json``, ``yaml``. The default format is ``yaml``.
+
+.. note:: The output formats do not apply to RPCs that return a stream of events.
+
 You can find a list of the available RPC methods
 `here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
 
