@@ -168,6 +168,7 @@ class ConfigTest {
         assertEquals(NetworkHostAndPort("localhost", 12345), config.outboundConfig!!.proxyConfig!!.proxyAddress)
         assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
         assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
+        assertEquals(null, config.outboundConfig!!.proxyConfig!!.proxyTimeoutMS)
         val badConfigResource4 = "/net/corda/bridge/withsocks/badconfig/badsocksversion4.conf"
         assertFailsWith<IllegalArgumentException> {
             createAndLoadConfigFromResource(tempFolder.root.toPath() / "4", badConfigResource4)
@@ -219,6 +220,7 @@ class ConfigTest {
         assertEquals(NetworkHostAndPort("proxyHost", 12345), config.outboundConfig!!.proxyConfig!!.proxyAddress)
         assertEquals("proxyUser", config.outboundConfig!!.proxyConfig!!.userName)
         assertEquals("pwd", config.outboundConfig!!.proxyConfig!!.password)
+        assertEquals(30000L, config.outboundConfig!!.proxyConfig!!.proxyTimeoutMS)
     }
 
     @Test
