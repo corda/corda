@@ -10,7 +10,6 @@ import net.corda.nodeapi.internal.network.*
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_MESSAGE_SIZE
 import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_TRANSACTION_SIZE
 import picocli.CommandLine.Option
-import picocli.CommandLine.defaultExceptionHandler
 import java.io.FileNotFoundException
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -91,21 +90,9 @@ class NetworkBootstrapperRunner(private val bootstrapper: NetworkBootstrapperWit
         verifyInputs()
         val networkParameterOverrides = getNetworkParametersOverrides().doOnErrors(::reportErrors).optional ?: return ExitCodes.FAILURE
         bootstrapper.bootstrap(dir.toAbsolutePath().normalize(),
-                copyCordapps = copyCordapps.toCordappCopierOption(),
+                copyCordapps = copyCordapps,
                 networkParameterOverrides = networkParameterOverrides
         )
         return ExitCodes.SUCCESS
-    }
-}
-
-enum class CopyCordapps {
-    FirstRunOnly, Yes, No;
-}
-
-fun CopyCordapps.toCordappCopierOption() : CordappCopierOption {
-    return when(this) {
-        CopyCordapps.FirstRunOnly -> CordappCopierOption.FirstRunOnly()
-        CopyCordapps.Yes -> CordappCopierOption.CopyCordapps()
-        else -> CordappCopierOption.DontCopyCordapps()
     }
 }

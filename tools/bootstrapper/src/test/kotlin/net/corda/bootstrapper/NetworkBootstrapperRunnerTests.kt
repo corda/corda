@@ -1,15 +1,12 @@
 package net.corda.bootstrapper
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.deleteRecursively
 import net.corda.core.internal.div
 import net.corda.core.utilities.days
-import net.corda.nodeapi.internal.network.CordappCopierOption.FirstRunOnly
-import net.corda.nodeapi.internal.network.CordappCopierOption.DontCopyCordapps
+import net.corda.nodeapi.internal.network.CopyCordapps
 import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridableParameters
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
 import net.corda.nodeapi.internal.network.PackageOwner
@@ -94,7 +91,7 @@ class NetworkBootstrapperRunnerTests {
     fun `test when defaults are run bootstrapper is called correctly`() {
         val (runner, mockBootstrapper) = getRunner()
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides()))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides())
         assertEquals(0, exitCode)
     }
 
@@ -104,7 +101,7 @@ class NetworkBootstrapperRunnerTests {
         val tempDir = createTempDir()
         runner.dir = tempDir.toPath()
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(tempDir.toPath().toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides()))
+        verify(mockBootstrapper).bootstrap(tempDir.toPath().toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides())
         assertEquals(0, exitCode)
     }
 
@@ -113,7 +110,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.noCopy = true
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<DontCopyCordapps>(), eq(NetworkParametersOverrides()))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.No, NetworkParametersOverrides())
         assertEquals(0, exitCode)
     }
 
@@ -122,7 +119,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.copyCordapps = CopyCordapps.No
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<DontCopyCordapps>(), eq(NetworkParametersOverrides()))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.No, NetworkParametersOverrides())
         assertEquals(0, exitCode)
     }
 
@@ -131,7 +128,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.minimumPlatformVersion = 1
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(minimumPlatformVersion = 1)))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(minimumPlatformVersion = 1))
         assertEquals(0, exitCode)
     }
 
@@ -148,7 +145,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.maxMessageSize = 1
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(maxMessageSize = 1)))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(maxMessageSize = 1))
         assertEquals(0, exitCode)
     }
 
@@ -165,7 +162,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.maxTransactionSize = 1
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(maxTransactionSize = 1)))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(maxTransactionSize = 1))
         assertEquals(0, exitCode)
     }
 
@@ -182,7 +179,7 @@ class NetworkBootstrapperRunnerTests {
         val (runner, mockBootstrapper) = getRunner()
         runner.eventHorizon = 7.days
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(eventHorizon = 7.days)))
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(eventHorizon = 7.days))
         assertEquals(0, exitCode)
     }
 
@@ -200,12 +197,12 @@ class NetworkBootstrapperRunnerTests {
         val conf = correctNetworkFile.copyToTestDir()
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(
                 maxMessageSize = 10000,
                 maxTransactionSize = 2000,
                 eventHorizon = 5.days,
                 minimumPlatformVersion = 2
-        )))
+        ))
         assertEquals(0, exitCode)
     }
 
@@ -215,9 +212,9 @@ class NetworkBootstrapperRunnerTests {
         val conf = aliceConfigFile.copyToTestDir()
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKey))
-        )))
+        ))
         assertEquals(0, exitCode)
     }
 
@@ -227,9 +224,9 @@ class NetworkBootstrapperRunnerTests {
         val conf = aliceConfigFile.copyToTestDir(dirAliceEC)
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKeyEC))
-        )))
+        ))
         assertEquals(0, exitCode)
     }
 
@@ -239,9 +236,9 @@ class NetworkBootstrapperRunnerTests {
         val conf = aliceConfigFile.copyToTestDir(dirAliceDSA)
         runner.networkParametersFile = conf
         val exitCode = runner.runProgram()
-        verify(mockBootstrapper).bootstrap(eq(Paths.get(".").toAbsolutePath().normalize()), any<FirstRunOnly>(), eq(NetworkParametersOverrides(
+        verify(mockBootstrapper).bootstrap(Paths.get(".").toAbsolutePath().normalize(), CopyCordapps.FirstRunOnly, NetworkParametersOverrides(
                 packageOwnership = listOf(PackageOwner("com.example.stuff", publicKey = alicePublicKeyDSA))
-        )))
+        ))
         assertEquals(0, exitCode)
     }
 

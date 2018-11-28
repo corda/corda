@@ -184,7 +184,7 @@ class NetworkBootstrapperTest {
     fun `no copy CorDapps`() {
         createNodeConfFile("alice", aliceConfig)
         val cordappBytes = createFakeCordappJar("sample-app", listOf("contract.class"))
-        bootstrap(copyCordapps = false)
+        bootstrap(copyCordapps = CopyCordapps.No)
         val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
         assertThat(rootDir / "alice" / "cordapps" / "sample-app.jar").doesNotExist()
         assertThat(networkParameters.whitelistedContractImplementations).isEqualTo(mapOf(
