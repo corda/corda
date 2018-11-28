@@ -58,10 +58,55 @@ class InteractiveShellTest {
         private val BOB = getTestPartyAndCertificate(BOB_NAME, generateKeyPair().public)
         private val ALICE_NODE_INFO = NodeInfo(listOf(NetworkHostAndPort("localhost", 8080)), listOf(ALICE), 1, 1)
         private val BOB_NODE_INFO = NodeInfo(listOf(NetworkHostAndPort("localhost", 80)), listOf(BOB), 1, 1)
-        private val NODE_INFO_JSON_PAYLOAD = this::class.java.getResource("/node_info_payload.json").readText()
-        private val NODE_INFO_YAML_PAYLOAD = this::class.java.getResource("/node_info_payload.yaml").readText()
-        private val NETWORK_MAP_JSON_PAYLOAD = this::class.java.getResource("/network_map_payload.json").readText()
-        private val NETWORK_MAP_YAML_PAYLOAD = this::class.java.getResource("/network_map_payload.yaml").readText()
+        private val NODE_INFO_JSON_PAYLOAD =
+                """
+                {
+                  "addresses" : [ "localhost:8080" ],
+                  "legalIdentitiesAndCerts" : [ "O=Alice Corp, L=Madrid, C=ES" ],
+                  "platformVersion" : 1,
+                  "serial" : 1
+                }
+                """.trimIndent()
+        private val NODE_INFO_YAML_PAYLOAD =
+                """
+                    addresses:
+                    - "localhost:8080"
+                    legalIdentitiesAndCerts:
+                    - "O=Alice Corp, L=Madrid, C=ES"
+                    platformVersion: 1
+                    serial: 1
+
+                """.trimIndent()
+        private val NETWORK_MAP_JSON_PAYLOAD =
+                """
+                    [ {
+                      "addresses" : [ "localhost:8080" ],
+                      "legalIdentitiesAndCerts" : [ "O=Alice Corp, L=Madrid, C=ES" ],
+                      "platformVersion" : 1,
+                      "serial" : 1
+                    }, {
+                      "addresses" : [ "localhost:80" ],
+                      "legalIdentitiesAndCerts" : [ "O=Bob Plc, L=Rome, C=IT" ],
+                      "platformVersion" : 1,
+                      "serial" : 1
+                    } ]
+                """.trimIndent()
+        private val NETWORK_MAP_YAML_PAYLOAD =
+                """
+                    - addresses:
+                      - "localhost:8080"
+                      legalIdentitiesAndCerts:
+                      - "O=Alice Corp, L=Madrid, C=ES"
+                      platformVersion: 1
+                      serial: 1
+                    - addresses:
+                      - "localhost:80"
+                      legalIdentitiesAndCerts:
+                      - "O=Bob Plc, L=Rome, C=IT"
+                      platformVersion: 1
+                      serial: 1
+
+                """.trimIndent()
     }
 
     @Suppress("UNUSED")
@@ -97,8 +142,7 @@ class InteractiveShellTest {
 
     private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
         val objectMapper = ObjectMapper()
-        val tf = TypeFactory.defaultInstance()
-                .withClassLoader(classLoader)
+        val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
         objectMapper.typeFactory = tf
 
         return objectMapper
@@ -174,8 +218,7 @@ class InteractiveShellTest {
     @Test
     fun runRpcFromStringWithCustomTypeResult() {
         val command = listOf("nodeInfo")
-        whenever(cordaRpcOps.nodeInfo())
-                .thenReturn(ALICE_NODE_INFO)
+        whenever(cordaRpcOps.nodeInfo()).thenReturn(ALICE_NODE_INFO)
 
         InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.JSON)
         verify(printWriter).println(NODE_INFO_JSON_PAYLOAD)
@@ -187,8 +230,7 @@ class InteractiveShellTest {
     @Test
     fun runRpcFromStringWithCollectionsResult() {
         val command = listOf("networkMapSnapshot")
-        whenever(cordaRpcOps.networkMapSnapshot())
-                .thenReturn(listOf(ALICE_NODE_INFO, BOB_NODE_INFO))
+        whenever(cordaRpcOps.networkMapSnapshot()).thenReturn(listOf(ALICE_NODE_INFO, BOB_NODE_INFO))
 
         InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.JSON)
         verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD)
