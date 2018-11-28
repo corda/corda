@@ -198,7 +198,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
  *
  * @param otherSideSession The session which is providing the transaction to record.
  * @param expectedTxId Expected ID of the transaction that's about to be received. This is typically retrieved from
- * [SignTransactionFlow].
+ * [SignTransactionFlow]. Setting it to null disables the expected transaction ID check.
  * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  */
 class ReceiveFinalityFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
