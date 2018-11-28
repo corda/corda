@@ -82,7 +82,7 @@ Whitelisting contracts
 Any CorDapps provided when bootstrapping a network will be scanned for contracts which will be used to create the
 *Zone whitelist* (see :doc:`api-contract-constraints`) for the network.
 
-.. note:: If you only wish to whitelist the CorDapps but not copy them to each node then run with the ``--no-copy`` flag.
+.. note:: If you only wish to whitelist the CorDapps but not copy them to each node then run with the ``--copy-cordapps=No`` option.
 
 The CorDapp JARs will be hashed and scanned for ``Contract`` classes. These contract class implementations will become part
 of the whitelisted contracts in the network parameters (see ``NetworkParameters.whitelistedContractImplementations`` :doc:`network-map`).
@@ -401,16 +401,17 @@ The Network Bootstrapper can be started with the following command line options:
 
 .. code-block:: shell
 
-    bootstrapper [-hvV] [--no-copy] [--dir=<dir>] [--event-horizon=<eventHorizon>]
-             [--logging-level=<loggingLevel>]
+    bootstrapper [-hvV] [--copy-cordapps=<copyCordapps>] [--dir=<dir>]
+             [--event-horizon=<eventHorizon>] [--logging-level=<loggingLevel>]
              [--max-message-size=<maxMessageSize>]
              [--max-transaction-size=<maxTransactionSize>]
              [--minimum-platform-version=<minimumPlatformVersion>]
              [-n=<networkParametersFile>] [COMMAND]
 
 * ``--dir=<dir>``: Root directory containing the node configuration files and CorDapp JARs that will form the test network.
-    It may also contain existing node directories. Defaults to the current directory.
-* ``--no-copy``: Don't copy the CorDapp JARs into the nodes' "cordapps" directories.
+  It may also contain existing node directories. Defaults to the current directory.
+* ``--copy-cordapps=<copyCordapps>``: Whether or not to copy the CorDapp JARs into the nodes' 'cordapps' directory. Possible values:
+  FirstRunOnly, Yes, No. Default: FirstRunOnly.
 * ``--verbose``, ``--log-to-console``, ``-v``: If set, prints logging to the console as well as to a file.
 * ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO.
 * ``--help``, ``-h``: Show this help message and exit.
@@ -419,8 +420,8 @@ The Network Bootstrapper can be started with the following command line options:
 * ``--max-message-size``: The maximum message size to use in the network-parameters, in bytes.
 * ``--max-transaction-size``: The maximum transaction size to use in the network-parameters, in bytes.
 * ``--event-horizon``: The event horizon to use in the network-parameters.
-* ``--network-parameter-overrides=<networkParametersFile>``, ``-n=<networkParametersFile>`: Overrides the default network parameters with those
-    in the given file. See `Overriding network parameters via a file`_ for more information.
+* ``--network-parameter-overrides=<networkParametersFile>``, ``-n=<networkParametersFile>``: Overrides the default network parameters with those
+  in the given file. See `Overriding network parameters via a file`_ for more information.
 
 
 Sub-commands

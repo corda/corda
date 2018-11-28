@@ -668,3 +668,35 @@ Then, in ``generateMappedObject``, add support for the new schema:
 
 With this approach, whenever the state object is stored in the vault, a representation of it will be stored in two
 separate database tables where possible - one for each supported schema.
+
+Serialisation
+-------------
+
+The Corda serialisation format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Currently, the serialisation format for everything except flow checkpoints (which uses a Kryo-based format) is based
+on AMQP 1.0, a self-describing and controllable serialisation format. AMQP is desirable because it allows us to have
+a schema describing what has been serialized alongside the data itself. This assists with versioning and deserialising
+long-ago archived data, among other things.
+
+Writing classes that meet the serialisation format requirements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Although not strictly related to versioning, AMQP serialisation dictates that we must write our classes in a particular way:
+
+* Your class must have a constructor that takes all the properties that you wish to record in the serialized form. This
+  is required in order for the serialization framework to reconstruct an instance of your class
+* If more than one constructor is provided, the serialization framework needs to know which one to use. The
+  ``@ConstructorForDeserialization`` annotation can be used to indicate the chosen constructor. For a Kotlin class
+  without the ``@ConstructorForDeserialization`` annotation, the primary constructor is selected
+* The class must be compiled with parameter names in the .class file. This is the default in Kotlin but must be turned
+  on in Java (using the ``-parameters`` command line option to ``javac``)
+* Your class must provide a Java Bean getter for each of the properties in the constructor, with a matching name. For
+  example, if a class has the constructor parameter ``foo``, there must be a getter called ``getFoo()``. If ``foo`` is
+  a boolean, the getter may optionally be called ``isFoo()``. This is why the class must be compiled with parameter
+  names turned on
+* The class must be annotated with ``@CordaSerializable``
+* The declared types of constructor arguments/getters must be supported, and where generics are used the generic
+  parameter must be a supported type, an open wildcard (*), or a bounded wildcard which is currently widened to an open
+  wildcard
+* Any superclass must adhere to the same rules, but can be abstract
+* Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly
