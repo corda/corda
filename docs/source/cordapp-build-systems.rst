@@ -256,6 +256,33 @@ To check if CorDapp is signed use `JAR signing and verification tool <https://do
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
+If your build system post-processes the Cordapp JAR, then the modified JAR content may be out-of-date or not complete
+with regards to a signature file. In this case you can sign the Cordapp as a separate step and disable the automatic signing by the ``cordapp`` plugin.
+The ``cordapp`` plugin contains a standalone task ``signJar`` which uses the same ``signing`` configuration.
+The task has two parameters: ``inputJars`` - to pass JAR files to be signed
+and an optional ``postfix`` which is added to the name of signed JARs (it defaults to "-signed").
+The signed JARs are returned as  ``outputJars`` property.
+
+For example in order to sign a JAR modified by *modifyCordapp* task,
+create an instance of the ``net.corda.plugins.SignJar`` task (below named as *sign*).
+The output of *modifyCordapp* task is passed to *inputJars* and the *sign* task is run after *modifyCordapp* one:
+
+.. sourcecode:: groovy
+
+    task sign(type: net.corda.plugins.SignJar) {
+        inputJars modifyCordapp
+    }
+    modifyCordapp.finalizedBy sign
+    cordapp {
+        signing {
+            enabled false
+        }
+        //..
+    }
+
+The task creates a new JAR file named *\*-signed.jar* which should be used further in your build/publishing process.
+Also the best practice is to disable signing by the ``cordapp`` plugin as shown in the example.
+
 Example
 ^^^^^^^
 Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you
