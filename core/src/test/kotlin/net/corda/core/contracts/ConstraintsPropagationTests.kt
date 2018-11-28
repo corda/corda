@@ -78,7 +78,7 @@ class ConstraintsPropagationTests {
                         .copy(whitelistedContractImplementations = mapOf(
                                 Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
                                 noPropagationContractClassName to listOf(SecureHash.zeroHash)),
-                                packageOwnership = mapOf(Cash.PROGRAM_ID to hashToSignatureConstraintsKey))
+                                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey))
         )
     }
 
@@ -125,11 +125,10 @@ class ConstraintsPropagationTests {
         println("Signed: $signedAttachmentId")
 
         ledgerServices.ledger(DUMMY_NOTARY) {
-            transaction {
+            unverifiedTransaction {
                 attachment(Cash.PROGRAM_ID, unsignedAttachmentId)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(unsignedAttachmentId), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
             }
             transaction {
                 attachment(Cash.PROGRAM_ID, signedAttachmentId)
@@ -298,11 +297,11 @@ class ConstraintsPropagationTests {
         val attachmentSigned = mock<ContractAttachment>()
         val attachmentIdSigned = zeroHash
         whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
-        whenever(attachmentSigned.contract).thenReturn(propagatingContractClassName)
+        whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // network parameters
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
+                packageOwnership = mapOf( "net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
         // attachment with context (both unsigned and signed attachments representing same contract)
         val attachmentWithContext = mock<AttachmentWithContext>()

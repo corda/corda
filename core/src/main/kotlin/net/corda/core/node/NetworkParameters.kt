@@ -2,6 +2,7 @@ package net.corda.core.node
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
 import net.corda.core.internal.requirePackageValid
@@ -185,7 +186,15 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
-    fun getOwnerOf(contractClassName: String): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
+    fun getOwnerOf(contractClassName: ContractClassName): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
+
+    /**
+     * Returns the public key of the package owner if any of [contractClassName] match, or null if not owned.
+     */
+    fun getOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
+        val ownerKeys = contractClassNames.map { getOwnerOf(it) }
+        return ownerKeys.find { it != null }
+    }
 
     /**
      * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not

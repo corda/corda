@@ -19,6 +19,7 @@ import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
+import net.corda.testing.core.JarSignatureTestUtils.generateKey
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.OutOfProcess
@@ -26,7 +27,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import org.assertj.core.api.Assertions
-import org.junit.Ignore
 import org.junit.Test
 
 class CordappConstraintsTests {
@@ -46,7 +46,7 @@ class CordappConstraintsTests {
         )) {
 
             val alice = startNode(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true)),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
                     rpcUsers = listOf(user)).getOrThrow()
 
             val expected = 500.DOLLARS
@@ -92,7 +92,7 @@ class CordappConstraintsTests {
 
             println("Restarting the node using signed contract jar ...")
             val restartedNode = startNode(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true)),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
                     regenerateCordappsOnStart = true
             ).getOrThrow()
 
@@ -175,14 +175,14 @@ class CordappConstraintsTests {
 
     @Test
     fun `issue and consume cash using signature constraints`() {
-        driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP.signJar(true)),
+        driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP.signJar()),
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 inMemoryDB = false)) {
 
             val (alice, bob) = listOf(
-                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true))),
-                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true)))
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar())),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar()))
             ).map { it.getOrThrow() }
 
             // Issue Cash
@@ -233,13 +233,18 @@ class CordappConstraintsTests {
         }
     }
 
-    @Ignore("ongoing investigation into why SIGNATURE constraint is not propagating in the wire transaction")
     @Test
     fun `issue cash and transfer using hash to signature constraints migration`() {
+
+        // signing key setup
+        val keyStoreDir = SelfCleaningDir()
+        val packageOwnerKey = keyStoreDir.path.generateKey()
+
         driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP),
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false)) {
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4,
+                        packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)),
+                inMemoryDB = false, startNodesInProcess = true)) {
 
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
@@ -256,28 +261,28 @@ class CordappConstraintsTests {
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $ALICE_NAME ...")
-            (alice as OutOfProcess).process.destroyForcibly()
+//            (alice as OutOfProcess).process.destroyForcibly()
             alice.stop()
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $BOB_NAME ...")
-            (bob as OutOfProcess).process.destroyForcibly()
+//            (bob as OutOfProcess).process.destroyForcibly()
             bob.stop()
 
             println("Restarting the node for $ALICE_NAME ...")
             val restartedAlice = startNode(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true)),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
                     regenerateCordappsOnStart = true
             ).getOrThrow()
 
             println("Restarting the node for $BOB_NAME ...")
             val restartedBob = startNode(providedName = BOB_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(true)),
+                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
                     regenerateCordappsOnStart = true
             ).getOrThrow()
 
             // Register for Bob vault updates
-            val vaultUpdatesBob = bob.rpc.vaultTrackByCriteria(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
+            val vaultUpdatesBob = restartedBob.rpc.vaultTrackByCriteria(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
 
             // Transfer Cash
             val bobParty = restartedBob.rpc.wellKnownPartyFromX500Name(BOB_NAME)!!
@@ -315,6 +320,9 @@ class CordappConstraintsTests {
             Assertions.assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
             Assertions.assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
             Assertions.assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
+
+            // clean-up
+            keyStoreDir.close()
         }
     }
 

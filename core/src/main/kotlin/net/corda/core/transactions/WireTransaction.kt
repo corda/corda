@@ -20,7 +20,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.lazyMapped
-import net.corda.core.utilities.loggerFor
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate
@@ -157,9 +156,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         }
         val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
 
-        val attachments = attachments.lazyMapped { att, _ ->
-            resolveAttachment(att) ?: throw AttachmentResolutionException(att)
-        }
+        val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
@@ -167,7 +164,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedInputs,
                 outputs,
                 authenticatedCommands,
-                attachments,
+                resolvedAttachments,
                 id,
                 notary,
                 timeWindow,
@@ -296,9 +293,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
-        private val log = loggerFor<LedgerTransaction>()
-        private const val DEFAULT_MAX_TX_SIZE = 10485760
-
         @CordaInternal
         @Deprecated("Do not use, this is internal API")
         fun createComponentGroups(inputs: List<StateRef>,

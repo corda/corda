@@ -129,7 +129,7 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
-        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract()
+        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract })
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
 
@@ -191,7 +191,7 @@ private constructor(
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->
-            contractAttachmentsByContract[contract]?.forEach { attachment ->
+            contractAttachmentsByContract[contract]?.filter { it.isSigned }?.forEach { attachment ->
                 if (!owner.isFulfilledBy(attachment.signerKeys))
                     throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
             } ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
@@ -308,13 +308,13 @@ private constructor(
      *  Specifically, this is the case for transactions combining hash and signature constraints where the hash constrained contract jar
      *  will be unsigned, and the signature constrained counterpart will be signed.
      */
-    private fun getContractAttachmentsByContract(): Map<ContractClassName, Set<ContractAttachment>> {
+    private fun getContractAttachmentsByContract(contractClasses: List<ContractClassName>): Map<ContractClassName, Set<ContractAttachment>> {
         val result = mutableMapOf<ContractClassName, Set<ContractAttachment>>()
 
         for (attachment in attachments) {
             if (attachment !is ContractAttachment) continue
 
-            for (contract in attachment.allContracts) {
+            for (contract in contractClasses) {
                 result.compute(contract) { _, attachmentSet ->
                     when {
                         attachmentSet == null -> mutableSetOf(attachment)
