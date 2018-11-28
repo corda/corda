@@ -2,6 +2,7 @@ package net.corda.client.jackson
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.core.*
 import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -163,6 +164,9 @@ object JacksonSupport {
             enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
             enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
             disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+
+            // Add support for serialising/deserialising sub-types.
+            enableDefaultTyping(ObjectMapper.DefaultTyping.OBJECT_AND_NON_CONCRETE, JsonTypeInfo.As.PROPERTY)
 
             registerModule(JavaTimeModule().apply {
                 addSerializer(Date::class.java, DateSerializer)
