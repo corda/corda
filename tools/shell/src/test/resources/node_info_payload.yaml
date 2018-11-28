@@ -1,0 +1,6 @@
+addresses:
+- "localhost:8080"
+legalIdentitiesAndCerts:
+- "O=Alice Corp, L=Madrid, C=ES"
+platformVersion: 1
+serial: 1
