@@ -2,6 +2,12 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
+import java.lang.Exception
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
+import kotlin.reflect.jvm.javaConstructor
+
+private const val IGNORE_COMPUTED = -1
 
 /**
  * Creates a new [ObjectBuilder] ready to be populated with deserialized values so that it can create an object instance.
@@ -11,6 +17,46 @@ import java.io.NotSerializableException
  */
 data class ObjectBuilderProvider(val propertySlots: Map<String, Int>, private val provider: () -> ObjectBuilder)
     : () -> ObjectBuilder by provider
+
+/**
+ * Wraps the operation of calling a constructor, with helpful exception handling.
+ */
+private class ConstructorCaller(constructor: LocalConstructorInformation): (Array<Any?>) -> Any {
+
+    private val javaConstructor = constructor.observedMethod.javaConstructor!!
+
+    override fun invoke(parameters: Array<Any?>): Any =
+        try {
+            javaConstructor.newInstance(*parameters)
+        } catch (e: InvocationTargetException) {
+            throw NotSerializableException(
+                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
+                    "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
+        } catch (e: IllegalAccessException) {
+            throw NotSerializableException(
+                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
+                    "not accessible: ${e.message}")
+        }
+}
+
+/**
+ * Wraps the operation of calling a setter, with helpful exception handling.
+ */
+private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
+    override fun invoke(target: Any, value: Any?) {
+        try {
+            setter.invoke(target, value)
+        } catch (e: InvocationTargetException) {
+            throw NotSerializableException(
+                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
+                            "failed when called with parameter $value: ${e.cause!!.message}")
+        } catch (e: IllegalAccessException) {
+            throw NotSerializableException(
+                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
+                    "not accessible: ${e.message}")
+        }
+    }
+}
 
 /**
  * Initialises, configures and creates a new object by receiving values into indexed slots.
@@ -32,40 +78,46 @@ interface ObjectBuilder {
          */
         fun makeProvider(typeIdentifier: TypeIdentifier,
                          constructor: LocalConstructorInformation,
-                         properties: Map<String, LocalPropertyInformation>): ObjectBuilderProvider {
-            val nonCalculatedProperties = properties.filterNot { (_, property) -> property.isCalculated }
-            val propertySlots = nonCalculatedProperties.keys.mapIndexed {
-                slot, name -> name to slot
-            }.toMap(LinkedHashMap())
+                         properties: Map<String, LocalPropertyInformation>): ObjectBuilderProvider =
+            if (constructor.hasParameters) makeConstructorBasedProvider(properties, typeIdentifier, constructor)
+            else makeGetterSetterProvider(properties, typeIdentifier, constructor)
 
-            val constructorIndices = nonCalculatedProperties.values.mapNotNull { property ->
-                when(property) {
+        private fun makeConstructorBasedProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+            val constructorIndices = properties.mapValues { (name, property) ->
+                when (property) {
                     is LocalPropertyInformation.ConstructorPairedProperty -> property.constructorSlot.parameterIndex
                     is LocalPropertyInformation.PrivateConstructorPairedProperty -> property.constructorSlot.parameterIndex
-                    else -> null
-                }
-            }.toIntArray()
-
-            if (constructorIndices.isNotEmpty()) {
-                if (constructorIndices.size != nonCalculatedProperties.size) {
-                    throw NotSerializableException(
-                            "Some but not all properties of ${typeIdentifier.prettyPrint(false)} " +
-                            "are constructor-based")
-                }
-                return ObjectBuilderProvider(propertySlots) {
-                    ConstructorBasedObjectBuilder(constructor, constructorIndices)
+                    is LocalPropertyInformation.CalculatedProperty -> IGNORE_COMPUTED
+                    else -> throw NotSerializableException(
+                            "Type ${typeIdentifier.prettyPrint(false)} has constructor arguments, " +
+                                    "but property $name is not constructor-paired"
+                    )
                 }
             }
 
-            val getterSetter = nonCalculatedProperties.asSequence().mapNotNull { (name, property) ->
-                if (property is LocalPropertyInformation.GetterSetterProperty) name to property
-                else throw NotSerializableException(
-                        "Property $name of type ${typeIdentifier.prettyPrint(false)} " +
-                        "with default no-argument constructor is not a getter/setter property")
-            }.toMap(LinkedHashMap())
+            val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                SetterBasedObjectBuilder(constructor, getterSetter.values.toList())
+                ConstructorBasedObjectBuilder(ConstructorCaller(constructor), constructorIndices.values.toIntArray())
+            }
+        }
+
+        private fun makeGetterSetterProvider(properties: Map<String, LocalPropertyInformation>, typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation): ObjectBuilderProvider {
+            val setters = properties.mapValues { (name, property) ->
+                when (property) {
+                    is LocalPropertyInformation.GetterSetterProperty -> SetterCaller(property.observedSetter)
+                    is LocalPropertyInformation.CalculatedProperty -> null
+                    else -> throw NotSerializableException(
+                            "Type ${typeIdentifier.prettyPrint(false)} has no constructor arguments, " +
+                                    "but property $name is constructor-paired"
+                    )
+                }
+            }
+
+            val propertySlots = setters.keys.mapIndexed { slot, name -> name to slot }.toMap()
+
+            return ObjectBuilderProvider(propertySlots) {
+                SetterBasedObjectBuilder(ConstructorCaller(constructor), setters.values.toList())
             }
         }
     }
@@ -91,17 +143,17 @@ interface ObjectBuilder {
  * and calling a setter method for each value populated into one of its slots.
  */
 private class SetterBasedObjectBuilder(
-        private val constructor: LocalConstructorInformation,
-        private val properties: List<LocalPropertyInformation.GetterSetterProperty>): ObjectBuilder {
+        private val constructor: ConstructorCaller,
+        private val setters: List<SetterCaller?>): ObjectBuilder {
 
     private lateinit var target: Any
 
     override fun initialize() {
-        target = constructor.observedMethod.call()
+        target = constructor.invoke(emptyArray())
     }
 
     override fun populate(slot: Int, value: Any?) {
-        properties[slot].observedSetter.invoke(target, value)
+        setters[slot]?.invoke(target, value)
     }
 
     override fun build(): Any = target
@@ -112,19 +164,19 @@ private class SetterBasedObjectBuilder(
  * and calling a constructor with those parameters to obtain the configured object instance.
  */
 private class ConstructorBasedObjectBuilder(
-        private val constructor: LocalConstructorInformation,
+        private val constructor: ConstructorCaller,
         private val parameterIndices: IntArray): ObjectBuilder {
 
-    private val params = arrayOfNulls<Any>(parameterIndices.size)
+    private val params = arrayOfNulls<Any>(parameterIndices.count { it != IGNORE_COMPUTED })
 
     override fun initialize() {}
 
     override fun populate(slot: Int, value: Any?) {
         val parameterIndex = parameterIndices[slot]
-        params[parameterIndex] = value
+        if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
     }
 
-    override fun build(): Any = constructor.observedMethod.call(*params)
+    override fun build(): Any = constructor.invoke(params)
 }
 
 /**
