@@ -117,7 +117,7 @@ fun <A> rpcDriver(
         waitForNodesToFinish: Boolean = false,
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
+        @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
