@@ -540,6 +540,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
         inputsWithTransactionState.add(stateAndRef)
+        resolveStatePointers(stateAndRef.state)
+        return this
     }
 
     /** Adds an attachment with the specified hash to the TransactionBuilder. */

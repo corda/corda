@@ -71,7 +71,7 @@ class AttachmentLoadingTests {
         private val testNetworkParameters = testNetworkParameters().addNotary(DUMMY_NOTARY)
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
-        override fun loadContractAttachment(stateRef: StateRef): Attachment? = throw NotImplementedError()
+        override fun loadContractAttachment(stateRef: StateRef): Attachment = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
             doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
         }
