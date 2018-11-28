@@ -33,22 +33,43 @@ import kotlin.reflect.jvm.javaType
  * will find it useful to revert to earlier states of knowledge about which types have been visited on a given branch.
  */
 internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
-                                                val resolutionContext: Type? = null,
-                                                val visited: Set<TypeIdentifier> = emptySet(),
-                                                val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf()) {
+                                                var resolutionContext: Type? = null,
+                                                var visited: Set<TypeIdentifier> = emptySet(),
+                                                val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf(),
+                                                var warnIfNonComposable: Boolean = true) {
 
     companion object {
         private val logger = contextLogger()
     }
 
     /**
+     * If we are examining the type of a read-only property, or a type flagged as [Opaque], then we do not need to warn
+     * if the [LocalTypeInformation] for that type (or any of its related types) is [LocalTypeInformation.NonComposable].
+     */
+    private inline fun <T> suppressWarningsAnd(block: LocalTypeInformationBuilder.() -> T): T {
+        val previous = warnIfNonComposable
+        return try {
+            warnIfNonComposable = false
+            block()
+        } finally {
+            warnIfNonComposable = previous
+        }
+    }
+
+    /**
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
      */
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
-        if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier).apply { cycles.add(this) }
-        else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
-            copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
-        }
+            if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier).apply { cycles.add(this) }
+            else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
+                val previous = visited
+                try {
+                    visited = visited + typeIdentifier
+                    buildIfNotFound(type, typeIdentifier, isOpaque)
+                } finally {
+                    visited = previous
+                }
+            }
 
     private fun resolveAndBuild(type: Type): LocalTypeInformation {
         val resolved = type.resolveAgainstContext()
@@ -57,7 +78,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun Type.resolveAgainstContext(): Type =
-            if (resolutionContext == null) this else resolveAgainst(resolutionContext)
+            resolutionContext?.let(::resolveAgainst) ?: this
 
     private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation {
         val rawType = type.asClass()
@@ -79,7 +100,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     private fun buildForClass(type: Class<*>, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(type) &&
-            !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
+                    !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
             Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
             type.kotlin.javaPrimitiveType != null -> LocalTypeInformation.Atomic(type.kotlin.javaPrimitiveType!!, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
@@ -95,9 +116,12 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             type.isInterface -> buildInterface(type, typeIdentifier, emptyList())
             type.isAbstractClass -> buildAbstract(type, typeIdentifier, emptyList())
             isOpaque -> LocalTypeInformation.Opaque(
-                        type,
-                        typeIdentifier,
-                        buildNonAtomic(type, type, typeIdentifier, emptyList(), true))
+                    type,
+                    typeIdentifier,
+                    suppressWarningsAnd { buildNonAtomic(type, type, typeIdentifier, emptyList()) })
+            Exception::class.java.isAssignableFrom(type.asClass()) -> suppressWarningsAnd {
+                buildNonAtomic(type, type, typeIdentifier, emptyList())
+            }
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
         }
     }
@@ -109,7 +133,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             isOpaque: Boolean): LocalTypeInformation = withContext(type) {
         when {
             Collection::class.java.isAssignableFrom(rawType) &&
-            !EnumSet::class.java.isAssignableFrom(rawType) ->
+                    !EnumSet::class.java.isAssignableFrom(rawType) ->
                 LocalTypeInformation.ACollection(type, typeIdentifier, buildTypeParameterInformation(type)[0])
             Map::class.java.isAssignableFrom(rawType) -> {
                 val (keyType, valueType) = buildTypeParameterInformation(type)
@@ -118,8 +142,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             rawType.isInterface -> buildInterface(type, typeIdentifier, buildTypeParameterInformation(type))
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
             isOpaque -> LocalTypeInformation.Opaque(rawType,
-                        typeIdentifier,
-                        buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type), true))
+                    typeIdentifier,
+                    suppressWarningsAnd { buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type)) })
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }
@@ -143,8 +167,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type),
                     typeParameters)
 
-    private inline fun <T> withContext(newContext: Type, block: LocalTypeInformationBuilder.() -> T): T =
-            copy(resolutionContext = newContext).run(block)
+    private inline fun <T> withContext(newContext: Type, block: LocalTypeInformationBuilder.() -> T): T {
+        val previous = resolutionContext
+        return try {
+            resolutionContext = newContext
+            block()
+        } finally {
+            resolutionContext = previous
+        }
+    }
 
     /**
      * Build a non-atomic type, which is either [Composable] or [NonComposable].
@@ -156,13 +187,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
      * Rather than throwing an exception if a type is [NonComposable], we capture its type information so that it can
      * still be used to _serialize_ values, or as the basis for deciding on an evolution strategy.
      */
-    private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>, suppressWarning: Boolean = false): LocalTypeInformation {
+    private fun buildNonAtomic(rawType: Class<*>, type: Type, typeIdentifier: TypeIdentifier, typeParameterInformation: List<LocalTypeInformation>): LocalTypeInformation {
         val superclassInformation = buildSuperclassInformation(type)
         val interfaceInformation = buildInterfaceInformation(type)
         val observedConstructor = constructorForDeserialization(type)
 
         if (observedConstructor == null) {
-            if (!suppressWarning) {
+            if (warnIfNonComposable) {
                 logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
             }
             return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
@@ -175,7 +206,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         val hasNonComposableProperties = properties.values.any { it.type is LocalTypeInformation.NonComposable }
 
         if (!propertiesSatisfyConstructor(constructorInformation, properties) || hasNonComposableProperties) {
-            if (!suppressWarning) {
+            if (warnIfNonComposable) {
                 if (hasNonComposableProperties) {
                     logger.info("Type ${type.typeName} has non-composable properties and has been marked as non-composable")
                 } else {
@@ -214,7 +245,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun buildSuperclassInformation(type: Type): LocalTypeInformation =
-        resolveAndBuild(type.asClass().genericSuperclass)
+            resolveAndBuild(type.asClass().genericSuperclass)
 
     private fun buildInterfaceInformation(type: Type) =
             type.allInterfaces.asSequence().mapNotNull {
@@ -244,8 +275,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 if (descriptor.field == null || descriptor.getter == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
-                    val paramTypeInformation = build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext
-                            ?: rawType))
+                    // Because this parameter is read-only, we don't need to warn if its type is non-composable.
+                    val paramTypeInformation = suppressWarningsAnd {
+                        build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
+                    }
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
                     name to LocalPropertyInformation.ReadOnlyProperty(descriptor.getter, paramTypeInformation, isMandatory)
                 }
@@ -275,10 +308,10 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                                               name: String,
                                               descriptor: PropertyDescriptor,
                                               constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
-        val constructorIndex = constructorParameterIndices[name] ?:
-            // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
-            // and cannot infer whether the property name should be capitalised or not.
-            constructorParameterIndices[name.decapitalize()] ?: return null
+        // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
+        // and cannot infer whether the property name should be capitalised or not.
+        val constructorIndex = constructorParameterIndices[name] ?: constructorParameterIndices[name.decapitalize()]
+        if (constructorIndex == null) return null
 
         if (descriptor.getter == null) {
             if (descriptor.field == null) return null
