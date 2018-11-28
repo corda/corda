@@ -33,10 +33,10 @@ import kotlin.reflect.jvm.javaType
  * will find it useful to revert to earlier states of knowledge about which types have been visited on a given branch.
  */
 internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
-                                                val resolutionContext: Type? = null,
-                                                val visited: Set<TypeIdentifier> = emptySet(),
+                                                var resolutionContext: Type? = null,
+                                                var visited: Set<TypeIdentifier> = emptySet(),
                                                 val cycles: MutableList<LocalTypeInformation.Cycle> = mutableListOf(),
-                                                val warnIfNonComposable: Boolean = true) {
+                                                var warnIfNonComposable: Boolean = true) {
 
     companion object {
         private val logger = contextLogger()
@@ -46,8 +46,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
      * If we are examining the type of a read-only property, or a type flagged as [Opaque], then we do not need to warn
      * if the [LocalTypeInformation] for that type (or any of its related types) is [LocalTypeInformation.NonComposable].
      */
-    private fun <T> suppressingWarnings(block: LocalTypeInformationBuilder.() -> T): T =
-            copy(warnIfNonComposable = false).block()
+    private inline fun <T> suppressWarningsAnd(block: LocalTypeInformationBuilder.() -> T): T {
+        val previous = warnIfNonComposable
+        return try {
+            warnIfNonComposable = false
+            block()
+        } finally {
+            warnIfNonComposable = previous
+        }
+    }
 
     /**
      * Recursively build [LocalTypeInformation] for the given [Type] and [TypeIdentifier]
@@ -55,7 +62,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     fun build(type: Type, typeIdentifier: TypeIdentifier): LocalTypeInformation =
             if (typeIdentifier in visited) LocalTypeInformation.Cycle(type, typeIdentifier).apply { cycles.add(this) }
             else lookup.findOrBuild(type, typeIdentifier) { isOpaque ->
-                copy(visited = visited + typeIdentifier).buildIfNotFound(type, typeIdentifier, isOpaque)
+                val previous = visited
+                try {
+                    visited = visited + typeIdentifier
+                    buildIfNotFound(type, typeIdentifier, isOpaque)
+                } finally {
+                    visited = previous
+                }
             }
 
     private fun resolveAndBuild(type: Type): LocalTypeInformation {
@@ -65,7 +78,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
     }
 
     private fun Type.resolveAgainstContext(): Type =
-            if (resolutionContext == null) this else resolveAgainst(resolutionContext)
+            resolutionContext?.let(::resolveAgainst) ?: this
 
     private fun buildIfNotFound(type: Type, typeIdentifier: TypeIdentifier, isOpaque: Boolean): LocalTypeInformation {
         val rawType = type.asClass()
@@ -105,8 +118,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             isOpaque -> LocalTypeInformation.Opaque(
                     type,
                     typeIdentifier,
-                    suppressingWarnings { buildNonAtomic(type, type, typeIdentifier, emptyList()) })
-            Exception::class.java.isAssignableFrom(type.asClass()) -> suppressingWarnings {
+                    suppressWarningsAnd { buildNonAtomic(type, type, typeIdentifier, emptyList()) })
+            Exception::class.java.isAssignableFrom(type.asClass()) -> suppressWarningsAnd {
                 buildNonAtomic(type, type, typeIdentifier, emptyList())
             }
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
@@ -130,7 +143,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             rawType.isAbstractClass -> buildAbstract(type, typeIdentifier, buildTypeParameterInformation(type))
             isOpaque -> LocalTypeInformation.Opaque(rawType,
                     typeIdentifier,
-                    suppressingWarnings { buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type)) })
+                    suppressWarningsAnd { buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type)) })
             else -> buildNonAtomic(rawType, type, typeIdentifier, buildTypeParameterInformation(type))
         }
     }
@@ -154,8 +167,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     buildInterfaceInformation(type),
                     typeParameters)
 
-    private inline fun <T> withContext(newContext: Type, block: LocalTypeInformationBuilder.() -> T): T =
-            copy(resolutionContext = newContext).run(block)
+    private inline fun <T> withContext(newContext: Type, block: LocalTypeInformationBuilder.() -> T): T {
+        val previous = resolutionContext
+        return try {
+            resolutionContext = newContext
+            block()
+        } finally {
+            resolutionContext = previous
+        }
+    }
 
     /**
      * Build a non-atomic type, which is either [Composable] or [NonComposable].
@@ -256,7 +276,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
                     // Because this parameter is read-only, we don't need to warn if its type is non-composable.
-                    val paramTypeInformation = suppressingWarnings {
+                    val paramTypeInformation = suppressWarningsAnd {
                         build(paramType, TypeIdentifier.forGenericType(paramType, resolutionContext ?: rawType))
                     }
                     val isMandatory = paramType.asClass().isPrimitive || !descriptor.getter.returnsNullable()
