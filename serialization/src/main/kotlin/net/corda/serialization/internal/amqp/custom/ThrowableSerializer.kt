@@ -68,7 +68,7 @@ class ThrowableSerializer(factory: LocalSerializerFactory) : CustomSerializer.Pr
                     proxy.additionalProperties[parameter.name] ?:
                     proxy.additionalProperties[parameter.name.capitalize()]
                 }
-                val throwable = constructor.observedMethod.call(*params.toTypedArray())
+                val throwable = constructor.observedMethod.newInstance(*params.toTypedArray())
                 (throwable as CordaThrowable).apply {
                     if (this.javaClass.name != proxy.exceptionClass) this.originalExceptionClassName = proxy.exceptionClass
                     this.setMessage(proxy.message)

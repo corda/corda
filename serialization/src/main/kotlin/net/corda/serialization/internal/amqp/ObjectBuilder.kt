@@ -2,10 +2,9 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
-import java.lang.Exception
+import java.lang.reflect.Constructor
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
-import kotlin.reflect.jvm.javaConstructor
 
 private const val IGNORE_COMPUTED = -1
 
@@ -21,13 +20,11 @@ data class ObjectBuilderProvider(val propertySlots: Map<String, Int>, private va
 /**
  * Wraps the operation of calling a constructor, with helpful exception handling.
  */
-private class ConstructorCaller(constructor: LocalConstructorInformation): (Array<Any?>) -> Any {
-
-    private val javaConstructor = constructor.observedMethod.javaConstructor!!
+private class ConstructorCaller(private val javaConstructor: Constructor<Any>): (Array<Any?>) -> Any {
 
     override fun invoke(parameters: Array<Any?>): Any =
         try {
-            javaConstructor.apply { isAccessible = true }.newInstance(*parameters)
+            javaConstructor.newInstance(*parameters)
         } catch (e: InvocationTargetException) {
             throw NotSerializableException(
                     "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
@@ -45,7 +42,7 @@ private class ConstructorCaller(constructor: LocalConstructorInformation): (Arra
 private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
     override fun invoke(target: Any, value: Any?) {
         try {
-            setter.apply { isAccessible = true }.invoke(target, value)
+            setter.invoke(target, value)
         } catch (e: InvocationTargetException) {
             throw NotSerializableException(
                     "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
@@ -98,7 +95,7 @@ interface ObjectBuilder {
             val propertySlots = constructorIndices.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                ConstructorBasedObjectBuilder(ConstructorCaller(constructor), constructorIndices.values.toIntArray())
+                ConstructorBasedObjectBuilder(ConstructorCaller(constructor.observedMethod), constructorIndices.values.toIntArray())
             }
         }
 
@@ -117,7 +114,7 @@ interface ObjectBuilder {
             val propertySlots = setters.keys.mapIndexed { slot, name -> name to slot }.toMap()
 
             return ObjectBuilderProvider(propertySlots) {
-                SetterBasedObjectBuilder(ConstructorCaller(constructor), setters.values.toList())
+                SetterBasedObjectBuilder(ConstructorCaller(constructor.observedMethod), setters.values.toList())
             }
         }
     }
