@@ -211,11 +211,11 @@ To check if CorDapp is signed use `JAR signing and verification tool <https://do
 
 Cordformation plugin can also sign CorDapps JARs, when deploying set of nodes, see :doc:`generating-a-node`.
 
-If your build system post processes the Cordapp JAR, then the modified JAR content may be out-of-date or not complete
+If your build system post-processes the Cordapp JAR, then the modified JAR content may be out-of-date or not complete
 with regards to a signature file. In this case you can sign the Cordapp as a separate step and disable the automatic signing by the ``cordapp`` plugin.
 The ``cordapp`` plugin contains a standalone task ``signJar`` which uses the same ``signing`` configuration.
-The task has two parameters ``inputJars`` to pass JAR files to be signed,
-and optional  ``postfix`` is added to the name of signed JARs (by default it's "-signed").
+The task has two parameters: ``inputJars`` - to pass JAR files to be signed
+and an optional ``postfix`` which is added to the name of signed JARs (it defaults to "-signed").
 The signed JARs are returned as  ``outputJars`` property.
 
 For example in order to sign a JAR modified by *modifyCordapp* task,
