@@ -226,9 +226,9 @@ class ConstraintsPropagationTests {
 
             // the attachment is signed
             transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(ALICE_PARTY.owningKey))
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey))
                 input("w1")
-                output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
+                output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
                 verifies()
             }

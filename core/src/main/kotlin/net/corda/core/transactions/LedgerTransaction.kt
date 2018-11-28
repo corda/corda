@@ -129,7 +129,7 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
-        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract })
+        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
 
@@ -308,21 +308,14 @@ private constructor(
      *  Specifically, this is the case for transactions combining hash and signature constraints where the hash constrained contract jar
      *  will be unsigned, and the signature constrained counterpart will be signed.
      */
-    private fun getContractAttachmentsByContract(contractClasses: List<ContractClassName>): Map<ContractClassName, Set<ContractAttachment>> {
+    private fun getContractAttachmentsByContract(contractClasses: Set<ContractClassName>): Map<ContractClassName, Set<ContractAttachment>> {
         val result = mutableMapOf<ContractClassName, Set<ContractAttachment>>()
 
         for (attachment in attachments) {
             if (attachment !is ContractAttachment) continue
-
             for (contract in contractClasses) {
-                result.compute(contract) { _, attachmentSet ->
-                    when {
-                        attachmentSet == null -> mutableSetOf(attachment)
-                        attachmentSet.contains(attachment) -> attachmentSet
-                        !attachmentSet.contains(attachment) -> attachmentSet.plus(attachment)
-                        else -> throw IllegalStateException("Unable to include new attachment $attachment for $contract")
-                    }
-                }
+                if (!attachment.allContracts.contains(contract)) continue
+                result[contract] = result.getOrDefault(contract, setOf(attachment)).plus(attachment)
             }
         }
 

@@ -244,7 +244,7 @@ class CordappConstraintsTests {
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4,
                         packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)),
-                inMemoryDB = false, startNodesInProcess = true)) {
+                inMemoryDB = false)) {
 
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
@@ -261,12 +261,12 @@ class CordappConstraintsTests {
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $ALICE_NAME ...")
-//            (alice as OutOfProcess).process.destroyForcibly()
+            (alice as OutOfProcess).process.destroyForcibly()
             alice.stop()
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $BOB_NAME ...")
-//            (bob as OutOfProcess).process.destroyForcibly()
+            (bob as OutOfProcess).process.destroyForcibly()
             bob.stop()
 
             println("Restarting the node for $ALICE_NAME ...")
