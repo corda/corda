@@ -11,13 +11,6 @@ class UtimacoCryptoServiceTest {
     @Test
     fun `Parse config file`() {
         val config = parseConfigFile(javaClass.getResource("utimaco_config.yml").toPath())
-        assertEquals(true, config.provider.keepSessionAlive)
-    }
-    @Test
-    fun `File based auth`() {
-        val auth = fileBasedAuth(javaClass.getResource("uname").toPath(), javaClass.getResource("pw").toPath())
-        val credentials = auth()
-        assertEquals("testpassword", String(credentials.password))
-        assertEquals("testuser", credentials.username)
+        assertEquals(true, config.keepSessionAlive)
     }
 }

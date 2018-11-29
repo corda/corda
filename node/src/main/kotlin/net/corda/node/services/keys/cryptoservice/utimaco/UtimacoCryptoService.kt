@@ -20,18 +20,18 @@ import kotlin.reflect.full.memberProperties
 /**
  * Implementation of CryptoService for the Utimaco HSM.
  */
-class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvider, private val keyConfig: KeyGenerationConfiguration, private val authThreshold: Int, private val auth: () -> UtimacoCredentials) : CryptoService {
+class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvider, private val config: UtimacoConfig, private val auth: () -> UtimacoCredentials) : CryptoService {
 
     private val keyStore: KeyStore
     private val keyTemplate: CryptoServerCXI.KeyAttributes
 
     init {
         try {
-            keyTemplate = toKeyTemplate(keyConfig)
+            keyTemplate = toKeyTemplate(config)
             authenticate(auth())
             val authState = cryptoServerProvider.cryptoServer.authState
-            require((authState and 0x0000000F) >= authThreshold) {
-                "Insufficient authentication: auth state is $authState, at least $authThreshold is required."
+            require((authState and 0x0000000F) >= config.authThreshold) {
+                "Insufficient authentication: auth state is $authState, at least ${config.authThreshold} is required."
             }
             keyStore = KeyStore.getInstance("CryptoServer", cryptoServerProvider)
             keyStore.load(null, null)
@@ -42,7 +42,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
 
     private inline fun <T> withAuthentication(block: () -> T): T {
         return withErrorMapping {
-            if (cryptoServerProvider.cryptoServer.authState and 0x0000000F >= authThreshold) {
+            if (cryptoServerProvider.cryptoServer.authState and 0x0000000F >= config.authThreshold) {
                 block()
             } else {
                 authenticate(auth())
@@ -124,8 +124,8 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         return withAuthentication {
             val keyAttributes = attributesForScheme(keyTemplate, schemeId)
             keyAttributes.name = alias
-            val overwrite = if (keyConfig.keyOverride) CryptoServerCXI.FLAG_OVERWRITE else 0
-            cryptoServerProvider.cryptoServer.generateKey(overwrite, keyAttributes, keyConfig.keyGenMechanism)
+            val overwrite = if (config.keyOverride) CryptoServerCXI.FLAG_OVERWRITE else 0
+            cryptoServerProvider.cryptoServer.generateKey(overwrite, keyAttributes, config.keyGenMechanism)
             getPublicKey(alias) ?: throw CryptoServiceException("Key generation for alias $alias succeeded, but key could not be accessed afterwards.")
         }
     }
@@ -146,50 +146,52 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
 
     data class UtimacoCredentials(val username: String, val password: ByteArray, val keyFile: Path? = null)
 
+    /*
+     * Configuration for the Utimaco CryptoService.
+     * @param host.
+     * @param port port of the device.
+     * @param connectionTimeout maximum wait in milliseconds upon connection to the device.
+     * @param timeout maximum wait in milliseconds if the device is not responding.
+     * @param keepSessionAlive if set to false, the session will expire after 15 minutes.
+     * @param keyGroup the key group to be used when querying and generating keys.
+     * @param keySpecifier the key specifier used when querying and generating keys.
+     * @param authThreshold authentication threshold, refer to the Utimaco documentation.
+     * @param keyOverride overwrite existing keys with the same alias when generating new keys.
+     * @param keyExport indicates if keys should be created as exportable.
+     * @param keyGenMechanism refer to the Utimaco documentation.
+     * @param username username for login.
+     * @param password password for login, or password to keyFile (if specified).
+     * @param keyFile (optional) log in using a key file. Refer to the Utimaco documentation for details.
+     */
     data class UtimacoConfig(
-            val provider: ProviderConfig,
-            val keyGeneration: KeyGenerationConfiguration = KeyGenerationConfiguration(),
-            val authThreshold: Int = 1,
-            val authentication: Credentials,
-            val keyFile: Path? = null
-    )
-
-    data class ProviderConfig(
             val host: String,
             val port: Int,
             val connectionTimeout: Int = 30000,
             val timeout: Int = 60000,
-            val endSessionOnShutdown: Boolean = true,
             val keepSessionAlive: Boolean = false,
             val keyGroup: String = "*",
             val keySpecifier: Int = -1,
-            val storeKeysExternal: Boolean = false
-    )
-
-    data class KeyGenerationConfiguration(
-            val keyGroup: String = "*",
-            val keySpecifier: Int = -1,
+            val authThreshold: Int = 1,
             val keyOverride: Boolean = false,
             val keyExport: Boolean = false,
-            val keyGenMechanism: Int = 4
+            val keyGenMechanism: Int = 4,
+            val username: String,
+            val password: String,
+            val keyFile: Path? = null
     )
-
-    data class Credentials(val username: String, val password: String)
 
     /**
      * Taken from network-services.
-     * Configuration class for [CryptoServerProvider]
-     * Currently not supported: DefaultUser,KeyStorePath,LogFile,LogLevel,LogSize
+     * Configuration class for [CryptoServerProvider].
+     * Currently not supported: DefaultUser,KeyStorePath,LogFile,LogLevel,LogSize.
      */
     internal data class CryptoServerProviderConfig(
             val Device: String,
             val ConnectionTimeout: Int,
             val Timeout: Int,
-            val EndSessionOnShutdown: Int, // todo does this actually exist? docs don't mention it
             val KeepSessionAlive: Int,
             val KeyGroup: String,
-            val KeySpecifier: Int,
-            val StoreKeysExternal: Boolean
+            val KeySpecifier: Int
     )
 
     private fun attributesForScheme(keyTemplate: CryptoServerCXI.KeyAttributes, schemeId: Int): CryptoServerCXI.KeyAttributes {
@@ -226,12 +228,12 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         )
 
         fun parseConfigFile(configFile: Path): UtimacoConfig {
-            val config = ConfigFactory.parseFile(configFile.toFile())
+            val config = ConfigFactory.parseFile(configFile.toFile()).resolve()
             return config.parseAs(UtimacoConfig::class)
         }
 
         /**
-         * Username and password are stored in files, base64-encoded
+         * Username and password are stored in files, base64-encoded.
          */
         fun fileBasedAuth(usernameFile: Path, passwordFile: Path): () -> UtimacoCredentials = {
             val username = String(Base64.getDecoder().decode(usernameFile.toFile().readLines().first()))
@@ -245,19 +247,19 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
 
         fun fromConfigurationFile(configFile: Path?): UtimacoCryptoService {
             val config = parseConfigFile(configFile!!)
-            return fromConfig(config) { UtimacoCredentials(config.authentication.username, config.authentication.password.toByteArray(), config.keyFile) }
+            return fromConfig(config) { UtimacoCredentials(config.username, config.password.toByteArray(), config.keyFile) }
         }
 
         fun fromConfig(configuration: UtimacoConfig, auth: () -> UtimacoCredentials): UtimacoCryptoService {
-            val providerConfig = toCryptoServerProviderConfig(configuration.provider)
+            val providerConfig = toCryptoServerProviderConfig(configuration)
             val cryptoServerProvider = createProvider(providerConfig)
-            return UtimacoCryptoService(cryptoServerProvider, configuration.keyGeneration, configuration.authThreshold, auth)
+            return UtimacoCryptoService(cryptoServerProvider, configuration, auth)
         }
 
         /**
-         * Note that some attributes cannot be determined at this point, as they depend on the scheme ID
+         * Note that some attributes cannot be determined at this point, as they depend on the scheme ID.
          */
-        private fun toKeyTemplate(config: KeyGenerationConfiguration): CryptoServerCXI.KeyAttributes {
+        private fun toKeyTemplate(config: UtimacoConfig): CryptoServerCXI.KeyAttributes {
             return CryptoServerCXI.KeyAttributes().apply {
                 specifier = config.keySpecifier
                 group = config.keyGroup
@@ -265,16 +267,14 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
             }
         }
 
-        private fun toCryptoServerProviderConfig(config: ProviderConfig): CryptoServerProviderConfig {
+        private fun toCryptoServerProviderConfig(config: UtimacoConfig): CryptoServerProviderConfig {
             return CryptoServerProviderConfig(
                     "${config.port}@${config.host}",
                     config.connectionTimeout,
                     config.timeout,
-                    if (config.endSessionOnShutdown) 1 else 0,
                     if (config.keepSessionAlive) 1 else 0,
                     config.keyGroup,
-                    config.keySpecifier,
-                    config.storeKeysExternal
+                    config.keySpecifier
             )
         }
 
@@ -284,7 +284,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
          *
          * @param config crypto server provider configuration.
          *
-         * @return preconfigured instance of [CryptoServerProvider]
+         * @return preconfigured instance of [CryptoServerProvider].
          */
         private fun createProvider(config: CryptoServerProviderConfig): CryptoServerProvider {
             val cfgBuffer = ByteArrayOutputStream()
@@ -299,7 +299,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     }
 }
 
-// This code (incl. the hsm_errors file) is duplicated with the Network-Management module
+// This code (incl. the hsm_errors file) is duplicated with the Network-Management module.
 object HsmErrors {
     val errors: Map<Int, String> by lazy(HsmErrors::load)
     fun load(): Map<Int, String> {
