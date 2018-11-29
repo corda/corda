@@ -90,7 +90,6 @@ class NodeRegistrationTest : IntegrationTest() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = listOf(NotarySpec(notaryName)),
                 cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages("net.corda.finance"),
                 notaryCustomOverrides = mapOf("devMode" to false)

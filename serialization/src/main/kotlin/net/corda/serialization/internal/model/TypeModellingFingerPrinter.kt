@@ -68,7 +68,8 @@ internal class FingerprintWriter(debugEnabled: Boolean) {
     fun writeArray() = append(ARRAY_HASH)
     fun writeNullable() = append(NULLABLE_HASH)
     fun writeNotNullable() = append(NOT_NULLABLE_HASH)
-    fun writeAny() = append(ANY_TYPE_HASH)
+    fun writeUnknown() = append(ANY_TYPE_HASH)
+    fun writeTop() = append(Any::class.java.name)
 
     private fun append(chars: CharSequence) = apply {
         debugBuffer?.append(chars)
@@ -123,8 +124,8 @@ private class FingerPrintingState(
         when (type) {
             is LocalTypeInformation.Cycle ->
                 throw IllegalStateException("Cyclic references must be dereferenced before fingerprinting")
-            is LocalTypeInformation.Unknown,
-            is LocalTypeInformation.Top -> writer.writeAny()
+            is LocalTypeInformation.Unknown -> writer.writeUnknown()
+            is LocalTypeInformation.Top -> writer.writeTop()
             is LocalTypeInformation.AnArray -> {
                 fingerprintType(type.componentType)
                 writer.writeArray()
@@ -204,7 +205,7 @@ private class FingerPrintingState(
 
     // Compensate for the serialisation framework's forcing of char to Character
     private fun adjustType(propertyType: LocalTypeInformation): Pair<Boolean, LocalTypeInformation> =
-        if (propertyType.typeIdentifier.name == "char") true to CHARACTER_TYPE else false to propertyType
+            if (propertyType.typeIdentifier.name == "char") true to CHARACTER_TYPE else false to propertyType
 
     private fun fingerprintInterfaces(interfaces: List<LocalTypeInformation>) =
             interfaces.forEach { fingerprintType(it) }
