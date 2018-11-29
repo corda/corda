@@ -224,7 +224,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         } catch (t: Throwable) {
             if(t.isUnrecoverable()) {
                 logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
-                Thread.sleep(Duration.ofSeconds(10).toMillis()) // To allow async logger to flush.
+                Fiber.sleep(Duration.ofSeconds(10).toMillis()) // To allow async logger to flush.
                 Runtime.getRuntime().halt(1)
             }
             logger.info("Flow raised an error... sending it to flow hospital", t)
