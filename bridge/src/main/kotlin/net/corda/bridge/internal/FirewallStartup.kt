@@ -81,7 +81,7 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
         return ExitCodes.SUCCESS
     }
 
-    fun logStartupInfo(versionInfo: FirewallVersionInfo, conf: FirewallConfiguration) {
+    private fun logStartupInfo(versionInfo: FirewallVersionInfo, conf: FirewallConfiguration) {
         log.info("Vendor: ${versionInfo.vendor}")
         log.info("Release: ${versionInfo.releaseVersion}")
         log.info("Platform Version: ${versionInfo.platformVersion}")
@@ -103,9 +103,9 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
         log.info("Starting as firewall mode of ${conf.firewallMode}")
     }
 
-    protected fun loadConfigFile(): FirewallConfiguration = cmdLineOptions.loadConfig()
+    private fun loadConfigFile(): FirewallConfiguration = cmdLineOptions.loadConfig()
 
-    protected fun getVersionInfo(): FirewallVersionInfo {
+    private fun getVersionInfo(): FirewallVersionInfo {
         return FirewallVersionInfo(
                 CordaVersionProvider.platformVersion,
                 CordaVersionProvider.releaseVersion,
@@ -166,7 +166,7 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
         SLF4JBridgeHandler.install()
     }
 
-    fun startFirewall(conf: FirewallConfiguration, versionInfo: FirewallVersionInfo, startTime: Long): FirewallInstance {
+    private fun startFirewall(conf: FirewallConfiguration, versionInfo: FirewallVersionInfo, startTime: Long): FirewallInstance {
         val firewall = FirewallInstance(conf, versionInfo)
         firewall.start()
         val elapsed = (System.currentTimeMillis() - startTime) / 10 / 100.0
