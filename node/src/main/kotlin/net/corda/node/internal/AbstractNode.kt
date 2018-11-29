@@ -352,7 +352,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 netParams,
                 keyManagementService,
                 configuration.networkParameterAcceptanceSettings)
-        startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        try {
+            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        } catch (e: Exception) {
+            // Try to stop any started messaging services.
+            stop()
+            throw e
+        }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         return database.transaction {
@@ -838,6 +844,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
+
     /**
      * Loads or generates the node's legal identity and key-pair.
      * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
