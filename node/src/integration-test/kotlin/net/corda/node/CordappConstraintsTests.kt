@@ -21,6 +21,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.core.JarSignatureTestUtils.generateKey
 import net.corda.testing.driver.*
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import org.assertj.core.api.Assertions
@@ -238,10 +239,11 @@ class CordappConstraintsTests {
         val packageOwnerKey = keyStoreDir.path.generateKey()
 
         driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
                 extraCordappPackagesToScan = listOf("net.corda.finance"),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4,
                         packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)),
-                inMemoryDB = false, startNodesInProcess = true)) {
+                inMemoryDB = false)) {
 
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
@@ -258,12 +260,12 @@ class CordappConstraintsTests {
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $ALICE_NAME ...")
-//            (alice as OutOfProcess).process.destroyForcibly()
+            (alice as OutOfProcess).process.destroyForcibly()
             alice.stop()
 
             // Restart the node and re-query the vault
             println("Shutting down the node for $BOB_NAME ...")
-//            (bob as OutOfProcess).process.destroyForcibly()
+            (bob as OutOfProcess).process.destroyForcibly()
             bob.stop()
 
             println("Restarting the node for $ALICE_NAME ...")
