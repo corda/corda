@@ -44,8 +44,8 @@ object TestCordappDirectories {
                 if (!(cordappsDirectory / testKeystore).exists() && (cordapp.keyStorePath == null)) {
                     cordappsDirectory.generateKey(alias, pwd, "O=Test Company Ltd,OU=Test,L=London,C=GB")
                 }
-                val keyStorePathToUse = cordapp.keyStorePath ?: cordappsDirectory / testKeystore
-                keyStorePathToUse.copyTo(cordappDir / testKeystore)
+                val keyStorePathToUse = cordapp.keyStorePath ?: cordappsDirectory
+                (keyStorePathToUse / testKeystore).copyTo(cordappDir / testKeystore)
                 val pk = cordappDir.signJar("$filename.jar", alias, pwd)
                 logger.debug { "Signed Jar: $cordappDir/$filename.jar with public key $pk" }
             } else logger.debug { "Unsigned Jar: $cordappDir/$filename.jar" }
