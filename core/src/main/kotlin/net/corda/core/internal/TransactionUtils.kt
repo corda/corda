@@ -5,6 +5,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.componentHash
 import net.corda.core.crypto.sha256
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
@@ -156,4 +157,16 @@ fun createComponentGroups(inputs: List<StateRef>,
 @KeepForDJVM
 data class SerializedStateAndRef(val serializedState: SerializedBytes<TransactionState<ContractState>>, val ref: StateRef) {
     fun toStateAndRef(): StateAndRef<ContractState> = StateAndRef(serializedState.deserialize(), ref)
+}
+
+/** Check that network parameters hash on this transaction is the current hash for the network. */
+fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
+    // Transactions created on Corda 3.x or below do not contain network parameters,
+    // so no checking is done until the minimum platform version is at least 4.
+    if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
+
+    // TODO: [ENT-2666] Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
+    //       We will never end up in perfect synchronization with all the nodes. However, network parameters update process
+    //       lets us predict what is the reasonable time window for changing parameters on most of the nodes.
+    //       For now we don't check whether the attached network parameters match the current ones.
 }
