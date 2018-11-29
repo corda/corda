@@ -370,13 +370,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         if (observedConstructor.javaConstructor?.parameters?.getOrNull(0)?.name == "this$0")
             throw NotSerializableException("Type '${type.typeName} has synthetic fields and is likely a nested inner class.")
 
-        return LocalConstructorInformation(observedConstructor, observedConstructor.parameters.map {
-            val parameterType = it.type.javaType
-            LocalConstructorParameterInformation(
-                    it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
-                    resolveAndBuild(parameterType),
-                    parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
-        })
+        return LocalConstructorInformation(
+                observedConstructor.javaConstructor!!.apply { isAccessible = true },
+                observedConstructor.parameters.map {
+                    val parameterType = it.type.javaType
+                    LocalConstructorParameterInformation(
+                            it.name ?: throw IllegalStateException("Unnamed parameter in constructor $observedConstructor"),
+                            resolveAndBuild(parameterType),
+                            parameterType.asClass().isPrimitive || !it.type.isMarkedNullable)
+                })
     }
 }
 
