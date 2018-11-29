@@ -7,8 +7,11 @@ import com.zaxxer.hikari.pool.HikariPool
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
-import net.corda.core.crypto.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.internal.AliasPrivateKey
+import net.corda.core.crypto.isCRLDistributionPointBlacklisted
+import net.corda.core.crypto.newSecureRandom
 import net.corda.core.flows.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -365,7 +368,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 netParams,
                 keyManagementService,
                 configuration.networkParameterAcceptanceSettings)
-        startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        try {
+            startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
+        } catch (e: Exception) {
+            // Try to stop any started messaging services.
+            stop()
+            throw e
+        }
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         return database.transaction {
@@ -862,6 +871,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                                  nodeInfo: NodeInfo,
                                                  myNotaryIdentity: PartyAndCertificate?,
                                                  networkParameters: NetworkParameters)
+
     /**
      * Loads or generates the node's legal identity and key-pair.
      * Note that obtainIdentity returns a KeyPair with an [AliasPrivateKey].
