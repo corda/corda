@@ -10,6 +10,7 @@ import net.corda.core.flows.NotaryFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.NotaryChangeTransactionBuilder
+import net.corda.core.node.NetworkParameters
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -87,7 +88,7 @@ class NotaryWhitelistTests(
 
         // Remove old notary from the whitelist
         val parameters = aliceNode.services.networkParameters
-        val newParameters = parameters.copy(notaries = parameters.notaries.drop(1))
+        val newParameters = removeOldNotary(parameters)
         mockNet.nodes.forEach {
             (it.networkParametersStorage as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
         }
@@ -121,7 +122,7 @@ class NotaryWhitelistTests(
 
         // Remove old notary from the whitelist
         val parameters = aliceNode.services.networkParameters
-        val newParameters = parameters.copy(notaries = parameters.notaries.drop(1))
+        val newParameters = removeOldNotary(parameters)
         mockNet.nodes.forEach {
             (it.networkParametersStorage as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
         }
@@ -145,6 +146,13 @@ class NotaryWhitelistTests(
         }
         assert(ex.error is NotaryError.TransactionInvalid)
         assertEquals(validStx.id, ex.txId)
+    }
+
+    private fun removeOldNotary(parameters: NetworkParameters): NetworkParameters {
+        val newParameters = parameters.copy(notaries = parameters.notaries.drop(1))
+        assert(newParameters.notaries.none { it.identity == oldNotary })
+        assert(newParameters.notaries.any { it.identity == newNotary })
+        return newParameters
     }
 
     private fun issueStateOnOldNotary(oldNotaryParty: Party): StateAndRef<DummyContract.State> {
