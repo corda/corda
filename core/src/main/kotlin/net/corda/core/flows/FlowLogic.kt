@@ -463,7 +463,7 @@ abstract class FlowLogic<out T> {
     private fun maybeWireUpProgressTracking(subLogic: FlowLogic<*>) {
         val ours = progressTracker
         val theirs = subLogic.progressTracker
-        if (ours != null && theirs != null) {
+        if (ours != null && theirs != null && ours != theirs) {
             if (ours.currentStep == ProgressTracker.UNSTARTED) {
                 logger.warn("ProgressTracker has not been started")
                 ours.nextStep()
