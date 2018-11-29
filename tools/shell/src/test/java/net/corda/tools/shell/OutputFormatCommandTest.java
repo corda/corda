@@ -6,7 +6,7 @@ import org.crsh.text.RenderPrintWriter;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -46,11 +46,7 @@ public class OutputFormatCommandTest {
 
     @Test
     public void testInvalidUpdate() {
-        try {
-            outputFormatCommand.set(mockInvocationContext, "some-invalid-format");
-        } catch (ScriptException e) {
-            assertEquals("The provided format is not supported: some-invalid-format", e.getMessage());
-        }
-
+        assertThatExceptionOfType(ScriptException.class).isThrownBy(() -> outputFormatCommand.set(mockInvocationContext, "some-invalid-format"))
+                .withMessage("The provided format is not supported: some-invalid-format");
     }
 }
