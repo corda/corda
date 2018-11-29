@@ -1,11 +1,14 @@
 package net.corda.bridge
 
 import com.typesafe.config.ConfigException
+import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.services.api.FirewallMode
+import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
+import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyVersion
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.assertj.core.api.Assertions
@@ -16,6 +19,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Paths
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class ConfigTest {
     @Rule
@@ -232,6 +236,48 @@ class ConfigTest {
         val config = createAndLoadConfigFromResource(tempFolder.root.toPath(), configResource)
         assertEquals("opt" / "myCertificates", config.certificatesDirectory)
         assertEquals("opt" / "myCertificates" / "ssl" / "mySslKeystore.jks", config.sslKeystore)
-        assertEquals("opt" / "myCertificates" /"truststore.jks", config.trustStoreFile)
+        assertEquals("opt" / "myCertificates" / "truststore.jks", config.trustStoreFile)
+    }
+
+    @Test
+    fun `passwords are hidden in logging`() {
+        listOf("/net/corda/bridge/singleprocess/firewall.conf",
+                "/net/corda/bridge/withfloat/bridge/firewall.conf",
+                "/net/corda/bridge/withfloat/float/firewall.conf",
+                "/net/corda/bridge/custombasecerts/firewall.conf",
+                "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall.conf",
+                "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall_v3.conf",
+                "/net/corda/bridge/separatedwithcustomcerts/bridge/firewall_diffPasswords.conf",
+                "/net/corda/bridge/separatedwithcustomcerts/float/firewall.conf",
+                "/net/corda/bridge/separatedwithcustomcerts/float/firewall_v3.conf",
+                "/net/corda/bridge/withsocks/firewall.conf",
+                "/net/corda/bridge/withaudit/firewall.conf",
+                "/net/corda/bridge/healthcheckphrase/firewall.conf",
+                "/net/corda/bridge/version3/bridge.conf",
+                "/net/corda/bridge/withhttpproxy/firewall.conf",
+                "/net/corda/bridge/keystoreoverride/firewall.conf")
+                .forEachIndexed { index, path ->
+                    val config = createAndLoadConfigFromResource(tempFolder.root.toPath() / "test$index", path)
+                    val configString = config.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
+
+                    val possiblePasswordFromConfig = listOf("pwd",
+                            "mySecretArtemisKeyStorePassword",
+                            "mySecretArtemisTrustStorePassword",
+                            "mySecretTunnelKeyStorePassword",
+                            "mySecretTunnelPrivateKeyPassword",
+                            "mySecretTunnelTrustStorePassword",
+                            "trustpass",
+                            "cordacadevpass",
+                            "tunnelkeypassword",
+                            "tunneltrustpassword",
+                            "outboundtrustpassword",
+                            "outboundkeypassword",
+                            "inboundkeypassword",
+                            "inboundtrustpassword")
+
+                    possiblePasswordFromConfig.forEach {
+                        assertFalse(configString.contains(it))
+                    }
+                }
     }
 }

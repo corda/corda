@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigRenderOptions
 import net.corda.bridge.FirewallCmdLineOptions
 import net.corda.bridge.services.api.*
+import net.corda.bridge.services.config.BridgeConfigHelper.maskPassword
 import net.corda.bridge.services.config.internal.Version3BridgeConfigurationImpl
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
@@ -26,7 +27,7 @@ fun Config.parseAsFirewallConfiguration(): FirewallConfiguration {
             val oldStyleConfig = parseAs<Version3BridgeConfigurationImpl>(UnknownConfigKeysPolicy.IGNORE::handle)
             val newStyleConfig = oldStyleConfig.toConfig()
 
-            val configAsString = newStyleConfig.toConfig().root().render(ConfigRenderOptions.defaults())
+            val configAsString = newStyleConfig.toConfig().root().maskPassword().render(ConfigRenderOptions.defaults())
             FirewallCmdLineOptions.logger.warn("Old style config used. To avoid seeing this warning in the future, please upgrade to new style. " +
                     "New style config will look as follows:\n$configAsString")
             newStyleConfig
