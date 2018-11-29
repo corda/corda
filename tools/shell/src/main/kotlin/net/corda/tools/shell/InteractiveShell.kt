@@ -124,6 +124,7 @@ object InteractiveShell {
             }
         }
 
+        ExternalResolver.INSTANCE.addCommand("output-format", "Commands to inspect and update the output format.", OutputFormatCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
@@ -198,6 +199,16 @@ object InteractiveShell {
         throw e.cause ?: e
     }
 
+    @JvmStatic
+    fun setOutputFormat(outputFormat: OutputFormat) {
+        this.outputFormat = outputFormat
+    }
+
+    @JvmStatic
+    fun getOutputFormat(): OutputFormat {
+        return outputFormat
+    }
+
     fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
@@ -230,8 +241,8 @@ object InteractiveShell {
         }
     }
 
-    // TODO: This should become the default renderer rather than something used specifically by commands.
-    private val outputMapper by lazy { createOutputMapper(OutputFormat.JSON) }
+    // TODO: A default renderer could be used, instead of an object mapper. See: http://www.crashub.org/1.3/reference.html#_renderers
+    private var outputFormat = OutputFormat.YAML
 
     @VisibleForTesting
     lateinit var latch: CountDownLatch
@@ -248,7 +259,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              om: ObjectMapper = outputMapper) {
+                              inputObjectMapper: ObjectMapper) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -273,7 +284,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, inputObjectMapper)
 
             latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, latch::countDown)
@@ -428,7 +439,7 @@ object InteractiveShell {
 
     @JvmStatic
     fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
-                         inputObjectMapper: ObjectMapper, outputFormat: OutputFormat): Any? {
+                         inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to

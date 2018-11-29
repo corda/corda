@@ -220,11 +220,14 @@ class InteractiveShellTest {
         val command = listOf("nodeInfo")
         whenever(cordaRpcOps.nodeInfo()).thenReturn(ALICE_NODE_INFO)
 
-        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.JSON)
-        verify(printWriter).println(NODE_INFO_JSON_PAYLOAD)
-
-        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
         verify(printWriter).println(NODE_INFO_YAML_PAYLOAD)
+
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NODE_INFO_JSON_PAYLOAD)
     }
 
     @Test
@@ -232,11 +235,13 @@ class InteractiveShellTest {
         val command = listOf("networkMapSnapshot")
         whenever(cordaRpcOps.networkMapSnapshot()).thenReturn(listOf(ALICE_NODE_INFO, BOB_NODE_INFO))
 
-        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.JSON)
-        verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD)
-
-        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper, InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
         verify(printWriter).println(NETWORK_MAP_YAML_PAYLOAD)
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD)
     }
 
     @ToStringSerialize

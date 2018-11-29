@@ -9,7 +9,6 @@ import org.crsh.cli.Argument;
 import org.crsh.cli.Command;
 import org.crsh.cli.Man;
 import org.crsh.cli.Usage;
-import org.crsh.cli.Option;
 import org.crsh.command.InvocationContext;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -22,7 +21,6 @@ import java.util.Set;
 
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
-import static net.corda.tools.shell.InteractiveShell.OutputFormat;
 
 // Note that this class cannot be converted to Kotlin because CRaSH does not understand InvocationContext<Map<?, ?>> which
 // is the closest you can get in Kotlin to raw types.
@@ -30,12 +28,6 @@ import static net.corda.tools.shell.InteractiveShell.OutputFormat;
 public class RunShellCommand extends InteractiveShellCommand {
 
     private static Logger logger = LoggerFactory.getLogger(RunShellCommand.class);
-
-    private static final OutputFormat DEFAULT_OUTPUT_FORMAT = OutputFormat.YAML;
-    private static final Map<String, OutputFormat> OUTPUT_FORMAT_MAPPING = ImmutableMap.of(
-            "json", OutputFormat.JSON,
-            "yaml", OutputFormat.YAML
-    );
 
     @Command
     @Man(
@@ -46,8 +38,7 @@ public class RunShellCommand extends InteractiveShellCommand {
     )
     @Usage("runs a method from the CordaRPCOps interface on the node.")
     public Object main(InvocationContext<Map> context,
-                       @Usage("The command to run") @Argument(unquote = false) List<String> command,
-                       @Usage("The format of the output (json, yaml). Default: yaml") @Option(names={"f","format"}) String format) {
+                       @Usage("The command to run") @Argument(unquote = false) List<String> command) {
         logger.info("Executing command \"run {}\",", (command != null) ? command.stream().collect(joining(" ")) : "<no arguments>");
         StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
@@ -55,17 +46,8 @@ public class RunShellCommand extends InteractiveShellCommand {
             emitHelp(context, parser);
             return null;
         }
-        OutputFormat outputFormat = parseFormat(format);
 
-        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(InteractiveShell.getCordappsClassloader()), outputFormat);
-    }
-
-    private OutputFormat parseFormat(String format) {
-        if (format == null) {
-            return DEFAULT_OUTPUT_FORMAT;
-        }
-
-        return OUTPUT_FORMAT_MAPPING.getOrDefault(format, DEFAULT_OUTPUT_FORMAT);
+        return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(InteractiveShell.getCordappsClassloader()));
     }
 
     private void emitHelp(InvocationContext<Map> context, StringToMethodCallParser<CordaRPCOps> parser) {

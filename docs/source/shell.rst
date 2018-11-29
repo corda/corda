@@ -195,12 +195,6 @@ node by running:
 
 Some RPCs return a stream of events that will be shown on screen until you press Ctrl-C.
 
-You can choose the format of the output, using the ``--format`` option, i.e. by running:
-
-``run --format json networkMapSnapshot``
-
-The output formats currently supported are: ``json``, ``yaml``. The default format is ``yaml``.
-
 You can find a list of the available RPC methods
 `here <https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html>`_.
 
@@ -211,6 +205,18 @@ You can shut the node down via shell:
 
 * ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
 * ``shutdown`` will shut the node down immediately
+
+Output Formats
+**********************
+
+You can choose the format in which the output of the commands will be shown.
+
+To see what is the format that's currently used, you can type ``output-format get``.
+
+To update the format, you can type ``output-format set json``.
+
+The currently supported formats are ``json``, ``yaml``. The default format is ``yaml``.
+
 
 Flow commands
 *************
