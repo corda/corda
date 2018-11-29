@@ -253,7 +253,7 @@ open class NodeStartup : NodeStartupLogging {
         }
     }
 
-    private fun enforceSingleNodeIsRunning(baseDirectory: Path) {
+    internal fun enforceSingleNodeIsRunning(baseDirectory: Path) {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
