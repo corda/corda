@@ -21,8 +21,8 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
-import net.corda.core.transactions.WireTransaction.Companion.resolveContractAttachmentVersion
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.lazyMapped
 import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
@@ -324,13 +324,13 @@ open class TransactionBuilder @JvmOverloads constructor(
                 it
             }
         }
-        //TODO non-downgrade-rule modify to search only for specific ContractClass not all
-        val inputContractClassToJarVersion = resolveContractAttachmentVersion(states = inputStateRefs?.map { Pair(services.loadState(it).contract, it) } ?: emptyList(),
-                resolveContractAttachment = { services.loadContractAttachment(it) })
-        val inputMaxVersion = inputContractClassToJarVersion[contractClassName] ?: 0
+
         val outputVersion = getContractVersion(attachmentToUse)
-        require (inputMaxVersion <= outputVersion) {
-            "No-Downgrade Rule has been breached for contract class $contractClassName. The output state contract version $outputVersion is lower that the version of the input state ($inputMaxVersion)."
+        inputStateRefs?.forEach {
+            val inputMaxVersion = getContractVersion(services.loadContractAttachment(it))
+            require(inputMaxVersion <= outputVersion) { //it's enough if once inputs violates the rule
+                "No-Downgrade Rule has been breached for contract class $contractClassName. The output state contract version $outputVersion is lower that the version of the input state ($inputMaxVersion)."
+            }
         }
 
         return Pair(setOf(selectedAttachmentId), resolvedOutputStates)

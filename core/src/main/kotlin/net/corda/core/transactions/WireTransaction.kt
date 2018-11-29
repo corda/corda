@@ -117,7 +117,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         )
     }
 
-    private val dummyAttachment: Attachment by lazy {
+    private val missingAttachment: Attachment by lazy {
         object : AbstractAttachment({ byteArrayOf() }) {
             override val id: SecureHash get() = throw UnsupportedOperationException()
         }
@@ -142,7 +142,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters, { it -> resolveAttachment(it.txhash) ?: dummyAttachment })
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters, { it -> resolveAttachment(it.txhash) ?: missingAttachment })
     }
 
     private fun toLedgerTransactionInternal(

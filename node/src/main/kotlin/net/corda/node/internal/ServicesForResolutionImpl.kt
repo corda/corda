@@ -40,7 +40,7 @@ data class ServicesForResolutionImpl(
     }
 
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
-    override fun loadContractAttachment(stateRef: StateRef, interestedContractClassName : ContractClassName?): Attachment {
+    override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment {
         val coreTransaction = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
                 ?: throw TransactionResolutionException(stateRef.txhash)
         when (coreTransaction) {
@@ -48,7 +48,7 @@ data class ServicesForResolutionImpl(
                 val transactionState = coreTransaction.outRef<ContractState>(stateRef.index).state
                 for (attachmentId in coreTransaction.attachments) {
                     val attachment = attachments.openAttachment(attachmentId)
-                    if (attachment is ContractAttachment && (interestedContractClassName ?: transactionState.contract) in attachment.allContracts) {
+                    if (attachment is ContractAttachment && (forContractClassName ?: transactionState.contract) in attachment.allContracts) {
                         return attachment
                     }
                 }

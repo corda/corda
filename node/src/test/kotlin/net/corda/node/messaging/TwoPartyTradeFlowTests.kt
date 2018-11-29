@@ -68,7 +68,6 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 // TODO These tests need serious cleanup.
-@Ignore
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {
@@ -313,7 +312,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         })
     }
-
+    @Ignore
     @Test
     fun `check dependencies of sale asset are resolved`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
@@ -417,7 +416,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
     }
-
+    @Ignore
     @Test
     fun `track works`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
@@ -495,7 +494,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceTxMappings.expectEvents { aliceMappingExpectations }
         }
     }
-
+    @Ignore
     @Test
     fun `dependency with error on buyer side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
@@ -503,7 +502,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             runWithError(true, false, "at least one cash input")
         }
     }
-
+    @Ignore
     @Test
     fun `dependency with error on seller side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))

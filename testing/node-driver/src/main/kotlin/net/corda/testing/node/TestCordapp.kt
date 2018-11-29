@@ -26,7 +26,8 @@ interface TestCordapp {
     /** Returns the target platform version, defaults to the current platform version if not specified. */
     val targetVersion: Int
 
-    val implementationVersion: String
+    /** Returns the cordapp version. */
+    val cordappVersion: String
 
     /** Returns the config for this CorDapp, defaults to empty if not specified. */
     val config: Map<String, Any>
@@ -87,7 +88,7 @@ interface TestCordapp {
                         vendor = "test-vendor",
                         title = "test-title",
                         targetVersion = PLATFORM_VERSION,
-                        implementationVersion = implementationVersion,
+                        cordappVersion = implementationVersion,
                         config = emptyMap(),
                         packages = simplifyScanPackages(packageNames),
                         classes = emptySet()

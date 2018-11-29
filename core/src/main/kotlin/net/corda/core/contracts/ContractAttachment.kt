@@ -34,7 +34,7 @@ class ContractAttachment @JvmOverloads constructor(
     /**
      * Contract version.
      */
-    open val contractVersion: String get() = extractVersion(attachment)
+    open val version: String get() = extractVersion(attachment)
 
     companion object {
         private fun extractVersion(attachment: Attachment) =
@@ -42,7 +42,7 @@ class ContractAttachment @JvmOverloads constructor(
 
         fun getContractVersion(attachment: Attachment) : Version {
             val version = if (attachment is ContractAttachment) {
-                attachment.contractVersion
+                attachment.version
             } else {
                 extractVersion(attachment)
             }

@@ -66,7 +66,7 @@ interface ServicesForResolution {
     fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
-    fun loadContractAttachment(stateRef: StateRef, interestedContractClassName : ContractClassName? = null): Attachment
+    fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName? = null): Attachment
 }
 
 /**

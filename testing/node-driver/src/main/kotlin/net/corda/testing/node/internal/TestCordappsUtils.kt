@@ -66,7 +66,7 @@ fun TestCordappImpl.packageAsJar(file: Path) {
             .scan()
 
     scanResult.use {
-        val manifest = createTestManifest(name, title, version, vendor, targetVersion, implementationVersion)
+        val manifest = createTestManifest(name, title, version, vendor, targetVersion, cordappVersion)
         JarOutputStream(file.outputStream()).use { jos ->
             val time = FileTime.from(Instant.EPOCH)
             val manifestEntry = ZipEntry(JarFile.MANIFEST_NAME).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)

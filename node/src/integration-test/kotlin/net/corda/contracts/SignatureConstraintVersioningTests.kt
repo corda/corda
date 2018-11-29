@@ -13,6 +13,7 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.flows.isQuasarAgentSpecified
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testMessage.Message
@@ -24,12 +25,11 @@ import net.corda.testing.node.internal.cordappForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
-import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class SignatureConstraintTests {
+class SignatureConstraintVersioningTests {
 
     private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
     private val oldCordapp = base.withImplementationVersion("2")
@@ -39,7 +39,7 @@ class SignatureConstraintTests {
     private val transformetMessage = Message(message.value + "A")
 
     @Test
-    fun `can evolve from lower contract class version to higer one`() {
+    fun `can evolve from lower contract class version to higher one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
@@ -119,18 +119,13 @@ class SignatureConstraintTests {
     }
 }
 
-fun isQuasarAgentSpecified(): Boolean {
-    val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
-    return jvmArgs.any { it.startsWith("-javaagent:") && it.contains("quasar") }
-}
-
 @StartableByRPC
 class CreateMessage(private val message: Message, private val notary: Party) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         val messageState = MessageState(message = message, by = ourIdentity)
         val txCommand = Command(DummyMessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, DUMMY_MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
+        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, TEST_MESSAGE_CONTRACT_PROGRAM_ID), txCommand)
         txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
         serviceHub.recordTransactions(signedTx)
@@ -146,7 +141,7 @@ class ConsumeMessage(private val stateRef: StateAndRef<MessageState>, private va
         val oldMessageState = stateRef.state.data
         val messageState = MessageState(Message(oldMessageState.message.value + "A"), ourIdentity, stateRef.state.data.linearId)
         val txCommand = Command(DummyMessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, DUMMY_MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef)
+        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, TEST_MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef)
         txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
         serviceHub.recordTransactions(signedTx)
@@ -155,7 +150,7 @@ class ConsumeMessage(private val stateRef: StateAndRef<MessageState>, private va
 }
 
 //TODO enrich original MessageContract for new command
-const val DUMMY_MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.contracts.DummyMessageContract"
+const val TEST_MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.contracts.DummyMessageContract"
 
 open class DummyMessageContract : Contract {
     override fun verify(tx: LedgerTransaction) {
