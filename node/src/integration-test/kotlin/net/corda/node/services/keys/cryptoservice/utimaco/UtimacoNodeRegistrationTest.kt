@@ -25,6 +25,7 @@ import net.corda.testing.node.internal.internalDriver
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -32,6 +33,7 @@ import java.io.File
 import java.net.URL
 import java.nio.charset.Charset
 
+@Ignore
 class UtimacoNodeRegistrationTest : IntegrationTest() {
 
     @Rule
