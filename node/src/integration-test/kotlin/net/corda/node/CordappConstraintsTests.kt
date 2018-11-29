@@ -20,10 +20,7 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.core.JarSignatureTestUtils.generateKey
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.OutOfProcess
-import net.corda.testing.driver.driver
+import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import org.assertj.core.api.Assertions
@@ -45,9 +42,9 @@ class CordappConstraintsTests {
                 inMemoryDB = false
         )) {
 
-            val alice = startNode(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
-                    rpcUsers = listOf(user)).getOrThrow()
+            val alice = startNode(NodeParameters(additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
+                    providedName = ALICE_NAME,
+                    rpcUsers = listOf(user))).getOrThrow()
 
             val expected = 500.DOLLARS
             val ref = OpaqueBytes.of(0x01)
@@ -71,9 +68,9 @@ class CordappConstraintsTests {
         )) {
 
             println("Starting the node using unsigned contract jar ...")
-            val alice = startNode(providedName = ALICE_NAME,
+            val alice = startNode(NodeParameters(providedName = ALICE_NAME,
                     additionalCordapps = listOf(FINANCE_CORDAPP),
-                    rpcUsers = listOf(user)).getOrThrow()
+                    rpcUsers = listOf(user))).getOrThrow()
 
             val expected = 500.DOLLARS
             val ref = OpaqueBytes.of(0x01)
@@ -91,10 +88,10 @@ class CordappConstraintsTests {
             alice.stop()
 
             println("Restarting the node using signed contract jar ...")
-            val restartedNode = startNode(providedName = ALICE_NAME,
+            val restartedNode = startNode(NodeParameters(providedName = ALICE_NAME,
                     additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
                     regenerateCordappsOnStart = true
-            ).getOrThrow()
+            )).getOrThrow()
 
             val statesAfterRestart = restartedNode.rpc.vaultQueryBy<Cash.State>().states
             printVault(restartedNode, statesAfterRestart)
@@ -181,8 +178,8 @@ class CordappConstraintsTests {
                 inMemoryDB = false)) {
 
             val (alice, bob) = listOf(
-                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar())),
-                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar()))
+                    startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar()))),
+                    startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar())))
             ).map { it.getOrThrow() }
 
             // Issue Cash
@@ -270,16 +267,16 @@ class CordappConstraintsTests {
             bob.stop()
 
             println("Restarting the node for $ALICE_NAME ...")
-            val restartedAlice = startNode(providedName = ALICE_NAME,
+            val restartedAlice = startNode(NodeParameters(providedName = ALICE_NAME,
                     additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
                     regenerateCordappsOnStart = true
-            ).getOrThrow()
+            )).getOrThrow()
 
             println("Restarting the node for $BOB_NAME ...")
-            val restartedBob = startNode(providedName = BOB_NAME,
+            val restartedBob = startNode(NodeParameters(providedName = BOB_NAME,
                     additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
                     regenerateCordappsOnStart = true
-            ).getOrThrow()
+            )).getOrThrow()
 
             // Register for Bob vault updates
             val vaultUpdatesBob = restartedBob.rpc.vaultTrackByCriteria(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
