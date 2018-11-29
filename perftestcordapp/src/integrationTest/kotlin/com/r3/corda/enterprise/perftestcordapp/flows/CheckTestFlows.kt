@@ -10,9 +10,9 @@ import net.corda.node.services.Permissions
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.internal.incrementalPortAllocation
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.setDriverSerialization
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Ignore
@@ -27,8 +27,8 @@ class CheckAllTheTestFlows {
 
         var bob: NodeHandle? = null
 
-        var serializationEnv = setGlobalSerialization(true)
-        val driverParameters = DriverParameters(
+        private val serializationEnv = setDriverSerialization()
+        private val driverParameters = DriverParameters(
                 startNodesInProcess = true,
                 extraCordappPackagesToScan = listOf("com.r3.corda.enterprise.perftestcordapp"),
                 portAllocation = incrementalPortAllocation(20000)
@@ -67,7 +67,7 @@ class CheckAllTheTestFlows {
         @AfterClass
         fun classTearDown() {
             driver.shutdown()
-            serializationEnv.unset()
+            serializationEnv?.close()
         }
     }
 
