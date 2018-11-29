@@ -22,7 +22,7 @@ import java.util.*
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
 
-typealias CacheKey = Triple<ClassWhitelist, ClassLoader, Boolean>
+data class SerializationFactoryCacheKey(val classWhitelist: ClassWhitelist, val deserializationClassLoader: ClassLoader, val preventDataLoss: Boolean)
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {
@@ -43,14 +43,14 @@ interface SerializerFactoryFactory {
 @KeepForDJVM
 abstract class AbstractAMQPSerializationScheme(
         private val cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        maybeNotConcurrentSerializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory>,
+        maybeNotConcurrentSerializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>,
         val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     @DeleteForDJVM
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<CacheKey, SerializerFactory>(128).toSynchronised())
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
 
     // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
-    private val serializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory> = if (maybeNotConcurrentSerializerFactoriesForContexts is AccessOrderLinkedHashMap<*, *>) {
+    private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> = if (maybeNotConcurrentSerializerFactoriesForContexts is AccessOrderLinkedHashMap<*, *>) {
         Collections.synchronizedMap(maybeNotConcurrentSerializerFactoriesForContexts)
     } else {
         maybeNotConcurrentSerializerFactoriesForContexts
@@ -176,19 +176,19 @@ abstract class AbstractAMQPSerializationScheme(
     open val publicKeySerializer: CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 
     fun getSerializerFactory(context: SerializationContext): SerializerFactory {
-        val key = Triple(context.whitelist, context.deserializationClassLoader, context.preventDataLoss)
+        val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss)
         // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
         return serializerFactoriesForContexts[key] ?: serializerFactoriesForContexts.computeIfAbsent(key) {
-                when (context.useCase) {
-                    SerializationContext.UseCase.RPCClient ->
-                        rpcClientSerializerFactory(context)
-                    SerializationContext.UseCase.RPCServer ->
-                        rpcServerSerializerFactory(context)
-                    else -> sff.make(context)
-                }.also {
-                    registerCustomSerializers(context, it)
-                }
+            when (context.useCase) {
+                SerializationContext.UseCase.RPCClient ->
+                    rpcClientSerializerFactory(context)
+                SerializationContext.UseCase.RPCServer ->
+                    rpcServerSerializerFactory(context)
+                else -> sff.make(context)
+            }.also {
+                registerCustomSerializers(context, it)
             }
+        }
     }
 
     override fun <T : Any> deserialize(byteSequence: ByteSequence, clazz: Class<T>, context: SerializationContext): T {

@@ -15,7 +15,6 @@ import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.internal.CheckpointSerializer
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.amqp.CacheKey
 import java.util.concurrent.ConcurrentHashMap
 
 val kryoMagic = CordaSerializationMagic("corda".toByteArray() + byteArrayOf(0, 0))
@@ -32,10 +31,10 @@ private object AutoCloseableSerialisationDetector : Serializer<AutoCloseable>() 
 }
 
 object KryoCheckpointSerializer : CheckpointSerializer {
-    private val kryoPoolsForContexts = ConcurrentHashMap<CacheKey, KryoPool>()
+    private val kryoPoolsForContexts = ConcurrentHashMap<Pair<ClassWhitelist, ClassLoader>, KryoPool>()
 
     private fun getPool(context: CheckpointSerializationContext): KryoPool {
-        return kryoPoolsForContexts.computeIfAbsent(Triple(context.whitelist, context.deserializationClassLoader, false)) {
+        return kryoPoolsForContexts.computeIfAbsent(Pair(context.whitelist, context.deserializationClassLoader)) {
             KryoPool.Builder {
                 val serializer = Fiber.getFiberSerializer(false) as KryoSerializer
                 val classResolver = CordaClassResolver(context).apply { setKryo(serializer.kryo) }

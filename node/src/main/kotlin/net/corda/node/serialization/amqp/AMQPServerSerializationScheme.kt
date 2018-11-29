@@ -2,7 +2,6 @@ package net.corda.node.serialization.amqp
 
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.toSynchronised
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.CordaSerializationMagic
@@ -15,12 +14,12 @@ import net.corda.serialization.internal.amqp.custom.RxNotificationSerializer
  */
 class AMQPServerSerializationScheme(
         cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-        serializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory>
+        serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>
 ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<CacheKey, SerializerFactory>(128).toSynchronised())
-    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<CacheKey, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
+    constructor(cordapps: List<Cordapp>, serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>) : this(cordapps.customSerializers, serializerFactoriesForContexts)
 
-    constructor() : this(emptySet(), AccessOrderLinkedHashMap<CacheKey, SerializerFactory>(128).toSynchronised() )
+    constructor() : this(emptySet(), AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised() )
 
     override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
         throw UnsupportedOperationException()

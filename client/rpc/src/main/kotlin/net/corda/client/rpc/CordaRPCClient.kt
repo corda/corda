@@ -9,7 +9,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.days
@@ -17,7 +16,7 @@ import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
-import net.corda.serialization.internal.amqp.CacheKey
+import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 
@@ -297,7 +296,7 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
-                AMQPClientSerializationScheme.initialiseSerialization(classLoader, Caffeine.newBuilder().maximumSize(128).build<CacheKey, SerializerFactory>().asMap())
+                AMQPClientSerializationScheme.initialiseSerialization(classLoader, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap())
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
