@@ -259,7 +259,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              inputObjectMapper: ObjectMapper) {
+                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
