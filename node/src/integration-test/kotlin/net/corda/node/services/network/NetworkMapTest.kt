@@ -90,7 +90,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
@@ -143,7 +142,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
@@ -161,7 +159,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val (aliceNode, bobNode) = listOf(
@@ -179,7 +176,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
@@ -201,7 +197,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val (aliceNode, bobNode) = listOf(
@@ -226,7 +221,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList(),
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {

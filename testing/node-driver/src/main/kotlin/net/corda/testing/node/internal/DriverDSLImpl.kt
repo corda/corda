@@ -46,7 +46,6 @@ import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
@@ -956,11 +955,10 @@ interface InternalDriverDSL : DriverDSL {
  */
 fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDsl: D,
-        initialiseSerialization: Boolean = true,
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    val serializationEnv = setDriverSerialization()
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -971,7 +969,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.unset()
+        serializationEnv?.close()
     }
 }
 
@@ -988,7 +986,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(true)
+    val serializationEnv = setDriverSerialization()
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -1019,7 +1017,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.unset()
+        serializationEnv?.close()
     }
 }
 
@@ -1090,7 +1088,6 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
@@ -1123,8 +1120,7 @@ fun <A> internalDriver(
                     signCordapps = signCordapps
             ),
             coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = initialiseSerialization
+            dsl = dsl
     )
 }
 
