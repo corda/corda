@@ -42,7 +42,6 @@ import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
-import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
@@ -62,7 +61,6 @@ import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
 import java.time.Duration
-import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -323,14 +321,14 @@ class CordaRPCOpsImplTest {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "The Punisher", "Season 1")
             assertEquals(
-                    rpc.queryAttachments(
-                            AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                                    filenameCondition = ColumnPredicate.EqualityComparison(
-                                            EqualityComparisonOperator.EQUAL,
-                                            "Season 1"
-                                    )
-                            ), null
-                    ).size, 1
+                rpc.queryAttachments(
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        filenameCondition = ColumnPredicate.EqualityComparison(
+                            EqualityComparisonOperator.EQUAL,
+                            "Season 1"
+                        )
+                    ), null
+                ).size, 1
             )
         }
     }
@@ -341,14 +339,14 @@ class CordaRPCOpsImplTest {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "Daredevil", "Season 3")
             assertEquals(
-                    rpc.queryAttachments(
-                            AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                                    uploaderCondition = ColumnPredicate.EqualityComparison(
-                                            EqualityComparisonOperator.EQUAL,
-                                            "Daredevil"
-                                    )
-                            ), null
-                    ).size, 1
+                rpc.queryAttachments(
+                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        uploaderCondition = ColumnPredicate.EqualityComparison(
+                            EqualityComparisonOperator.EQUAL,
+                            "Daredevil"
+                        )
+                    ), null
+                ).size, 1
             )
         }
     }
