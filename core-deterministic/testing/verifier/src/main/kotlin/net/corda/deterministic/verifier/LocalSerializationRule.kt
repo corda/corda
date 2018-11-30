@@ -7,10 +7,7 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
-import net.corda.serialization.internal.amqp.SerializerFactory
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.*
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
@@ -67,7 +64,7 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private class AMQPSerializationScheme(
             cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
-            serializerFactoriesForContexts: AccessOrderLinkedHashMap<Triple<ClassWhitelist, ClassLoader, Boolean>, SerializerFactory>
+            serializerFactoriesForContexts: AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>
     ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
         override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
             throw UnsupportedOperationException()
