@@ -1,5 +1,6 @@
 package net.corda.tools.shell;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.corda.client.jackson.StringToMethodCallParser;
@@ -36,7 +37,8 @@ public class RunShellCommand extends InteractiveShellCommand {
                     "consulting the developer guide at https://docs.corda.net/api/kotlin/corda/net.corda.core.messaging/-corda-r-p-c-ops/index.html"
     )
     @Usage("runs a method from the CordaRPCOps interface on the node.")
-    public Object main(InvocationContext<Map> context, @Usage("The command to run") @Argument(unquote = false) List<String> command) {
+    public Object main(InvocationContext<Map> context,
+                       @Usage("The command to run") @Argument(unquote = false) List<String> command) {
         logger.info("Executing command \"run {}\",", (command != null) ? command.stream().collect(joining(" ")) : "<no arguments>");
         StringToMethodCallParser<CordaRPCOps> parser = new StringToMethodCallParser<>(CordaRPCOps.class, objectMapper(InteractiveShell.getCordappsClassloader()));
 
@@ -44,6 +46,7 @@ public class RunShellCommand extends InteractiveShellCommand {
             emitHelp(context, parser);
             return null;
         }
+
         return InteractiveShell.runRPCFromString(command, out, context, ops(), objectMapper(InteractiveShell.getCordappsClassloader()));
     }
 

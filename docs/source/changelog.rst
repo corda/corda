@@ -310,6 +310,8 @@ Unreleased
 * Finance CorDapp is now build as a sealed and signed JAR file.
   Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
 
+* The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
+
 Version 3.3
 -----------
 
