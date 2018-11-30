@@ -227,7 +227,7 @@ class BridgeSmokeTest {
         artemis.session.createQueue(ArtemisMessagingComponent.BRIDGE_NOTIFY, RoutingType.ANYCAST, ArtemisMessagingComponent.BRIDGE_NOTIFY, false)
         val controlConsumer = artemis.session.createConsumer(ArtemisMessagingComponent.BRIDGE_NOTIFY)
         controlConsumer.setMessageHandler { msg ->
-            val bridgeControl = BridgeControl.NodeToBridgeSnapshot("Test", listOf(inboxAddress.toString()), emptyList())
+            val bridgeControl = BridgeControl.NodeToBridgeSnapshot(DUMMY_BANK_A_NAME.toString(), listOf(inboxAddress.toString()), emptyList())
             val controlPacket = bridgeControl.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = artemis.session.createMessage(false)
             artemisMessage.writeBodyBufferBytes(controlPacket)

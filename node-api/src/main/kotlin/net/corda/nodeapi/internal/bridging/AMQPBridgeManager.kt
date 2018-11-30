@@ -268,7 +268,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
         }
     }
 
-    fun destroyAllBridge(queueName: String): Map<String, BridgeEntry> {
+    fun destroyAllBridges(queueName: String): Map<String, BridgeEntry> {
         val bridges = queueNamesToBridgesMap[queueName]
         destroyBridge(queueName, queueNamesToBridgesMap[queueName]?.flatMap { it.targets } ?: emptyList())
         return bridges?.map {

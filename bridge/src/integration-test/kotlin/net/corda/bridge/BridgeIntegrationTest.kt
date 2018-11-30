@@ -570,7 +570,7 @@ class BridgeIntegrationTest {
         val controlConsumer = artemis.session.createConsumer(BRIDGE_NOTIFY)
         controlConsumer.setMessageHandler { msg ->
             val outEntry = listOf(BridgeEntry(dummyOutQueue.toString(), listOf(NetworkHostAndPort("localhost", 7890)), listOf(DUMMY_BANK_A_NAME), serviceAddress = false))
-            val bridgeControl = BridgeControl.NodeToBridgeSnapshot("Test", listOf(inboxAddress.toString()), outEntry)
+            val bridgeControl = BridgeControl.NodeToBridgeSnapshot(DUMMY_BANK_A_NAME.toString(), listOf(inboxAddress.toString()), outEntry)
             val controlPacket = bridgeControl.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = artemis.session.createMessage(false)
             artemisMessage.writeBodyBufferBytes(controlPacket)

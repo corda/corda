@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.bridging
 
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -12,6 +13,7 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.P2P_PREFIX
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.PEERS_PREFIX
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.netty.ProxyConfig
 import org.apache.activemq.artemis.api.core.ActiveMQQueueExistsException
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -21,6 +23,7 @@ import org.apache.activemq.artemis.api.core.client.ClientMessage
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import rx.Observable
 import rx.subjects.PublishSubject
+import sun.security.x509.X500Name
 import java.util.*
 
 class BridgeControlListener(val config: MutualSslConfiguration,
@@ -156,6 +159,10 @@ class BridgeControlListener(val config: MutualSslConfiguration,
         log.info("Received bridge control message $controlMessage")
         when (controlMessage) {
             is BridgeControl.NodeToBridgeSnapshot -> {
+                if (!isConfigured(controlMessage.nodeIdentity)) {
+                    log.error("Fatal error! Bridge not configured with keystore for node with legal name ${controlMessage.nodeIdentity}.")
+                    System.exit(1)
+                }
                 if (!controlMessage.inboxQueues.all { validateInboxQueueName(it) }) {
                     log.error("Invalid queue names in control message $controlMessage")
                     return
@@ -196,5 +203,14 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 bridgeManager.destroyBridge(controlMessage.bridgeInfo.queueName, controlMessage.bridgeInfo.targets)
             }
         }
+    }
+
+    private fun isConfigured(sourceX500Name: String): Boolean {
+        val keyStore = config.keyStore.get().value.internal
+        return keyStore.aliases().toList().filter { alias ->
+            val x500Name = keyStore.getCertificate(alias).x509.subjectDN as X500Name
+            val cordaX500Name = CordaX500Name.build(x500Name.asX500Principal())
+            cordaX500Name.toString() == sourceX500Name
+        }.isNotEmpty()
     }
 }

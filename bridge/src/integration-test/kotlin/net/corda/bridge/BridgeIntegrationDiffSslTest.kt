@@ -33,10 +33,7 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import org.apache.activemq.artemis.api.core.RoutingType
@@ -162,8 +159,8 @@ class BridgeIntegrationDiffSslTest {
 
         val workingDirectory = tempFolder.root.toPath()
 
-        createTLSKeystore(CordaX500Name("NodeA", "London", "GB"), workingDirectory / "nodeA.jks")
-        createTLSKeystore(CordaX500Name("NodeB", "London", "GB"), workingDirectory / "nodeB.jks")
+        createTLSKeystore(DUMMY_BANK_A_NAME, workingDirectory / "nodeA.jks")
+        createTLSKeystore(DUMMY_BANK_B_NAME, workingDirectory / "nodeB.jks")
 
         val sslKeyTool = BridgeSSLKeyTool()
 
@@ -234,7 +231,7 @@ class BridgeIntegrationDiffSslTest {
         val controlConsumer = artemis.session.createConsumer(BRIDGE_NOTIFY)
         controlConsumer.setMessageHandler { msg ->
             val outEntry = listOf(BridgeEntry(dummyOutQueue.toString(), listOf(NetworkHostAndPort("localhost", 7890)), listOf(DUMMY_BANK_A_NAME), serviceAddress = false))
-            val bridgeControl = BridgeControl.NodeToBridgeSnapshot("Test", listOf(inboxAddress.toString()), outEntry)
+            val bridgeControl = BridgeControl.NodeToBridgeSnapshot(DUMMY_BANK_A_NAME.toString(), listOf(inboxAddress.toString()), outEntry)
             val controlPacket = bridgeControl.serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
             val artemisMessage = artemis.session.createMessage(false)
             artemisMessage.writeBodyBufferBytes(controlPacket)

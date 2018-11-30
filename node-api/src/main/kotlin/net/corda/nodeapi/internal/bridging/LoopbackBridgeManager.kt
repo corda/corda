@@ -174,7 +174,7 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
      */
     fun inboxesAdded(inboxes: List<String>) {
         for (inbox in inboxes) {
-            super.destroyAllBridge(inbox).forEach { source, bridgeEntry ->
+            super.destroyAllBridges(inbox).forEach { source, bridgeEntry ->
                 deployBridge(source, bridgeEntry.queueName, bridgeEntry.targets, bridgeEntry.legalNames.toSet())
             }
         }
