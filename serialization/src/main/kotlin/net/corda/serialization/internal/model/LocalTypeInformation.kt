@@ -326,7 +326,7 @@ sealed class LocalTypeInformation {
  * Represents information about a constructor.
  */
 data class LocalConstructorInformation(
-        val observedMethod: KFunction<Any>,
+        val observedMethod: Constructor<Any>,
         val parameters: List<LocalConstructorParameterInformation>) {
     val hasParameters: Boolean get() = parameters.isNotEmpty()
 }

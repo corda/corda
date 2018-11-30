@@ -90,16 +90,16 @@ class ExplorerSimulation(private val options: OptionSet) {
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
-            val issuerGBP = startNode(
+            val issuerGBP = startNode(NodeParameters(
                     providedName = ukBankName,
                     rpcUsers = listOf(manager),
                     additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
-            )
-            val issuerUSD = startNode(
+            ))
+            val issuerUSD = startNode(NodeParameters(
                     providedName = usaBankName,
                     rpcUsers = listOf(manager),
                     additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
-            )
+            ))
             val bno = startNode(providedName = IOUFlow.allowedMembershipName, rpcUsers = listOf(user))
 
             notaryNode = defaultNotaryNode.get()

@@ -14,6 +14,9 @@ import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._allEnabledSerializationEnvs
+import net.corda.core.serialization.internal._driverSerializationEnv
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -28,6 +31,8 @@ import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.database.DatabaseConstants
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
+import net.corda.testing.internal.createTestSerializationEnv
+import net.corda.testing.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
@@ -220,15 +225,11 @@ fun inMemoryH2DataSourceConfig(providedNodeName: String? = null, postfix: String
 
 fun CordaRPCClient.start(user: User) = start(user.username, user.password)
 
-fun NodeHandle.waitForShutdown(): Observable<Unit> {
-
-    return rpc.waitForShutdown().doAfterTerminate(::stop)
-}
+fun NodeHandle.waitForShutdown(): Observable<Unit> = rpc.waitForShutdown().doAfterTerminate(::stop)
 
 fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
-
     val completable = AsyncSubject.create<Unit>()
-    stateMachinesFeed().updates.subscribe({ _ -> }, { error ->
+    stateMachinesFeed().updates.subscribe({ }, { error ->
         if (error is ConnectionFailureException) {
             completable.onCompleted()
         } else {
@@ -236,4 +237,23 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
         }
     })
     return completable
+}
+
+/**
+ * Should only be used by Driver and MockNode.
+ */
+fun setDriverSerialization(): AutoCloseable? {
+    return if (_allEnabledSerializationEnvs.isEmpty()) {
+        DriverSerializationEnvironment().enable()
+    } else {
+        null
+    }
+}
+
+private class DriverSerializationEnvironment : SerializationEnvironment by createTestSerializationEnv(), AutoCloseable {
+    fun enable() = apply { _driverSerializationEnv.set(this) }
+    override fun close() {
+        _driverSerializationEnv.set(null)
+        inVMExecutors.remove(this)
+    }
 }

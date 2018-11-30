@@ -32,6 +32,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
@@ -225,8 +226,9 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
         } catch (t: Throwable) {
-            if(t is VirtualMachineError) {
+            if(t.isUnrecoverable()) {
                 logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
+                Fiber.sleep(Duration.ofSeconds(10).toMillis()) // To allow async logger to flush.
                 Runtime.getRuntime().halt(1)
             }
             logger.info("Flow raised an error... sending it to flow hospital", t)
@@ -290,6 +292,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             )
         }
     }
+
+    private fun Throwable.isUnrecoverable(): Boolean = this is VirtualMachineError && this !is StackOverflowError
 
     /**
      * If the sub-flow is [IdempotentFlow] we need to perform a checkpoint to make sure any potentially side-effect
