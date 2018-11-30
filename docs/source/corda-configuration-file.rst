@@ -339,6 +339,10 @@ The available config fields are listed below.
     :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
                                        more granular level. Defaults to an empty list.
 
+:cryptoServiceName: (optional) name of the CryptoService implementation. This only needs to be set if you intend to use a different provider than the default one (see :doc:`cryptoservice-configuration.rst`).
+
+:cryptoServiceConf: (optional) path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider than the default one (see :doc:`cryptoservice-configuration.rst`).
+
 Examples
 --------
 
