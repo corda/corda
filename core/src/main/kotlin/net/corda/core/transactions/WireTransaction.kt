@@ -172,7 +172,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
-        val inputContractClassToJarVersion = resolveContractAttachmentVersion(resolvedInputs.map { Pair(it.state.contract, it.ref) }, resolveContractAttachment)
+        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<out ContractState>>> = resolvedInputs.groupBy { it.state.contract }
+
+        val inputStateContractClassToVersions: Map<ContractClassName, List<Version>> =
+                inputStateContractClassToStateRefs.map { it.key to it.value.lazyMapped { stateRef, _ -> getContractVersion(resolveContractAttachment(stateRef.ref)) } }.toMap()
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
@@ -188,7 +191,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                inputContractClassToJarVersion
+                inputStateContractClassToVersions
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -339,13 +342,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 // For backwards compatibility revert to using the node classloader.
                 services.loadState(stateRef).serialize()
             }
-        }
-
-        @CordaInternal
-        fun resolveContractAttachmentVersion(states: List<Pair<ContractClassName, StateRef>>, resolveContractAttachment: (StateRef) -> Attachment): Map<ContractClassName, Version> {
-            return states.map { Pair(it.first, getContractVersion(resolveContractAttachment(it.second))) }
-                    .groupBy { it.first }
-                    .mapValues { it.value.map { it.second }.toSet().max()!! }
         }
     }
 

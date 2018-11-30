@@ -22,7 +22,6 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.lazyMapped
 import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
@@ -178,7 +177,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
                 .filterNot { it.key in allContracts }
                 .map { refStateEntry ->
-                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, services)
+                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services) //TODO contract class version for reference states
                 }
 
         val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
@@ -280,6 +279,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                 false,
                 contractClassName,
                 inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
+                inputStateRefs,
                 services)
 
         // This will contain the hash of the JAR that will be used by this Transaction.
@@ -415,13 +415,13 @@ open class TransactionBuilder @JvmOverloads constructor(
      *
      * For now we use the currently installed CorDapp version.
      */
-    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
+    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         //TODO will be set by the code pending in the other PR
-        val minimumRequiredContractClassVersion = DEFAULT_CORDAPP_VERSION
+        val minimumRequiredContractClassVersion  = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max()
 
         //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),

@@ -5,7 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.FlowException
 import net.corda.core.serialization.CordaSerializable
-
+import net.corda.core.contracts.Version
 /**
  * A contract attachment was missing when trying to automatically attach all known contract attachments
  *
@@ -13,6 +13,6 @@ import net.corda.core.serialization.CordaSerializable
  */
 @CordaSerializable
 @KeepForDJVM
-class MissingContractAttachments(val states: List<TransactionState<ContractState>>)
-    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}. " +
+class MissingContractAttachments(val states: List<TransactionState<ContractState>>, minimumRequiredContractClassVersion: Version? = null)
+    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}, minimum required contract class version ${minimumRequiredContractClassVersion ?: "UNKNOWN"}. " +
         "See https://docs.corda.net/api-contract-constraints.html#debugging")

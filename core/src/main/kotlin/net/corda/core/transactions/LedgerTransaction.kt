@@ -57,7 +57,7 @@ private constructor(
         /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters?,
         override val references: List<StateAndRef<ContractState>>,
-        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
+        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, List<Version>>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -91,9 +91,9 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
+                inputStatesContractClassNameToVersion: Map<ContractClassName, List<Version>>
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToVersion).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
@@ -153,10 +153,11 @@ private constructor(
     @Throws(TransactionVerificationException::class)
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
         contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val inputMaxVersion = inputStatesContractClassNameToMaxVersion[contractClassName] ?: 0
             val outputVersion = getContractVersion(attachment)
-            if (inputMaxVersion > outputVersion) {
-                throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$inputMaxVersion", "$outputVersion")
+            inputStatesContractClassNameToMaxVersion[contractClassName]?.forEach {
+                if (it > outputVersion) {
+                    throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$it", "$outputVersion")
+                }
             }
         }
     }
