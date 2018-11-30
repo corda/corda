@@ -159,6 +159,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
     }
 
+    operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
+
     class FlowMedicalHistory {
         internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()
 

@@ -138,9 +138,7 @@ class ComposableObjectReader(
                 obj.asSequence().zip(propertySerializers.values.asSequence())
                         // Read _all_ properties from the stream
                         .map { (item, property) -> property to property.readProperty(item, schemas, input, context) }
-                        // Throw away any calculated properties
-                        .filter { (property, _) -> !property.isCalculated }
-                        // Write the rest into the builder
+                        // Write them into the builder (computed properties will be thrown away)
                         .forEachIndexed { slot, (_, propertyValue) -> builder.populate(slot, propertyValue) }
                 return builder.build()
             }

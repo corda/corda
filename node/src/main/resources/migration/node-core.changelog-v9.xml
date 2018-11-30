@@ -1,0 +1,31 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+    <changeSet author="R3.Corda" id="add_network_parameters_storage">
+        <createTable tableName="node_network_parameters">
+            <column name="hash" type="NVARCHAR(130)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="epoch" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parameters_bytes" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signature_bytes" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cert" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parent_cert_path" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="network_parameters_pk">
+        <addPrimaryKey columnNames="hash" constraintName="node_network_parameters_pkey" tableName="node_network_parameters"/>
+    </changeSet>
+</databaseChangeLog>
