@@ -8,6 +8,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
@@ -16,12 +17,14 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.ColumnPredicate
 import net.corda.core.node.services.vault.EqualityComparisonOperator
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -32,12 +35,14 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManagerImpl
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
 import net.corda.node.services.messaging.RpcAuthContext
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
+import net.corda.testing.common.internal.isInstanceOf
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
@@ -56,6 +61,8 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
+import java.time.Duration
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -316,14 +323,14 @@ class CordaRPCOpsImplTest {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "The Punisher", "Season 1")
             assertEquals(
-                rpc.queryAttachments(
-                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        filenameCondition = ColumnPredicate.EqualityComparison(
-                            EqualityComparisonOperator.EQUAL,
-                            "Season 1"
-                        )
-                    ), null
-                ).size, 1
+                    rpc.queryAttachments(
+                            AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                                    filenameCondition = ColumnPredicate.EqualityComparison(
+                                            EqualityComparisonOperator.EQUAL,
+                                            "Season 1"
+                                    )
+                            ), null
+                    ).size, 1
             )
         }
     }
@@ -334,14 +341,14 @@ class CordaRPCOpsImplTest {
             val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             rpc.uploadAttachmentWithMetadata(inputJar, "Daredevil", "Season 3")
             assertEquals(
-                rpc.queryAttachments(
-                    AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                        uploaderCondition = ColumnPredicate.EqualityComparison(
-                            EqualityComparisonOperator.EQUAL,
-                            "Daredevil"
-                        )
-                    ), null
-                ).size, 1
+                    rpc.queryAttachments(
+                            AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                                    uploaderCondition = ColumnPredicate.EqualityComparison(
+                                            EqualityComparisonOperator.EQUAL,
+                                            "Daredevil"
+                                    )
+                            ), null
+                    ).size, 1
             )
         }
     }
@@ -382,6 +389,39 @@ class CordaRPCOpsImplTest {
             val killed = rpc.killFlow(flow.id)
             assertThat(killed).isTrue()
             assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `kill a flow releases soft lock`() {
+        withPermissions(all()) {
+            val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
+            val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
+
+            val flow = rpc.startFlow(::SoftLock, cash.ref, Duration.ofMinutes(5))
+
+            var locked = false
+            while (!locked) {
+                try {
+                    rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow()
+                } catch (e: StatesNotAvailableException) {
+                    locked = true
+                }
+            }
+
+            val killed = rpc.killFlow(flow.id)
+            assertThat(killed).isTrue()
+            assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()
+        }
+    }
+
+    @StartableByRPC
+    class SoftLock(private val stateRef: StateRef, private val duration: Duration) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            logger.info("Soft locking state with hash $stateRef...")
+            serviceHub.vaultService.softLockReserve(runId.uuid, NonEmptySet.of(stateRef))
+            sleep(duration)
         }
     }
 
