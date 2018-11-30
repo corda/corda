@@ -122,6 +122,12 @@ class MySQLUniquenessProvider(
     private val conflictCounter = metrics.counter("$metricPrefix.Conflicts")
     /** Track the distribution of the number of input states. **/
     private val inputStateCount = metrics.histogram("$metricPrefix.NumberOfInputStates")
+    /** Track the measured ETA. **/
+    private val requestProcessingETA = metrics.histogram("$metricPrefix.requestProcessingETASeconds")
+    /** Track the number of requests in the queue at insert. **/
+    private val requestQueueSize  = metrics.histogram("$metricPrefix.requestQueue.size")
+    /** Track the number of states in the queue at insert. **/
+    private val requestQueueStateCount  = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
 
     private val dataSource = HikariDataSource(HikariConfig(config.dataSource))
     private val connectionRetries = config.connectionRetries
@@ -192,9 +198,12 @@ class MySQLUniquenessProvider(
     override fun getEta(numStates: Int): Duration {
         val rate = throughput
         val nrStates = nrQueuedStates.getAndAdd(numStates)
+        requestQueueStateCount.update(nrStates)
         log.debug { "rate: $rate, queueSize: $nrStates" }
         if (rate > 0.0 && nrStates > 0) {
-            return Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            val eta = Duration.ofSeconds((2 * TimeUnit.MINUTES.toSeconds(1) * nrStates / rate).toLong())
+            requestProcessingETA.update(eta.seconds)
+            return eta
         }
         return NotaryServiceFlow.defaultEstimatedWaitTime
     }
@@ -228,6 +237,7 @@ class MySQLUniquenessProvider(
             recordDuration(timer)
         }
         requestQueue.put(request)
+        requestQueueSize.update(requestQueue.size)
         return future
     }
 
