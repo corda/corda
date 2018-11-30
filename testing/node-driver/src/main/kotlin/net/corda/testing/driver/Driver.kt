@@ -48,6 +48,8 @@ interface NodeHandle : AutoCloseable {
     val rpcAddress: NetworkHostAndPort
     /** Get the rpc admin address for this node **/
     val rpcAdminAddress: NetworkHostAndPort
+    /** Get the JMX server address for this node, if JMX is enabled **/
+    val jmxAddress: NetworkHostAndPort?
     /** Get a [List] of [User]'s for this node **/
     val rpcUsers: List<User>
     /** The location of the node's base directory **/
