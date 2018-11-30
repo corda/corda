@@ -8,6 +8,7 @@ import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.NotSerializableWithReasonException
 import net.corda.serialization.internal.model.EnumTransforms
+import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
@@ -190,19 +191,26 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
 
 typealias TransformsMap =  EnumMap<TransformTypes, MutableList<Transform>>
 
-fun TransformsMap.interpretForEnum(): EnumTransforms {
+fun TransformsMap.enumTransforms(): EnumTransforms {
     val defaultTransforms = this[TransformTypes.EnumDefault]?.toList() ?: emptyList()
     val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
     val renameTransforms = this[TransformTypes.Rename]?.toList() ?: emptyList()
     val renames = renameTransforms.associate { transform -> (transform as RenameSchemaTransform).to to transform.from }
 
-    return EnumTransforms(defaults, renames)
+    return EnumTransforms(defaults, renames, this)
 }
 
+/**
+ * Processes the annotations applied to classes intended for serialisation, to get the transforms that can be applied to them.
+ */
 object TransformsAnnotationProcessor {
 
+    /**
+     * Obtain all of the transforms applied for the given [Class].
+     */
     fun getTransformsSchema(type: Class<*>): TransformsMap {
         val result = TransformsMap(TransformTypes::class.java)
+        // We only have transforms for enums at present.
         if (!type.isEnum) return result
 
         val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
@@ -257,44 +265,6 @@ object TransformsAnnotationProcessor {
 data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, MutableList<Transform>>>) : DescribedType {
     companion object : DescribedTypeConstructor<TransformsSchema> {
         val DESCRIPTOR = AMQPDescriptorRegistry.TRANSFORM_SCHEMA.amqpDescriptor
-        private val logger = contextLogger()
-
-        /**
-         * Takes a class name and either returns a cached instance of the TransformSet for it or, on a cache miss,
-         * instantiates the transform set before inserting into the cache and returning it.
-         *
-         * @param name fully qualified class name to lookup transforms for
-         * @param sf the [SerializerFactory] building this transform set. Needed as each can define it's own
-         * class loader and this dictates which classes we can and cannot see
-         */
-        fun get(name: String, sf: LocalSerializerFactory) =
-                sf.getOrBuildTransform(name) {
-                    try {
-                        TransformsAnnotationProcessor.getTransformsSchema(sf.classloader.loadClass(name))
-                    } catch (_: ClassNotFoundException) {
-                        // if we can't load the class we'll end up caching an empty list which is fine as that
-                        // list, on lookup, won't be included in the schema because it's empty
-                        TransformsMap(TransformTypes::class.java)
-                    }
-                }
-
-        private fun getAndAdd(
-                type: String,
-                sf: LocalSerializerFactory,
-                map: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>>) {
-            try {
-                get(type, sf).apply {
-                    if (isNotEmpty()) {
-                        map[type] = this
-                    }
-                }
-            } catch (e: NotSerializableWithReasonException) {
-                val message = "Error running transforms for $type: ${e.message}"
-                logger.error(message)
-                logger.trace { e.toString() }
-                throw NotSerializableDetailedException(type, e.message ?: "")
-            }
-        }
 
         /**
          * Prepare a schema for encoding, takes all of the types being transmitted and inspects each
@@ -304,10 +274,23 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          * @param schema should be a [Schema] generated for a serialised data structure
          * @param sf should be provided by the same serialization context that generated the schema
          */
-        fun build(schema: Schema, sf: LocalSerializerFactory) = TransformsSchema(
-                mutableMapOf<String, EnumMap<TransformTypes, MutableList<Transform>>>().apply {
-                    schema.types.forEach { type -> getAndAdd(type.name, sf, this) }
-                })
+        fun build(schema: Schema, sf: LocalSerializerFactory): TransformsSchema {
+            val transformsMap = schema.types.asSequence().mapNotNull { type ->
+                val localType = try {
+                    sf.classloader.loadClass(type.name)
+                } catch (_: ClassNotFoundException) {
+                    return@mapNotNull null
+                }
+                val localTypeInformation = sf.getTypeInformation(localType)
+                if (localTypeInformation is LocalTypeInformation.AnEnum) {
+                    localTypeInformation.transforms.source.let {
+                        if (it.isEmpty()) null else type.name to it
+                    }
+                }
+                else null
+            }.toMap()
+            return TransformsSchema(transformsMap)
+        }
 
         override fun getTypeClass(): Class<*> = TransformsSchema::class.java
 
