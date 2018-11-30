@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.type.TypeFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
@@ -227,7 +228,7 @@ class InteractiveShellTest {
 
         InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
         InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
-        verify(printWriter).println(NODE_INFO_JSON_PAYLOAD)
+        verify(printWriter).println(NODE_INFO_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
     @Test
@@ -241,7 +242,7 @@ class InteractiveShellTest {
 
         InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
         InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
-        verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD)
+        verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
     @ToStringSerialize
