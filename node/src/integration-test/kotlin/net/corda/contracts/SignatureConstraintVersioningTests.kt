@@ -20,6 +20,7 @@ import net.corda.testMessage.Message
 import net.corda.testMessage.MessageState
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappForPackages
 import net.corda.testing.node.internal.internalDriver
@@ -46,7 +47,7 @@ class SignatureConstraintVersioningTests {
                 startNodesInProcess = isQuasarAgentSpecified(),
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
             var nodeName = {
-                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -55,7 +56,7 @@ class SignatureConstraintVersioningTests {
                 nodeName
             }()
             var result = {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true)).getOrThrow()
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
                     page.states.singleOrNull()
@@ -84,7 +85,7 @@ class SignatureConstraintVersioningTests {
                 startNodesInProcess = isQuasarAgentSpecified(),
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
             var nodeName = {
-                val nodeHandle = startNode(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true)).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -93,7 +94,7 @@ class SignatureConstraintVersioningTests {
                 nodeName
             }()
             var result = {
-                val nodeHandle = startNode(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true)).getOrThrow()
 
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
