@@ -18,8 +18,9 @@ DROP TABLE ${schema}.node_our_key_pairs CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_scheduled_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_nodes CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_network_map_subscribers CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_network_parameters CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_notary_committed_states CASCADE CONSTRAINTS
-DROP TABLE ${schema}.node_notary_committed_transactions CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_notary_committed_txs CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_notary_request_log CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_transaction_mappings CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_fungible_states_parts CASCADE CONSTRAINTS
