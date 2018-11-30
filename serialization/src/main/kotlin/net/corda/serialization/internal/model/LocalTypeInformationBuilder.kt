@@ -107,7 +107,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     type,
                     typeIdentifier,
                     type.enumConstants.map { it.toString() },
-                    buildInterfaceInformation(type))
+                    buildInterfaceInformation(type),
+                    TransformsAnnotationProcessor.getTransformsSchema(type).interpretForEnum())
             type.kotlinObjectInstance != null -> LocalTypeInformation.Singleton(
                     type,
                     typeIdentifier,

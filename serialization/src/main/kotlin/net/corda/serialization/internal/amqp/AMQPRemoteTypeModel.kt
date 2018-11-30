@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
-import java.util.*
 import kotlin.collections.LinkedHashMap
 
 /**
@@ -31,7 +30,7 @@ class AMQPRemoteTypeModel {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
         val byTypeDescriptor = schema.types.associateBy { it.typeDescriptor }
         val enumTransformsLookup = transforms.types.asSequence().map { (name, transformSet) ->
-            name.typeIdentifier to interpretTransformSet(transformSet)
+            name.typeIdentifier to transformSet.interpretForEnum()
         }.toMap()
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
@@ -179,20 +178,6 @@ class AMQPRemoteTypeModel {
                     else -> RemoteTypeInformation.Unparameterised(name, this)
                 }
     }
-}
-
-fun LocalTypeInformation.getEnumTransforms(factory: LocalSerializerFactory): EnumTransforms {
-    val transformsSchema = TransformsSchema.get(typeIdentifier.name, factory)
-    return interpretTransformSet(transformsSchema)
-}
-
-private fun interpretTransformSet(transformSet: EnumMap<TransformTypes, MutableList<Transform>>): EnumTransforms {
-    val defaultTransforms = transformSet[TransformTypes.EnumDefault]?.toList() ?: emptyList()
-    val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
-    val renameTransforms = transformSet[TransformTypes.Rename]?.toList() ?: emptyList()
-    val renames = renameTransforms.associate { transform -> (transform as RenameSchemaTransform).to to transform.from }
-
-    return EnumTransforms(defaults, renames)
 }
 
 private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?:

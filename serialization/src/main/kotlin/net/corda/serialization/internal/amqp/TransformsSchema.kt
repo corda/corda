@@ -7,7 +7,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.NotSerializableWithReasonException
-import net.corda.serialization.internal.model.DefaultCacheProvider
+import net.corda.serialization.internal.model.EnumTransforms
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
 import java.io.NotSerializableException
@@ -188,6 +188,65 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
     override val name: String get() = typeName
 }
 
+typealias TransformsMap =  EnumMap<TransformTypes, MutableList<Transform>>
+
+fun TransformsMap.interpretForEnum(): EnumTransforms {
+    val defaultTransforms = this[TransformTypes.EnumDefault]?.toList() ?: emptyList()
+    val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
+    val renameTransforms = this[TransformTypes.Rename]?.toList() ?: emptyList()
+    val renames = renameTransforms.associate { transform -> (transform as RenameSchemaTransform).to to transform.from }
+
+    return EnumTransforms(defaults, renames)
+}
+
+object TransformsAnnotationProcessor {
+
+    fun getTransformsSchema(type: Class<*>): TransformsMap {
+        val result = TransformsMap(TransformTypes::class.java)
+        if (!type.isEnum) return result
+
+        val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
+
+        supportedTransforms.forEach { supportedTransform ->
+            val annotationContainer = type.getAnnotation(supportedTransform.type) ?: return@forEach
+            result.processAnnotations(
+                    type,
+                    supportedTransform.enum,
+                    supportedTransform.getAnnotations(annotationContainer),
+                    constants)
+        }
+
+        return result
+    }
+
+    private fun TransformsMap.processAnnotations(type: Class<*>, transformType: TransformTypes, annotations: List<Annotation>, constants: Map<String, Int>) {
+        annotations.forEach { annotation ->
+            addTransform(type, transformType, transformType.build(annotation))
+        }
+        try {
+            transformType.validate(this[transformType] ?: emptyList(), constants)
+        } catch (e: NotSerializableWithReasonException) {
+            throw NotSerializableDetailedException(type.name, e.message!!)
+        }
+    }
+
+    private fun TransformsMap.addTransform(type: Class<*>, transformType: TransformTypes, transform: Transform) {
+        // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
+        // ignore them it feels like a good thing to alert the user to since this is
+        // more than likely a typo in their code so best make it an actual error
+        compute(transformType) { _, transforms ->
+            when {
+                transforms == null -> mutableListOf(transform)
+                transform in transforms -> throw AMQPNotSerializableException(
+                        type,
+                        "Repeated unique transformation annotation of type ${transform.name}")
+                else -> transforms.apply { this += transform }
+            }
+        }
+    }
+
+}
+
 /**
  * Represents the set of all transforms that can be a applied to all classes represented as part of
  * an AMQP schema. It forms a part of the AMQP envelope alongside the [Schema] and the serialized bytes
@@ -210,39 +269,14 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          */
         fun get(name: String, sf: LocalSerializerFactory) =
                 sf.getOrBuildTransform(name) {
-            val transforms = EnumMap<TransformTypes, MutableList<Transform>>(TransformTypes::class.java)
-            try {
-                val clazz = sf.classloader.loadClass(name)
-
-                supportedTransforms.forEach { transform ->
-                    clazz.getAnnotation(transform.type)?.let { list ->
-                        transform.getAnnotations(list).forEach { annotation ->
-                            val t = transform.enum.build(annotation)
-
-                            // we're explicitly rejecting repeated annotations, whilst it's fine and we'd just
-                            // ignore them it feels like a good thing to alert the user to since this is
-                            // more than likely a typo in their code so best make it an actual error
-                            if (transforms.computeIfAbsent(transform.enum) { mutableListOf() }.any { t == it }) {
-                                throw AMQPNotSerializableException(
-                                        clazz,
-                                        "Repeated unique transformation annotation of type ${t.name}")
-                            }
-
-                            transforms[transform.enum]!!.add(t)
-                        }
-
-                        transform.enum.validate(
-                                transforms[transform.enum] ?: emptyList(),
-                                clazz.enumConstants.mapIndexed { i, s -> Pair(s.toString(), i) }.toMap())
+                    try {
+                        TransformsAnnotationProcessor.getTransformsSchema(sf.classloader.loadClass(name))
+                    } catch (_: ClassNotFoundException) {
+                        // if we can't load the class we'll end up caching an empty list which is fine as that
+                        // list, on lookup, won't be included in the schema because it's empty
+                        TransformsMap(TransformTypes::class.java)
                     }
                 }
-            } catch (_: ClassNotFoundException) {
-                // if we can't load the class we'll end up caching an empty list which is fine as that
-                // list, on lookup, won't be included in the schema because it's empty
-            }
-
-            transforms
-        }
 
         private fun getAndAdd(
                 type: String,
