@@ -4,13 +4,10 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.staticField
+import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.testing.common.internal.asContextEnv
-import net.corda.testing.internal.createTestSerializationEnv
-import net.corda.testing.internal.inVMExecutors
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.testThreadFactory
+import net.corda.testing.internal.*
 import org.apache.activemq.artemis.core.remoting.impl.invm.InVMConnector
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -35,32 +32,16 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
                 }.whenever(it).execute(any())
             }
         }
-
-        /** Do not call, instead use [SerializationEnvironmentRule] as a [org.junit.Rule]. */
-        fun <T> run(taskLabel: String, task: (SerializationEnvironment) -> T): T {
-            return SerializationEnvironmentRule().apply { init() }.runTask(task)
-        }
     }
 
     private lateinit var env: SerializationEnvironment
-    val serializationFactory get() = env.serializationFactory
+
+    val serializationFactory: SerializationFactory get() = env.serializationFactory
 
     override fun apply(base: Statement, description: Description): Statement {
-        init()
-        return object : Statement() {
-            override fun evaluate() = runTask { base.evaluate() }
-        }
-    }
-
-    private fun init() {
         env = createTestSerializationEnv()
-    }
-
-    private fun <T> runTask(task: (SerializationEnvironment) -> T): T {
-        try {
-            return env.asContextEnv(inheritable, task)
-        } finally {
-            inVMExecutors.remove(env)
+        return object : Statement() {
+            override fun evaluate() = env.asTestContextEnv(inheritable) { base.evaluate() }
         }
     }
 }

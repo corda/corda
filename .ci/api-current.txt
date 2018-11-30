@@ -6867,7 +6867,6 @@ public final class net.corda.testing.core.SerializationEnvironmentRule extends j
   public static final net.corda.testing.core.SerializationEnvironmentRule$Companion Companion
 ##
 public static final class net.corda.testing.core.SerializationEnvironmentRule$Companion extends java.lang.Object
-  public final T run(String, kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.SerializationEnvironment, ? extends T>)
 ##
 public final class net.corda.testing.core.TestConstants extends java.lang.Object
   @NotNull
