@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: partya
+  labels:
+      app: partya
+spec:
+  imagePullSecrets:
+    - name: "registrysecret"
+  containers:
+  - name: partya
+    image: haregistry.azurecr.io/r3-corda:3.2
+    volumeMounts:
+    - name: partya-configmap-volume
+      mountPath: /opt/corda/node.conf
+      subPath: node.conf
+    - name: partya-certificates-secret-volume
+      mountPath: /opt/corda/certificates
+  
+  volumes:
+  - name: partya-configmap-volume
+    configMap:
+      name: partya-configmap
+  - name: partya-certificates-secret-volume
+    secret:
+      secretName: partya-certificates-secret
+
+  restartPolicy: Never

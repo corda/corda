@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: notary-init
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: "registrysecret"
+      initContainers:
+      - name: notary-initial-registration
+        image: haregistry.azurecr.io/r3-corda:3.2
+        args: ["--initial-registration", "--network-root-truststore", "certificates/network-root-truststore.jks", "--network-root-truststore-password", "password"]
+        volumeMounts:
+        - name: notary-configmap-volume
+          mountPath: /opt/corda/node.conf
+          subPath: node.conf
+        - name: notary-empty-dir-certificates
+          mountPath: /opt/corda/certificates
+        - name: network-root-truststore-secret-volume
+          mountPath: /opt/corda/certificates/network-root-truststore.jks
+          subPath: network-root-truststore.jks
+
+      - name: notary-just-generate-node-info
+        image: haregistry.azurecr.io/r3-corda:3.2
+        command: [ "/bin/bash", "-c", "--" ]
+        args: ["java -jar corda.jar --just-generate-node-info && cp nodeInfo* notaryNodeInfo/notaryNodeInfo"]
+        volumeMounts:
+        - name: notary-configmap-volume
+          mountPath: /opt/corda/node.conf
+          subPath: node.conf
+        - name: notary-empty-dir-certificates
+          mountPath: /opt/corda/certificates
+        - name: notary-empty-dir-node-info
+          mountPath: /opt/corda/notaryNodeInfo
+      
+      - name: upload-notary-certificates-secret
+        image: haregistry.azurecr.io/kubectl
+        args: ["kubectl create secret generic notary-certificates-secret --from-file=/opt/corda/certificates"]
+        volumeMounts:
+        - name: notary-empty-dir-certificates
+          mountPath: /opt/corda/certificates
+      
+      containers:
+      - name: upload-notary-node-info-secret
+        image: haregistry.azurecr.io/kubectl
+        args: ["kubectl create secret generic notary-node-info-secret --from-file=/opt/corda/notaryNodeInfo"]
+        volumeMounts:
+        - name: notary-empty-dir-node-info
+          mountPath: /opt/corda/notaryNodeInfo
+
+      volumes:
+      - name: notary-configmap-volume
+        configMap:
+          name: notary-configmap
+      - name: notary-empty-dir-certificates
+        emptyDir: {}
+      - name: network-root-truststore-secret-volume
+        secret:
+          secretName: network-root-truststore-secret
+      - name: notary-empty-dir-node-info
+        emptyDir: {}
+
+      restartPolicy: Never
+
+  backoffLimit: 0

@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: artemis
+spec:
+  selector:
+    app: artemis
+  ports:
+  - name: messaging-server-address
+    protocol: TCP
+    port: 11005

@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: doorman-init
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: "registrysecret"
+      initContainers:
+      - name: doorman-root-keygen
+        image: {{ image }}
+        args: ["--config-file", "doorman-init.conf", "--mode", "ROOT_KEYGEN", "--trust-store-password", "password"]
+        volumeMounts:
+        - name: doorman-configmap-volume
+          mountPath: /opt/doorman/doorman-init.conf
+          subPath: doorman-init.conf
+        - name: doorman-certificates-empty-dir-volume
+          mountPath: /opt/doorman/certificates
+      
+      - name: doorman-ca-keygen
+        image: {{ image }}
+        args: ["--config-file", "doorman-init.conf", "--mode", "CA_KEYGEN"]
+        volumeMounts:
+        - name: doorman-configmap-volume
+          mountPath: /opt/doorman/doorman-init.conf
+          subPath: doorman-init.conf
+        - name: doorman-certificates-empty-dir-volume
+          mountPath: /opt/doorman/certificates
+      
+      - name: upload-network-root-truststore-secret
+        image: haregistry.azurecr.io/kubectl
+        args: ["kubectl create secret generic network-root-truststore-secret --from-file=/opt/doorman/certificates/distribute-nodes/network-root-truststore.jks"]
+        volumeMounts:
+        - name: doorman-certificates-empty-dir-volume
+          mountPath: /opt/doorman/certificates
+      
+      containers:
+      - name: upload-doorman-certificates-secret
+        image: haregistry.azurecr.io/kubectl
+        args: ["kubectl create secret generic doorman-certificates-secret --from-file=/opt/doorman/certificates"]
+        volumeMounts:
+        - name: doorman-certificates-empty-dir-volume
+          mountPath: /opt/doorman/certificates
+
+      volumes:
+      - name: doorman-configmap-volume
+        configMap:
+          name: doorman-configmap
+      - name: doorman-certificates-empty-dir-volume
+        emptyDir: {}
+
+      restartPolicy: Never
+
+  backoffLimit: 0

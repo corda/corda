@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: notary
+  labels:
+      app: notary
+spec:
+  imagePullSecrets:
+    - name: "registrysecret"
+  containers:
+  - name: notary
+    image: haregistry.azurecr.io/r3-corda:3.2
+    volumeMounts:
+    - name: notary-configmap-volume
+      mountPath: /opt/corda/node.conf
+      subPath: node.conf
+    - name: notary-certificates-secret-volume
+      mountPath: /opt/corda/certificates
+  
+  volumes:
+  - name: notary-configmap-volume
+    configMap:
+      name: notary-configmap
+  - name: notary-certificates-secret-volume
+    secret:
+      secretName: notary-certificates-secret
+
+  restartPolicy: Never

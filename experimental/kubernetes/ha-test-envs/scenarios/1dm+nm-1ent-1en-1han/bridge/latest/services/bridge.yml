@@ -1,0 +1,10 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: bridge
+spec:
+  selector:
+    app: bridge
+  ports:
+  - protocol: TCP
+    port: 12005

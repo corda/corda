@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: notary
+spec:
+  selector:
+    app: notary
+  ports:
+  - name: p2p
+    protocol: TCP
+    port: 10006

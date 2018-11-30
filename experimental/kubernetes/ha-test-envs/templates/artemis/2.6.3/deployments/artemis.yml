@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ name }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ name }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ name }}
+    spec:
+      initContainers:
+      - name: {{ name }}-pod-setup
+        image: {{ image }}
+        command: [ "/bin/sh", "-c", "--" ]
+        args: [ "cp -RL /opt/artemis-configmap/* /var/lib/artemis/etc" ]
+        volumeMounts:
+        - name: {{ name }}-config-empty-dir-volume
+          mountPath: /var/lib/artemis/etc
+        - name: {{ name }}-configmap-volume
+          mountPath: /opt/artemis-configmap
+
+      containers:
+      - name: {{ name }}
+        image: {{ image }}
+        volumeMounts:
+        - name: {{ name }}-config-empty-dir-volume
+          mountPath: /var/lib/artemis/etc
+
+      volumes:
+      - name: {{ name }}-config-empty-dir-volume
+        emptyDir: {}
+      - name: {{ name }}-configmap-volume
+        configMap:
+          name: {{ name }}-configmap

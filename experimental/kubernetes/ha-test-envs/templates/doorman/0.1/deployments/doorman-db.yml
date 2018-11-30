@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doorman-db
+spec:
+  selector:
+    matchLabels:
+      app: doorman-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: doorman-db
+    spec:
+      containers:
+      - name: doorman-db
+        image: oscarfonts/h2

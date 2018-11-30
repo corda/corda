@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: doorman
+  labels:
+      app: doorman
+spec:
+  imagePullSecrets:
+    - name: "registrysecret"
+  containers:
+  - name: doorman
+    image: {{ image }}
+    args: ["--config-file", "doorman.conf"]
+    volumeMounts:
+    - name: doorman-configmap-volume
+      mountPath: /opt/doorman/doorman.conf
+      subPath: doorman.conf
+    - name: doorman-certificates-secret-volume
+      mountPath: /opt/doorman/certificates
+  
+  volumes:
+  - name: doorman-configmap-volume
+    configMap:
+      name: doorman-configmap
+  - name: doorman-certificates-secret-volume
+    secret:
+      secretName: doorman-certificates-secret
+
+  restartPolicy: Never
