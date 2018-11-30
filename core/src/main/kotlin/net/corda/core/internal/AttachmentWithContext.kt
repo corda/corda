@@ -10,9 +10,7 @@ class AttachmentWithContext(
         val contractAttachment: ContractAttachment,
         val contract: ContractClassName,
         /** Required for verifying [WhitelistedByZoneAttachmentConstraint] and [HashAttachmentConstraint] migration to [SignatureAttachmentConstraint] */
-        val networkParameters: NetworkParameters,
-        /** Required for Hash constraints migration to Signature constraints */
-        val signedContractAttachment: ContractAttachment? = null
+        val networkParameters: NetworkParameters
 ) : Attachment by contractAttachment {
     init {
         require(contract in contractAttachment.allContracts) {

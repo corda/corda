@@ -246,7 +246,7 @@ private constructor(
         val unsignedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { !it.isSigned }.firstOrNull()
         val signedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { it.isSigned }.firstOrNull()
         return when {
-            (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!, signedAttachment)
+            (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
             (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
             (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
             else -> throw TransactionVerificationException.ContractConstraintRejection(id, contractClassName)
