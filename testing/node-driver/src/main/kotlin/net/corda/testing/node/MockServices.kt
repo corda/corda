@@ -9,7 +9,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.FlowProgressHandle
@@ -17,12 +16,10 @@ import net.corda.core.messaging.StateMachineTransactionMapping
 import net.corda.core.node.*
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
-import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
@@ -47,12 +44,11 @@ import java.time.Instant
 import java.util.*
 import java.util.function.Consumer
 import javax.persistence.EntityManager
-import kotlin.collections.HashMap
 
-/**
- * Returns a simple [InMemoryIdentityService] containing the supplied [identities].
- */
-fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+/** Returns a simple [IdentityService] containing the supplied [identities]. */
+fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentityService {
+    return InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+}
 
 /**
  * An implementation of [ServiceHub] that is designed for in-memory unit tests of contract validation logic. It has
