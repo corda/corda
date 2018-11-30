@@ -235,7 +235,7 @@ class NodeAttachmentService(
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
                     ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
-                            ?: emptyList())
+                            ?: emptyList(), attachment.version ?: UNKNOWN_VERSION)
                 } else {
                     it
                 }

@@ -202,6 +202,8 @@ private constructor(
      * Enforces the validity of the actual constraints.
      * * Constraints should be one of the valid supported ones.
      * * Constraints should propagate correctly if not marked otherwise.
+     *
+     * Returns set of contract classes that identify hash -> signature constraint switchover
      */
     private fun verifyConstraintsValidity(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>, transactionClassLoader: ClassLoader): MutableSet<ContractClassName> {
         // First check that the constraints are valid.
@@ -229,6 +231,7 @@ private constructor(
                         if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
+                        // Hash to signature constraints auto-migration
                         if (outputConstraint is SignatureAttachmentConstraint && inputConstraint is HashAttachmentConstraint)
                             hashToSignatureConstrainedContracts.add(contractClassName)
                     }

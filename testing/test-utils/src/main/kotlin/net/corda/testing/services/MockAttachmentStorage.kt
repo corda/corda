@@ -95,7 +95,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
                             val contractClassMetadata = ContractAttachmentMetadata(contractClassName, "1.0", signers.isNotEmpty())
                             _contractClasses[contractClassMetadata] = sha256
                         }
-                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers)
+                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, "1.0")
                     }
             _files[sha256] = Pair(attachment, bytes)
         }
