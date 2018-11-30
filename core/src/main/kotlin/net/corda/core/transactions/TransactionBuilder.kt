@@ -20,6 +20,7 @@ import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.warnOnce
+import java.lang.IllegalStateException
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -242,6 +243,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         if (inputsHashConstraints.isNotEmpty() && outputsHashConstraints.isNotEmpty()) {
             val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
             val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
+            // only switchover if we have both signed and unsigned attachments for the given contract class name
             if (attachmentIds.isNotEmpty() && attachmentIds.size == 2)  {
                 val attachmentsToUse = attachmentIds.map {
                     services.attachments.openAttachment(it)?.let { it as ContractAttachment }

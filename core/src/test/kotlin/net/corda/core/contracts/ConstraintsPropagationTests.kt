@@ -305,10 +305,9 @@ class ConstraintsPropagationTests {
 
         // attachment with context (both unsigned and signed attachments representing same contract)
         val attachmentWithContext = mock<AttachmentWithContext>()
-        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentUnsigned)
+        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentSigned)
         whenever(attachmentWithContext.contract).thenReturn(propagatingContractClassName)
         whenever(attachmentWithContext.networkParameters).thenReturn(netParams)
-        whenever(attachmentWithContext.signedContractAttachment).thenReturn(attachmentSigned)
 
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
@@ -320,7 +319,19 @@ class ConstraintsPropagationTests {
     @Test
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
+        // signed attachment (for signature constraint)
+        val attachmentSigned = mock<ContractAttachment>()
+        whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
+
+        // network parameters
+        val netParams = testNetworkParameters(minimumPlatformVersion = 4,
+                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
+
+        // attachment with context
         val attachment = mock<AttachmentWithContext>()
+        whenever(attachment.networkParameters).thenReturn(netParams)
+        whenever(attachment.contractAttachment).thenReturn(attachmentSigned)
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
 
         // Exhaustive positive check

@@ -81,24 +81,20 @@ interface AttachmentConstraint {
             input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
                 attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
-            // Transition from Hash to Signature constraint (via CZ whitelisting) requires
-            // signer(s) of signature-constrained JAR is same as signer(s) of registered package namespace
+            // Transition from Hash to Signature constraint requires
+            // signer(s) of signature-constrained output state is same as signer(s) of registered package namespace
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
-                val signedAttachment = attachment.signedContractAttachment
-                if (signedAttachment != null) {
-                    val packageOwnerPK = attachment.networkParameters.getOwnerOf(signedAttachment.allContracts)
-                    if (packageOwnerPK == null) {
-                        log.warn("Missing registered java package owner for ${signedAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
-                        return false
-                    }
-                    return true
-                }
-                else {
-                    log.warn("Missing signed attachment for ${attachment.contract} (input constraint = $input, output constraint = $output)")
+                val packageOwnerPK = attachment.networkParameters.getOwnerOf(attachment.contractAttachment.allContracts)
+                if (packageOwnerPK == null) {
+                    log.warn("Missing registered java package owner for ${attachment.contractAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
                     return false
                 }
+                else if (!packageOwnerPK.isFulfilledBy(output.key) ) {
+                    log.warn("Java package owner keys do not match signature constrained output state keys")
+                    return false
+                }
+                return true
             }
-
             else -> false
         }
     }
