@@ -9,16 +9,12 @@ import net.corda.client.rpc.internal.serialization.amqp.RpcClientObservableDeSer
 import net.corda.core.context.Trace
 import net.corda.core.internal.ThreadBox
 import net.corda.core.internal.toSynchronised
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
 import net.corda.node.internal.serialization.testutils.serializationContext
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.messaging.ObservableSubscription
 import net.corda.nodeapi.RPCApi
-import net.corda.serialization.internal.amqp.AccessOrderLinkedHashMap
-import net.corda.serialization.internal.amqp.DeserializationInput
-import net.corda.serialization.internal.amqp.SerializationOutput
-import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.*
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Notification
@@ -63,7 +59,7 @@ class RoundTripObservableSerializerTests {
     @Test
     fun roundTripTest1() {
         val serializationScheme = AMQPRoundTripRPCSerializationScheme(
-                serializationContext, emptySet(), AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>(128).toSynchronised())
+                serializationContext, emptySet(), AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
 
         // Fake up a message ID, needs to be used on both "sides". The server setting it in the subscriptionMap,
         // the client as a property of the deserializer which, in the actual RPC client, is pulled off of

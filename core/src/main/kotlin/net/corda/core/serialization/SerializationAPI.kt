@@ -151,6 +151,12 @@ interface SerializationContext {
      */
     val lenientCarpenterEnabled: Boolean
     /**
+     * If true the carpenter will fail if the binary to be deserialized contains more fields then the current object from the classpath.
+     *
+     * The default is false.
+     */
+    val preventDataLoss: Boolean
+    /**
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
@@ -170,6 +176,12 @@ interface SerializationContext {
      * @see lenientCarpenterEnabled
      */
     fun withLenientCarpenter(): SerializationContext
+
+    /**
+     * Return a new context based on this one but with a strict evolution.
+     * @see preventDataLoss
+     */
+    fun withPreventDataLoss(): SerializationContext
 
     /**
      * Helper method to return a new context based on this context with the deserialization class loader changed.

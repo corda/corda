@@ -1,23 +1,16 @@
 package net.corda.serialization.internal
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
-import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutionException
-
-const val attachmentsClassLoaderEnabledPropertyName = "attachments.class.loader.enabled"
 
 internal object NullEncodingWhitelist : EncodingWhitelist {
     override fun acceptEncoding(encoding: SerializationEncoding) = false
@@ -32,7 +25,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val useCase: SerializationContext.UseCase,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
-                                                              override val lenientCarpenterEnabled: Boolean = false) : SerializationContext {
+                                                              override val lenientCarpenterEnabled: Boolean = false,
+                                                              override val preventDataLoss: Boolean = false) : SerializationContext {
     /**
      * {@inheritDoc}
      */
@@ -49,6 +43,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     }
 
     override fun withLenientCarpenter(): SerializationContext = copy(lenientCarpenterEnabled = true)
+
+    override fun withPreventDataLoss(): SerializationContext = copy(preventDataLoss = true)
 
     override fun withClassLoader(classLoader: ClassLoader): SerializationContext {
         return copy(deserializationClassLoader = classLoader)
@@ -67,8 +63,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
 
 @KeepForDJVM
 open class SerializationFactoryImpl(
-    // TODO: This is read-mostly. Probably a faster implementation to be found.
-    private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
+        // TODO: This is read-mostly. Probably a faster implementation to be found.
+        private val schemes: MutableMap<Pair<CordaSerializationMagic, SerializationContext.UseCase>, SerializationScheme>
 ) : SerializationFactory() {
     @DeleteForDJVM
     constructor() : this(ConcurrentHashMap())
@@ -131,7 +127,6 @@ open class SerializationFactoryImpl(
 
     override fun hashCode(): Int = registeredSchemes.hashCode()
 }
-
 
 @KeepForDJVM
 interface SerializationScheme {
