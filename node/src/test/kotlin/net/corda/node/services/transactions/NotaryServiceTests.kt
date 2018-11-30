@@ -66,7 +66,6 @@ class NotaryServiceTests {
         assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
     }
 
-    @Ignore("Re-enable the test when parameters currentness checks are in place, ENT-2666.")
     @Test
     fun `should reject when parameters not current`() {
         val hash = SecureHash.randomSHA256()
@@ -75,8 +74,7 @@ class NotaryServiceTests {
         mockNet.runNetwork()
         val ex = assertFailsWith<NotaryException> { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: $hash, " +
-                "but current network parameters are: ${notaryServices.networkParametersStorage.currentHash}")
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation contains unknown parameters hash: $hash")
     }
 
     internal companion object {
