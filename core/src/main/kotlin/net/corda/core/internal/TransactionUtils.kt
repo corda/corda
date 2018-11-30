@@ -163,7 +163,10 @@ data class SerializedStateAndRef(val serializedState: SerializedBytes<Transactio
 fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     // Transactions created on Corda 3.x or below do not contain network parameters,
     // so no checking is done until the minimum platform version is at least 4.
-    if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
+    if (networkParametersHash == null) {
+        if (serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        else throw IllegalArgumentException("Transaction for notarisation doesn't contain network parameters hash.")
+    }
 
     // TODO: [ENT-2666] Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
     //       We will never end up in perfect synchronization with all the nodes. However, network parameters update process

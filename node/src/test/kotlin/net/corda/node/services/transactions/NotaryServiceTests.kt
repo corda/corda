@@ -22,6 +22,7 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
@@ -62,9 +63,10 @@ class NotaryServiceTests {
         mockNet.runNetwork()
         val ex = assertFailsWith<NotaryException> { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: null")
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
     }
 
+    @Ignore("Re-enable the test when parameters currentness checks are in place, ENT-2666.")
     @Test
     fun `should reject when parameters not current`() {
         val hash = SecureHash.randomSHA256()
