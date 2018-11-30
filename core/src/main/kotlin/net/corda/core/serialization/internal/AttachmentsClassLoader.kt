@@ -123,7 +123,7 @@ internal object AttachmentsClassLoaderBuilder {
         val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
 
         // Create a new serializationContext for the current Transaction.
-        val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withClassLoader(transactionClassLoader)
+        val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(transactionSerializationContext) {

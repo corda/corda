@@ -1,21 +1,36 @@
 package net.corda.tools.shell
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.type.TypeFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.internal.ToStringSerialize
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowProgressHandleImpl
+import net.corda.core.node.NodeInfo
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.ProgressTracker
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.DEV_ROOT_CA
+import org.crsh.command.InvocationContext
+import org.crsh.text.RenderPrintWriter
+import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -23,8 +38,75 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class InteractiveShellTest {
+    lateinit var inputObjectMapper: ObjectMapper
+    lateinit var cordaRpcOps: CordaRPCOps
+    lateinit var invocationContext: InvocationContext<Map<Any, Any>>
+    lateinit var printWriter: RenderPrintWriter
+
+    @Before
+    fun setup() {
+        inputObjectMapper = objectMapperWithClassLoader(InteractiveShell.getCordappsClassloader())
+        cordaRpcOps = mock()
+        invocationContext = mock()
+        printWriter = mock()
+    }
+
     companion object {
         private val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
+
+        private val ALICE = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public)
+        private val BOB = getTestPartyAndCertificate(BOB_NAME, generateKeyPair().public)
+        private val ALICE_NODE_INFO = NodeInfo(listOf(NetworkHostAndPort("localhost", 8080)), listOf(ALICE), 1, 1)
+        private val BOB_NODE_INFO = NodeInfo(listOf(NetworkHostAndPort("localhost", 80)), listOf(BOB), 1, 1)
+        private val NODE_INFO_JSON_PAYLOAD =
+                """
+                {
+                  "addresses" : [ "localhost:8080" ],
+                  "legalIdentitiesAndCerts" : [ "O=Alice Corp, L=Madrid, C=ES" ],
+                  "platformVersion" : 1,
+                  "serial" : 1
+                }
+                """.trimIndent()
+        private val NODE_INFO_YAML_PAYLOAD =
+                """
+                    addresses:
+                    - "localhost:8080"
+                    legalIdentitiesAndCerts:
+                    - "O=Alice Corp, L=Madrid, C=ES"
+                    platformVersion: 1
+                    serial: 1
+
+                """.trimIndent()
+        private val NETWORK_MAP_JSON_PAYLOAD =
+                """
+                    [ {
+                      "addresses" : [ "localhost:8080" ],
+                      "legalIdentitiesAndCerts" : [ "O=Alice Corp, L=Madrid, C=ES" ],
+                      "platformVersion" : 1,
+                      "serial" : 1
+                    }, {
+                      "addresses" : [ "localhost:80" ],
+                      "legalIdentitiesAndCerts" : [ "O=Bob Plc, L=Rome, C=IT" ],
+                      "platformVersion" : 1,
+                      "serial" : 1
+                    } ]
+                """.trimIndent()
+        private val NETWORK_MAP_YAML_PAYLOAD =
+                """
+                    - addresses:
+                      - "localhost:8080"
+                      legalIdentitiesAndCerts:
+                      - "O=Alice Corp, L=Madrid, C=ES"
+                      platformVersion: 1
+                      serial: 1
+                    - addresses:
+                      - "localhost:80"
+                      legalIdentitiesAndCerts:
+                      - "O=Bob Plc, L=Rome, C=IT"
+                      platformVersion: 1
+                      serial: 1
+
+                """.trimIndent()
     }
 
     @Suppress("UNUSED")
@@ -56,6 +138,14 @@ class InteractiveShellTest {
             FlowProgressHandleImpl(StateMachineRunId.createRandom(), future, Observable.just("Some string"))
         }, input, FlowA::class.java, om)
         assertEquals(expected, output!!, input)
+    }
+
+    private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
+        val objectMapper = ObjectMapper()
+        val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
+        objectMapper.typeFactory = tf
+
+        return objectMapper
     }
     
     @Test
@@ -124,6 +214,35 @@ class InteractiveShellTest {
 
     @Test
     fun party() = check("party: \"${megaCorp.name}\"", megaCorp.name.toString())
+
+    @Test
+    fun runRpcFromStringWithCustomTypeResult() {
+        val command = listOf("nodeInfo")
+        whenever(cordaRpcOps.nodeInfo()).thenReturn(ALICE_NODE_INFO)
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NODE_INFO_YAML_PAYLOAD)
+
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NODE_INFO_JSON_PAYLOAD)
+    }
+
+    @Test
+    fun runRpcFromStringWithCollectionsResult() {
+        val command = listOf("networkMapSnapshot")
+        whenever(cordaRpcOps.networkMapSnapshot()).thenReturn(listOf(ALICE_NODE_INFO, BOB_NODE_INFO))
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.YAML)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NETWORK_MAP_YAML_PAYLOAD)
+
+        InteractiveShell.setOutputFormat(InteractiveShell.OutputFormat.JSON)
+        InteractiveShell.runRPCFromString(command, printWriter, invocationContext, cordaRpcOps, inputObjectMapper)
+        verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD)
+    }
 
     @ToStringSerialize
     data class UserValue(@JsonProperty("label") val label: String) {
