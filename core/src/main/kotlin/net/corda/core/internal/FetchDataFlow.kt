@@ -10,10 +10,8 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.SerializationToken
-import net.corda.core.serialization.SerializeAsToken
-import net.corda.core.serialization.SerializeAsTokenContext
+import net.corda.core.node.NetworkParameters
+import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
@@ -64,7 +62,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     @CordaSerializable
     enum class DataType {
-        TRANSACTION, ATTACHMENT
+        TRANSACTION, ATTACHMENT, PARAMETERS
     }
 
     @Suspendable
@@ -139,7 +137,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 }
 
 /**
- * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
+ * Given a set of hashes either loads from from local storage or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
@@ -192,4 +190,38 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
+}
+
+/**
+ * Wrapper around [SignedDataWithCert<NetworkParameters>] that implements [NamedByHash] interface
+ */
+class SignedParametersByHash(val signedParameters: SignedDataWithCert<NetworkParameters>) : NamedByHash {
+    override val id: SecureHash = signedParameters.raw.hash
+}
+
+/**
+ * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
+ * network parameters are saved to local parameters storage automatically.
+ */
+class FetchNetworkParametersFlow(requests: Set<SecureHash>,
+                                 otherSide: FlowSession) : FetchDataFlow<SignedParametersByHash, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
+    override fun load(txid: SecureHash): SignedParametersByHash? {
+        return serviceHub.networkParametersStorage.lookupSigned(txid)?.let { SignedParametersByHash(it) }
+    }
+
+    override fun convert(wire: SignedDataWithCert<NetworkParameters>): SignedParametersByHash = SignedParametersByHash(wire)
+
+    // TODO check what with nullability of downloaded?
+    override fun maybeWriteToDisk(downloaded: List<SignedParametersByHash>) {
+        for (parameters in downloaded) {
+            with(serviceHub.networkParametersStorage) {
+                if (!hasParameters(parameters.id)) {
+                    // This will perform the signature check too and throws with SignatureVerificationException
+                    saveParameters(parameters.signedParameters)
+                } else {
+                    logger.debug("Network parameters ${parameters.id} already exists in storage, skipping.")
+                }
+            }
+        }
+    }
 }

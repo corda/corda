@@ -30,6 +30,12 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
         setCurrentParametersUnverified(currentSignedParameters.verifiedNetworkMapCert(trustRoot))
     }
 
+    override fun lookupSigned(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {
+        throw UnsupportedOperationException()
+    }
+
+    override fun hasParameters(hash: SecureHash): Boolean = hash in hashToParametersMap
+
     override val currentHash: SecureHash
         get() {
             return withTestSerializationEnvIfNotSet {

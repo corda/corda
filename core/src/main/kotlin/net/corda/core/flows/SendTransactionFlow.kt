@@ -42,7 +42,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
 
     @Suspendable
     override fun call(): Void? {
-        // The first payload will be the transaction data, subsequent payload will be the transaction/attachment data.
+        // The first payload will be the transaction data, subsequent payload will be the transaction/attachment/network parameters data.
         var payload = payload
 
         // Depending on who called this flow, the type of the initial payload is different.
@@ -92,6 +92,10 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                 FetchDataFlow.DataType.ATTACHMENT -> dataRequest.hashes.map {
                     serviceHub.attachments.openAttachment(it)?.open()?.readFully()
                             ?: throw FetchDataFlow.HashNotFound(it)
+                }
+                FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
+                    serviceHub.networkParametersStorage.lookup(it)
+                            ?: throw FetchDataFlow.HashNotFound(it) //TODO it should be error of type NoNetworkParameters with hash or sth like that
                 }
             }
         }

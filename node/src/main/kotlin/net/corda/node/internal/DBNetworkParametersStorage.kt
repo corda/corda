@@ -20,6 +20,7 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.crypto.X509CertificateFactory
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
@@ -93,11 +94,15 @@ class DBNetworkParametersStorage(
         return database.transaction { hashToParameters[hash]?.raw?.deserialize() } ?: tryDownloadUnknownParameters(hash)
     }
 
+    override fun lookupSigned(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {
+        return database.transaction { hashToParameters[hash] }
+    }
+    override fun hasParameters(hash: SecureHash): Boolean = hash in hashToParameters
     override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
 
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }
-        val networkParameters = signedNetworkParameters.verified()
+        val networkParameters = signedNetworkParameters.verifiedNetworkMapCert(trustRoot)
         val hash = signedNetworkParameters.raw.hash
         log.trace { "Parameters to save $networkParameters with hash $hash" }
         database.transaction {
@@ -105,7 +110,7 @@ class DBNetworkParametersStorage(
         }
     }
 
-    // TODO For the future we could get them also as signed (by network operator) attachments on transactions.
+    // TODO Revisit this approach
     private fun tryDownloadUnknownParameters(parametersHash: SecureHash): NetworkParameters? {
         return if (networkMapClient != null) {
             try {
