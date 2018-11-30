@@ -8,6 +8,7 @@ import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.NotSerializableWithReasonException
 import net.corda.serialization.internal.model.EnumTransforms
+import net.corda.serialization.internal.model.InvalidEnumTransformsException
 import net.corda.serialization.internal.model.LocalTypeInformation
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.codec.DescribedTypeConstructor
@@ -194,9 +195,18 @@ typealias TransformsMap =  EnumMap<TransformTypes, MutableList<Transform>>
 fun TransformsMap.enumTransforms(): EnumTransforms {
     val defaultTransforms = this[TransformTypes.EnumDefault]?.toList() ?: emptyList()
     val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
-    val renameTransforms = this[TransformTypes.Rename]?.toList() ?: emptyList()
-    val renames = renameTransforms.associate { transform -> (transform as RenameSchemaTransform).to to transform.from }
+    val renameTransforms = this[TransformTypes.Rename]?.asSequence()?.filterIsInstance<RenameSchemaTransform>()?.toList()
+            ?: emptyList()
 
+    // We have to do this validation here, because duplicate keys are lost in EnumTransforms.
+    renameTransforms.groupingBy { it.from }.eachCount().forEach { from, count ->
+        if (count > 1) throw InvalidEnumTransformsException("There are multiple transformations from $from, which is not allowed")
+    }
+    renameTransforms.groupingBy { it.to }.eachCount().forEach { to, count ->
+        if (count > 1) throw InvalidEnumTransformsException("There are multiple transformations to $to, which is not allowed")
+    }
+
+    val renames = renameTransforms.associate { transform -> transform.to to transform.from }
     return EnumTransforms(defaults, renames, this)
 }
 
@@ -213,28 +223,27 @@ object TransformsAnnotationProcessor {
         // We only have transforms for enums at present.
         if (!type.isEnum) return result
 
-        val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
-
         supportedTransforms.forEach { supportedTransform ->
             val annotationContainer = type.getAnnotation(supportedTransform.type) ?: return@forEach
             result.processAnnotations(
                     type,
                     supportedTransform.enum,
-                    supportedTransform.getAnnotations(annotationContainer),
-                    constants)
+                    supportedTransform.getAnnotations(annotationContainer))
+        }
+
+        val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
+        try {
+            result.enumTransforms().validate(constants)
+        } catch (e: InvalidEnumTransformsException) {
+            throw NotSerializableDetailedException(type.name, e.message!!)
         }
 
         return result
     }
 
-    private fun TransformsMap.processAnnotations(type: Class<*>, transformType: TransformTypes, annotations: List<Annotation>, constants: Map<String, Int>) {
+    private fun TransformsMap.processAnnotations(type: Class<*>, transformType: TransformTypes, annotations: List<Annotation>) {
         annotations.forEach { annotation ->
             addTransform(type, transformType, transformType.build(annotation))
-        }
-        try {
-            transformType.validate(this[transformType] ?: emptyList(), constants)
-        } catch (e: NotSerializableWithReasonException) {
-            throw NotSerializableDetailedException(type.name, e.message!!)
         }
     }
 

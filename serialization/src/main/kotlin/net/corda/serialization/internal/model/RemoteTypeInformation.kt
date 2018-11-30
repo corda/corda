@@ -1,9 +1,5 @@
 package net.corda.serialization.internal.model
 
-import net.corda.serialization.internal.amqp.TransformTypes
-import net.corda.serialization.internal.amqp.TransformsMap
-import java.util.*
-
 typealias TypeDescriptor = String
 
 /**
@@ -186,14 +182,3 @@ private data class RemoteTypeInformationPrettyPrinter(private val simplifyClassN
                     ": " + prettyPrint(value.type)
 }
 
-data class EnumTransforms(
-        val defaults: Map<String, String>,
-        val renames: Map<String, String>,
-        val source: TransformsMap) {
-
-    val size: Int get() = defaults.size + renames.size
-
-    companion object {
-        val empty = EnumTransforms(emptyMap(), emptyMap(), TransformsMap(TransformTypes::class.java))
-    }
-}

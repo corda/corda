@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
 import kotlin.collections.LinkedHashMap
@@ -130,12 +131,23 @@ class AMQPRemoteTypeModel {
                     RemoteTypeInformation.Unparameterised(
                             typeDescriptor,
                             identifier)
-                } else RemoteTypeInformation.AnEnum(
-                        typeDescriptor,
-                        identifier,
-                        choices.map { it.name },
-                        enumTransformsLookup[identifier] ?: EnumTransforms.empty)
+                } else interpretEnum(identifier)
+
             else -> throw NotSerializableException("Cannot interpret restricted type $this")
+        }
+
+        private fun RestrictedType.interpretEnum(identifier: TypeIdentifier): RemoteTypeInformation.AnEnum {
+            val constants = choices.asSequence().mapIndexed { index, choice -> choice.name to index }.toMap(LinkedHashMap())
+            val transforms = try {
+                (enumTransformsLookup[identifier] ?: EnumTransforms.empty).apply { validate(constants) }
+            } catch (e: InvalidEnumTransformsException) {
+                throw NotSerializableDetailedException(name, e.message!!)
+            }
+            return RemoteTypeInformation.AnEnum(
+                    typeDescriptor,
+                    identifier,
+                    constants.keys.toList(),
+                    transforms)
         }
 
         /**

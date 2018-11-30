@@ -516,27 +516,6 @@ class EnumEvolvabilityTests {
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
-    //
-    // In this test, like the above, we're looking to ensure repeated renames are rejected as
-    // unserailzble. However, in this case, it isn't a struct cycle, rather one element
-    // is renamed to match what a different element used to be called
-    //
-    @CordaSerializationTransformRenames(
-            CordaSerializationTransformRename(from = "B", to = "C"),
-            CordaSerializationTransformRename(from = "C", to = "D")
-    )
-    enum class RejectCyclicRenameAlt { A, C, D }
-
-    @Test
-    fun rejectCyclicRenameAlt() {
-        data class C(val e: RejectCyclicRenameAlt)
-
-        val sf = testDefaultFactory()
-        assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectCyclicRenameAlt.A))
-        }.isInstanceOf(NotSerializableException::class.java)
-    }
-
     @CordaSerializationTransformRenames(
             CordaSerializationTransformRename("G", "C"),
             CordaSerializationTransformRename("F", "G"),
