@@ -212,6 +212,7 @@ object DefaultKryoCustomizer {
             kryo.writeClassAndObject(output, obj.additionalContracts)
             output.writeString(obj.uploader)
             kryo.writeClassAndObject(output, obj.signerKeys)
+            output.writeString(obj.version)
         }
 
         @Suppress("UNCHECKED_CAST")
