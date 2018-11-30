@@ -166,6 +166,8 @@ fun FlowLogic<*>.checkParameterHash(networkParametersHash: SecureHash?) {
     if (networkParametersHash == null) {
         if (serviceHub.networkParameters.minimumPlatformVersion < 4) return
         else throw IllegalArgumentException("Transaction for notarisation doesn't contain network parameters hash.")
+    } else {
+        serviceHub.networkParametersStorage.lookup(networkParametersHash) ?: throw IllegalArgumentException("Transaction for notarisation contains unknown parameters hash: $networkParametersHash")
     }
 
     // TODO: [ENT-2666] Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
