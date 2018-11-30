@@ -175,7 +175,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = resolvedInputs.groupBy { it.state.contract }
 
         val inputStateContractClassToVersions: Map<ContractClassName, List<Version>> =
-            inputStateContractClassToStateRefs.mapValues { it.value.lazyMapped { stateRef, _ -> getContractVersion(resolveContractAttachment(stateRef.ref)) } }
+            inputStateContractClassToStateRefs.mapValues { it.value.lazyMapped { stateRef, _ -> getContractVersion(resolveContractAttachment(stateRef.ref)) }.map { it } }
+            //inputStateContractClassToStateRefs.mapValues { it.value.map{ getContractVersion(resolveContractAttachment(it.ref)) } }
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
