@@ -35,7 +35,13 @@ class DBCheckpointStorage : CheckpointStorage {
             @Type(type = "corda-blob")
             @Column(name = "checkpoint_value", nullable = false)
             var checkpoint: ByteArray = EMPTY_BYTE_ARRAY
-    )
+            
+    ){
+        override fun toString(): String{
+		    val DBCheckpoint2Str = "{checkpointId = ${checkpointId}, checkpointSize = ${checkpoint.size}}"
+		    return DBCheckpoint2Str
+	    }
+    }
 
     override fun addCheckpoint(id: StateMachineRunId, checkpoint: SerializedBytes<Checkpoint>) {
         currentDBSession().save(DBCheckpoint().apply {
