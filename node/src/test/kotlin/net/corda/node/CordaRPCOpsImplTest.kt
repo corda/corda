@@ -393,7 +393,7 @@ class CordaRPCOpsImplTest {
     }
 
     @Test
-    fun `kill a flow releases soft lock`() {
+    fun `killing a flow releases soft lock`() {
         withPermissions(all()) {
             val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
             val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
