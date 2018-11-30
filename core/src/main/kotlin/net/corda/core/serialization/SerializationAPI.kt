@@ -151,7 +151,7 @@ interface SerializationContext {
      */
     val lenientCarpenterEnabled: Boolean
     /**
-     * If true the carpenter will fail if the binary to be deserialized contains more fields then the current object from the classpath.
+     * If true the serialization evolver will fail if the binary to be deserialized contains more fields then the current object from the classpath.
      *
      * The default is false.
      */
