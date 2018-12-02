@@ -126,7 +126,7 @@ open class NodeStartup : NodeStartupLogging {
 
         // Step 2. We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
-        enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
+        isNodeRunningAt(cmdLineOptions.baseDirectory)
 
         // Step 3. Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
@@ -253,7 +253,7 @@ open class NodeStartup : NodeStartupLogging {
         }
     }
 
-    internal fun enforceSingleNodeIsRunning(baseDirectory: Path) {
+    fun isNodeRunningAt(baseDirectory: Path): Boolean {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
@@ -284,6 +284,7 @@ open class NodeStartup : NodeStartupLogging {
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
             System.exit(1)
         }
+        return true
     }
 
     private fun lookupMachineNameAndMaybeWarn(): String {
