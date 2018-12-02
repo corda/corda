@@ -6,19 +6,16 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.http.HttpApi
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
-import net.corda.testing.node.internal.internalDriver
 import org.assertj.core.api.Assertions.*
 import org.json.simple.JSONObject
 import org.junit.Test
@@ -104,10 +101,11 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        driver(DriverParameters(jmxPolicy = JmxPolicy(7006), startNodesInProcess = false, notarySpecs = emptyList())) {
-            startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
+        val portAllocation = incrementalPortAllocation(7006)
+        driver(DriverParameters(jmxPolicy = JmxPolicy(portAllocation.nextPort()), startNodesInProcess = false, notarySpecs = emptyList())) {
+            val node = startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             // request access to some JMX metrics via Jolokia HTTP/JSON
-            val api = HttpApi.fromHostAndPort(NetworkHostAndPort("localhost", 7006), "/jolokia/")
+            val api = HttpApi.fromHostAndPort(node.jmxAddress!!, "/jolokia/")
             val versionAsJson = api.getJson<JSONObject>("/jolokia/version/")
             assertThat(versionAsJson.getValue("status")).isEqualTo(200)
         }
