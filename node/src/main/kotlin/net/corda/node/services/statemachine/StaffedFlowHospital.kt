@@ -96,11 +96,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val (event, backOffMilliseconds: Long) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
+            val backOffForChronicalConditions = medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
+                if (it == 0) {
+                    0L
+                } else {
+                    (100 * 1.5.pow(it)).toLong()
+                }
+            }
+
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
 
             val (outcome, event) = when (report.diagnosis) {
                 Diagnosis.DISCHARGE -> {
-                    log.info("Flow ${flowFiber.id} error discharged from hospital by ${report.by}")
+                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay $backOffForChronicalConditions ms) by ${report.by}")
                     Pair(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
@@ -112,14 +120,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                     // None of the staff care for these errors so we let them propagate
                     log.info("Flow ${flowFiber.id} error allowed to propagate")
                     Pair(Outcome.UNTREATABLE, Event.StartErrorPropagation)
-                }
-            }
-
-            val backOffForChronicalConditions = medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
-                if (it == 0) {
-                    0L
-                } else {
-                    (100 * 1.5.pow(it)).toLong()
                 }
             }
 
