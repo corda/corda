@@ -3,10 +3,7 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformRename
-import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.trace
 import net.corda.serialization.internal.NotSerializableDetailedException
-import net.corda.serialization.internal.NotSerializableWithReasonException
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.InvalidEnumTransformsException
 import net.corda.serialization.internal.model.LocalTypeInformation
@@ -192,24 +189,6 @@ class RenameSchemaTransform(val from: String, val to: String) : Transform() {
 
 typealias TransformsMap =  EnumMap<TransformTypes, MutableList<Transform>>
 
-fun TransformsMap.enumTransforms(): EnumTransforms {
-    val defaultTransforms = this[TransformTypes.EnumDefault]?.toList() ?: emptyList()
-    val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
-    val renameTransforms = this[TransformTypes.Rename]?.asSequence()?.filterIsInstance<RenameSchemaTransform>()?.toList()
-            ?: emptyList()
-
-    // We have to do this validation here, because duplicate keys are lost in EnumTransforms.
-    renameTransforms.groupingBy { it.from }.eachCount().forEach { from, count ->
-        if (count > 1) throw InvalidEnumTransformsException("There are multiple transformations from $from, which is not allowed")
-    }
-    renameTransforms.groupingBy { it.to }.eachCount().forEach { to, count ->
-        if (count > 1) throw InvalidEnumTransformsException("There are multiple transformations to $to, which is not allowed")
-    }
-
-    val renames = renameTransforms.associate { transform -> transform.to to transform.from }
-    return EnumTransforms(defaults, renames, this)
-}
-
 /**
  * Processes the annotations applied to classes intended for serialisation, to get the transforms that can be applied to them.
  */
@@ -233,7 +212,7 @@ object TransformsAnnotationProcessor {
 
         val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
         try {
-            result.enumTransforms().validate(constants)
+            EnumTransforms.build(result).validate(constants)
         } catch (e: InvalidEnumTransformsException) {
             throw NotSerializableDetailedException(type.name, e.message!!)
         }

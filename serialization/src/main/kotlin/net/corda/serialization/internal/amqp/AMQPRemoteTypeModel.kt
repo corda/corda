@@ -31,7 +31,7 @@ class AMQPRemoteTypeModel {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
         val byTypeDescriptor = schema.types.associateBy { it.typeDescriptor }
         val enumTransformsLookup = transforms.types.asSequence().map { (name, transformSet) ->
-            name.typeIdentifier to transformSet.enumTransforms()
+            name.typeIdentifier to EnumTransforms.build(transformSet)
         }.toMap()
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
