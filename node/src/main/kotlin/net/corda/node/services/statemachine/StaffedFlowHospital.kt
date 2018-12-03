@@ -14,6 +14,7 @@ import rx.subjects.PublishSubject
 import java.sql.SQLException
 import java.time.Instant
 import java.util.*
+import kotlin.math.pow
 
 /**
  * This hospital consults "staff" to see if they can automatically diagnose and treat flows.
@@ -31,6 +32,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     })
     private val secureRandom = newSecureRandom()
 
+    private val delayedDischargeTimer = Timer("FlowHospitalDelayedDischargeTimer")
     /**
      * The node was unable to initiate the [InitialSessionMessage] from [sender].
      */
@@ -91,7 +93,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val time = Instant.now()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
 
-        val event = mutex.locked {
+        val (event, backOffMilliseconds: Long) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
@@ -113,14 +115,30 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 }
             }
 
+            val backOffForChronicalConditions = medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
+                if (it == 0) {
+                    0L
+                } else {
+                    (100 * 1.5.pow(it)).toLong()
+                }
+            }
+
             val record = MedicalRecord.Flow(time, flowFiber.id, currentState.checkpoint.numberOfSuspends, errors, report.by, outcome)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
-            event
+            Pair(event, backOffForChronicalConditions)
         }
 
         if (event != null) {
-            flowFiber.scheduleEvent(event)
+            if (backOffMilliseconds == 0L) {
+                flowFiber.scheduleEvent(event)
+            } else {
+                delayedDischargeTimer.schedule(object : TimerTask() {
+                    override fun run() {
+                        flowFiber.scheduleEvent(event)
+                    }
+                }, backOffMilliseconds)
+            }
         }
     }
 
@@ -165,8 +183,12 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()
 
         fun notDischargedForTheSameThingMoreThan(max: Int, by: Staff, currentState: StateMachineState): Boolean {
+            return timesDischargedForTheSameThing(by, currentState) <= max
+        }
+
+        fun timesDischargedForTheSameThing(by: Staff, currentState: StateMachineState): Int {
             val lastAdmittanceSuspendCount = currentState.checkpoint.numberOfSuspends
-            return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount } <= max
+            return records.count { it.outcome == Outcome.DISCHARGE && by in it.by && it.suspendCount == lastAdmittanceSuspendCount }
         }
 
         override fun toString(): String = "${this.javaClass.simpleName}(records = $records)"
