@@ -345,10 +345,10 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
         // TODO sollecitom this does not work
-        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, SampleCashSchemaV2.PersistentCashState::quantity.name)
+//        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, CashSchemaV1.PersistentCashState::pennies.name)
         // TODO sollecitom these do not work either, fix them
-//        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, SampleCashSchemaV2.PersistentCashState::stateRef.name)
-//        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
+        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, CashSchemaV1.PersistentCashState::stateRef.name)
+//        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
          // TODO sollecitom this works, write a test for it
 //        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
 
