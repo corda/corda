@@ -533,7 +533,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     rootEntities.map { it.value }
                 else
                     aggregateExpressions
-        // TODO sollecitom this results in cross join, and it doesn't work with SORT
+        // TODO sollecitom this results in cross join, and it doesn't work with SORT (cartesian product of table entries, so sort is incorrect)
         criteriaQuery.multiselect(selections)
         val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
