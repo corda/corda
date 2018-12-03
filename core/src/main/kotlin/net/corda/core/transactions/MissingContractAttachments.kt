@@ -13,6 +13,6 @@ import net.corda.core.contracts.Version
  */
 @CordaSerializable
 @KeepForDJVM
-class MissingContractAttachments(val states: List<TransactionState<ContractState>>, minimumRequiredContractClassVersion: Version? = null)
-    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}, minimum required contract class version ${minimumRequiredContractClassVersion ?: "UNKNOWN"}. " +
+class MissingContractAttachments @JvmOverloads constructor (val states: List<TransactionState<ContractState>>, minimumRequiredContractClassVersion: Version? = null)
+    : FlowException("Cannot find contract attachments for ${states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}. " +
         "See https://docs.corda.net/api-contract-constraints.html#debugging")

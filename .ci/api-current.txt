@@ -4946,6 +4946,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>)
+  public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, Integer)
   @NotNull
   public final java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>> getStates()
 ##
