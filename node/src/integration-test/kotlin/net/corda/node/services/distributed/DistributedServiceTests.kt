@@ -27,6 +27,8 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assume
+import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
@@ -86,6 +88,11 @@ class DistributedServiceTests : IntegrationTest() {
 
             testBlock()
         }
+    }
+
+    @Before
+    fun beforeMethod() {
+        Assume.assumeFalse(isRemoteDatabaseMode()) // Enterprise only - disable tests, as they are flaky where running against remote database, see CORDA-907
     }
 
     // TODO This should be in RaftNotaryServiceTests

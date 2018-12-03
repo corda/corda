@@ -8,11 +8,12 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.rules.ExternalResource
 
+private const val DATABASE_PROVIDER = "custom.databaseProvider"
+private const val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
+
 sealed class DatabaseRule(val databaseSchemas: List<String>, val dbScriptPrefix: String) : ExternalResource() {
 
-    private val DATABASE_PROVIDER = "custom.databaseProvider"
     private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
-    private val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
     private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")
 
     public override fun before() {
@@ -42,9 +43,7 @@ abstract class IntegrationTest {
     // dataSource.password = [PASSWORD]
     //    where [PASSWORD] must be the same for all ${custom.nodeOrganizationName}
     companion object {
-        private val DATABASE_PROVIDER = "custom.databaseProvider"
         private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
-        private val TEST_DB_SCRIPT_DIR = "test.db.script.dir"
         private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")
         var databaseSchemas = mutableListOf<String>()
 
