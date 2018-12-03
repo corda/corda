@@ -5976,12 +5976,12 @@ public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   public <init>()
   public <init>(boolean, net.corda.testing.driver.PortAllocation)
   public final boolean component1()
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation component2()
   @NotNull
   public final net.corda.testing.driver.JmxPolicy copy(boolean, net.corda.testing.driver.PortAllocation)
   public boolean equals(Object)
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation getJmxHttpServerPortAllocation()
   public final boolean getStartJmxHttpServer()
   public int hashCode()
