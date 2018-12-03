@@ -210,15 +210,6 @@ object TransformsAnnotationProcessor {
                     supportedTransform.getAnnotations(annotationContainer))
         }
 
-        /*
-        val constants = type.enumConstants.mapIndexed { index, constant -> constant.toString() to index }.toMap()
-        try {
-            EnumTransforms.build(result).validate(constants)
-        } catch (e: InvalidEnumTransformsException) {
-            throw NotSerializableDetailedException(type.name, e.message!!)
-        }
-        */
-
         return result
     }
 
