@@ -119,7 +119,7 @@ class ValidatingNotaryServiceTests {
         val future = runNotaryClient(stx)
         val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: null")
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
     }
 
     @Test
