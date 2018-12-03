@@ -13,6 +13,7 @@ import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
 import java.sql.SQLException
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.math.pow
@@ -97,37 +98,30 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val (event, backOffForChronicalConditions) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
-            val backOffForChronicalConditions = medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
-                if (it == 0) {
-                    0.seconds
-                } else {
-                    maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
-                }
-            }
-
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
 
-            val (outcome, event) = when (report.diagnosis) {
+            val (outcome, event, backOffForChronicCondition) = when (report.diagnosis) {
                 Diagnosis.DISCHARGE -> {
-                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay ${backOffForChronicalConditions.seconds}s) by ${report.by}")
-                    Pair(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint)
+                    val backOff = calculateBackOffForChronicCondition(report, medicalHistory, currentState)
+                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay ${backOff.seconds}s) by ${report.by}")
+                    Triple(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint, backOff)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
                     log.info("Flow ${flowFiber.id} error kept for overnight observation by ${report.by}")
                     // We don't schedule a next event for the flow - it will automatically retry from its checkpoint on node restart
-                    Pair(Outcome.OVERNIGHT_OBSERVATION, null)
+                    Triple(Outcome.OVERNIGHT_OBSERVATION, null, 0.seconds)
                 }
                 Diagnosis.NOT_MY_SPECIALTY -> {
                     // None of the staff care for these errors so we let them propagate
                     log.info("Flow ${flowFiber.id} error allowed to propagate")
-                    Pair(Outcome.UNTREATABLE, Event.StartErrorPropagation)
+                    Triple(Outcome.UNTREATABLE, Event.StartErrorPropagation, 0.seconds)
                 }
             }
 
             val record = MedicalRecord.Flow(time, flowFiber.id, currentState.checkpoint.numberOfSuspends, errors, report.by, outcome)
             medicalHistory.records += record
             recordsPublisher.onNext(record)
-            Pair(event, backOffForChronicalConditions)
+            Pair(event, backOffForChronicCondition)
         }
 
         if (event != null) {
@@ -141,6 +135,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 }, backOffForChronicalConditions.toMillis())
             }
         }
+    }
+
+    private fun calculateBackOffForChronicCondition(report: ConsultationReport, medicalHistory: FlowMedicalHistory, currentState: StateMachineState): Duration {
+        if (report.by.any { it is Chronic }) {
+            return medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
+                if (it == 0) {
+                    0.seconds
+                } else {
+                    maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
+                }
+            }
+        }
+        return 0.seconds
     }
 
     private fun consultStaff(flowFiber: FlowFiber,
@@ -237,14 +244,17 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         NOT_MY_SPECIALTY
     }
 
+
     interface Staff {
         fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis
     }
 
+    interface Chronic
+
     /**
      * SQL Deadlock detection.
      */
-    object DeadlockNurse : Staff {
+    object DeadlockNurse : Staff, Chronic {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             return if (mentionsDeadlock(newError)) {
                 Diagnosis.DISCHARGE
