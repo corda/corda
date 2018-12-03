@@ -8,6 +8,7 @@ import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.messaging.DataFeed
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.seconds
 import net.corda.node.services.FinalityHandler
 import org.hibernate.exception.ConstraintViolationException
 import rx.subjects.PublishSubject
@@ -93,14 +94,14 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val time = Instant.now()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
 
-        val (event, backOffMilliseconds: Long) = mutex.locked {
+        val (event, backOffForChronicalConditions) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
             val backOffForChronicalConditions = medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
                 if (it == 0) {
-                    0L
+                    0.seconds
                 } else {
-                    maxOf(10L, ((1 + Math.random()) * (100 * 1.5.pow(it)) / 2).toLong())
+                    maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
                 }
             }
 
@@ -108,7 +109,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
             val (outcome, event) = when (report.diagnosis) {
                 Diagnosis.DISCHARGE -> {
-                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay $backOffForChronicalConditions ms) by ${report.by}")
+                    log.info("Flow ${flowFiber.id} error discharged from hospital (delay ${backOffForChronicalConditions.seconds}s) by ${report.by}")
                     Pair(Outcome.DISCHARGE, Event.RetryFlowFromSafePoint)
                 }
                 Diagnosis.OVERNIGHT_OBSERVATION -> {
@@ -130,14 +131,14 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         if (event != null) {
-            if (backOffMilliseconds == 0L) {
+            if (backOffForChronicalConditions.isZero) {
                 flowFiber.scheduleEvent(event)
             } else {
                 delayedDischargeTimer.schedule(object : TimerTask() {
                     override fun run() {
                         flowFiber.scheduleEvent(event)
                     }
-                }, backOffMilliseconds)
+                }, backOffForChronicalConditions.toMillis())
             }
         }
     }
