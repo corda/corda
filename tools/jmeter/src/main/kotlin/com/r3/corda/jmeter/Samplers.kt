@@ -21,6 +21,7 @@ abstract class AbstractSampler : BaseFlowSampler() {
     lateinit var notaryIdentity: Party
 
     companion object JMeterProperties {
+        @JvmStatic
         val notary = Argument("notaryName", "", "<meta>", "The X500 name of the notary.")
     }
 

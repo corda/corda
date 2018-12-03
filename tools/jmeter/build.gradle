@@ -47,7 +47,7 @@ dependencies {
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_native', version: jmVersion
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_tcp', version: jmVersion
     runtime group: 'org.apache.jmeter', name: 'ApacheJMeter_config', version: jmVersion
-    runtime group: 'org.apache.jmeter', name: 'ApacheJMeter', version: jmVersion
+    compile group: 'org.apache.jmeter', name: 'ApacheJMeter', version: jmVersion
     runtime group: 'org.apache.jmeter', name: 'jorphan', version: jmVersion
     //For Azure SQL and SQL Server support in persistence
     runtime group: 'com.microsoft.sqlserver', name: 'mssql-jdbc', version: '6.2.1.jre8'

@@ -3,7 +3,7 @@ package com.r3.corda.jmeter
 import com.google.common.net.HostAndPort
 import net.corda.core.internal.div
 import org.apache.commons.io.FileUtils
-import org.apache.jmeter.JMeter
+import org.apache.jmeter.NewDriver
 import org.slf4j.LoggerFactory
 import picocli.CommandLine
 import java.io.File
@@ -22,11 +22,9 @@ import kotlin.streams.asSequence
 class Launcher {
     companion object {
         private val logger = LoggerFactory.getLogger(this::class.java)
-
         @JvmStatic
         fun main(args: Array<String>) {
             logger.info("Launcher called with ${args.toList()}")
-            val jMeter = JMeter()
             val cmdLine = LauncherCommandLine()
             CommandLine.populateCommand(cmdLine, *args)
 
@@ -45,7 +43,7 @@ class Launcher {
                 }
                 logger.info("search_paths = $searchPath")
                 System.setProperty("search_paths", searchPath)
-                jMeter.start(jMeterArgs.toTypedArray())
+                NewDriver.main(jMeterArgs.toTypedArray())
             } catch (e: Throwable) {
                 println(e.message)
                 printHelp(cmdLine)
@@ -149,7 +147,7 @@ class Launcher {
                 System.setProperty("jmeter.home", tmpDirPath.toString())
                 val tmpPropertyFile = (tmpDirPath / "jmeter.properties").toFile()
                 tmpPropertyFile.writeText("")
-                JMeter().start(arrayOf("--?", "-p", tmpPropertyFile.absolutePath))
+                NewDriver.main(arrayOf("--?", "-p", tmpPropertyFile.absolutePath))
             } finally {
                 FileUtils.deleteDirectory(tmpDir)
             }
