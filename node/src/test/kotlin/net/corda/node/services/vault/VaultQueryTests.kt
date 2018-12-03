@@ -347,8 +347,8 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber.name)
 //        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
         // TODO sollecitom these work, write a test for it
-//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
 //        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::stateRef.name)
+//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
 
         val sort = Sort.Direction.ASC
         val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sort)))
