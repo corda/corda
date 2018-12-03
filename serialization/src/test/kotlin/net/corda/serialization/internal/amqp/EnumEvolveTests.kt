@@ -428,34 +428,30 @@ class EnumEvolveTests {
 
     // Version of the class as it was serialised
     //
-    // enum class MyEnum { A, B, C }
+    // enum class ExtendedEnum { A, B, C }
     //
     // Version of the class as it's used in the test
     @CordaSerializationTransformEnumDefaults (
             CordaSerializationTransformEnumDefault("E", "C"),
             CordaSerializationTransformEnumDefault("D", "C")
     )
-    enum class MyEnum { A, B, C, D, E}
+    enum class ExtendedEnum { A, B, C, D, E}
 
     // See https://r3-cev.atlassian.net/browse/CORDA-2264.
     @Test
-    fun evolveEnum() {
+    fun extendEnum() {
         val resource = "${javaClass.simpleName}.${testName()}"
         val sf = testDefaultFactory()
 
-        data class C(val e: MyEnum)
+        data class C(val e: ExtendedEnum)
 
         // Uncomment to re-generate test files
         // val so = SerializationOutput(sf)
-        // File(URI("$localPath/$resource.A")).writeBytes(so.serialize(C(MyEnum.A)).bytes)
-        // File(URI("$localPath/$resource.B")).writeBytes(so.serialize(C(MyEnum.B)).bytes)
-        // File(URI("$localPath/$resource.C")).writeBytes(so.serialize(C(MyEnum.C)).bytes)
+        // File(URI("$localPath/$resource.A")).writeBytes(so.serialize(C(ExtendedEnum.A)).bytes)
 
-        val path1 = EvolvabilityTests::class.java.getResource("$resource.C")
-        val path2 = EvolvabilityTests::class.java.getResource("$resource.B")
-        val path3 = EvolvabilityTests::class.java.getResource("$resource.A")
+        val path1 = EvolvabilityTests::class.java.getResource("$resource.A")
 
-        // fails here
         val obj1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(File(path1.toURI()).readBytes()))
+        assertEquals(ExtendedEnum.A, obj1.e)
     }
 }
