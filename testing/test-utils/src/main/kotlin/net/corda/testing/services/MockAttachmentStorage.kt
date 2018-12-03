@@ -46,14 +46,24 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<SecureHash> {
         criteria as AttachmentQueryCriteria.AttachmentsQueryCriteria
-        val isSigned = criteria.isSignedCondition == Builder.equal(true)
         val contractClassNames =
                 if (criteria.contractClassNamesCondition is ColumnPredicate.EqualityComparison)
                     (criteria.contractClassNamesCondition as ColumnPredicate.EqualityComparison<List<ContractClassName>>).rightLiteral
                 else emptyList()
-        val contractMetadataList = contractClassNames.map {contractClassName ->
-            ContractAttachmentMetadata(contractClassName, "1.0", isSigned)
-        }
+        val contractMetadataList =
+            if (criteria.isSignedCondition != null) {
+                val isSigned = criteria.isSignedCondition == Builder.equal(true)
+                 contractClassNames.map {contractClassName ->
+                    ContractAttachmentMetadata(contractClassName, "1.0", isSigned)
+                }
+            }
+            else {
+                contractClassNames.flatMap { contractClassName ->
+                    listOf(ContractAttachmentMetadata(contractClassName, "1.0", false),
+                     ContractAttachmentMetadata(contractClassName, "1.0", true))
+                }
+            }
+
         return _contractClasses.filterKeys { contractMetadataList.contains(it) }.values.toList()
     }
 
