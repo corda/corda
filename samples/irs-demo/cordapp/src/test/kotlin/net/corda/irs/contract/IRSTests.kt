@@ -229,8 +229,8 @@ class IRSTests {
     private val cordappPackages = listOf("net.corda.irs.contract")
     private val networkParameters = testNetworkParameters().addNotary(dummyNotary.party)
     private val megaCorpServices = MockServices(cordappPackages, megaCorp, rigorousMock(), networkParameters, megaCorp.keyPair)
-    private val miniCorpServices = MockServices(listOf("net.corda.irs.contract"), miniCorp, rigorousMock(), networkParameters,  miniCorp.keyPair)
-    private val notaryServices = MockServices(listOf("net.corda.irs.contract"), dummyNotary, rigorousMock(), networkParameters, dummyNotary.keyPair)
+    private val miniCorpServices = MockServices(cordappPackages, miniCorp, rigorousMock(), networkParameters,  miniCorp.keyPair)
+    private val notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), networkParameters, dummyNotary.keyPair)
     private val ledgerServices = MockServices(
             emptyList(),
             megaCorp,
