@@ -53,11 +53,8 @@ representation (mapped object) via the ``generateMappedObject`` method, the outp
     :start-after: DOCSTART MappedSchema
     :end-before: DOCEND MappedSchema
 
-The ``SchemaService`` can be configured by a node administrator to select the schemas used by each CorDapp.
 With this framework, the relational view of ledger states can evolve in a controlled fashion in lock-step with internal systems or other
-integration points and is not dependant on changes to the contract code. The service can select from the
-``MappedSchema`` offered by a ``QueryableState``, automatically upgrade to a later version of a schema or even
-provide a ``MappedSchema`` not originally offered by the ``QueryableState``.
+integration points and is not dependant on changes to the contract code.
 
 It is expected that multiple contract state implementations might provide mappings within a single schema.
 For example an Interest Rate Swap contract and an Equity OTC Option contract might both provide a mapping to
