@@ -72,7 +72,6 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
             if (attachedParameterHash == null) {
                 throw IllegalArgumentException("Transaction must contain network parameters.")
             }
-            // TODO: If not found, the notary should resolve network parameters from the network map server or the counterparty.
             val attachedParameters = serviceHub.networkParametersStorage.lookup(attachedParameterHash)
                     ?: throw IllegalStateException("Unable to resolve network parameters from hash: $attachedParameterHash")
 
