@@ -334,6 +334,40 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `pagination works when multiple pages have the same value for the sort criteria field`() {
+        val numberOfStates = 59
+        val pageSize = 13
+        val allRefs = database.transaction {
+            val vault = vaultFiller.fillWithSomeTestCash(10.DOLLARS, notaryServices, numberOfStates, DUMMY_CASH_ISSUER)
+            vault.states.map { it.ref }.toSet()
+        }
+        val queriedRefs = mutableSetOf<StateRef>()
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        // TODO sollecitom this does not work
+        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, SampleCashSchemaV2.PersistentCashState::quantity.name)
+        // TODO sollecitom these do not work either, fix them
+//        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, SampleCashSchemaV2.PersistentCashState::stateRef.name)
+//        val sortAttribute = SortAttribute.Custom(SampleCashSchemaV2.PersistentCashState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
+         // TODO sollecitom this works, write a test for it
+//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
+
+        val sort = Sort.Direction.ASC
+        val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sort)))
+
+        var pageNumber = 0
+        while(pageNumber * pageSize < numberOfStates) {
+            val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+            val page = vaultService.queryBy<Cash.State>(sorting = sorting, paging = paging, criteria = criteria)
+            assertThat(page.states.map { it.ref }.any { ref -> ref in queriedRefs }).withFailMessage("Page contains element already seen.").isFalse()
+            queriedRefs += page.states.map { it.ref }
+            pageNumber++
+        }
+
+        assertThat(queriedRefs).hasSameElementsAs(allRefs)
+    }
+
+    @Test
     fun `unconsumed states with count`() {
         database.transaction {
             repeat(4) {
