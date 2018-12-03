@@ -77,10 +77,10 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
 
             checkInWhitelist(attachedParameters, notary)
         } else {
-            // Using default network parameters for platform versions 3 or earlier
+            // Using current network parameters for platform versions 3 or earlier.
             val defaultParams = with(serviceHub.networkParametersStorage) {
-                lookup(defaultHash)
-                        ?: throw IllegalStateException("Unable to verify whether the notary $notary is whitelisted: default network parameters not set.")
+                lookup(currentHash)
+                        ?: throw IllegalStateException("Unable to verify whether the notary $notary is whitelisted: current network parameters not set.")
             }
             checkInWhitelist(defaultParams, notary)
         }
