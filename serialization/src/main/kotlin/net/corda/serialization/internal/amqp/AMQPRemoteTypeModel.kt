@@ -31,7 +31,7 @@ class AMQPRemoteTypeModel {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
         val byTypeDescriptor = schema.types.associateBy { it.typeDescriptor }
         val enumTransformsLookup = transforms.types.asSequence().map { (name, transformSet) ->
-            name.typeIdentifier to EnumTransforms.build(transformSet)
+            name.typeIdentifier to transformSet
         }.toMap()
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
@@ -50,7 +50,7 @@ class AMQPRemoteTypeModel {
     }
 
     data class InterpretationState(val notationLookup: Map<TypeIdentifier, TypeNotation>,
-                                   val enumTransformsLookup: Map<TypeIdentifier, EnumTransforms>,
+                                   val enumTransformsLookup: Map<TypeIdentifier, TransformsMap>,
                                    val cache: MutableMap<TypeDescriptor, RemoteTypeInformation>,
                                    val seen: Set<TypeIdentifier>) {
 
@@ -139,7 +139,7 @@ class AMQPRemoteTypeModel {
         private fun RestrictedType.interpretEnum(identifier: TypeIdentifier): RemoteTypeInformation.AnEnum {
             val constants = choices.asSequence().mapIndexed { index, choice -> choice.name to index }.toMap(LinkedHashMap())
             val transforms = try {
-                (enumTransformsLookup[identifier] ?: EnumTransforms.empty).apply { validate(constants) }
+                enumTransformsLookup[identifier]?.let { EnumTransforms.build(it, constants) } ?: EnumTransforms.empty
             } catch (e: InvalidEnumTransformsException) {
                 throw NotSerializableDetailedException(name, e.message!!)
             }

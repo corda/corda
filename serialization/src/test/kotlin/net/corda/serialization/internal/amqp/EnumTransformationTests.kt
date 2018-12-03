@@ -23,7 +23,9 @@ class EnumTransformationTests {
     // See https://r3-cev.atlassian.net/browse/CORDA-1497
     @Test
     fun defaultAndRename() {
-        val transforms = EnumTransforms.build(TransformsAnnotationProcessor.getTransformsSchema(MultiOperations::class.java))
+        val transforms = EnumTransforms.build(
+                TransformsAnnotationProcessor.getTransformsSchema(MultiOperations::class.java),
+                MultiOperations::class.java.constants)
 
         assertEquals(mapOf("BOB" to "E"), transforms.renames)
         assertEquals(mapOf("D" to "C", "E" to "D"), transforms.defaults)
@@ -40,8 +42,13 @@ class EnumTransformationTests {
 
     @Test
     fun cycleDetection() {
-        assertFailsWith<NotSerializableDetailedException> {
-            TransformsAnnotationProcessor.getTransformsSchema(RenameCycle::class.java)
+        assertFailsWith<InvalidEnumTransformsException> {
+            EnumTransforms.build(
+                    TransformsAnnotationProcessor.getTransformsSchema(RenameCycle::class.java),
+                    RenameCycle::class.java.constants)
         }
     }
+
+    private val Class<*>.constants: Map<String, Int> get() =
+        enumConstants.asSequence().mapIndexed { index, constant -> constant.toString() to index }.toMap()
 }
