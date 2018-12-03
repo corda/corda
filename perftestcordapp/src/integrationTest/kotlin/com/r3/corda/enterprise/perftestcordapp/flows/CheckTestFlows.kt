@@ -102,10 +102,30 @@ class CheckAllTheTestFlows {
     }
 
     @Test
+    fun TestCashIssueAndDuplicateAnonymousPayment() {
+        driver.run {
+            CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
+                connection.proxy.startFlow(::CashIssueAndDuplicatePayment, 1.DOLLARS, OpaqueBytes.of(0), bob!!.nodeInfo.legalIdentities[0], false, defaultNotaryIdentity)
+                        .returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test
     fun TestCashIssueAndDoublePayment() {
         driver.run {
             CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashIssueAndDoublePayment, 1.DOLLARS, OpaqueBytes.of(0), bob!!.nodeInfo.legalIdentities[0], false, defaultNotaryIdentity)
+                        .returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun TestCashIssueAndDoubleAnonymousPayment() {
+        driver.run {
+            CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
+                connection.proxy.startFlow(::CashIssueAndDoublePayment, 1.DOLLARS, OpaqueBytes.of(0), bob!!.nodeInfo.legalIdentities[0], true, defaultNotaryIdentity)
                         .returnValue.getOrThrow()
             }
         }
@@ -121,6 +141,21 @@ class CheckAllTheTestFlows {
 
             CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
                 connection.proxy.startFlow(::CashPaymentFromKnownStatesFlow, inputStates, 1, 1, 1.DOLLARS, bob!!.nodeInfo.legalIdentities[0], false)
+                        .returnValue.getOrThrow()
+            }
+        }
+    }
+
+    @Test
+    fun TestCashIssueFlowAndPayAnonymousKnownStates() {
+        driver.run {
+            val result = CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
+                connection.proxy.startFlow(::CashIssueFlow, 1.DOLLARS, OpaqueBytes.of(0), defaultNotaryIdentity).returnValue.getOrThrow()
+            }
+            val inputStates = setOf(StateRef(result.id, 0))
+
+            CordaRPCClient(alice!!.rpcAddress).use("A", "A") { connection ->
+                connection.proxy.startFlow(::CashPaymentFromKnownStatesFlow, inputStates, 1, 1, 1.DOLLARS, bob!!.nodeInfo.legalIdentities[0], true)
                         .returnValue.getOrThrow()
             }
         }

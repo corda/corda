@@ -16,10 +16,19 @@ import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class CashPaymentFlowTests {
+@RunWith(Parameterized::class)
+class CashPaymentFlowTests(private val anonymous: Boolean) {
+    companion object {
+        @Parameterized.Parameters(name = "Anonymous = {0}")
+        @JvmStatic
+        fun data() = listOf(false, true)
+    }
+
     private lateinit var mockNet: MockNetwork
     private val initialBalance = 2000.DOLLARS
     private val ref = OpaqueBytes.of(0x01)
@@ -59,7 +68,7 @@ class CashPaymentFlowTests {
             val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
             val future = bankOfCordaNode.startFlow(CashPaymentFlow(expectedPayment,
-                    payTo))
+                    payTo, anonymous))
             mockNet.runNetwork()
             future.getOrThrow()
 
@@ -91,7 +100,7 @@ class CashPaymentFlowTests {
         val payTo = aliceNode.info.singleIdentity()
         val expected = 4000.DOLLARS
         val future = bankOfCordaNode.startFlow(CashPaymentFlow(expected,
-                payTo))
+                payTo, anonymous))
         mockNet.runNetwork()
         assertFailsWith<CashException> {
             future.getOrThrow()
@@ -102,7 +111,7 @@ class CashPaymentFlowTests {
     fun `pay zero cash`() {
         val payTo = aliceNode.info.singleIdentity()
         val expected = 0.DOLLARS
-        val future = bankOfCordaNode.startFlow(CashPaymentFlow(expected, payTo))
+        val future = bankOfCordaNode.startFlow(CashPaymentFlow(expected, payTo, anonymous))
         mockNet.runNetwork()
         assertFailsWith<IllegalArgumentException> {
             future.getOrThrow()
