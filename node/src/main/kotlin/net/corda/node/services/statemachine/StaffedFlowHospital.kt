@@ -138,16 +138,15 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     }
 
     private fun calculateBackOffForChronicCondition(report: ConsultationReport, medicalHistory: FlowMedicalHistory, currentState: StateMachineState): Duration {
-        if (report.by.any { it is Chronic }) {
-            return medicalHistory.timesDischargedForTheSameThing(DeadlockNurse, currentState).let {
+        return report.by.firstOrNull { it is Chronic }?.let { chronicStaff ->
+            return medicalHistory.timesDischargedForTheSameThing(chronicStaff, currentState).let {
                 if (it == 0) {
                     0.seconds
                 } else {
                     maxOf(10, (10 + (Math.random()) * (10 * 1.5.pow(it)) / 2).toInt()).seconds
                 }
             }
-        }
-        return 0.seconds
+        } ?: 0.seconds
     }
 
     private fun consultStaff(flowFiber: FlowFiber,
