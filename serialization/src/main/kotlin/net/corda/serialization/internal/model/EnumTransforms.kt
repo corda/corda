@@ -53,7 +53,7 @@ data class EnumTransforms(
     }
 
     private fun validate(constants: Map<String, Int>): EnumTransforms {
-        validateNoCycles()
+        validateNoCycles(constants)
 
         // For any name in the enum's constants, get all its previous names
         fun renameChain(newName: String): Sequence<String> = generateSequence(newName) { renames[it] }
@@ -85,12 +85,16 @@ data class EnumTransforms(
      *
      * By detecting each condition, and updating the chains accordingly, we can perform cycle-detection in O(n) time.
      */
-    private fun validateNoCycles() {
+    private fun validateNoCycles(constants: Map<String, Int>) {
         // We keep track of chains in both directions
         val chainStartsToEnds = mutableMapOf<String, String>()
         val chainEndsToStarts = mutableMapOf<String, String>()
 
-        for ((from, to) in renames) {
+        for ((to, from) in renames) {
+            if (from in constants) {
+                throw InvalidEnumTransformsException("Rename from $from to $to would rename existing constant in $constants.keys")
+            }
+
             // If there is an existing chain, starting at the "to" node of this edge, then there is a chain from this edge's
             // "from" to that chain's end.
             val newEnd = chainStartsToEnds[to] ?: to
@@ -105,12 +109,16 @@ data class EnumTransforms(
             }
 
             // Either update, or create, the chains in both directions.
-            chainStartsToEnds[from] = newEnd
-            chainEndsToStarts[to] = newStart
-
-            // If we have joined two previously unconnected chains, update their starts and ends accordingly.
             chainStartsToEnds[newStart] = newEnd
             chainEndsToStarts[newEnd] = newStart
+        }
+
+        // Make sure that every rename chain ends with a known constant.
+        for ((chainStart, chainEnd) in chainStartsToEnds) {
+            if (chainEnd !in constants) {
+                throw InvalidEnumTransformsException(
+                        "Rename chain from $chainStart to $chainEnd does not end with a known constant in ${constants.keys}")
+            }
         }
     }
 
