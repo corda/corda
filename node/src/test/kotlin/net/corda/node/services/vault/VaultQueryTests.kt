@@ -337,11 +337,10 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     fun `pagination works when multiple pages have the same value for the sort criteria field`() {
         val numberOfStates = 59
         val pageSize = 13
-        val allRefs = database.transaction {
+        database.transaction {
             val vault = vaultFiller.fillWithSomeTestCash(10.DOLLARS, notaryServices, numberOfStates, DUMMY_CASH_ISSUER)
             vault.states.map { it.ref }.toSet()
         }
-        val queriedRefs = mutableSetOf<StateRef>()
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
         // TODO sollecitom this does not work
@@ -355,16 +354,19 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val sort = Sort.Direction.ASC
         val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sort)))
 
+        val allStates = vaultService.queryBy<Cash.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
+        assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+
+        val queriedStates = mutableListOf<StateAndRef<*>>()
         var pageNumber = 0
         while(pageNumber * pageSize < numberOfStates) {
             val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
             val page = vaultService.queryBy<Cash.State>(sorting = sorting, paging = paging, criteria = criteria)
-            assertThat(page.states.map { it.ref }.any { ref -> ref in queriedRefs }).withFailMessage("Page contains element already seen.").isFalse()
-            queriedRefs += page.states.map { it.ref }
+            queriedStates += page.states
             pageNumber++
         }
 
-        assertThat(queriedRefs).hasSameElementsAs(allRefs)
+        assertThat(queriedStates).containsExactlyElementsOf(allStates)
     }
 
     @Test
