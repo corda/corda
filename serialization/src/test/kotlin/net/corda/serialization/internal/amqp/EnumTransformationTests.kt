@@ -4,7 +4,6 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.serialization.CordaSerializationTransformRenames
-import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.model.EnumTransforms
 import net.corda.serialization.internal.model.InvalidEnumTransformsException
 import org.junit.Assert.assertEquals
@@ -17,7 +16,10 @@ class EnumTransformationTests {
             CordaSerializationTransformEnumDefault(old = "C", new = "D"),
             CordaSerializationTransformEnumDefault(old = "D", new = "E")
     )
-    @CordaSerializationTransformRename(to = "BOB", from = "E")
+    @CordaSerializationTransformRenames(
+        CordaSerializationTransformRename(to = "BOB", from = "FRED"),
+        CordaSerializationTransformRename(to = "FRED", from = "E")
+    )
     enum class MultiOperations { A, B, C, D, BOB }
 
     // See https://r3-cev.atlassian.net/browse/CORDA-1497
@@ -27,7 +29,7 @@ class EnumTransformationTests {
                 TransformsAnnotationProcessor.getTransformsSchema(MultiOperations::class.java),
                 MultiOperations::class.java.constants)
 
-        assertEquals(mapOf("BOB" to "E"), transforms.renames)
+        assertEquals(mapOf("BOB" to "FRED", "FRED" to "E"), transforms.renames)
         assertEquals(mapOf("D" to "C", "E" to "D"), transforms.defaults)
     }
 

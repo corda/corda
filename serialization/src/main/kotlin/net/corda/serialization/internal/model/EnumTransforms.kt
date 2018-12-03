@@ -55,10 +55,15 @@ data class EnumTransforms(
     private fun validate(constants: Map<String, Int>): EnumTransforms {
         validateNoCycles()
 
-        val constantsBeforeRenaming = constants.asSequence().mapNotNull { (name, index) ->
-            renames[name]?.let { newName -> newName to index }
+        // For any name in the enum's constants, get all its previous names
+        fun renameChain(newName: String): Sequence<String> = generateSequence(newName) { renames[it] }
+
+        // Map all previous names to the current name's index.
+        val constantsBeforeRenaming = constants.asSequence().flatMap { (name, index) ->
+            renameChain(name).map { it to index }
         }.toMap()
-        validateDefaults(constants + constantsBeforeRenaming)
+
+        validateDefaults(constantsBeforeRenaming + constants)
 
         return this
     }
