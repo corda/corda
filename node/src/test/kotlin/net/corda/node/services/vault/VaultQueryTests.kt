@@ -337,31 +337,31 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     fun `pagination works when multiple pages have the same value for the sort criteria field`() {
         val numberOfStates = 59
         val pageSize = 13
+
         database.transaction {
-            val vault = vaultFiller.fillWithSomeTestCash(10.DOLLARS, notaryServices, numberOfStates, DUMMY_CASH_ISSUER)
-            vault.states.map { it.ref }.toSet()
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
         }
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
         // TODO sollecitom this does not work
-//        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, CashSchemaV1.PersistentCashState::pennies.name)
+//        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber.name)
         // TODO sollecitom these do not work either, fix them
-        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, CashSchemaV1.PersistentCashState::stateRef.name)
-//        val sortAttribute = SortAttribute.Custom(CashSchemaV1.PersistentCashState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::stateRef.name)
+//        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
          // TODO sollecitom this works, write a test for it
-//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
+//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::stateRef.name)
 
         val sort = Sort.Direction.ASC
         val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sort)))
 
-        val allStates = vaultService.queryBy<Cash.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
+        val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
         assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
 
         val queriedStates = mutableListOf<StateAndRef<*>>()
         var pageNumber = 0
         while(pageNumber * pageSize < numberOfStates) {
             val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
-            val page = vaultService.queryBy<Cash.State>(sorting = sorting, paging = paging, criteria = criteria)
+            val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
             queriedStates += page.states
             pageNumber++
         }
