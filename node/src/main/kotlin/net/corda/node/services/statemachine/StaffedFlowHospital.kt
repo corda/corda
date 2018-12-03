@@ -95,7 +95,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         val time = Instant.now()
         log.info("Flow ${flowFiber.id} admitted to hospital in state $currentState")
 
-        val (event, backOffForChronicalConditions) = mutex.locked {
+        val (event, backOffForChronicCondition) = mutex.locked {
             val medicalHistory = flowPatients.computeIfAbsent(flowFiber.id) { FlowMedicalHistory() }
 
             val report = consultStaff(flowFiber, currentState, errors, medicalHistory)
@@ -125,14 +125,14 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
 
         if (event != null) {
-            if (backOffForChronicalConditions.isZero) {
+            if (backOffForChronicCondition.isZero) {
                 flowFiber.scheduleEvent(event)
             } else {
                 delayedDischargeTimer.schedule(object : TimerTask() {
                     override fun run() {
                         flowFiber.scheduleEvent(event)
                     }
-                }, backOffForChronicalConditions.toMillis())
+                }, backOffForChronicCondition.toMillis())
             }
         }
     }
