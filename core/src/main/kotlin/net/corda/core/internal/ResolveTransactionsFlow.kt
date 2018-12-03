@@ -29,6 +29,12 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
 
     // Need it ordered in terms of iteration. Needs to be a variable for the check-pointing logic to work.
     private val txHashes = txHashesArg.toList()
+    // Hash map of transaction id and set of all parent network parameters hashes it is direct child of.
+    // This is to prevent downgrade attacks, where we obtain transaction chain with network parameters out of order.
+    // We need to make an assumption that parameters epoch can only increase in the dependency chain and verify that.
+    private val stxRootParametersMap = HashMap<SecureHash, MutableSet<SecureHash>>()
+    /** Transaction to fetch attachments for. */
+    private var signedTransaction: SignedTransaction? = null
 
     /**
      * Resolves and validates the dependencies of the specified [SignedTransaction]. Fetches the attachments, but does
@@ -60,9 +66,6 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @CordaSerializable
     class ExcessivelyLargeTransactionGraph : FlowException()
 
-    /** Transaction to fetch attachments for. */
-    private var signedTransaction: SignedTransaction? = null
-
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.
     /** The maximum number of transactions this flow will try to download before bailing out. */
     var transactionCountLimit = 5000
@@ -74,28 +77,72 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class, FetchDataFlow.IllegalTransactionRequest::class)
     override fun call() {
+        initializeNetworkParametersMap()
+        val minimumPlatformVersion = serviceHub.networkParameters.minimumPlatformVersion
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
         for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
             val page = page(pageNumber, RESOLUTION_PAGE_SIZE)
 
             newTxns += downloadDependencies(page)
-            val txsWithMissingAttachments = if (pageNumber == 0) signedTransaction?.let { newTxns + it } ?: newTxns else newTxns
+            val txsWithMissingAttachments = if (pageNumber == 0) signedTransaction?.let { newTxns + it }
+                    ?: newTxns else newTxns
             fetchMissingAttachments(txsWithMissingAttachments)
+            // Fetch missing parameters flow was added in version 4.
+            if (minimumPlatformVersion >= 4) {
+                fetchMissingParameters(txsWithMissingAttachments)
+            }
         }
         otherSide.send(FetchDataFlow.Request.End)
         // Finish fetching data.
 
         val result = topologicalSort(newTxns)
-        result.forEach {
+        result.forEach { stx ->
             // For each transaction, verify it and insert it into the database. As we are iterating over them in a
             // depth-first order, we should not encounter any verification failures due to missing data. If we fail
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
-            it.verify(serviceHub)
-            serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
+
+            // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
+            // Check that epochs are ordered in the transaction chain.
+            with(serviceHub.networkParametersStorage) {
+                val currentEpoch = stx.getHashOrDefault().let { hash ->
+                    getEpochFromHash(hash) ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $hash")
+                }
+                stxRootParametersMap[stx.id]?.forEach { parentHash ->
+                    val parentEpoch = getEpochFromHash(parentHash)
+                            ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $parentHash")
+                    if (currentEpoch > parentEpoch) {
+                        throw IllegalArgumentException("Network parameters are not ordered in the transaction graph " +
+                        "for dependency transaction: ${stx.id} and parent parameters hash: $parentHash")
+                    }
+                }
+            }
+            stx.verify(serviceHub)
+            serviceHub.recordTransactions(StatesToRecord.NONE, listOf(stx))
         }
     }
+
+    // At the beginning transactions from the constructor should be tagged with parameters with epoch less equal than than the current ones for the network.
+    // If single signed transaction constructor was called, then all txHashes should have epoch less equal than epoch of this transaction.
+    // Record this fact in the map.
+    private fun initializeNetworkParametersMap() {
+        // Epoch of parameters that are at the top, if no single transaction then assume current ones
+        val stx = this.signedTransaction
+        val rootParametersHash = with(serviceHub.networkParametersStorage) {
+            if (stx == null) {
+                currentHash
+            } else {
+                stx.networkParametersHash ?: defaultHash
+            }
+        }
+        for (txId in txHashes) {
+            stxRootParametersMap.computeIfAbsent(txId) { mutableSetOf() }.add(rootParametersHash)
+        }
+    }
+
+    private fun SignedTransaction.getHashOrDefault(): SecureHash = networkParametersHash
+            ?: serviceHub.networkParametersStorage.defaultHash
 
     private fun page(pageNumber: Int, pageSize: Int): Set<SecureHash> {
         val offset = pageNumber * pageSize
@@ -146,7 +193,17 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
                 check(resultQ.putIfAbsent(stx.id, stx) == null)   // Assert checks the filter at the start.
 
             // Add all input states and reference input states to the work queue.
-            val inputHashes = downloads.flatMap { it.inputs + it.references }.map { it.txhash }
+            val inputHashes = mutableListOf<SecureHash>()
+            for (stx in downloads) {
+                val rootHash = stx.getHashOrDefault()
+                val depsIds = (stx.inputs + stx.references).map { it.txhash }
+                // For all inputs and references transaction hashes record the network parameters hash that is parent in the graph.
+                depsIds.forEach { depId ->
+                    stxRootParametersMap.computeIfAbsent(depId) { mutableSetOf() }.add(rootHash)
+                }
+                inputHashes.addAll(depsIds)
+            }
+
             nextRequests.addAll(inputHashes)
 
             limitCounter = limitCounter exactAdd nextRequests.size
@@ -173,5 +230,14 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         val missingAttachments = attachments.filter { serviceHub.attachments.openAttachment(it) == null }
         if (missingAttachments.isNotEmpty())
             subFlow(FetchAttachmentsFlow(missingAttachments.toSet(), otherSide))
+    }
+
+    // TODO This can also be done in parallel. See comment to [fetchMissingAttachments] above.
+    @Suspendable
+    private fun fetchMissingParameters(downloads: List<SignedTransaction>) {
+        val parameters = downloads.mapNotNull { it.networkParametersHash }
+        val missingParameters = parameters.filter { !serviceHub.networkParametersStorage.hasParameters(it) }
+        if (missingParameters.isNotEmpty())
+            subFlow(FetchNetworkParametersFlow(missingParameters.toSet(), otherSide))
     }
 }

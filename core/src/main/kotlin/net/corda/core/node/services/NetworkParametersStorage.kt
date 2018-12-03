@@ -27,7 +27,7 @@ interface NetworkParametersStorage {
      */
     fun lookup(hash: SecureHash): NetworkParameters?
 
-    // TODO INTERNAL REGION - revisit
+    // TODO The methods below should be internal, they are used only in ResolveTransactionsFlow and FetchParametersFlow
     /**
      * Return signed network parameters with certificate for the given hash. Null if there are no parameters for this hash in the storage.
      * (No fallback to network map.)

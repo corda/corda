@@ -94,8 +94,8 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    serviceHub.networkParametersStorage.lookup(it)
-                            ?: throw FetchDataFlow.HashNotFound(it) //TODO it should be error of type NoNetworkParameters with hash or sth like that
+                    serviceHub.networkParametersStorage.lookupSigned(it)
+                            ?: throw FetchDataFlow.HashNotFound(it) // TODO Different error
                 }
             }
         }

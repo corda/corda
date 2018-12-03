@@ -201,7 +201,8 @@ class SignedParametersByHash(val signedParameters: SignedDataWithCert<NetworkPar
 
 /**
  * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
- * network parameters are saved to local parameters storage automatically.
+ * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion is >= 4.
+ * Nodes on lower versions won't understand this flow.
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedParametersByHash, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
@@ -211,7 +212,6 @@ class FetchNetworkParametersFlow(requests: Set<SecureHash>,
 
     override fun convert(wire: SignedDataWithCert<NetworkParameters>): SignedParametersByHash = SignedParametersByHash(wire)
 
-    // TODO check what with nullability of downloaded?
     override fun maybeWriteToDisk(downloaded: List<SignedParametersByHash>) {
         for (parameters in downloaded) {
             with(serviceHub.networkParametersStorage) {
