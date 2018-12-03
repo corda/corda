@@ -121,14 +121,8 @@ class DriverTests {
             baseDirectory
         }
 
-        if ((baseDirectory / "process-id").exists()) {
-            // The addShutdownHook call doesn't reliably get called on Windows (even on graceful node shutdown), so at least check
-            // that the lock has been released, to make sure the node has been killed
-            val pidFile = (baseDirectory / "process-id").toFile()
-            val pidFileRw = RandomAccessFile(pidFile, "rw")
-            pidFileRw.channel.tryLock()
-            pidFileRw.close()
-        }
+        // Should be able to start another node up in that directory
+        assertThat(NodeStartup().isNodeRunningAt(baseDirectory)).isTrue()
     }
 
     @Test
