@@ -4,8 +4,10 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`upgrade-notes`.
 
-Unreleased
-----------
+.. _changelog_v4.0:
+
+Version 4.0
+-----------
 
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must

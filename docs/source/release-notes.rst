@@ -3,8 +3,10 @@ Release notes
 
 .. _release_notes_v4_0:
 
-Release 4.0 (Unreleased)
-------------------------
+Release 4.0 
+-----------
+
+Over 1500 changes, both large and small, have been added stired into the 
 
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -31,6 +33,16 @@ Significant Changes in 4.0
   Signing can be configured or disabled, and it defaults to using the Corda development certificate.
   Signed CorDapps facilitate signature constraints checks.
   Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be disabled.
+
+* **AMQP**
+
+Corda 3.0 shipped  wuit
+
+* **RPC SSL**
+  Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
+  a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
+
+* **The Flow Hospital**
 
 << MORE TO COME >>
 
