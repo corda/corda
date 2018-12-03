@@ -27,9 +27,4 @@ interface NetworkParametersStorage {
      * get them from network map.
      */
     fun lookup(hash: SecureHash): NetworkParameters?
-
-    /**
-     * Returns the [NotaryInfo] for a notary [party] in the current or any historic network parameter whitelist, or null if not found.
-     */
-    fun getHistoricNotary(party: Party): NotaryInfo?
 }

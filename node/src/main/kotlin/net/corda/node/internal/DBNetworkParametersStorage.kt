@@ -5,6 +5,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.notary.HistoricNetworkParameterStorage
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkParametersStorage
@@ -49,7 +50,7 @@ class DBNetworkParametersStorage(
         // TODO It's very inefficient solution (at least at the beginning when node joins without historical data)
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?
-) : NetworkParametersStorageInternal, SingletonSerializeAsToken() {
+) : NetworkParametersStorageInternal, HistoricNetworkParameterStorage, SingletonSerializeAsToken() {
     private lateinit var trustRoot: X509Certificate
 
     companion object {
