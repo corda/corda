@@ -343,12 +343,11 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         }
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
-        // TODO sollecitom this does not work
-//        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber.name)
         // TODO sollecitom these do not work either, fix them
-        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::stateRef.name)
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber.name)
 //        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, VaultSchemaV1.VaultStates::stateRef.name)
-         // TODO sollecitom this works, write a test for it
+        // TODO sollecitom these work, write a test for it
+//        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, VaultSchemaV1.VaultStates::stateRef.name)
 //        val sortAttribute = SortAttribute.Custom(VaultSchemaV1.VaultStates::class.java, DummyLinearStateSchemaV1.PersistentDummyLinearState::stateRef.name)
 
         val sort = Sort.Direction.ASC
