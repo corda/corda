@@ -355,6 +355,12 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
         assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
 
+        (1..3).forEach {
+            val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
+            assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            assertThat(newAllStates).containsExactlyElementsOf(allStates)
+        }
+
         val queriedStates = mutableListOf<StateAndRef<*>>()
         var pageNumber = 0
         while(pageNumber * pageSize < numberOfStates) {
