@@ -29,6 +29,11 @@ attachment JARs may not provide the same file path. If they do, the transaction 
 state specifies both a constraint over attachments *and* a Contract class name to use, the specified class must appear
 in only one attachment.
 
+.. note:: With the introduction of signature constraints in Corda 4, a new Attachments Classloader will verify that
+   both signed and unsigned versions of an associated contract jar contain identical classes. This allows for automatic
+   migration of hash-constrained states (created with pre-Corda 4 unsigned contract jars) to signature constrained states
+   when used as outputs in new transactions using signed Corda 4 contract jars.
+
 Recap: A corda transaction transitions input states to output states. Each state is composed of data, the name of the class that verifies the transition(contract), and
 the contract constraint. The transaction also contains a list of attachments (normal JARs) from where these classes will be loaded. There must be only one JAR containing each contract.
 The contract constraints are responsible to ensure the attachment JARs are following the rules set by the creators of the input states (in a continuous chain to the issue).
@@ -65,7 +70,7 @@ consumes notary and ledger resources, and is just in general more complex.
 Contract/State Agreement
 ------------------------
 
-Starting with Corda 4, ``ContractState``s must explicitly indicate which ``Contract`` they belong to. When a transaction is
+Starting with Corda 4, a ``ContractState`` must explicitly indicate which ``Contract`` it belongs to. When a transaction is
 verified, the contract bundled with each state in the transaction must be its "owning" contract, otherwise we cannot guarantee that
 the transition of the ``ContractState`` will be verified against the business rules that should apply to it.
 
@@ -111,14 +116,19 @@ The other is to define the ``ContractState`` class as an inner class of the ``Co
 
 If a ``ContractState``'s owning ``Contract`` cannot be identified by either of these mechanisms, and the ``targetVersion`` of the
 CorDapp is 4 or greater, then transaction verification will fail with a ``TransactionRequiredContractUnspecifiedException``. If
-the owning ``Contract`` _can_ be identified, but the ``ContractState`` has been bundled with a different contract, then
+the owning ``Contract`` *can* be identified, but the ``ContractState`` has been bundled with a different contract, then
 transaction verification will fail with a ``TransactionContractConflictException``.
 
 How constraints work
 --------------------
 
-Starting from Corda 3 there are two types of constraint that can be used: hash and zone whitelist. In future
-releases a third type will be added, the signature constraint.
+In Corda 4 there are three types of constraint that can be used in production environments: hash, zone whitelist and signature.
+For development purposes the ``AlwaysAcceptAttachmentConstraint`` allows any attachment to be selected.
+
+Hash and zone whitelist constraints were available in Corda 3, with hash constraints being used as default.
+In Corda 4 the default constraint is the signature constraint if the jar is signed. Otherwise,
+the default constraint type is either a zone constraint, if the network parameters in effect when the
+transaction is built contain an entry for that contract class, or a hash constraint if not.
 
 **Hash constraints.** The behaviour provided by public blockchain systems like Bitcoin and Ethereum is that once data is placed on the ledger,
 the program that controls it is fixed and cannot be changed. There is no support for upgrades at all. This implements a
@@ -143,19 +153,15 @@ parameters file, and trigger the network parameters upgrade process. This involv
 command to accept the new parameters file and then restarting the node. Node owners who do not restart their node in
 time effectively stop being a part of the network.
 
-**Signature constraints.** These are not yet supported, but once implemented they will allow a state to require a JAR
-signed by a specified identity, via the regular Java ``jarsigner`` tool. This will be the most flexible type
+**Signature constraints.** These enforce an association between a state and its associated contract JAR which must be
+signed by a specified identity, via the regular Java ``jarsigner`` tool. This is the most flexible type
 and the smoothest to deploy: no restarts or contract upgrade transactions are needed.
-When CorDapp is build using :ref:`corda-gradle-plugin <cordapp_build_system_signing_cordapp_jar_ref>` the JAR is signed
+When a CorDapp is build using :ref:`corda-gradle-plugin <cordapp_build_system_signing_cordapp_jar_ref>` the JAR is signed
 by Corda development key by default, an external keystore can be configured or signing can be disabled.
 
 .. warning:: CorDapps can only use signature constraints when participating in a Corda network using a minimum platform version of 4.
     An auto downgrade rule applies to signed CorDapps built and tested with Corda 4 but running on a Corda network of a lower version:
     if the associated contract class is whitelisted in the network parameters then zone constraints are applied, otherwise hash constraints are used.
-
-**Defaults.** Currently, the default constraint type is either a zone constraint, if the network parameters in effect when the
-transaction is built contain an entry for that contract class, or a hash constraint if not. Once the Signature Constraints are introduced,
-the default constraint will be the Signature Constraint if the jar is signed.
 
 A ``TransactionState`` has a ``constraint`` field that represents that state's attachment constraint. When a party
 constructs a ``TransactionState``, or adds a state using ``TransactionBuilder.addOutput(ContractState)`` without
@@ -234,7 +240,7 @@ As was mentioned above, the TransactionBuilder API gives the CorDapp developer o
 to construct output states with a constraint of his choosing.
 Also, as listed above, some constraints are more restrictive then others.
 For example, the ``HashAttachmentConstraint`` is the most restrictive, basically reducing the universe of possible attachments
-to 1, while the ``AlwaysAcceptAttachmentConstraint`` allows any attachment to be selected.
+to 1 (see migrating from hash constraints in note below), while the ``AlwaysAcceptAttachmentConstraint`` allows any attachment to be selected.
 
 For the ledger to remain in a consistent state, the expected behavior is for output state to inherit the constraints of input states.
 This guarantees that for example, a transaction can't output a state with the ``AlwaysAcceptAttachmentConstraint`` when the
@@ -247,25 +253,35 @@ Starting with version 4 of Corda, the constraint propagation logic has been impl
 unless disabled using ``@NoConstraintPropagation`` - which reverts to the previous behavior.
 
 For Contracts that are not annotated with ``@NoConstraintPropagation``, the platform implements a fairly simple constraint transition policy
-to ensure security and also allow the possibility to transition to the new SignatureAttachmentConstraint.
+to ensure security and also allow the possibility to transition to the new ``SignatureAttachmentConstraint``.
+
+.. note:: Migration from hash to signature constraints is automatic if the transaction building node has a signed version of the
+   original contract jar (used in previous transactions generating hash constrained states). Additionally, it is a requirement that
+   the owner of this signed jar register the java package namespace of the encompassing contract classes with the network parameters.
+   See :ref:`package_namespace_ownership` introduced in Corda 4.
 
 During transaction building the ``AutomaticPlaceholderConstraint`` for output states will be resolved and the best contract attachment versions
 will be selected based on a variety of factors so that the above holds true.
 If it can't find attachments in storage or there are no possible constraints, the Transaction Builder will fail early.
 
 For example:
-- In the simple case, if a ``MyContract`` input state is constrained by the ``HashAttachmentConstraint``, then the constraints of all output states of that type will be resolved
-to the ``HashAttachmentConstraint`` with the same hash, and the attachment with that hash will be selected.
-- For upgradeable constraints like the ``WhitelistedByZoneAttachmentConstraint``, the output states will inherit the same,
-and the selected attachment will be the latest version installed on the node.
-- A more complex case is when for ``MyContract``, one input state is constrained by the ``HashAttachmentConstraint``, while another
-state by the ``WhitelistedByZoneAttachmentConstraint``. To respect the rule from above, if the hash of the ``HashAttachmentConstraint``
-is whitelisted by the network, then the output states will inherit the ``HashAttachmentConstraint``, as it is more restrictive.
-If the hash was not whitelisted, then the builder will fail as it is unable to select a correct constraint.
-- The ``SignatureAttachmentConstraint`` is an upgradeable constraint, same as the ``WhitelistedByZoneAttachmentConstraint``.
-By convention we allow states to transition to the ``SignatureAttachmentConstraint`` from the ``WhitelistedByZoneAttachmentConstraint`` as long as the Signatures
-from new constraints are all the jarsigners from the whitelisted attachment.
 
+- In the simple case, if a ``MyContract`` input state is constrained by the ``HashAttachmentConstraint``, then the constraints of all output states of that type will be resolved
+  to the ``HashAttachmentConstraint`` with the same hash, and the attachment with that hash will be selected.
+
+- For upgradeable constraints like the ``WhitelistedByZoneAttachmentConstraint``, the output states will inherit the same,
+  and the selected attachment will be the latest version installed on the node.
+
+- A more complex case is when for ``MyContract``, one input state is constrained by the ``HashAttachmentConstraint``, while another
+  state by the ``WhitelistedByZoneAttachmentConstraint``. To respect the rule from above, if the hash of the ``HashAttachmentConstraint``
+  is whitelisted by the network, then the output states will inherit the ``HashAttachmentConstraint``, as it is more restrictive.
+  If the hash was not whitelisted, then the builder will fail as it is unable to select a correct constraint.
+
+- The ``SignatureAttachmentConstraint`` is an upgradeable constraint, same as the ``WhitelistedByZoneAttachmentConstraint``.
+  By convention we allow states to transition to the ``SignatureAttachmentConstraint`` from the ``WhitelistedByZoneAttachmentConstraint`` as long as the Signatures
+  from new constraints are all the jarsigners from the whitelisted attachment. We also allow transitioning of states from ``HashAttachmentConstraint`` to
+  ``SignatureAttachmentConstraint`` where both the unsigned and signed versions of the associated contract attachment are loaded in a node, and the java
+  package namespace of encompassing contract classes is registered with the network parameters using the same signing key as the signed contract jar.
 
 For Contracts that are annotated with ``@NoConstraintPropagation``, the platform requires that the Transaction Builder specifies
 an actual constraint for the output states (the ``AutomaticPlaceholderConstraint`` can't be used) .
