@@ -18,9 +18,7 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.debug
 import net.corda.core.utilities.warnOnce
-import java.lang.IllegalStateException
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -192,23 +190,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val attachments: Collection<AttachmentId> = contractAttachmentsAndResolvedOutputStates.flatMap { it.first } + refStateContractAttachments
 
-        // HashConstraint -> SignatureConstraint migration required both unsigned and signed version of contract attachment
-        val signatureConstrainedContractClasses = outputs.filter { it.constraint is SignatureAttachmentConstraint }.map { it.contract }
-        val extraAttachmentIds =
-                signatureConstrainedContractClasses.map { contractClass ->
-                    val hashConstrainedInputs = inputs.map { services.loadState(it) }.
-                            filter { state -> state.constraint is HashAttachmentConstraint && state.contract == contractClass}
-                    if (hashConstrainedInputs.isNotEmpty()) {
-                        log.debug { "Hash->Signature constraints migration for contractClassName = $contractClass" }
-                        // TODO: filter query by contract version
-                        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClass)), isSignedCondition = Builder.equal(false))
-                        val unsignedAttachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
-                        log.debug { "Hash->Signature constraints migration adding additional attachmentIds: $unsignedAttachmentIds for contractClassName = $contractClass" }
-                        unsignedAttachmentIds
-                    } else emptyList()
-                }.flatten()
-
-        return Pair(attachments + extraAttachmentIds, resolvedOutputStatesInTheOriginalOrder)
+        return Pair(attachments, resolvedOutputStatesInTheOriginalOrder)
     }
 
     private val automaticConstraints = setOf(AutomaticPlaceholderConstraint, AutomaticHashConstraint)
@@ -237,7 +219,10 @@ open class TransactionBuilder @JvmOverloads constructor(
     ): Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
-        // identify if any input-output pairs are transitioning from hash to signature constraints.
+        // Hash to Signature constraints migration switchover
+        // identify if any input-output pairs are transitioning from hash to signature constraints:
+        // 1. output states contain pre-existing hash constraint (selected from set of unconsumed states in a nodes vault)
+        // 2. node has signed jar for associated contract class and version
         val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
         val outputsHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
         if (inputsHashConstraints.isNotEmpty() && outputsHashConstraints.isNotEmpty()) {
