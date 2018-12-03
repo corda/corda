@@ -100,7 +100,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
                 if (it == 0) {
                     0L
                 } else {
-                    (100 * 1.5.pow(it)).toLong()
+                    maxOf(10L, ((1 + Math.random()) * (100 * 1.5.pow(it)) / 2).toLong())
                 }
             }
 
