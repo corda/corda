@@ -13,6 +13,7 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
+import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -63,11 +64,7 @@ class NodeProcess(
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
 
-            fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
-                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo))).install(nodeDir)
-                }
-            }
+            val serializationEnv = AMQPClientSerializationScheme.createSerializationEnv()
 
             init {
                 checkNotOnClasspath("net.corda.node.Corda") {
@@ -76,9 +73,25 @@ class NodeProcess(
             }
         }
 
+        var networkParametersCopier: NetworkParametersCopier? = null
+
         private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
         private var notaryParty: Party? = null
+
+        private fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
+            if (networkParametersCopier == null) {
+                try {
+                    networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+                } catch (_: IllegalStateException) {
+                    // Assuming serialization env not in context.
+                    serializationEnv.asContextEnv {
+                        networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+                    }
+                }
+            }
+            networkParametersCopier!!.install(nodeDir)
+        }
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 
