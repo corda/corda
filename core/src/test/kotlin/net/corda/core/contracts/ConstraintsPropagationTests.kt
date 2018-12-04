@@ -11,6 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.toPath
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
@@ -65,22 +66,25 @@ class ConstraintsPropagationTests {
         }
     }
 
-    private val ledgerServices = MockServices(
-            cordappPackages = listOf("net.corda.finance.contracts.asset"),
-            initialIdentity = ALICE,
-            identityService = rigorousMock<IdentityServiceInternal>().also {
-                doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
-                doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
-            },
-            networkParameters = testNetworkParameters(
-                    minimumPlatformVersion = 4,
-                    whitelistedContractImplementations = mapOf(
-                            Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
-                            noPropagationContractClassName to listOf(SecureHash.zeroHash)
-                    ),
-                    notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))
-            )
-    )
+    private lateinit var ledgerServices: MockServices
+
+    @Before
+    fun setUp() {
+        ledgerServices = MockServices(
+                cordappPackages = listOf("net.corda.finance.contracts.asset"),
+                initialIdentity = ALICE,
+                identityService = rigorousMock<IdentityServiceInternal>().also {
+                    doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
+                    doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
+                },
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                        .copy(whitelistedContractImplementations = mapOf(
+                                Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
+                                noPropagationContractClassName to listOf(SecureHash.zeroHash)),
+                                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey),
+                                notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+        )
+    }
 
     @Test
     fun `Happy path with the HashConstraint`() {
