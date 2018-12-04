@@ -51,6 +51,36 @@ class EnumTransformationTests {
         }
     }
 
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "P", to = "Q"),
+            CordaSerializationTransformRename(from = "Q", to = "R")
+    )
+    enum class DanglingRenames { A, B, C }
+
+    @Test
+    fun renameCycleDoesNotTerminateInConstant() {
+        assertFailsWith<InvalidEnumTransformsException> {
+            EnumTransforms.build(
+                    TransformsAnnotationProcessor.getTransformsSchema(DanglingRenames::class.java),
+                    DanglingRenames::class.java.constants)
+        }
+    }
+
+    @CordaSerializationTransformRenames(
+            CordaSerializationTransformRename(from = "P", to = "Q"),
+            CordaSerializationTransformRename(from = "Q", to = "R")
+    )
+    enum class RenamesExisting { Q, R, S }
+
+    @Test
+    fun renamesRenameExistingConstant() {
+        assertFailsWith<InvalidEnumTransformsException> {
+            EnumTransforms.build(
+                    TransformsAnnotationProcessor.getTransformsSchema(RenamesExisting::class.java),
+                    RenamesExisting::class.java.constants)
+        }
+    }
+
     private val Class<*>.constants: Map<String, Int> get() =
         enumConstants.asSequence().mapIndexed { index, constant -> constant.toString() to index }.toMap()
 }
