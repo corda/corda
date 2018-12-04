@@ -61,7 +61,7 @@ class NodeProcess(
 
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
             fun defaultNetworkParameters(notaryInfo: NotaryInfo) = run {
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                     // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
