@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
@@ -54,6 +55,7 @@ interface AttachmentConstraint {
      *
      * TODO - SignatureConstraint third party signers.
      */
+    @CordaInternal
     fun canBeTransitionedFrom(input: AttachmentConstraint, attachment: AttachmentWithContext): Boolean {
         val output = this
         return when {
