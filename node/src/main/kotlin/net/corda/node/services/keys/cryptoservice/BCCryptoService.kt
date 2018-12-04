@@ -1,6 +1,7 @@
 package net.corda.node.services.keys.cryptoservice
 
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sha256
 import net.corda.node.services.config.NodeConfiguration
@@ -65,6 +66,14 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
         } catch (e: Exception) {
             throw CryptoServiceException("Cannot get Signer for key with alias $alias", e)
         }
+    }
+
+    override fun defaultIdentitySignatureScheme(): SignatureScheme {
+        return X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME
+    }
+
+    override fun defaultTLSSignatureScheme(): SignatureScheme {
+        return X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME
     }
 
     /**

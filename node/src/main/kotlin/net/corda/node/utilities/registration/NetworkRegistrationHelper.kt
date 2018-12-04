@@ -117,7 +117,7 @@ open class NetworkRegistrationHelper(
         return if (cryptoService.containsKey(nodeCaKeyAlias)) {
             cryptoService.getPublicKey(nodeCaKeyAlias)!!
         } else {
-            cryptoService.generateKeyPair(nodeCaKeyAlias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME.schemeNumberID)
+            cryptoService.generateKeyPair(nodeCaKeyAlias, cryptoService.defaultTLSSignatureScheme().schemeNumberID)
         }
     }
 

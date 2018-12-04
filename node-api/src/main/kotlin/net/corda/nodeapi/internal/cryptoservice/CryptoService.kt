@@ -1,6 +1,7 @@
 package net.corda.nodeapi.internal.cryptoservice
 
 import net.corda.core.DoNotImplement
+import net.corda.core.crypto.SignatureScheme
 import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PublicKey
@@ -37,6 +38,16 @@ interface CryptoService {
      * Returns [ContentSigner] for the key identified by the input alias.
      */
     fun getSigner(alias: String): ContentSigner
+
+    /**
+     * Returns the [SignatureScheme] that should be used for generating key pairs for the node's legal identity with this [CryptoService].
+     */
+    fun defaultIdentitySignatureScheme(): SignatureScheme
+
+    /**
+     * Returns the [SignatureScheme] that should be used with this [CryptoService] when generating key pairs for TLS.
+     */
+    fun defaultTLSSignatureScheme(): SignatureScheme
 }
 
 open class CryptoServiceException(message: String?, cause: Throwable? = null) : Exception(message, cause)

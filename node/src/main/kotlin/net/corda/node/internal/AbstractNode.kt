@@ -950,7 +950,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 
-    protected open fun generateKeyPair(alias: String) = cryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+    protected open fun generateKeyPair(alias: String) = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme().schemeNumberID)
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
