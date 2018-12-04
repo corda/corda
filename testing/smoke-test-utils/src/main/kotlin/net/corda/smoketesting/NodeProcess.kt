@@ -62,10 +62,8 @@ class NodeProcess(
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
-            fun defaultNetworkParameters(notaryInfo: NotaryInfo) = run {
+            fun createNetworkParameters(notaryInfo: NotaryInfo) = {
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
-                    // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
                     NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
                 }
             }
@@ -96,7 +94,7 @@ class NodeProcess(
             log.info("Node directory: {}", nodeDir)
 
             (nodeDir / "node.conf").writeText(config.toText())
-            defaultNetworkParameters(NotaryInfo(notaryParty!!, false)).install(nodeDir)
+            createNetworkParameters(NotaryInfo(notaryParty!!, false)).install(nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
