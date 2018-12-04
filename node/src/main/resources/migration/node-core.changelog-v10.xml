@@ -7,8 +7,10 @@
 
     <changeSet author="R3.Corda" id="add_version_column">
         <addColumn tableName="node_attachments">
-            <column name="version" type="NVARCHAR(64)"/>
+            <column name="version" type="INT"/>
         </addColumn>
+        <sql>update node_attachments set version = 0</sql>
+        <addNotNullConstraint tableName="node_attachments" columnName="version" columnDataType="INT"/>
     </changeSet>
 
 </databaseChangeLog>

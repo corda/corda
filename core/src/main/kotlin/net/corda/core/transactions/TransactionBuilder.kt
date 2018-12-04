@@ -14,7 +14,9 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -398,14 +400,21 @@ open class TransactionBuilder @JvmOverloads constructor(
      * This method should only be called for upgradeable contracts.
      *
      * For now we use the currently installed CorDapp version.
-     * TODO - When the SignatureConstraint and contract version logic is in, this will need to query the attachments table and find the latest one that satisfies all constraints.
-     * TODO - select a version of the contract that is no older than the one from the previous transactions.
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(states)
+        val highestContractClassVersion = UNKNOWN_CORDA_CONTRACT_VERSION //TODO will be set by code from other PR
+
+        //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+                versionCondition = Builder.greaterThanOrEqual(highestContractClassVersion))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort)
+
+        return attachmentIds.firstOrNull() ?: throw MissingContractAttachments(states)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys

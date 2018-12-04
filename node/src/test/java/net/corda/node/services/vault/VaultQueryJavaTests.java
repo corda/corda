@@ -616,12 +616,12 @@ public class VaultQueryJavaTests {
 
         // version
         FieldInfo version = getField("version", NodeAttachmentService.DBAttachment.class);
-        ColumnPredicate<List<String>> version2Predicate = equal(version, asList("2.0")).component2();
+        ColumnPredicate<Integer> version2Predicate = equal(version, 2).component2();
 
         AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version2Predicate);
         assertThat(storage.queryAttachments(criteria4).size()).isEqualTo(1);
 
-        ColumnPredicate<List<String>> version1Predicate = equal(version, asList("1.0")).component2();
+        ColumnPredicate<Integer> version1Predicate = equal(version, 1).component2();
         ColumnPredicate<List<String>> manyContractClassNamesPredicate = equal(contractClassNames, asList("com.example.MyContract", "com.example.AnotherContract")).component2();
 
         AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version1Predicate);

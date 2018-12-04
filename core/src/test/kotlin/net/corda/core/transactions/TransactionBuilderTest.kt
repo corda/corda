@@ -13,6 +13,10 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -38,6 +42,10 @@ class TransactionBuilderTest {
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
     private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
+    private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
+            versionCondition = Builder.greaterThanOrEqual(UNKNOWN_CORDA_CONTRACT_VERSION))
+    private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
     @Before
     fun setup() {
@@ -57,6 +65,8 @@ class TransactionBuilderTest {
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
+
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 
     @Test
@@ -122,6 +132,7 @@ class TransactionBuilderTest {
 
         doReturn(attachments).whenever(services).attachments
         doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
+        doReturn(listOf(contractAttachmentId)).whenever(attachments).queryAttachments(attachmentQueryCriteria, attachmentSort)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
         val builder = TransactionBuilder()

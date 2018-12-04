@@ -283,7 +283,7 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
                                                                   val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
                                                                   val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
                                                                   val isSignedCondition: ColumnPredicate<Boolean>? = null,
-                                                                  val versionCondition: ColumnPredicate<List<String>>? = null) : AttachmentQueryCriteria() {
+                                                                  val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -302,7 +302,7 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
         fun withContractClassNames(contractClassNamesPredicate: ColumnPredicate<List<ContractClassName>>) = copy(contractClassNamesCondition = contractClassNamesPredicate)
         fun withSigners(signersPredicate: ColumnPredicate<List<PublicKey>>) = copy(signersCondition = signersPredicate)
         fun isSigned(isSignedPredicate: ColumnPredicate<Boolean>) = copy(isSignedCondition = isSignedPredicate)
-        fun withVersions(versionsPredicate: ColumnPredicate<List<String>>) = copy(versionCondition = versionsPredicate)
+        fun withVersions(versionsPredicate: ColumnPredicate<Int>) = copy(versionCondition = versionsPredicate)
     }
 
     class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>
