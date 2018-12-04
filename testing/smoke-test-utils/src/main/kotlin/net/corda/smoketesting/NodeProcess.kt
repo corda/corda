@@ -63,9 +63,6 @@ class NodeProcess(
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
-
-            val serializationEnv = AMQPClientSerializationScheme.createSerializationEnv()
-
             init {
                 checkNotOnClasspath("net.corda.node.Corda") {
                     "Smoke test has the node in its classpath. Please remove the offending dependency."
@@ -85,7 +82,7 @@ class NodeProcess(
                     networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
                 } catch (_: IllegalStateException) {
                     // Assuming serialization env not in context.
-                    serializationEnv.asContextEnv {
+                    AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                         networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
                     }
                 }
