@@ -91,7 +91,7 @@ class NodeProcess(
         }
 
         fun create(config: NodeConfig): NodeProcess {
-            require(notaryParty != null) { "Notary needs to be created first by calling `createNotary`."}
+            require(notaryParty != null) { "Notary needs to be created first by calling `createNotary`." }
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
 
