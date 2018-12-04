@@ -172,9 +172,10 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
-        val inputStateContractClassToVersions: List<Pair<ContractClassName, Version>> = serializedResolvedInputs.lazyMapped { star, _ ->
-            star.toStateAndRef().let { Pair(it.state.contract, getContractVersion(resolveContractAttachment(it.ref))) }
-        }.toList() //to make it work on notary
+        //keep resolvedInputs lazy and resolve the inputs separately here to get Version
+        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map { it.toStateAndRef() }.groupBy { it.state.contract }
+        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> =
+                inputStateContractClassToStateRefs.mapValues { it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: 0 }
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
@@ -190,7 +191,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                inputStateContractClassToVersions
+                inputStateContractClassToMaxVersion
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
