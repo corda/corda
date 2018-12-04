@@ -34,6 +34,12 @@ class NotaryChangeHandler(otherSideSession: FlowSession) : AbstractStateReplacem
         if (state !in proposedTx.inputs.map { it.ref }) {
             throw StateReplacementException("The proposed state $state is not in the proposed transaction inputs")
         }
+
+        val newNotary = proposal.modification
+        val isNotary = serviceHub.networkMapCache.isNotary(newNotary)
+        if (!isNotary) {
+            throw StateReplacementException("The proposed node $newNotary does not run a Notary service")
+        }
     }
 }
 
