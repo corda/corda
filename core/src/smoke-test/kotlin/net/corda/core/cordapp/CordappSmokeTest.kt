@@ -25,6 +25,8 @@ import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
 import net.corda.smoketesting.NodeProcess.Companion.CORDAPPS_DIR_NAME
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -42,6 +44,15 @@ class CordappSmokeTest {
 
     private val factory = NodeProcess.Factory()
 
+    private val notaryConfig = NodeConfig(
+            legalName = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH"),
+            p2pPort = port.andIncrement,
+            rpcPort = port.andIncrement,
+            rpcAdminPort = port.andIncrement,
+            isNotary = true,
+            users = listOf(user)
+    )
+
     private val aliceConfig = NodeConfig(
             legalName = CordaX500Name(organisation = "Alice Corp", locality = "Madrid", country = "ES"),
             p2pPort = port.andIncrement,
@@ -50,6 +61,18 @@ class CordappSmokeTest {
             isNotary = false,
             users = listOf(user)
     )
+
+    private lateinit var notary: NodeProcess
+
+    @Before
+    fun setUp() {
+       notary = factory.createNotary(notaryConfig)
+    }
+
+    @After
+    fun done() {
+        notary.close()
+    }
 
     @Test
     fun `FlowContent appName returns the filename of the CorDapp jar`() {

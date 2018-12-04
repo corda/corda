@@ -79,15 +79,33 @@ class NodeProcess(
 
         private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
+        private var notaryParty: Party? = null
+
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 
-        fun create(config: NodeConfig): NodeProcess {
+        fun createNotary(config: NodeConfig): NodeProcess {
+            require(notaryParty == null) { "Only one notary can be created." }
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
 
             (nodeDir / "node.conf").writeText(config.toText())
-            val notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
-            defaultNetworkParameters(NotaryInfo(Party(config.legalName, notaryParty.owningKey), false)).install(nodeDir)
+            notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
+            defaultNetworkParameters(NotaryInfo(notaryParty!!, false)).install(nodeDir)
+
+            val process = startNode(nodeDir)
+            val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
+            waitForNode(process, config, client)
+            val nodeProcess = NodeProcess(config, nodeDir, process, client)
+            return nodeProcess
+        }
+
+        fun create(config: NodeConfig): NodeProcess {
+            require(notaryParty != null) { "Notary needs to be created first by calling `createNotary`."}
+            val nodeDir = baseDirectory(config).createDirectories()
+            log.info("Node directory: {}", nodeDir)
+
+            (nodeDir / "node.conf").writeText(config.toText())
+            defaultNetworkParameters(NotaryInfo(notaryParty!!, false)).install(nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))

@@ -70,7 +70,7 @@ class StandaloneCordaRPClientTest {
     fun setUp() {
         factory = NodeProcess.Factory()
         copyFinanceCordapp()
-        notary = factory.create(notaryConfig)
+        notary = factory.createNotary(notaryConfig)
         connection = notary.connect()
         rpcProxy = connection.proxy
         notaryNode = fetchNotaryIdentity()
