@@ -149,13 +149,17 @@ class DefaultEvolutionSerializerFactory(
 
         val conversions = members.associate { it to findLocal(it) }
         val convertedOrdinals = remoteOrdinals.asSequence().map { (member, ord) -> ord to conversions[member]!! }.toMap()
-        if (localOrdinals.any { (name, ordinal) -> convertedOrdinals[ordinal] != name })
-            throw EvolutionSerializationException(
-                    this,
-                    "Constants have been reordered, additions must be appended to the end")
+
+        if (constantsAreReordered(localOrdinals, convertedOrdinals)) throw EvolutionSerializationException(this,
+                "Constants have been reordered, additions must be appended to the end")
 
         return EnumEvolutionSerializer(localTypeInformation.observedType, localSerializerFactory, conversions, localOrdinals)
     }
+
+    private fun constantsAreReordered(localOrdinals: Map<String, Int>, convertedOrdinals: Map<Int, String>): Boolean =
+        if (localOrdinals.size <= convertedOrdinals.size) {
+            localOrdinals.any { (name, ordinal) -> convertedOrdinals[ordinal] != name }
+        } else convertedOrdinals.any { (ordinal, name) -> localOrdinals[name] != ordinal }
 
     private fun RemoteTypeInformation.Composable.buildComposableEvolutionSerializer(
             localTypeInformation: LocalTypeInformation.Composable,
