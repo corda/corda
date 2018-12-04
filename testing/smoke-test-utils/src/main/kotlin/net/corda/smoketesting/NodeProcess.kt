@@ -62,10 +62,8 @@ class NodeProcess(
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
-            fun createNetworkParameters(notaryInfo: NotaryInfo) = {
-                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
-                }
+            fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
+                NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo))).install(nodeDir)
             }
 
             init {
@@ -94,7 +92,7 @@ class NodeProcess(
             log.info("Node directory: {}", nodeDir)
 
             (nodeDir / "node.conf").writeText(config.toText())
-            createNetworkParameters(NotaryInfo(notaryParty!!, false)).install(nodeDir)
+            createNetworkParameters(NotaryInfo(notaryParty!!, false), nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
