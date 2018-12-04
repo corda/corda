@@ -22,6 +22,7 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
@@ -37,7 +38,7 @@ class NotaryServiceTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that
@@ -62,7 +63,7 @@ class NotaryServiceTests {
         mockNet.runNetwork()
         val ex = assertFailsWith<NotaryException> { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: null")
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
     }
 
     @Test
@@ -73,8 +74,7 @@ class NotaryServiceTests {
         mockNet.runNetwork()
         val ex = assertFailsWith<NotaryException> { future.getOrThrow() }
         val notaryError = ex.error as NotaryError.TransactionInvalid
-        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation was tagged with parameters with hash: $hash, " +
-                "but current network parameters are: ${notaryServices.networkParametersStorage.currentHash}")
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation contains unknown parameters hash: $hash")
     }
 
     internal companion object {

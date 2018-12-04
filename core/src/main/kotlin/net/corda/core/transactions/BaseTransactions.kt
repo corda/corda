@@ -29,13 +29,12 @@ abstract class CoreTransaction : BaseTransaction() {
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
     abstract override val references: List<StateAndRef<ContractState>>
-    // TODO NetworkParameters field is nullable only because of the API stability and the fact that our ledger transactions exposed constructors
-    //  (they were data classes). This should be revisited.
     /**
      * Network parameters that were in force when this transaction was created. Resolved from the hash of network parameters on the corresponding
      * wire transaction.
      */
     abstract val networkParameters: NetworkParameters?
+
     override fun checkBaseInvariants() {
         super.checkBaseInvariants()
         checkInputsAndReferencesHaveSameNotary()
@@ -46,5 +45,18 @@ abstract class FullTransaction : BaseTransaction() {
         val notaries = (inputs + references).map { it.state.notary }.toHashSet()
         check(notaries.size == 1) { "All inputs and reference inputs must point to the same notary" }
         check(notaries.single() == notary) { "The specified notary must be the one specified by all inputs and input references" }
+    }
+
+    /** Make sure the assigned notary is part of the network parameter whitelist. */
+    protected fun checkNotaryWhitelisted() {
+        notary?.let { notaryParty ->
+            // Network parameters will never be null if the transaction is resolved from a CoreTransaction rather than constructed directly.
+            networkParameters?.let { parameters ->
+                val notaryWhitelist = parameters.notaries.map { it.identity }
+                check(notaryParty in notaryWhitelist) {
+                    "Notary ($notaryParty) specified by the transaction is not on the network parameter whitelist: [${notaryWhitelist.joinToString()}]"
+                }
+            }
+        }
     }
 }

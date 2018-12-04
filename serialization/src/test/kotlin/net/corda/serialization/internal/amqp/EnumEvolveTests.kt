@@ -13,6 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Ignore
 import org.junit.Test
+import java.io.File
 import java.io.NotSerializableException
 import java.net.URI
 import kotlin.test.assertEquals
@@ -423,5 +424,34 @@ class EnumEvolveTests {
             DeserializationInput(sf).deserialize(SerializedBytes<C>(
                     EvolvabilityTests::class.java.getResource(resource).readBytes()))
         }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    // Version of the class as it was serialised
+    //
+    // enum class ExtendedEnum { A, B, C }
+    //
+    // Version of the class as it's used in the test
+    @CordaSerializationTransformEnumDefaults (
+            CordaSerializationTransformEnumDefault("E", "C"),
+            CordaSerializationTransformEnumDefault("D", "C")
+    )
+    enum class ExtendedEnum { A, B, C, D, E}
+
+    // See https://r3-cev.atlassian.net/browse/CORDA-2264.
+    @Test
+    fun extendEnum() {
+        val resource = "${javaClass.simpleName}.${testName()}"
+        val sf = testDefaultFactory()
+
+        data class C(val e: ExtendedEnum)
+
+        // Uncomment to re-generate test files
+        // val so = SerializationOutput(sf)
+        // File(URI("$localPath/$resource.A")).writeBytes(so.serialize(C(ExtendedEnum.A)).bytes)
+
+        val path1 = EvolvabilityTests::class.java.getResource("$resource.A")
+
+        val obj1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(File(path1.toURI()).readBytes()))
+        assertEquals(ExtendedEnum.A, obj1.e)
     }
 }

@@ -6,6 +6,7 @@ import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.POUNDS
 import net.corda.finance.`issued by`
@@ -48,10 +49,14 @@ class ConstraintsPropagationTests {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-                    .copy(whitelistedContractImplementations = mapOf(
+            networkParameters = testNetworkParameters(
+                    minimumPlatformVersion = 4,
+                    whitelistedContractImplementations = mapOf(
                             Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
-                            noPropagationContractClassName to listOf(SecureHash.zeroHash)))
+                            noPropagationContractClassName to listOf(SecureHash.zeroHash)
+                    ),
+                    notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))
+            )
     )
 
     @Test

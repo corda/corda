@@ -7,7 +7,7 @@ In the Hello, World tutorial, we built a CorDapp allowing us to model IOUs on le
 elements:
 
 * An ``IOUState``, representing IOUs on the blockchain
-* An ``IOUFlow`` and ``IOFlowResponder`` flow pair, orchestrating the process of agreeing the creation of an IOU on-ledger
+* An ``IOUFlow`` and ``IOUFlowResponder`` flow pair, orchestrating the process of agreeing the creation of an IOU on-ledger
 
 However, our CorDapp did not impose any constraints on the evolution of IOUs on the blockchain over time. Anyone was free
 to create IOUs of any value, between any party.

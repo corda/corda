@@ -298,6 +298,14 @@ allprojects {
     }
 }
 
+subprojects {
+    tasks.withType(Test) {
+        if (project.getProperty('test.parallel').toBoolean()) {
+            maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+        }
+    }
+}
+
 // Check that we are running on a Java 8 JDK. The source/targetCompatibility values above aren't sufficient to
 // guarantee this because those are properties checked by the Java plugin, but we're using Kotlin.
 //

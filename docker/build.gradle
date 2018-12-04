@@ -13,6 +13,7 @@ buildscript {
 
 import com.bmuschko.gradle.docker.DockerRemoteApiPlugin
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -36,6 +37,13 @@ shadowJar {
     zip64 true
 }
 
+docker{
+    registryCredentials  {
+        url = System.env.DOCKER_URL
+        username = System.env.DOCKER_USERNAME
+        password = System.env.DOCKER_PASSWORD
+    }
+}
 
 task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
     doLast {
@@ -54,11 +62,25 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
     }
 }
 
+final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
+final buildTags = ["corda/corda-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-${project.version.toString().toLowerCase()}:latest"]
+
 task buildOfficialDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
     //if we are a snapshot, append a timestamp
     //if we are a release, append RELEASE
-    final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
     inputDir = new File(project.buildDir, "docker-temp")
-    tags = ["corda/corda-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-${project.version.toString().toLowerCase()}:latest"]
+    tags = buildTags
+}
+
+task pushTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialDockerImage]){
+    imageName = buildTags[0]
+}
+
+task pushLatestTag('type': DockerPushImage, dependsOn: [buildOfficialDockerImage]){
+    imageName = buildTags[1]
+}
+
+task pushOfficialImages(dependsOn: [pushTimeStampedTag, pushLatestTag]){
+    
 }

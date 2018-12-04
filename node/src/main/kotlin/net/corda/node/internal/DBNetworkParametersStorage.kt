@@ -1,10 +1,13 @@
 package net.corda.node.internal
 
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.internal.notary.HistoricNetworkParameterStorage
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -37,6 +40,8 @@ interface NetworkParametersStorageInternal : NetworkParametersStorage {
      * Hash should always be calculated over the serialized bytes.
      */
     fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>)
+
+    fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate)
 }
 
 class DBNetworkParametersStorage(
@@ -45,7 +50,7 @@ class DBNetworkParametersStorage(
         // TODO It's very inefficient solution (at least at the beginning when node joins without historical data)
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?
-) : NetworkParametersStorageInternal, SingletonSerializeAsToken() {
+) : NetworkParametersStorageInternal, HistoricNetworkParameterStorage, SingletonSerializeAsToken() {
     private lateinit var trustRoot: X509Certificate
 
     companion object {
@@ -71,7 +76,7 @@ class DBNetworkParametersStorage(
         }
     }
 
-    fun start(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate) {
+    override fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate) {
         this.trustRoot = trustRoot
         saveParameters(currentSignedParameters)
         _currentHash = currentSignedParameters.raw.hash
@@ -116,6 +121,22 @@ class DBNetworkParametersStorage(
             log.warn("Tried to download historical network parameters with hash $parametersHash, but network map url isn't configured")
             null
         }
+    }
+
+    /**
+     * Try to obtain notary info from the current network parameters. If not found, look through historical ones.
+     */
+    override fun getHistoricNotary(party: Party): NotaryInfo? {
+        val currentParameters = lookup(currentHash)
+                ?: throw IllegalStateException("Unable to obtain NotaryInfo – current network parameters not set.")
+        val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
+        if (inCurrentParams == null) {
+            val inOldParams = hashToParameters.allPersisted().flatMap { (_, signedParams) ->
+                val parameters = signedParams.raw.deserialize()
+                parameters.notaries.asSequence()
+            }.firstOrNull { it.identity == party }
+            return inOldParams
+        } else return inCurrentParams
     }
 
     @Entity

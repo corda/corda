@@ -2278,8 +2278,6 @@ public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.cor
   @NotNull
   public java.util.List<net.corda.core.crypto.TransactionSignature> call()
   @NotNull
-  protected final net.corda.core.identity.Party checkTransaction()
-  @NotNull
   public net.corda.core.utilities.ProgressTracker getProgressTracker()
   @Suspendable
   @NotNull
@@ -5976,12 +5974,12 @@ public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   public <init>()
   public <init>(boolean, net.corda.testing.driver.PortAllocation)
   public final boolean component1()
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation component2()
   @NotNull
   public final net.corda.testing.driver.JmxPolicy copy(boolean, net.corda.testing.driver.PortAllocation)
   public boolean equals(Object)
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation getJmxHttpServerPortAllocation()
   public final boolean getStartJmxHttpServer()
   public int hashCode()
@@ -6383,7 +6381,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @NotNull
-  public final net.corda.core.node.NetworkParameters getNetworkParameters()
+  public net.corda.core.node.NetworkParameters getNetworkParameters()
   @NotNull
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull

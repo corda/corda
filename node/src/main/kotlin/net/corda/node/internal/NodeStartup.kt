@@ -127,7 +127,7 @@ open class NodeStartup : NodeStartupLogging {
 
         // Step 2. We do the single node check before we initialise logging so that in case of a double-node start it
         // doesn't mess with the running node's logs.
-        enforceSingleNodeIsRunning(cmdLineOptions.baseDirectory)
+        if (!isNodeRunningAt(cmdLineOptions.baseDirectory)) return ExitCodes.FAILURE
 
         // Step 3. Register all cryptography [Provider]s.
         // Required to install our [SecureRandom] before e.g., UUID asks for one.
@@ -262,7 +262,7 @@ open class NodeStartup : NodeStartupLogging {
         }
     }
 
-    internal fun enforceSingleNodeIsRunning(baseDirectory: Path) {
+    fun isNodeRunningAt(baseDirectory: Path): Boolean {
         // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
         // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
         // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
@@ -276,7 +276,7 @@ open class NodeStartup : NodeStartupLogging {
             if (pidFileLock == null) {
                 println("It appears there is already a node running with the specified data directory $baseDirectory")
                 println("Shut that other node down and try again. It may have process ID ${pidFile.readText()}")
-                System.exit(1)
+                return false
             }
             pidFile.deleteOnExit()
             // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
@@ -291,8 +291,9 @@ open class NodeStartup : NodeStartupLogging {
             val appUser = System.getProperty("user.name")
             println("Application user '$appUser' does not have necessary permissions for Node base directory '$baseDirectory'.")
             println("Corda Node process in now exiting. Please check directory permissions and try starting the Node again.")
-            System.exit(1)
+            return false
         }
+        return true
     }
 
     private fun lookupMachineNameAndMaybeWarn(): String {
