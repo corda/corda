@@ -6,7 +6,9 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
@@ -30,9 +32,9 @@ import kotlin.test.assertEquals
 class ParametersResoultionTest {
     // FetchParametersFlow is enabled if minimumPlatformVersion is >= 4
     private var params1: NetworkParameters = testNetworkParameters(epoch = 1, minimumPlatformVersion = 4)
-    private var params2: NetworkParameters = testNetworkParameters(epoch = 2, minimumPlatformVersion = 4)
+    private lateinit var params2: NetworkParameters
     private var params3: NetworkParameters = testNetworkParameters(epoch = 3, minimumPlatformVersion = 4)
-    private var params4: NetworkParameters = testNetworkParameters(epoch = 4, minimumPlatformVersion = 4)
+    private lateinit var params4: NetworkParameters
 
     private val certKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
 
@@ -53,6 +55,9 @@ class ParametersResoultionTest {
         notary = mockNet.defaultNotaryIdentity
         megaCorp = megaCorpNode.info.singleIdentity()
         miniCorp = miniCorpNode.info.singleIdentity()
+
+        params2 = testNetworkParameters(epoch = 2, minimumPlatformVersion = 4, notaries = listOf((NotaryInfo(notary, true))))
+        params4 = testNetworkParameters(epoch = 4, minimumPlatformVersion = 4, notaries = listOf((NotaryInfo(notary, true))))
     }
 
     @After
@@ -99,7 +104,7 @@ class ParametersResoultionTest {
         megaCorpNode.transaction {
             megaCorpNode.services.recordTransactions(dummy1, dummy2)
             // Record parameters too.
-            with(megaCorpNode.services.networkParametersStorage) {
+            with(megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal) {
                 parameters1?.let { saveParameters(certKeyPair.sign(it)) }
                 parameters2?.let { saveParameters(certKeyPair.sign(it)) }
             }
@@ -204,8 +209,8 @@ class ParametersResoultionTest {
 
         megaCorpNode.transaction {
             megaCorpNode.services.recordTransactions(stx2, stx3)
-            megaCorpNode.services.networkParametersStorage.saveParameters(certKeyPair.sign(params1))
-            megaCorpNode.services.networkParametersStorage.saveParameters(certKeyPair.sign(params3))
+            (megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal).saveParameters(certKeyPair.sign(params1))
+            (megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal).saveParameters(certKeyPair.sign(params3))
         }
 
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx3.id), megaCorp)

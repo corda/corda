@@ -11,6 +11,7 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
@@ -209,14 +210,14 @@ class SignedParametersByHash(val signedParameters: SignedDataWithCert<NetworkPar
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedParametersByHash, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
     override fun load(txid: SecureHash): SignedParametersByHash? {
-        return serviceHub.networkParametersStorage.lookupSigned(txid)?.let { SignedParametersByHash(it) }
+        return (serviceHub.networkParametersStorage as NetworkParametersStorageInternal).lookupSigned(txid)?.let { SignedParametersByHash(it) }
     }
 
     override fun convert(wire: SignedDataWithCert<NetworkParameters>): SignedParametersByHash = SignedParametersByHash(wire)
 
     override fun maybeWriteToDisk(downloaded: List<SignedParametersByHash>) {
         for (parameters in downloaded) {
-            with(serviceHub.networkParametersStorage) {
+            with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
                 if (!hasParameters(parameters.id)) {
                     // This will perform the signature check too and throws with SignatureVerificationException
                     saveParameters(parameters.signedParameters)

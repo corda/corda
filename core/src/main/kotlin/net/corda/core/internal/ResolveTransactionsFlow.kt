@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.node.StatesToRecord
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -106,7 +107,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             if (minimumPlatformVersion >= 4) {
                 // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
                 // Check that epochs are ordered in the transaction chain.
-                with(serviceHub.networkParametersStorage) {
+                with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
                     val currentEpoch = stx.getHashOrDefault().let { hash ->
                         getEpochFromHash(hash) ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $hash")
                     }
@@ -238,7 +239,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     private fun fetchMissingParameters(downloads: List<SignedTransaction>) {
         val parameters = downloads.mapNotNull { it.networkParametersHash }
-        val missingParameters = parameters.filter { !serviceHub.networkParametersStorage.hasParameters(it) }
+        val missingParameters = parameters.filter { !(serviceHub.networkParametersStorage as NetworkParametersStorageInternal).hasParameters(it) }
         if (missingParameters.isNotEmpty())
             subFlow(FetchNetworkParametersFlow(missingParameters.toSet(), otherSide))
     }

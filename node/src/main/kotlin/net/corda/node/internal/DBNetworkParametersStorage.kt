@@ -8,7 +8,7 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.notary.HistoricNetworkParameterStorage
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
@@ -27,23 +27,6 @@ import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils
 import java.security.cert.X509Certificate
 import javax.persistence.*
-
-interface NetworkParametersStorageInternal : NetworkParametersStorage {
-    /**
-     * Return parameters epoch for the given parameters hash. Null if there are no parameters for this hash in the storage and we are unable to
-     * get them from network map.
-     */
-    fun getEpochFromHash(hash: SecureHash): Int?
-
-    /**
-     * Save signed network parameters data. Internally network parameters bytes should be stored with the signature.
-     * It's because of ability of older nodes to function in network where parameters were extended with new fields.
-     * Hash should always be calculated over the serialized bytes.
-     */
-    fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>)
-
-    fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate)
-}
 
 class DBNetworkParametersStorage(
         cacheFactory: NamedCacheFactory,

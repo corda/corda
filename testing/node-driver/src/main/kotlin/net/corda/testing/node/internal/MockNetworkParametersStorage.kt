@@ -6,8 +6,9 @@ import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.internal.notary.HistoricNetworkParameterStorage
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.serialize
-import net.corda.node.internal.NetworkParametersStorageInternal
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.withTestSerializationEnvIfNotSet
@@ -16,7 +17,7 @@ import java.time.Instant
 
 class MockNetworkParametersStorage(private var currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorageInternal, HistoricNetworkParameterStorage {
     private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
-
+    private val hashToSignedParametersMap: HashMap<SecureHash, SignedNetworkParameters> = HashMap()
     init {
         storeCurrentParameters()
     }
@@ -31,7 +32,7 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
     }
 
     override fun lookupSigned(hash: SecureHash): SignedDataWithCert<NetworkParameters>? {
-        throw UnsupportedOperationException()
+        return hashToSignedParametersMap[hash]
     }
 
     override fun hasParameters(hash: SecureHash): Boolean = hash in hashToParametersMap
@@ -49,6 +50,7 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
         val networkParameters = signedNetworkParameters.verified()
         val hash = signedNetworkParameters.raw.hash
         hashToParametersMap[hash] = networkParameters
+        hashToSignedParametersMap[hash] = signedNetworkParameters
     }
 
     override fun getHistoricNotary(party: Party): NotaryInfo? {

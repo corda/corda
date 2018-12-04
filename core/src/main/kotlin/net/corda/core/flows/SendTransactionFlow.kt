@@ -6,6 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.RetrieveAnyTransactionPayload
 import net.corda.core.internal.readFully
+import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
@@ -94,7 +95,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    serviceHub.networkParametersStorage.lookupSigned(it)
+                    (serviceHub.networkParametersStorage as NetworkParametersStorageInternal).lookupSigned(it)
                             ?: throw FetchDataFlow.MissingNetworkParameters(it)
                 }
             }
