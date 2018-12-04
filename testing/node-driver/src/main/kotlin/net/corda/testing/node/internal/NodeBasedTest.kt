@@ -23,6 +23,7 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.User
 import org.apache.commons.lang.SystemUtils
@@ -40,9 +41,7 @@ import kotlin.test.assertFalse
 // TODO Some of the logic here duplicates what's in the driver - the reason why it's not straightforward to replace it by
 // using DriverDSLImpl in `init()` and `stopAllNodes()` is because of the platform version passed to nodes (driver doesn't
 // support this, and it's a property of the Corda JAR)
-abstract class NodeBasedTest
-@JvmOverloads
-constructor(private val cordappPackages: List<String> = emptyList(), private val notaries: List<CordaX500Name> = emptyList()) {
+abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyList(), private val notaries: List<CordaX500Name> = emptyList()): IntegrationTest() {
     companion object {
         private val WHITESPACE = "\\s++".toRegex()
     }
