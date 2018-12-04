@@ -49,6 +49,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
+    class MissingNetworkParameters(val requested: SecureHash) : FlowException()
+
     class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
 
     @CordaSerializable
@@ -219,7 +221,7 @@ class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                     // This will perform the signature check too and throws with SignatureVerificationException
                     saveParameters(parameters.signedParameters)
                 } else {
-                    logger.debug("Network parameters ${parameters.id} already exists in storage, skipping.")
+                    logger.debug{ "Network parameters ${parameters.id} already exists in storage, skipping." }
                 }
             }
         }
