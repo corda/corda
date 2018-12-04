@@ -135,9 +135,9 @@ created.
         public class SchemaV1 extends MappedSchema {
 
             /**
-             * This class must extend the MappedSchema class. It's name is created based on the SchemaFamily name and the associated version number abbreviation (V1, V2... Vn).
+             * This class must extend the MappedSchema class. Its name is based on the SchemaFamily name and the associated version number abbreviation (V1, V2... Vn).
              * In the constructor, use the super keyword to call the constructor of MappedSchema with the following arguments: a class literal representing the schema family,
-             * a version number and a collection of mappedTypes which represent the JPA entity classes that the ORM layer needs to be configured with for this schema.
+             * a version number and a collection of mappedTypes (class literals) which represent JPA entity classes that the ORM layer needs to be configured with for this schema.
              */
 
             public SchemaV1() {
@@ -146,7 +146,8 @@ created.
 
             /**
              * The @entity annotation signifies that the specified POJO class' non-transient fields should be persisted to a relational database using the services
-             * of an entity manager. The @table annotation specifies the title of the table that will be created to contain the persisted data.
+             * of an entity manager. The @table annotation specifies properties of the table that will be created to contain the persisted data, in this case we have
+             * specified a name argument which will be used the table's title.
              */
 
             @Entity
@@ -165,7 +166,7 @@ created.
 
                 /**
                  * The @OneToMany annotation specifies a one-to-many relationship between this class and a collection included as a field.
-                 * The @JoinColumns, and @JoinColumn annotations specify on which columns this relationship will be joined on.
+                 * The @JoinColumn and @JoinColumns annotations specify on which columns these tables will be joined on.
                  */
 
                 @OneToMany(cascade = CascadeType.PERSIST)
