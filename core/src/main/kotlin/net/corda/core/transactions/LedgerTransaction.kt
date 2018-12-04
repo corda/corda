@@ -180,13 +180,9 @@ private constructor(
      *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
     private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>) {
-        // This should never happen once we have network parameters in the transaction.
-        if (networkParameters == null) {
-            return
-        }
         val contractsAndOwners = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
-            networkParameters.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
+            networkParameters!!.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->
@@ -225,7 +221,6 @@ private constructor(
                 val outputConstraints = outputContractGroups[contractClassName]?.map { it.constraint }?.toSet()
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
-                        checkNotNull(networkParameters)
                         val constraintAttachment = resolveAttachment(contractClassName, contractAttachmentsByContract)
                         if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
