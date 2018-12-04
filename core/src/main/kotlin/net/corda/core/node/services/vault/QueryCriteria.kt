@@ -295,6 +295,14 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
         ): AttachmentsQueryCriteria {
             return AttachmentsQueryCriteria(uploaderCondition, filenameCondition, uploadDateCondition)
         }
+
+        fun withUploader(uploaderPredicate: ColumnPredicate<String>) = copy(uploaderCondition = uploaderPredicate)
+        fun withFilename(filenamePredicate: ColumnPredicate<String>) = copy(filenameCondition = filenamePredicate)
+        fun withUploadDate(uploadDatePredicate: ColumnPredicate<Instant>) = copy(uploadDateCondition = uploadDatePredicate)
+        fun withContractClassNames(contractClassNamesPredicate: ColumnPredicate<List<ContractClassName>>) = copy(contractClassNamesCondition = contractClassNamesPredicate)
+        fun withSigners(signersPredicate: ColumnPredicate<List<PublicKey>>) = copy(signersCondition = signersPredicate)
+        fun isSigned(isSignedPredicate: ColumnPredicate<Boolean>) = copy(isSignedCondition = isSignedPredicate)
+        fun withVersions(versionsPredicate: ColumnPredicate<List<String>>) = copy(versionCondition = versionsPredicate)
     }
 
     class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>

@@ -22,6 +22,7 @@ import javax.tools.ToolProvider
 
 object ContractJarTestUtils {
 
+    @JvmOverloads
     fun makeTestJar(output: OutputStream, extraEntries: List<Pair<String, String>> = emptyList()) {
         output.use {
             val jar = JarOutputStream(it)
@@ -38,6 +39,7 @@ object ContractJarTestUtils {
         }
     }
 
+    @JvmOverloads
     fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: String = "1.0"): Pair<Path, PublicKey> {
         val alias = "testAlias"
         val pwd = "testPassword"
@@ -49,6 +51,7 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName) to signer
     }
 
+    @JvmOverloads
     fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: String = "1.0"): Path {
         val packages = contractName.split(".")
         val jarName = "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"

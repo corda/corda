@@ -1,14 +1,17 @@
 package net.corda.node.services.vault;
 
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableSet;
 import kotlin.Pair;
 import kotlin.Triple;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.CryptoUtils;
+import net.corda.core.crypto.SecureHash;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.services.AttachmentStorage;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultService;
@@ -16,15 +19,20 @@ import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
+import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.finance.schemas.test.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
+import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
+import net.corda.testing.core.ContractJarTestUtils;
+import net.corda.testing.core.SelfCleaningDir;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
+import net.corda.testing.internal.TestingNamedCacheFactory;
 import net.corda.testing.internal.vault.DummyLinearContract;
 import net.corda.testing.internal.vault.VaultFiller;
 import net.corda.testing.node.MockServices;
@@ -33,6 +41,11 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.PublicKey;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,9 +54,11 @@ import java.util.stream.StreamSupport;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static net.corda.core.node.services.vault.Builder.equal;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.core.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
@@ -62,6 +77,7 @@ public class VaultQueryJavaTests {
     private VaultFiller vaultFiller;
     private MockServices issuerServices;
     private VaultService vaultService;
+    private AttachmentStorage storage;
     private CordaPersistence database;
 
     @Before
@@ -78,6 +94,7 @@ public class VaultQueryJavaTests {
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
         vaultService = services.getVaultService();
+        storage = new NodeAttachmentService(new MetricRegistry(), new TestingNamedCacheFactory(100), database);
     }
 
     @After
@@ -540,5 +557,76 @@ public class VaultQueryJavaTests {
             assertThat(queryStatesWithPaging(vaultService, 5).size()).isEqualTo(6);
             return tx;
         });
+    }
+
+    private Pair<Path, SecureHash> makeTestJar(Path path) throws IOException {
+        Path file = Paths.get(path.toAbsolutePath().toString(), "$counter.jar");
+        ContractJarTestUtils.INSTANCE.makeTestJar(Files.newOutputStream(file));
+        return new Pair(file, SecureHash.sha256(Files.readAllBytes(file)));
+    }
+
+    @Test
+    public void testAttachmentQueryCriteria() throws IOException, NoSuchFieldException {
+        SelfCleaningDir selfCleaningDir = new SelfCleaningDir();
+        Path path = selfCleaningDir.getPath();
+
+        Pair<Path, SecureHash> sampleJarAndHash = makeTestJar(path);
+        Path sampleJar = sampleJarAndHash.component1();
+        Path contractJar = INSTANCE.makeTestContractJar(path, "com.example.MyContract");
+
+        Pair<Path, PublicKey> signedContractJarAndKey = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract");
+        Path signedContractJar = signedContractJarAndKey.component1();
+        PublicKey publicKey = signedContractJarAndKey.component2();
+
+        Pair<Path, PublicKey> anotherSignedContractJarAndKey = INSTANCE.makeTestSignedContractJar(path, "com.example.AnotherContract");
+        Path anotherSignedContractJar = anotherSignedContractJarAndKey.component1();
+
+        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, "2.0");
+        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", "2.0");
+        Path signedContractJarV2 = signedContractJarAndKeyV2.component1();
+
+        storage.importAttachment(Files.newInputStream(sampleJar),"uploaderA", "sample.jar");
+        storage.importAttachment(Files.newInputStream(contractJar), "uploaderB", "contract.jar");
+        storage.importAttachment(Files.newInputStream(signedContractJar), "uploaderC", "contract-signed.jar");
+        storage.importAttachment(Files.newInputStream(anotherSignedContractJar), "uploaderD", "another-contract-signed.jar");
+        storage.importAttachment(Files.newInputStream(contractJarV2), "uploaderB", "contract-V2.jar");
+        storage.importAttachment(Files.newInputStream(signedContractJarV2), "uploaderC", "contract-signed-V2.jar");
+
+        // contract class name
+        FieldInfo contractClassNames = getField("contractClassNames", NodeAttachmentService.DBAttachment.class);
+        ColumnPredicate<List<String>> contractClassNamesPredicate = equal(contractClassNames, singletonList("com.example.MyContract")).component2();
+
+        AttachmentsQueryCriteria criteria1 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate);
+        criteria1.withContractClassNames(contractClassNamesPredicate);
+        assertThat(storage.queryAttachments(criteria1).size()).isEqualTo(4);
+
+        // signers
+        FieldInfo signers = getField("signers", NodeAttachmentService.DBAttachment.class);
+        ColumnPredicate<List<PublicKey>> signersPredicate = equal(signers, singletonList(publicKey)).component2();
+
+        AttachmentsQueryCriteria criteria2 = new AttachmentsQueryCriteria().withSigners(signersPredicate);
+        assertThat(storage.queryAttachments(criteria2).size()).isEqualTo(1);
+
+        // isSigned
+        FieldInfo isSigned = getField("signers", NodeAttachmentService.DBAttachment.class);
+        ColumnPredicate<Boolean> isSignedPredicate = equal(isSigned, true).component2();
+
+        AttachmentsQueryCriteria criteria3 = new AttachmentsQueryCriteria().isSigned(isSignedPredicate);
+        assertThat(storage.queryAttachments(criteria3).size()).isEqualTo(3);
+
+        // version
+        FieldInfo version = getField("version", NodeAttachmentService.DBAttachment.class);
+        ColumnPredicate<List<String>> version2Predicate = equal(version, asList("2.0")).component2();
+
+        AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version2Predicate);
+        assertThat(storage.queryAttachments(criteria4).size()).isEqualTo(1);
+
+        ColumnPredicate<List<String>> version1Predicate = equal(version, asList("1.0")).component2();
+        ColumnPredicate<List<String>> manyContractClassNamesPredicate = equal(contractClassNames, asList("com.example.MyContract", "com.example.AnotherContract")).component2();
+
+        AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version1Predicate);
+        assertThat(storage.queryAttachments(criteria5).size()).isEqualTo(2);
+
+        selfCleaningDir.close();
     }
 }
