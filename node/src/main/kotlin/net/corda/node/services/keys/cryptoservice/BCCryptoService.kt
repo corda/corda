@@ -28,13 +28,13 @@ class BCCryptoService(private val legalName: X500Principal, private val certific
     // TODO make it private when E2ETestKeyManagementService does not require direct access to the private key.
     internal var certificateStore: CertificateStore = certificateStoreSupplier.get(true)
 
-    override fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         try {
-            val keyPair = Crypto.generateKeyPair(Crypto.findSignatureScheme(schemeNumberID))
+            val keyPair = Crypto.generateKeyPair(scheme)
             importKey(alias, keyPair)
             return keyPair.public
         } catch (e: Exception) {
-            throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme with id $schemeNumberID", e)
+            throw CryptoServiceException("Cannot generate key for alias $alias and signature scheme ${scheme.schemeCodeName} (id ${scheme.schemeNumberID})", e)
         }
     }
 

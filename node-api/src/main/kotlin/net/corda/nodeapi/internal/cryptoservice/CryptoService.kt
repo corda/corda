@@ -17,7 +17,7 @@ interface CryptoService {
      *
      * Returns the [PublicKey] of the generated [KeyPair].
      */
-    fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey
+    fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey
 
     /** Check if this [CryptoService] has a private key entry for the input alias. */
     fun containsKey(alias: String): Boolean
