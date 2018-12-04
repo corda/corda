@@ -75,12 +75,12 @@ object JarSignatureTestUtils {
     fun Path.getJarSigners(fileName: String) =
             JarInputStream(FileInputStream((this / fileName).toFile())).use(JarSignatureCollector::collectSigners)
 
-    fun Path.addManifest(fileName: String, vararg entry: Pair<Attributes.Name, String>) {
+    fun Path.addManifest(fileName: String, vararg entry: Pair<String, String>) {
         JarInputStream(FileInputStream((this / fileName).toFile())).use { input ->
             val manifest = input.manifest ?: Manifest()
             entry.forEach { (attributeName, value) ->
                 // eg. Attributes.Name.IMPLEMENTATION_VERSION, version
-                manifest.mainAttributes[attributeName] = value
+                manifest.mainAttributes.putValue(attributeName,value)
             }
             val output = JarOutputStream(FileOutputStream((this / fileName).toFile()), manifest)
             var entry= input.nextEntry

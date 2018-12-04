@@ -8,6 +8,7 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.CORDA_CONTRACT_VERSION
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
@@ -34,7 +35,6 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
-import java.util.jar.Attributes.Name.IMPLEMENTATION_VERSION
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -111,7 +111,7 @@ class NodeAttachmentService(
 
             // Assumption: only Contract Attachments are versioned.
             @Column(name = "version", nullable = true)
-            var version: String? = null
+            var version: Int? = null
     )
 
     @VisibleForTesting
@@ -235,7 +235,7 @@ class NodeAttachmentService(
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
                     ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
-                            ?: emptyList(), attachment.version ?: UNKNOWN_VERSION)
+                            ?: emptyList(), attachment.version ?: 1)
                 } else {
                     it
                 }
@@ -356,7 +356,7 @@ class NodeAttachmentService(
 
     private fun getVersion(attachmentBytes: ByteArray) =
         JarInputStream(attachmentBytes.inputStream()).use {
-            it.manifest?.mainAttributes?.getValue(IMPLEMENTATION_VERSION) ?: "1.0"
+            it.manifest?.mainAttributes?.getValue(CORDA_CONTRACT_VERSION)?.toInt() ?: 1
         }
 
     @Suppress("OverridingDeprecatedMember")

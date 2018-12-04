@@ -213,7 +213,8 @@ data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseS
     enum class AttachmentSortAttribute(val columnName: String) {
         INSERTION_DATE("insertion_date"),
         UPLOADER("uploader"),
-        FILENAME("filename")
+        FILENAME("filename"),
+        VERSION ("version")
     }
 
     @CordaSerializable

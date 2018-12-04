@@ -35,6 +35,8 @@ interface TestCordapp {
     /** Returns whether the CorDapp should be jar signed. */
     val signJar: Boolean
 
+    val cordaContractVersion: Int
+
     /** Return a copy of this [TestCordapp] but with the specified name. */
     fun withName(name: String): TestCordapp
 
@@ -56,6 +58,8 @@ interface TestCordapp {
     /** Returns a signed copy of this [TestCordapp].
      *  Optionally can pass in the location of an existing java key store to use */
     fun signJar(keyStorePath: Path? = null): TestCordappImpl
+
+    fun withCordaContractVersion(version: Int): TestCordappImpl
 
     class Factory {
         companion object {

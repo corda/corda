@@ -1,5 +1,6 @@
 package net.corda.testing.core
 
+import net.corda.core.contracts.CORDA_CONTRACT_VERSION
 import net.corda.testing.core.JarSignatureTestUtils.addManifest
 import net.corda.testing.core.JarSignatureTestUtils.createJar
 import net.corda.testing.core.JarSignatureTestUtils.generateKey
@@ -12,7 +13,6 @@ import java.net.URI
 import java.net.URL
 import java.nio.file.*
 import java.security.PublicKey
-import java.util.jar.Attributes
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import javax.tools.JavaFileObject
@@ -38,24 +38,24 @@ object ContractJarTestUtils {
         }
     }
 
-    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: String = "1.0"): Pair<Path, PublicKey> {
+    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: String = "1.0", cordaContractVersion: Int = 1): Pair<Path, PublicKey> {
         val alias = "testAlias"
         val pwd = "testPassword"
         workingDir.generateKey(alias, pwd, ALICE_NAME.toString())
-        val jarName = makeTestContractJar(workingDir, contractName, true, version)
+        val jarName = makeTestContractJar(workingDir, contractName, true, version, cordaContractVersion)
         val signer = workingDir.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
         (workingDir / "_shredder").delete()
         (workingDir / "_teststore").delete()
         return workingDir.resolve(jarName) to signer
     }
 
-    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: String = "1.0"): Path {
+    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: String = "1.0", cordaContractVersion: Int = 1): Path {
         val packages = contractName.split(".")
         val jarName = "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"
         val className = packages.last()
         createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
         workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
-        workingDir.addManifest(jarName, Pair(Attributes.Name.IMPLEMENTATION_VERSION, version))
+        workingDir.addManifest(jarName, Pair(CORDA_CONTRACT_VERSION, cordaContractVersion.toString()))
         return workingDir.resolve(jarName)
     }
 

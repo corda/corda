@@ -5,7 +5,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
-fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int, cordappContractVersion: Int = 1): Manifest {
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -18,7 +18,7 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Specification-Vendor"] = vendor
 
     manifest["Implementation-Title"] = title
-    manifest["Implementation-Version"] = version
+    manifest["Cordapp-Contract-Version"] = cordappContractVersion.toString()
     manifest["Implementation-Vendor"] = vendor
     manifest["Target-Platform-Version"] = targetVersion.toString()
 
