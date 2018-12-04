@@ -29,7 +29,7 @@ attachment JARs may not provide the same file path. If they do, the transaction 
 state specifies both a constraint over attachments *and* a Contract class name to use, the specified class must appear
 in only one attachment.
 
-.. note:: With the introduction of signature constraints in Corda 4, a new Attachments Classloader will verify that
+.. note:: With the introduction of signature constraints in Corda 4, a new attachments classloader will verify that
    both signed and unsigned versions of an associated contract jar contain identical classes. This allows for automatic
    migration of hash-constrained states (created with pre-Corda 4 unsigned contract jars) to signature constrained states
    when used as outputs in new transactions using signed Corda 4 contract jars.
