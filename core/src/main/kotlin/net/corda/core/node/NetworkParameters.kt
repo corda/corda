@@ -5,6 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
@@ -186,11 +187,13 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
+    @VisibleForTesting
     internal fun getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
 
     /**
      * Returns the public key of the package owner if any of [contractClassName] match, or null if not owned.
      */
+    @VisibleForTesting
     internal fun getPackageOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
         val ownerKeys = contractClassNames.map { getPackageOwnerOf(it) }
         return ownerKeys.find { it != null }
