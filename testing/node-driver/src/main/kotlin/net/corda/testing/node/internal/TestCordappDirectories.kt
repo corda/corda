@@ -5,8 +5,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.core.JarSignatureTestUtils.signJar
-import net.corda.testing.core.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.node.TestCordapp
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -37,17 +37,18 @@ object TestCordappDirectories {
             val configDir = (cordappDir / "config").createDirectories()
             val jarFile = cordappDir / "$filename.jar"
             cordapp.packageAsJar(jarFile)
-            //TODO in future we may extend the signing with user-defined key-stores/certs/keys.
-            if (signJar) {
+            if (signJar || cordapp.signJar) {
                 val testKeystore = "_teststore"
                 val alias = "Test"
                 val pwd = "secret!"
-                if (!(cordappsDirectory / testKeystore).exists()) {
+                if (!(cordappsDirectory / testKeystore).exists() && (cordapp.keyStorePath == null)) {
                     cordappsDirectory.generateKey(alias, pwd, "O=Test Company Ltd,OU=Test,L=London,C=GB")
                 }
-                (cordappsDirectory / testKeystore).copyTo(cordappDir / testKeystore)
-                cordappDir.signJar("$filename.jar", alias, pwd)
-            }
+                val keyStorePathToUse = cordapp.keyStorePath ?: cordappsDirectory
+                (keyStorePathToUse / testKeystore).copyTo(cordappDir / testKeystore)
+                val pk = cordappDir.signJar("$filename.jar", alias, pwd)
+                logger.debug { "Signed Jar: $cordappDir/$filename.jar with public key $pk" }
+            } else logger.debug { "Unsigned Jar: $cordappDir/$filename.jar" }
             (configDir / "$filename.conf").writeText(configString)
             logger.debug { "$cordapp packaged into $jarFile" }
             cordappDir

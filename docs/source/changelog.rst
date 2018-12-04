@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Automatic Constraints propagation for hash-constrained states to signature-constrained states.
+  This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
+  by unsigned CorDapps in previous versions of Corda.
+
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
   also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities

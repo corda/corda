@@ -266,8 +266,7 @@ data class ContractUpgradeLedgerTransaction(
                 legacyContractAttachment as? ContractAttachment
                         ?: ContractAttachment(legacyContractAttachment, legacyContractClassName, signerKeys = legacyContractAttachment.signerKeys),
                 upgradedContract.legacyContract,
-                networkParameters.whitelistedContractImplementations
-        )
+                networkParameters)
 
         // TODO: exclude encumbrance states from this check
         check(inputs.all { it.state.constraint.isSatisfiedBy(attachmentForConstraintVerification) }) {
