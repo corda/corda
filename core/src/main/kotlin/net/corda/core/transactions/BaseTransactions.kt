@@ -29,8 +29,6 @@ abstract class CoreTransaction : BaseTransaction() {
 abstract class FullTransaction : BaseTransaction() {
     abstract override val inputs: List<StateAndRef<ContractState>>
     abstract override val references: List<StateAndRef<ContractState>>
-    // TODO NetworkParameters field is nullable only because of the API stability and the fact that our ledger transactions exposed constructors
-    //  (they were data classes). This should be revisited.
     /**
      * Network parameters that were in force when this transaction was created. Resolved from the hash of network parameters on the corresponding
      * wire transaction.
