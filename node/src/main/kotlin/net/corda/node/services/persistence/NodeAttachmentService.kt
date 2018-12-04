@@ -109,9 +109,9 @@ class NodeAttachmentService(
                     foreignKey = ForeignKey(name = "FK__signers__attachments"))
             var signers: List<PublicKey>? = null,
 
-            // Assumption: only Contract Attachments are versioned.
-            @Column(name = "version", nullable = true)
-            var version: Int? = null
+            // Assumption: only Contract Attachments are versioned, no version default to 0
+            @Column(name = "version", nullable = false)
+            var version: Int = 0
     )
 
     @VisibleForTesting

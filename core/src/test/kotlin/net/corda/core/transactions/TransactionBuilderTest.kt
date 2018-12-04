@@ -44,8 +44,8 @@ class TransactionBuilderTest {
     private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
     private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
             contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
-            versionCondition = Builder.greaterThanOrEqual(1))
-    private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.ASC)))
+            versionCondition = Builder.greaterThanOrEqual(0))
+    private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()

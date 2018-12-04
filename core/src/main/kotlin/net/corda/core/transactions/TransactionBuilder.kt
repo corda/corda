@@ -415,13 +415,12 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        val highestContractClassVersion = 1
+        val highestContractClassVersion = 0 //TODO will be set by code from other PR
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
                 contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
                 versionCondition = Builder.greaterThanOrEqual(highestContractClassVersion))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort)
-        //TODO Null and Sorting is supported differently on varius dbs, so sort here, need to fetch AttachmentID and Version
         return attachmentIds.firstOrNull() ?: throw MissingContractAttachments(states)
     }
 

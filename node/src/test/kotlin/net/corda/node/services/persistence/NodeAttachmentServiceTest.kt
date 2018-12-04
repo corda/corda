@@ -248,30 +248,27 @@ class NodeAttachmentServiceTest {
                             isSignedCondition = Builder.equal(true))).size
             )
 
-//            assertEquals(
-//                    1,
-//                    storage.queryAttachments(AttachmentsQueryCriteria(
-//                            contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
-//                            //versionCondition = ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX),
-//                            isSignedCondition = Builder.equal(true)),
-//                            AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))
-//                            ).size
-//            )
-
-
-            val x = storage.queryAttachments(AttachmentsQueryCriteria(
+            assertEquals(
+                    2,storage.queryAttachments(AttachmentsQueryCriteria(
                     contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
-                    //versionCondition = ColumnPredicate.AggregateFunction(AggregateFunctionType.MAX),
+                    versionCondition = Builder.greaterThanOrEqual(1),
                     isSignedCondition = Builder.equal(true)),
-                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION))))
-            println(x)
-            val y = storage.queryAttachments(AttachmentsQueryCriteria(
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
+            )
+
+            assertEquals(1, storage.queryAttachments(AttachmentsQueryCriteria(
                     contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
                     versionCondition = Builder.greaterThanOrEqual(2),
                     isSignedCondition = Builder.equal(true)),
-                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, direction = Sort.Direction.ASC))))
-            println(y)
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
+            )
 
+            assertEquals(0, storage.queryAttachments(AttachmentsQueryCriteria(
+                    contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                    versionCondition = Builder.greaterThanOrEqual(10),
+                    isSignedCondition = Builder.equal(true)),
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
+            )
         }
     }
 

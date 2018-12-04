@@ -95,8 +95,8 @@ class AttachmentsClassLoaderStaticContractTests {
          val contractAttachmentId = SecureHash.randomSHA256()
          val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
                 contractClassNamesCondition = Builder.equal(listOf("net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract")),
-                versionCondition = Builder.greaterThanOrEqual(1))
-         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.ASC)))
+                versionCondition = Builder.greaterThanOrEqual(0))
+         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
 
     }
