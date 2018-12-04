@@ -6,6 +6,7 @@ import net.corda.core.internal.kotlinObjectInstance
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.contextLogger
+import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.amqp.*
 import java.io.NotSerializableException
 import java.lang.reflect.Method
@@ -107,7 +108,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                     type,
                     typeIdentifier,
                     type.enumConstants.map { it.toString() },
-                    buildInterfaceInformation(type))
+                    buildInterfaceInformation(type),
+                    getEnumTransforms(type))
             type.kotlinObjectInstance != null -> LocalTypeInformation.Singleton(
                     type,
                     typeIdentifier,
@@ -123,6 +125,15 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
                 buildNonAtomic(type, type, typeIdentifier, emptyList())
             }
             else -> buildNonAtomic(type, type, typeIdentifier, emptyList())
+        }
+    }
+
+    private fun getEnumTransforms(type: Class<*>): EnumTransforms {
+        try {
+            val constants = type.enumConstants.asSequence().mapIndexed { index, constant -> constant.toString() to index }.toMap()
+            return EnumTransforms.build(TransformsAnnotationProcessor.getTransformsSchema(type), constants)
+        } catch (e: InvalidEnumTransformsException) {
+            throw NotSerializableDetailedException(type.name, e.message!!)
         }
     }
 
@@ -299,19 +310,23 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         }.toMap()
 
         return rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
-            val property = makeConstructorPairedProperty(constructorParameterIndices, name, descriptor, constructorInformation)
-            if (property == null) null else name to property
+            val normalisedName = when {
+                name in constructorParameterIndices -> name
+                name.decapitalize() in constructorParameterIndices -> name.decapitalize()
+                else -> return@mapNotNull null
+            }
+
+            val property = makeConstructorPairedProperty(
+                    constructorParameterIndices[normalisedName]!!,
+                    descriptor,
+                    constructorInformation)
+            if (property == null) null else normalisedName to property
         }
     }
 
-    private fun makeConstructorPairedProperty(constructorParameterIndices: Map<String, Int>,
-                                              name: String,
+    private fun makeConstructorPairedProperty(constructorIndex: Int,
                                               descriptor: PropertyDescriptor,
                                               constructorInformation: LocalConstructorInformation): LocalPropertyInformation? {
-        // In some very rare cases we have a constructor parameter matched by a getter with no backing field,
-        // and cannot infer whether the property name should be capitalised or not.
-        val constructorIndex = constructorParameterIndices[name] ?: constructorParameterIndices[name.decapitalize()]
-        if (constructorIndex == null) return null
 
         if (descriptor.getter == null) {
             if (descriptor.field == null) return null

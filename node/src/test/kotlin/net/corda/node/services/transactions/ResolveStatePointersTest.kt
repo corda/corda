@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -58,7 +59,7 @@ class ResolveStatePointersTest {
                 cordappPackages = cordapps,
                 identityService = makeTestIdentityService(notary.identity, myself.identity),
                 initialIdentity = myself,
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(notary.party, true)))
         )
         services = databaseAndServices.second
     }

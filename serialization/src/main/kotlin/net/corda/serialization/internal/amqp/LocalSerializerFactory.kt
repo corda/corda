@@ -62,14 +62,6 @@ interface LocalSerializerFactory {
      * Use the [FingerPrinter] to create a type descriptor for the given [typeInformation].
      */
     fun createDescriptor(typeInformation: LocalTypeInformation): Symbol
-
-    /**
-     * Obtain or register [Transform]s for the given class [name].
-     *
-     * Eventually this information should be moved into the [LocalTypeInformation] for the type.
-     */
-    fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
-            EnumMap<TransformTypes, MutableList<Transform>>
 }
 
 /**
@@ -91,17 +83,12 @@ class DefaultLocalSerializerFactory(
         val logger = contextLogger()
     }
 
-    private val transformsCache: MutableMap<String, EnumMap<TransformTypes, MutableList<Transform>>> = DefaultCacheProvider.createCache()
     private val serializersByType: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
 
     override fun createDescriptor(typeInformation: LocalTypeInformation): Symbol =
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeInformation)}")
 
     override fun getTypeInformation(type: Type): LocalTypeInformation = typeModel.inspect(type)
-
-    override fun getOrBuildTransform(name: String, builder: () -> EnumMap<TransformTypes, MutableList<Transform>>):
-            EnumMap<TransformTypes, MutableList<Transform>> =
-            transformsCache.computeIfAbsent(name) { _ -> builder() }
 
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
             get(typeInformation.observedType, typeInformation)

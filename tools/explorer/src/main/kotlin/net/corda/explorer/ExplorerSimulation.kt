@@ -73,7 +73,7 @@ class ExplorerSimulation(private val options: OptionSet) {
                 portAllocation = portAllocation,
                 cordappsForAllNodes = listOf(FINANCE_CORDAPP),
                 waitForAllNodesToFinish = true,
-                jmxPolicy = JmxPolicy(7006)
+                jmxPolicy = JmxPolicy.defaultEnabled()
         )) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))

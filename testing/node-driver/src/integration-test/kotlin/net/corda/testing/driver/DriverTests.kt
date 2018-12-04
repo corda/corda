@@ -12,7 +12,6 @@ import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.http.HttpApi
 import net.corda.testing.node.internal.addressMustBeBound
 import net.corda.testing.node.internal.addressMustNotBeBound
@@ -101,8 +100,7 @@ class DriverTests {
 
     @Test
     fun `monitoring mode enables jolokia exporting of JMX metrics via HTTP JSON`() {
-        val portAllocation = incrementalPortAllocation(7006)
-        driver(DriverParameters(jmxPolicy = JmxPolicy(portAllocation.nextPort()), startNodesInProcess = false, notarySpecs = emptyList())) {
+        driver(DriverParameters(jmxPolicy = JmxPolicy.defaultEnabled(), startNodesInProcess = false, notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_REGULATOR_NAME).getOrThrow()
             // request access to some JMX metrics via Jolokia HTTP/JSON
             val api = HttpApi.fromHostAndPort(node.jmxAddress!!, "/jolokia/")

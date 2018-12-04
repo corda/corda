@@ -182,11 +182,3 @@ private data class RemoteTypeInformationPrettyPrinter(private val simplifyClassN
                     ": " + prettyPrint(value.type)
 }
 
-data class EnumTransforms(val defaults: Map<String, String>, val renames: Map<String, String>) {
-
-    val size: Int get() = defaults.size + renames.size
-
-    companion object {
-        val empty = EnumTransforms(emptyMap(), emptyMap())
-    }
-}

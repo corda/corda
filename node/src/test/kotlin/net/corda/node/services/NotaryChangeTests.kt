@@ -1,7 +1,9 @@
 package net.corda.node.services
 
-import net.corda.core.contracts.*
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
 import net.corda.core.flows.NotaryChangeFlow
 import net.corda.core.flows.NotaryFlow
 import net.corda.core.flows.StateReplacementException
@@ -13,11 +15,18 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.testing.contracts.DummyContract
-import net.corda.testing.core.*
-import net.corda.testing.node.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -25,6 +34,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class NotaryChangeTests {
+    private val oldNotaryName = CordaX500Name("Old Notary", "Zurich", "CH")
+    private val newNotaryName = CordaX500Name("New Notary", "Zurich", "CH")
+
     private lateinit var mockNet: MockNetwork
     private lateinit var oldNotaryNode: StartedMockNode
     private lateinit var clientNodeA: StartedMockNode
@@ -35,17 +47,16 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
-        val oldNotaryName = CordaX500Name("Regulator A", "Paris", "FR")
         mockNet = MockNetwork(
-                notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME), MockNetworkNotarySpec(oldNotaryName)),
+                notarySpecs = listOf(MockNetworkNotarySpec(oldNotaryName), MockNetworkNotarySpec(newNotaryName)),
                 cordappPackages = listOf("net.corda.testing.contracts")
         )
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         clientA = clientNodeA.info.singleIdentity()
-        oldNotaryNode = mockNet.notaryNodes[1]
-        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(DUMMY_NOTARY_NAME)!!
+        oldNotaryNode = mockNet.notaryNodes[0]
         oldNotaryParty = clientNodeA.services.networkMapCache.getNotary(oldNotaryName)!!
+        newNotaryParty = clientNodeA.services.networkMapCache.getNotary(newNotaryName)!!
     }
 
     @After
@@ -77,11 +88,13 @@ class NotaryChangeTests {
         assertEquals(loadedStateA, loadedStateB)
     }
 
+    // TODO: Re-enable the test when parameter currentness checks are in place, ENT-2666.
     @Test
+    @Ignore
     fun `should throw when a participant refuses to change Notary`() {
         val state = issueMultiPartyState(clientNodeA, clientNodeB, oldNotaryNode, oldNotaryParty)
-        val newEvilNotary = getTestPartyAndCertificate(CordaX500Name(organisation = "Evil R3", locality = "London", country = "GB"), generateKeyPair().public)
-        val flow = NotaryChangeFlow(state, newEvilNotary.party)
+
+        val flow = NotaryChangeFlow(state, newNotaryParty)
         val future = clientNodeA.startFlow(flow)
 
         mockNet.runNetwork()
@@ -112,8 +125,10 @@ class NotaryChangeTests {
         assertTrue(originalOutputs.size == newOutputs.size && originalOutputs.containsAll(newOutputs))
 
         // Check if encumbrance linking between states has not changed.
-        val originalLinkedStates = issueTx.outputs.asSequence().filter { it.encumbrance != null }.map { Pair(it.data, issueTx.outputs[it.encumbrance!!].data) }.toSet()
-        val notaryChangeLinkedStates = notaryChangeTx.outputs.asSequence().filter { it.encumbrance != null }.map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
+        val originalLinkedStates = issueTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, issueTx.outputs[it.encumbrance!!].data) }.toSet()
+        val notaryChangeLinkedStates = notaryChangeTx.outputs.asSequence().filter { it.encumbrance != null }
+                .map { Pair(it.data, notaryChangeTx.outputs[it.encumbrance!!].data) }.toSet()
 
         assertTrue { originalLinkedStates.size == notaryChangeLinkedStates.size && originalLinkedStates.containsAll(notaryChangeLinkedStates) }
     }

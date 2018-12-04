@@ -63,7 +63,7 @@ class DBNetworkParametersStorageTest {
         networkMapClient = createMockNetworkMapClient()
         nodeParametersStorage = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
             database.transaction {
-                start(netParams1, DEV_ROOT_CA.certificate)
+                setCurrentParameters(netParams1, DEV_ROOT_CA.certificate)
             }
         }
     }

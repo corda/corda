@@ -30,6 +30,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
@@ -138,7 +139,6 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
-
 }
 
 open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
@@ -147,16 +147,20 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-                               val networkParameters: NetworkParameters = testNetworkParameters(),
+                               initialNetworkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                val cordappsForAllNodes: Collection<TestCordapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
+
+    var networkParameters: NetworkParameters = initialNetworkParameters
+        private set
+
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
         SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
-        require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
+        require(initialNetworkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
     }
 
     var nextNodeId = 0
@@ -229,8 +233,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         try {
             filesystem.getPath("/nodes").createDirectory()
             val notaryInfos = generateNotaryIdentities()
+            networkParameters = initialNetworkParameters.copy(notaries = notaryInfos)
             // The network parameters must be serialised before starting any of the nodes
-            networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
+            networkParametersCopier = NetworkParametersCopier(networkParameters)
             @Suppress("LeakingThis")
             // Notary nodes need a platform version >= network min platform version.
             notaryNodes = createNotaries()
@@ -302,8 +307,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 internals.flowManager.registerInitiatedFlow(initiatingFlowClass, initiatedFlowClass)
                 return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
-
-
         }
 
         val mockNet = args.network
@@ -430,8 +433,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 Observable.empty<T>()
             }
         }
-    }
 
+        override fun makeParametersStorage(): NetworkParametersStorageInternal {
+            return MockNetworkParametersStorage()
+        }
+    }
 
     fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)

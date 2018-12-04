@@ -38,7 +38,7 @@ class NotaryServiceTests {
         mockNet = InternalMockNetwork(
                 cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
                 notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4)
         )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryServices = mockNet.defaultNotaryNode.services //TODO get rid of that

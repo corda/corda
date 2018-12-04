@@ -9,6 +9,7 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.messaging.*
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -45,7 +46,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
     }
@@ -65,7 +66,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
         client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
-        identity = node.info.identityFromX500Name(ALICE_NAME)
+        identity = notaryNodes.first().info.identityFromX500Name(DUMMY_NOTARY_NAME)
     }
 
     @After

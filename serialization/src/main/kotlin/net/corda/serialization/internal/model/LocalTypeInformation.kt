@@ -179,7 +179,8 @@ sealed class LocalTypeInformation {
             override val observedType: Class<*>,
             override val typeIdentifier: TypeIdentifier,
             val members: List<String>,
-            val interfaces: List<LocalTypeInformation>): LocalTypeInformation()
+            val interfaces: List<LocalTypeInformation>,
+            val transforms: EnumTransforms): LocalTypeInformation()
 
     /**
      * Represents a type whose underlying class is an interface.
