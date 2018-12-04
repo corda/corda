@@ -103,7 +103,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
-                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
+                        logger.warn("Not loading CorDapp ${it.info.name} (${it.info.vendor}) as it requires minimum " +
                                 "platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
                         false
                     } else {
@@ -119,7 +119,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         if (certificates.isEmpty() || (certificates - blockedCertificates).isNotEmpty())
                             true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
                         else {
-                            logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
+                            logger.warn("Not loading CorDapp ${it.info.name} (${it.info.vendor}) as it is signed by development key(s) only: " +
                                     "${blockedCertificates.map { it.publicKey }}.")
                             false
                         }

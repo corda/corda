@@ -25,7 +25,7 @@ data class CordappImpl(
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
-        val info: Info,
+        val info: CordappInfo,
         override val jarHash: SecureHash.SHA256,
         val notaryService: Class<out NotaryService>?,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
@@ -46,13 +46,14 @@ data class CordappImpl(
         classList.mapNotNull { it?.name } + contractClassNames
     }
 
-    // TODO Why a seperate Info class and not just have the fields directly in CordappImpl?
-    data class Info(val shortName: String, val vendor: String, val version: String, val minimumPlatformVersion: Int, val targetPlatformVersion: Int) {
+    /** original (to Corda 3) */
+    data class Info(val shortName: String, override val vendor: String, override val version: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
+        : CordappInfo(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion) {
         companion object {
             const val UNKNOWN_VALUE = "Unknown"
             val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
-
-        fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
+        override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
+        override fun description() = "CorDapp $name version $version by $vendor"
     }
 }
