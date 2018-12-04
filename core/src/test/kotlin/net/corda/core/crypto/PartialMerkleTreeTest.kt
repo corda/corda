@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.ReferenceStateRef
@@ -49,6 +50,7 @@ class PartialMerkleTreeTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     private val nodes = "abcdef"
     private lateinit var hashed: List<SecureHash.SHA256>
     private lateinit var expectedRoot: SecureHash
@@ -56,6 +58,7 @@ class PartialMerkleTreeTest {
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
+
     @Before
     fun init() {
         hashed = nodes.map { it.serialize().sha256() }
@@ -66,8 +69,9 @@ class PartialMerkleTreeTest {
                 cordappPackages = emptyList(),
                 initialIdentity = TestIdentity(MEGA_CORP.name),
                 identityService = rigorousMock<IdentityServiceInternal>().also {
-                    doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY) },
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                    doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+                },
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)

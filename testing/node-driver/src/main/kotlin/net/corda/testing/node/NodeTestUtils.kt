@@ -8,17 +8,12 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.dsl.EnforceVerifyOrFail
-import net.corda.testing.dsl.LedgerDSL
-import net.corda.testing.dsl.LedgerDSLInterpreter
-import net.corda.testing.dsl.TestLedgerDSLInterpreter
-import net.corda.testing.dsl.TestTransactionDSLInterpreter
-import net.corda.testing.dsl.TransactionDSL
-import net.corda.testing.dsl.TransactionDSLInterpreter
+import net.corda.testing.dsl.*
+import net.corda.testing.internal.withTestSerializationEnvIfNotSet
+import net.corda.testing.node.internal.MockNetworkParametersStorage
 
 /**
  * Creates and tests a ledger built by the passed in dsl.
@@ -28,17 +23,20 @@ fun ServiceHub.ledger(
         notary: Party = TestIdentity.fresh("ledger notary").party,
         script: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val serializationExists = try {
-        effectiveSerializationEnv
-        true
-    } catch (e: IllegalStateException) {
-        false
+    val currentParameters = networkParametersStorage.run {
+        lookup(currentHash) ?: throw IllegalStateException("Current network parameters not found, $currentHash")
+
     }
-    return LedgerDSL(TestLedgerDSLInterpreter(this), notary).apply {
-        if (serializationExists) {
+    if (currentParameters.notaries.none { it.identity == notary }) {
+        // Add the notary to the whitelist. Otherwise no constructed transactions will verify.
+        val newParameters = currentParameters.addNotary(notary)
+        (networkParametersStorage as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
+    }
+
+    return withTestSerializationEnvIfNotSet("ledgerDSL") {
+        val interpreter = TestLedgerDSLInterpreter(this)
+        LedgerDSL(interpreter, notary).apply {
             script()
-        } else {
-            SerializationEnvironmentRule.run("ledger") { script() }
         }
     }
 }

@@ -250,6 +250,7 @@ data class ContractUpgradeLedgerTransaction(
     private val upgradedContract: UpgradedContract<ContractState, *> = loadUpgradedContract()
 
     init {
+        checkNotaryWhitelisted()
         // TODO: relax this constraint once upgrading encumbered states is supported.
         check(inputs.all { it.state.contract == legacyContractClassName }) {
             "All input states must point to the legacy contract"

@@ -4,17 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotarisationPayload
-import net.corda.core.flows.NotarisationRequest
-import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotarisationResponse
-import net.corda.core.flows.NotaryError
-import net.corda.core.flows.NotaryException
-import net.corda.core.flows.NotaryFlow
-import net.corda.core.flows.WaitTimeUpdate
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
 import net.corda.core.internal.checkParameterHash
@@ -55,9 +45,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
     @Suspendable
     override fun call(): Void? {
-        check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
-            "We are not a notary on the network"
-        }
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
 
         try {
@@ -123,6 +110,21 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
         }
     }
 
+    /**
+     * Check that network parameters hash on this transaction is the current hash for the network.
+     */
+    // TODO: ENT-2666 Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
+    //     We will never end up in perfect synchronization with all the nodes. However, network parameters update process
+    //     lets us predict what is the reasonable time window for changing parameters on most of the nodes.
+    @Suspendable
+    protected fun checkParametersHash(networkParametersHash: SecureHash?) {
+        if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
+        val notaryParametersHash = serviceHub.networkParametersStorage.currentHash
+        require(notaryParametersHash == networkParametersHash) {
+            "Transaction for notarisation was tagged with parameters with hash: $networkParametersHash, but current network parameters are: $notaryParametersHash"
+        }
+    }
+
     /** Verifies that the correct notarisation request was signed by the counterparty. */
     private fun validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
         val requestingParty = otherSideSession.counterparty
@@ -133,8 +135,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
     @Suspendable
-    protected open fun verifyTransaction(requestPayload: NotarisationPayload) {
-    }
+    abstract fun verifyTransaction(requestPayload: NotarisationPayload)
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
@@ -158,7 +159,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
     private fun logError(error: NotaryError) {
         val errorCause = when (error) {
             is NotaryError.RequestSignatureInvalid -> error.cause
-            is NotaryError.TransactionInvalid ->  error.cause
+            is NotaryError.TransactionInvalid -> error.cause
             is NotaryError.General -> error.cause
             else -> null
         }

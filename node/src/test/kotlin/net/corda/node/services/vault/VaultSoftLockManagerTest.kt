@@ -102,7 +102,8 @@ class VaultSoftLockManagerTest {
 
     class ClientLogic(nodePair: NodePair, val state: ContractState) : NodePair.AbstractClientLogic<List<ContractState>>(nodePair) {
         override fun callImpl(): List<ContractState> {
-            val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary = ourIdentity).apply {
+            val notary = serviceHub.networkParameters.notaries.first().identity
+            val stx = serviceHub.signInitialTransaction(TransactionBuilder(notary).apply {
                 addOutputState(state, ContractImpl::class.jvmName)
                 addCommand(CommandDataImpl, ourIdentity.owningKey)
             })

@@ -1,10 +1,10 @@
 package net.corda.core.node.services
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 
 /**
  * Interface for handling network parameters storage used for resolving transactions according to parameters that were
