@@ -88,7 +88,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
             val cachedValue = map.getIfCached(1)
             val expectedValue = if (scenario.isCached!!) {
                 when (scenario.b) {
-                    ReadOrWrite.Read -> null
+                    ReadOrWrite.Read -> throw IllegalStateException("Do nothing and isCached = true is not a valid combination.")
                     ReadOrWrite.Write -> "X"
                     ReadOrWrite.WriteDuplicateAllowed -> "Y"
                 }
