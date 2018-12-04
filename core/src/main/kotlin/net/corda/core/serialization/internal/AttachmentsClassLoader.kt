@@ -3,7 +3,6 @@ package net.corda.core.serialization.internal
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
-import net.corda.core.crypto.MerkleTree
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.VisibleForTesting
@@ -18,7 +17,6 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
-import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 
 /**
@@ -29,6 +27,13 @@ import java.util.jar.Manifest
  */
 class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
+
+    init {
+        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
+            "Attempting to load Contract Attachments downloaded from the network"
+        }
+        requireNoDuplicates(attachments)
+    }
 
     companion object {
         private val log = contextLogger()
@@ -52,54 +57,53 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         }
 
         private fun requireNoDuplicates(attachments: List<Attachment>) {
-            val classLoaderEntries = mutableMapOf<String, SecureHash>()
-            val attachmentContentMTHashes = mutableSetOf<SecureHash>()
+            // Avoid unnecessary duplicate checking if possible:
+            // 1. single attachment.
+            // 2. multiple attachments with non-overlapping contract classes.
+            if (attachments.size <= 1) return
+            val overlappingContractClasses = attachments.mapNotNull { it as? ContractAttachment }.flatMap { it.allContracts }.groupingBy { it }.eachCount().filter { it.value > 1 }
+            if (overlappingContractClasses.isEmpty()) return
+
+            // this logic executes only if there are overlapping contract classes
+            log.debug("Duplicate contract class checking for $overlappingContractClasses")
+            val classLoaderEntries = mutableMapOf<String, Attachment>()
             for (attachment in attachments) {
                 attachment.openAsJAR().use { jar ->
-                    val attachmentEntries = calculateEntriesHashes(attachment, jar)
-                    if (attachmentEntries.isNotEmpty()) {
-                        val contentHashMT = MerkleTree.getMerkleTree(attachmentEntries.toSortedMap().map{ it.value }).hash
-                        if (attachmentContentMTHashes.contains(contentHashMT)) {
-                            log.debug { "Duplicate entry: ${attachment.id} has same content hash $contentHashMT as previous attachment" }
-                        } else {
-                            attachmentEntries.forEach { path, contentHash ->
-                                if (path in classLoaderEntries.keys) {
-                                    val originalContentHash = classLoaderEntries[path]!!
-                                    if (contentHash == originalContentHash) {
-                                        log.debug { "Duplicate entry $path has same content hash $contentHash" }
-                                    } else
-                                        throw OverlappingAttachmentsException(path)
+                    val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
+                    while (true) {
+                        val entry = jar.nextJarEntry ?: break
+                        if (entry.isDirectory) continue
+                        // We already verified that paths are not strange/game playing when we inserted the attachment
+                        // into the storage service. So we don't need to repeat it here.
+                        //
+                        // We forbid files that differ only in case, or path separator to avoid issues for Windows/Mac developers where the
+                        // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
+                        //
+                        // Also convert to Unix path separators as all resource/class lookups will expect this.
+                        //
+                        val path = entry.name.toLowerCase().replace('\\', '/')
+                        // TODO - If 2 entries are identical, it means the same file is present in both attachments, so that should be ok.
+                        if (shouldCheckForNoOverlap(path, targetPlatformVersion)) {
+                            if (path in classLoaderEntries.keys) {
+                                // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
+                                val contentHash = readAttachment(attachment, path).sha256()
+                                val originalAttachment = classLoaderEntries[path]!!
+                                val originalContentHash = readAttachment(originalAttachment, path).sha256()
+                                if (contentHash == originalContentHash) {
+                                    log.debug { "Duplicate entry $path has same content hash $contentHash" }
+                                    continue
+                                } else {
+                                    log.debug { "Content hash differs for $path" }
+                                    throw OverlappingAttachmentsException(path)
                                 }
                             }
-                            attachmentContentMTHashes.add(contentHashMT)
-                            classLoaderEntries.putAll(attachmentEntries)
+                            log.debug { "Adding new entry for $path" }
+                            classLoaderEntries[path] = attachment
                         }
                     }
                 }
+                log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
             }
-        }
-
-        fun calculateEntriesHashes(attachment: Attachment, jar: JarInputStream): Map<String, SecureHash> {
-            val contentHashes = mutableMapOf<String, SecureHash>()
-            val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
-            while (true) {
-                val entry = jar.nextJarEntry ?: break
-                if (entry.isDirectory) continue
-                // We already verified that paths are not strange/game playing when we inserted the attachment
-                // into the storage service. So we don't need to repeat it here.
-                //
-                // We forbid files that differ only in case, or path separator to avoid issues for Windows/Mac developers where the
-                // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
-                //
-                // Also convert to Unix path separators as all resource/class lookups will expect this.
-                //
-                val filepath = entry.name.toLowerCase().replace('\\', '/')
-                if (shouldCheckForNoOverlap(filepath, targetPlatformVersion)) {
-                    val contentHash = readAttachment(attachment, filepath).sha256()
-                    contentHashes[filepath] = contentHash
-                }
-            }
-            return contentHashes
         }
 
         // This was reused from: https://github.com/corda/corda/pull/4240.
@@ -117,14 +121,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                 return it.toByteArray()
             }
         }
-    }
-
-    init {
-        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
-            "Attempting to load Contract Attachments downloaded from the network"
-        }
-
-        requireNoDuplicates(attachments)
     }
 
     /**

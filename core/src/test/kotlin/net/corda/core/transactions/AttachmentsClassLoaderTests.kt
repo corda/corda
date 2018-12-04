@@ -7,7 +7,6 @@ import net.corda.core.internal.declaredField
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.testing.core.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.fakeAttachment
-import net.corda.testing.internal.fakeAttachments
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertArrayEquals
@@ -21,6 +20,8 @@ class AttachmentsClassLoaderTests {
 
     companion object {
         val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH_V4: URL = AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar")
+        val FINANCE_JAR_PATH: URL = AttachmentsClassLoaderTests::class.java.getResource("finance.jar")
         private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
         private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
@@ -51,6 +52,16 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    fun `Test non-overlapping contract jar`() {
+        val att1 = storage.importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
+        val att2 = storage.importAttachment(ISOLATED_CONTRACTS_JAR_PATH_V4.openStream(), "app", "isolated-4.0.jar")
+
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
+            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Test
     fun `Test valid overlapping contract jar`() {
         val isolatedId = storage.importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
         val signedJar = signContractJar(ISOLATED_CONTRACTS_JAR_PATH, copyFirst = true)
@@ -58,6 +69,15 @@ class AttachmentsClassLoaderTests {
 
         // does not throw OverlappingAttachments exception
         AttachmentsClassLoader(arrayOf(isolatedId, isolatedSignedId).map { storage.openAttachment(it)!! })
+    }
+
+    @Test
+    fun `Test non-overlapping different contract jars`() {
+        val att1 = storage.importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
+        val att2 = storage.importAttachment(FINANCE_JAR_PATH.openStream(), "app", "finance.jar")
+
+        // does not throw OverlappingAttachments exception
+        AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
 
     @Test
@@ -71,26 +91,6 @@ class AttachmentsClassLoaderTests {
 
         val txt1 = IOUtils.toString(cl.getResourceAsStream("file2.txt"), Charsets.UTF_8.name())
         assertEquals("some other data", txt1)
-    }
-
-    @Test
-    fun `Test overlapping file exception`() {
-        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
-        val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
-
-        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
-        }
-    }
-
-    @Test
-    fun `Test overlapping file exception triggered by one of many attachments`() {
-        val att1 = storage.importAttachment(fakeAttachments( Pair("file1.txt", "some data"), Pair("file2.txt", "some more data")).inputStream(), "app", "file1.jar")
-        val att2 = storage.importAttachment(fakeAttachments( Pair("file1.txt", "some data"), Pair("file2.txt", "some more data2")).inputStream(), "app", "file2.jar")
-
-        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
-        }
     }
 
     @Test
