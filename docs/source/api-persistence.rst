@@ -125,8 +125,7 @@ subclasses may be implemented. The relationship between these classes is defined
 constructor requires a list of *all* of these subclasses.
 
 An example Schema implementing hierarchical relationships with JPA annotations has been implemented below. This Schema will cause ``parent_data`` and ``child_data` tables to be
-inserted. The column names and expected data types are designated with the ``@Column`` annotation. The hierarchical relationships are
-designated with the ``@OneToMany``, ``@ManyToOne``, and ``@JoinColumns`` annotations.
+created.
 
 .. container:: codeset
 
@@ -135,17 +134,40 @@ designated with the ``@OneToMany``, ``@ManyToOne``, and ``@JoinColumns`` annotat
         @CordaSerializable
         public class SchemaV1 extends MappedSchema {
 
+            /**
+             * This class must extend the MappedSchema class. It's name is created based on the SchemaFamily name and the associated version number abbreviation (V1, V2... Vn).
+             * In the constructor, use the super keyword to call the constructor of MappedSchema with the following arguments: a class literal representing the schema family,
+             * a version number and a collection of mappedTypes which represent the JPA entity classes that the ORM layer needs to be configured with for this schema.
+             */
+
             public SchemaV1() {
                 super(Schema.class, 1, ImmutableList.of(PersistentParentToken.class, PersistentChildToken.class));
             }
 
+            /**
+             * The @entity annotation signifies that the specified POJO class' non-transient fields should be persisted to a relational database using the services
+             * of an entity manager. The @table annotation specifies the title of the table that will be created to contain the persisted data.
+             */
+
             @Entity
             @Table(name = "parent_data")
             public static class PersistentParentToken extends PersistentState {
+
+                /**
+                 * The @Column annotations specify the columns that will comprise the inserted table and specify the shape of the fields and associated
+                 * data types of each database entry.
+                 */
+
                 @Column(name = "owner") private final String owner;
                 @Column(name = "issuer") private final String issuer;
                 @Column(name = "amount") private final int amount;
                 @Column(name = "linear_id") public final UUID linearId;
+
+                /**
+                 * The @OneToMany annotation specifies a one-to-many relationship between this class and a collection included as a field.
+                 * The @JoinColumns, and @JoinColumn annotations specify on which columns this relationship will be joined on.
+                 */
+
                 @OneToMany(cascade = CascadeType.PERSIST)
                 @JoinColumns({
                         @JoinColumn(name = "output_index", referencedColumnName = "output_index"),
@@ -193,6 +215,7 @@ designated with the ``@OneToMany``, ``@ManyToOne``, and ``@JoinColumns`` annotat
             @CordaSerializable
             @Table(name = "child_data")
             public static class PersistentChildToken {
+                // The @Id annotation marks this field as the primary key of the persisted entity.
                 @Id
                 private final UUID Id;
                 @Column(name = "owner")
@@ -201,6 +224,13 @@ designated with the ``@OneToMany``, ``@ManyToOne``, and ``@JoinColumns`` annotat
                 private final String issuer;
                 @Column(name = "amount")
                 private final int amount;
+
+                /**
+                 * The @ManyToOne annotation specifies that this class will be present as a member of a collection on a parent class and that it should
+                 * be persisted with the joining columns specified in the parent class. It is important to note the targetEntity parameter which should correspond
+                 * to a class literal of the parent class.
+                 */
+
                 @ManyToOne(targetEntity = PersistentParentToken.class)
                 private final TokenState persistentParentToken;
 
