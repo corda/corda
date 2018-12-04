@@ -125,10 +125,10 @@ class NetworkParametersTest {
                 )
         )
 
-        assertEquals(params.getOwnerOf("com.example.something.MyClass"), key1)
-        assertEquals(params.getOwnerOf("com.examplesomething.MyClass"), null)
-        assertEquals(params.getOwnerOf("com.examplestuff.something.MyClass"), key2)
-        assertEquals(params.getOwnerOf("com.exam.something.MyClass"), null)
+        assertEquals(params.getPackageOwnerOf("com.example.something.MyClass"), key1)
+        assertEquals(params.getPackageOwnerOf("com.examplesomething.MyClass"), null)
+        assertEquals(params.getPackageOwnerOf("com.examplestuff.something.MyClass"), key2)
+        assertEquals(params.getPackageOwnerOf("com.exam.something.MyClass"), null)
     }
 
     @Test

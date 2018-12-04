@@ -61,8 +61,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                         val contentHashMT = MerkleTree.getMerkleTree(attachmentEntries.toSortedMap().map{ it.value }).hash
                         if (attachmentContentMTHashes.contains(contentHashMT)) {
                             log.debug { "Duplicate entry: ${attachment.id} has same content hash $contentHashMT as previous attachment" }
-                        }
-                        else {
+                        } else {
                             attachmentEntries.forEach { path, contentHash ->
                                 if (path in classLoaderEntries.keys) {
                                     val originalContentHash = classLoaderEntries[path]!!

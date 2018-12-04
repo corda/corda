@@ -84,7 +84,7 @@ interface AttachmentConstraint {
             // Transition from Hash to Signature constraint requires
             // signer(s) of signature-constrained output state is same as signer(s) of registered package namespace
             input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
-                val packageOwnerPK = attachment.networkParameters.getOwnerOf(attachment.contractAttachment.allContracts)
+                val packageOwnerPK = attachment.networkParameters.getPackageOwnerOf(attachment.contractAttachment.allContracts)
                 if (packageOwnerPK == null) {
                     log.warn("Missing registered java package owner for ${attachment.contractAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
                     return false

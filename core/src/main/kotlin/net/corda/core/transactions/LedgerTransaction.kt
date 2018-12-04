@@ -186,7 +186,7 @@ private constructor(
         }
         val contractsAndOwners = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
-            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+            networkParameters.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->

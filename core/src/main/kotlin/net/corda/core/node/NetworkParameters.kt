@@ -186,13 +186,13 @@ data class NetworkParameters(
     /**
      * Returns the public key of the package owner of the [contractClassName], or null if not owned.
      */
-    fun getOwnerOf(contractClassName: ContractClassName): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
+    internal fun getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
 
     /**
      * Returns the public key of the package owner if any of [contractClassName] match, or null if not owned.
      */
-    fun getOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
-        val ownerKeys = contractClassNames.map { getOwnerOf(it) }
+    internal fun getPackageOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
+        val ownerKeys = contractClassNames.map { getPackageOwnerOf(it) }
         return ownerKeys.find { it != null }
     }
 
