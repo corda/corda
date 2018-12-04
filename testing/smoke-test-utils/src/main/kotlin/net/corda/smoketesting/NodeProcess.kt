@@ -3,9 +3,12 @@ package net.corda.smoketesting
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
@@ -59,11 +62,11 @@ class NodeProcess(
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
-            val defaultNetworkParameters = run {
+            fun defaultNetworkParameters(notaryInfo: NotaryInfo) = run {
                 AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                     // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
                     // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
-                    NetworkParametersCopier(testNetworkParameters())
+                    NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
                 }
             }
 
@@ -83,7 +86,8 @@ class NodeProcess(
             log.info("Node directory: {}", nodeDir)
 
             (nodeDir / "node.conf").writeText(config.toText())
-            defaultNetworkParameters.install(nodeDir)
+            val notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
+            defaultNetworkParameters(NotaryInfo(Party(config.legalName, notaryParty.owningKey), false)).install(nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
