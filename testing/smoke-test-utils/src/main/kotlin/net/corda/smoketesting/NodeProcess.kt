@@ -62,8 +62,11 @@ class NodeProcess(
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
             val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
+
             fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
-                NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo))).install(nodeDir)
+                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
+                    NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo))).install(nodeDir)
+                }
             }
 
             init {
@@ -79,17 +82,13 @@ class NodeProcess(
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 
-        fun createNotary(config: NodeConfig): NodeProcess {
-            require(notaryParty == null) { "Only one notary can be created." }
-            val nodeDir = baseDirectory(config).createDirectories()
-            notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
-            return create(config)
-        }
-
         fun create(config: NodeConfig): NodeProcess {
-            require(notaryParty != null) { "Notary needs to be created first by calling `createNotary`." }
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
+            if (config.isNotary) {
+                require(notaryParty == null) { "Only one notary can be created." }
+                notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
+            }
 
             (nodeDir / "node.conf").writeText(config.toText())
             createNetworkParameters(NotaryInfo(notaryParty!!, false), nodeDir)

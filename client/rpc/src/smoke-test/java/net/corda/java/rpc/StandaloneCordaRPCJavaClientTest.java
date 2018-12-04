@@ -56,7 +56,7 @@ public class StandaloneCordaRPCJavaClientTest {
     public void setUp() {
         factory = new NodeProcess.Factory();
         copyFinanceCordapp();
-        notary = factory.createNotary(notaryConfig);
+        notary = factory.create(notaryConfig);
         connection = notary.connect();
         rpcProxy = connection.getProxy();
         notaryNodeIdentity = rpcProxy.nodeInfo().getLegalIdentities().get(0);

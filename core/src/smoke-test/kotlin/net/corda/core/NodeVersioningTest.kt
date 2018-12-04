@@ -49,7 +49,7 @@ class NodeVersioningTest {
 
     @Before
     fun setUp() {
-        notary = factory.createNotary(notaryConfig)
+        notary = factory.create(notaryConfig)
     }
 
     @After
