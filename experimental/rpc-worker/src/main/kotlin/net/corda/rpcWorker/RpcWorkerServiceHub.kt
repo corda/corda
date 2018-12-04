@@ -235,7 +235,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
         networkMapClient?.start(trustRoot)
 
-        networkParametersStorage.start(signedNetworkParameters.signed, trustRoot)
+        networkParametersStorage.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
 
         val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys

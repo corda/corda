@@ -403,7 +403,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
-        networkParametersStorage.start(signedNetworkParameters.signed, trustRoot)
+        networkParametersStorage.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
         database.transaction {
             networkMapCache.start(networkParameters.notaries)
         }
