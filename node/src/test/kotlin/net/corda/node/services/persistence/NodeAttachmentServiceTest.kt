@@ -4,10 +4,10 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import net.corda.testing.core.ContractJarTestUtils.makeTestContractJar
-import net.corda.testing.core.ContractJarTestUtils.makeTestJar
-import net.corda.testing.core.ContractJarTestUtils.makeTestSignedContractJar
-import net.corda.testing.core.SelfCleaningDir
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
+import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256

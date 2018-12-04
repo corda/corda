@@ -5,7 +5,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.internal.declaredField
 import net.corda.core.serialization.internal.AttachmentsClassLoader
-import net.corda.testing.core.ContractJarTestUtils.signContractJar
+import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils

@@ -1,11 +1,11 @@
 package net.corda.testing.core
 
-import net.corda.testing.core.JarSignatureTestUtils.createJar
-import net.corda.testing.core.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.JarSignatureTestUtils.getJarSigners
-import net.corda.testing.core.JarSignatureTestUtils.signJar
-import net.corda.testing.core.JarSignatureTestUtils.updateJar
-import net.corda.testing.core.JarSignatureTestUtils.addIndexList
+import net.corda.testing.core.internal.JarSignatureTestUtils.createJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.getJarSigners
+import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.updateJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.addIndexList
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import org.assertj.core.api.Assertions.assertThat

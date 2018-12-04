@@ -1,4 +1,4 @@
-package net.corda.testing.core
+package net.corda.testing.core.internal
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.JarSignatureCollector

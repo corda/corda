@@ -5,8 +5,8 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.loggerFor
-import net.corda.testing.core.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.JarSignatureTestUtils.signJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.testing.node.TestCordapp
 import java.nio.file.Path
 import java.nio.file.Paths
