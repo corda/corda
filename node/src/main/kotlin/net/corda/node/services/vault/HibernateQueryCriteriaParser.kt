@@ -222,6 +222,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         private val log = contextLogger()
     }
 
+    // incrementally build list of join predicates
+    private val joinPredicates = mutableListOf<Predicate>()
     // incrementally build list of root entities (for later use in Sort parsing)
     private val rootEntities = mutableMapOf<Class<out StatePersistable>, Root<*>>(Pair(VaultSchemaV1.VaultStates::class.java, vaultStates))
     private val aggregateExpressions = mutableListOf<Expression<*>>()
@@ -450,7 +452,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 }
 
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
-        predicateSet.add(joinPredicate)
+        joinPredicates.add(joinPredicate)
 
         // linear ids UUID
         criteria.uuid?.let {
@@ -503,7 +505,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     }
 
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
-            predicateSet.add(joinPredicate)
+            joinPredicates.add(joinPredicate)
 
             // resolve general criteria expressions
             @Suppress("UNCHECKED_CAST")
@@ -535,7 +537,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     aggregateExpressions
         // TODO sollecitom this results in cross join, and it doesn't work with SORT (cartesian product of table entries, so sort is incorrect)
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates)
+        val combinedPredicates = joinPredicates.plus(predicateSet).plus(commonPredicates.values).plus(constraintPredicates)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
         return predicateSet
@@ -639,24 +641,36 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         // scenario where sorting on attributes not parsed as criteria
                         val entityRoot = criteriaQuery.from(entityStateClass)
                         rootEntities[entityStateClass] = entityRoot
+                        // TODO sollecitom check
+                        val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
+                        joinPredicates.add(joinPredicate)
                         entityRoot
                     }
             when (direction) {
                 Sort.Direction.ASC -> {
-                    if (entityStateAttributeChild != null)
+                    if (entityStateAttributeChild != null) {
+                        // TODO sollecitom add asc/desc by stateRef, if not there already
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                    else
+                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+                    }
+                    else {
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent)))
+                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+                    }
                 }
                 Sort.Direction.DESC ->
-                    if (entityStateAttributeChild != null)
+                    if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                    else
+                    }
+                    else {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
+                    }
             }
         }
         if (orderCriteria.isNotEmpty()) {
             criteriaQuery.orderBy(orderCriteria)
+            // TODO sollecitom check
+            criteriaQuery.where(*joinPredicates.toTypedArray())
         }
     }
 

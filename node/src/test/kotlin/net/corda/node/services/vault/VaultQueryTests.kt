@@ -338,38 +338,69 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         val numberOfStates = 59
         val pageSize = 13
 
-        val vault = database.transaction {
+        database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
         }
         val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
 
-        // TODO sollecitom these don't work, fix them
-        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
-//        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearNumber")
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearNumber")
 
         val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
         val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
-//        val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria)
         assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+        assertThat(allStates.sortedBy { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
 
-//        assertThat(allStates.states.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
-//
-//        (1..3).forEach {
-//            val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = PageSpecification(1, 200), criteria = criteria).states
-//            assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
-//            assertThat(newAllStates).containsExactlyElementsOf(allStates.states)
-//        }
-//
-//        val queriedStates = mutableListOf<StateAndRef<*>>()
-//        var pageNumber = 0
-//        while (pageNumber * pageSize < numberOfStates) {
-//            val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
-//            val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
-//            queriedStates += page.states
-//            pageNumber++
-//        }
-//
-//        assertThat(queriedStates).containsExactlyElementsOf(allStates.states)
+        (1..3).forEach {
+            val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            assertThat(newAllStates).containsExactlyElementsOf(allStates)
+        }
+
+        val queriedStates = mutableListOf<StateAndRef<*>>()
+        var pageNumber = 0
+        while (pageNumber * pageSize < numberOfStates) {
+            val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+            val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+            queriedStates += page.states
+            pageNumber++
+        }
+
+        assertThat(queriedStates).containsExactlyElementsOf(allStates)
+    }
+
+    @Test
+    fun `sorting by state ref works`() {
+        val numberOfStates = 59
+        val pageSize = 13
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+        }
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
+
+        val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, Sort.Direction.ASC)))
+        val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+        assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+        assertThat(allStates.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+
+        (1..3).forEach {
+            val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            assertThat(newAllStates).containsExactlyElementsOf(allStates)
+        }
+
+        val queriedStates = mutableListOf<StateAndRef<*>>()
+        var pageNumber = 0
+        while (pageNumber * pageSize < numberOfStates) {
+            val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+            val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+            queriedStates += page.states
+            pageNumber++
+        }
+
+        assertThat(queriedStates).containsExactlyElementsOf(allStates)
     }
 
     @Test
