@@ -23,6 +23,7 @@ interface NodeHandleInternal : NodeHandle {
     override val p2pAddress: NetworkHostAndPort get() = configuration.p2pAddress
     override val rpcAddress: NetworkHostAndPort get() = configuration.rpcOptions.address
     override val rpcAdminAddress: NetworkHostAndPort get() = configuration.rpcOptions.adminAddress
+    override val jmxAddress: NetworkHostAndPort? get() = configuration.jmxMonitoringHttpPort?.let { NetworkHostAndPort("localhost", it) }
     override val baseDirectory: Path get() = configuration.baseDirectory
 }
 

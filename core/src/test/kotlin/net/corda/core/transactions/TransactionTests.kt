@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
@@ -176,7 +177,7 @@ class TransactionTests {
                 notary,
                 timeWindow,
                 privacySalt,
-                testNetworkParameters(),
+                testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
                 emptyList()
         )
 

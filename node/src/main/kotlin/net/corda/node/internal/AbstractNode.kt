@@ -169,7 +169,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
     val cryptoService = configuration.makeCryptoService()
-    val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    @Suppress("LeakingThis")
+    val networkParametersStorage = makeParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
@@ -378,7 +379,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Do all of this in a database transaction so anything that might need a connection has one.
         return database.transaction {
-            networkParametersStorage.start(signedNetParams, trustRoot)
+            networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
             cordappProvider.start(netParams.whitelistedContractImplementations)
@@ -717,6 +718,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return DBTransactionStorage(database, cacheFactory)
     }
 
+    protected open fun makeParametersStorage(): NetworkParametersStorageInternal {
+        return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    }
+
     @VisibleForTesting
     protected open fun acceptableLiveFiberCountOnStop(): Int = 0
 
@@ -807,7 +812,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             /** Some notary implementations only work with Java serialization. */
             maybeInstallSerializationFilter(serviceClass)
 
-            val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java).apply { isAccessible = true }
+            val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java)
+                    .apply { isAccessible = true }
             val service = constructor.newInstance(services, notaryKey) as NotaryService
 
             service.run {

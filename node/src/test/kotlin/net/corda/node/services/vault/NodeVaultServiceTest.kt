@@ -11,6 +11,7 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
 import net.corda.core.internal.packageName
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.PageSpecification
@@ -91,7 +92,7 @@ class NodeVaultServiceTest {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        val parameters = testNetworkParameters()
+        val parameters = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
                 cordappPackages,
                 makeTestIdentityService(MEGA_CORP_IDENTITY, MINI_CORP_IDENTITY, DUMMY_CASH_ISSUER_IDENTITY, DUMMY_NOTARY_IDENTITY),

@@ -1,8 +1,8 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.serialization.internal.NotSerializableDetailedException
 import net.corda.serialization.internal.model.*
 import java.io.NotSerializableException
-import java.util.*
 import kotlin.collections.LinkedHashMap
 
 /**
@@ -31,7 +31,7 @@ class AMQPRemoteTypeModel {
         val notationLookup = schema.types.associateBy { it.name.typeIdentifier }
         val byTypeDescriptor = schema.types.associateBy { it.typeDescriptor }
         val enumTransformsLookup = transforms.types.asSequence().map { (name, transformSet) ->
-            name.typeIdentifier to interpretTransformSet(transformSet)
+            name.typeIdentifier to transformSet
         }.toMap()
 
         val interpretationState = InterpretationState(notationLookup, enumTransformsLookup, cache, emptySet())
@@ -50,7 +50,7 @@ class AMQPRemoteTypeModel {
     }
 
     data class InterpretationState(val notationLookup: Map<TypeIdentifier, TypeNotation>,
-                                   val enumTransformsLookup: Map<TypeIdentifier, EnumTransforms>,
+                                   val enumTransformsLookup: Map<TypeIdentifier, TransformsMap>,
                                    val cache: MutableMap<TypeDescriptor, RemoteTypeInformation>,
                                    val seen: Set<TypeIdentifier>) {
 
@@ -131,12 +131,23 @@ class AMQPRemoteTypeModel {
                     RemoteTypeInformation.Unparameterised(
                             typeDescriptor,
                             identifier)
-                } else RemoteTypeInformation.AnEnum(
-                        typeDescriptor,
-                        identifier,
-                        choices.map { it.name },
-                        enumTransformsLookup[identifier] ?: EnumTransforms.empty)
+                } else interpretEnum(identifier)
+
             else -> throw NotSerializableException("Cannot interpret restricted type $this")
+        }
+
+        private fun RestrictedType.interpretEnum(identifier: TypeIdentifier): RemoteTypeInformation.AnEnum {
+            val constants = choices.asSequence().mapIndexed { index, choice -> choice.name to index }.toMap(LinkedHashMap())
+            val transforms = try {
+                enumTransformsLookup[identifier]?.let { EnumTransforms.build(it, constants) } ?: EnumTransforms.empty
+            } catch (e: InvalidEnumTransformsException) {
+                throw NotSerializableDetailedException(name, e.message!!)
+            }
+            return RemoteTypeInformation.AnEnum(
+                    typeDescriptor,
+                    identifier,
+                    constants.keys.toList(),
+                    transforms)
         }
 
         /**
@@ -179,20 +190,6 @@ class AMQPRemoteTypeModel {
                     else -> RemoteTypeInformation.Unparameterised(name, this)
                 }
     }
-}
-
-fun LocalTypeInformation.getEnumTransforms(factory: LocalSerializerFactory): EnumTransforms {
-    val transformsSchema = TransformsSchema.get(typeIdentifier.name, factory)
-    return interpretTransformSet(transformsSchema)
-}
-
-private fun interpretTransformSet(transformSet: EnumMap<TransformTypes, MutableList<Transform>>): EnumTransforms {
-    val defaultTransforms = transformSet[TransformTypes.EnumDefault]?.toList() ?: emptyList()
-    val defaults = defaultTransforms.associate { transform -> (transform as EnumDefaultSchemaTransform).new to transform.old }
-    val renameTransforms = transformSet[TransformTypes.Rename]?.toList() ?: emptyList()
-    val renames = renameTransforms.associate { transform -> (transform as RenameSchemaTransform).to to transform.from }
-
-    return EnumTransforms(defaults, renames)
 }
 
 private val TypeNotation.typeDescriptor: String get() = descriptor.name?.toString() ?:

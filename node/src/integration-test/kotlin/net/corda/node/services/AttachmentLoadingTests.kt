@@ -24,7 +24,7 @@ import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
-import net.corda.testing.driver.DriverDSL
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -73,7 +73,7 @@ class AttachmentLoadingTests : IntegrationTest() {
     }
 
     private val services = object : ServicesForResolution {
-        private val testNetworkParameters = testNetworkParameters()
+        private val testNetworkParameters = testNetworkParameters().addNotary(DUMMY_NOTARY)
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {

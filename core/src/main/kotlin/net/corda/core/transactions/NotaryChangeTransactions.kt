@@ -123,8 +123,6 @@ private constructor(
         val newNotary: Party,
         override val id: SecureHash,
         override val sigs: List<TransactionSignature>,
-        // TODO Network parameters should never be null on NotaryChangeLedgerTransaction, this is left only because of deprecated constructors. We should decide to
-        //  get rid of them.
         override val networkParameters: NetworkParameters?
 ) : FullTransaction(), TransactionWithSignatures {
     companion object {
@@ -141,6 +139,22 @@ private constructor(
 
     init {
         checkEncumbrances()
+        checkNewNotaryWhitelisted()
+    }
+
+    /**
+     * Check that the output notary is whitelisted.
+     *
+     * Note that for this transaction type we do not require the input notary to be whitelisted to support network merging.
+     * For all other transaction types this is enforced.
+     */
+    private fun checkNewNotaryWhitelisted() {
+        networkParameters?.let { parameters ->
+            val notaryWhitelist = parameters.notaries.map { it.identity }
+            check(newNotary in notaryWhitelist) {
+                "The output notary $newNotary is not whitelisted in the attached network parameters."
+            }
+        }
     }
 
     override val references: List<StateAndRef<ContractState>> = emptyList()

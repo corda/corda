@@ -497,7 +497,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test
     fun `dependency with error on buyer side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
-        mockNet.defaultNotaryNode.services.ledger(DUMMY_NOTARY) {
+        mockNet.defaultNotaryNode.services.ledger(mockNet.defaultNotaryIdentity) {
             runWithError(true, false, "at least one cash input")
         }
     }
@@ -505,7 +505,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     @Test
     fun `dependency with error on seller side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(cordappPackages))
-        mockNet.defaultNotaryNode.services.ledger(DUMMY_NOTARY) {
+        mockNet.defaultNotaryNode.services.ledger(mockNet.defaultNotaryIdentity) {
             runWithError(false, true, "Issuances have a time-window")
         }
     }

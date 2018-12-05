@@ -46,7 +46,8 @@ class LargeTransactionsTest : IntegrationTest() {
                                    private val hash4: SecureHash) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            val tx = TransactionBuilder(notary = DUMMY_NOTARY)
+            val notary = serviceHub.networkParameters.notaries.first().identity
+            val tx = TransactionBuilder(notary)
                     .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                     .addCommand(dummyCommand(ourIdentity.owningKey))
                     .addAttachment(hash1)

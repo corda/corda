@@ -48,6 +48,8 @@ interface NodeHandle : AutoCloseable {
     val rpcAddress: NetworkHostAndPort
     /** Get the rpc admin address for this node **/
     val rpcAdminAddress: NetworkHostAndPort
+    /** Get the JMX server address for this node, if JMX is enabled **/
+    val jmxAddress: NetworkHostAndPort?
     /** Get a [List] of [User]'s for this node **/
     val rpcUsers: List<User>
     /** The location of the node's base directory **/
@@ -120,6 +122,34 @@ abstract class PortAllocation {
 }
 
 /**
+ * A class containing configuration information for Jolokia JMX, to be used when creating a node via the [driver].
+ *
+ * @property startJmxHttpServer Indicates whether the spawned nodes should start with a Jolokia JMX agent to enable remote
+ * JMX monitoring using HTTP/JSON.
+ * @property jmxHttpServerPortAllocation The port allocation strategy to use for remote Jolokia/JMX monitoring over HTTP.
+ * Defaults to incremental from port 7005. Use [NodeHandle.jmxAddress] to get the assigned address.
+ */
+@Suppress("DEPRECATION")
+data class JmxPolicy
+@Deprecated("Use the constructor that just takes in the jmxHttpServerPortAllocation or use JmxPolicy.defaultEnabled()")
+constructor(
+        val startJmxHttpServer: Boolean = false,
+        val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation(7005)
+) {
+    @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified if you wish to not have monitoring turned on.")
+    constructor() : this(false)
+
+    /** Create a [JmxPolicy] that turns on monitoring using the given [PortAllocation]. */
+    constructor(jmxHttpServerPortAllocation: PortAllocation) : this(true, jmxHttpServerPortAllocation)
+
+    companion object {
+        /** Returns a default [JmxPolicy] that turns on monitoring. */
+        @JvmStatic
+        fun defaultEnabled(): JmxPolicy = JmxPolicy(true)
+    }
+}
+
+/**
  * [driver] allows one to start up nodes like this:
  *   driver {
  *     val noService = startNode(providedName = DUMMY_BANK_A.name)
@@ -134,7 +164,7 @@ abstract class PortAllocation {
  *
  * @param defaultParameters The default parameters for the driver. Allows the driver to be configured in builder style
  *   when called from Java code.
- * @property dsl The dsl itself.
+ * @param dsl The dsl itself.
  * @return The value returned in the [dsl] closure.
  */
 fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: DriverDSL.() -> A): A {

@@ -1,6 +1,7 @@
 package net.corda.node.internal
 
 import com.google.common.io.Files
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.channels.OverlappingFileLockException
 import java.util.concurrent.CountDownLatch
@@ -16,7 +17,7 @@ class NodeStartupTest {
 
         thread(start = true) {
             val node = NodeStartup()
-            node.enforceSingleNodeIsRunning(dir)
+            assertThat(node.isNodeRunningAt(dir)).isTrue()
             latch.countDown()
         }
 
@@ -25,6 +26,6 @@ class NodeStartupTest {
 
         // Check that I can't start up another node in the same directory
         val anotherNode = NodeStartup()
-        assertFailsWith<OverlappingFileLockException> { anotherNode.enforceSingleNodeIsRunning(dir) }
+        assertFailsWith<OverlappingFileLockException> { anotherNode.isNodeRunningAt(dir) }
     }
 }

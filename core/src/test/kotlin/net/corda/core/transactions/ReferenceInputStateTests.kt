@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -49,8 +50,7 @@ class ReferenceStateTests {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-
+            networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
     )
 
     // This state has only been created to serve reference data so it cannot ever be used as an input or

@@ -234,9 +234,9 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
-        @Suppress("DEPRECATION")
-        val jmxConfig = if (jmxPolicy.startJmxHttpServer) {
-            mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPolicy.httpPort)
+        val jmxPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation.nextPort() else null
+        val jmxConfig = if (jmxPort != null) {
+            mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPort)
         } else {
             emptyMap()
         }
