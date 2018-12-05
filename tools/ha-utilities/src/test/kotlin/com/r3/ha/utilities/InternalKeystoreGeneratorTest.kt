@@ -74,7 +74,7 @@ class InternalKeystoreGeneratorTest {
         assertEquals(trustStorePassword, generator.trustStorePassword)
         generator.runProgram()
 
-        listOf("bridge.jks", "artemis.jks", "artemis-client.jks").map { workingDirectory / "artemis" / it }.forEach {
+        listOf("artemis.jks").map { workingDirectory / "artemis" / it }.forEach {
             assertTrue(it.exists())
             assertTrue(X509KeyStore.fromFile(it, keyStorePassword).contains(CORDA_CLIENT_TLS))
             assertTrue(X509KeyStore.fromFile(it, keyStorePassword).internal.isKeyEntry(CORDA_CLIENT_TLS))

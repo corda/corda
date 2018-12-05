@@ -24,9 +24,7 @@ class InternalArtemisKeystoreGenerator : AbstractInternalKeystoreGenerator("gene
         val artemisCertDir = baseDirectory / "artemis"
         val root = createRootKeystore("Internal Artemis Root", artemisCertDir / "artemis-root.jks", artemisCertDir / "artemis-truststore.jks",
                 keyStorePassword, keyStorePassword, trustStorePassword).getCertificateAndKeyPair(X509Utilities.CORDA_ROOT_CA, keyStorePassword)
-        createTLSKeystore("bridge", root, artemisCertDir / "bridge.jks", keyStorePassword, keyStorePassword)
         createTLSKeystore("artemis", root, artemisCertDir / "artemis.jks", keyStorePassword, keyStorePassword)
-        createTLSKeystore("artemis-client", root, artemisCertDir / "artemis-client.jks", keyStorePassword, keyStorePassword)
     }
 }
 
