@@ -10,6 +10,7 @@ import org.apache.logging.log4j.core.appender.ConsoleAppender
 import org.apache.logging.log4j.core.appender.OutputStreamManager
 import org.crsh.text.RenderPrintWriter
 import org.fusesource.jansi.Ansi
+import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
 import rx.Subscription
@@ -146,22 +147,25 @@ abstract class ANSIProgressRenderer {
         with(ansi) {
             var lines = 0
             for ((index, step) in tree.withIndex()) {
+                val processedStep = treeIndexProcessed.contains(index)
+                val skippedStep = index < treeIndex && !processedStep
+                val activeStep = index == treeIndex
 
                 val marker = when {
-                    treeIndexProcessed.contains(index) -> " ${Emoji.greenTick} "
-                    index < treeIndex -> " ${Emoji.notRun} "
-                    treeIndex == tree.lastIndex -> "${Emoji.greenTick} "
-                    index == treeIndex -> "${Emoji.rightArrow} "
+                    processedStep -> " ${Emoji.greenTick} "
+                    skippedStep -> " ${Emoji.notRun} "
+                    activeStep -> "${Emoji.rightArrow} "
                     error -> "${Emoji.noEntry} "
                     else -> "    "   // Not reached yet.
                 }
                 a("    ".repeat(step.first))
                 a(marker)
 
-                val active = index == treeIndex
-                if (active) bold()
-                a(step.second)
-                if (active) boldOff()
+                when {
+                    activeStep -> renderInBold(step.second, ansi)
+                    skippedStep -> renderInFaint(step.second, ansi)
+                    else -> a(step.second)
+                }
 
                 eraseLine(Ansi.Erase.FORWARD)
                 newline()
@@ -171,6 +175,21 @@ abstract class ANSIProgressRenderer {
         }
     }
 
+    private fun renderInBold(payload: String, ansi: Ansi): Unit {
+        with(ansi) {
+            a(Attribute.INTENSITY_BOLD)
+            a(payload)
+            a(Attribute.INTENSITY_BOLD_OFF)
+        }
+    }
+
+    private fun renderInFaint(payload: String, ansi: Ansi): Unit {
+        with(ansi) {
+            a(Attribute.INTENSITY_FAINT)
+            a(payload)
+            a(Attribute.INTENSITY_BOLD_OFF)
+        }
+    }
 
 }
 
