@@ -535,9 +535,8 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     rootEntities.map { it.value }
                 else
                     aggregateExpressions
-        // TODO sollecitom this results in cross join, and it doesn't work with SORT (cartesian product of table entries, so sort is incorrect)
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = joinPredicates.plus(commonPredicates.values).plus(predicateSet)
+        val combinedPredicates = commonPredicates.values.plus(predicateSet).plus(constraintPredicates).plus(joinPredicates)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
         return predicateSet
@@ -630,7 +629,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
 
         val orderCriteria = mutableListOf<Order>()
 
-        // TODO sollecitom, instead of adding to order criteria, add to sorting.columns, if it doesn't contain it already.
         val sorting = if (sortingArg.columns.none { it.sortAttribute == SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF) }) {
             sortingArg.copy(columns = sortingArg.columns + Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))
         } else {
@@ -647,7 +645,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                         // scenario where sorting on attributes not parsed as criteria
                         val entityRoot = criteriaQuery.from(entityStateClass)
                         rootEntities[entityStateClass] = entityRoot
-                        // TODO sollecitom check
                         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
                         joinPredicates.add(joinPredicate)
                         entityRoot
@@ -656,27 +653,22 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 Sort.Direction.ASC -> {
                     if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-//                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                     else {
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-//                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                 }
                 Sort.Direction.DESC ->
                     if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-//                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                     else {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-//                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
             }
         }
         if (orderCriteria.isNotEmpty()) {
             criteriaQuery.orderBy(orderCriteria)
-            // TODO sollecitom check
             criteriaQuery.where(*joinPredicates.toTypedArray())
         }
     }
