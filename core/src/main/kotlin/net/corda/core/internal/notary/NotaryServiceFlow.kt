@@ -110,21 +110,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
         }
     }
 
-    /**
-     * Check that network parameters hash on this transaction is the current hash for the network.
-     */
-    // TODO: ENT-2666 Implement network parameters fuzzy checking. By design in Corda network we have propagation time delay.
-    //     We will never end up in perfect synchronization with all the nodes. However, network parameters update process
-    //     lets us predict what is the reasonable time window for changing parameters on most of the nodes.
-    @Suspendable
-    protected fun checkParametersHash(networkParametersHash: SecureHash?) {
-        if (networkParametersHash == null && serviceHub.networkParameters.minimumPlatformVersion < 4) return
-        val notaryParametersHash = serviceHub.networkParametersStorage.currentHash
-        require(notaryParametersHash == networkParametersHash) {
-            "Transaction for notarisation was tagged with parameters with hash: $networkParametersHash, but current network parameters are: $notaryParametersHash"
-        }
-    }
-
     /** Verifies that the correct notarisation request was signed by the counterparty. */
     private fun validateRequestSignature(request: NotarisationRequest, signature: NotarisationRequestSignature) {
         val requestingParty = otherSideSession.counterparty
