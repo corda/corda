@@ -241,6 +241,11 @@ open class MockServices private constructor(
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters)
             : this(cordappPackages, TestIdentity(initialIdentityName), identityService, networkParameters)
 
+
+    @JvmOverloads
+    constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters, key: KeyPair)
+            : this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, networkParameters)
+
     /**
      * A helper constructor that requires at least one test identity to be registered, and which takes the package of
      * the caller as the package in which to find app code. This is the most convenient constructor and the one that
