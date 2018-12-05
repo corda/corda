@@ -452,7 +452,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 }
 
         val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), vaultLinearStates.get<PersistentStateRef>("stateRef"))
-        joinPredicates.add(joinPredicate)
+        predicateSet.add(joinPredicate)
 
         // linear ids UUID
         criteria.uuid?.let {
@@ -505,7 +505,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     }
 
             val joinPredicate = criteriaBuilder.equal(vaultStates.get<PersistentStateRef>("stateRef"), entityRoot.get<PersistentStateRef>("stateRef"))
-            joinPredicates.add(joinPredicate)
+            predicateSet.add(joinPredicate)
 
             // resolve general criteria expressions
             @Suppress("UNCHECKED_CAST")
@@ -537,7 +537,7 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     aggregateExpressions
         // TODO sollecitom this results in cross join, and it doesn't work with SORT (cartesian product of table entries, so sort is incorrect)
         criteriaQuery.multiselect(selections)
-        val combinedPredicates = joinPredicates.plus(predicateSet).plus(commonPredicates.values).plus(constraintPredicates)
+        val combinedPredicates = joinPredicates.plus(commonPredicates.values).plus(predicateSet)
         criteriaQuery.where(*combinedPredicates.toTypedArray())
 
         return predicateSet
