@@ -649,7 +649,6 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             when (direction) {
                 Sort.Direction.ASC -> {
                     if (entityStateAttributeChild != null) {
-                        // TODO sollecitom add asc/desc by stateRef, if not there already
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
@@ -661,9 +660,11 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 Sort.Direction.DESC ->
                     if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
+                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                     else {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
+                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
             }
         }
