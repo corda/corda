@@ -1,5 +1,7 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.flows.FlowException
+import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.model.*
@@ -16,7 +18,7 @@ class AMQPRemoteTypeModelTests {
     @JvmField
     val serializationEnvRule = SerializationEnvironmentRule()
 
-    private val factory = testDefaultFactory()
+    private val factory = testDefaultFactory().apply { register(ThrowableSerializer(this)) }
     private val typeModel = AMQPRemoteTypeModel()
 
     interface Interface<P, Q, R> {
@@ -43,10 +45,10 @@ class AMQPRemoteTypeModelTests {
     @Test
     fun `round-trip some types through AMQP serialisations`() {
         arrayOf("").assertRemoteType("String[]")
-        listOf(1).assertRemoteType("List<?>")
+        listOf(1).assertRemoteType("List<*>")
         arrayOf(listOf(1)).assertRemoteType("List[]")
         Enum.BAZ.assertRemoteType("Enum(FOO|BAR|BAZ)")
-        mapOf("string" to 1).assertRemoteType("Map<?, ?>")
+        mapOf("string" to 1).assertRemoteType("Map<*, *>")
         arrayOf(byteArrayOf(1, 2, 3)).assertRemoteType("byte[][]")
 
         SimpleClass(1, 2.0, null, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
@@ -61,17 +63,23 @@ class AMQPRemoteTypeModelTests {
 
         C(arrayOf("a", "b"), listOf(UUID.randomUUID()), mapOf(UUID.randomUUID() to intArrayOf(1, 2, 3)), Enum.BAZ)
                 .assertRemoteType("""
-            C: Interface<String, UUID, ?>
+            C: Interface<String, UUID, *>
               array: String[]
               enum: Enum(FOO|BAR|BAZ)
               list: List<UUID>
-              map: Map<UUID, ?>
+              map: Map<UUID, *>
         """)
+    }
+
+    @Test
+    fun flowException() {
+        Exception("foo").assertRemoteType("""""")
     }
 
     private fun getRemoteType(obj: Any): RemoteTypeInformation {
         val output = SerializationOutput(factory)
         val schema = output.serializeAndReturnSchema(obj)
+        schema.schema.types.forEach { println(it) }
         val values = typeModel.interpret(SerializationSchemas(schema.schema, schema.transformsSchema)).values
         return values.find { it.typeIdentifier.getLocalType().asClass().isAssignableFrom(obj::class.java) } ?:
         throw IllegalArgumentException(
