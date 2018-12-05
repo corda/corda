@@ -581,8 +581,8 @@ public class VaultQueryJavaTests {
         Pair<Path, PublicKey> anotherSignedContractJarAndKey = INSTANCE.makeTestSignedContractJar(path, "com.example.AnotherContract");
         Path anotherSignedContractJar = anotherSignedContractJarAndKey.component1();
 
-        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, "2.0");
-        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", "2.0");
+        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, "2");
+        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", "2");
         Path signedContractJarV2 = signedContractJarAndKeyV2.component1();
 
         storage.importAttachment(Files.newInputStream(sampleJar),"uploaderA", "sample.jar");

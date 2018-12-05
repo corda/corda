@@ -1,11 +1,12 @@
 package net.corda.node.internal.cordapp
 
+import net.corda.core.contracts.UNKNOWN_CORDA_CONTRACT_VERSION
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
-fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int, cordappContractVersion: Int = 1): Manifest {
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -18,7 +19,7 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Specification-Vendor"] = vendor
 
     manifest["Implementation-Title"] = title
-    manifest["Cordapp-Contract-Version"] = cordappContractVersion.toString()
+    manifest["Cordapp-Contract-Version"] = version
     manifest["Implementation-Vendor"] = vendor
     manifest["Target-Platform-Version"] = targetVersion.toString()
 
@@ -34,7 +35,7 @@ operator fun Manifest.get(key: String): String? = mainAttributes.getValue(key)
 fun Manifest.toCordappInfo(defaultShortName: String): CordappImpl.Info {
     val shortName = this["Name"] ?: defaultShortName
     val vendor = this["Implementation-Vendor"] ?: UNKNOWN_VALUE
-    val version = this["Implementation-Version"] ?: UNKNOWN_VALUE
+    val version = this["Implementation-Version"] ?: UNKNOWN_CORDA_CONTRACT_VERSION.toString()
     val minPlatformVersion = this["Min-Platform-Version"]?.toIntOrNull() ?: 1
     val targetPlatformVersion = this["Target-Platform-Version"]?.toIntOrNull() ?: minPlatformVersion
     return CordappImpl.Info(

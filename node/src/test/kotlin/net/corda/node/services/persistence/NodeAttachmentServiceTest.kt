@@ -209,8 +209,8 @@ class NodeAttachmentServiceTest {
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val (anotherSignedContractJar, _) = makeTestSignedContractJar(file.path,"com.example.AnotherContract")
-            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = "2.0", cordaContractVersion = 2)
-            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = "2.0", cordaContractVersion = 2)
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = "2")
+            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = "2")
 
             sampleJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             contractJar.read { storage.importAttachment(it, "uploaderB", "contract.jar") }
