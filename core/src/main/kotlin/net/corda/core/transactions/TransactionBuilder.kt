@@ -405,16 +405,16 @@ open class TransactionBuilder @JvmOverloads constructor(
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        val minimumRequiredContractClassVersion = UNKNOWN_CORDA_CONTRACT_VERSION //TODO will be set by code from other PR
+
+        //TODO will be set by the code pending in the other PR
+        val minimumRequiredContractClassVersion = UNKNOWN_CORDA_CONTRACT_VERSION
 
         //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
                 versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-        val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort)
 
-        return attachmentIds.firstOrNull() ?: throw MissingContractAttachments(states)
+        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys

@@ -9,6 +9,7 @@ import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.UNKNOWN_CORDA_CONTRACT_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -346,7 +347,7 @@ class NodeAttachmentServiceTest {
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = 1)
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = UNKNOWN_CORDA_CONTRACT_VERSION)
             session.merge(corruptAttachment)
             id
         }

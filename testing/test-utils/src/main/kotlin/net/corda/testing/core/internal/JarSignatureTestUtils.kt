@@ -79,7 +79,6 @@ object JarSignatureTestUtils {
         JarInputStream(FileInputStream((this / fileName).toFile())).use { input ->
             val manifest = input.manifest ?: Manifest()
             entry.forEach { (attributeName, value) ->
-                // eg. Attributes.Name.IMPLEMENTATION_VERSION, version
                 manifest.mainAttributes[attributeName] = value
             }
             val output = JarOutputStream(FileOutputStream((this / fileName).toFile()), manifest)
