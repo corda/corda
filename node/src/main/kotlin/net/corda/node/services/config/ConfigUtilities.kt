@@ -131,12 +131,8 @@ fun MutualSslConfiguration.configureDevKeyAndTrustStores(myLegalName: CordaX500N
                     }
                 }
             }
-            is AzureKeyVaultCryptoService -> {
-                val publicKey = cryptoService.generateKeyPair(CORDA_CLIENT_CA, AzureKeyVaultCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
-                createClientCA(publicKey, myLegalName, signingCertificateStore)
-            }
-            is UtimacoCryptoService -> {
-                val publicKey = cryptoService.generateKeyPair(CORDA_CLIENT_CA, UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
+            is AzureKeyVaultCryptoService, is UtimacoCryptoService -> {
+                val publicKey = cryptoService.generateKeyPair(CORDA_CLIENT_CA, cryptoService.defaultIdentitySignatureScheme())
                 createClientCA(publicKey, myLegalName, signingCertificateStore)
             }
             else -> throw IllegalArgumentException("CryptoService not supported.")

@@ -31,11 +31,23 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
     private val vaultURL = "https://mytestkeyvault1261.vault.azure.net/"
 
     @Test
+    fun `Generate key with the default legal identity scheme, then sign and verify data`() {
+        val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault)
+        val alias = UUID.randomUUID().toString()
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        assertNotNull(generated)
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data)
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
     fun `Generate P-256 ECDSA key with hardware protection, sign and verify data`() {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -47,7 +59,7 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -59,7 +71,7 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -71,7 +83,7 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -83,7 +95,7 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, premiumVault, AzureKeyVaultCryptoService.Protection.HARDWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -95,7 +107,7 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
         val alias = UUID.randomUUID().toString()
-        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
         assertNotNull(generated)
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -108,11 +120,11 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
         val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
         val signer = cryptoService.getSigner(alias)
 
         val otherAlias = UUID.randomUUID().toString()
-        val otherPubKey = cryptoService.generateKeyPair(otherAlias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val otherPubKey = cryptoService.generateKeyPair(otherAlias, cryptoService.defaultIdentitySignatureScheme())
         val issuer = Party(DUMMY_BANK_A_NAME, pubKey)
         val partyAndCert = getTestPartyAndCertificate(issuer)
         val issuerCert = partyAndCert.certificate
@@ -150,6 +162,6 @@ class AzureKeyVaultCryptoServiceIntegrationTest {
         val path = javaClass.getResource("out.pkcs12").toURI().path
         val keyVaultClient = AzureKeyVaultCryptoService.createKeyVaultClient(path, "", "1", clientId)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.SOFTWARE)
-        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair("no", Integer.MIN_VALUE) }
+        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair("no", Crypto.EDDSA_ED25519_SHA512) }
     }
 }

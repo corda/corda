@@ -4,6 +4,7 @@ import CryptoServerCXI.CryptoServerCXI
 import CryptoServerJCE.CryptoServerProvider
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
@@ -59,8 +60,8 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         }
     }
 
-    override fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey {
-        return generateKeyPair(alias, schemeNumberID, keyTemplate)
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
+        return generateKeyPair(alias, scheme, keyTemplate)
     }
 
     override fun containsKey(alias: String): Boolean {
@@ -120,9 +121,17 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         }
     }
 
-    fun generateKeyPair(alias: String, schemeId: Int, keyTemplate: CryptoServerCXI.KeyAttributes): PublicKey {
+    override fun defaultIdentitySignatureScheme(): SignatureScheme {
+        return DEFAULT_IDENTITY_SIGNATURE_SCHEME
+    }
+
+    override fun defaultTLSSignatureScheme(): SignatureScheme {
+        throw UnsupportedOperationException("Generating key pairs for TLS with the Utimaco CryptoService is not supported.")
+    }
+
+    fun generateKeyPair(alias: String, scheme: SignatureScheme, keyTemplate: CryptoServerCXI.KeyAttributes): PublicKey {
         return withAuthentication {
-            val keyAttributes = attributesForScheme(keyTemplate, schemeId)
+            val keyAttributes = attributesForScheme(keyTemplate, scheme.schemeNumberID)
             keyAttributes.name = alias
             val overwrite = if (config.keyOverride) CryptoServerCXI.FLAG_OVERWRITE else 0
             cryptoServerProvider.cryptoServer.generateKey(overwrite, keyAttributes, config.keyGenMechanism)

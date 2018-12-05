@@ -50,7 +50,7 @@ class UtimacoCryptoServiceIntegrationTest {
         val cryptoService = UtimacoCryptoService.fromConfig(config) { UtimacoCryptoService.UtimacoCredentials("INTEGRATION_TEST", pw.toByteArray()) }
         cryptoService.logOff()
         pw = "foo"
-        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("foo", Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID) }
+        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("foo", cryptoService.defaultIdentitySignatureScheme()) }
     }
 
     @Test
@@ -65,7 +65,7 @@ class UtimacoCryptoServiceIntegrationTest {
     fun `When alias contains illegal characters, should throw `() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = "a".repeat(257)
-        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID) }
+        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256) }
     }
 
     @Test
@@ -73,7 +73,7 @@ class UtimacoCryptoServiceIntegrationTest {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = UUID.randomUUID().toString()
         cryptoService.logOff()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         assertTrue { cryptoService.containsKey(alias) }
         val data = UUID.randomUUID().toString().toByteArray()
         cryptoService.logOff()
@@ -85,7 +85,18 @@ class UtimacoCryptoServiceIntegrationTest {
     fun `Generate ECDSA key with r1 curve, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
+        assertTrue { cryptoService.containsKey(alias) }
+        val data = UUID.randomUUID().toString().toByteArray()
+        val signed = cryptoService.sign(alias, data)
+        Crypto.doVerify(pubKey, signed, data)
+    }
+
+    @Test
+    fun `Generate key with the default legal identity scheme, then sign and verify data`() {
+        val cryptoService = UtimacoCryptoService.fromConfig(config, login)
+        val alias = UUID.randomUUID().toString()
+        val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
         assertTrue { cryptoService.containsKey(alias) }
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -96,7 +107,7 @@ class UtimacoCryptoServiceIntegrationTest {
     fun `Generate ECDSA key with k1 curve, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
         assertTrue { cryptoService.containsKey(alias) }
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -107,7 +118,7 @@ class UtimacoCryptoServiceIntegrationTest {
     fun `Generate RSA key, then sign and verify data`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
         assertTrue { cryptoService.containsKey(alias) }
         val data = UUID.randomUUID().toString().toByteArray()
         val signed = cryptoService.sign(alias, data)
@@ -144,10 +155,10 @@ class UtimacoCryptoServiceIntegrationTest {
     fun `Content signer works with X509Utilities`() {
         val cryptoService = UtimacoCryptoService.fromConfig(config, login)
         val alias = UUID.randomUUID().toString()
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
         val signer = cryptoService.getSigner(alias)
         val otherAlias = UUID.randomUUID().toString()
-        val otherPubKey = cryptoService.generateKeyPair(otherAlias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val otherPubKey = cryptoService.generateKeyPair(otherAlias, cryptoService.defaultIdentitySignatureScheme())
         val issuer = Party(DUMMY_BANK_A_NAME, pubKey)
         val partyAndCert = getTestPartyAndCertificate(issuer)
         val issuerCert = partyAndCert.certificate
@@ -172,6 +183,6 @@ class UtimacoCryptoServiceIntegrationTest {
         val conf = config.copy(authThreshold = 0) // because auth state for the admin user is 570425344
         val cryptoService = UtimacoCryptoService.fromConfig(conf) { UtimacoCryptoService.UtimacoCredentials(username, pw, keyFile) }
         // the admin user does not have permission to access or create keys, so this operation will fail
-        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("no", Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID) }
+        assertFailsWith<UtimacoCryptoService.UtimacoHSMException> { cryptoService.generateKeyPair("no", cryptoService.defaultIdentitySignatureScheme()) }
     }
 }

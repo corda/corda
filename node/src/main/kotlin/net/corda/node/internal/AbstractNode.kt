@@ -979,11 +979,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return PartyAndCertificate(X509Utilities.buildCertPath(identityCertPath))
     }
 
-    protected open fun generateKeyPair(alias: String) = when (cryptoService) {
-        is UtimacoCryptoService -> cryptoService.generateKeyPair(alias, UtimacoCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
-        is AzureKeyVaultCryptoService -> cryptoService.generateKeyPair(alias, AzureKeyVaultCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID) // Azure KeyVault does not support EdDSA.
-        else -> cryptoService.generateKeyPair(alias, X509Utilities.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID)
-    }
+    protected open fun generateKeyPair(alias: String) = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,

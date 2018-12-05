@@ -46,9 +46,8 @@ class BCCryptoServiceTests {
     }
 
     private fun generateKeyAndSignForScheme(cryptoService: BCCryptoService, signatureScheme: SignatureScheme) {
-        val schemeNumberID = signatureScheme.schemeNumberID
-        val alias = "signature$schemeNumberID"
-        val pubKey = cryptoService.generateKeyPair(alias, schemeNumberID)
+        val alias = "signature${signatureScheme.schemeNumberID}"
+        val pubKey = cryptoService.generateKeyPair(alias, signatureScheme)
         assertTrue { cryptoService.containsKey(alias) }
 
         val signatureData = cryptoService.sign(alias, clearData)

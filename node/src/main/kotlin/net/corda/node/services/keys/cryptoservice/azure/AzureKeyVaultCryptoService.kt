@@ -17,6 +17,7 @@ import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
+import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
@@ -45,9 +46,9 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
     /**
      * The protection parameter indicates if  KeyVault should store keys protected by an HSM or as "software-protected" keys.
      */
-    override fun generateKeyPair(alias: String, schemeNumberID: Int): PublicKey {
+    override fun generateKeyPair(alias: String, scheme: SignatureScheme): PublicKey {
         checkAlias(alias)
-        val keyRequest: CreateKeyRequest = createKeyRequest(schemeNumberID, alias, protection)
+        val keyRequest: CreateKeyRequest = createKeyRequest(scheme.schemeNumberID, alias, protection)
         val keyBundle = keyVaultClient.createKey(keyRequest)
         return toPublicKey(keyBundle)
     }
@@ -111,6 +112,14 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
     }
 
+
+    override fun defaultIdentitySignatureScheme(): SignatureScheme {
+        return DEFAULT_IDENTITY_SIGNATURE_SCHEME
+    }
+
+    override fun defaultTLSSignatureScheme(): SignatureScheme {
+        throw UnsupportedOperationException("Generating key pairs for TLS with the Azure KeyVault CryptoService is not supported.")
+    }
     private fun createIdentifier(alias: String) = keyVaultUrl.removeSuffix("/") + "/keys/" + alias
 
     private fun createKeyRequest(schemeNumberID: Int, alias: String, protection: Protection): CreateKeyRequest {

@@ -7,14 +7,11 @@ import com.microsoft.azure.keyvault.models.KeyBundle
 import com.microsoft.azure.keyvault.models.KeyOperationResult
 import com.microsoft.azure.keyvault.webkey.JsonWebKey
 import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.times
 import net.corda.core.crypto.Crypto
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.days
-import net.corda.node.services.keys.cryptoservice.utimaco.UtimacoCryptoService
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -36,6 +33,30 @@ class AzureKeyVaultCryptoServiceTest {
     private val objectMapper = ObjectMapper()
 
     @Test
+    fun `Generate key with the default legal identity scheme, then sign and verify data`() {
+        val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
+        val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
+        val alias = "c16d2aa8-2f42-4b2f-946d-00e51df43d88"
+        val webKeyString = "{\"kid\":\"none\",\"kty\":\"EC-HSM\",\"key_ops\":[\"sign\"],\"n\":null,\"e\":null,\"d\":null,\"dp\":null,\"dq\":null,\"qi\":null,\"p\":null,\"q\":null,\"k\":null,\"key_hsm\":null,\"crv\":\"P-256\",\"x\":\"Q9sEtdtbb2tb2XJHXtgD80BO5RcUpL3Q2xoca7CQZ7E\",\"y\":\"eDZP2RTd6_Nyk-uJ7Zs6MDaxzQ2RtQZJyWVXE15Dflg\"}"
+        val jsonWebKey = objectMapper.readValue<JsonWebKey>(webKeyString)
+        val keyBundle = Mockito.mock(KeyBundle::class.java)
+        Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
+        Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
+        val generated = cryptoService.generateKeyPair(alias, cryptoService.defaultIdentitySignatureScheme())
+        Mockito.verify(keyVaultClient, times(1)).createKey(any())
+        Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
+        val exists = cryptoService.containsKey(alias)
+        assertTrue(exists)
+        val data = Base64.getDecoder().decode("NmU1ZTMxZWYtYWU0NS00MzM0LThkYjQtNzRkNWU3NDQ1YWY3")
+        val resultString = "{\"kid\":\"none\",\"value\":\"nvrVKgmfDa3MSAStp4PfiB9VkPJfLVR-m7hzgGYpL2qcoI2QxF4H54dkMC798ff-3YLqcHN6PX7v3nxvJR-QYg\"}"
+        val result = objectMapper.readValue<KeyOperationResult>(resultString)
+        Mockito.`when`(keyVaultClient.sign(any(), any(), any())).thenReturn(result)
+        val signed = cryptoService.sign(alias, data)
+        // doesn't throw
+        Crypto.doVerify(generated, signed, data)
+    }
+
+    @Test
     fun `Generate P-256 ECDSA key with hardware protection, sign and verify data`() {
         val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL, AzureKeyVaultCryptoService.Protection.HARDWARE)
@@ -45,7 +66,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val exists = cryptoService.containsKey(alias)
@@ -69,7 +90,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val exists = cryptoService.containsKey(alias)
@@ -95,7 +116,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val data = Base64.getDecoder().decode("M2M0ODFlZjQtN2FhYS00MzJlLTg5MjgtMDQ1OWVmYTI2YTU2")
@@ -118,7 +139,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256K1_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val data = Base64.getDecoder().decode("N2RiYjdmMDEtYmVkNS00Y2MxLThhNDQtYWIwNDQzMDRlYmQ0")
@@ -141,7 +162,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val data = Base64.getDecoder().decode("NzNhNjhmNTgtYzJkOS00YTAyLWJiZmYtYzZiOGNmMjI3Zjk2")
@@ -164,7 +185,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256.schemeNumberID)
+        val generated = cryptoService.generateKeyPair(alias, Crypto.RSA_SHA256)
         Mockito.verify(keyVaultClient, times(1)).createKey(any())
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val data = Base64.getDecoder().decode("ZWMwNjVjYjctYmFhNy00YjhkLWE1ZDQtNGZjMmQxYmI2OWY4")
@@ -185,7 +206,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(keyBundle.key()).thenReturn(jsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(keyBundle)
-        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val pubKey = cryptoService.generateKeyPair(alias, Crypto.ECDSA_SECP256R1_SHA256)
         Mockito.`when`(keyVaultClient.getKey(any())).thenReturn(keyBundle)
         val signer = cryptoService.getSigner(alias)
 
@@ -195,7 +216,7 @@ class AzureKeyVaultCryptoServiceTest {
         val otherKeyBundle = Mockito.mock(KeyBundle::class.java)
         Mockito.`when`(otherKeyBundle.key()).thenReturn(otherJsonWebKey)
         Mockito.`when`(keyVaultClient.createKey(any())).thenReturn(otherKeyBundle)
-        val otherPubKey = cryptoService.generateKeyPair(otherAlias, Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID)
+        val otherPubKey = cryptoService.generateKeyPair(otherAlias, Crypto.ECDSA_SECP256R1_SHA256)
 
         val resultString = "{\"kid\":\"none\",\"value\":\"nr3k8MvlqN2ycg-gJmRyS9VKCEffh4d8FKBqqi9UV2R6MKrpTokc4R1_8lBRBC9JLweRz6V--PKQPu4i8WH9NA\"}"
         val result = objectMapper.readValue<KeyOperationResult>(resultString)
@@ -238,7 +259,7 @@ class AzureKeyVaultCryptoServiceTest {
         val keyVaultClient: KeyVaultClient = Mockito.mock(KeyVaultClient::class.java)
         val vaultURL = "https://nope"
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
-        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair("no", Integer.MIN_VALUE) }
+        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair("no", Crypto.EDDSA_ED25519_SHA512) }
     }
 
     @Test
@@ -255,10 +276,9 @@ class AzureKeyVaultCryptoServiceTest {
         val cryptoService = AzureKeyVaultCryptoService(keyVaultClient, vaultURL)
         val withIllegalChar = "asdf!-d"
         val tooLong = "a".repeat(128)
-        val id = AzureKeyVaultCryptoService.DEFAULT_IDENTITY_SIGNATURE_SCHEME.schemeNumberID
 
-        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair(withIllegalChar, id) }
-        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair(tooLong, id) }
+        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair(withIllegalChar, cryptoService.defaultIdentitySignatureScheme()) }
+        assertFailsWith<IllegalArgumentException> { cryptoService.generateKeyPair(tooLong, cryptoService.defaultIdentitySignatureScheme()) }
 
         assertFailsWith<IllegalArgumentException> { cryptoService.getPublicKey(withIllegalChar) }
         assertFailsWith<IllegalArgumentException> { cryptoService.getPublicKey(tooLong) }
