@@ -70,24 +70,22 @@ class NodeProcess(
             }
         }
 
-        var networkParametersCopier: NetworkParametersCopier? = null
+        private lateinit var networkParametersCopier: NetworkParametersCopier
 
         private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
 
         private var notaryParty: Party? = null
 
         private fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
-            if (networkParametersCopier == null) {
-                try {
+            try {
+                networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+            } catch (_: IllegalStateException) {
+                // Assuming serialization env not in context.
+                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
                     networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
-                } catch (_: IllegalStateException) {
-                    // Assuming serialization env not in context.
-                    AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                        networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
-                    }
                 }
             }
-            networkParametersCopier!!.install(nodeDir)
+            networkParametersCopier.install(nodeDir)
         }
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
@@ -98,6 +96,8 @@ class NodeProcess(
             if (config.isNotary) {
                 require(notaryParty == null) { "Only one notary can be created." }
                 notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
+            } else {
+                require(notaryParty != null) { "Notary not created. Please call `create` with a notary config first." }
             }
 
             (nodeDir / "node.conf").writeText(config.toText())
