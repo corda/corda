@@ -48,7 +48,6 @@ import net.corda.testing.dsl.TestLedgerDSLInterpreter
 import net.corda.testing.dsl.TestTransactionDSLInterpreter
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TEST_TX_TIME
-import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
@@ -127,7 +126,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             bobNode.internals.disableDBCloseOnStop()
 
             bobNode.database.transaction {
-                VaultFiller(bobNode.services, dummyNotary, notary, ::Random).fillWithSomeTestCash(2000.DOLLARS, bankNode.services, 3, 10, cashIssuer)
+                bobNode.services.fillWithSomeTestCash(2000.DOLLARS, bankNode.services, outputNotary = notary, issuedBy = cashIssuer)
             }
 
             val alicesFakePaper = aliceNode.database.transaction {
