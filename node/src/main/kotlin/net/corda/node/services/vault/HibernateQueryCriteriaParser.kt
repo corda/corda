@@ -625,11 +625,17 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return emptySet()
     }
 
-    private fun parse(sorting: Sort) {
-        log.trace { "Parsing sorting specification: $sorting" }
+    private fun parse(sortingArg: Sort) {
+        log.trace { "Parsing sorting specification: $sortingArg" }
 
         val orderCriteria = mutableListOf<Order>()
 
+        // TODO sollecitom, instead of adding to order criteria, add to sorting.columns, if it doesn't contain it already.
+        val sorting = if (sortingArg.columns.none { it.sortAttribute == SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF) }) {
+            sortingArg.copy(columns = sortingArg.columns + Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))
+        } else {
+            sortingArg
+        }
         sorting.columns.map { (sortAttribute, direction) ->
             val (entityStateClass, entityStateAttributeParent, entityStateAttributeChild) =
                     when (sortAttribute) {
@@ -650,21 +656,21 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                 Sort.Direction.ASC -> {
                     if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+//                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                     else {
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+//                        orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                 }
                 Sort.Direction.DESC ->
                     if (entityStateAttributeChild != null) {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+//                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
                     else {
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
+//                        orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(PersistentState::stateRef.name)))
                     }
             }
         }

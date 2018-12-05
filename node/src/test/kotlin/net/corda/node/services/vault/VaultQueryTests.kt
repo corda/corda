@@ -352,7 +352,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
             when (sortDirection) {
                 Sort.Direction.ASC -> assertThat(allStates.sortedBy { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
-                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.state.data.linearNumber }.sortedByDescending { it.ref.txhash }.sortedByDescending { it.ref.index }).isEqualTo(allStates)
+                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
             }
 
             (1..3).forEach {
