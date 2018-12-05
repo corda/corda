@@ -1,7 +1,10 @@
 package net.corda.nodeapi.internal.protonwrapper.netty
 
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.*
+import io.netty.channel.Channel
+import io.netty.channel.ChannelFutureListener
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -37,7 +40,7 @@ enum class ProxyVersion {
     HTTP
 }
 
-data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null) {
+data class ProxyConfig(val version: ProxyVersion, val proxyAddress: NetworkHostAndPort, val userName: String? = null, val password: String? = null, val proxyTimeoutMS: Long? = null) {
     init {
         if (version == ProxyVersion.SOCKS4) {
             require(password == null) { "SOCKS4 does not support a password" }
@@ -160,6 +163,10 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                         //httpProxyHandler.setConnectTimeoutMillis(3600000) // 1hr for debugging purposes
                         httpProxyHandler
                     }
+                }
+                val proxyTimeout = proxyConfig.proxyTimeoutMS
+                if (proxyTimeout != null) {
+                    proxy.setConnectTimeoutMillis(proxyTimeout)
                 }
                 pipeline.addLast("Proxy", proxy)
                 proxy.connectFuture().addListener {

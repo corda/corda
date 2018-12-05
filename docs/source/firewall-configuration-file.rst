@@ -133,6 +133,8 @@ absolute path to the firewall's base directory.
 
         :password: Optionally, a password to present to the SOCKS5 or HTTP Proxy. It is not valid for SOCKS4 proxies and it should always be combined with [userName].
 
+        :proxyTimeoutMS: optionally, specify a timeout in msec if the proxy is unusually slow to initate connections. The default value used is 10000 msec.
+
 :inboundConfig:  This section is used to configure the properties of the listening port. It is required for ``SenderReceiver`` and ``FloatOuter`` modes and must be absent for ``BridgeInner`` mode:
 
         :listeningAddress: The host and port to bind to as ``TLS 1.2/AMQP 1.0`` listener. This may be a specific network interface on multi-homed machines.
