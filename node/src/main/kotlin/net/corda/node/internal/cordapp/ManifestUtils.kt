@@ -19,7 +19,7 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Specification-Vendor"] = vendor
 
     manifest["Implementation-Title"] = title
-    manifest["Cordapp-Contract-Version"] = version
+    manifest["Implementation-Vendor"] = version
     manifest["Implementation-Vendor"] = vendor
     manifest["Target-Platform-Version"] = targetVersion.toString()
 
