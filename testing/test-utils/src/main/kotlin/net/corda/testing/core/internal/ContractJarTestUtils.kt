@@ -89,13 +89,14 @@ object ContractJarTestUtils {
     }
 
     fun signContractJar(jarURL: URL, copyFirst: Boolean, keyStoreDir: Path? = null, alias: String = "testAlias", pwd: String  = "testPassword"): Pair<Path, PublicKey> {
+        val urlAsPath = jarURL.toPath()
         val jarName =
             if (copyFirst) {
-                val signedJarName = Paths.get(jarURL.path.substringBeforeLast(".") + "-SIGNED.jar")
-                Files.copy(jarURL.toPath(), signedJarName, StandardCopyOption.REPLACE_EXISTING)
+                val signedJarName = Paths.get(urlAsPath.toString().substringBeforeLast(".") + "-SIGNED.jar")
+                Files.copy(urlAsPath, signedJarName, StandardCopyOption.REPLACE_EXISTING)
                 signedJarName
             }
-            else jarURL.toPath()
+            else urlAsPath
 
         val workingDir =
             if (keyStoreDir == null) {
