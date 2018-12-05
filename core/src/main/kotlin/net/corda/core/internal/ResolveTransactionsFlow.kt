@@ -104,25 +104,29 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
 
-            if (minimumPlatformVersion >= 4) {
-                // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
-                // Check that epochs are ordered in the transaction chain.
-                with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
-                    val currentEpoch = stx.getHashOrDefault().let { hash ->
-                        getEpochFromHash(hash) ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $hash")
-                    }
-                    stxRootParametersMap[stx.id]?.forEach { parentHash ->
-                        val parentEpoch = getEpochFromHash(parentHash)
-                                ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $parentHash")
-                        if (currentEpoch > parentEpoch) {
-                            throw IllegalArgumentException("Network parameters are not ordered in the transaction graph " +
-                                    "for dependency transaction: ${stx.id} and parent parameters hash: $parentHash")
-                        }
-                    }
-                }
-            }
+            if (minimumPlatformVersion >= 4)
+                checkNetworkParametersOrdered(stx)
+
             stx.verify(serviceHub)
             serviceHub.recordTransactions(StatesToRecord.NONE, listOf(stx))
+        }
+    }
+
+    private fun checkNetworkParametersOrdered(stx: SignedTransaction) {
+        // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
+        // Check that epochs are ordered in the transaction chain.
+        with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
+            val currentEpoch = stx.getHashOrDefault().let { hash ->
+                getEpochFromHash(hash) ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $hash")
+            }
+            stxRootParametersMap[stx.id]?.forEach { parentHash ->
+                val parentEpoch = getEpochFromHash(parentHash)
+                        ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $parentHash")
+                if (currentEpoch > parentEpoch) {
+                    throw IllegalArgumentException("Network parameters are not ordered in the transaction graph " +
+                            "for dependency transaction: ${stx.id} and parent parameters hash: $parentHash")
+                }
+            }
         }
     }
 

@@ -140,7 +140,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 }
 
 /**
- * Given a set of hashes either loads from from local storage or requests them from the other peer. Downloaded
+ * Given a set of hashes either loads from local storage or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
@@ -159,10 +159,10 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
                     } catch (e: FileAlreadyExistsException) {
                         // This can happen when another transaction will insert the same attachment during this transaction.
                         // The outcome is the same (the attachment is imported), so we can ignore this exception.
-                        logger.debug("Attachment ${attachment.id} already inserted.")
+                        logger.debug { "Attachment ${attachment.id} already inserted." }
                     }
                 } else {
-                    logger.debug("Attachment ${attachment.id} already exists, skipping.")
+                    logger.debug { "Attachment ${attachment.id} already exists, skipping." }
                 }
             }
         }
@@ -222,7 +222,7 @@ class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                     // This will perform the signature check too and throws with SignatureVerificationException
                     saveParameters(parameters.signedParameters)
                 } else {
-                    logger.debug{ "Network parameters ${parameters.id} already exists in storage, skipping." }
+                    logger.debug { "Network parameters ${parameters.id} already exists in storage, skipping." }
                 }
             }
         }
