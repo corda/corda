@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -407,7 +408,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         //TODO will be set by the code pending in the other PR
-        val minimumRequiredContractClassVersion = UNKNOWN_CORDA_CONTRACT_VERSION
+        val minimumRequiredContractClassVersion = DEFAULT_CORDAPP_VERSION
 
         //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),

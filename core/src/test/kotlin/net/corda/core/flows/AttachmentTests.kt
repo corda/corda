@@ -4,7 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.UNKNOWN_CORDA_CONTRACT_VERSION
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
@@ -90,7 +90,7 @@ class AttachmentTests : WithMockNet {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment, version = UNKNOWN_CORDA_CONTRACT_VERSION)
+        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment, version = DEFAULT_CORDAPP_VERSION)
         badAliceNode.updateAttachment(corruptAttachment)
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.

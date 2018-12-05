@@ -9,7 +9,7 @@ import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.UNKNOWN_CORDA_CONTRACT_VERSION
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -210,8 +210,8 @@ class NodeAttachmentServiceTest {
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val (anotherSignedContractJar, _) = makeTestSignedContractJar(file.path,"com.example.AnotherContract")
-            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = "2")
-            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = "2")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = 2)
 
             sampleJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             contractJar.read { storage.importAttachment(it, "uploaderB", "contract.jar") }
@@ -347,7 +347,7 @@ class NodeAttachmentServiceTest {
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = UNKNOWN_CORDA_CONTRACT_VERSION)
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = DEFAULT_CORDAPP_VERSION)
             session.merge(corruptAttachment)
             id
         }

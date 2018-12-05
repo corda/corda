@@ -8,6 +8,7 @@ import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CORDAPP_CONTRACT_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
@@ -17,6 +18,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
@@ -106,9 +108,9 @@ class NodeAttachmentService(
                     foreignKey = ForeignKey(name = "FK__signers__attachments"))
             var signers: List<PublicKey>? = null,
 
-            // Assumption: only Contract Attachments are versioned, version unknown or value for other attachments other than Contract Attachment defaults to 0
+            // Assumption: only Contract Attachments are versioned, version unknown or value for other attachments other than Contract Attachment defaults to 1
             @Column(name = "version", nullable = false)
-            var version: Int = UNKNOWN_CORDA_CONTRACT_VERSION
+            var version: Int = DEFAULT_CORDAPP_VERSION
     )
 
     @VisibleForTesting
@@ -354,9 +356,9 @@ class NodeAttachmentService(
     private fun getVersion(attachmentBytes: ByteArray) =
         JarInputStream(attachmentBytes.inputStream()).use {
             try {
-                it.manifest?.mainAttributes?.getValue(CORDA_CONTRACT_VERSION)?.toInt() ?: UNKNOWN_CORDA_CONTRACT_VERSION
+                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
             } catch (e: NumberFormatException) {
-                UNKNOWN_CORDA_CONTRACT_VERSION
+                DEFAULT_CORDAPP_VERSION
             }
         }
 

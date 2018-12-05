@@ -4,6 +4,7 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
@@ -44,7 +45,7 @@ class TransactionBuilderTest {
     private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
     private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
             contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
-            versionCondition = Builder.greaterThanOrEqual(UNKNOWN_CORDA_CONTRACT_VERSION))
+            versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION))
     private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
     @Before
@@ -65,7 +66,6 @@ class TransactionBuilderTest {
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
-
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 

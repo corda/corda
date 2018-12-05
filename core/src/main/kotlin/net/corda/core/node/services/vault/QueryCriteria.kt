@@ -302,7 +302,7 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
         fun withContractClassNames(contractClassNamesPredicate: ColumnPredicate<List<ContractClassName>>) = copy(contractClassNamesCondition = contractClassNamesPredicate)
         fun withSigners(signersPredicate: ColumnPredicate<List<PublicKey>>) = copy(signersCondition = signersPredicate)
         fun isSigned(isSignedPredicate: ColumnPredicate<Boolean>) = copy(isSignedCondition = isSignedPredicate)
-        fun withVersions(versionsPredicate: ColumnPredicate<Int>) = copy(versionCondition = versionsPredicate)
+        fun withVersion(versionPredicate: ColumnPredicate<Int>) = copy(versionCondition = versionPredicate)
     }
 
     class AndComposition(override val a: AttachmentQueryCriteria, override val b: AttachmentQueryCriteria): AttachmentQueryCriteria(), GenericQueryCriteria.ChainableQueryCriteria.AndVisitor<AttachmentQueryCriteria, AttachmentsQueryCriteriaParser, AttachmentSort>

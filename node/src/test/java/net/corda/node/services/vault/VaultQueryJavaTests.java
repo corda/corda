@@ -581,8 +581,8 @@ public class VaultQueryJavaTests {
         Pair<Path, PublicKey> anotherSignedContractJarAndKey = INSTANCE.makeTestSignedContractJar(path, "com.example.AnotherContract");
         Path anotherSignedContractJar = anotherSignedContractJarAndKey.component1();
 
-        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, "2");
-        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", "2");
+        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, 2);
+        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", 2);
         Path signedContractJarV2 = signedContractJarAndKeyV2.component1();
 
         storage.importAttachment(Files.newInputStream(sampleJar),"uploaderA", "sample.jar");
@@ -618,13 +618,13 @@ public class VaultQueryJavaTests {
         FieldInfo version = getField("version", NodeAttachmentService.DBAttachment.class);
         ColumnPredicate<Integer> version2Predicate = equal(version, 2).component2();
 
-        AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version2Predicate);
+        AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersion(version2Predicate);
         assertThat(storage.queryAttachments(criteria4).size()).isEqualTo(1);
 
         ColumnPredicate<Integer> version1Predicate = equal(version, 1).component2();
         ColumnPredicate<List<String>> manyContractClassNamesPredicate = equal(contractClassNames, asList("com.example.MyContract", "com.example.AnotherContract")).component2();
 
-        AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version1Predicate);
+        AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersion(version1Predicate);
         assertThat(storage.queryAttachments(criteria5).size()).isEqualTo(2);
 
         selfCleaningDir.close();
