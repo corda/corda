@@ -31,11 +31,6 @@ class ContractAttachment @JvmOverloads constructor(
         return "ContractAttachment(attachment=${attachment.id}, contracts='$allContracts', uploader='$uploader', signed='$isSigned', version='$version')"
     }
 
-    /**
-     * Contract version.
-     */
-    val version: String get() = extractVersion(attachment)
-
     companion object {
         private fun extractVersion(attachment: Attachment) =
             try { attachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "0" } catch (e: Exception) { "0" }
@@ -46,7 +41,7 @@ class ContractAttachment @JvmOverloads constructor(
             } else {
                 extractVersion(attachment)
             }
-            return Integer.parseInt(version)
+            return try { Integer.parseInt(version) } catch (e: NumberFormatException) { Integer.parseInt(version.substring(0, version.indexOf("."))) }
         }
     }
 }

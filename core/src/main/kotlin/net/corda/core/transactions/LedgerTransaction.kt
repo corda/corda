@@ -151,9 +151,9 @@ private constructor(
      * Verify that contract class versions of output states are not lower that versions of relevant input states.
      */
     @Throws(TransactionVerificationException::class)
-    private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
-        contractAttachmentsByContract.forEach { contractClassName, attachment ->
-            val outputVersion = getContractVersion(attachment)
+    private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>) {
+        contractAttachmentsByContract.forEach { contractClassName, attachments ->
+            val outputVersion = getContractVersion(singedOrUnsignedOrNull(attachments) ?: throw Exception("This is wrong"))
             inputStatesContractClassNameToMaxVersion[contractClassName]?.let {
                 if (it > outputVersion) {
                     throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$it", "$outputVersion")
@@ -255,6 +255,9 @@ private constructor(
         }
         return hashToSignatureConstrainedContracts
     }
+
+    private fun singedOrUnsignedOrNull(set: Set<ContractAttachment>) =
+        set.firstOrNull { it.isSigned } ?: set.firstOrNull { !it.isSigned }
 
     private fun resolveAttachment(contractClassName: ContractClassName, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>): AttachmentWithContext {
         val unsignedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { !it.isSigned }.firstOrNull()

@@ -19,6 +19,7 @@ import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
+import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
 /**
@@ -98,14 +99,15 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers)
+            val version = try { baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1" } catch (e: Exception) { "1" }
             val attachment =
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
                     else {
                         contractClassNames.map {contractClassName ->
-                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, 1, signers.isNotEmpty())
+                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, version, signers.isNotEmpty())
                             _contractClasses[contractClassMetadata] = sha256
                         }
-                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, 1)
+                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, version)
                     }
             _files[sha256] = Pair(attachment, bytes)
         }

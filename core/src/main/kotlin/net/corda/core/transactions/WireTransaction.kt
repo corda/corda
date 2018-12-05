@@ -174,8 +174,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         //keep resolvedInputs lazy and resolve the inputs separately here to get Version
         val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map { it.toStateAndRef() }.groupBy { it.state.contract }
-        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> =
-                inputStateContractClassToStateRefs.mapValues { it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: 0 }
+        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> = inputStateContractClassToStateRefs.mapValues { it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: 0 }
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,

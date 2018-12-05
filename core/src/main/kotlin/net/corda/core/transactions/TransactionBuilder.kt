@@ -325,14 +325,6 @@ open class TransactionBuilder @JvmOverloads constructor(
             }
         }
 
-        val outputVersion = getContractVersion(attachmentToUse)
-        inputStateRefs?.forEach {
-            val inputMaxVersion = getContractVersion(services.loadContractAttachment(it))
-            require(inputMaxVersion <= outputVersion) { //it's enough if once inputs violates the rule
-                "No-Downgrade Rule has been breached for contract class $contractClassName. The output state contract version $outputVersion is lower that the version of the input state ($inputMaxVersion)."
-            }
-        }
-
         return Pair(setOf(selectedAttachmentId), resolvedOutputStates)
     }
 
