@@ -83,7 +83,7 @@ class HsmSimulator(portAllocation: PortAllocation,
 
     val address = portAllocation.nextHostAndPort()
     private lateinit var docker: DockerClient
-    private val containerId: String = "hsm_simulator"
+    private var containerId: String? = null
 
     override fun before() {
         assumeFalse("Docker registry username is not set!. Skipping the test.", registryUser.isNullOrBlank())
@@ -94,7 +94,7 @@ class HsmSimulator(portAllocation: PortAllocation,
             docker.pullHsmSimulatorImageFromRepository()
         }
         cleanUpExisting()
-        docker.createContainer()
+        containerId = docker.createContainer()
         docker.startHsmSimulatorContainer()
     }
 
@@ -106,7 +106,9 @@ class HsmSimulator(portAllocation: PortAllocation,
     private fun cleanUpExisting() {
         docker.listContainers()
                 .filter { it.ports()?.filter { it.publicPort() == address.port }?.size ?:0 > 0 }
-                .filter { it.image() == imageRepoTag }
+                .filter {
+                    it.image().startsWith("$imageRepoTag:")
+                }
                 .forEach {
                     docker.killContainer(it.id())
                     docker.removeContainer(it.id())
@@ -151,8 +153,9 @@ class HsmSimulator(portAllocation: PortAllocation,
         )
         var pollCount = HSM_STARTUP_POLL_MAX_COUNT
         while (pollCount > 0) {
-            val provider = createProvider(config)
+            var provider: CryptoServerProvider? = null
             try {
+                provider = createProvider(config)
                 provider.loginPassword(CRYPTO_USER, CRYPTO_PASSWORD)
                 provider.cryptoServer.authState
                 return
@@ -160,7 +163,7 @@ class HsmSimulator(portAllocation: PortAllocation,
                 pollCount--
                 Thread.sleep(HSM_STARTUP_SLEEP_INTERVAL_MS)
             } finally {
-                provider.logoff()
+                provider?.logoff()
             }
         }
         throw IllegalStateException("Unable to obtain connection to initialised HSM Simulator")

@@ -22,7 +22,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@Ignore
 class UtimacoCryptoServiceIntegrationTest {
 
     companion object {
