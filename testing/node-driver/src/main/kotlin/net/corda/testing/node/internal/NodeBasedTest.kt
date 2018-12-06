@@ -63,7 +63,8 @@ abstract class NodeBasedTest(private val cordappPackages: List<String> = emptyLi
     }
 
     @Before
-    fun init() {
+    override fun setUp() {
+        super.setUp()
         val notaryInfos = notaries.map { NotaryInfo(installNotary(it), true) } // todo only validating ones
         defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(notaries = notaryInfos))
         notaries.mapTo(notaryNodes) { startNode(it) }

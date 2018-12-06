@@ -62,7 +62,9 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @Before
-    public void setUp() throws Exception {
+    @Override
+    public void setUp() {
+        super.setUp();
         node = startNode(ALICE_NAME, 1000, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getNode().getConfiguration().getRpcOptions().getAddress()));
     }
