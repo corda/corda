@@ -71,11 +71,6 @@ class AMQPRemoteTypeModelTests {
         """)
     }
 
-    @Test
-    fun flowException() {
-        Exception("foo").assertRemoteType("""""")
-    }
-
     private fun getRemoteType(obj: Any): RemoteTypeInformation {
         val output = SerializationOutput(factory)
         val schema = output.serializeAndReturnSchema(obj)
