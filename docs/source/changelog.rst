@@ -320,6 +320,8 @@ Unreleased
 
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 
+* The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
+
 Version 3.3
 -----------
 
