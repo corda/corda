@@ -51,7 +51,9 @@ private val logger = LoggerFactory.getLogger("ClassloaderUtils")
 fun <T> withContractsInJar(jarInputStream: InputStream, withContracts: (List<ContractClassName>, InputStream) -> T): T {
     val tempFile = Files.createTempFile("attachment", ".jar")
     try {
-        jarInputStream.copyTo(tempFile, StandardCopyOption.REPLACE_EXISTING)
+        jarInputStream.use {
+            it.copyTo(tempFile, StandardCopyOption.REPLACE_EXISTING)
+        }
         val cordappJar = tempFile.toAbsolutePath()
         val contracts = logElapsedTime("Contracts loading for '$cordappJar'", logger) {
             ContractsJarFile(tempFile.toAbsolutePath()).scan()

@@ -13,8 +13,8 @@ import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
-import java.io.File
 import java.lang.IllegalStateException
+import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
