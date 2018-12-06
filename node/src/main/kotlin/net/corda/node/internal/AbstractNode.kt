@@ -266,7 +266,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun initKeyStores(): X509Certificate {
         if (configuration.devMode) {
-            configuration.configureWithDevSSLCertificate()
+            configuration.configureWithDevSSLCertificate(cryptoService)
             // configureWithDevSSLCertificate is a devMode process that writes directly to keystore files, so
             // we should re-synchronise BCCryptoService with the updated keystore file.
             if (cryptoService is BCCryptoService) {
