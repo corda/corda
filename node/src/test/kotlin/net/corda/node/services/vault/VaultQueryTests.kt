@@ -334,6 +334,88 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `query with sort criteria works even when multiple pages have the same value for the sort criteria field`() {
+        val numberOfStates = 59
+        val pageSize = 13
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+        }
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearNumber")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+            val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            when (sortDirection) {
+                Sort.Direction.ASC -> assertThat(allStates.sortedBy { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+            }
+
+            (1..3).forEach {
+                val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+                assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+                assertThat(newAllStates).containsExactlyElementsOf(allStates)
+            }
+
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+
+    @Test
+    fun `query with sort criteria works with pagination`() {
+        val numberOfStates = 59
+        val pageSize = 13
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+        }
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+            val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            when (sortDirection) {
+                Sort.Direction.ASC -> assertThat(allStates.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.ref.txhash }.sortedByDescending { it.ref.index }).isEqualTo(allStates)
+            }
+
+            (1..3).forEach {
+                val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+                assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+                assertThat(newAllStates).containsExactlyElementsOf(allStates)
+            }
+
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+
+    @Test
     fun `unconsumed states with count`() {
         database.transaction {
             repeat(4) {

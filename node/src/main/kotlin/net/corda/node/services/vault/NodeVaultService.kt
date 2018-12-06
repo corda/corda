@@ -76,7 +76,7 @@ class NodeVaultService(
     }
 
     private val concurrentBox = ConcurrentBox(InnerState())
-    private lateinit var criteriaBuilder: CriteriaBuilder
+    private val criteriaBuilder: CriteriaBuilder by lazy { database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder }
     private val persistentStateService = PersistentStateService(schemaService)
 
     /**
@@ -91,7 +91,6 @@ class NodeVaultService(
     private val producedStatesMapping = cacheFactory.buildNamed<SecureHash, BitSet>(Caffeine.newBuilder(), "NodeVaultService_producedStates")
 
     override fun start() {
-        criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder
         bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
             update.produced.forEach {

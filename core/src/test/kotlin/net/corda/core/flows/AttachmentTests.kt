@@ -4,9 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.*
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.contracts.Attachment
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
-import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.core.flows.mixins.WithMockNet
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -14,8 +13,13 @@ import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.hash
 import net.corda.node.services.persistence.NodeAttachmentService
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.makeUnique
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.fakeAttachment
+import net.corda.testing.internal.matchers.flow.willReturn
+import net.corda.testing.internal.matchers.flow.willThrow
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
@@ -89,7 +93,7 @@ class AttachmentTests : WithMockNet {
         val corruptBytes = "arggghhhh".toByteArray()
         System.arraycopy(corruptBytes, 0, attachment, 0, corruptBytes.size)
 
-        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment, version = "1.0")
+        val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = attachment, version = DEFAULT_CORDAPP_VERSION)
         badAliceNode.updateAttachment(corruptAttachment)
 
         // Get n1 to fetch the attachment. Should receive corrupted bytes.

@@ -1,17 +1,21 @@
 package net.corda.testing.core.internal
 
-import net.corda.testing.core.internal.JarSignatureTestUtils.addManifest
-import net.corda.testing.core.internal.JarSignatureTestUtils.createJar
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
+import net.corda.core.cordapp.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.internal.JarSignatureTestUtils.addManifest
+import net.corda.testing.core.internal.JarSignatureTestUtils.createJar
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import java.io.OutputStream
 import java.net.URI
 import java.net.URL
-import java.nio.file.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.security.PublicKey
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
@@ -41,7 +45,7 @@ object ContractJarTestUtils {
     }
 
     @JvmOverloads
-    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: String = "1.0"): Pair<Path, PublicKey> {
+    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1): Pair<Path, PublicKey> {
         val alias = "testAlias"
         val pwd = "testPassword"
         workingDir.generateKey(alias, pwd, ALICE_NAME.toString())
@@ -53,13 +57,13 @@ object ContractJarTestUtils {
     }
 
     @JvmOverloads
-    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: String = "1.0"): Path {
+    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1): Path {
         val packages = contractName.split(".")
         val jarName = "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"
         val className = packages.last()
         createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
         workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
-        workingDir.addManifest(jarName, Pair(Attributes.Name.IMPLEMENTATION_VERSION, version))
+        workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
         return workingDir.resolve(jarName)
     }
 

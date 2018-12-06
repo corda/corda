@@ -26,7 +26,7 @@ import java.util.jar.JarInputStream
  */
 class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
-    private data class ContractAttachmentMetadata(val name: ContractClassName, val version: String, val isSigned: Boolean)
+    private data class ContractAttachmentMetadata(val name: ContractClassName, val version: Int, val isSigned: Boolean)
 
     private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
     private val _contractClasses = HashMap<ContractAttachmentMetadata, SecureHash>()
@@ -54,13 +54,13 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             if (criteria.isSignedCondition != null) {
                 val isSigned = criteria.isSignedCondition == Builder.equal(true)
                  contractClassNames.map {contractClassName ->
-                    ContractAttachmentMetadata(contractClassName, "1.0", isSigned)
+                    ContractAttachmentMetadata(contractClassName, 1, isSigned)
                 }
             }
             else {
                 contractClassNames.flatMap { contractClassName ->
-                    listOf(ContractAttachmentMetadata(contractClassName, "1.0", false),
-                     ContractAttachmentMetadata(contractClassName, "1.0", true))
+                    listOf(ContractAttachmentMetadata(contractClassName, 1, false),
+                     ContractAttachmentMetadata(contractClassName, 1, true))
                 }
             }
 
@@ -102,10 +102,10 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
                     else {
                         contractClassNames.map {contractClassName ->
-                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, "1.0", signers.isNotEmpty())
+                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, 1, signers.isNotEmpty())
                             _contractClasses[contractClassMetadata] = sha256
                         }
-                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, "1.0")
+                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, 1)
                     }
             _files[sha256] = Pair(attachment, bytes)
         }

@@ -55,6 +55,7 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
             from shadowJar.archivePath
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
+            from "src/docker/DockerfileAL"
             from "src/docker/Dockerfile"
             rename(cordaJar.name, "corda.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
@@ -64,23 +65,35 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
-final buildTags = ["corda/corda-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-${project.version.toString().toLowerCase()}:latest"]
+final zuluBuildTags = ["corda/corda-zulu-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-zulu-${project.version.toString().toLowerCase()}:latest"]
+final correttoBuildTags = ["corda/corda-corretto-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-corretto-${project.version.toString().toLowerCase()}:latest"]
 
-task buildOfficialDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    //if we are a snapshot, append a timestamp
-    //if we are a release, append RELEASE
+task buildOfficialZuluDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
     inputDir = new File(project.buildDir, "docker-temp")
-    tags = buildTags
+    tags = zuluBuildTags
+    dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile")
 }
 
-task pushTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialDockerImage]){
-    imageName = buildTags[0]
+task buildOfficialCorrettoDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
+    inputDir = new File(project.buildDir, "docker-temp")
+    tags = correttoBuildTags
+    dockerFile = new File(new File(project.buildDir, "docker-temp"), "DockerfileAL")
 }
 
-task pushLatestTag('type': DockerPushImage, dependsOn: [buildOfficialDockerImage]){
-    imageName = buildTags[1]
+task pushZuluTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDockerImage]){
+    imageName = zuluBuildTags[0]
 }
 
-task pushOfficialImages(dependsOn: [pushTimeStampedTag, pushLatestTag]){
-    
+task pushZuluLatestTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDockerImage]){
+    imageName = zuluBuildTags[1]
 }
+
+task pushCorrettoTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialCorrettoDockerImage]){
+    imageName = correttoBuildTags[0]
+}
+
+task pushCorrettoLatestTag('type': DockerPushImage, dependsOn: [buildOfficialCorrettoDockerImage]){
+    imageName = correttoBuildTags[1]
+}
+
+task pushOfficialImages(dependsOn: [pushZuluTimeStampedTag, pushZuluLatestTag, pushCorrettoTimeStampedTag, pushCorrettoLatestTag])
