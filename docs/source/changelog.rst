@@ -20,7 +20,7 @@ Unreleased
 
   The ``confidential-identities`` dependency in your CorDapp must now be ``compile`` and not ``cordaCompile``.
 
-* Fixed a bug causing Hibernate to generate cross join statements. This was evident in poor performance and incorrect results for vault queries with sorting.
+* Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
 * Marked the ``Attachment`` interface as ``@DoNotImplement`` because it is not meant to be extended by CorDapp developers. If you have already
   done so, please get in contact on the usual communication channels.

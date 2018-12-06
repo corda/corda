@@ -624,17 +624,17 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
         return emptySet()
     }
 
-    private fun parse(sortingArg: Sort) {
-        log.trace { "Parsing sorting specification: $sortingArg" }
+    private fun parse(sorting: Sort) {
+        log.trace { "Parsing sorting specification: $sorting" }
 
         val orderCriteria = mutableListOf<Order>()
 
-        val sorting = if (sortingArg.columns.none { it.sortAttribute == SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF) }) {
-            sortingArg.copy(columns = sortingArg.columns + Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))
+        val actualSorting = if (sorting.columns.none { it.sortAttribute == SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF) }) {
+            sorting.copy(columns = sorting.columns + Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))
         } else {
-            sortingArg
+            sorting
         }
-        sorting.columns.map { (sortAttribute, direction) ->
+        actualSorting.columns.map { (sortAttribute, direction) ->
             val (entityStateClass, entityStateAttributeParent, entityStateAttributeChild) =
                     when (sortAttribute) {
                         is SortAttribute.Standard -> parse(sortAttribute.attribute)
@@ -651,20 +651,16 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
                     }
             when (direction) {
                 Sort.Direction.ASC -> {
-                    if (entityStateAttributeChild != null) {
+                    if (entityStateAttributeChild != null)
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                    }
-                    else {
+                    else
                         orderCriteria.add(criteriaBuilder.asc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-                    }
                 }
                 Sort.Direction.DESC ->
-                    if (entityStateAttributeChild != null) {
+                    if (entityStateAttributeChild != null)
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent).get<String>(entityStateAttributeChild)))
-                    }
-                    else {
+                    else
                         orderCriteria.add(criteriaBuilder.desc(sortEntityRoot.get<String>(entityStateAttributeParent)))
-                    }
             }
         }
         if (orderCriteria.isNotEmpty()) {
