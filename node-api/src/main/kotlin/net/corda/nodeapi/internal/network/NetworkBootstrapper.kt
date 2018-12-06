@@ -483,9 +483,11 @@ interface NetworkBootstrapperWithOverridableParameters {
 
 enum class CopyCordapps {
     FirstRunOnly {
-        override fun copy(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) {
+        override fun copyTo(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean, fromCordform: Boolean) {
             if (networkAlreadyExists) {
-                println("Not copying CorDapp JARs as --copy-cordapps is set to FirstRunOnly, and it looks like this network has already been bootstrapped.")
+                if (!fromCordform) {
+                    println("Not copying CorDapp JARs as --copy-cordapps is set to FirstRunOnly, and it looks like this network has already been bootstrapped.")
+                }
                 return
             }
             cordappJars.copy(nodeDirs)
@@ -493,14 +495,18 @@ enum class CopyCordapps {
     },
 
     Yes {
-        override fun copy(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) = cordappJars.copy(nodeDirs)
+        override fun copyTo(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean, fromCordform: Boolean) = cordappJars.copy(nodeDirs)
     },
 
     No {
-        override fun copy(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean) = println("Not copying CorDapp JARs as --copy-cordapps is set to No.")
+        override fun copyTo(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean, fromCordform: Boolean) {
+            if (!fromCordform) {
+                println("Not copying CorDapp JARs as --copy-cordapps is set to No.")
+            }
+        }
     };
 
-    protected abstract fun copy(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean)
+    protected abstract fun copyTo(cordappJars: List<Path>, nodeDirs: List<Path>, networkAlreadyExists: Boolean, fromCordform: Boolean)
 
     protected fun List<Path>.copy(nodeDirs: List<Path>) {
         if (this.isNotEmpty()) {
@@ -522,6 +528,6 @@ enum class CopyCordapps {
         if (!fromCordform) {
             println("Found the following CorDapps: ${cordappJars.map { it.fileName }}")
         }
-        this.copy(cordappJars, nodeDirs, networkAlreadyExists)
+        this.copyTo(cordappJars, nodeDirs, networkAlreadyExists, fromCordform)
     }
 }
