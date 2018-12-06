@@ -40,7 +40,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME));
+    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),
