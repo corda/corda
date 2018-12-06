@@ -464,6 +464,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             doReturn(makeInternalTestDataSourceProperties("node_$id", "net_$networkId")).whenever(it).dataSourceProperties
             doReturn(makeTestDatabaseProperties("node_$id")).whenever(it).database
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
+            doReturn(false).whenever(it).messagingServerExternal
             parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 

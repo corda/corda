@@ -10,7 +10,6 @@ import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationS
 import net.corda.cliutils.ShellConstants
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
-import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.concurrent.openFuture
@@ -53,8 +52,8 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_S
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
@@ -230,6 +229,9 @@ open class Node(configuration: NodeConfiguration,
 
         network as P2PMessagingClient
 
+        // When using external Artemis for P2P messaging, the node's p2pSslOptions are no longer used.
+        val sslOptions = configuration.enterpriseConfiguration.messagingServerSslConfiguration ?: configuration.p2pSslOptions
+
         // Construct security manager reading users data either from the 'security' config section
         // if present or from rpcUsers list if the former is missing from config.
         val securityManagerConfig = configuration.security?.authService
@@ -250,7 +252,7 @@ open class Node(configuration: NodeConfiguration,
         val rpcServerAddresses = if (configuration.rpcOptions.standAloneBroker) {
             BrokerAddresses(configuration.rpcOptions.address, configuration.rpcOptions.adminAddress)
         } else {
-            startLocalRpcBroker(securityManager)
+            startLocalRpcBroker(securityManager, sslOptions)
         }
 
         val externalBridge = configuration.enterpriseConfiguration.externalBridge
@@ -276,10 +278,10 @@ open class Node(configuration: NodeConfiguration,
                 rpcThreadPoolSize = configuration.enterpriseConfiguration.tuning.rpcThreadPoolSize
         )
         rpcServerAddresses?.let {
-            internalRpcMessagingClient = InternalRPCMessagingClient(configuration.p2pSslOptions,
+            internalRpcMessagingClient = InternalRPCMessagingClient(sslOptions,
                     it.admin,
                     MAX_RPC_MESSAGE_SIZE,
-                    CordaX500Name.build(configuration.p2pSslOptions.keyStore.get()[X509Utilities.CORDA_CLIENT_TLS].subjectX500Principal),
+                    configuration.myLegalName,
                     rpcServerConfiguration)
             printBasicNodeInfo("RPC connection address", it.primary.toString())
             printBasicNodeInfo("RPC admin connection address", it.admin.toString())
@@ -314,15 +316,15 @@ open class Node(configuration: NodeConfiguration,
         )
     }
 
-    private fun startLocalRpcBroker(securityManager: RPCSecurityManager): BrokerAddresses? {
+    private fun startLocalRpcBroker(securityManager: RPCSecurityManager, sslOptions: MutualSslConfiguration): BrokerAddresses? {
         return with(configuration) {
             rpcOptions.address.let {
                 val rpcBrokerDirectory: Path = baseDirectory / "brokers" / "rpc"
                 with(rpcOptions) {
                     rpcBroker = if (useSsl) {
-                        ArtemisRpcBroker.withSsl(configuration.p2pSslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withSsl(sslOptions, this.address, adminAddress, sslConfig!!, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     } else {
-                        ArtemisRpcBroker.withoutSsl(configuration.p2pSslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
+                        ArtemisRpcBroker.withoutSsl(sslOptions, this.address, adminAddress, securityManager, MAX_RPC_MESSAGE_SIZE, jmxMonitoringHttpPort != null, rpcBrokerDirectory, shouldStartLocalShell())
                     }
                 }
                 rpcBroker!!.addresses

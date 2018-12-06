@@ -727,8 +727,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private fun getCertificateStores(): AllCertificateStores? {
         return try {
-            // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
-            val sslKeyStore = configuration.p2pSslOptions.keyStore.get()
+            val sslKeyStore: CertificateStore? = if (configuration.messagingServerExternal) {
+                // When using external Artemis and bridge, the node's TLS keystore should not be used by the node for any purpose.
+                null
+            } else {
+                // The following will throw IOException if key file not found or KeyStoreException if keystore password is incorrect.
+                configuration.p2pSslOptions.keyStore.get()
+            }
             val signingCertificateStore = configuration.signingCertificateStore.get()
             val trustStore = configuration.p2pSslOptions.trustStore.get()
             AllCertificateStores(trustStore, sslKeyStore, signingCertificateStore)
@@ -738,10 +743,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore, val identitiesKeyStore: CertificateStore)
+    private data class AllCertificateStores(val trustStore: CertificateStore, val sslKeyStore: CertificateStore?, val identitiesKeyStore: CertificateStore)
 
     private fun validateKeyStores(): X509Certificate {
-        // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist.
+        // Step 1. Check trustStore, sslKeyStore and identitiesKeyStore exist. sslKeystore should exist only when using embedded Artemis and bridge.
         val certStores = try {
             requireNotNull(getCertificateStores()) {
                 "One or more keyStores (identity or TLS) or trustStore not found. " +
@@ -756,9 +761,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         require(CORDA_ROOT_CA in certStores.trustStore) {
             "Alias for trustRoot key not found. Please ensure you have an updated trustStore file."
         }
-        // Step 3. Check that tls keyStore contains the correct key-alias entry.
-        require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
-            "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+        // Step 3. Check that TLS keyStore contains the correct key-alias entry. Not necessary when using an external messaging server.
+        certStores.sslKeyStore?.let {
+            require(CORDA_CLIENT_TLS in certStores.sslKeyStore) {
+                "Alias for TLS key not found. Please ensure you have an updated TLS keyStore file."
+            }
         }
 
         // Step 4. Check that identity keyStores contain the correct key-alias entry for Node CA.
@@ -768,10 +775,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         // Step 5. Check all cert paths chain to the trusted root.
         val trustRoot = certStores.trustStore[CORDA_ROOT_CA]
-        val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
-        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
+        certStores.sslKeyStore?.let {
+            val sslCertChainRoot = certStores.sslKeyStore.query { getCertificateChain(CORDA_CLIENT_TLS) }.last()
+            require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+        }
 
-        require(sslCertChainRoot == trustRoot) { "TLS certificate must chain to the trusted root." }
+        val nodeCaCertChainRoot = certStores.identitiesKeyStore.query { getCertificateChain(CORDA_CLIENT_CA) }.last()
         require(nodeCaCertChainRoot == trustRoot) { "Client CA certificate must chain to the trusted root." }
 
         if (configuration.devMode) {

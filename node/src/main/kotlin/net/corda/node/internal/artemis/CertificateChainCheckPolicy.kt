@@ -40,7 +40,7 @@ sealed class CertificateChainCheckPolicy {
 
     object LeafMustMatch : CertificateChainCheckPolicy() {
         override fun createCheck(keyStore: KeyStore, trustStore: KeyStore): Check {
-            val ourPublicKey = keyStore.getCertificate(X509Utilities.CORDA_CLIENT_TLS).publicKey
+            val ourPublicKey = keyStore.getCertificate(keyStore.aliases().nextElement()).publicKey
             return object : Check {
                 override fun checkCertificateChain(theirChain: Array<X509Certificate>) {
                     val theirLeaf = theirChain.first().publicKey
