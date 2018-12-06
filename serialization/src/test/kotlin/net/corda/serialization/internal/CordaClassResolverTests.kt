@@ -14,6 +14,7 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
@@ -215,8 +216,8 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `Attempt to load contract attachment with the incorrect uploader should fails with IAE`() {
+    @Test(expected = MissingAttachmentsException::class)
+    fun `Attempt to load contract attachment with the incorrect uploader should fails with MissingAttachmentsException`() {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
