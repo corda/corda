@@ -212,6 +212,7 @@ object DefaultKryoCustomizer {
             kryo.writeClassAndObject(output, obj.additionalContracts)
             output.writeString(obj.uploader)
             kryo.writeClassAndObject(output, obj.signerKeys)
+            output.writeString(obj.version)
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -222,6 +223,7 @@ object DefaultKryoCustomizer {
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
                 val uploader = input.readString()
                 val signers = kryo.readClassAndObject(input) as List<PublicKey>
+                val version = input.readString()
                 val context = kryo.serializationContext()!!
                 val attachmentStorage = context.serviceHub.attachments
 
@@ -233,14 +235,15 @@ object DefaultKryoCustomizer {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract, additionalContracts, uploader, signers)
+                return ContractAttachment(lazyAttachment, contract, additionalContracts, uploader, signers, version)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
                 val additionalContracts = kryo.readClassAndObject(input) as Set<ContractClassName>
                 val uploader = input.readString()
                 val signers = kryo.readClassAndObject(input) as List<PublicKey>
-                return ContractAttachment(attachment, contract, additionalContracts, uploader, signers)
+                val version = input.readString()
+                return ContractAttachment(attachment, contract, additionalContracts, uploader, signers, version)
             }
         }
     }

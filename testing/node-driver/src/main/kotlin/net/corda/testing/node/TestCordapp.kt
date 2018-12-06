@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.simplifyScanPackages
+import java.nio.file.Path
 
 /**
  * Represents information about a CorDapp. Used to generate CorDapp JARs in tests.
@@ -31,6 +32,9 @@ interface TestCordapp {
     /** Returns the set of package names scanned for this test CorDapp. */
     val packages: Set<String>
 
+    /** Returns whether the CorDapp should be jar signed. */
+    val signJar: Boolean
+
     /** Return a copy of this [TestCordapp] but with the specified name. */
     fun withName(name: String): TestCordapp
 
@@ -48,6 +52,10 @@ interface TestCordapp {
 
     /** Returns a copy of this [TestCordapp] but with the specified CorDapp config. */
     fun withConfig(config: Map<String, Any>): TestCordapp
+
+    /** Returns a signed copy of this [TestCordapp].
+     *  Optionally can pass in the location of an existing java key store to use */
+    fun signJar(keyStorePath: Path? = null): TestCordappImpl
 
     class Factory {
         companion object {

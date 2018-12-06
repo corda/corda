@@ -122,6 +122,7 @@ class TransactionTests {
             doReturn(SecureHash.zeroHash).whenever(it).id
             doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
         }, DummyContract.PROGRAM_ID, uploader = "app"))
+        attachments.first().openAsJAR()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()

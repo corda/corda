@@ -11,8 +11,8 @@ import net.corda.nodeapi.internal.network.NetworkBootstrapperWithOverridablePara
 import net.corda.nodeapi.internal.network.NetworkParametersOverrides
 import net.corda.nodeapi.internal.network.PackageOwner
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.JarSignatureTestUtils.generateKey
-import net.corda.testing.core.JarSignatureTestUtils.getPublicKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.internal.JarSignatureTestUtils.getPublicKey
 import org.junit.*
 import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
