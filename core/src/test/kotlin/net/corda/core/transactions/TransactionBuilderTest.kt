@@ -9,7 +9,9 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
@@ -45,7 +47,8 @@ class TransactionBuilderTest {
     private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
     private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
             contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
-            versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION))
+            versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
+            uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
     private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
     @Before

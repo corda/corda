@@ -2,7 +2,6 @@ package net.corda.contracts
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
@@ -10,6 +9,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
+import net.corda.core.transactions.MissingContractAttachments
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -21,11 +21,13 @@ import net.corda.testMessage.MessageState
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.NodeParameters
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Test
+import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -81,11 +83,14 @@ class SignatureConstraintVersioningTests {
     fun `cannot evolve from higher contract class version to lower one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
+        val port = incrementalPortAllocation(21_000).nextPort()
+
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
                 networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
             var nodeName = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true)).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true),
+                        customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -94,14 +99,20 @@ class SignatureConstraintVersioningTests {
                 nodeName
             }()
             var result = {
-                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true)).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true),
+                        customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
+
+                //set the attachment with newer version (3) as untrusted one so the node can use only the older attachment with version 2
+                DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
+                    it.createStatement().execute("UPDATE NODE_ATTACHMENTS SET UPLOADER = 'p2p' WHERE VERSION = 3")
+                }
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
                     page.states.singleOrNull()
                 }
 
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    assertFailsWith(CordaRuntimeException::class) {
+                    assertFailsWith(MissingContractAttachments::class) {
                         it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
                     }
                 }
