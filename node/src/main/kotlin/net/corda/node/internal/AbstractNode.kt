@@ -17,6 +17,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.NotaryService
@@ -601,8 +602,16 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
 
         override fun <T> startFlow(flow: FlowLogic<T>): FlowHandle<T> {
-            val stateMachine = startFlowChecked(flow)
-            return FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+            val parentFlow = FlowLogic.currentTopLevel
+            return if (parentFlow != null) {
+                val result = parentFlow.subFlow(flow)
+                // Accessing the flow id must happen after the flow has started.
+                val flowId = flow.runId
+                FlowHandleImpl(flowId, doneFuture(result))
+            } else {
+                val stateMachine = startFlowChecked(flow)
+                FlowHandleImpl(id = stateMachine.id, returnValue = stateMachine.resultFuture)
+            }
         }
 
         private fun <T> startFlowChecked(flow: FlowLogic<T>): FlowStateMachine<T> {

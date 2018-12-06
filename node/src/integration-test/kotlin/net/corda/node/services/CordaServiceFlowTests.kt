@@ -46,7 +46,6 @@ class CordaServiceFlowTests {
 
     @CordaService
     class TextLengthComputingService(private val services: AppServiceHub) : SingletonSerializeAsToken() {
-        // TODO sollecitom this might need to be @Suspendable
         fun computeLength(text: String): Int {
             // Just to check this works with Quasar.
             require(text.isNotEmpty()) { "Length must be at least 1." }
