@@ -404,18 +404,14 @@ open class TransactionBuilder @JvmOverloads constructor(
 
     /**
      * This method should only be called for upgradeable contracts.
-     *
-     * For now we use the currently installed CorDapp version.
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        //TODO will be set by the code pending in the other PR
-        val minimumRequiredContractClassVersion  = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max()
-
-        //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
+        val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max() ?: DEFAULT_CORDAPP_VERSION
+        //TODO could be moved as a single method of the attachment service method e.g. getContractAttachmentWithHighestContractVersion(contractClassName, minContractVersion)
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
                 versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))

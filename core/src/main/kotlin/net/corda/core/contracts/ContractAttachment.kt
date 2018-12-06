@@ -33,15 +33,13 @@ class ContractAttachment @JvmOverloads constructor(
 
     companion object {
         private fun extractVersion(attachment: Attachment) =
-            try { attachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "0" } catch (e: Exception) { "0" }
+            try { attachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1" } catch (e: NumberFormatException) { "1" }
 
-        fun getContractVersion(attachment: Attachment) : Version {
-            val version = if (attachment is ContractAttachment) {
+        fun getContractVersion(attachment: Attachment) : Version =
+            if (attachment is ContractAttachment) {
                 attachment.version
             } else {
-                extractVersion(attachment)
+                try { Integer.parseInt(extractVersion(attachment)) } catch (e: NumberFormatException) { 1 }
             }
-            return try { Integer.parseInt(version) } catch (e: NumberFormatException) { Integer.parseInt(version.substring(0, version.indexOf("."))) }
-        }
     }
 }

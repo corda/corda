@@ -99,7 +99,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers)
-            val version = try { baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1" } catch (e: Exception) { "1" }
+            val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1") } catch (e: Exception) { 1 }
             val attachment =
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
                     else {

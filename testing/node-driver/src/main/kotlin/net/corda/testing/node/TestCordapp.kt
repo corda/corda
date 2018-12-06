@@ -1,6 +1,7 @@
 package net.corda.testing.node
 
 import net.corda.core.DoNotImplement
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.simplifyScanPackages
@@ -38,9 +39,6 @@ interface TestCordapp {
     /** Returns whether the CorDapp should be jar signed. */
     val signJar: Boolean
 
-    /** Returns the contract version, default to 1 if not specified. */
-    val cordaContractVersion: Int
-
     /** Return a copy of this [TestCordapp] but with the specified name. */
     fun withName(name: String): TestCordapp
 
@@ -63,9 +61,7 @@ interface TestCordapp {
      *  Optionally can pass in the location of an existing java key store to use */
     fun signJar(keyStorePath: Path? = null): TestCordappImpl
 
-    fun withCordaContractVersion(version: Int): TestCordappImpl
-
-    fun withImplementationVersion(version: String): TestCordapp
+    fun withCordappVersion(version: String): TestCordappImpl
 
     class Factory {
         companion object {
@@ -81,14 +77,14 @@ interface TestCordapp {
              * default values, which can be changed with the wither methods.
              */
             @JvmStatic
-            fun fromPackages(packageNames: Collection<String>, implementationVersion: String = "1"): TestCordapp {
+            fun fromPackages(packageNames: Collection<String>): TestCordapp {
                 return TestCordappImpl(
                         name = "test-name",
                         version = "1.0",
                         vendor = "test-vendor",
                         title = "test-title",
                         targetVersion = PLATFORM_VERSION,
-                        cordappVersion = implementationVersion,
+                        cordappVersion = DEFAULT_CORDAPP_VERSION.toString(),
                         config = emptyMap(),
                         packages = simplifyScanPackages(packageNames),
                         classes = emptySet()
