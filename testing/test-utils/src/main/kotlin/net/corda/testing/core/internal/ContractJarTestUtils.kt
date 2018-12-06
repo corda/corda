@@ -1,5 +1,6 @@
 package net.corda.testing.core.internal
 
+import net.corda.core.internal.cordapp.CORDAPP_CONTRACT_VERSION
 import net.corda.testing.core.internal.JarSignatureTestUtils.addManifest
 import net.corda.testing.core.internal.JarSignatureTestUtils.createJar
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
@@ -7,7 +8,6 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.core.internal.toPath
-import net.corda.core.cordapp.CORDAPP_CONTRACT_VERSION
 import net.corda.testing.core.ALICE_NAME
 import java.io.OutputStream
 import java.net.URI

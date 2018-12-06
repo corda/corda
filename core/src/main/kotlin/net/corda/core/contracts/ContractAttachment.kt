@@ -2,7 +2,7 @@ package net.corda.core.contracts
 
 import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.DEFAULT_CORDAPP_VERSION
 import java.security.PublicKey
 
 /**
