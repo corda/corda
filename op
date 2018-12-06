@@ -3,19 +3,16 @@
 b208d03f5c Corda Behave: compendium of minor changes and improvements (#3008)
 ec70478d70 Corda Behave extensions for CTS (#2968)
 
+2c6bce3e5d CORDA-2099 serialisation rewrite (#4257)
+Serialization re-write
+
 
 
 
 ce5fb66260 StateMachine rewrite
 
 
-91c52af5ac ENT-1584: Subscribe to private network maps using UUIDs (#2922)
 
-
-
-
-
-7978910e0b ENT-1633 increase node max heap size to 512m (#2851)
 
 
 
@@ -28,6 +25,7 @@ ce5fb66260 StateMachine rewrite
 
 1552e992e7 ENT-1443 Add cert role to CSR and doorman issue cert according to the cert role (#2620)
 
+
 311475a81c Switch to using our own quasar fork with thread leak fix (#2443)
 
 
@@ -36,12 +34,10 @@ f3d2a7674c Add module for end-to-end testing library
 2c9a942e1a CORDA-2088: Simplified the TestCordapp public API (#4064)
 
 
-Serialization re-write
 
 84ff1c875a CORDA-1006: Undoing the wiring of maxMessageSize as it's not correctly implemented and updating the docs to clarify its status. (#2501) (#2729)
 c8cf46c657 CORDA-961 Wire up and enforce max transaction size (#2465)
 
-da591363fd CORDA-990: Flows Draining Mode (#2483)
 
 7b65b7971a CORDA-939 - Don't expose StartedNode and AbstractNode as part of public test api (#2472)
 8081ee42ad CORDA-939 - Dont expose FlowStateMachine via public API (#2438)
@@ -53,10 +49,8 @@ c8672d373f CORDA-973 Compression support for serialization (#2473)
 a24a2105b1 CORDA-1217 Replace Guava caches with Caffeine (#2818)
 
 72074c76c7 [CORDA-792] Standalone Shell (#2663)
-f6e79cdbea Upgrade to H2 1.4.197. (#2918)
 342ecc4eed CORDA-1265: Upgrade to Kotlin language/API 1.2 (#2871)
 
-2c6bce3e5d CORDA-2099 serialisation rewrite (#4257)
 
 98a495fa84 CORDA-2199 NetworkParameters certificate role (#4278)
 
@@ -120,23 +114,17 @@ d7b85b4928 CORDA-1934 Renaming INTERMEDIATE_CA certificate role to DOORMAN_CA ce
 d2ef16cbfd Deterministic JVM (#3386)
 e3ece00bea ENT-1906: Publish DJVM artifact with its dependency information. (#3897)
 
-7ee946b98f ENT-2320 Introduce BelongsToContract annotation (#1)
-
-49adf55397 ENT-2489: Additional optional parameter to specify target for RPC invocation. (#3915)
 
 dbc1088417 CORDA-1939 Regression: Liquibase fails to migrate existing pre-liquibase database (#3855)
 
-f81428eb53 Corda 1916: signature attachment constraints (#3839)
 
 bc330bd989 ENT-2414 Named caches (#3848)
 
 487cad7d06 CORDA-1471 Database schema setup for internal tables via Liquibase (#3815)
 
-68bfb7ff66 New jokes.
 
 d5f4370443 CORDA-1848 Add example alias and autocomplete for CLI tools (#3700)
 
-76d87b67ce CORDA-1844: Support for high throughput Observables shipped via RPC (#3698)
 
 40fc56f2ea Feature/corda 1813/change postgres column type (#3631)
 
@@ -152,7 +140,6 @@ f3dc018f04 Clarify local shell is dev-mode only (#3479)
 
 7a1b75ef35 [CORDA-1822]: Derive error code from exception signature (#3774)
 
-35b2170b9c Upgrade to Kotlin 1.2.51. (#3509)
 
 f19564f9f8 add simple network verification cordapp (#3412)
 
@@ -164,11 +151,6 @@ b275f4349a ENT-1968: Add RPC for refreshing network map cache (#3552)
 
 14dcce49ac ENT-1463, ENT-1903: Raise minimum JDK to 8u171 to fix ZIP compression bugs, (#3367)
 
-de6e78b4a3 V2 gui for the bootstrapper (#3373)
-
-381aadc78f ENT-1796 RPC SSL (#3401)
-
-3758dbea34 CORDA-1493: add --clear-network-map-cache command line option (#3272)
 
 824adca6c0 CORDA-1238: Updated JacksonSupport to serialise pojos annotated with @CordaSerializable with the same properties as the AMQP serialisation framework. (#3162)
 
@@ -179,5 +161,3 @@ d1e147b1c1 [CORDA-1638]: Audit log of failed transactions MVP. (#3231)
 a6b7257491 CORDA-1441: Upgrade to Kotlin 1.2.41 (#3063)
 
 ab80df342a CORDA-1319 Adding CRL checking for nodes (#2987)
-
-24fa695ca0  CORDA-866: Implement removal of stale nodes from network - backport (#3128)

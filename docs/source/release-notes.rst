@@ -6,14 +6,15 @@ Release notes
 Release 4.0 
 -----------
 
-Over 1500 changes, both large and small, have been added stired into the 
+Here we are, 1500 plus commits later... and it's a Software Release!
+
+We are really proud to release Corda 4 to the open source community today, it's been a long time in the making, but we think
+you'll agree worth the wait. Corda 3 has done stirling service over the last year, it grew with new features and many,
+many, bug fixes, but with Corda 4 
 
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Retirement of non-elliptic Diffie-Hellman for TLS**
-  The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
-  as it is a legacy cipher family not supported by all native SSL/TLS implementations.
 
 * **Reference states**:
 
@@ -23,9 +24,6 @@ Significant Changes in 4.0
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
   normal state when it occurs in an input or output position.
 
-* **Added auto-acceptance for network parameters updates**
-  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
-  command on every parameter update. This behaviour can be turned off via the node configuration.
 
 * **CorDapp JAR Signing and Sealing**:
 
@@ -34,17 +32,75 @@ Significant Changes in 4.0
   Signed CorDapps facilitate signature constraints checks.
   Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be disabled.
 
-* **AMQP**
-
-Corda 3.0 shipped  wuit
-
-* **RPC SSL**
-  Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
-  a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`
-
 * **The Flow Hospital**
 
-<< MORE TO COME >>
+  Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
+  be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
+  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenario the receiving
+  flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
+  the node will have an incomplete view of the ledger.
+
+
+* **A more pleaseing bootstrapper**
+
+  The interface to the network boostrapper has undergone a signigicant overhaul to make the experince of using and
+  interacting with it simpler, faster, and just genreally more pleaesnt.
+
+  In addition, it supports all of the new network paramters that can optionally be set. See the :doc:`changelog` for
+  details on individual additions.
+
+RPC Changes
+~~~~~~~~~~~
+
+* **AMQP**
+
+  Cod
+
+
+* **SSL**
+  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The operator of a node
+  wishing to enable this must of course generate and distribute a certificate in order for client applications to
+  suxessfully conect. This is docusmnted here :doc:`tutorial-clientrpc-api`
+
+76d87b67ce CORDA-1844: Support for high throughput Observables shipped via RPC (#3698)
+
+
+
+
+Other change of note
+~~~~~~~~~~~~~~~~~~~~
+
+* **Added auto-acceptance for network parameters updates**
+  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
+  command on every parameter update. This behaviour can be turned off via the node configuration.
+
+* **Retirement of non-elliptic Diffie-Hellman for TLS**
+  The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
+  as it is a legacy cipher family not supported by all native SSL/TLS implementations.
+
+* **Re-written State Machine**
+
+* **Clearing the Network Map cache**
+
+  Troubleshooting a nodes conectivity issues when not running as aprt ofa bootstrapped network was previously frustrating, clearing
+  the network map cache an often needed step yet only available through an RPC call. This can now be done via the ``--clear-network-map-cache command line flag``
+
+* **The BelongsToContract Annotation**
+
+  Prior to this there was no way to tie specific state types to specific contract type. This could result in the wrong contract being run and accepting the result.
+  For example, with ta cash state you could  convince someone who doesn't check that the state is a cash state even though it wasn't checked as such. the ``@BelongsToContract``
+  is thus introduced to do just this. See :doc:`api-contract-constraints` for more information.
+
+f81428eb53 Corda 1916: signature attachment constraints (#3839)
+
+Minor Changes
+~~~~~~~~~~~~~
+
+ * Upgraded to Kotlin 1.2.51
+ * Liquibase - The node now uses Liquibase to bootstrap and update itself. This is a transparent change with pre Corda 3 nodes seemlessly upgrading to operate
+   as if they'd been bootstrapped in this way. This also applies to the finance CorDapp module.
+ * New jokes - you're welcome! (and we're sorry!)
+
 
 .. _release_notes_v3_3:
 
