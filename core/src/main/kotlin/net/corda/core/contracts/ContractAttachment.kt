@@ -1,8 +1,8 @@
 package net.corda.core.contracts
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.UNKNOWN_VERSION
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import java.security.PublicKey
 
 /**
@@ -20,7 +20,7 @@ class ContractAttachment @JvmOverloads constructor(
         val additionalContracts: Set<ContractClassName> = emptySet(),
         val uploader: String? = null,
         override val signerKeys: List<PublicKey> = emptyList(),
-        val version: String = UNKNOWN_VERSION) : Attachment by attachment {
+        val version: Int = DEFAULT_CORDAPP_VERSION) : Attachment by attachment {
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 

@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
@@ -14,7 +15,9 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -398,14 +401,21 @@ open class TransactionBuilder @JvmOverloads constructor(
      * This method should only be called for upgradeable contracts.
      *
      * For now we use the currently installed CorDapp version.
-     * TODO - When the SignatureConstraint and contract version logic is in, this will need to query the attachments table and find the latest one that satisfies all constraints.
-     * TODO - select a version of the contract that is no older than the one from the previous transactions.
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(states)
+
+        //TODO will be set by the code pending in the other PR
+        val minimumRequiredContractClassVersion = DEFAULT_CORDAPP_VERSION
+
+        //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+                versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+
+        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
