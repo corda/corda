@@ -16,7 +16,6 @@ import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.LocalSerializerFactory
 import net.corda.serialization.internal.amqp.SerializerFactory
 import net.corda.serialization.internal.amqp.amqpMagic
 import net.corda.serialization.internal.model.LocalPropertyInformation
@@ -35,6 +34,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import java.util.Collections.emptyList
 import kotlin.reflect.full.superclasses
 
 fun main(args: Array<String>) {
@@ -157,6 +157,11 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
             val inheritanceDependencies: Set<Type>
     )
 
+    // The factory lets us look up serializers, which gives us the fingerprints we will use to check the format
+    // of the data we're decoding matches the generated code. This version of C++ support doesn't do evolution.
+    private val p2pFactory: SerializerFactory = Scheme.getSerializerFactory(AMQP_P2P_CONTEXT)
+    private val storageFactory: SerializerFactory = Scheme.getSerializerFactory(AMQP_STORAGE_CONTEXT)
+
     /**
      * Invokes the given callback with the file path and the file contents that should be created.
      */
@@ -165,10 +170,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
         // This code is made complex by the desire to support generics. We will convert Java generic classes to
         // C++ templated classes, and use specialisation to allow the same class to have many concrete descriptors
         // at decode time.
-        //
-        // The factory lets us look up serializers, which gives us the fingerprints we will use to check the format
-        // of the data we're decoding matches the generated code. This version of C++ support doesn't do evolution.
-        val serializerFactory: SerializerFactory = Scheme.getSerializerFactory(AMQP_P2P_CONTEXT)
+
         // We don't want to generate the same code twice, so we keep track of the classes we already made here.
         // This set contains type names with erased type parameters in C++ form, e.g. kotlin::Pair<A, B>, not resolved
         // type parameters.
@@ -202,7 +204,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                 continue   // This can happen if we have cycles in the _type_ graph (not object graph).
             val baseName: String = type.baseClass.name
             try {
-                val result: GenResult = generateClassFor(type, serializerFactory, seenSoFar) ?: continue
+                val result: GenResult = generateClassFor(type, seenSoFar) ?: continue
 
                 check(result.pointerDependencies.none { it.baseClass.isArray }) { result.pointerDependencies }
 
@@ -224,7 +226,7 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
                     // Need to erase generics to their bounds at the type level or use ? for Object.
                     val params = typeParams.map { it.bounds.first() }
                             .map { it: Type? -> if (it == Any::class.java) "net::corda::Any" else it!!.mangleToCPPSyntax() }
-                    val descriptor = serializerFactory.createDescriptor(serializerFactory.getTypeInformation(rawType))
+                    val descriptor = p2pFactory.createDescriptor(p2pFactory.getTypeInformation(rawType))
                     registrationTemplate(rawType.typeName.replace(".", "::") + "<" + params.joinToString(", ") + ">", descriptor)
                 } else {
                     registrationTemplate(type.mangleToCPPSyntax(), result.descriptor)
@@ -331,10 +333,12 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
     private val Type.isCordaSerializable: Boolean get() = baseClass.isAnnotationPresent(CordaSerializable::class.java)
 
-    private fun generateClassFor(type: Type, serializerFactory: LocalSerializerFactory, seenSoFar: Set<String>): GenResult? {
+    private fun generateClassFor(type: Type, seenSoFar: Set<String>): GenResult? {
         val fieldDeclarations = mutableListOf<String>()
         val fieldReads = mutableListOf<String>()
         val dependencies = mutableSetOf<Type>()
+
+        val serializerFactory = p2pFactory
 
         // Get the serializer created by the serialization engine, and map it to C++.
         val typeInformation: LocalTypeInformation = serializerFactory.getTypeInformation(type)
@@ -345,6 +349,10 @@ class GenerateCPPHeaders : CordaCliWrapper("generate-cpp-headers", "Generate sou
 
         // descriptorSymbol is the string "net.corda:blahblah" that maps a section of data to a schema.
         val descriptorSymbol = serializerFactory.createDescriptor(typeInformation)
+        val otherDescriptor = storageFactory.createDescriptor(storageFactory.getTypeInformation(type))
+        if (descriptorSymbol != otherDescriptor) {
+            println("Descriptor mismatch for $type: p2p = $descriptorSymbol, storage = $otherDescriptor")
+        }
 
         val properties: Map<PropertyName, LocalPropertyInformation> = when (typeInformation) {
             is LocalTypeInformation.Abstract -> {
