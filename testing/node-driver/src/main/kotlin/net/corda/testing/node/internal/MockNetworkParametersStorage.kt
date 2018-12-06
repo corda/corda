@@ -32,7 +32,7 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
 
     override val currentHash: SecureHash
         get() {
-            return withTestSerializationEnvIfNotSet("networkParameters") {
+            return withTestSerializationEnvIfNotSet {
                 currentParameters.serialize().hash
             }
         }
@@ -47,12 +47,14 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
 
     override fun getHistoricNotary(party: Party): NotaryInfo? {
         val inCurrentParams = currentParameters.notaries.singleOrNull { it.identity == party }
-        if (inCurrentParams == null) {
+        return if (inCurrentParams == null) {
             val inOldParams = hashToParametersMap.flatMap { (_, parameters) ->
                 parameters.notaries
             }.firstOrNull { it.identity == party }
-            return inOldParams
-        } else return inCurrentParams
+            inOldParams
+        } else {
+            inCurrentParams
+        }
     }
 
     private fun storeCurrentParameters() {

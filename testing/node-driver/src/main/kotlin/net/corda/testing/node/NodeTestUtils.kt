@@ -33,7 +33,7 @@ fun ServiceHub.ledger(
         (networkParametersStorage as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
     }
 
-    return withTestSerializationEnvIfNotSet("ledgerDSL") {
+    return withTestSerializationEnvIfNotSet {
         val interpreter = TestLedgerDSLInterpreter(this)
         LedgerDSL(interpreter, notary).apply {
             script()

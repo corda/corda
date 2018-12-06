@@ -198,7 +198,7 @@ fun fakeAttachment(filePath: String, content: String, manifestAttributes: Map<St
 }
 
 /** If [effectiveSerializationEnv] is not set, runs the block with a new [SerializationEnvironmentRule]. */
-fun <R> withTestSerializationEnvIfNotSet(taskName: String, block: () -> R): R {
+fun <R> withTestSerializationEnvIfNotSet(block: () -> R): R {
     val serializationExists = try {
         effectiveSerializationEnv
         true
@@ -207,7 +207,7 @@ fun <R> withTestSerializationEnvIfNotSet(taskName: String, block: () -> R): R {
     }
     return if (serializationExists) {
         block()
-    } else SerializationEnvironmentRule.run(taskName) {
-        block()
+    } else {
+        createTestSerializationEnv().asTestContextEnv { block() }
     }
 }
