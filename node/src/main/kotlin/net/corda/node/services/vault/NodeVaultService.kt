@@ -72,7 +72,7 @@ class NodeVaultService(
     }
 
     private val mutex = ThreadBox(InnerState())
-    private lateinit var criteriaBuilder: CriteriaBuilder
+    private val criteriaBuilder: CriteriaBuilder by lazy { database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder }
     private val persistentStateService = PersistentStateService(schemaService)
 
     /**
@@ -82,7 +82,6 @@ class NodeVaultService(
     private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
 
     override fun start() {
-        criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder
         bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
             update.produced.forEach {

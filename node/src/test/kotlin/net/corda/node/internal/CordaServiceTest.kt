@@ -5,13 +5,18 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.contracts.ContractState
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.trackBy
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
 import net.corda.testing.node.MockNetwork
@@ -19,6 +24,7 @@ import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.HashSet
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -43,6 +49,7 @@ class DummyServiceFlow : FlowLogic<InvocationContext>() {
 
 @CordaService
 class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
+
     fun startServiceFlow() {
         val handle = appServiceHub.startFlow(DummyServiceFlow())
         val context = handle.returnValue.get()
@@ -60,6 +67,12 @@ class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsTo
         subscriber.unsubscribe()
     }
 
+    fun trackByBug() {
+        val contractStateTypes = HashSet(listOf(Cash.State::class.java))
+        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED, contractStateTypes)
+        appServiceHub.vaultService.trackBy(ContractState::class.java, criteria).updates
+    }
+
 }
 
 @CordaService
@@ -73,6 +86,14 @@ class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsT
 
 @CordaService
 class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
+
+@CordaService
+class VaultQueryingService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
+    init {
+        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+        serviceHub.vaultService.trackBy(ContractState::class.java, criteria)
+    }
+}
 
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
@@ -120,4 +141,13 @@ class CordaServiceTest {
         service.startServiceFlowAndTrack()
     }
 
+    /**
+     * Reproduce CORDA-2296
+     * Querying the vault from a services constructor failed because the criteriaBuilder
+     * had not been initialized.
+     */
+    @Test
+    fun `Can query vault service in constructor`() {
+        nodeA.services.cordaService(VaultQueryingService::class.java)
+    }
 }
