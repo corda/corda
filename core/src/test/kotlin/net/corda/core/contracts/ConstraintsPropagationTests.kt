@@ -113,7 +113,6 @@ class ConstraintsPropagationTests {
         }
     }
 
-    @Ignore //TODO no-downgrade-rul - temporary ignored
     @Test
     fun `Happy path for Hash to Signature Constraint migration`() {
         val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
