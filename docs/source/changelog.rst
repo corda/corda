@@ -26,6 +26,8 @@ Unreleased
 
 * Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
+* Improved exception thrown by `AttachmentsClassLoader` when an attachment cannot be used because its uploader is not trusted.
+
 * Marked the ``Attachment`` interface as ``@DoNotImplement`` because it is not meant to be extended by CorDapp developers. If you have already
   done so, please get in contact on the usual communication channels.
 
