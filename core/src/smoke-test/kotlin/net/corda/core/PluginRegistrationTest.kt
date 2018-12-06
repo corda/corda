@@ -26,6 +26,13 @@ class PluginRegistrationTest {
         // Create node jarDir with an empty jar file in it
         val jarDir = temporaryFolder.newFolder("jardir").path!!
         JarOutputStream(FileOutputStream((jarDir / "empty.jar").toFile())).close ()
+        val notaryConfig = NodeConfig(
+                legalName = CordaX500Name("Notary", "Zurich", "CH"),
+                isNotary = true,
+                p2pPort = 30200,
+                rpcPort = 30201,
+                rpcAdminPort = 30203,
+                users = listOf(User("_", "_", setOf("ALL"))))
         val config = NodeConfig(
                 legalName = CordaX500Name(organisation = "org", locality = "Madrid", country = "ES"),
                 p2pPort = 30100,
@@ -41,10 +48,15 @@ class PluginRegistrationTest {
         // Install plugin Jars in node directory, then start the node and close it
         val consoleOutput = temporaryFolder.newFile("node-stdout.txt")
         val nodeJvmArgs = arrayOf("--logging-level", "DEBUG", "--no-local-shell", "--log-to-console")
-        NodeProcess.Factory(extraJvmArgs = nodeJvmArgs, redirectConsoleTo = consoleOutput)
+        val nodeFactory = NodeProcess.Factory(extraJvmArgs = nodeJvmArgs, redirectConsoleTo = consoleOutput)
                 .setupPlugins(config, listOf(pluginJarFile))
-                .create(config)
-                .close()
+
+        val notary = nodeFactory.create(notaryConfig)
+        val node = nodeFactory.create(config)
+
+        notary.close()
+        node.close()
+
         val outputLines = consoleOutput.readLines()
         val classpath = outputLines.filter { it.contains(" classpath:") }.last()
 
