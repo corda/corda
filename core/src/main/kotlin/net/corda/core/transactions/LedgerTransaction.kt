@@ -128,7 +128,7 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
-        val contractAttachmentsByContract: Map<ContractClassName, ContractAttachment> = getUniqueContractAttachmentsByContract()
+        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
 
@@ -137,8 +137,8 @@ private constructor(
             // TODO - verify for version downgrade
             validatePackageOwnership(contractAttachmentsByContract)
             validateStatesAgainstContract(internalTx)
-            verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
-            verifyConstraints(internalTx, contractAttachmentsByContract)
+            val hashToSignatureConstrainedContracts = verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
+            verifyConstraints(internalTx, contractAttachmentsByContract, hashToSignatureConstrainedContracts)
             verifyContracts(internalTx)
         }
     }
@@ -179,21 +179,17 @@ private constructor(
      * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
      *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
-    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
-        // This should never happen once we have network parameters in the transaction.
-        if (networkParameters == null) {
-            return
-        }
+    private fun validatePackageOwnership(contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>) {
         val contractsAndOwners = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
-            networkParameters.getOwnerOf(contractClassName)?.let { contractClassName to it }
+            networkParameters!!.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->
-            val attachment = contractAttachmentsByContract[contract]!!
-            if (!owner.isFulfilledBy(attachment.signerKeys)) {
-                throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
-            }
+            contractAttachmentsByContract[contract]?.filter { it.isSigned }?.forEach { attachment ->
+                if (!owner.isFulfilledBy(attachment.signerKeys))
+                    throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
+            } ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(this.id, id, contract)
         }
     }
 
@@ -201,10 +197,10 @@ private constructor(
      * Enforces the validity of the actual constraints.
      * * Constraints should be one of the valid supported ones.
      * * Constraints should propagate correctly if not marked otherwise.
+     *
+     * Returns set of contract classes that identify hash -> signature constraint switchover
      */
-    private fun verifyConstraintsValidity(internalTx: LedgerTransaction,
-                                          contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>,
-                                          transactionClassLoader: ClassLoader) {
+    private fun verifyConstraintsValidity(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>, transactionClassLoader: ClassLoader): MutableSet<ContractClassName> {
         // First check that the constraints are valid.
         for (state in internalTx.allStates) {
             checkConstraintValidity(state)
@@ -215,6 +211,9 @@ private constructor(
         val inputContractGroups = internalTx.inputs.groupBy { it.state.contract }
         val outputContractGroups = internalTx.outputs.groupBy { it.contract }
 
+        // identify any contract classes where input-output pair are transitioning from hash to signature constraints.
+        val hashToSignatureConstrainedContracts = mutableSetOf<ContractClassName>()
+
         for (contractClassName in (inputContractGroups.keys + outputContractGroups.keys)) {
             if (contractClassName.contractHasAutomaticConstraintPropagation(transactionClassLoader)) {
                 // Verify that the constraints of output states have at least the same level of restriction as the constraints of the corresponding input states.
@@ -222,14 +221,30 @@ private constructor(
                 val outputConstraints = outputContractGroups[contractClassName]?.map { it.constraint }?.toSet()
                 outputConstraints?.forEach { outputConstraint ->
                     inputConstraints?.forEach { inputConstraint ->
-                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, contractAttachmentsByContract[contractClassName]!!))) {
+                        val constraintAttachment = resolveAttachment(contractClassName, contractAttachmentsByContract)
+                        if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(id, contractClassName, inputConstraint, outputConstraint)
                         }
+                        // Hash to signature constraints auto-migration
+                        if (outputConstraint is SignatureAttachmentConstraint && inputConstraint is HashAttachmentConstraint)
+                            hashToSignatureConstrainedContracts.add(contractClassName)
                     }
                 }
             } else {
                 contractClassName.warnContractWithoutConstraintPropagation()
             }
+        }
+        return hashToSignatureConstrainedContracts
+    }
+
+    private fun resolveAttachment(contractClassName: ContractClassName, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>): AttachmentWithContext {
+        val unsignedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { !it.isSigned }.firstOrNull()
+        val signedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { it.isSigned }.firstOrNull()
+        return when {
+            (unsignedAttachment != null && signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+            (unsignedAttachment != null) -> AttachmentWithContext(unsignedAttachment, contractClassName, networkParameters!!)
+            (signedAttachment != null) -> AttachmentWithContext(signedAttachment, contractClassName, networkParameters!!)
+            else -> throw TransactionVerificationException.ContractConstraintRejection(id, contractClassName)
         }
     }
 
@@ -240,39 +255,64 @@ private constructor(
      *
      * @throws TransactionVerificationException if the constraints fail to verify
      */
-    private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, ContractAttachment>) {
+    private fun verifyConstraints(internalTx: LedgerTransaction, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>, hashToSignatureConstrainedContracts: MutableSet<ContractClassName>) {
         for (state in internalTx.allStates) {
-            val contractAttachment = contractAttachmentsByContract[state.contract]
-                    ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
-
-            val constraintAttachment = AttachmentWithContext(contractAttachment, state.contract,
-                    networkParameters?.whitelistedContractImplementations)
-
             if (state.constraint is SignatureAttachmentConstraint)
-                checkMinimumPlatformVersion(networkParameters?.minimumPlatformVersion ?: 1, 4, "Signature constraints")
+                checkMinimumPlatformVersion(networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
+
+            val constraintAttachment =
+                // hash to to signature constraint migration logic:
+                // pass the unsigned attachment when verifying the constraint of the input state, and the signed attachment when verifying the constraint of the output state.
+                if (state.contract in hashToSignatureConstrainedContracts) {
+                    val unsignedAttachment = contractAttachmentsByContract[state.contract].unsigned
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+                    val signedAttachment = contractAttachmentsByContract[state.contract].signed
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+                    when {
+                        // use unsigned attachment if hash-constrained input state
+                        state.data in inputStates -> AttachmentWithContext(unsignedAttachment, state.contract, networkParameters!!)
+                        // use signed attachment if signature-constrained output state
+                        state.data in outputStates -> AttachmentWithContext(signedAttachment, state.contract, networkParameters!!)
+                        else -> throw IllegalStateException("${state.contract} must use either signed or unsigned attachment in hash to signature constraints migration")
+                    }
+                }
+                // standard processing logic
+                else {
+                    val contractAttachment = contractAttachmentsByContract[state.contract]?.firstOrNull()
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(id, state.contract)
+                    AttachmentWithContext(contractAttachment, state.contract, networkParameters!!)
+                }
+
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(id, state.contract)
             }
         }
     }
 
-    private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
-        val result = mutableMapOf<ContractClassName, ContractAttachment>()
+    private val Set<ContractAttachment>?.unsigned: ContractAttachment?
+        get() {
+            return this?.filter { !it.isSigned }?.firstOrNull()
+        }
+
+    private val Set<ContractAttachment>?.signed: ContractAttachment?
+        get() {
+            return this?.filter { it.isSigned }?.firstOrNull()
+        }
+
+    // TODO: revisit to include contract version information
+    /**
+     *  This method may return more than one attachment for a given contract class.
+     *  Specifically, this is the case for transactions combining hash and signature constraints where the hash constrained contract jar
+     *  will be unsigned, and the signature constrained counterpart will be signed.
+     */
+    private fun getContractAttachmentsByContract(contractClasses: Set<ContractClassName>): Map<ContractClassName, Set<ContractAttachment>> {
+        val result = mutableMapOf<ContractClassName, Set<ContractAttachment>>()
 
         for (attachment in attachments) {
             if (attachment !is ContractAttachment) continue
-
-            for (contract in attachment.allContracts) {
-                result.compute(contract) { _, previousAttachment ->
-                    when {
-                        previousAttachment == null -> attachment
-                        attachment.id == previousAttachment.id -> previousAttachment
-                        // In case multiple attachments have been added for the same contract, fail because this
-                        // transaction will not be able to be verified because it will break the no-overlap rule
-                        // that we have implemented in our Classloaders
-                        else -> throw TransactionVerificationException.ConflictingAttachmentsRejection(id, contract)
-                    }
-                }
+            for (contract in contractClasses) {
+                if (!attachment.allContracts.contains(contract)) continue
+                result[contract] = result.getOrDefault(contract, setOf(attachment)).plus(attachment)
             }
         }
 

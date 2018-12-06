@@ -2,14 +2,18 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.sha256
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.toSynchronised
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
@@ -24,7 +28,15 @@ import java.util.jar.Manifest
 class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
+    init {
+        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
+            "Attempting to load Contract Attachments downloaded from the network"
+        }
+        requireNoDuplicates(attachments)
+    }
+
     companion object {
+        private val log = contextLogger()
 
         init {
             // This is required to register the AttachmentURLStreamHandlerFactory.
@@ -45,13 +57,22 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         }
 
         private fun requireNoDuplicates(attachments: List<Attachment>) {
-            val classLoaderEntries = mutableSetOf<String>()
+            // Avoid unnecessary duplicate checking if possible:
+            // 1. single attachment.
+            // 2. multiple attachments with non-overlapping contract classes.
+            if (attachments.size <= 1) return
+            val overlappingContractClasses = attachments.mapNotNull { it as? ContractAttachment }.flatMap { it.allContracts }.groupingBy { it }.eachCount().filter { it.value > 1 }
+            if (overlappingContractClasses.isEmpty()) return
+
+            // this logic executes only if there are overlapping contract classes
+            log.debug("Duplicate contract class checking for $overlappingContractClasses")
+            val classLoaderEntries = mutableMapOf<String, Attachment>()
             for (attachment in attachments) {
                 attachment.openAsJAR().use { jar ->
                     val targetPlatformVersion = jar.manifest?.targetPlatformVersion ?: 1
                     while (true) {
                         val entry = jar.nextJarEntry ?: break
-
+                        if (entry.isDirectory) continue
                         // We already verified that paths are not strange/game playing when we inserted the attachment
                         // into the storage service. So we don't need to repeat it here.
                         //
@@ -59,14 +80,29 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                         // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                         //
                         // Also convert to Unix path separators as all resource/class lookups will expect this.
+                        //
                         val path = entry.name.toLowerCase().replace('\\', '/')
                         // TODO - If 2 entries are identical, it means the same file is present in both attachments, so that should be ok.
                         if (shouldCheckForNoOverlap(path, targetPlatformVersion)) {
-                            if (path in classLoaderEntries) throw TransactionVerificationException.OverlappingAttachmentsException(path)
-                            classLoaderEntries.add(path)
+                            if (path in classLoaderEntries.keys) {
+                                // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
+                                val contentHash = readAttachment(attachment, path).sha256()
+                                val originalAttachment = classLoaderEntries[path]!!
+                                val originalContentHash = readAttachment(originalAttachment, path).sha256()
+                                if (contentHash == originalContentHash) {
+                                    log.debug { "Duplicate entry $path has same content hash $contentHash" }
+                                    continue
+                                } else {
+                                    log.debug { "Content hash differs for $path" }
+                                    throw OverlappingAttachmentsException(path)
+                                }
+                            }
+                            log.debug { "Adding new entry for $path" }
+                            classLoaderEntries[path] = attachment
                         }
                     }
                 }
+                log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
             }
         }
 
@@ -77,14 +113,14 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                 val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
                 return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
             }
-    }
 
-    init {
-        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
-            "Attempting to load Contract Attachments downloaded from the network"
+        @VisibleForTesting
+        private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {
+            ByteArrayOutputStream().use {
+                attachment.extractFile(filepath, it)
+                return it.toByteArray()
+            }
         }
-
-        requireNoDuplicates(attachments)
     }
 
     /**

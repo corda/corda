@@ -34,6 +34,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import java.util.jar.Attributes.Name.IMPLEMENTATION_VERSION
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -106,7 +107,11 @@ class NodeAttachmentService(
             @Column(name = "signer", nullable = false)
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_signers", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__signers__attachments"))
-            var signers: List<PublicKey>? = null
+            var signers: List<PublicKey>? = null,
+
+            // Assumption: only Contract Attachments are versioned.
+            @Column(name = "version", nullable = true)
+            var version: String? = null
     )
 
     @VisibleForTesting
@@ -230,7 +235,7 @@ class NodeAttachmentService(
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
                     ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
-                            ?: emptyList())
+                            ?: emptyList(), attachment.version ?: UNKNOWN_VERSION)
                 } else {
                     it
                 }
@@ -313,6 +318,7 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
+                    val contractVersion = getVersion(bytes)
                     val session = currentDBSession()
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
@@ -320,7 +326,8 @@ class NodeAttachmentService(
                             uploader = uploader,
                             filename = filename,
                             contractClassNames = contractClassNames,
-                            signers = jarSigners
+                            signers = jarSigners,
+                            version = contractVersion
                     )
                     session.save(attachment)
                     attachmentCount.inc()
@@ -346,6 +353,11 @@ class NodeAttachmentService(
 
     private fun getSigners(attachmentBytes: ByteArray) =
         JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+
+    private fun getVersion(attachmentBytes: ByteArray) =
+        JarInputStream(attachmentBytes.inputStream()).use {
+            it.manifest?.mainAttributes?.getValue(IMPLEMENTATION_VERSION) ?: "1.0"
+        }
 
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {

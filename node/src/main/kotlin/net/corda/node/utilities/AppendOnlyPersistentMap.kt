@@ -8,7 +8,8 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.lang.ref.WeakReference
-import java.util.*
+import java.util.HashSet
+import java.util.NoSuchElementException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -142,7 +143,12 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * @param key The cache key
      * @return The value in the cache, or null if not present.
      */
-    fun getIfCached(key: K): V? = cache.getIfPresent(key!!)?.value
+    fun getIfCached(key: K): V? {
+        val transactional = cache.getIfPresent(key!!)
+        return if (transactional?.isPresent ?: false) {
+            transactional?.value
+        } else null
+    }
 
     /**
      * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.

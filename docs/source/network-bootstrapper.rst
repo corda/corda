@@ -319,6 +319,8 @@ An example configuration file:
         }
     ]
 
+.. _package_namespace_ownership:
+
 Package namespace ownership
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
