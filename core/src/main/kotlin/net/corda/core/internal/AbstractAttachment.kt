@@ -20,7 +20,6 @@ const val DEPLOYED_CORDAPP_UPLOADER = "app"
 const val RPC_UPLOADER = "rpc"
 const val P2P_UPLOADER = "p2p"
 const val UNKNOWN_UPLOADER = "unknown"
-const val UNKNOWN_VERSION = "unknown"
 
 private val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
 

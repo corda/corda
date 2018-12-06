@@ -4,11 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
-import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
-import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
-import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.core.contracts.ContractAttachment
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
@@ -22,6 +19,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
+import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
+import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
@@ -209,8 +210,8 @@ class NodeAttachmentServiceTest {
             val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
             val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val (anotherSignedContractJar, _) = makeTestSignedContractJar(file.path,"com.example.AnotherContract")
-            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = "2.0")
-            val (signedContractJarV2, publicKeyV2) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = "2.0")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = 2)
 
             sampleJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             contractJar.read { storage.importAttachment(it, "uploaderB", "contract.jar") }
@@ -238,7 +239,7 @@ class NodeAttachmentServiceTest {
                     1,
                     storage.queryAttachments(AttachmentsQueryCriteria(
                             contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
-                            versionCondition = Builder.equal(listOf("2.0")),
+                            versionCondition = Builder.equal(2),
                             isSignedCondition = Builder.equal(true))).size
             )
 
@@ -246,8 +247,32 @@ class NodeAttachmentServiceTest {
                     2,
                     storage.queryAttachments(AttachmentsQueryCriteria(
                             contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract", "com.example.AnotherContract")),
-                            versionCondition = Builder.equal(listOf("1.0")),
+                            versionCondition = Builder.equal(1),
                             isSignedCondition = Builder.equal(true))).size
+            )
+
+            assertEquals(
+                    2,storage.queryAttachments(AttachmentsQueryCriteria(
+                    contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                    versionCondition = Builder.greaterThanOrEqual(1),
+                    isSignedCondition = Builder.equal(true)),
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
+            )
+
+            assertEquals(
+                    1,storage.queryAttachments(AttachmentsQueryCriteria(
+                    contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                    versionCondition = Builder.greaterThanOrEqual(2),
+                    isSignedCondition = Builder.equal(true)),
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
+            )
+
+            assertEquals(
+                    0,storage.queryAttachments(AttachmentsQueryCriteria(
+                    contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                    versionCondition = Builder.greaterThanOrEqual(10),
+                    isSignedCondition = Builder.equal(true)),
+                    AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
             )
         }
     }
@@ -322,7 +347,7 @@ class NodeAttachmentServiceTest {
             val bytes = testJar.readAll()
             val corruptBytes = "arggghhhh".toByteArray()
             System.arraycopy(corruptBytes, 0, bytes, 0, corruptBytes.size)
-            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = "1.0")
+            val corruptAttachment = NodeAttachmentService.DBAttachment(attId = id.toString(), content = bytes, version = DEFAULT_CORDAPP_VERSION)
             session.merge(corruptAttachment)
             id
         }

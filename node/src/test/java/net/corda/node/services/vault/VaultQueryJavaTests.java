@@ -15,11 +15,11 @@ import net.corda.core.node.services.AttachmentStorage;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.VaultService;
+import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria;
 import net.corda.core.node.services.vault.*;
 import net.corda.core.node.services.vault.QueryCriteria.LinearStateQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultCustomQueryCriteria;
 import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
-import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
@@ -28,10 +28,10 @@ import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction;
-import net.corda.testing.core.internal.ContractJarTestUtils;
-import net.corda.testing.core.internal.SelfCleaningDir;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import net.corda.testing.core.TestIdentity;
+import net.corda.testing.core.internal.ContractJarTestUtils;
+import net.corda.testing.core.internal.SelfCleaningDir;
 import net.corda.testing.internal.TestingNamedCacheFactory;
 import net.corda.testing.internal.vault.DummyLinearContract;
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1;
@@ -59,8 +59,8 @@ import static net.corda.core.node.services.vault.Builder.equal;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
-import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.core.TestConstants.*;
+import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
@@ -587,8 +587,8 @@ public class VaultQueryJavaTests {
         Pair<Path, PublicKey> anotherSignedContractJarAndKey = INSTANCE.makeTestSignedContractJar(path, "com.example.AnotherContract");
         Path anotherSignedContractJar = anotherSignedContractJarAndKey.component1();
 
-        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, "2.0");
-        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", "2.0");
+        Path contractJarV2 = INSTANCE.makeTestContractJar(path, "com.example.MyContract", false, 2);
+        Pair<Path, PublicKey> signedContractJarAndKeyV2 = INSTANCE.makeTestSignedContractJar(path, "com.example.MyContract", 2);
         Path signedContractJarV2 = signedContractJarAndKeyV2.component1();
 
         storage.importAttachment(Files.newInputStream(sampleJar),"uploaderA", "sample.jar");
@@ -622,15 +622,15 @@ public class VaultQueryJavaTests {
 
         // version
         FieldInfo version = getField("version", NodeAttachmentService.DBAttachment.class);
-        ColumnPredicate<List<String>> version2Predicate = equal(version, asList("2.0")).component2();
+        ColumnPredicate<Integer> version2Predicate = equal(version, 2).component2();
 
-        AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version2Predicate);
+        AttachmentsQueryCriteria criteria4 = new AttachmentsQueryCriteria().withContractClassNames(contractClassNamesPredicate).isSigned(isSignedPredicate).withVersion(version2Predicate);
         assertThat(storage.queryAttachments(criteria4).size()).isEqualTo(1);
 
-        ColumnPredicate<List<String>> version1Predicate = equal(version, asList("1.0")).component2();
+        ColumnPredicate<Integer> version1Predicate = equal(version, 1).component2();
         ColumnPredicate<List<String>> manyContractClassNamesPredicate = equal(contractClassNames, asList("com.example.MyContract", "com.example.AnotherContract")).component2();
 
-        AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersions(version1Predicate);
+        AttachmentsQueryCriteria criteria5 = new AttachmentsQueryCriteria().withContractClassNames(manyContractClassNamesPredicate).isSigned(isSignedPredicate).withVersion(version1Predicate);
         assertThat(storage.queryAttachments(criteria5).size()).isEqualTo(2);
 
         selfCleaningDir.close();

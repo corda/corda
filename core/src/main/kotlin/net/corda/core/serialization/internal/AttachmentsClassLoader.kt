@@ -9,6 +9,7 @@ import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.toSynchronised
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
@@ -29,8 +30,9 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     init {
-        require(attachments.mapNotNull { it as? ContractAttachment }.all { isUploaderTrusted(it.uploader) }) {
-            "Attempting to load Contract Attachments downloaded from the network"
+        val untrusted = attachments.mapNotNull { it as? ContractAttachment }.filterNot { isUploaderTrusted(it.uploader) }.map(ContractAttachment::id)
+        if(untrusted.isNotEmpty()) {
+            throw MissingAttachmentsException(untrusted, "Attempting to load Contract Attachments downloaded from the network")
         }
         requireNoDuplicates(attachments)
     }

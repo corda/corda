@@ -9,7 +9,6 @@ import net.corda.core.node.services.vault.CollectionOperator.*
 import net.corda.core.node.services.vault.ColumnPredicate.*
 import net.corda.core.node.services.vault.EqualityComparisonOperator.*
 import net.corda.core.node.services.vault.LikenessOperator.*
-import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
@@ -213,7 +212,8 @@ data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseS
     enum class AttachmentSortAttribute(val columnName: String) {
         INSERTION_DATE("insertion_date"),
         UPLOADER("uploader"),
-        FILENAME("filename")
+        FILENAME("filename"),
+        VERSION ("version")
     }
 
     @CordaSerializable

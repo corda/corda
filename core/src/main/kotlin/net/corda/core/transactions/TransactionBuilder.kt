@@ -4,12 +4,12 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.keys
-import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -19,7 +19,9 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -29,38 +31,8 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.collections.Collection
-import kotlin.collections.List
-import kotlin.collections.Map
-import kotlin.collections.MutableList
-import kotlin.collections.Set
-import kotlin.collections.all
-import kotlin.collections.any
-import kotlin.collections.arrayListOf
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.emptyList
-import kotlin.collections.filter
-import kotlin.collections.filterNot
-import kotlin.collections.find
-import kotlin.collections.flatMap
-import kotlin.collections.flatten
-import kotlin.collections.forEach
-import kotlin.collections.groupBy
-import kotlin.collections.intersect
-import kotlin.collections.isNotEmpty
-import kotlin.collections.listOf
-import kotlin.collections.map
-import kotlin.collections.mapNotNull
-import kotlin.collections.none
-import kotlin.collections.plus
-import kotlin.collections.setOf
-import kotlin.collections.single
-import kotlin.collections.singleOrNull
-import kotlin.collections.toList
-import kotlin.collections.toMap
-import kotlin.collections.toSet
-import kotlin.collections.toSortedSet
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -435,14 +407,21 @@ open class TransactionBuilder @JvmOverloads constructor(
      * This method should only be called for upgradeable contracts.
      *
      * For now we use the currently installed CorDapp version.
-     * TODO - When the SignatureConstraint and contract version logic is in, this will need to query the attachments table and find the latest one that satisfies all constraints.
-     * TODO - select a version of the contract that is no older than the one from the previous transactions.
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
-        return services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(states)
+
+        //TODO will be set by the code pending in the other PR
+        val minimumRequiredContractClassVersion = DEFAULT_CORDAPP_VERSION
+
+        //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+                versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+
+        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
