@@ -47,10 +47,10 @@ import java.util.*
 import java.util.function.Consumer
 import javax.persistence.EntityManager
 
-/**
- * Returns a simple [InMemoryIdentityService] containing the supplied [identities].
- */
-fun makeTestIdentityService(vararg identities: PartyAndCertificate) = InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+/** Returns a simple [IdentityService] containing the supplied [identities]. */
+fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentityService {
+    return InMemoryIdentityService(identities.toList(), DEV_ROOT_CA.certificate)
+}
 
 /**
  * An implementation of [ServiceHub] that is designed for in-memory unit tests of contract validation logic. It has
