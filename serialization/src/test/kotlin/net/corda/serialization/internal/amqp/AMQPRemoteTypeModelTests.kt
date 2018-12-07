@@ -18,7 +18,7 @@ class AMQPRemoteTypeModelTests {
     @JvmField
     val serializationEnvRule = SerializationEnvironmentRule()
 
-    private val factory = testDefaultFactory().apply { register(ThrowableSerializer(this)) }
+    private val factory = testDefaultFactory()
     private val typeModel = AMQPRemoteTypeModel()
 
     interface Interface<P, Q, R> {
