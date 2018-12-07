@@ -42,13 +42,14 @@ import kotlin.test.assertEquals
  * the attacker to [alice].
  */
 abstract class MQSecurityTest : NodeBasedTest() {
-    val rpcUser = User("user1", "pass", permissions = emptySet())
+    private val rpcUser = User("user1", "pass", permissions = emptySet())
     lateinit var alice: NodeWithInfo
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
 
     @Before
-    fun start() {
+    override fun setUp() {
+        super.setUp()
         alice = startNode(ALICE_NAME, rpcUsers = extraRPCUsers + rpcUser)
         attacker = createAttacker()
         startAttacker(attacker)
