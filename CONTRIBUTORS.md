@@ -91,6 +91,7 @@ see changes to this list.
 * Igor Nitto (R3)
 * Igor Panov
 * Ivan Schasny (R3)
+* Ivaylo Tonev (Industria)
 * James Brown (R3)
 * James Carlyle (R3)
 * Janis Olekss (Accenture)
