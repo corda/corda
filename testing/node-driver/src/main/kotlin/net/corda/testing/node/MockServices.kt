@@ -148,7 +148,6 @@ open class MockServices private constructor(
         // Because Kotlin is dumb and makes not publicly visible objects public, thus changing the public API.
         private val mockStateMachineRecordedTransactionMappingStorage = MockStateMachineRecordedTransactionMappingStorage()
 
-
         private val dummyAttachment by lazy {
             val inputStream = ByteArrayOutputStream().apply {
                 ZipOutputStream(this).use {

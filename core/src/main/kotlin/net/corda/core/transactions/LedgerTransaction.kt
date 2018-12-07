@@ -3,10 +3,10 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
 import net.corda.core.contracts.Version
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
@@ -153,7 +153,7 @@ private constructor(
     @Throws(TransactionVerificationException::class)
     private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>) {
         contractAttachmentsByContract.forEach { contractClassName, attachments ->
-            val outputVersion = getContractVersion(singedOrUnsignedOrNull(attachments) ?: throw Exception("This is wrong"))
+            val outputVersion = attachments.signed?.version ?: attachments.unsigned?.version ?: DEFAULT_CORDAPP_VERSION
             inputStatesContractClassNameToMaxVersion[contractClassName]?.let {
                 if (it > outputVersion) {
                     throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$it", "$outputVersion")
@@ -255,9 +255,6 @@ private constructor(
         }
         return hashToSignatureConstrainedContracts
     }
-
-    private fun singedOrUnsignedOrNull(set: Set<ContractAttachment>) =
-        set.firstOrNull { it.isSigned } ?: set.firstOrNull { !it.isSigned }
 
     private fun resolveAttachment(contractClassName: ContractClassName, contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>): AttachmentWithContext {
         val unsignedAttachment = contractAttachmentsByContract[contractClassName]!!.filter { !it.isSigned }.firstOrNull()

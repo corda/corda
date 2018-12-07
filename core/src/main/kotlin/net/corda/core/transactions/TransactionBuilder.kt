@@ -177,7 +177,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
                 .filterNot { it.key in allContracts }
                 .map { refStateEntry ->
-                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services) //TODO contract class version for reference states
+                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services)
                 }
 
         val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
@@ -414,7 +414,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         //TODO could be moved as a single method of the attachment service method e.g. getContractAttachmentWithHighestContractVersion(contractClassName, minContractVersion)
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
                 versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion),
-                uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
+                uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
         return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)

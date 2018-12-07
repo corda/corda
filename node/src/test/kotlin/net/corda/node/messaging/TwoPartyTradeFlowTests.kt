@@ -68,6 +68,7 @@ import kotlin.test.assertTrue
  * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 // TODO These tests need serious cleanup.
+// TODO Enable Ignored tests, they don't work with signature constraint contract class version no downgrade rule (requires the previous transaction to be recorded, unlike in this test).
 @RunWith(Parameterized::class)
 class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
     companion object {

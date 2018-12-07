@@ -4,7 +4,6 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import java.security.PublicKey
-import java.util.jar.Attributes
 
 /**
  * Wrap an attachment in this if it is to be used as an executable contract attachment
@@ -32,14 +31,11 @@ class ContractAttachment @JvmOverloads constructor(
     }
 
     companion object {
-        private fun extractVersion(attachment: Attachment) =
-            try { attachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1" } catch (e: NumberFormatException) { "1" }
-
         fun getContractVersion(attachment: Attachment) : Version =
             if (attachment is ContractAttachment) {
                 attachment.version
             } else {
-                try { Integer.parseInt(extractVersion(attachment)) } catch (e: NumberFormatException) { 1 }
+                DEFAULT_CORDAPP_VERSION
             }
     }
 }
