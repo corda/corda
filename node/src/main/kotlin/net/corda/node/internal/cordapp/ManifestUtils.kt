@@ -21,7 +21,7 @@ fun createTestManifest(name: String, version: String, vendor: String, licence: S
     manifest[CORDAPP_WORKFLOW_VENDOR] = vendor
     manifest[CORDAPP_WORKFLOW_LICENCE] = licence
 
-    manifest["Target-Platform-Version"] = targetVersion.toString()
+    manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
 
     return manifest
 }
@@ -40,8 +40,8 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
 
     val log = loggerFor<Manifest>()
 
-    val minPlatformVersion = this["Min-Platform-Version"]?.toIntOrNull() ?: 1
-    val targetPlatformVersion = this["Target-Platform-Version"]?.toIntOrNull() ?: minPlatformVersion
+    val minPlatformVersion = this[MIN_PLATFORM_VERSION]?.toIntOrNull() ?: 1
+    val targetPlatformVersion = this[TARGET_PLATFORM_VERSION]?.toIntOrNull() ?: minPlatformVersion
 
     /** new identifiers (Corda 4) */
     // is it a Contract Jar?
@@ -65,16 +65,16 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
         )
     }
     // is it a Contract Jar?
-    if (this["Cordapp-Worflow-Name"] != null) {
-        val name = this["Cordapp-Worflow-Name"] ?: defaultName
+    if (this[CORDAPP_WORKFLOW_NAME] != null) {
+        val name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName
         val version = try {
-            Integer.valueOf(this["Cordapp-Worflow-Version"])
+            Integer.valueOf(this[CORDAPP_WORKFLOW_VERSION])
         } catch (nfe: NumberFormatException) {
             log.warn("Invalid version identifier ${this[CORDAPP_CONTRACT_VERSION]}. Defaulting to $DEFAULT_CORDAPP_VERSION")
             DEFAULT_CORDAPP_VERSION
         } ?: DEFAULT_CORDAPP_VERSION
-        val vendor = this["Cordapp-Worflow-Vendor"] ?: UNKNOWN_VALUE
-        val licence = this["Cordapp-Worflow-Licence"] ?: UNKNOWN_VALUE
+        val vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE
+        val licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE
         return Workflow(
                 name = name,
                 vendor = vendor,
