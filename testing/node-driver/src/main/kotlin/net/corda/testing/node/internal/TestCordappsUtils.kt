@@ -2,7 +2,7 @@ package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.internal.outputStream
-import net.corda.node.internal.cordapp.createTestManifest
+import net.corda.core.internal.cordapp.createTestManifest
 import net.corda.testing.node.TestCordapp
 import java.io.BufferedOutputStream
 import java.nio.file.Path
