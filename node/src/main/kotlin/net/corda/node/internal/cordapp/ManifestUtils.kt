@@ -6,6 +6,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
+//TODO implementationVersion parmemater and update `Implementation-Version` when we finally agree on a naming split for Contracts vs Flows jars.
 fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int, implementationVersion: String): Manifest {
     val manifest = Manifest()
 
@@ -19,7 +20,6 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Specification-Vendor"] = vendor
 
     manifest["Implementation-Title"] = title
-    // TODO to rename `implementation-Version when we finally agree on a naming split for Contracts vs Flows jars.
     manifest[Attributes.Name.IMPLEMENTATION_VERSION] = implementationVersion
     manifest["Implementation-Vendor"] = vendor
     manifest["Target-Platform-Version"] = targetVersion.toString()

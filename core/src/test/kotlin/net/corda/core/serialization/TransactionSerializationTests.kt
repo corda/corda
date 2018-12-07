@@ -75,7 +75,6 @@ class TransactionSerializationTests {
     val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
         override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
     }
-    //initialNetworkParameters = testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
     val notaryServices = object : MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY) {
         override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
     }
