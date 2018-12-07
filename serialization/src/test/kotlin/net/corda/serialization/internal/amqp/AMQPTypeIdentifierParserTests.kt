@@ -67,7 +67,7 @@ class AMQPTypeIdentifierParserTests {
         assertParsesCompatibly<IntArray>()
         assertParsesCompatibly<Array<Int>>()
         assertParsesCompatibly<List<Int>>()
-        assertParsesTo<WithParameter<*>>("WithParameter<?>")
+        assertParsesCompatibly<WithParameter<*>>()
         assertParsesCompatibly<WithParameter<Int>>()
         assertParsesCompatibly<Array<out WithParameter<Int>>>()
         assertParsesCompatibly<WithParameters<IntArray, WithParameter<Array<WithParameters<Array<Array<Date>>, UUID>>>>>()

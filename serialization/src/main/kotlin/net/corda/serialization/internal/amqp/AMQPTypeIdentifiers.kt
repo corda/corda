@@ -46,8 +46,8 @@ object AMQPTypeIdentifiers {
     fun nameForType(typeIdentifier: TypeIdentifier): String = when(typeIdentifier) {
         is TypeIdentifier.Erased -> typeIdentifier.name
         is TypeIdentifier.Unparameterised -> primitiveTypeNamesByName[typeIdentifier] ?: typeIdentifier.name
-        is TypeIdentifier.UnknownType,
-        is TypeIdentifier.TopType -> "?"
+        is TypeIdentifier.UnknownType -> "?"
+        is TypeIdentifier.TopType -> TypeIdentifier.TopType.name
         is TypeIdentifier.ArrayOf ->
             if (typeIdentifier == primitiveByteArrayType) "binary"
             else nameForType(typeIdentifier.componentType) +

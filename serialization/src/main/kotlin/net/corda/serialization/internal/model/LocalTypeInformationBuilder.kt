@@ -103,7 +103,8 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             Collection::class.java.isAssignableFrom(type) &&
                     !EnumSet::class.java.isAssignableFrom(type) -> LocalTypeInformation.ACollection(type, typeIdentifier, LocalTypeInformation.Unknown)
             Map::class.java.isAssignableFrom(type) -> LocalTypeInformation.AMap(type, typeIdentifier, LocalTypeInformation.Unknown, LocalTypeInformation.Unknown)
-            type.kotlin.javaPrimitiveType != null -> LocalTypeInformation.Atomic(type.kotlin.javaPrimitiveType!!, typeIdentifier)
+            type == String::class.java -> LocalTypeInformation.Atomic(String::class.java, typeIdentifier)
+            type.kotlin.javaPrimitiveType != null ->LocalTypeInformation.Atomic(type.kotlin.javaPrimitiveType!!, typeIdentifier)
             type.isEnum -> LocalTypeInformation.AnEnum(
                     type,
                     typeIdentifier,
