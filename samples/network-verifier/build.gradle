@@ -53,10 +53,12 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
 }
 
 cordapp {
-    info {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    workflow {
         name "net/corda/samples/network-verifier"
-        vendor "Corda Open Source"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
+        version 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }

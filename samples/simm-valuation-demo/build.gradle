@@ -138,10 +138,3 @@ task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
-
-cordapp {
-    info {
-        vendor = 'R3'
-        targetPlatformVersion = corda_platform_version.toInteger()
-    }
-}
