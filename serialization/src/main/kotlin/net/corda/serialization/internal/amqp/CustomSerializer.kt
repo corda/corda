@@ -65,17 +65,25 @@ abstract class CustomSerializer<T : Any> : AMQPSerializer<T>, SerializerFor {
         override val schemaForDocumentation = Schema(emptyList())
 
         override fun isSerializerFor(clazz: Class<*>): Boolean = clazz == this.clazz
+
         override val type: Type get() = clazz
+
         override val typeDescriptor: Symbol by lazy {
-            Symbol.valueOf("$DESCRIPTOR_DOMAIN:${FingerprintWriter(false).write(arrayOf(superClassSerializer.typeDescriptor.toString(), AMQPTypeIdentifiers.nameForType(clazz)).joinToString()).fingerprint}")
+            val fingerprint = FingerprintWriter()
+                    .write(superClassSerializer.typeDescriptor)
+                    .write(AMQPTypeIdentifiers.nameForType(clazz))
+                    .fingerprint
+            Symbol.valueOf("$DESCRIPTOR_DOMAIN:$fingerprint")
         }
+
         private val typeNotation: TypeNotation = RestrictedType(
                 AMQPTypeIdentifiers.nameForType(clazz),
                 null,
                 emptyList(),
                 AMQPTypeIdentifiers.nameForType(superClassSerializer.type),
                 Descriptor(typeDescriptor),
-                emptyList())
+                emptyList()
+        )
 
         override fun writeClassInfo(output: SerializationOutput) {
             output.writeTypeNotations(typeNotation)
