@@ -34,7 +34,8 @@ define(['angular', 'lodash', 'viewmodel/Deal'], function (angular, _, dealViewMo
 
             this.getDate = function () {
                 return load('date', $http.get(endpoint('/api/irs/demodate'))).then(function (resp) {
-                    date = String(new Date(resp.data));
+                    var dateParts = resp.data.split("-");
+                    date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]); // JS uses 0 based months
                     return _this.getDateModel(date);
                 });
             };
