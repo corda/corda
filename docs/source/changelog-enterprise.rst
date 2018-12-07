@@ -11,7 +11,7 @@ Please refer to :doc:`changelog` for all Open Source changes which automatically
 
 Changelog entries in this unreleased section refer to Enterprise-only changes.
 
-* The ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
+* WARNING the ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
   with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``.
   Within that configuration file the ``bridgeMode`` property has been modified to ``firewallMode`` for overall consistency.
   Furthermore, under ``outboundConfig`` - ``socksProxyConfig`` been renamed into ``proxyConfig``.
@@ -23,6 +23,35 @@ Changelog entries in this unreleased section refer to Enterprise-only changes.
 
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.
   It retries 10 times with a 1 minute interval in between each try. At the moment this is not configurable.
+
+* Added config log password masking for the corda firewall.
+
+* Bridge and Float now allow keystores to have distinct private key passwords.
+
+* Introduced a proxy timeout setting for the bridge in case the proxy is unusually slow to initate connections.
+  The default value used is 10000msec.
+
+* Added debug logging during proxy connect phase.
+
+* Eliminated the need for a load balancer by enabling automatic RPC client failover.
+
+* Eliminated the need for a load balancer for P2P node communications in HA configuration.
+
+* Gracefully handle Artemis connectivity loss during bridge leader election.
+
+* Added Server Name Indication to AMQP client/server
+
+* Added an SNI switch.
+
+* Enabled external bridge connectivity through HttpProxy.
+
+* Added keytool/registration tool to combine keystores for the shared bridge deployment.
+
+* The bridge and float keystores can have distinct passwords.
+
+* Corda firewall should logs packet statistics.
+
+* Implemented alternative to Zookeeper for bridge leader elections(bully algorithm).
 
 .. _changelog_v3.1:
 
