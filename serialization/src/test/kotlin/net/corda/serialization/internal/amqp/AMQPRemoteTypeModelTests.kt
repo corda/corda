@@ -45,10 +45,10 @@ class AMQPRemoteTypeModelTests {
     @Test
     fun `round-trip some types through AMQP serialisations`() {
         arrayOf("").assertRemoteType("String[]")
-        listOf(1).assertRemoteType("List<*>")
+        listOf(1).assertRemoteType("List<Object>")
         arrayOf(listOf(1)).assertRemoteType("List[]")
         Enum.BAZ.assertRemoteType("Enum(FOO|BAR|BAZ)")
-        mapOf("string" to 1).assertRemoteType("Map<*, *>")
+        mapOf("string" to 1).assertRemoteType("Map<Object, Object>")
         arrayOf(byteArrayOf(1, 2, 3)).assertRemoteType("byte[][]")
 
         SimpleClass(1, 2.0, null, byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6))
@@ -63,11 +63,11 @@ class AMQPRemoteTypeModelTests {
 
         C(arrayOf("a", "b"), listOf(UUID.randomUUID()), mapOf(UUID.randomUUID() to intArrayOf(1, 2, 3)), Enum.BAZ)
                 .assertRemoteType("""
-            C: Interface<String, UUID, *>
+            C: Interface<String, UUID, Object>
               array: String[]
               enum: Enum(FOO|BAR|BAZ)
               list: List<UUID>
-              map: Map<UUID, *>
+              map: Map<UUID, Object>
         """)
     }
 
