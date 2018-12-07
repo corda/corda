@@ -64,7 +64,7 @@ constructor(private val cordappPackages: List<String> = emptyList(), private val
     }
 
     @Before
-    fun init() {
+    open fun setUp() {
         val notaryInfos = notaries.map { NotaryInfo(installNotary(it), true) } // todo only validating ones
         defaultNetworkParameters = NetworkParametersCopier(testNetworkParameters(notaries = notaryInfos))
         notaries.mapTo(notaryNodes) { startNode(it) }
