@@ -9,16 +9,29 @@ import net.corda.core.node.AppServiceHub
 import net.corda.core.node.services.CordaService
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.getOrThrow
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 
-class CordaServiceFlowTests {
+class CordaServiceFlowTests : IntegrationTest() {
+
+    private companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
+
     @Test
     fun `corda service can start a flow and wait for it`() {
         driver(DriverParameters(startNodesInProcess = true)) {
-            val node = startNode().getOrThrow()
+            val node = startNode(providedName = ALICE_NAME).getOrThrow()
             val text = "191ejodaimadc8i"
 
             val length = node.rpc.startFlow(::ComputeTextLengthThroughCordaService, text).returnValue.getOrThrow()
