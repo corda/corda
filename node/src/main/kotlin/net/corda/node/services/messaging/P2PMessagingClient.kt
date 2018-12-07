@@ -233,6 +233,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             producerSession!!.start()
             bridgeSession!!.start()
 
+
             // Create a queue, consumer and producer for handling P2P network messages.
             // Create a general purpose producer.
             producer = producerSession!!.createProducer()
@@ -670,6 +671,7 @@ private class P2PMessagingConsumer(
     private val subscriptions = mutableSetOf<Subscription>()
 
     override fun start() {
+
         synchronized(this) {
             require(!startedFlag){"Must not already be started"}
             drainingModeWasChangedEvents.filter { change -> change.switchedOn() }.doOnNext { initialAndExistingConsumer.switchTo(existingOnlyConsumer) }.subscribe()

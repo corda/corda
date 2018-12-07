@@ -55,6 +55,7 @@ import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 @Ignore
+// TODO: Investigate why node's artemis client can't failover to out of process slave artemis server.
 class HABrokerFailoverTest : IntegrationTest() {
     companion object {
         @ClassRule
