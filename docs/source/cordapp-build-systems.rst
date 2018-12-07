@@ -382,10 +382,8 @@ Using the `cordapp` Gradle plugin, this can be achieved by putting this in your 
     .. sourcecode:: groovy
 
         cordapp {
-            info {
-                targetPlatformVersion 4
-                minimumPlatformVersion 4
-            }
+            targetPlatformVersion 4
+            minimumPlatformVersion 4
         }
 
 Without using the `cordapp` plugin, you can achieve the same by modifying the jar task as shown in this example:
@@ -402,3 +400,47 @@ Without using the `cordapp` plugin, you can achieve the same by modifying the ja
                 )
             }
         }
+
+Separation of CorDapp contracts, flows and services
+---------------------------------------------------
+It is recommended that Contract code (states, commands, verification logic) be packaged separately from Business Flows (and associated services).
+This decoupling enables Contracts to evolve independently from the Flows that use them. Contracts may even be specified and implemented by different
+providers (eg. Corda currently ships with a Cash financial contract which in turn is used in many other Flows and many other CorDapps).
+
+As of Corda 4, CorDapps can explicitly differentiate its type using the `cordapp` Gradle plugin as follows:
+
+For a contract only CorDapp we specify the `contract` tag:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        cordapp {
+            targetPlatformVersion 4
+            minimumPlatformVersion 3
+            contract {
+                name "my contract name"
+                version 1
+                vendor "my company"
+                licence "my licence"
+            }
+        }
+
+For a CorDapp that contains flows and/or services we specify the `workflow` tag:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        cordapp {
+            targetPlatformVersion 4
+            minimumPlatformVersion 3
+            workflow {
+                name "my workflow name"
+                version 1
+                vendor "my company"
+                licence "my licence"
+            }
+        }
+
+.. note:: it is possible, *but not recommended*,  to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
