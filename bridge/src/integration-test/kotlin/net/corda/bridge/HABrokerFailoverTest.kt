@@ -23,6 +23,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
@@ -42,6 +43,7 @@ import org.apache.activemq.artemis.spi.core.security.ActiveMQJAASSecurityManager
 import org.apache.activemq.artemis.spi.core.security.jaas.TextFileCertificateLoginModule
 import org.apache.commons.io.FileUtils
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -52,8 +54,8 @@ import javax.security.auth.login.AppConfigurationEntry
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
+@Ignore
 class HABrokerFailoverTest : IntegrationTest() {
-
     companion object {
         @ClassRule
         @JvmField
@@ -80,14 +82,10 @@ class HABrokerFailoverTest : IntegrationTest() {
         masterConfigPath.parent.createDirectories()
         slaveConfigPath.parent.createDirectories()
 
-        ClassLoader.getSystemResourceAsStream("artemis/artemis-roles.properties")
-                .copyTo(masterConfigPath.parent / "artemis-roles.properties")
-        ClassLoader.getSystemResourceAsStream("artemis/artemis-roles.properties")
-                .copyTo(slaveConfigPath.parent / "artemis-roles.properties")
-        ClassLoader.getSystemResourceAsStream("artemis/artemis-users.properties")
-                .copyTo(masterConfigPath.parent / "artemis-users.properties")
-        ClassLoader.getSystemResourceAsStream("artemis/artemis-users.properties")
-                .copyTo(slaveConfigPath.parent / "artemis-users.properties")
+        ClassLoader.getSystemResourceAsStream("artemis/artemis-roles.properties").copyTo(masterConfigPath.parent / "artemis-roles.properties")
+        ClassLoader.getSystemResourceAsStream("artemis/artemis-roles.properties").copyTo(slaveConfigPath.parent / "artemis-roles.properties")
+        ClassLoader.getSystemResourceAsStream("artemis/artemis-users.properties").copyTo(masterConfigPath.parent / "artemis-users.properties")
+        ClassLoader.getSystemResourceAsStream("artemis/artemis-users.properties").copyTo(slaveConfigPath.parent / "artemis-users.properties")
         ClassLoader.getSystemResourceAsStream("artemis/master/broker.xml").copyTo(masterConfigPath)
         ClassLoader.getSystemResourceAsStream("artemis/slave/broker.xml").copyTo(slaveConfigPath)
 
@@ -137,7 +135,7 @@ class HABrokerFailoverTest : IntegrationTest() {
                                 "trustStorePassword" to "trustpass"
                         )))
 
-        internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)), portAllocation = portAllocator, isDebug = true) {
+        internalDriver(notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)), portAllocation = portAllocator) {
             val aliceUser = User("alice", "alice", permissions = setOf("ALL"))
 
             val aBridgeFuture = startBridge(ALICE_NAME, p2pPort, 10130, mapOf(
@@ -151,8 +149,8 @@ class HABrokerFailoverTest : IntegrationTest() {
                     )
             ), nodeDirectory = nodeBaseDir)
 
-            val bobNode = startNode(providedName = BOB_NAME, rpcUsers = listOf(aliceUser), additionalCordapps = setOf(FINANCE_CORDAPP)).getOrThrow()
-            val aliceNode = startNode(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), customOverrides = nodeConfiguration, additionalCordapps = setOf(FINANCE_CORDAPP)).getOrThrow()
+            val bobNode = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(aliceUser), additionalCordapps = setOf(FINANCE_CORDAPP))).getOrThrow()
+            val aliceNode = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), customOverrides = nodeConfiguration, additionalCordapps = setOf(FINANCE_CORDAPP))).getOrThrow()
 
             aBridgeFuture.getOrThrow()
 
