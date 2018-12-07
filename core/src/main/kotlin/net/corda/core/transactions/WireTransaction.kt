@@ -145,7 +145,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters,
-                // Returning dummy Attachment for resolveContractAttachment``method allows this deprecated method to work and disables "contract version no downgrad erule" as dummy Attachment will return version 1
+                // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
                 { it -> resolveAttachment(it.txhash) ?: missingAttachment })
     }
 
