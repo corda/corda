@@ -13,7 +13,6 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import java.io.ByteArrayInputStream
 import java.io.InputStream
-import java.io.Writer
 import javax.sql.DataSource
 
 class SchemaMigration(
@@ -117,6 +116,7 @@ class SchemaMigration(
             (it.metaData.getTables(null, null, "NODE%", null).next() &&
                     !it.metaData.getTables(null, null, "DATABASECHANGELOG%", null).next())
         }
+
         when {
             isExistingDBWithoutLiquibase && existingCheckpoints -> throw CheckpointsException()
             isExistingDBWithoutLiquibase -> {
@@ -139,13 +139,6 @@ class SchemaMigration(
                             "migration/vault-schema.changelog-v4.xml",
                             "migration/vault-schema.changelog-pkey.xml")
 
-                    if (schemas.any { schema -> schema.migrationResource == "cash.changelog-master" })
-                        preV4Baseline.addAll(listOf("migration/cash.changelog-init.xml",
-                                "migration/cash.changelog-v1.xml"))
-
-                    if (schemas.any { schema -> schema.migrationResource == "commercial-paper.changelog-master" })
-                        preV4Baseline.addAll(listOf("migration/commercial-paper.changelog-init.xml",
-                                "migration/commercial-paper.changelog-v1.xml"))
 
                     if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
                         preV4Baseline.addAll(listOf("migration/node-notary.changelog-init.xml",
@@ -157,6 +150,29 @@ class SchemaMigration(
                 }
             }
         }
+        val isFinanceAppVer4detectedAndNotMigrated = schemas.any { schema ->
+            (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1" || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
+                    && schema.migrationResource != null
+        } && (isExistingDBWithoutLiquibase || dataSource.connection.use {
+            it.createStatement().use {
+                it.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE FILENAME IN ('migration/cash.changelog-init.xml','migration/commercial-paper.changelog-init.xml')")
+                if (it.resultSet.next()) {
+                    it.resultSet.getInt(1) == 0
+                } else true
+            }
+        })
+
+        if (isFinanceAppVer4detectedAndNotMigrated) {
+            val preV4Baseline = listOf("migration/cash.changelog-init.xml", "migration/cash.changelog-v1.xml",
+                    "migration/commercial-paper.changelog-init.xml", "migration/commercial-paper.changelog-v1.xml")
+            val dynamicInclude = "master.changelog.json"
+            dataSource.connection.use { connection ->
+                val customResourceAccessor = CustomResourceAccessor(dynamicInclude, preV4Baseline, classLoader)
+                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+                liquibase.changeLogSync(Contexts(), LabelExpression())
+            }
+        }
+
         return isExistingDBWithoutLiquibase
     }
 }
