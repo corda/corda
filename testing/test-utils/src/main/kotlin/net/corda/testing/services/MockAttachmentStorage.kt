@@ -3,6 +3,7 @@ package net.corda.testing.services
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
@@ -99,7 +100,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers)
-            val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION) ?: "1") } catch (e: Exception) { 1 }
+            val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)) } catch (e: Exception) { DEFAULT_CORDAPP_VERSION }
             val attachment =
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
                     else {

@@ -8,6 +8,7 @@ import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.contracts.Version
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
@@ -117,6 +118,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         )
     }
 
+    // Helper for deprecated toLedgerTransaction
     private val missingAttachment: Attachment by lazy {
         object : AbstractAttachment({ byteArrayOf() }) {
             override val id: SecureHash get() = throw UnsupportedOperationException()
@@ -142,7 +144,9 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters, { it -> resolveAttachment(it.txhash) ?: missingAttachment })
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters,
+                // Returning dummy Attachment for resolveContractAttachment``method allows this deprecated method to work and disables "contract version no downgrad erule" as dummy Attachment will return version 1
+                { it -> resolveAttachment(it.txhash) ?: missingAttachment })
     }
 
     private fun toLedgerTransactionInternal(
@@ -173,8 +177,12 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
         //keep resolvedInputs lazy and resolve the inputs separately here to get Version
-        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map { it.toStateAndRef() }.groupBy { it.state.contract }
-        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> = inputStateContractClassToStateRefs.mapValues { it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: 0 }
+        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map {
+            it.toStateAndRef()
+        }.groupBy { it.state.contract }
+        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> = inputStateContractClassToStateRefs.mapValues {
+            it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: DEFAULT_CORDAPP_VERSION
+        }
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,

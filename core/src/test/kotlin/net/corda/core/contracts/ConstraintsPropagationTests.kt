@@ -400,7 +400,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-               failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version 1 is lower that the version of the input state (2).")
+               failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
             }
         }
     }
@@ -463,7 +463,7 @@ class ConstraintsPropagationTests {
                 input("c2")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version 1 is lower that the version of the input state (2).")
+                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
             }
         }
     }
@@ -482,7 +482,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version 1 is lower that the version of the input state (2).")
+                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
             }
         }
     }
