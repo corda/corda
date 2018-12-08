@@ -92,6 +92,8 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
+        // TODO: remove once gradle plugins 4.0.37 released
+        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-dev' }
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -226,8 +228,6 @@ allprojects {
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
-        // TODO: remove once gradle plugins 4.0.37 released
-        maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda-dev' }
     }
 
     configurations {
