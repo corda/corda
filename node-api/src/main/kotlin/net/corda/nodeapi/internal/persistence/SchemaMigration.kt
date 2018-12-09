@@ -108,14 +108,12 @@ class SchemaMigration(
 
     /** For existing database created before verions 4.0 add Liquibase support - creates DATABASECHANGELOG and DATABASECHANGELOGLOCK tables and marks changesets as executed. */
     private fun migrateOlderDatabaseToUseLiquibase(existingCheckpoints: Boolean): Boolean {
-
         val isFinanceAppWithLiquibase = schemas.any { schema ->
             (schema::class.qualifiedName == "net.corda.finance.schemas.CashSchemaV1"
                     || schema::class.qualifiedName == "net.corda.finance.schemas.CommercialPaperSchemaV1")
                     && schema.migrationResource != null
         }
-
-        val hasFinanceAppLiquibaseEntryLogs: (Statement) -> Boolean = {
+        val noLiquibaseEntryLogForFinanceApp: (Statement) -> Boolean = {
             it.execute("SELECT COUNT(*) FROM DATABASECHANGELOG WHERE FILENAME IN ('migration/cash.changelog-init.xml','migration/commercial-paper.changelog-init.xml')")
             if (it.resultSet.next())
                 it.resultSet.getInt(1) == 0
@@ -130,9 +128,9 @@ class SchemaMigration(
             val hasLiquibase = it.metaData.getTables(null, null, "DATABASECHANGELOG%", null).next()
 
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
-                    && (!existingDatabase  // Empty database, so no need to check further.
-                        || (hasLiquibase // If Liquibase is already in the database check if Finance App schema log is missing.
-                            && it.createStatement().use { hasFinanceAppLiquibaseEntryLogs(it) }))
+                    && existingDatabase
+                    && (!hasLiquibase // Migrate as other tables.
+                         || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
 
             Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
         }
