@@ -205,6 +205,21 @@ a flow:
    ltx.verify(); // Verifies both the attachment constraints and contracts
 
 
+Contract attachment non-downgrade rule
+--------------------------------------
+
+Transaction verification enforces attachment contract non-downgrade rule:
+the version of the code used in the transaction that spends a state needs to be >= any version of the input states
+(``spending_version >= creation_version``). This rule is enforced at verification time, and also during transaction building.
+When transaction is verified, for a given contract class, the contract attachment of the output states must be of the same
+or newer version as the contract attachment of the input states.
+When creating a new transaction, the latest attachment (one with the biggest contract class version) is selected,
+and it must be at least equal to the version of contract attachment of the relevant input states.
+
+Non-downgrade rule protects against the possibility of malicious nodes selecting old and buggy contract code when spending newer states.
+The rule is enforced by the node, however the contract version is specified by Cordapp developer in the JAR file.
+Contract attachment version is a decimal number defined in the manifest file of a JAR file, and defaults to `1`, see CorDapp version identifiers.
+
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
 
