@@ -6,15 +6,19 @@ Release notes
 Release 4.0 
 -----------
 
-Here we are, 1500 plus commits later... and it's a Software Release!
+Here we are, 9 months and 1500 plus commits later... and it's a bouncing baby software release!
 
 We are really proud to release Corda 4 to the open source community today, it's been a long time in the making, but we think
-you'll agree worth the wait. Corda 3 has done stirling service over the last year, it grew with new features and many,
-many, bug fixes, but with Corda 4 
+you'll agree worth the wait. Corda 3 has done sterling service over the last year but it's time to unleash all of the new
+features we've been working on that extend, enhance, and improve Corda in a myriad of ways.
+
+Just as Corda 3 was a commitment brought with it a commitment to wire and API stability, Corda 4 comes with those
+same patentees. States valid in Corda 3 will be transparently usable in Corda 4 whilst we have strived to
+keep the API stable. Of course, where we've introduced new features not available in older version app developers
+will have to wait for their Compatibility Zone operators to adopt version 4 as the minimum platform version.
 
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 
 * **Reference states**:
 
@@ -23,6 +27,8 @@ Significant Changes in 4.0
   transaction verification process and is not consumed when the transaction is committed to the ledger but is checked
   for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
   normal state when it occurs in an input or output position.
+
+* **Signature Constraints**
 
 
 * **CorDapp JAR Signing and Sealing**:
@@ -40,6 +46,46 @@ Significant Changes in 4.0
   flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
   the node will have an incomplete view of the ledger.
 
+Determinism for fun and profit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  THE DJVM!!!!
+
+  THE DETERMINATOR!!!!
+
+  see :doc:`key-concepts-djvm`
+
+
+RPC Changes
+~~~~~~~~~~~
+
+* **AMQP**
+
+  AMQP is now default serialization framework across all of Corda (check pointing aside), swapping the RPC framework
+  from using the older ``Kryo`` implementation and thus bringing Corda into line with R3's Corda Enterprise. This does
+  mean that clients will need to have their client RPC library updated, but it does mean that Open Source and Enterprise
+  Corda nodes will be able to interact with  clients using the same framework, greatly reducing the testing
+  and deployment burden.
+
+
+* **SSL**
+  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The operator of a node
+  wishing to enable this must of course generate and distribute a certificate in order for client applications to
+  suxessfully conect. This is docusmnted here :doc:`tutorial-clientrpc-api`
+
+Other change of note
+~~~~~~~~~~~~~~~~~~~~
+
+* **The Standalone Shell**
+
+* **Contract Upgrade Transactions**
+
+  see :doc:`contract-upgrade`
+
+* **Auto-acceptance for network parameters updates**
+
+  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
+  command on every parameter update. This behaviour can be turned off via the node configuration.
 
 * **A more pleaseing bootstrapper**
 
@@ -49,36 +95,9 @@ Significant Changes in 4.0
   In addition, it supports all of the new network paramters that can optionally be set. See the :doc:`changelog` for
   details on individual additions.
 
-RPC Changes
-~~~~~~~~~~~
-
-* **AMQP**
-
-  Cod
-
-
-* **SSL**
-  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The operator of a node
-  wishing to enable this must of course generate and distribute a certificate in order for client applications to
-  suxessfully conect. This is docusmnted here :doc:`tutorial-clientrpc-api`
-
-76d87b67ce CORDA-1844: Support for high throughput Observables shipped via RPC (#3698)
-
-
-
-
-Other change of note
-~~~~~~~~~~~~~~~~~~~~
-
-* **Added auto-acceptance for network parameters updates**
-  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
-  command on every parameter update. This behaviour can be turned off via the node configuration.
-
 * **Retirement of non-elliptic Diffie-Hellman for TLS**
   The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
   as it is a legacy cipher family not supported by all native SSL/TLS implementations.
-
-* **Re-written State Machine**
 
 * **Clearing the Network Map cache**
 
@@ -93,13 +112,62 @@ Other change of note
 
 f81428eb53 Corda 1916: signature attachment constraints (#3839)
 
+* **Package Namespace Ownership**
+
+<<< Someone should opine on this >>>
+
+* **Configurable flow responders**
+
+  In Corda 3 you could specify at most one flow with an ``@InitiatedBy`` annotation as a responder to a flow. However, in a
+  production environment, it is likely that a single CorDapp  will contain a "base" responder, which other users of the CorDapp
+  will want to configure for use with their own backends.
+
+  It is now possible to:
+
+  * Subclass flows, and deterministically know that this subclassed implementation will be used as the responder
+  * Specify a flow to respond to the Initiator regardless of it's place in the inheritance tree. And know deterministically that this implementation will be used as the responder.
+
+  More information can be found in :docs:`flow-overriding`
+
+* **Error Code Generation**
+
+  Derive error code from exception signature so that we can reference that in centralised knowledge base. Further, enrich exceptions and reported events for easier debugging and troubleshooting.
+
+* **A New Statemachine**
+
+
+
+API Changes
+~~~~~~~~~~~
+
+ * The API for the TestCordapp has been simplified
+ * Don't expose StartedNode and AbstractNode as part of public test api (#2472)
+ * The FlowStateMachine is no longer a part of the public API
+ * Exposure of node internals in mock network
+ * New Vault Query : ``StateModificationStatus`` which can be ``MODIFIABLE``, ``NOT_MODIFIABLE``, or ``ALL``
+ * Added ``is_modifiable`` column to the ``VaultStates`` table. A node that is a participant in a state will view it as
+   ``MODIFIABLE`` whilst those it isn't are viewed as ``NOT_MODIFIABLE``
+ * Further to the above, ``getCashBalances`` has been updated to only query for MODIFIABLE states as we only want to count cash states which we own!
+ * Vault Queries are now case insensitive.
+
 Minor Changes
 ~~~~~~~~~~~~~
 
- * Upgraded to Kotlin 1.2.51
+ * We've raised the minimum JDK to 8u171, needed to get fixes for certain ZIP compression bugs
+ * Upgraded to Kotlin 1.2.71
+ * Upgraded to Gradle 4.10.1. (#3947)
  * Liquibase - The node now uses Liquibase to bootstrap and update itself. This is a transparent change with pre Corda 3 nodes seemlessly upgrading to operate
    as if they'd been bootstrapped in this way. This also applies to the finance CorDapp module.
+ * Auto completion for the command line tooling (when enabled - see <<<some doc>>>)
  * New jokes - you're welcome! (and we're sorry!)
+ * Version 2 of the serialization engine
+ * Support for MSSQL
+ * Enforcement of Max Transaction size
+ * Logging is now asynchronous
+ * Migrated away from FastClasspathScanner to ClassGraph
+ * Notary backpressure added to the platform - a transparent change that none the less leads to a much stabler network
+ * Added a Node commanline option for validating configuration ``java -jar corda-4.0.jar validate-configuration``
+ 
 
 
 .. _release_notes_v3_3:
