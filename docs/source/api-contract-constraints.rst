@@ -204,26 +204,34 @@ a flow:
    LedgerTransaction ltx = wtx.toLedgerTransaction(serviceHub);
    ltx.verify(); // Verifies both the attachment constraints and contracts
 
+.. _contract_non-downgrade_rule_ref:
 
 Contract attachment non-downgrade rule
 --------------------------------------
+Contract code is versioned and deployed as an independent jar that gets imported into a nodes database as a contract attachment (either explicitly
+loaded via `rpc` or automatically loaded upon node startup for a given corDapp). When constructing new transactions it is paramount to ensure
+that the contract version of code associated with new output states is the same or newer than the highest version of any existing inputs states.
+This is to prevent the possibility of nodes from selecting older, potentially malicious or buggy, contract code when creating new states from existing consumed states.
 
-The contract attachment non-downgrade rule ensures that the transaction uses the contract code which is compatible with the contract code of input states.
-The compatibility is verified based of the contract code version number.
-Each contract code (contract attachment) has a whole number defined in the manifest file of the enclosing JAR file.
-When developing an upgraded contract code the version number should be increased, if missing it default to `1`, see CorDapp version identifiers.
+Transactions contain an attachment for each contract. The version of the output states is the version of this contract attachment.
+This can be seen as the version of code that instantiated and serialised those classes.
 
-Non-downgrade rule protects against the possibility of malicious nodes selecting old and incorrect contract code when spending newer states.
-The rule is enforced by the node, however the contract version is specified by Cordapp developer in the JAR file.
+The non-downgrade rule specifies that the version of the code used in the transaction that spends a state needs to be >= highest version of the
+input states (eg. spending_version >= creation_version)
 
 The Contract attachment non-downgrade rule is enforced in two locations:
 
-- Transaction building - the latest attachment (the contract code with the highest contract class version) is selected,
-  and it must be at least equal to the version of contract attachment of the relevant input states.
+    - Transaction building, upon creation of new output states
+    - Transaction verification, upon resolution of existing transaction chains
 
-- Transaction verification - the version of the code used in the transaction that spends a state needs to be the highest version
-  of the input states for a given contract class (``spending_version >= creation_version``).
+A Contracts version identifier is stored in the manifest information of the enclosing jar file. This version identifier should be a whole number starting from 1.
 
+.. sourcecode:: groovy
+
+    'Cordapp-Contract-Name': "My contract name"
+    'Cordapp-Contract-Version': 1
+
+This information should be set using the Gradle cordapp plugin or manually as described in :ref:`CorDapp separation <cordapp_separation_ref>`.
 
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
