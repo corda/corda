@@ -8,25 +8,28 @@ Release 4.0
 
 Here we are, 9 months and 1500 plus commits later... and it's a bouncing baby software release!
 
-We are really proud to release Corda 4 to the open source community today, it's been a long time in the making, but we think
-you'll agree worth the wait. Corda 3 has done sterling service over the last year but it's time to unleash all of the new
-features we've been working on that extend, enhance, and improve Corda in a myriad of ways.
+We are really proud to release Corda 4 to the open source community today, it's been a long time in
+the making, but we think you'll agree worth the wait. Corda 3 has done sterling service over the last
+year but it's time to unleash all of the new features we've been working on that extend, enhance,
+and improve Corda in a myriad of ways.
 
-Just as Corda 3 was a commitment brought with it a commitment to wire and API stability, Corda 4 comes with those
-same patentees. States valid in Corda 3 will be transparently usable in Corda 4 whilst we have strived to
-keep the API stable. Of course, where we've introduced new features not available in older version app developers
-will have to wait for their Compatibility Zone operators to adopt version 4 as the minimum platform version.
+Just as Corda 3 was a commitment brought with it a commitment to wire and API stability, Corda 4
+comes with those same guarantees. States valid in Corda 3 will be transparently usable in Corda 4 whilst
+we have strived to keep the API stable. Of course, where we've introduced new features not available in
+older version app developers will have to wait for their Compatibility Zone operators to adopt version 4
+as the minimum platform version.
 
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * **Reference states**:
 
-  Introduced the concept of "reference input states". A reference input state is a ``ContractState`` which can be referred
-  to in a transaction by the contracts of input and output states but whose contract is not executed as part of the
-  transaction verification process and is not consumed when the transaction is committed to the ledger but is checked
-  for "current-ness". In other words, the contract logic isn't run for the referencing transaction only. It's still a
-  normal state when it occurs in an input or output position.
+  With Corda 4 we are introducing the concept of "reference input states". A reference input state is
+  a ``ContractState`` which can be referred to in a transaction by the contracts of input and output
+  states but, significantly, whose contract is not executed as part of the transaction verification process
+  and is not consumed when the transaction is committed to the ledger. Rather, it is checked
+  for "current-ness". In other words, the contract logic isn't run for the referencing transaction only.
+  It's still a normal state when it occurs in an input or output position.
 
 * **Signature Constraints**
 
@@ -40,11 +43,12 @@ Significant Changes in 4.0
 
 * **The Flow Hospital**
 
-  Introducing the flow hospital - a component of the node that manages flows that have errored and whether they should
-  be retried from their previous checkpoints or have their errors propagate. Currently it will respond to any error that
-  occurs during the resolution of a received transaction as part of ``FinalityFlow``. In such a scenario the receiving
-  flow will be parked and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
-  the node will have an incomplete view of the ledger.
+  Introducing the flow hospital - a component of the node that manages flows that have errored and whether
+  they should be retried from their previous checkpoints or have their errors propagate. Currently it
+  will respond to any error that occurs during the resolution of a received transaction as part of
+  ``FinalityFlow``. In such a scenario the receiving flow will be parked and retried on node restart. This
+  is to allow the node operator to rectify the situation as otherwise the node will have an incomplete view
+  of the ledger.
 
 Determinism for fun and profit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,22 +65,28 @@ RPC Changes
 
 * **AMQP**
 
-  AMQP is now default serialization framework across all of Corda (check pointing aside), swapping the RPC framework
-  from using the older ``Kryo`` implementation and thus bringing Corda into line with R3's Corda Enterprise. This does
-  mean that clients will need to have their client RPC library updated, but it does mean that Open Source and Enterprise
-  Corda nodes will be able to interact with  clients using the same framework, greatly reducing the testing
-  and deployment burden.
+  AMQP is now default serialization framework across all of Corda (check pointing aside), swapping the RPC
+  framework from using the older ``Kryo`` implementation and thus bringing Corda into line with R3's
+  Corda Enterprise. This does mean that clients will need to have their client RPC library updated to the
+  one shipped with Corda 4. However,  it does mean that Open Source and Enterprise Corda nodes will be
+  able to interact with  clients using the same framework, greatly reducing the testing and deployment burden.
 
 
 * **SSL**
-  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The operator of a node
-  wishing to enable this must of course generate and distribute a certificate in order for client applications to
-  suxessfully conect. This is docusmnted here :doc:`tutorial-clientrpc-api`
+  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The
+  operator of a node wishing to enable this must of course generate and distribute a certificate in
+  order for client applications to successfully connect. This is documented here :doc:`tutorial-clientrpc-api`
 
 Other change of note
 ~~~~~~~~~~~~~~~~~~~~
 
+* **Transaction Tagging**
+
+<<< Someone should opine on this >>>
+
 * **The Standalone Shell**
+
+<<< Someone should opine on this >>>
 
 * **Contract Upgrade Transactions**
 
@@ -84,16 +94,17 @@ Other change of note
 
 * **Auto-acceptance for network parameters updates**
 
-  Added auto-accepting for a subset of network parameters, negating the need for a node operator to manually run an accept
-  command on every parameter update. This behaviour can be turned off via the node configuration.
+  Added auto-accepting for a subset of network parameters, negating the need for a node operator to
+  manually run an accept command on every parameter update. This behaviour can be turned off via the
+  node configuration.
 
 * **A more pleaseing bootstrapper**
 
-  The interface to the network boostrapper has undergone a signigicant overhaul to make the experince of using and
-  interacting with it simpler, faster, and just genreally more pleaesnt.
+  The interface to the network boostrapper has undergone a signigicant overhaul to make the experience of
+  using and interacting with it simpler, faster, and just genreally more pleaesnt.
 
-  In addition, it supports all of the new network paramters that can optionally be set. See the :doc:`changelog` for
-  details on individual additions.
+  In addition, it supports all of the new network paramters that can optionally be set. See the
+  :doc:`changelog` for details on individual additions.
 
 * **Retirement of non-elliptic Diffie-Hellman for TLS**
   The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
@@ -110,7 +121,6 @@ Other change of note
   For example, with ta cash state you could  convince someone who doesn't check that the state is a cash state even though it wasn't checked as such. the ``@BelongsToContract``
   is thus introduced to do just this. See :doc:`api-contract-constraints` for more information.
 
-f81428eb53 Corda 1916: signature attachment constraints (#3839)
 
 * **Package Namespace Ownership**
 
@@ -118,24 +128,30 @@ f81428eb53 Corda 1916: signature attachment constraints (#3839)
 
 * **Configurable flow responders**
 
-  In Corda 3 you could specify at most one flow with an ``@InitiatedBy`` annotation as a responder to a flow. However, in a
-  production environment, it is likely that a single CorDapp  will contain a "base" responder, which other users of the CorDapp
-  will want to configure for use with their own backends.
+  In Corda 3 you could specify at most one flow with an ``@InitiatedBy`` annotation as a responder to a
+  flow. However, in a production environment, it is likely that a single CorDapp  will contain a "base"
+  responder, which other users of the CorDapp will want to configure for use with their own backends.
 
   It is now possible to:
 
-  * Subclass flows, and deterministically know that this subclassed implementation will be used as the responder
-  * Specify a flow to respond to the Initiator regardless of it's place in the inheritance tree. And know deterministically that this implementation will be used as the responder.
+  * Subclass flows, and deterministically know that this subclassed implementation will be used as the
+    responder
+  * Specify a flow to respond to the Initiator regardless of it's place in the inheritance tree.
+    And know deterministically that this implementation will be used as the responder.
 
   More information can be found in :docs:`flow-overriding`
 
 * **Error Code Generation**
 
-  Derive error code from exception signature so that we can reference that in centralised knowledge base. Further, enrich exceptions and reported events for easier debugging and troubleshooting.
+  Derive error code from exception signature so that we can reference that in centralised knowledge base.
+  Further, enrich exceptions and reported events for easier debugging and troubleshooting.
 
 * **A New Statemachine**
 
-
+  Corda 4 has a substantially overhauled internal state machine that is both faster and easier to maintain
+  whilst giving us the ability to add debuggable features such as the ``Flow Hospital``. This is a
+  transparent change for users, but the impact in terms of added stability and extensibility will bring
+  many benefits now and in the future,
 
 API Changes
 ~~~~~~~~~~~
