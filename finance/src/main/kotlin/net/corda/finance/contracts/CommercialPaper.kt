@@ -185,14 +185,17 @@ class CommercialPaper : Contract {
      * to redeem the paper. We must therefore send enough money to the key that owns the paper to satisfy the face
      * value, and then ensure the paper is removed from the ledger.
      *
+     * @return a new [TransactionBuilder] containing the additional states and commands.
+     *
      * @throws InsufficientBalanceException if the vault doesn't contain enough money to pay the redeemer.
      */
     @Throws(InsufficientBalanceException::class)
     @Suspendable
-    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub, ourIdentity: PartyAndCertificate) {
+    fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub, ourIdentity: PartyAndCertificate): TransactionBuilder {
         // Add the cash movement using the states in our vault.
-        Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), ourIdentity, paper.state.data.owner)
-        tx.addInputState(paper)
-        tx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
+        val newTx = Cash.generateSpend(services, tx, paper.state.data.faceValue.withoutIssuer(), ourIdentity, paper.state.data.owner).first
+        newTx.addInputState(paper)
+        newTx.addCommand(Commands.Redeem(), paper.state.data.owner.owningKey)
+        return newTx
     }
 }

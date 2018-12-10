@@ -64,20 +64,21 @@ open class TransactionBuilder @JvmOverloads constructor(
     /**
      * Creates a copy of the builder.
      */
-    fun copy(): TransactionBuilder = copy(includeCommand = { true })
+    fun copy(): TransactionBuilder = copy(commands = ArrayList(this.commands))
 
-    fun copy(includeCommand: (command: Command<*>) -> Boolean = { true }): TransactionBuilder {
-        val t = TransactionBuilder(
-                notary = notary,
-                inputs = ArrayList(inputs),
-                attachments = ArrayList(attachments),
-                outputs = ArrayList(outputs),
-                commands = commands.filter(includeCommand).toMutableList(),
-                window = window,
-                privacySalt = privacySalt,
-                references = references,
-                serviceHub = serviceHub
-        )
+    /**
+     * Creates a copy of the builder, with the ability to keep or modify individual fields.
+     */
+    fun copy(notary: Party? = this.notary,
+            inputs: MutableList<StateRef> = ArrayList(this.inputs),
+            attachments: MutableList<SecureHash> = ArrayList(this.attachments),
+            outputs: MutableList<TransactionState<ContractState>> = ArrayList(this.outputs),
+            commands: MutableList<Command<*>> = ArrayList(this.commands),
+            window: TimeWindow? = this.window,
+            privacySalt: PrivacySalt = this.privacySalt,
+            references: MutableList<StateRef> = ArrayList(this.references),
+            serviceHub: ServiceHub? = this.serviceHub): TransactionBuilder {
+        val t = TransactionBuilder(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, references, serviceHub)
         t.inputsWithTransactionState.addAll(this.inputsWithTransactionState)
         t.referencesWithTransactionState.addAll(this.referencesWithTransactionState)
         return t

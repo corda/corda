@@ -176,14 +176,15 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
             }
 
             val move = generateMoveCommand()
+            fun Command<*>.isMove(): Boolean = value::class.java != move::class.java
             // The notary may be associated with a locked state only.
             // We use a new TransactionBuilder to avoid duplicate commands.
-            val newTx = tx.copy(includeCommand = { cmd -> cmd.value::class.java != move::class.java })
+            val newTx = tx.copy(commands = tx.commands().filter { cmd -> !cmd.isMove() }.toMutableList())
 
             for (state in gathered) newTx.addInputState(state)
             for (state in outputStates) newTx.addOutputState(state)
 
-            newTx.addCommand(move, tx.commands().filter { cmd -> cmd.value::class.java == move::class.java }.flatMap(Command<*>::signers) + keysUsed)
+            newTx.addCommand(move, tx.commands().filter(Command<*>::isMove).flatMap(Command<*>::signers) + keysUsed)
 
             return Pair(newTx, keysUsed)
         }
