@@ -11,6 +11,8 @@ Unreleased
   This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
   by unsigned CorDapps in previous versions of Corda.
 
+* Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
+
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
   also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities

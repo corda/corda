@@ -49,7 +49,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
     }
 
-    val rpcUser = User("user1", "pass", permissions = emptySet())
+    private val rpcUser = User("user1", "pass", permissions = emptySet())
     lateinit var alice: NodeWithInfo
     lateinit var attacker: SimpleMQClient
     private val clients = ArrayList<SimpleMQClient>()
