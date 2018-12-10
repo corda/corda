@@ -1,4 +1,5 @@
 evaluationDependsOn(":node:capsule")
+evaluationDependsOn(":tools:dbmigration")
 buildscript {
     repositories {
         mavenLocal()
@@ -39,25 +40,29 @@ shadowJar {
 
 docker{
     registryCredentials  {
-        url = System.env.DOCKER_URL
         username = System.env.DOCKER_USERNAME
         password = System.env.DOCKER_PASSWORD
     }
 }
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
     doLast {
         def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
+        def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
         project.copy {
             into new File(project.buildDir, "docker-temp")
             from "src/bash/run-corda.sh"
+            from "src/bash/db-migrate-create-jars.sh"
+            from "src/bash/db-migrate-execute-migration.sh"
             from cordaJar
             from shadowJar.archivePath
+            from dbmigrator
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
             from "src/docker/DockerfileAL"
             from "src/docker/Dockerfile"
             rename(cordaJar.name, "corda.jar")
+            rename(dbmigrator.name, "database-manager.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
     }
@@ -65,8 +70,8 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar]) {
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
-final zuluBuildTags = ["corda/corda-zulu-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-zulu-${project.version.toString().toLowerCase()}:latest"]
-final correttoBuildTags = ["corda/corda-corretto-${project.version.toString().toLowerCase()}:${suffix}", "corda/corda-corretto-${project.version.toString().toLowerCase()}:latest"]
+final zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
+final correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
 
 task buildOfficialZuluDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
     inputDir = new File(project.buildDir, "docker-temp")

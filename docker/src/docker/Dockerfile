@@ -18,6 +18,7 @@ RUN addgroup corda && \
 
 WORKDIR /opt/corda
 
+ENV CORDA_BASE="/opt/corda"
 ENV CORDAPPS_FOLDER="/opt/corda/cordapps"
 ENV PERSISTENCE_FOLDER="/opt/corda/persistence"
 ENV CERTIFICATES_FOLDER="/opt/corda/certificates"
@@ -49,17 +50,25 @@ VOLUME ["/etc/corda"]
 
 ##CORDA JAR
 ADD --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
+##DB MIGRATION JAR
+ADD --chown=corda:corda database-manager.jar /opt/corda/bin/database-manager.jar
 ##CONFIG MANIPULATOR JAR
 ADD --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
 ##CONFIG GENERATOR SHELL SCRIPT
 ADD --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
 ##CORDA RUN SCRIPT
 ADD --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
+##DB MIGRATOR RUN SCRIPT
+ADD --chown=corda:corda db-migrate-create-jars.sh /opt/corda/bin/db-migrate-create-jars
+##DB MIGRATOR RUN SCRIPT
+ADD --chown=corda:corda db-migrate-execute-migration.sh /opt/corda/bin/db-migrate-execute-migration
 ##BASE CONFIG FOR GENERATOR
 ADD --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 ##SET EXECUTABLE PERMISSIONS
 RUN chmod +x /opt/corda/bin/config-generator
 RUN chmod +x /opt/corda/bin/run-corda
+RUN chmod +x /opt/corda/bin/db-migrate-create-jars
+RUN chmod +x /opt/corda/bin/db-migrate-execute-migration
 
 ENV PATH=$PATH:/opt/corda/bin
 

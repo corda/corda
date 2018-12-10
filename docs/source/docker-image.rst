@@ -161,3 +161,44 @@ Once the container has finished performing the initial registration, the node ca
             -p 10201:10201 \
             corda/corda-4.0-snapshot:latest
 
+Performing Database Migrations
+==============================
+
+The image contains the database-migration tool. It is possible to run this in two modes within a container.
+
+Generating Migration Jars
+-------------------------
+
+In this mode, the database-migration tool will scan the provided CorDapps, and generate corresponding migration jars. These jars will be placed alongside
+the source CorDapps. In this example, there are two CorDapps provided ``corda-insurance.jar`` and ``corda-kyc.jar``
+
+.. code-block:: shell
+
+    docker run -ti \
+            -v /home/user/docker/docker/config:/etc/corda \
+            -v /home/user/docker/docker/certificates:/opt/corda/certificates \
+            -v /home/user/docker/docker/persistence:/opt/corda/persistence \
+            -v /home/user/docker/docker/logs:/opt/corda/logs \
+            -v /home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
+            entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-create-jars
+
+After the container has finished executing, there will be two new jars in ``/home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps``: ``migration-corda-insurance.jar`` and ``migration-corda-kyc.jar``.
+These will then be loaded as normal CorDapps by the node on next launch.
+
+Executing Migrations on the Database
+------------------------------------
+
+It is also possible to use the image to directly perform the migration of the database.
+
+.. code-block:: shell
+
+    docker run -ti \
+            -v $(pwd)/docker/config:/etc/corda \
+            -v $(pwd)/docker/certificates:/opt/corda/certificates \
+            -v $(pwd)/docker/persistence:/opt/corda/persistence \
+            -v $(pwd)/docker/logs:/opt/corda/logs \
+            -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
+            entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-execute-migration
+
+
+If the container is launched with the ``db-migrate-execute-migration`` command, the migration is directly applied to the database.

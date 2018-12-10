@@ -11,7 +11,15 @@ docker run -ti --net="host" \
         -e MY_EMAIL_ADDRESS="cordauser@r3.com"      \
         -v $(pwd)/docker/config:/etc/corda          \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \
-        corda/corda-4.0-snapshot:latest config-generator --generic
+        entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest config-generator --generic
+
+docker run -ti \
+        -v $(pwd)/docker/config:/etc/corda \
+        -v $(pwd)/docker/certificates:/opt/corda/certificates \
+        -v $(pwd)/docker/persistence:/opt/corda/persistence \
+        -v $(pwd)/docker/logs:/opt/corda/logs \
+        -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
+        entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-execute-migration
 
 ##set memory to 2gb max, and 2cores max
 docker run -ti \
@@ -24,4 +32,4 @@ docker run -ti \
         -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
         -p 10200:10200 \
         -p 10201:10201 \
-        corda/corda-4.0-snapshot:latest
+        entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest
