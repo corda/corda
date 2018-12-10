@@ -153,7 +153,7 @@ abstract class ANSIProgressRenderer {
 
                 val marker = when {
                     processedStep -> " ${Emoji.greenTick} "
-                    skippedStep -> " ${Emoji.notRun} "
+                    skippedStep -> "      "
                     activeStep -> "${Emoji.rightArrow} "
                     error -> "${Emoji.noEntry} "
                     else -> "    "   // Not reached yet.

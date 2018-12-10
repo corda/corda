@@ -29,8 +29,8 @@ class ANSIProgressRendererTest {
         private const val STEP_3_LABEL = "Running step 3"
 
         private const val STEP_1_SUCCESS_OUTPUT = """✓ $STEP_1_LABEL"""
-        private const val STEP_2_SKIPPED_OUTPUT = """- $INTENSITY_FAINT_ON_ASCII$STEP_2_LABEL$INTENSITY_OFF_ASCII"""
-        private const val STEP_3_ACTIVE_OUTPUT = """✓ $INTENSITY_BOLD_ON_ASCII$STEP_3_LABEL$INTENSITY_OFF_ASCII"""
+        private const val STEP_2_SKIPPED_OUTPUT = """  $INTENSITY_FAINT_ON_ASCII$STEP_2_LABEL$INTENSITY_OFF_ASCII"""
+        private const val STEP_3_ACTIVE_OUTPUT  = """✓ $INTENSITY_BOLD_ON_ASCII$STEP_3_LABEL$INTENSITY_OFF_ASCII"""
     }
 
     lateinit var printWriter: RenderPrintWriter
