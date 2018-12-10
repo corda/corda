@@ -69,13 +69,13 @@ cordapp {
     minimumPlatformVersion 1
     contract {
         name "net/corda/finance/contracts"
-        version 1
+        versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
     workflow {
         name "net/corda/finance/flows"
-        version 1
+        versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }

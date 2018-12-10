@@ -460,7 +460,7 @@ For a contract only CorDapp we specify the `contract` tag:
             minimumPlatformVersion 3
             contract {
                 name "my contract name"
-                version 1
+                versionId 1
                 vendor "my company"
                 licence "my licence"
             }
@@ -477,7 +477,7 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
             minimumPlatformVersion 3
             workflow {
                 name "my workflow name"
-                version 1
+                versionId 1
                 vendor "my company"
                 licence "my licence"
             }

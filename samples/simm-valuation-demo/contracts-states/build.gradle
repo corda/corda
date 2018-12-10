@@ -16,7 +16,7 @@ cordapp {
     }
     contract {
         name "net/corda/vega/contracts"
-        version 1
+        versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }

@@ -40,7 +40,7 @@ cordapp {
     minimumPlatformVersion 1
     workflow {
         name "net/corda/experimental/notary-bft-smart"
-        version 1
+        versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
