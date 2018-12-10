@@ -54,6 +54,13 @@ interface LocalSerializerFactory {
     fun getTypeInformation(type: Type): LocalTypeInformation
 
     /**
+     * Obtain [LocalTypeInformation] for the [Type] that has the given name in the [ClassLoader] associated with this factory.
+     *
+     * @return null if the type with the given name does not exist in the [ClassLoader] for this factory.
+     */
+    fun getTypeInformation(typeName: String): LocalTypeInformation?
+
+    /**
      * Use the [FingerPrinter] to create a type descriptor for the given [type].
      */
     fun createDescriptor(type: Type): Symbol = createDescriptor(getTypeInformation(type))
@@ -78,17 +85,29 @@ class DefaultLocalSerializerFactory(
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
-
     companion object {
         val logger = contextLogger()
     }
 
     private val serializersByType: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private val typesByName = DefaultCacheProvider.createCache<String, Optional<Type>>()
 
     override fun createDescriptor(typeInformation: LocalTypeInformation): Symbol =
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeInformation)}")
 
     override fun getTypeInformation(type: Type): LocalTypeInformation = typeModel.inspect(type)
+
+    override fun getTypeInformation(typeName: String): LocalTypeInformation? {
+        val type = typesByName.getOrPut(typeName) {
+            val localType = try {
+                    Class.forName(typeName, false, classloader)
+                } catch (_: ClassNotFoundException) {
+                    null
+                }
+            Optional.ofNullable(localType)
+        }.orElse(null)
+        return type?.run { getTypeInformation(type) }
+    }
 
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
             get(typeInformation.observedType, typeInformation)
