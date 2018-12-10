@@ -64,13 +64,15 @@ open class TransactionBuilder @JvmOverloads constructor(
     /**
      * Creates a copy of the builder.
      */
-    fun copy(): TransactionBuilder {
+    fun copy(): TransactionBuilder = copy(includeCommand = { true })
+
+    fun copy(includeCommand: (command: Command<*>) -> Boolean = { true }): TransactionBuilder {
         val t = TransactionBuilder(
                 notary = notary,
                 inputs = ArrayList(inputs),
                 attachments = ArrayList(attachments),
                 outputs = ArrayList(outputs),
-                commands = ArrayList(commands),
+                commands = commands.filter(includeCommand).toMutableList(),
                 window = window,
                 privacySalt = privacySalt,
                 references = references,

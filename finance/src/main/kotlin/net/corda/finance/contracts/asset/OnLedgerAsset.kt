@@ -120,9 +120,6 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
 
             // TODO: Check that re-running this on the same transaction multiple times does the right thing.
 
-            // The notary may be associated with a locked state only.
-            tx.notary = acceptableStates.firstOrNull()?.state?.notary
-
             // Calculate the total amount we're sending (they must be all of a compatible token).
             val totalSendAmount = payments.map { it.amount }.sumOrThrow()
             // Select a subset of the available states we were given that sums up to >= totalSendAmount.
@@ -178,13 +175,17 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
                 outputStates += deriveState(templateState, amount, payChangeTo)
             }
 
-            for (state in gathered) tx.addInputState(state)
-            for (state in outputStates) tx.addOutputState(state)
+            val move = generateMoveCommand()
+            // The notary may be associated with a locked state only.
+            // We use a new TransactionBuilder to avoid duplicate commands.
+            val newTx = tx.copy(includeCommand = { cmd -> cmd.value::class.java != move::class.java })
 
-            // What if we already have a move command with the right keys? Filter it out here or in platform code?
-            tx.addCommand(generateMoveCommand(), keysUsed)
+            for (state in gathered) newTx.addInputState(state)
+            for (state in outputStates) newTx.addOutputState(state)
 
-            return Pair(tx, keysUsed)
+            newTx.addCommand(move, tx.commands().filter { cmd -> cmd.value::class.java == move::class.java }.flatMap(Command<*>::signers) + keysUsed)
+
+            return Pair(newTx, keysUsed)
         }
 
         /**
@@ -298,7 +299,7 @@ abstract class OnLedgerAsset<T : Any, out C : CommandData, S : FungibleAsset<T>>
                                                           issueCommand: CommandData): Set<PublicKey> {
             check(tx.inputStates().isEmpty())
             check(tx.outputStates().map { it.data }.filterIsInstance(transactionState.javaClass).isEmpty())
-            require(transactionState.data.amount.quantity > 0){"Amount to issue must be greater than zero"}
+            require(transactionState.data.amount.quantity > 0) { "Amount to issue must be greater than zero" }
             val at = transactionState.data.amount.token.issuer
             val commandSigner = at.party.owningKey
             tx.addOutputState(transactionState)

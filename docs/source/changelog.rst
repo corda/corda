@@ -13,6 +13,8 @@ Unreleased
 
 * Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
 
+* Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
+
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
   also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities

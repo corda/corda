@@ -19,7 +19,6 @@ import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
 import net.corda.testing.dsl.TransactionDSL
@@ -103,6 +102,10 @@ class CashTests {
             vaultFiller.fillWithSomeTestCash(400.DOLLARS, megaCorpServices, 1, megaCorp.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(80.DOLLARS, miniCorpServices, 1, miniCorp.ref(1), ourIdentity)
             vaultFiller.fillWithSomeTestCash(80.SWISS_FRANCS, miniCorpServices, 1, miniCorp.ref(1), ourIdentity)
+
+            vaultFiller.fillWithSomeTestCash(100.POUNDS, megaCorpServices, 1, megaCorp.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(400.POUNDS, megaCorpServices, 1, megaCorp.ref(1), ourIdentity)
+            vaultFiller.fillWithSomeTestCash(80.POUNDS, miniCorpServices, 1, miniCorp.ref(1), ourIdentity)
         }
         database.transaction {
             vaultStatesUnconsumed = ourServices.vaultService.queryBy<Cash.State>().states
@@ -522,10 +525,10 @@ class CashTests {
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
-        val tx = TransactionBuilder(dummyNotary.party)
-        database.transaction {
+        var tx = TransactionBuilder(dummyNotary.party)
+        tx = database.transaction {
             Cash.generateSpend(services, tx, amount, ourIdentity, dest)
-        }
+        }.first
         return tx.toWireTransaction(services)
     }
 
@@ -621,8 +624,8 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithParties() {
         database.transaction {
-            val tx = TransactionBuilder(dummyNotary.party)
-            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
+            var tx = TransactionBuilder(dummyNotary.party)
+            tx = Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party)).first
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -826,13 +829,12 @@ class CashTests {
 
     @Test
     fun multiSpend() {
-        val tx = TransactionBuilder(dummyNotary.party)
-        database.transaction {
+        val (tx, _) = database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+            Cash.generateSpend(ourServices, TransactionBuilder(dummyNotary.party), payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
@@ -845,5 +847,45 @@ class CashTests {
         assertEquals(megaCorp.party, out(1).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(2).amount.token.issuer.party)
         assertEquals(megaCorp.party, out(3).amount.token.issuer.party)
+    }
+
+    @Test
+    fun generateSpendTwiceWithinATransaction() {
+        var (tx, _) = database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
+            )
+            Cash.generateSpend(ourServices, TransactionBuilder(dummyNotary.party), payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+        tx = database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.POUNDS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.POUNDS)
+            )
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }.first
+
+        val wtx = tx.toWireTransaction(ourServices)
+        fun out(i: Int) = wtx.getOutput(i) as Cash.State
+        assertEquals(8, wtx.outputs.size)
+
+        assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())
+        assertEquals(320.DOLLARS, out(1).amount.withoutIssuer())
+        assertEquals(150.DOLLARS, out(2).amount.withoutIssuer())
+        assertEquals(30.DOLLARS, out(3).amount.withoutIssuer())
+        assertEquals(miniCorp.party, out(0).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(1).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(2).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(3).amount.token.issuer.party)
+
+        assertEquals(80.POUNDS, out(4).amount.withoutIssuer())
+        assertEquals(320.POUNDS, out(5).amount.withoutIssuer())
+        assertEquals(150.POUNDS, out(6).amount.withoutIssuer())
+        assertEquals(30.POUNDS, out(7).amount.withoutIssuer())
+        assertEquals(miniCorp.party, out(4).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(5).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(6).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
     }
 }
