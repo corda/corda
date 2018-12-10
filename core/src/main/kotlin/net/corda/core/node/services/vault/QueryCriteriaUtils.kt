@@ -140,6 +140,7 @@ const val DEFAULT_PAGE_SIZE = 200
 /**
  * Note: use [PageSpecification] to correctly handle a number of bounded pages of a pre-configured page size.
  */
+// Here we subtract 1 to allow the Vault to figure out whether there are more results and pages by querying for `pageSize + 1`.
 const val MAX_PAGE_SIZE = Int.MAX_VALUE - 1
 
 /**
