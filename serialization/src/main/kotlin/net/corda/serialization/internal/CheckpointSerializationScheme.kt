@@ -16,15 +16,6 @@ data class CheckpointSerializationContextImpl @JvmOverloads constructor(
                                                               override val objectReferencesEnabled: Boolean,
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist) : CheckpointSerializationContext {
-    /**
-     * {@inheritDoc}
-     *
-     * Unsupported for checkpoints.
-     */
-    override fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): CheckpointSerializationContext {
-        throw UnsupportedOperationException()
-    }
-
     override fun withProperty(property: Any, value: Any): CheckpointSerializationContext {
         return copy(properties = properties + (property to value))
     }

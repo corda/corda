@@ -5,30 +5,30 @@ import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.NodeHandleInternal
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.After
+import org.hamcrest.CoreMatchers.`is`
+import org.junit.*
 import org.junit.Assert.assertEquals
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.net.URL
+import java.nio.file.Files
 import java.time.Instant
 
 @RunWith(Parameterized::class)
@@ -38,7 +38,7 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val cacheTimeout = 1.seconds
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
 
     private lateinit var networkMapServer: NetworkMapServer
     private lateinit var compatibilityZone: CompatibilityZoneParams
@@ -90,11 +90,13 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow() as NodeHandleInternal
-            val nextParams = networkMapServer.networkParameters.copy(epoch = 3, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            val nextParams = networkMapServer.networkParameters.copy(
+                    epoch = 3,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = networkMapServer.networkParameters.maxMessageSize + 1)
             val nextHash = nextParams.serialize().hash
             val snapshot = alice.rpc.networkParametersFeed().snapshot
             val updates = alice.rpc.networkParametersFeed().updates.bufferUntilSubscribed()
@@ -103,7 +105,10 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             networkMapServer.scheduleParametersUpdate(nextParams, "Next parameters", Instant.ofEpochMilli(random63BitValue()))
             // Wait for network map client to poll for the next update.
             Thread.sleep(cacheTimeout.toMillis() * 2)
-            val laterParams = networkMapServer.networkParameters.copy(epoch = 4, modifiedTime = Instant.ofEpochMilli(random63BitValue()))
+            val laterParams = networkMapServer.networkParameters.copy(
+                    epoch = 4,
+                    modifiedTime = Instant.ofEpochMilli(random63BitValue()),
+                    maxMessageSize = nextParams.maxMessageSize + 1)
             val laterHash = laterParams.serialize().hash
             networkMapServer.scheduleParametersUpdate(laterParams, "Another update", Instant.ofEpochMilli(random63BitValue()))
             Thread.sleep(cacheTimeout.toMillis() * 2)
@@ -137,7 +142,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
@@ -155,7 +159,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val (aliceNode, bobNode) = listOf(
@@ -173,7 +176,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
@@ -195,7 +197,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList()
         ) {
             val (aliceNode, bobNode) = listOf(
@@ -220,7 +221,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
-                initialiseSerialization = false,
                 notarySpecs = emptyList(),
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {
@@ -237,7 +237,9 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         // Make sure the nodes aren't getting the node infos from their additional directories
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
-            assertThat(nodeInfosDir.list()).isEmpty()
+            Assert.assertThat(nodeInfosDir.list().size, `is`(1))
+            Assert.assertThat(Files.readAllBytes(nodeInfosDir.list().single()).deserialize<SignedNodeInfo>().verified().legalIdentities.first(), `is`( this.nodeInfo.legalIdentities.first()))
+
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }

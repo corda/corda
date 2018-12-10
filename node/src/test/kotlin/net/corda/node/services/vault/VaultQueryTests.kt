@@ -7,9 +7,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
 import net.corda.core.node.services.*
+import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.node.services.vault.*
 import net.corda.core.node.services.vault.QueryCriteria.*
-import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.*
@@ -99,7 +99,6 @@ interface VaultQueryParties {
 }
 
 open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
-
     override val alice = TestIdentity(ALICE_NAME, 70)
     override val bankOfCorda = TestIdentity(BOC_NAME)
     override val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))
@@ -335,6 +334,88 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     }
 
     @Test
+    fun `query with sort criteria works even when multiple pages have the same value for the sort criteria field`() {
+        val numberOfStates = 59
+        val pageSize = 13
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+        }
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "linearNumber")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+            val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            when (sortDirection) {
+                Sort.Direction.ASC -> assertThat(allStates.sortedBy { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.state.data.linearNumber }.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+            }
+
+            (1..3).forEach {
+                val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+                assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+                assertThat(newAllStates).containsExactlyElementsOf(allStates)
+            }
+
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+
+    @Test
+    fun `query with sort criteria works with pagination`() {
+        val numberOfStates = 59
+        val pageSize = 13
+
+        database.transaction {
+            vaultFiller.fillWithSomeTestLinearStates(numberOfStates, linearNumber = 100L)
+        }
+        val criteria = VaultQueryCriteria(status = Vault.StateStatus.ALL)
+
+        val sortAttribute = SortAttribute.Custom(DummyLinearStateSchemaV1.PersistentDummyLinearState::class.java, "stateRef")
+
+        Sort.Direction.values().forEach { sortDirection ->
+
+            val sorting = Sort(listOf(Sort.SortColumn(sortAttribute, sortDirection)))
+            val allStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+            assertThat(allStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+            when (sortDirection) {
+                Sort.Direction.ASC -> assertThat(allStates.sortedBy { it.ref.txhash }.sortedBy { it.ref.index }).isEqualTo(allStates)
+                Sort.Direction.DESC -> assertThat(allStates.sortedByDescending { it.ref.txhash }.sortedByDescending { it.ref.index }).isEqualTo(allStates)
+            }
+
+            (1..3).forEach {
+                val newAllStates = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, criteria = criteria).states
+                assertThat(newAllStates.groupBy(StateAndRef<*>::ref)).hasSameSizeAs(allStates)
+                assertThat(newAllStates).containsExactlyElementsOf(allStates)
+            }
+
+            val queriedStates = mutableListOf<StateAndRef<*>>()
+            var pageNumber = 0
+            while (pageNumber * pageSize < numberOfStates) {
+                val paging = PageSpecification(pageNumber = pageNumber + 1, pageSize = pageSize)
+                val page = vaultService.queryBy<DummyLinearContract.State>(sorting = sorting, paging = paging, criteria = criteria)
+                queriedStates += page.states
+                pageNumber++
+            }
+
+            assertThat(queriedStates).containsExactlyElementsOf(allStates)
+        }
+    }
+
+    @Test
     fun `unconsumed states with count`() {
         database.transaction {
             repeat(4) {
@@ -481,7 +562,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint).states.first().state.constraint
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint).states.first().state.constraint
             // hash constraint
-            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
+            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = AutomaticPlaceholderConstraint) // defaults to the HashConstraint
             val constraintHash = linearStateHash.states.first().state.constraint as HashAttachmentConstraint
             // signature constraint (single key)
             val linearStateSignature = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
@@ -504,7 +585,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val constraintTypeCriteria2 = VaultQueryCriteria(constraintTypes = setOf(HASH))
             val constraintResults2 = vaultService.queryBy<LinearState>(constraintTypeCriteria2)
             assertThat(constraintResults2.states).hasSize(2)
-            assertThat(constraintResults2.states.map { it.state.constraint }).containsOnlyOnce(constraintHash)
+            assertThat(constraintResults2.states.map { it.state.constraint }.toSet()).isEqualTo(setOf(constraintHash))
 
             // search for states with [Vault.ConstraintInfo.Type] either HASH or CZ_WHITELISED
             // DOCSTART VaultQueryExample30
@@ -536,7 +617,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             val alwaysAcceptConstraint = vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint).states.first().state.constraint
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
             // hash constraint
-            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint(SecureHash.randomSHA256()))
+            val linearStateHash = vaultFiller.fillWithSomeTestLinearStates(1, constraint = AutomaticPlaceholderConstraint) // defaults to the hash constraint.
             val constraintHash = linearStateHash.states.first().state.constraint as HashAttachmentConstraint
             // signature constraint (single key)
             val linearStateSignature = vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
@@ -559,7 +640,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             // search for states for a specific HashAttachmentConstraint
             val constraintsCriteria2 = VaultQueryCriteria(constraints = setOf(Vault.ConstraintInfo(constraintHash)))
             val constraintResults2 = vaultService.queryBy<LinearState>(constraintsCriteria2)
-            assertThat(constraintResults2.states).hasSize(1)
+            assertThat(constraintResults2.states).hasSize(2)
             assertThat(constraintResults2.states.first().state.constraint).isEqualTo(constraintHash)
 
             // search for states with a specific SignatureAttachmentConstraint constraint
@@ -574,7 +655,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
                     Vault.ConstraintInfo(constraintSignatureCompositeKey), Vault.ConstraintInfo(constraintHash)))
             val constraintResults = vaultService.queryBy<LinearState>(constraintCriteria)
             // DOCEND VaultQueryExample31
-            assertThat(constraintResults.states).hasSize(3)
+            assertThat(constraintResults.states).hasSize(4)
             assertThat(constraintResults.states.map { it.state.constraint }).containsAll(listOf(constraintHash, constraintSignature, constraintSignatureCompositeKey))
 
             // exercise enriched query
@@ -1474,8 +1555,9 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
                 vaultFiller.fillWithSomeTestLinearStates(1, linearNumber = it.toLong(), linearString = it.toString())
             }
             val max = builder { DummyLinearStateSchemaV1.PersistentDummyLinearState::linearTimestamp.max(
-                    groupByColumns = listOf(DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber)
-                )
+                    groupByColumns = listOf(DummyLinearStateSchemaV1.PersistentDummyLinearState::linearNumber),
+                    orderBy = Sort.Direction.ASC
+            )
             }
             val maxCriteria = VaultCustomQueryCriteria(max)
             val pageSpec = PageSpecification(DEFAULT_PAGE_NUM, MAX_PAGE_SIZE)
@@ -2336,7 +2418,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
         database.transaction {
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = WhitelistedByZoneAttachmentConstraint)
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = SignatureAttachmentConstraint(alice.publicKey))
-            vaultFiller.fillWithSomeTestLinearStates(1, constraint = HashAttachmentConstraint( SecureHash.randomSHA256()))
+            vaultFiller.fillWithSomeTestLinearStates(1, constraint = AutomaticPlaceholderConstraint) // this defaults to the HashConstraint
             vaultFiller.fillWithSomeTestLinearStates(1, constraint = AlwaysAcceptAttachmentConstraint)
 
             // Base criteria

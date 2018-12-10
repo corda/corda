@@ -42,6 +42,9 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             // installed on restart, at which point the message will be able proceed as normal. If not then it will need
             // to be dropped manually.
             Outcome.OVERNIGHT_OBSERVATION
+        } else if (error is SessionRejectException.FinalityHandlerDisabled) {
+            // TODO We need a way to be able to give the green light to such a session-init message
+            Outcome.OVERNIGHT_OBSERVATION
         } else {
             Outcome.UNTREATABLE
         }
@@ -155,6 +158,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             DataFeed(snapshot, recordsPublisher.bufferUntilSubscribed())
         }
     }
+
+    operator fun contains(flowId: StateMachineRunId) = mutex.locked { flowId in flowPatients }
 
     class FlowMedicalHistory {
         internal val records: MutableList<MedicalRecord.Flow> = mutableListOf()
@@ -284,7 +289,8 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
 
         private fun warn(flowLogic: FinalityHandler, flowFiber: FlowFiber, currentState: StateMachineState) {
             log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                    "the flow by re-starting the node. State machine state: $currentState, initiating party was: ${flowLogic.sender().name}")
+                    "the flow by re-starting the node. State machine state: $currentState, initiating party was: " +
+                    "${flowLogic.sender.counterparty}")
         }
     }
 }

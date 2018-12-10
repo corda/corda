@@ -6,6 +6,7 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.Party
 import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializeAsTokenContext
 import java.io.FileNotFoundException
@@ -27,6 +28,11 @@ fun isUploaderTrusted(uploader: String?): Boolean = uploader in TRUSTED_UPLOADER
 @KeepForDJVM
 abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     companion object {
+        /**
+         * Returns a function that knows how to load an attachment.
+         *
+         * TODO - this code together with the rest of the Attachment handling (including [FetchedAttachment]) needs some refactoring as it is really hard to follow.
+         */
         @DeleteForDJVM
         fun SerializeAsTokenContext.attachmentDataLoader(id: SecureHash): () -> ByteArray {
             return {
@@ -42,8 +48,13 @@ abstract class AbstractAttachment(dataLoader: () -> ByteArray) : Attachment {
     override val size: Int get() = attachmentData.size
 
     override fun open(): InputStream = attachmentData.inputStream()
-    override val signers: List<PublicKey> by lazy {
+
+    override val signerKeys: List<PublicKey> by lazy {
         openAsJAR().use(JarSignatureCollector::collectSigners)
+    }
+
+    override val signers: List<Party> by lazy {
+        openAsJAR().use(JarSignatureCollector::collectSigningParties)
     }
 
     override fun equals(other: Any?) = other === this || other is Attachment && other.id == this.id

@@ -8,12 +8,14 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.*
+import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
 import java.io.NotSerializableException
+import java.lang.Exception
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
@@ -100,8 +102,8 @@ class DeserializationInput constructor(
             throw NotSerializableException(amqp.mitigation)
         } catch (nse: NotSerializableException) {
             throw nse
-        } catch (t: Throwable) {
-            throw NotSerializableException("Internal deserialization failure: ${t.javaClass.name}: ${t.message}").apply { initCause(t) }
+        } catch (e: Exception) {
+            throw NotSerializableException("Internal deserialization failure: ${e.javaClass.name}: ${e.message}").apply { initCause(e) }
         } finally {
             objectHistory.clear()
         }
@@ -167,8 +169,8 @@ class DeserializationInput constructor(
                 val objectRead = when (obj) {
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
-                        val serializer = serializerFactory.get(obj.descriptor, schemas)
-                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) {
+                        val serializer = serializerFactory.get(obj.descriptor.toString(), schemas)
+                        if (type != TypeIdentifier.UnknownType.getLocalType() && serializer.type != type && with(serializer.type) {
                                     !isSubClassOf(type) && !materiallyEquivalentTo(type)
                                 }
                         ) {

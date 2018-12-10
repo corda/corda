@@ -31,8 +31,7 @@ In ``IOUFlow.java``/``Flows.kt``, change the imports block to the following:
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
 
-And update ``IOUFlow.call`` by changing the code following the retrieval of the notary's identity from the network as
-follows:
+And update ``IOUFlow.call`` to the following:
 
 .. container:: codeset
 
@@ -66,13 +65,10 @@ transaction proposal before finalising it by adding our signature.
 Requesting the borrower's signature
 -----------------------------------
 
-We now need to communicate with the borrower to request their signature over the transaction. Whenever you want to
-communicate with another party in the context of a flow, you first need to establish a flow session with them. If the
-counterparty has a ``FlowLogic`` registered to respond to the ``FlowLogic`` initiating the session, a session will be
-established. All communication between the two ``FlowLogic`` instances will then place as part of this session.
+Previously we wrote a responder flow for the borrower in order to receive the finalised transaction from the lender.
+We use this same flow to first request their signature over the transaction.
 
-Once we have a session with the borrower, we gather the borrower's signature using ``CollectSignaturesFlow``, which
-takes:
+We gather the borrower's signature using ``CollectSignaturesFlow``, which takes:
 
 * A transaction signed by the flow initiator
 * A list of flow-sessions between the flow initiator and the required signers
@@ -81,11 +77,11 @@ And returns a transaction signed by all the required signers.
 
 We can then pass this fully-signed transaction into ``FinalityFlow``.
 
-Creating the borrower's flow
+Updating the borrower's flow
 ----------------------------
-On the lender's side, we used ``CollectSignaturesFlow`` to automate the collection of signatures. To allow the lender
-to respond, we need to write a response flow as well. In a new ``IOUFlowResponder.java`` file in Java, or within the
-``App.kt`` file in Kotlin, add the following class:
+On the lender's side, we used ``CollectSignaturesFlow`` to automate the collection of signatures. To allow the borrower
+to respond, we need to update its responder flow to first receive the partially signed transaction for signing. Update
+``IOUFlowResponder.call`` to be the following:
 
 .. container:: codeset
 
@@ -93,19 +89,13 @@ to respond, we need to write a response flow as well. In a new ``IOUFlowResponde
         :language: kotlin
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
+        :dedent: 8
 
     .. literalinclude:: example-code/src/main/java/net/corda/docs/java/tutorial/twoparty/IOUFlowResponder.java
         :language: java
         :start-after: DOCSTART 01
         :end-before: DOCEND 01
-
-As with the ``IOUFlow``, our ``IOUFlowResponder`` flow is a ``FlowLogic`` subclass where we've overridden
-``FlowLogic.call``.
-
-The flow is annotated with ``InitiatedBy(IOUFlow.class)``, which means that your node will invoke
-``IOUFlowResponder.call`` when it receives a message from a instance of ``Initiator`` running on another node. What
-will this message from the ``IOUFlow`` be? If we look at the definition of ``CollectSignaturesFlow``, we can see that
-we'll be sent a ``SignedTransaction``, and are expected to send back our signature over that transaction.
+        :dedent: 8
 
 We could write our own flow to handle this process. However, there is also a pre-defined flow called
 ``SignTransactionFlow`` that can handle the process automatically. The only catch is that ``SignTransactionFlow`` is an
@@ -129,6 +119,9 @@ signatures are contractually valid.
 Once we've defined the ``SignTransactionFlow`` subclass, we invoke it using ``FlowLogic.subFlow``, and the
 communication with the borrower's and the lender's flow is conducted automatically.
 
+``SignedTransactionFlow`` returns the newly signed transaction. We pass in the transaction's ID to ``ReceiveFinalityFlow``
+to ensure we are recording the correct notarised transaction from the lender.
+
 Conclusion
 ----------
 We have now updated our flow to verify the transaction and gather the lender's signature, in line with the constraints
@@ -136,7 +129,7 @@ defined in ``IOUContract``. We can now re-run our updated CorDapp, using the
 :doc:`same instructions as before <hello-world-running>`.
 
 Our CorDapp now imposes restrictions on the issuance of IOUs. Most importantly, IOU issuance now requires agreement
-from both the lender and the borrower before an IOU can be created on the ledger. This prevents either the lender or
+from both the lender and the borrower before an IOU can be created on the blockchain. This prevents either the lender or
 the borrower from unilaterally updating the ledger in a way that only benefits themselves.
 
 After completing this tutorial, your CorDapp should look like this:

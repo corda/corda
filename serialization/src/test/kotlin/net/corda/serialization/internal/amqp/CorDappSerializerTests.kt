@@ -13,16 +13,13 @@ import kotlin.test.assertEquals
 class CorDappSerializerTests {
     data class NeedsProxy(val a: String)
 
-    private fun proxyFactory(serializers: List<SerializationCustomSerializer<*, *>>): SerializerFactory {
-        val factory = SerializerFactoryBuilder.build(AllWhitelist,
-                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-                DefaultEvolutionSerializerProvider)
-
+    private fun proxyFactory(
+            serializers: List<SerializationCustomSerializer<*, *>>
+    ) = SerializerFactoryBuilder.build(AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader())).apply {
         serializers.forEach {
-            factory.registerExternal(CorDappCustomSerializer(it, factory))
+            registerExternal(CorDappCustomSerializer(it, this))
         }
-
-        return factory
     }
 
     class NeedsProxyProxySerializer : SerializationCustomSerializer<NeedsProxy, NeedsProxyProxySerializer.Proxy> {

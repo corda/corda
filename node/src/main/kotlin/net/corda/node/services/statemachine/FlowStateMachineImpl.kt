@@ -32,6 +32,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
@@ -71,7 +72,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val stateMachine: StateMachine,
             val serviceHub: ServiceHubInternal,
             val checkpointSerializationContext: CheckpointSerializationContext,
-            val unfinishedFibers: ReusableLatch
+            val unfinishedFibers: ReusableLatch,
+            val waitTimeUpdateHook: (id: StateMachineRunId, timeout: Long) -> Unit
     )
 
     internal var transientValues: TransientReference<TransientValues>? = null
@@ -193,7 +195,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 "Transaction context is missing. This might happen if a suspendable method is not annotated with @Suspendable annotation."
             }
         } else {
-            require(contextTransactionOrNull == null)
+            require(contextTransactionOrNull == null){"Transaction is marked as not present, but is not null"}
         }
     }
 
@@ -219,9 +221,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             val result = logic.call()
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)
-        } catch (throwable: Throwable) {
-            logger.info("Flow threw exception... sending it to flow hospital", throwable)
-            Try.Failure<R>(throwable)
+        } catch (t: Throwable) {
+            if(t.isUnrecoverable()) {
+                logger.error("Caught unrecoverable error from flow. Forcibly terminating the JVM, this might leave resources open, and most likely will.", t)
+                Fiber.sleep(Duration.ofSeconds(10).toMillis()) // To allow async logger to flush.
+                Runtime.getRuntime().halt(1)
+            }
+            logger.info("Flow raised an error... sending it to flow hospital", t)
+            Try.Failure<R>(t)
         }
         val softLocksId = if (hasSoftLockedStates) logic.runId.uuid else null
         val finalEvent = when (resultOrError) {
@@ -281,6 +288,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
             )
         }
     }
+
+    private fun Throwable.isUnrecoverable(): Boolean = this is VirtualMachineError && this !is StackOverflowError
 
     /**
      * If the sub-flow is [IdempotentFlow] we need to perform a checkpoint to make sure any potentially side-effect
@@ -373,8 +382,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         maySkipCheckpoint = skipPersistingCheckpoint,
                         fiber = this.checkpointSerialize(context = serializationContext.value)
                 )
-            } catch (throwable: Throwable) {
-                Event.Error(throwable)
+            } catch (exception: Exception) {
+                Event.Error(exception)
             }
 
             // We must commit the database transaction before returning from this closure otherwise Quasar may schedule
@@ -384,7 +393,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                     isDbTransactionOpenOnEntry = true,
                     isDbTransactionOpenOnExit = false
             )
-            require(continuation == FlowContinuation.ProcessEvents)
+            require(continuation == FlowContinuation.ProcessEvents){"Expected a continuation of type ${FlowContinuation.ProcessEvents}, found $continuation "}
             unpark(SERIALIZER_BLOCKER)
         }
         return uncheckedCast(processEventsUntilFlowIsResumed(
@@ -405,6 +414,14 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     override fun snapshot(): StateMachineState {
         return transientState!!.value
+    }
+
+    /**
+     * Hook to allow a timed flow to update its own timeout (i.e. how long it can be suspended before it gets
+     * retried.
+     */
+    override fun updateTimedFlowTimeout(timeoutSeconds: Long) {
+        getTransientField(TransientValues::waitTimeUpdateHook).invoke(id, timeoutSeconds)
     }
 
     override val stateMachine get() = getTransientField(TransientValues::stateMachine)

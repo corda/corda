@@ -5,9 +5,12 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByService
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
+import net.corda.core.contracts.ContractState
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
@@ -59,7 +62,6 @@ class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsTo
         assertTrue(count.get() > 1)
         subscriber.unsubscribe()
     }
-
 }
 
 @CordaService
@@ -73,6 +75,14 @@ class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsT
 
 @CordaService
 class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
+
+@CordaService
+class VaultQueryService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
+    init {
+        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+        serviceHub.vaultService.trackBy(ContractState::class.java, criteria)
+    }
+}
 
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
@@ -120,4 +130,13 @@ class CordaServiceTest {
         service.startServiceFlowAndTrack()
     }
 
+    /**
+     * Reproduce CORDA-2296
+     * Querying the vault from a services constructor failed because the criteriaBuilder
+     * had not been initialized.
+     */
+    @Test
+    fun `Can query vault service in constructor`() {
+        nodeA.services.cordaService(VaultQueryService::class.java)
+    }
 }

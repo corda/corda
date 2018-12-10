@@ -32,7 +32,7 @@ class HibernateConfiguration(
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
         private val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
-        val cordappClassLoader: ClassLoader? = null
+        val customClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -86,7 +86,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
+        val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -112,13 +112,13 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, customClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
-        if (cordappClassLoader != null) {
+        if (customClassLoader != null) {
             config.standardServiceRegistryBuilder.addService(
                     ClassLoaderService::class.java,
-                    ClassLoaderServiceImpl(cordappClassLoader))
+                    ClassLoaderServiceImpl(customClassLoader))
         }
 
         val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())

@@ -160,12 +160,17 @@ class CashTests {
         }
     }
 
+    @BelongsToContract(Cash::class)
+    object DummyState: ContractState {
+        override val participants: List<AbstractParty> = emptyList()
+    }
+
     @Test
     fun `issue by move`() {
         // Check we can't "move" money into existence.
         transaction {
             attachment(Cash.PROGRAM_ID)
-            input(Cash.PROGRAM_ID, DummyState())
+            input(Cash.PROGRAM_ID, DummyState)
             output(Cash.PROGRAM_ID, outState)
             command(miniCorp.publicKey, Cash.Commands.Move())
             this `fails with` "there is at least one cash input for this group"
@@ -501,7 +506,7 @@ class CashTests {
 
     private fun makeCash(amount: Amount<Currency>, issuer: AbstractParty, depositRef: Byte = 1) =
             StateAndRef(
-                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party),
+                    TransactionState(Cash.State(amount `issued by` issuer.ref(depositRef), ourIdentity), Cash.PROGRAM_ID, dummyNotary.party, constraint = AlwaysAcceptAttachmentConstraint),
                     StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 

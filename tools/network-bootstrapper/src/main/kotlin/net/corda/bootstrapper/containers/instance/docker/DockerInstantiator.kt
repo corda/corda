@@ -30,13 +30,13 @@ class DockerInstantiator(private val volume: LocalVolume,
             try {
                 localClient.killContainerCmd(container.id).exec()
                 LOG.info("Found running container: $instanceName killed")
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 //container not running
             }
             try {
                 localClient.removeContainerCmd(container.id).exec()
                 LOG.info("Found existing container: $instanceName removed")
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 //this *only* occurs of the container had been previously scheduled for removal
                 //but did not complete before this attempt was begun.
             }

@@ -45,7 +45,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
+class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val rpcUser = User("user1", "test", permissions = setOf(all()))
     }
@@ -60,12 +60,13 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
     }
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5
         ))
-        identity = node.info.identityFromX500Name(ALICE_NAME)
+        identity = notaryNodes.first().info.identityFromX500Name(DUMMY_NOTARY_NAME)
     }
 
     @After
@@ -116,7 +117,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance")) {
                     nodeIsShut.onCompleted()
                 } catch (e: ActiveMQSecurityException) {
                     // nothing here - this happens if trying to connect before the node is started
-                } catch (e: Throwable) {
+                } catch (e: Exception) {
                     nodeIsShut.onError(e)
                 }
             }, 1, 1, TimeUnit.SECONDS)

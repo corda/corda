@@ -5,16 +5,18 @@ import net.corda.core.crypto.secureRandomBytes
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
-import net.corda.core.node.JavaPackageName
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.serialization.serialize
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DEV_ROOT_CA
-import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.NODE_INFO_DIRECTORY
+import net.corda.core.utilities.days
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.config.toConfig
+import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_MESSAGE_SIZE
+import net.corda.nodeapi.internal.network.NetworkBootstrapper.Companion.DEFAULT_MAX_TRANSACTION_SIZE
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier.Companion.NODE_INFO_FILE_NAME_PREFIX
 import net.corda.testing.core.*
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -27,6 +29,7 @@ import org.junit.rules.ExpectedException
 import org.junit.rules.TemporaryFolder
 import java.nio.file.Path
 import java.security.PublicKey
+import java.time.Duration
 import kotlin.streams.toList
 
 class NetworkBootstrapperTest {
@@ -181,7 +184,7 @@ class NetworkBootstrapperTest {
     fun `no copy CorDapps`() {
         createNodeConfFile("alice", aliceConfig)
         val cordappBytes = createFakeCordappJar("sample-app", listOf("contract.class"))
-        bootstrap(copyCordapps = false)
+        bootstrap(copyCordapps = CopyCordapps.No)
         val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
         assertThat(rootDir / "alice" / "cordapps" / "sample-app.jar").doesNotExist()
         assertThat(networkParameters.whitelistedContractImplementations).isEqualTo(mapOf(
@@ -211,11 +214,29 @@ class NetworkBootstrapperTest {
         assertThat(networkParameters.epoch).isEqualTo(2)
     }
 
+    @Test
+    fun `network parameters overrides`() {
+        createNodeConfFile("alice", aliceConfig)
+        val minimumPlatformVersion = 2
+        val maxMessageSize = 10000
+        val maxTransactionSize = 20000
+        val eventHorizon = 7.days
+        bootstrap(minimumPlatformVerison = minimumPlatformVersion,
+                    maxMessageSize = maxMessageSize,
+                    maxTransactionSize = maxTransactionSize,
+                    eventHorizon = eventHorizon)
+        val networkParameters = assertBootstrappedNetwork(fakeEmbeddedCordaJar, "alice" to aliceConfig)
+        assertThat(networkParameters.minimumPlatformVersion).isEqualTo(minimumPlatformVersion)
+        assertThat(networkParameters.maxMessageSize).isEqualTo(maxMessageSize)
+        assertThat(networkParameters.maxTransactionSize).isEqualTo(maxTransactionSize)
+        assertThat(networkParameters.eventHorizon).isEqualTo(eventHorizon)
+    }
+
     private val ALICE = TestIdentity(ALICE_NAME, 70)
     private val BOB = TestIdentity(BOB_NAME, 80)
 
-    private val alicePackageName = JavaPackageName("com.example.alice")
-    private val bobPackageName = JavaPackageName("com.example.bob")
+    private val alicePackageName = "com.example.alice"
+    private val bobPackageName = "com.example.bob"
 
     @Test
     fun `register new package namespace in existing network`() {
@@ -231,21 +252,21 @@ class NetworkBootstrapperTest {
         assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
         // register additional package name
         createNodeConfFile("bob", bobConfig)
-        bootstrap(packageOwnership = mapOf(Pair(bobPackageName, BOB.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         assertContainsPackageOwner("bob", mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
     }
 
     @Test
     fun `attempt to register overlapping namespaces in existing network`() {
         createNodeConfFile("alice", aliceConfig)
-        val greedyNamespace = JavaPackageName("com.example")
+        val greedyNamespace = "com.example"
         bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         assertContainsPackageOwner("alice", mapOf(Pair(greedyNamespace, ALICE.publicKey)))
         // register overlapping package name
         createNodeConfFile("bob", bobConfig)
         expectedEx.expect(IllegalArgumentException::class.java)
-        expectedEx.expectMessage("multiple packages added to the packageOwnership overlap.")
-        bootstrap(packageOwnership = mapOf(Pair(bobPackageName, BOB.publicKey)))
+        expectedEx.expectMessage("Multiple packages added to the packageOwnership overlap.")
+        bootstrap(packageOwnership = mapOf(Pair(greedyNamespace, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
     }
 
     @Test
@@ -254,7 +275,7 @@ class NetworkBootstrapperTest {
         bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
         assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
         // unregister package name
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, null)))
+        bootstrap(packageOwnership = emptyMap())
         assertContainsPackageOwner("alice", emptyMap())
     }
 
@@ -263,8 +284,8 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         // unregister package name
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, null)))
-        assertContainsPackageOwner("alice", mapOf(Pair(bobPackageName, BOB.publicKey)))
+        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey)))
+        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
     }
 
     @Test
@@ -272,17 +293,8 @@ class NetworkBootstrapperTest {
         createNodeConfFile("alice", aliceConfig)
         bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(bobPackageName, BOB.publicKey)))
         // unregister all package names
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, null), Pair(bobPackageName, null)))
+        bootstrap(packageOwnership = emptyMap())
         assertContainsPackageOwner("alice", emptyMap())
-    }
-
-    @Test
-    fun `register and unregister sample package namespace in network`() {
-        createNodeConfFile("alice", aliceConfig)
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, ALICE.publicKey), Pair(alicePackageName, null)))
-        assertContainsPackageOwner("alice", emptyMap())
-        bootstrap(packageOwnership = mapOf(Pair(alicePackageName, null), Pair(alicePackageName, ALICE.publicKey)))
-        assertContainsPackageOwner("alice", mapOf(Pair(alicePackageName, ALICE.publicKey)))
     }
 
     private val rootDir get() = tempFolder.root.toPath()
@@ -293,9 +305,20 @@ class NetworkBootstrapperTest {
         return bytes
     }
 
-    private fun bootstrap(copyCordapps: Boolean = true, packageOwnership : Map<JavaPackageName, PublicKey?> = emptyMap()) {
+    private fun bootstrap(copyCordapps: CopyCordapps = CopyCordapps.FirstRunOnly,
+                          packageOwnership: Map<String, PublicKey>? = emptyMap(),
+                          minimumPlatformVerison: Int? = PLATFORM_VERSION,
+                          maxMessageSize: Int? = DEFAULT_MAX_MESSAGE_SIZE,
+                          maxTransactionSize: Int? = DEFAULT_MAX_TRANSACTION_SIZE,
+                          eventHorizon: Duration? = 30.days) {
         providedCordaJar = (rootDir / "corda.jar").let { if (it.exists()) it.readAll() else null }
-        bootstrapper.bootstrap(rootDir, copyCordapps, PLATFORM_VERSION, packageOwnership)
+        bootstrapper.bootstrap(rootDir, copyCordapps, NetworkParametersOverrides(
+                minimumPlatformVersion = minimumPlatformVerison,
+                maxMessageSize = maxMessageSize,
+                maxTransactionSize = maxTransactionSize,
+                eventHorizon = eventHorizon,
+                packageOwnership = packageOwnership?.map { PackageOwner(it.key, it.value!!) }
+        ))
     }
 
     private fun createNodeConfFile(nodeDirName: String, config: FakeNodeConfig) {
@@ -321,19 +344,23 @@ class NetworkBootstrapperTest {
         return cordappBytes
     }
 
-    private val Path.networkParameters: NetworkParameters get() {
-        return (this / NETWORK_PARAMS_FILE_NAME).readObject<SignedNetworkParameters>().verifiedNetworkMapCert(DEV_ROOT_CA.certificate)
-    }
+    private val Path.networkParameters: NetworkParameters
+        get() {
+            return (this / NETWORK_PARAMS_FILE_NAME).readObject<SignedNetworkParameters>()
+                    .verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
+        }
 
-    private val Path.nodeInfoFile: Path get() {
-        return list { it.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.toList() }.single()
-    }
+    private val Path.nodeInfoFile: Path
+        get() {
+            return list { it.filter { it.fileName.toString().startsWith(NODE_INFO_FILE_NAME_PREFIX) }.toList() }.single()
+        }
 
     private val Path.nodeInfo: NodeInfo get() = nodeInfoFile.readObject<SignedNodeInfo>().verified()
 
-    private val Path.fakeNodeConfig: FakeNodeConfig get() {
-        return ConfigFactory.parseFile((this / "node.conf").toFile()).parseAs(FakeNodeConfig::class)
-    }
+    private val Path.fakeNodeConfig: FakeNodeConfig
+        get() {
+            return ConfigFactory.parseFile((this / "node.conf").toFile()).parseAs(FakeNodeConfig::class)
+        }
 
     private fun assertBootstrappedNetwork(cordaJar: ByteArray, vararg nodes: Pair<String, FakeNodeConfig>): NetworkParameters {
         val networkParameters = (rootDir / nodes[0].first).networkParameters
@@ -363,7 +390,7 @@ class NetworkBootstrapperTest {
         }
     }
 
-    private fun assertContainsPackageOwner(nodeDirName: String, packageOwners: Map<JavaPackageName, PublicKey>) {
+    private fun assertContainsPackageOwner(nodeDirName: String, packageOwners: Map<String, PublicKey>) {
         val networkParams = (rootDir / nodeDirName).networkParameters
         assertThat(networkParams.packageOwnership).isEqualTo(packageOwners)
     }

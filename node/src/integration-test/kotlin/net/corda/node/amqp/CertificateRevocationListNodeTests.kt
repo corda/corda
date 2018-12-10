@@ -24,7 +24,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.MAX_MESSAGE_SIZE
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
@@ -72,7 +72,7 @@ class CertificateRevocationListNodeTests {
     private val ROOT_CA = DEV_ROOT_CA
     private lateinit var INTERMEDIATE_CA: CertificateAndKeyPair
 
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
     private val serverPort = portAllocation.nextPort()
 
     private lateinit var server: CrlServer

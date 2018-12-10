@@ -29,6 +29,7 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
 import java.time.Instant
@@ -67,28 +68,28 @@ class ExplorerSimulation(private val options: OptionSet) {
     }
 
     private fun startDemoNodes() {
-        val portAllocation = PortAllocation.Incremental(20000)
+        val portAllocation = incrementalPortAllocation(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
                 cordappsForAllNodes = listOf(FINANCE_CORDAPP),
                 waitForAllNodesToFinish = true,
-                jmxPolicy = JmxPolicy(true)
+                jmxPolicy = JmxPolicy.defaultEnabled()
         )) {
             // TODO : Supported flow should be exposed somehow from the node instead of set of ServiceInfo.
             val alice = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user))
             val bob = startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
             val ukBankName = CordaX500Name(organisation = "UK Bank Plc", locality = "London", country = "GB")
             val usaBankName = CordaX500Name(organisation = "USA Bank Corp", locality = "New York", country = "US")
-            val issuerGBP = startNode(
+            val issuerGBP = startNode(NodeParameters(
                     providedName = ukBankName,
                     rpcUsers = listOf(manager),
                     additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
-            )
-            val issuerUSD = startNode(
+            ))
+            val issuerUSD = startNode(NodeParameters(
                     providedName = usaBankName,
                     rpcUsers = listOf(manager),
                     additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
-            )
+            ))
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()

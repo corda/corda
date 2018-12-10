@@ -15,7 +15,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.Collections.singleton
 
-// When scanning of the CorDapp Jar is performed without "corda-core.jar" being the in the classpath, there is no way to appreciate
+// When scanning of the CorDapp Jar is performed without "corda-core.jar" being in the classpath, there is no way to appreciate
 // relationships between those interfaces, therefore they have to be listed explicitly.
 val coreContractClasses = setOf(Contract::class, UpgradedContractWithLegacyConstraint::class, UpgradedContract::class)
 
@@ -51,7 +51,9 @@ private val logger = LoggerFactory.getLogger("ClassloaderUtils")
 fun <T> withContractsInJar(jarInputStream: InputStream, withContracts: (List<ContractClassName>, InputStream) -> T): T {
     val tempFile = Files.createTempFile("attachment", ".jar")
     try {
-        jarInputStream.copyTo(tempFile, StandardCopyOption.REPLACE_EXISTING)
+        jarInputStream.use {
+            it.copyTo(tempFile, StandardCopyOption.REPLACE_EXISTING)
+        }
         val cordappJar = tempFile.toAbsolutePath()
         val contracts = logElapsedTime("Contracts loading for '$cordappJar'", logger) {
             ContractsJarFile(tempFile.toAbsolutePath()).scan()

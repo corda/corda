@@ -13,6 +13,7 @@ import net.corda.testing.core.*
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -29,7 +30,7 @@ class CashPaymentFlowTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(), cordappPackages = listOf("net.corda.finance"))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         aliceNode = mockNet.createPartyNode(ALICE_NAME)
@@ -61,10 +62,10 @@ class CashPaymentFlowTests {
             // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
             // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
             vaultUpdatesBoc.expectEvents {
-                expect { update ->
-                    require(update.consumed.size == 1) { "Expected 1 consumed states, actual: $update" }
-                    require(update.produced.size == 1) { "Expected 1 produced states, actual: $update" }
-                    val changeState = update.produced.single().state.data
+                expect { (consumed, produced) ->
+                    assertThat(consumed).hasSize(1)
+                    assertThat(produced).hasSize(1)
+                    val changeState = produced.single().state.data
                     assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
                 }
             }
@@ -72,8 +73,8 @@ class CashPaymentFlowTests {
             // Check notary node vault updates
             vaultUpdatesBankClient.expectEvents {
                 expect { (consumed, produced) ->
-                    require(consumed.isEmpty()) { consumed.size }
-                    require(produced.size == 1) { produced.size }
+                    assertThat(consumed).isEmpty()
+                    assertThat(produced).hasSize(1)
                     val paymentState = produced.single().state.data
                     assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
                 }

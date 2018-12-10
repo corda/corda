@@ -2,7 +2,6 @@ package net.corda.blobinspector
 
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.jcabi.manifests.Manifests
 import net.corda.client.jackson.JacksonSupport
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.ExitCodes
@@ -16,18 +15,18 @@ import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.utilities.base64ToByteArray
 import net.corda.core.utilities.hexToByteArray
 import net.corda.core.utilities.sequence
-import net.corda.serialization.internal.*
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.amqpMagic
-import org.slf4j.event.Level
 import picocli.CommandLine.*
 import java.io.PrintStream
 import java.net.MalformedURLException
 import java.net.URL
 import java.nio.file.Paths
-import java.util.*
-import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
     BlobInspector().start(args)
@@ -57,6 +56,8 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
         val bytes = parseToBinaryRelaxed(inputFormatType, inputBytes)
                 ?: throw IllegalArgumentException("Error: this input does not appear to be encoded in Corda's AMQP extended format, sorry.")
 
+        initialiseSerialization()
+
         if (schema) {
             val envelope = DeserializationInput.getEnvelope(bytes.sequence(), SerializationDefaults.STORAGE_CONTEXT.encodingWhitelist)
             out.println(envelope.schema)
@@ -72,14 +73,13 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
 
         val mapper = JacksonSupport.createNonRpcMapper(factory, fullParties)
 
-        initialiseSerialization()
-        try {
+        return try {
             val deserialized = bytes.deserialize<Any>(context = SerializationDefaults.STORAGE_CONTEXT)
             out.println(deserialized.javaClass.name)
             mapper.writeValue(out, deserialized)
-            return ExitCodes.SUCCESS
-        } catch(e: Exception) {
-            return ExitCodes.FAILURE
+            ExitCodes.SUCCESS
+        } catch (e: Exception) {
+            ExitCodes.FAILURE
         } finally {
             _contextSerializationEnv.set(null)
         }
@@ -110,7 +110,7 @@ class BlobInspector : CordaCliWrapper("blob-inspector", "Convert AMQP serialised
             } else {
                 null   // Not an AMQP blob.
             }
-        } catch (t: Throwable) {
+        } catch (e: Exception) {
             return null   // Failed to parse in some other way.
         }
     }
@@ -148,15 +148,5 @@ private class SourceConverter : ITypeConverter<URL> {
     }
 }
 
-private class CordaVersionProvider : IVersionProvider {
-    override fun getVersion(): Array<String> {
-        return arrayOf(
-                "Version: ${Manifests.read("Corda-Release-Version")}",
-                "Revision: ${Manifests.read("Corda-Revision")}"
-        )
-    }
-}
-
 private enum class OutputFormatType { YAML, JSON }
 private enum class InputFormatType { BINARY, HEX, BASE64 }
-

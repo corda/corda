@@ -6,13 +6,16 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.ReferenceStateRef
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -47,6 +50,7 @@ class PartialMerkleTreeTest {
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
+
     private val nodes = "abcdef"
     private lateinit var hashed: List<SecureHash.SHA256>
     private lateinit var expectedRoot: SecureHash
@@ -54,14 +58,21 @@ class PartialMerkleTreeTest {
     private lateinit var testLedger: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
+
     @Before
     fun init() {
         hashed = nodes.map { it.serialize().sha256() }
         expectedRoot = MerkleTree.getMerkleTree(hashed.toMutableList() + listOf(zeroHash, zeroHash)).hash
         merkleTree = MerkleTree.getMerkleTree(hashed)
-        testLedger = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
-            doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
-        }).ledger(DUMMY_NOTARY) {
+
+        testLedger = MockServices(
+                cordappPackages = emptyList(),
+                initialIdentity = TestIdentity(MEGA_CORP.name),
+                identityService = rigorousMock<IdentityServiceInternal>().also {
+                    doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
+                },
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+        ).ledger(DUMMY_NOTARY) {
             unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",
@@ -76,6 +87,7 @@ class PartialMerkleTreeTest {
             transaction {
                 attachments(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
+                reference("dummy cash 1")
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash".output<Cash.State>().copy(owner = MINI_CORP))
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                 timeWindow(TEST_TX_TIME)
@@ -148,11 +160,13 @@ class PartialMerkleTreeTest {
         // the signers component is also sent (required for visibility purposes).
         assertEquals(5, ftx.filteredComponentGroups.size)
         assertEquals(1, ftx.inputs.size)
+        assertEquals(0, ftx.references.size)
         assertEquals(0, ftx.attachments.size)
         assertEquals(1, ftx.outputs.size)
         assertEquals(1, ftx.commands.size)
         assertNull(ftx.notary)
         assertNotNull(ftx.timeWindow)
+        assertNull(ftx.networkParametersHash)
         ftx.verify()
     }
 
@@ -173,9 +187,11 @@ class PartialMerkleTreeTest {
         assertTrue(ftxNothing.attachments.isEmpty())
         assertTrue(ftxNothing.commands.isEmpty())
         assertTrue(ftxNothing.inputs.isEmpty())
+        assertTrue(ftxNothing.references.isEmpty())
         assertTrue(ftxNothing.outputs.isEmpty())
         assertNull(ftxNothing.timeWindow)
         assertTrue(ftxNothing.availableComponentGroups.flatten().isEmpty())
+        assertNull(ftxNothing.networkParametersHash)
         ftxNothing.verify() // We allow empty ftx transactions (eg from a timestamp authority that blindly signs).
     }
 
@@ -320,5 +336,22 @@ class PartialMerkleTreeTest {
         for (i in 0..19) assertEquals(i, pmtAllIncluded.leafIndex(SecureHash.sha256(i.toString())))
         // The provided hash is not in the tree (using a leaf that didn't exist in the original Merkle tree).
         assertFailsWith<MerkleTreeException> { pmtAllIncluded.leafIndex(SecureHash.sha256("30")) }
+    }
+
+    @Test
+    fun `building Merkle for reference states only`() {
+        fun filtering(elem: Any): Boolean {
+            return when (elem) {
+                is ReferenceStateRef -> true
+                else -> false
+            }
+        }
+
+        val ftx = testTx.buildFilteredTransaction(Predicate(::filtering))
+
+        assertEquals(1, ftx.filteredComponentGroups.size)
+        assertEquals(0, ftx.inputs.size)
+        assertEquals(1, ftx.references.size)
+        ftx.verify()
     }
 }

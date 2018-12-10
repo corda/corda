@@ -1,6 +1,9 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.*
+import com.typesafe.config.Config
+import com.typesafe.config.ConfigFactory
+import com.typesafe.config.ConfigParseOptions
+import com.typesafe.config.ConfigValueFactory
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
@@ -9,7 +12,8 @@ import net.corda.nodeapi.internal.config.getBooleanCaseInsensitive
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.tools.shell.SSHDConfiguration
-import org.assertj.core.api.Assertions.*
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -180,27 +184,6 @@ class NodeConfigurationImplTest {
     }
 
     @Test
-    fun `validation has error on non-null cryptoServiceConf for null cryptoServiceName`() {
-        val configuration = testConfiguration.copy(cryptoServiceConf = "unsupported.conf")
-
-        val errors = configuration.validate()
-
-        assertThat(errors).hasOnlyOneElementSatisfying {
-            error -> error.contains("cryptoServiceName is null, but cryptoServiceConf is set to unsupported.conf")
-        }
-    }
-
-    @Test
-    fun `fail on wrong cryptoServiceName`() {
-        var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
-        rawConfig = rawConfig.withValue("cryptoServiceName", ConfigValueFactory.fromAnyRef("UNSUPPORTED"))
-
-        val config = rawConfig.parseAsNodeConfiguration()
-
-        assertThat(config.errors.asSequence().map(Configuration.Validation.Error::message).filter { it.contains("has no constant of the name 'UNSUPPORTED'") }.toList()).isNotEmpty
-    }
-
-    @Test
     fun `rpcAddress and rpcSettings_address are equivalent`() {
         var rawConfig = ConfigFactory.parseResources("working-config.conf", ConfigParseOptions.defaults().setAllowMissing(false))
         rawConfig = rawConfig.withoutPath("rpcSettings.address")
@@ -234,24 +217,24 @@ class NodeConfigurationImplTest {
     @Test
     fun `jmxReporterType is null and defaults to Jokolia`() {
         val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
-        assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
+        assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     @Test
     fun `jmxReporterType is not null and is set to New Relic`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("NEW_RELIC"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
-        assertTrue(JmxReporterType.NEW_RELIC.toString() == nodeConfig.jmxReporterType.toString())
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
+        assertEquals(JmxReporterType.NEW_RELIC.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     @Test
     fun `jmxReporterType is not null and set to Jokolia`() {
         var rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("devMode" to true)))
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
-        val nodeConfig = rawConfig.parseAsNodeConfiguration().orThrow()
-        assertTrue(JmxReporterType.JOLOKIA.toString() == nodeConfig.jmxReporterType.toString())
+        val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
+        assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {

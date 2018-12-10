@@ -220,8 +220,8 @@ object RPCApi {
         companion object {
             private fun Any.safeSerialize(context: SerializationContext, wrap: (Throwable) -> Any) = try {
                 serialize(context = context)
-            } catch (t: Throwable) {
-                wrap(t).serialize(context = context)
+            } catch (e: Exception) {
+                wrap(e).serialize(context = context)
             }
 
             fun fromClientMessage(context: SerializationContext, message: ClientMessage): ServerToClient {

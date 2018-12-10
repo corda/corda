@@ -1,26 +1,40 @@
 package net.corda.confidential
 
+import co.paralleluniverse.fibers.Suspendable
 import com.natpryce.hamkrest.MatchResult
 import com.natpryce.hamkrest.Matcher
+import com.natpryce.hamkrest.assertion.assert
 import com.natpryce.hamkrest.equalTo
-import net.corda.core.identity.*
+import net.corda.core.crypto.DigitalSignature
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
+import net.corda.core.identity.Party
+import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.internal.packageName
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.allOf
 import net.corda.testing.internal.matchers.flow.willReturn
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.startFlow
-import org.junit.Test
-import kotlin.test.*
-import com.natpryce.hamkrest.assertion.assert
-import net.corda.core.crypto.DigitalSignature
 import net.corda.testing.internal.matchers.hasOnlyEntries
+import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
+import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.startFlow
 import org.junit.AfterClass
+import org.junit.Test
 import java.security.PublicKey
+import kotlin.test.assertFailsWith
 
 class SwapIdentitiesFlowTests {
     companion object {
-        private val mockNet = InternalMockNetwork(networkSendManuallyPumped = false, threadPerNode = true)
+        private val mockNet = InternalMockNetwork(
+                networkSendManuallyPumped = false,
+                threadPerNode = true,
+                cordappsForAllNodes = cordappsForPackages(this::class.packageName)
+        )
 
         @AfterClass
         @JvmStatic
@@ -36,7 +50,7 @@ class SwapIdentitiesFlowTests {
     @Test
     fun `issue key`() {
         assert.that(
-            aliceNode.services.startFlow(SwapIdentitiesFlow(bob)),
+            aliceNode.services.startFlow(SwapIdentitiesInitiator(bob)),
             willReturn(
                 hasOnlyEntries(
                     alice to allOf(
@@ -102,21 +116,20 @@ class SwapIdentitiesFlowTests {
         services.keyManagementService.freshKeyAndCert(services.myInfo.singleIdentityAndCert(), false)
     }
 
-    private fun TestStartedNode.signSwapIdentitiesFlowData(party: PartyAndCertificate, owningKey: PublicKey) =
-            services.keyManagementService.sign(
-                    SwapIdentitiesFlow.buildDataToSign(party),
-                    owningKey)
+    private fun TestStartedNode.signSwapIdentitiesFlowData(party: PartyAndCertificate, owningKey: PublicKey): DigitalSignature.WithKey {
+        return services.keyManagementService.sign(SwapIdentitiesFlow.buildDataToSign(party), owningKey)
+    }
 
-    private fun TestStartedNode.validateSwapIdentitiesFlow(
-            party: Party,
-            counterparty: PartyAndCertificate,
-            signature: DigitalSignature.WithKey) =
-            SwapIdentitiesFlow.validateAndRegisterIdentity(
-                    services.identityService,
-                    party,
-                    counterparty,
-                    signature.withoutKey()
-            )
+    private fun TestStartedNode.validateSwapIdentitiesFlow(party: Party,
+                                                           counterparty: PartyAndCertificate,
+                                                           signature: DigitalSignature.WithKey): PartyAndCertificate {
+        return SwapIdentitiesFlow.validateAndRegisterIdentity(
+                services,
+                party,
+                counterparty,
+                signature.withoutKey()
+        )
+    }
     //endregion
 
     //region Matchers
@@ -141,21 +154,36 @@ class SwapIdentitiesFlowTests {
         override val description =
                 "has an owning key which is ${sayNotIf(negated)}held by ${node.info.singleIdentity().name}"
 
-        override fun invoke(actual: AnonymousParty) =
-                if (negated != actual.owningKey in node.services.keyManagementService.keys) {
-                    MatchResult.Match
-                } else {
-                    MatchResult.Mismatch("""
-                    had an owning key which was ${sayNotIf(!negated)}held by ${node.info.singleIdentity().name}
-                    """.trimIndent())
-                }
-
-        override fun not(): Matcher<AnonymousParty> {
-            return copy(negated=!negated)
+        override fun invoke(actual: AnonymousParty): MatchResult {
+            return if (negated != actual.owningKey in node.services.keyManagementService.keys) {
+                MatchResult.Match
+            } else {
+                MatchResult.Mismatch("""
+                            had an owning key which was ${sayNotIf(!negated)}held by ${node.info.singleIdentity().name}
+                            """.trimIndent())
+            }
         }
+
+        override fun not(): Matcher<AnonymousParty> = copy(negated=!negated)
     }
 
     private fun TestStartedNode.holdsOwningKey() = HoldsOwningKeyMatcher(this)
     //endregion
+}
 
+@InitiatingFlow
+private class SwapIdentitiesInitiator(private val otherSide: Party) : FlowLogic<Map<Party, AnonymousParty>>() {
+    @Suspendable
+    override fun call(): Map<Party, AnonymousParty> {
+        val (anonymousUs, anonymousThem) = subFlow(SwapIdentitiesFlow(initiateFlow(otherSide)))
+        return mapOf(ourIdentity to anonymousUs, otherSide to anonymousThem)
+    }
+}
+
+@InitiatedBy(SwapIdentitiesInitiator::class)
+private class SwapIdentitiesResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        subFlow(SwapIdentitiesFlow(otherSide))
+    }
 }

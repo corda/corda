@@ -72,8 +72,7 @@ open class NonNullableField(field: Class<out Any?>) : ClassField(field) {
     }
 
     override fun nullTest(mv: MethodVisitor, slot: Int) {
-        require(name != unsetName)
-
+        check(name != unsetName) {"Property this.name cannot be $unsetName"}
         if (!field.isPrimitive) {
             with(mv) {
                 visitVarInsn(ALOAD, 0) // load this
@@ -109,7 +108,7 @@ class NullableField(field: Class<out Any?>) : ClassField(field) {
     }
 
     override fun nullTest(mv: MethodVisitor, slot: Int) {
-        require(name != unsetName)
+        require(name != unsetName){"Property this.name cannot be $unsetName"}
     }
 }
 

@@ -224,7 +224,7 @@ private fun <T : Enum<T>> enumBridge(clazz: Class<T>, name: String): T {
  */
 fun Any.toConfig(): Config = ConfigValueFactory.fromMap(toConfigMap()).toConfig()
 
-fun Any.toConfigValue(): ConfigValue = if (this is ConfigValue) this else ConfigValueFactory.fromAnyRef(convertValue(this))
+fun Any?.toConfigValue(): ConfigValue = if (this is ConfigValue) this else if (this != null) ConfigValueFactory.fromAnyRef(convertValue(this)) else ConfigValueFactory.fromAnyRef(null)
 
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 // Reflect over the fields of the receiver and generate a value Map that can use to create Config object.

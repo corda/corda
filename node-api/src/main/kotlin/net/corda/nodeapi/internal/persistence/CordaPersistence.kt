@@ -61,7 +61,8 @@ class CordaPersistence(
         schemas: Set<MappedSchema>,
         val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
-        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet()
+        attributeConverters: Collection<AttributeConverter<*, *>> = emptySet(),
+        customClassLoader: ClassLoader? = null
 ) : Closeable {
     companion object {
         private val log = contextLogger()
@@ -70,7 +71,7 @@ class CordaPersistence(
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory)
+            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
         }
     }
 
@@ -160,8 +161,8 @@ class CordaPersistence(
         var recoverableFailureCount = 0
         fun <T> quietly(task: () -> T) = try {
             task()
-        } catch (t: Throwable) {
-            log.warn("Cleanup task failed:", t)
+        } catch (e: Exception) {
+            log.warn("Cleanup task failed:", e)
         }
         while (true) {
             val transaction = contextDatabase.currentOrNew(isolationLevel) // XXX: Does this code really support statement changing the contextDatabase?
@@ -169,7 +170,7 @@ class CordaPersistence(
                 val answer = transaction.statement()
                 transaction.commit()
                 return answer
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 quietly(transaction::rollback)
                 if (e is SQLException || (recoverAnyNestedSQLException && e.hasSQLExceptionCause())) {
                     if (++recoverableFailureCount > recoverableFailureTolerance) throw e

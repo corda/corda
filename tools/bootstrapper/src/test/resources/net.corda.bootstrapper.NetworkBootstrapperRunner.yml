@@ -22,7 +22,7 @@
     - "DEBUG"
     - "TRACE"
   - parameterName: "--no-copy"
-    parameterType: "boolean"
+    parameterType: "java.lang.Boolean"
     required: false
     multiParam: false
     acceptableValues: []

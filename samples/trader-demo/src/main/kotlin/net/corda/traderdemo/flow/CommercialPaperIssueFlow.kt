@@ -3,9 +3,7 @@ package net.corda.traderdemo.flow
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -22,6 +20,7 @@ import java.util.*
  * Flow for the Bank of Corda node to issue some commercial paper to the seller's node, to sell to the buyer.
  */
 @StartableByRPC
+@InitiatingFlow
 class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
                                private val issueRef: OpaqueBytes,
                                private val recipient: Party,
@@ -56,7 +55,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
             // Sign it as ourselves.
             val stx = serviceHub.signInitialTransaction(tx)
 
-            subFlow(FinalityFlow(stx))
+            subFlow(FinalityFlow(stx, emptyList()))
         }
 
         // Now make a dummy transaction that moves it to a new key, just to show that resolving dependencies works.
@@ -65,7 +64,17 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
             val builder = TransactionBuilder(notary)
             CommercialPaper().generateMove(builder, issuance.tx.outRef(0), recipient)
             val stx = serviceHub.signInitialTransaction(builder)
-            subFlow(FinalityFlow(stx))
+            val recipientSession = initiateFlow(recipient)
+            subFlow(FinalityFlow(stx, listOf(recipientSession)))
         }
+    }
+}
+
+@InitiatedBy(CommercialPaperIssueFlow::class)
+class CommercialPaperIssueResponderFlow(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        // Record the move transaction
+        subFlow(ReceiveFinalityFlow(otherSideSession))
     }
 }

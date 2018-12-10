@@ -10,10 +10,11 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.internal.cordappForClasses
 import org.hamcrest.CoreMatchers.`is`
-import org.junit.Assert
+import org.junit.Assert.assertThat
 import org.junit.Test
 
 class FlowOverrideTests {
@@ -31,7 +32,7 @@ class FlowOverrideTests {
     @InitiatedBy(Ping::class)
     open class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
         companion object {
-            val PONG = "PONG"
+            const val PONG = "PONG"
         }
 
         @Suspendable
@@ -52,7 +53,7 @@ class FlowOverrideTests {
     class Pongiest(private val pingSession: FlowSession) : Pong(pingSession) {
 
         companion object {
-            val GORGONZOLA = "Gorgonzola"
+            const val GORGONZOLA = "Gorgonzola"
         }
 
         @Suspendable
@@ -61,16 +62,21 @@ class FlowOverrideTests {
         }
     }
 
-    private val nodeAClasses = setOf(Ping::class.java,
-            Pong::class.java, Pongiest::class.java)
+    private val nodeAClasses = setOf(Ping::class.java, Pong::class.java, Pongiest::class.java)
     private val nodeBClasses = setOf(Ping::class.java, Pong::class.java)
 
     @Test
     fun `should use the most specific implementation of a responding flow`() {
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(providedName = ALICE_NAME, additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
-            Assert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(net.corda.node.flows.FlowOverrideTests.Pongiest.GORGONZOLA))
+            val nodeA = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray()))
+            )).getOrThrow()
+            val nodeB = startNode(NodeParameters(
+                    providedName = BOB_NAME,
+                    additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))
+            )).getOrThrow()
+            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pongiest.GORGONZOLA))
         }
     }
 
@@ -78,9 +84,16 @@ class FlowOverrideTests {
     fun `should use the overriden implementation of a responding flow`() {
         val flowOverrides = mapOf(Ping::class.java to Pong::class.java)
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = emptySet())) {
-            val nodeA = startNode(providedName = ALICE_NAME, additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray())), flowOverrides = flowOverrides).getOrThrow()
-            val nodeB = startNode(providedName = BOB_NAME, additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))).getOrThrow()
-            Assert.assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(net.corda.node.flows.FlowOverrideTests.Pong.PONG))
+            val nodeA = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = setOf(cordappForClasses(*nodeAClasses.toTypedArray())),
+                    flowOverrides = flowOverrides
+            )).getOrThrow()
+            val nodeB = startNode(NodeParameters(
+                    providedName = BOB_NAME,
+                    additionalCordapps = setOf(cordappForClasses(*nodeBClasses.toTypedArray()))
+            )).getOrThrow()
+            assertThat(nodeB.rpc.startFlow(::Ping, nodeA.nodeInfo.singleIdentity()).returnValue.getOrThrow(), `is`(Pong.PONG))
         }
     }
 

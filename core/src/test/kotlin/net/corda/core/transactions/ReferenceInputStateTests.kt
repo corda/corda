@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
@@ -23,7 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
-val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
+const val CONTRACT_ID = "net.corda.core.transactions.ReferenceStateTests\$ExampleContract"
 
 class ReferenceStateTests {
     private companion object {
@@ -49,8 +50,7 @@ class ReferenceStateTests {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-
+            networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
     )
 
     // This state has only been created to serve reference data so it cannot ever be used as an input or
@@ -58,7 +58,18 @@ class ReferenceStateTests {
     // check might not be present in other contracts, like Cash, for example. Cash might have a command
     // called "Share" that allows a party to prove to another that they own over a certain amount of cash.
     // As such, cash can be added to the references list with a "Share" command.
+    @BelongsToContract(ExampleContract::class)
     data class ExampleState(val creator: Party, val data: String) : ContractState {
+        override val participants: List<AbstractParty> get() = listOf(creator)
+    }
+
+    // This state has only been created to serve reference data so it cannot ever be used as an input or
+    // output when it is being referred to. However, we might want all states to be referable, so this
+    // check might not be present in other contracts, like Cash, for example. Cash might have a command
+    // called "Share" that allows a party to prove to another that they own over a certain amount of cash.
+    // As such, cash can be added to the references list with a "Share" command.
+    @BelongsToContract(Cash::class)
+    data class ExampleCashState(val creator: Party, val data: String) : ContractState {
         override val participants: List<AbstractParty> get() = listOf(creator)
     }
 
@@ -169,7 +180,7 @@ class ReferenceStateTests {
             transaction {
                 input("REF DATA")
                 command(ALICE_PUBKEY, ExampleContract.Update())
-                output(Cash.PROGRAM_ID, "UPDATED REF DATA", "REF DATA".output<ExampleState>().copy(data = "NEW STUFF!"))
+                output(ExampleContract::class.java.typeName, "UPDATED REF DATA", "REF DATA".output<ExampleState>().copy(data = "NEW STUFF!"))
                 verifies()
             }
             // Try to use the old one.
@@ -187,7 +198,7 @@ class ReferenceStateTests {
     @Test
     fun `state ref cannot be a reference input and regular input in the same transaction`() {
         val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
-        val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY), StateRef(SecureHash.zeroHash, 0))
+        val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))
         assertFailsWith(IllegalArgumentException::class, "A StateRef cannot be both an input and a reference input in the same transaction.") {
             @Suppress("DEPRECATION") // To be removed when feature is finalised.
             TransactionBuilder(notary = DUMMY_NOTARY).addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())

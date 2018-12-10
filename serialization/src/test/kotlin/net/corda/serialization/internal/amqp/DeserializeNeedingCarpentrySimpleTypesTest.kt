@@ -442,6 +442,3 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
         assertEquals(null, deserializedObj::class.java.getMethod("getByteC").invoke(deserializedObj))
     }
 }
-
-
-

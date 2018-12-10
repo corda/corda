@@ -25,8 +25,8 @@ Git
 3. Download and run the executable to install Git (use the default installation values) and make a note of the installation directory.
 4. Open a new command prompt and type ``git --version`` to test that Git is installed correctly
 
-Buillding Corda
-~~~~~~~~~~~~~~~
+Building Corda
+~~~~~~~~~~~~~~
 
 1. Open a command prompt
 2. Run ``git clone https://github.com/corda/corda.git``

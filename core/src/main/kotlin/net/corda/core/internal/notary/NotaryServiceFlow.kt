@@ -6,7 +6,11 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
+import net.corda.core.internal.checkParameterHash
+import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
+import java.time.Duration
 
 /**
  * A flow run by a notary service that handles notarisation requests.
@@ -15,21 +19,32 @@ import net.corda.core.utilities.unwrap
  * if any of the input states have been previously committed.
  *
  * Additional transaction validation logic can be added when implementing [validateRequest].
+ *
+ * @param otherSideSession The session with the notary client.
+ * @param service The notary service to utilise.
+ * @param etaThreshold If the ETA for processing the request, according to the service, is greater than this, notify the client.
  */
 // See AbstractStateReplacementFlow.Acceptor for why it's Void?
-abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService) : FlowLogic<Void?>() {
+abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service: SinglePartyNotaryService, private val etaThreshold: Duration) : FlowLogic<Void?>() {
     companion object {
         // TODO: Determine an appropriate limit and also enforce in the network parameters and the transaction builder.
         private const val maxAllowedInputsAndReferences = 10_000
+
+        /**
+         * This is default wait time estimate for notaries/uniqueness providers that do not estimate wait times.
+         * Also used as default eta message threshold so that a default wait time/default threshold will never
+         * lead to an update message being sent.
+         */
+        val defaultEstimatedWaitTime: Duration = 10.seconds
     }
 
     private var transactionId: SecureHash? = null
 
     @Suspendable
+    private fun counterpartyCanHandleBackPressure() = otherSideSession.getCounterpartyFlowInfo(true).flowVersion >= MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE
+
+    @Suspendable
     override fun call(): Void? {
-        check(serviceHub.myInfo.legalIdentities.any { serviceHub.networkMapCache.isNotary(it) }) {
-            "We are not a notary on the network"
-        }
         val requestPayload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
 
         try {
@@ -39,6 +54,11 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
 
             verifyTransaction(requestPayload)
 
+            val eta = service.getEstimatedWaitTime(tx.inputs.size + tx.references.size)
+            if (eta > etaThreshold && counterpartyCanHandleBackPressure()) {
+                otherSideSession.send(WaitTimeUpdate(eta))
+            }
+
             service.commitInputStates(
                     tx.inputs,
                     tx.id,
@@ -46,7 +66,6 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
                     requestPayload.requestSignature,
                     tx.timeWindow,
                     tx.references)
-
         } catch (e: NotaryInternalException) {
             logError(e.error)
             // Any exception that's not a NotaryInternalException is assumed to be an unexpected internal error
@@ -63,6 +82,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val transaction = extractParts(requestPayload)
             transactionId = transaction.id
             checkNotary(transaction.notary)
+            checkParameterHash(transaction.networkParametersHash)
             checkInputs(transaction.inputs + transaction.references)
             return transaction
         } catch (e: Exception) {
@@ -100,8 +120,7 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
      * Override to implement custom logic to perform transaction verification based on validity and privacy requirements.
      */
     @Suspendable
-    protected open fun verifyTransaction(requestPayload: NotarisationPayload) {
-    }
+    abstract fun verifyTransaction(requestPayload: NotarisationPayload)
 
     @Suspendable
     private fun signTransactionAndSendResponse(txId: SecureHash) {
@@ -118,13 +137,14 @@ abstract class NotaryServiceFlow(val otherSideSession: FlowSession, val service:
             val inputs: List<StateRef>,
             val timeWindow: TimeWindow?,
             val notary: Party?,
-            val references: List<StateRef> = emptyList()
+            val references: List<StateRef> = emptyList(),
+            val networkParametersHash: SecureHash?
     )
 
     private fun logError(error: NotaryError) {
         val errorCause = when (error) {
             is NotaryError.RequestSignatureInvalid -> error.cause
-            is NotaryError.TransactionInvalid ->  error.cause
+            is NotaryError.TransactionInvalid -> error.cause
             is NotaryError.General -> error.cause
             else -> null
         }

@@ -37,7 +37,7 @@ class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attac
  */
 @Suppress("MemberVisibilityCanBePrivate")
 @CordaSerializable
-sealed class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
+abstract class TransactionVerificationException(val txId: SecureHash, message: String, cause: Throwable?)
     : FlowException("$message, transaction: $txId", cause) {
 
     /**
@@ -50,6 +50,19 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
     class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
         constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
     }
+
+    /**
+     * This exception happens when a transaction was not built correctly.
+     * When a contract is not annotated with [NoConstraintPropagation], then the platform ensures that the constraints of output states transition correctly from input states.
+     *
+     * @property txId The transaction.
+     * @property contractClass The fully qualified class name of the failing contract.
+     * @property inputConstraint The constraint of the input state.
+     * @property outputConstraint The constraint of the outputs state.
+     */
+    @KeepForDJVM
+    class ConstraintPropagationRejection(txId: SecureHash, val contractClass: String, inputConstraint: AttachmentConstraint, outputConstraint: AttachmentConstraint)
+        : TransactionVerificationException(txId, "Contract constraints for $contractClass are not propagated correctly. The outputConstraint: $outputConstraint is not a valid transition from the input constraint: $inputConstraint.", null)
 
     /**
      * The transaction attachment that contains the [contractClass] class didn't meet the constraints specified by
@@ -146,6 +159,36 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
         : TransactionVerificationException(txId, "Encumbered output states assigned to different notaries found. " +
             "Output state with index $encumberedIndex is assigned to notary [$encumberedNotary], while its encumbrance with index $encumbranceIndex is assigned to notary [$encumbranceNotary]", null)
 
+    /**
+     * If a state is identified as belonging to a contract, either because the state class is defined as an inner class
+     * of the contract class or because the state class is annotated with [BelongsToContract], then it must not be
+     * bundled in a [TransactionState] with a different contract.
+     *
+     * @param state The [TransactionState] whose bundled state and contract are in conflict.
+     * @param requiredContractClassName The class name of the contract to which the state belongs.
+     */
+    @KeepForDJVM
+    class TransactionContractConflictException(txId: SecureHash, state: TransactionState<ContractState>, requiredContractClassName: String)
+        : TransactionVerificationException(txId,
+            """
+            State of class ${state.data::class.java.typeName} belongs to contract $requiredContractClassName, but
+            is bundled in TransactionState with ${state.contract}.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+            """.trimIndent().replace('\n', ' '), null)
+
+    // TODO: add reference to documentation
+    @KeepForDJVM
+    class TransactionRequiredContractUnspecifiedException(txId: SecureHash, state: TransactionState<ContractState>)
+        : TransactionVerificationException(txId,
+            """
+            State of class ${state.data::class.java.typeName} does not have a specified owning contract.
+            Add the @BelongsToContract annotation to this class to ensure that it can only be bundled in a TransactionState
+            with the correct contract.
+
+            For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
+            """.trimIndent(), null)
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM
@@ -188,4 +231,11 @@ sealed class TransactionVerificationException(val txId: SecureHash, message: Str
             """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+
+    /**
+     * Thrown when multiple attachments provide the same file when building the AttachmentsClassloader for a transaction.
+     */
+    @CordaSerializable
+    @KeepForDJVM
+    class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
 }

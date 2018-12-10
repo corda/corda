@@ -4,14 +4,19 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.contracts.ComponentGroupEnum.*
+import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
+import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
+import net.corda.core.internal.SerializedStateAndRef
+import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.lazyMapped
@@ -49,7 +54,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 
-    @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.", ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
+    @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
+            ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
     @DeleteForDJVM
     @JvmOverloads
     constructor(
@@ -60,7 +66,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow), privacySalt)
+    ) : this(createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null), privacySalt)
 
     init {
         check(componentGroups.all { it.components.isNotEmpty() }) { "Empty component groups are not allowed" }
@@ -99,8 +105,11 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         return toLedgerTransactionInternal(
                 resolveIdentity = { services.identityService.partyFromKey(it) },
                 resolveAttachment = { services.attachments.openAttachment(it) },
-                resolveStateRef = { services.loadState(it) },
-                networkParameters = services.networkParameters
+                resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
+                resolveParameters = {
+                    val hashToResolve = it ?: services.networkParametersStorage.defaultHash
+                    services.networkParametersStorage.lookup(hashToResolve)
+                }
         )
     }
 
@@ -113,41 +122,73 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
+    @JvmOverloads
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
+            resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, resolveStateRef, null)
+        // This reverts to serializing the resolved transaction state.
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
-            resolveStateRef: (StateRef) -> TransactionState<*>?,
-            networkParameters: NetworkParameters?
+            resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
+            resolveParameters: (SecureHash?) -> NetworkParameters?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
-        val authenticatedArgs = commands.lazyMapped { cmd, _ ->
+        val authenticatedCommands = commands.lazyMapped { cmd, _ ->
             val parties = cmd.signers.mapNotNull { pk -> resolveIdentity(pk) }
             CommandWithParties(cmd.signers, parties, cmd.value)
         }
-        val resolvedInputs = inputs.lazyMapped { ref, _ ->
-            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
+
+        val serializedResolvedInputs = inputs.map { ref ->
+            SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val resolvedReferences = references.lazyMapped { ref, _ ->
-            resolveStateRef(ref)?.let { StateAndRef(it, ref) } ?: throw TransactionResolutionException(ref.txhash)
+        val resolvedInputs = serializedResolvedInputs.lazyMapped { star, _ -> star.toStateAndRef() }
+
+        val serializedResolvedReferences = references.map { ref ->
+            SerializedStateAndRef(resolveStateRefAsSerialized(ref) ?: throw TransactionResolutionException(ref.txhash), ref)
         }
-        val attachments = attachments.lazyMapped { att, _ ->
-            resolveAttachment(att) ?: throw AttachmentResolutionException(att)
-        }
-        val ltx = LedgerTransaction(resolvedInputs, outputs, authenticatedArgs, attachments, id, notary, timeWindow, privacySalt, networkParameters, resolvedReferences)
-        checkTransactionSize(ltx, networkParameters?.maxTransactionSize ?: 10485760)
+        val resolvedReferences = serializedResolvedReferences.lazyMapped { star, _ -> star.toStateAndRef() }
+
+        val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
+
+        val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
+
+        val ltx = LedgerTransaction.create(
+                resolvedInputs,
+                outputs,
+                authenticatedCommands,
+                resolvedAttachments,
+                id,
+                notary,
+                timeWindow,
+                privacySalt,
+                resolvedNetworkParameters,
+                resolvedReferences,
+                componentGroups,
+                serializedResolvedInputs,
+                serializedResolvedReferences
+        )
+
+        checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
+
         return ltx
     }
 
-    private fun checkTransactionSize(ltx: LedgerTransaction, maxTransactionSize: Int) {
+    /**
+     * Deterministic function that checks if the transaction is below the maximum allowed size.
+     * It uses the binary representation of transactions.
+     */
+    private fun checkTransactionSize(ltx: LedgerTransaction,
+                                     maxTransactionSize: Int,
+                                     resolvedSerializedInputs: List<SerializedStateAndRef>,
+                                     resolvedSerializedReferences: List<SerializedStateAndRef>) {
         var remainingTransactionSize = maxTransactionSize
 
         fun minus(size: Int) {
@@ -164,9 +205,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         // it's likely that the same underlying Attachment CorDapp will occur more than once so we dedup on the attachment id.
         ltx.attachments.distinctBy { it.id }.forEach { minus(it.size) }
 
-        // TODO - these can be optimized by creating a LazyStateAndRef class, that just stores (a pointer) the serialized output componentGroup from the previous transaction.
-        minus(ltx.references.serialize().size)
-        minus(ltx.inputs.serialize().size)
+        minus(resolvedSerializedInputs.sumBy { it.serializedState.size })
+        minus(resolvedSerializedReferences.sumBy { it.serializedState.size })
 
         // For Commands and outputs we can use the component groups as they are already serialized.
         minus(componentGroupSize(COMMANDS_GROUP))
@@ -253,33 +293,37 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     }
 
     companion object {
-        /**
-         * Creating list of [ComponentGroup] used in one of the constructors of [WireTransaction] required
-         * for backwards compatibility purposes.
-         */
-        @JvmOverloads
         @CordaInternal
+        @Deprecated("Do not use, this is internal API")
         fun createComponentGroups(inputs: List<StateRef>,
                                   outputs: List<TransactionState<ContractState>>,
                                   commands: List<Command<*>>,
                                   attachments: List<SecureHash>,
                                   notary: Party?,
-                                  timeWindow: TimeWindow?,
-                                  references: List<StateRef> = emptyList()): List<ComponentGroup> {
-            val serialize = { value: Any, _: Int -> value.serialize() }
-            val componentGroupMap: MutableList<ComponentGroup> = mutableListOf()
-            if (inputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(INPUTS_GROUP.ordinal, inputs.lazyMapped(serialize)))
-            if (references.isNotEmpty()) componentGroupMap.add(ComponentGroup(REFERENCES_GROUP.ordinal, references.lazyMapped(serialize)))
-            if (outputs.isNotEmpty()) componentGroupMap.add(ComponentGroup(OUTPUTS_GROUP.ordinal, outputs.lazyMapped(serialize)))
-            // Adding commandData only to the commands group. Signers are added in their own group.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(COMMANDS_GROUP.ordinal, commands.map { it.value }.lazyMapped(serialize)))
-            if (attachments.isNotEmpty()) componentGroupMap.add(ComponentGroup(ATTACHMENTS_GROUP.ordinal, attachments.lazyMapped(serialize)))
-            if (notary != null) componentGroupMap.add(ComponentGroup(NOTARY_GROUP.ordinal, listOf(notary).lazyMapped(serialize)))
-            if (timeWindow != null) componentGroupMap.add(ComponentGroup(TIMEWINDOW_GROUP.ordinal, listOf(timeWindow).lazyMapped(serialize)))
-            // Adding signers to their own group. This is required for command visibility purposes: a party receiving
-            // a FilteredTransaction can now verify it sees all the commands it should sign.
-            if (commands.isNotEmpty()) componentGroupMap.add(ComponentGroup(SIGNERS_GROUP.ordinal, commands.map { it.signers }.lazyMapped(serialize)))
-            return componentGroupMap
+                                  timeWindow: TimeWindow?): List<ComponentGroup> {
+            return createComponentGroups(inputs, outputs, commands, attachments, notary, timeWindow, emptyList(), null)
+        }
+
+        /**
+         * This is the main logic that knows how to retrieve the binary representation of [StateRef]s.
+         *
+         * For [ContractUpgradeWireTransaction] or [NotaryChangeWireTransaction] it knows how to recreate the output state in the correct classloader independent of the node's classpath.
+         */
+        @CordaInternal
+        internal fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
+            return if (services is ServiceHub) {
+                val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
+                        ?: throw TransactionResolutionException(stateRef.txhash)
+                when (coreTransaction) {
+                    is WireTransaction -> coreTransaction.componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }?.components?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
+                    is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
+                    is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
+                    else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
+                }
+            } else {
+                // For backwards compatibility revert to using the node classloader.
+                services.loadState(stateRef).serialize()
+            }
         }
     }
 
@@ -287,11 +331,29 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
-        for (reference in references) buf.appendln("${Emoji.rightArrow}REFS:      $reference")
-        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:      $input")
-        for ((data) in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:     $data")
-        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND:    $command")
-        for (attachment in attachments) buf.appendln("${Emoji.paperclip}ATTACHMENT: $attachment")
+        for (reference in references) {
+            val emoji = Emoji.rightArrow
+            buf.appendln("${emoji}REFS:       $reference")
+        }
+        for (input in inputs) {
+            val emoji = Emoji.rightArrow
+            buf.appendln("${emoji}INPUT:      $input")
+        }
+        for ((data) in outputs) {
+            val emoji = Emoji.leftArrow
+            buf.appendln("${emoji}OUTPUT:     $data")
+        }
+        for (command in commands) {
+            val emoji = Emoji.diamond
+            buf.appendln("${emoji}COMMAND:    $command")
+        }
+        for (attachment in attachments) {
+            val emoji = Emoji.paperclip
+            buf.appendln("${emoji}ATTACHMENT: $attachment")
+        }
+        if (networkParametersHash != null) {
+            buf.appendln("PARAMETERS HASH:  $networkParametersHash")
+        }
         return buf.toString()
     }
 

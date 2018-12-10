@@ -392,26 +392,9 @@ class EnumEvolvabilityTests {
         data class C1(val annotatedEnum: AnnotatedEnumOnce)
 
         val sf = testDefaultFactory()
-        val f = sf.javaClass.getDeclaredField("transformsCache")
-        f.isAccessible = true
-
-        @Suppress("UNCHECKED_CAST")
-        val transformsCache = f.get(sf) as ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>
-
-        assertEquals(0, transformsCache.size)
 
         val sb1 = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C1(AnnotatedEnumOnce.D))
-
-        assertEquals(2, transformsCache.size)
-        assertTrue(transformsCache.containsKey(C1::class.java.name))
-        assertTrue(transformsCache.containsKey(AnnotatedEnumOnce::class.java.name))
-
         val sb2 = TestSerializationOutput(VERBOSE, sf).serializeAndReturnSchema(C2(AnnotatedEnumOnce.D))
-
-        assertEquals(3, transformsCache.size)
-        assertTrue(transformsCache.containsKey(C1::class.java.name))
-        assertTrue(transformsCache.containsKey(C2::class.java.name))
-        assertTrue(transformsCache.containsKey(AnnotatedEnumOnce::class.java.name))
 
         assertEquals(sb1.transformsSchema.types[AnnotatedEnumOnce::class.java.name],
                 sb2.transformsSchema.types[AnnotatedEnumOnce::class.java.name])
@@ -530,27 +513,6 @@ class EnumEvolvabilityTests {
         val sf = testDefaultFactory()
         assertThatThrownBy {
             SerializationOutput(sf).serialize(C(RejectCyclicRename.A))
-        }.isInstanceOf(NotSerializableException::class.java)
-    }
-
-    //
-    // In this test, like the above, we're looking to ensure repeated renames are rejected as
-    // unserailzble. However, in this case, it isn't a struct cycle, rather one element
-    // is renamed to match what a different element used to be called
-    //
-    @CordaSerializationTransformRenames(
-            CordaSerializationTransformRename(from = "B", to = "C"),
-            CordaSerializationTransformRename(from = "C", to = "D")
-    )
-    enum class RejectCyclicRenameAlt { A, C, D }
-
-    @Test
-    fun rejectCyclicRenameAlt() {
-        data class C(val e: RejectCyclicRenameAlt)
-
-        val sf = testDefaultFactory()
-        assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectCyclicRenameAlt.A))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 

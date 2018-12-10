@@ -68,7 +68,6 @@ processTestResources {
 
 dependencies {
     compile project(':node-api')
-    compile project(":confidential-identities")
     compile project(':client:rpc')
     compile project(':tools:shell')
     compile project(':tools:cliutils')
@@ -151,6 +150,7 @@ dependencies {
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.
     compileOnly "co.paralleluniverse:capsule:$capsule_version"
+    testCompile "co.paralleluniverse:capsule:$capsule_version"
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"

@@ -7,9 +7,8 @@ import com.google.common.hash.Hashing
 import com.google.common.hash.HashingInputStream
 import com.google.common.io.CountingInputStream
 import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.*
+import net.corda.core.cordapp.CORDAPP_CONTRACT_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
@@ -19,6 +18,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
@@ -106,7 +106,11 @@ class NodeAttachmentService(
             @Column(name = "signer", nullable = false)
             @CollectionTable(name = "${NODE_DATABASE_PREFIX}attachments_signers", joinColumns = [(JoinColumn(name = "att_id", referencedColumnName = "att_id"))],
                     foreignKey = ForeignKey(name = "FK__signers__attachments"))
-            var signers: List<PublicKey>? = null
+            var signers: List<PublicKey>? = null,
+
+            // Assumption: only Contract Attachments are versioned, version unknown or value for other attachments other than Contract Attachment defaults to 1
+            @Column(name = "version", nullable = false)
+            var version: Int = DEFAULT_CORDAPP_VERSION
     )
 
     @VisibleForTesting
@@ -229,8 +233,8 @@ class NodeAttachmentService(
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
-                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers
-                            ?: emptyList())
+                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
+                            ?: emptyList(), attachment.version)
                 } else {
                     it
                 }
@@ -300,7 +304,7 @@ class NodeAttachmentService(
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
-                require(inputStream !is JarInputStream)
+                require(inputStream !is JarInputStream){"Input stream must not be a JarInputStream"}
 
                 // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
                 // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
@@ -313,6 +317,7 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
+                    val contractVersion = getVersion(bytes)
                     val session = currentDBSession()
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
@@ -320,7 +325,8 @@ class NodeAttachmentService(
                             uploader = uploader,
                             filename = filename,
                             contractClassNames = contractClassNames,
-                            signers = jarSigners
+                            signers = jarSigners,
+                            version = contractVersion
                     )
                     session.save(attachment)
                     attachmentCount.inc()
@@ -346,6 +352,15 @@ class NodeAttachmentService(
 
     private fun getSigners(attachmentBytes: ByteArray) =
         JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+
+    private fun getVersion(attachmentBytes: ByteArray) =
+        JarInputStream(attachmentBytes.inputStream()).use {
+            try {
+                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
+            } catch (e: NumberFormatException) {
+                DEFAULT_CORDAPP_VERSION
+            }
+        }
 
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {

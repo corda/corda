@@ -1,5 +1,6 @@
 package net.corda.core.transactions
 
+import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
@@ -7,9 +8,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.crypto.sha256
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.NotaryChangeWireTransaction.Component.*
@@ -35,8 +38,15 @@ data class NotaryChangeWireTransaction(
     override val inputs: List<StateRef> = serializedComponents[INPUTS.ordinal].deserialize()
     override val references: List<StateRef> = emptyList()
     override val notary: Party = serializedComponents[NOTARY.ordinal].deserialize()
+
     /** Identity of the notary service to reassign the states to.*/
     val newNotary: Party = serializedComponents[NEW_NOTARY.ordinal].deserialize()
+
+    override val networkParametersHash: SecureHash? by lazy {
+        if (serializedComponents.size >= PARAMETERS_HASH.ordinal + 1) {
+            serializedComponents[PARAMETERS_HASH.ordinal].deserialize<SecureHash>()
+        } else null
+    }
 
     /**
      * This transaction does not contain any output states, outputs can be obtained by resolving a
@@ -64,19 +74,36 @@ data class NotaryChangeWireTransaction(
         }
     }
 
-    /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
+    /** Resolves input states and network parameters and builds a [NotaryChangeLedgerTransaction]. */
     @DeleteForDJVM
     fun resolve(services: ServicesForResolution, sigs: List<TransactionSignature>): NotaryChangeLedgerTransaction {
         val resolvedInputs = services.loadStates(inputs.toSet()).toList()
-        return NotaryChangeLedgerTransaction(resolvedInputs, notary, newNotary, id, sigs)
+        val hashToResolve = networkParametersHash ?: services.networkParametersStorage.defaultHash
+        val resolvedNetworkParameters = services.networkParametersStorage.lookup(hashToResolve)
+                ?: throw TransactionResolutionException(id)
+        return NotaryChangeLedgerTransaction.create(resolvedInputs, notary, newNotary, id, sigs, resolvedNetworkParameters)
     }
 
     /** Resolves input states and builds a [NotaryChangeLedgerTransaction]. */
     @DeleteForDJVM
     fun resolve(services: ServiceHub, sigs: List<TransactionSignature>) = resolve(services as ServicesForResolution, sigs)
 
+    /**
+     * This should return a serialized virtual output state, that will be used to verify spending transactions.
+     * The binary output should not depend on the classpath of the node that is verifying the transaction.
+     *
+     * Ideally the serialization engine would support partial deserialization so that only the Notary ( and the encumbrance can be replaced from the binary input state)
+     *
+     *
+     * TODO - currently this uses the main classloader.
+     */
+    @CordaInternal
+    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef): SerializedBytes<TransactionState<ContractState>> {
+        return services.loadState(stateRef).serialize()
+    }
+
     enum class Component {
-        INPUTS, NOTARY, NEW_NOTARY
+        INPUTS, NOTARY, NEW_NOTARY, PARAMETERS_HASH
     }
 
     @Deprecated("Required only for backwards compatibility purposes. This type of transaction should not be constructed outside Corda code.", ReplaceWith("NotaryChangeTransactionBuilder"), DeprecationLevel.WARNING)
@@ -89,15 +116,45 @@ data class NotaryChangeWireTransaction(
  * needed for signature verification.
  */
 @KeepForDJVM
-data class NotaryChangeLedgerTransaction(
+class NotaryChangeLedgerTransaction
+private constructor(
         override val inputs: List<StateAndRef<ContractState>>,
         override val notary: Party,
         val newNotary: Party,
         override val id: SecureHash,
-        override val sigs: List<TransactionSignature>
+        override val sigs: List<TransactionSignature>,
+        override val networkParameters: NetworkParameters?
 ) : FullTransaction(), TransactionWithSignatures {
+    companion object {
+        @CordaInternal
+        internal fun create(inputs: List<StateAndRef<ContractState>>,
+                            notary: Party,
+                            newNotary: Party,
+                            id: SecureHash,
+                            sigs: List<TransactionSignature>,
+                            networkParameters: NetworkParameters): NotaryChangeLedgerTransaction {
+            return NotaryChangeLedgerTransaction(inputs, notary, newNotary, id, sigs, networkParameters)
+        }
+    }
+
     init {
         checkEncumbrances()
+        checkNewNotaryWhitelisted()
+    }
+
+    /**
+     * Check that the output notary is whitelisted.
+     *
+     * Note that for this transaction type we do not require the input notary to be whitelisted to support network merging.
+     * For all other transaction types this is enforced.
+     */
+    private fun checkNewNotaryWhitelisted() {
+        networkParameters?.let { parameters ->
+            val notaryWhitelist = parameters.notaries.map { it.identity }
+            check(newNotary in notaryWhitelist) {
+                "The output notary $newNotary is not whitelisted in the attached network parameters."
+            }
+        }
     }
 
     override val references: List<StateAndRef<ContractState>> = emptyList()
@@ -140,5 +197,55 @@ data class NotaryChangeLedgerTransaction(
                 }
             }
         }
+    }
+
+    operator fun component1(): List<StateAndRef<ContractState>> = inputs
+    operator fun component2(): Party = notary
+    operator fun component3(): Party = newNotary
+    operator fun component4(): SecureHash = id
+    operator fun component5(): List<TransactionSignature> = sigs
+    operator fun component6(): NetworkParameters? = networkParameters
+
+    override fun equals(other: Any?): Boolean = this === other || other is NotaryChangeLedgerTransaction && this.id == other.id
+
+    override fun hashCode(): Int = id.hashCode()
+
+    override fun toString(): String {
+        return """NotaryChangeLedgerTransaction(
+            |    id=$id
+            |    inputs=$inputs
+            |    notary=$notary
+            |    newNotary=$newNotary
+            |    sigs=$sigs
+            |    networkParameters=$networkParameters
+            |)""".trimMargin()
+    }
+
+    // Things that we can't remove after `data class` removal from this class, so it is deprecated instead.
+    //
+    @Deprecated("NotaryChangeLedgerTransaction should not be created directly, use NotaryChangeWireTransaction.resolve instead.")
+    constructor(
+            inputs: List<StateAndRef<ContractState>>,
+            notary: Party,
+            newNotary: Party,
+            id: SecureHash,
+            sigs: List<TransactionSignature>
+    ) : this(inputs, notary, newNotary, id, sigs, null)
+
+    @Deprecated("NotaryChangeLedgerTransaction should not be created directly, use NotaryChangeWireTransaction.resolve instead.")
+    fun copy(inputs: List<StateAndRef<ContractState>> = this.inputs,
+             notary: Party = this.notary,
+             newNotary: Party = this.newNotary,
+             id: SecureHash = this.id,
+             sigs: List<TransactionSignature> = this.sigs
+    ): NotaryChangeLedgerTransaction {
+        return NotaryChangeLedgerTransaction(
+                inputs,
+                notary,
+                newNotary,
+                id,
+                sigs,
+                this.networkParameters
+        )
     }
 }

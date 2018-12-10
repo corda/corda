@@ -3,14 +3,18 @@ package net.corda.node.services.vault
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.MAX_CONSTRAINT_DATA_SIZE
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
+import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.Type
 import java.time.Instant
 import java.util.*
@@ -25,8 +29,18 @@ object VaultSchema
  * First version of the Vault ORM schema
  */
 @CordaSerializable
-object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, version = 1,
-        mappedTypes = listOf(VaultStates::class.java, VaultLinearStates::class.java, VaultFungibleStates::class.java, VaultTxnNote::class.java)) {
+object VaultSchemaV1 : MappedSchema(
+        schemaFamily = VaultSchema.javaClass,
+        version = 1,
+        mappedTypes = listOf(
+                VaultStates::class.java,
+                VaultLinearStates::class.java,
+                VaultFungibleStates::class.java,
+                VaultTxnNote::class.java,
+                PersistentParty::class.java,
+                StateToExternalId::class.java
+        )
+) {
 
     override val migrationResource = "vault-schema.changelog-master"
 
@@ -84,16 +98,6 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     class VaultLinearStates(
             /** [ContractState] attributes */
 
-            /** X500Name of participant parties **/
-            @ElementCollection
-            @CollectionTable(name = "vault_linear_states_parts",
-                    joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
-                    foreignKey = ForeignKey(name = "FK__lin_stat_parts__lin_stat"))
-            @Column(name = "participants")
-            var participants: MutableSet<AbstractParty?>? = null,
-            // Reason for not using Set is described here:
-            // https://stackoverflow.com/questions/44213074/kotlin-collection-has-neither-generic-type-or-onetomany-targetentity
-
             /**
              *  Represents a [LinearState] [UniqueIdentifier]
              */
@@ -104,25 +108,12 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Type(type = "uuid-char")
             var uuid: UUID
     ) : PersistentState() {
-        constructor(uid: UniqueIdentifier, _participants: List<AbstractParty>) :
-                this(externalId = uid.externalId,
-                        uuid = uid.id,
-                        participants = _participants.toMutableSet())
+        constructor(uid: UniqueIdentifier) : this(externalId = uid.externalId, uuid = uid.id)
     }
 
     @Entity
     @Table(name = "vault_fungible_states")
     class VaultFungibleStates(
-            /** [ContractState] attributes */
-
-            /** X500Name of participant parties **/
-            @ElementCollection
-            @CollectionTable(name = "vault_fungible_states_parts",
-                    joinColumns = [(JoinColumn(name = "output_index", referencedColumnName = "output_index")), (JoinColumn(name = "transaction_id", referencedColumnName = "transaction_id"))],
-                    foreignKey = ForeignKey(name = "FK__fung_st_parts__fung_st"))
-            @Column(name = "participants", nullable = true)
-            var participants: MutableSet<AbstractParty>? = null,
-
             /** [OwnableState] attributes */
 
             /** X500Name of owner party **/
@@ -149,12 +140,8 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
             @Type(type = "corda-wrapper-binary")
             var issuerRef: ByteArray?
     ) : PersistentState() {
-        constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes, _participants: List<AbstractParty>) :
-                this(owner = _owner,
-                        quantity = _quantity,
-                        issuer = _issuerParty,
-                        issuerRef = _issuerRef.bytes,
-                        participants = _participants.toMutableSet())
+        constructor(_owner: AbstractParty, _quantity: Long, _issuerParty: AbstractParty, _issuerRef: OpaqueBytes) :
+                this(owner = _owner, quantity = _quantity, issuer = _issuerParty, issuerRef = _issuerRef.bytes)
     }
 
     @Entity
@@ -173,4 +160,48 @@ object VaultSchemaV1 : MappedSchema(schemaFamily = VaultSchema.javaClass, versio
     ) {
         constructor(txId: String, note: String) : this(0, txId, note)
     }
+
+    @Entity
+    @Table(name = "state_party", indexes = [Index(name = "state_party_idx", columnList = "public_key_hash")])
+    class PersistentParty(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            val id: Long?,
+
+            // Foreign key.
+            @Column(name = "state_ref")
+            val stateRef: PersistentStateRef,
+
+            @Column(name = "public_key_hash", nullable = false)
+            val publicKeyHash: String,
+
+            @Column(name = "x500_name", nullable = true)
+            var x500Name: AbstractParty? = null
+    ) : StatePersistable {
+        constructor(stateRef: PersistentStateRef, abstractParty: AbstractParty)
+                : this(null, stateRef, abstractParty.owningKey.toStringShort(), abstractParty)
+    }
+
+    @Entity
+    @Immutable
+    @Table(name = "v_pkey_hash_ex_id_map")
+    class StateToExternalId(
+            @Id
+            @GeneratedValue
+            @Column(name = "id", unique = true, nullable = false)
+            val id: Long,
+
+            // Foreign key.
+            @Column(name = "state_ref")
+            val stateRef: PersistentStateRef,
+
+            @Column(name = "public_key_hash")
+            val publicKeyHash: String,
+
+            @Column(name = "external_id")
+            @Type(type = "uuid-char")
+            val externalId: UUID
+    ) : StatePersistable
 }
+

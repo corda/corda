@@ -4,16 +4,16 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
+import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
+import net.corda.core.internal.BackpressureAwareTimedFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.notary.HistoricNetworkParameterStorage
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
 import net.corda.core.internal.pushToLoggingContext
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
+import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
@@ -27,15 +27,18 @@ class NotaryFlow {
      * In case of a single-node or Raft notary, the flow will return a single signature. For the BFT notary multiple
      * signatures will be returned – one from each replica that accepted the input state commit.
      *
+     * The transaction to be notarised, [stx], should be fully verified before calling this flow.
+     *
      * @throws NotaryException in case the any of the inputs to the transaction have been consumed
-     *                         by another transaction or the time-window is invalid.
+     *                         by another transaction or the time-window is invalid or
+     *                         the parameters used for this transaction are no longer in force in the network.
      */
     @DoNotImplement
     @InitiatingFlow
     open class Client(
             private val stx: SignedTransaction,
             override val progressTracker: ProgressTracker
-    ) : FlowLogic<List<TransactionSignature>>(), TimedFlow {
+    ) : BackpressureAwareTimedFlow<List<TransactionSignature>>() {
         constructor(stx: SignedTransaction) : this(stx, tracker())
 
         companion object {
@@ -50,8 +53,8 @@ class NotaryFlow {
         override fun call(): List<TransactionSignature> {
             stx.pushToLoggingContext()
             val notaryParty = checkTransaction()
-            progressTracker.currentStep = REQUESTING
             logger.info("Sending transaction to notary: ${notaryParty.name}.")
+            progressTracker.currentStep = REQUESTING
             val response = notarise(notaryParty)
             logger.info("Notary responded.")
             progressTracker.currentStep = VALIDATING
@@ -62,6 +65,7 @@ class NotaryFlow {
          * Checks that the transaction specifies a valid notary, and verifies that it contains all required signatures
          * apart from the notary's.
          */
+        // TODO: [CORDA-2274] Perform full transaction verification once verification caching is enabled.
         protected fun checkTransaction(): Party {
             val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
             check(serviceHub.networkMapCache.isNotary(notaryParty)) { "$notaryParty is not a notary on the network" }
@@ -71,25 +75,42 @@ class NotaryFlow {
             stx.resolveTransactionWithSignatures(serviceHub).verifySignaturesExcept(notaryParty.owningKey)
             return notaryParty
         }
-
         /** Notarises the transaction with the [notaryParty], obtains the notary's signature(s). */
         @Throws(NotaryException::class)
         @Suspendable
         protected fun notarise(notaryParty: Party): UntrustworthyData<NotarisationResponse> {
             val session = initiateFlow(notaryParty)
-            val requestSignature = NotarisationRequest(stx.inputs, stx.id).generateSignature(serviceHub)
-            return if (serviceHub.networkMapCache.isValidatingNotary(notaryParty)) {
+            val requestSignature = generateRequestSignature()
+            return if (isValidating(notaryParty)) {
                 sendAndReceiveValidating(session, requestSignature)
             } else {
                 sendAndReceiveNonValidating(notaryParty, session, requestSignature)
             }
         }
 
+        private fun isValidating(notaryParty: Party): Boolean {
+            val onTheCurrentWhitelist = serviceHub.networkMapCache.isNotary(notaryParty)
+            return if (!onTheCurrentWhitelist) {
+                /*
+                    Note that the only scenario where it's acceptable to use a notary not in the current network parameter whitelist is
+                    when performing a notary change transaction after a network merge – the old notary won't be on the whitelist of the new network,
+                    and can't be used for regular transactions.
+                */
+                check(stx.coreTransaction is NotaryChangeWireTransaction) {
+                    "Notary $notaryParty is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
+                }
+                val historicNotary = (serviceHub.networkParametersStorage as HistoricNetworkParameterStorage).getHistoricNotary(notaryParty)
+                        ?: throw IllegalStateException("The notary party $notaryParty specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
+                historicNotary.validating
+
+            } else serviceHub.networkMapCache.isValidatingNotary(notaryParty)
+        }
+
         @Suspendable
         private fun sendAndReceiveValidating(session: FlowSession, signature: NotarisationRequestSignature): UntrustworthyData<NotarisationResponse> {
             val payload = NotarisationPayload(stx, signature)
             subFlow(NotarySendTransactionFlow(session, payload))
-            return session.receive()
+            return receiveResultOrTiming(session)
         }
 
         @Suspendable
@@ -97,10 +118,13 @@ class NotaryFlow {
             val ctx = stx.coreTransaction
             val tx = when (ctx) {
                 is ContractUpgradeWireTransaction -> ctx.buildFilteredTransaction()
-                is WireTransaction -> ctx.buildFilteredTransaction(Predicate { it is StateRef || it is TimeWindow || it == notaryParty })
+                is WireTransaction -> ctx.buildFilteredTransaction(Predicate {
+                    it is StateRef || it is ReferenceStateRef || it is TimeWindow || it == notaryParty || it is NetworkParametersHash
+                })
                 else -> ctx
             }
-            return session.sendAndReceiveWithRetry(NotarisationPayload(tx, signature))
+            session.send(NotarisationPayload(tx, signature))
+            return receiveResultOrTiming(session)
         }
 
         /** Checks that the notary's signature(s) is/are valid. */
@@ -120,6 +144,16 @@ class NotaryFlow {
             override fun sendPayloadAndReceiveDataRequest(otherSideSession: FlowSession, payload: Any): UntrustworthyData<FetchDataFlow.Request> {
                 return otherSideSession.sendAndReceiveWithRetry(payload)
             }
+        }
+
+        /**
+         * Ensure that transaction ID instances are not referenced in the serialized form in case several input states are outputs of the
+         * same transaction.
+         */
+        private fun generateRequestSignature(): NotarisationRequestSignature {
+            // TODO: This is not required any more once our AMQP serialization supports turning off object referencing.
+            val notarisationRequest = NotarisationRequest(stx.inputs.map { it.copy(txhash = SecureHash.parse(it.txhash.toString())) }, stx.id)
+            return notarisationRequest.generateSignature(serviceHub)
         }
     }
 }

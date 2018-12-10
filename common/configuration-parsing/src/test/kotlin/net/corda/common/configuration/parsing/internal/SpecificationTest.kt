@@ -1,8 +1,11 @@
 package net.corda.common.configuration.parsing.internal
 
 import com.typesafe.config.Config
+import net.corda.common.validation.internal.Validated
+import net.corda.common.validation.internal.Validated.Companion.invalid
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicLong
 
 class SpecificationTest {
 
@@ -39,7 +42,7 @@ class SpecificationTest {
         val rpcSettings = RpcSettingsSpec.parse(configuration)
 
         assertThat(rpcSettings.isValid).isTrue()
-        assertThat(rpcSettings.orThrow()).satisfies { value ->
+        assertThat(rpcSettings.value()).satisfies { value ->
 
             assertThat(value.useSsl).isEqualTo(useSslValue)
             assertThat(value.addresses).satisfies { addresses ->
@@ -48,6 +51,28 @@ class SpecificationTest {
                 assertThat(addresses.admin).isEqualTo(adminAddressValue)
             }
         }
+    }
+
+    @Test
+    fun parse_list_aggregation() {
+
+        val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {
+
+            private val maxElement by long("elements").list().map { elements -> elements.max() }
+
+            override fun parseValid(configuration: Config): Valid<AtomicLong> {
+
+                return valid(AtomicLong(configuration[maxElement]!!))
+            }
+        }
+
+        val elements = listOf(1L, 10L, 2L)
+        val configuration = configObject("elements" to elements).toConfig()
+
+        val result = spec.parse(configuration)
+
+        assertThat(result.isValid).isTrue()
+        assertThat(result.value().get()).isEqualTo(elements.max())
     }
 
     @Test
@@ -65,6 +90,43 @@ class SpecificationTest {
         assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.MissingValue::class.java) { error ->
 
             assertThat(error.path).containsExactly("useSsl")
+        }
+    }
+
+    @Test
+    fun validate_list_aggregation() {
+
+        fun parseMax(elements: List<Long>): Valid<Long> {
+
+            if (elements.isEmpty()) {
+                return invalid(Configuration.Validation.Error.BadValue.of("element list cannot be empty"))
+            }
+            if (elements.any { element -> element <= 1  }) {
+                return invalid(Configuration.Validation.Error.BadValue.of("elements cannot be less than or equal to 1"))
+            }
+            return valid(elements.max()!!)
+        }
+
+        val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {
+
+            private val maxElement by long("elements").list().mapValid(::parseMax)
+
+            override fun parseValid(configuration: Config): Valid<AtomicLong> {
+
+                return valid(AtomicLong(configuration[maxElement]))
+            }
+        }
+
+        val elements = listOf(1L, 10L, 2L)
+        val configuration = configObject("elements" to elements).toConfig()
+
+        val result = spec.parse(configuration)
+
+        assertThat(result.errors).hasSize(1)
+        assertThat(result.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
+
+            assertThat(error.path).containsExactly("elements")
+            assertThat(error.message).contains("elements cannot be less than or equal to 1")
         }
     }
 

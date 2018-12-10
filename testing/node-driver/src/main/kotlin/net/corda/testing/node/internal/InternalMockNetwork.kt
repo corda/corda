@@ -30,11 +30,13 @@ import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.VerifierType
 import net.corda.node.services.identity.PersistentIdentityService
@@ -55,7 +57,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.*
@@ -138,7 +139,6 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
-
 }
 
 open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
@@ -147,16 +147,20 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
                                val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
-                               val networkParameters: NetworkParameters = testNetworkParameters(),
+                               initialNetworkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
                                val cordappsForAllNodes: Collection<TestCordapp> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
+
+    var networkParameters: NetworkParameters = initialNetworkParameters
+        private set
+
     init {
         // Apache SSHD for whatever reason registers a SFTP FileSystemProvider - which gets loaded by JimFS.
         // This SFTP support loads BouncyCastle, which we want to avoid.
         // Please see https://issues.apache.org/jira/browse/SSHD-736 - it's easier then to create our own fork of SSHD
         SecurityUtils.setAPrioriDisabledProvider("BC", true) // XXX: Why isn't this static?
-        require(networkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
+        require(initialNetworkParameters.notaries.isEmpty()) { "Define notaries using notarySpecs" }
     }
 
     var nextNodeId = 0
@@ -168,11 +172,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     private val networkId = random63BitValue()
     private val networkParametersCopier: NetworkParametersCopier
     private val _nodes = mutableListOf<MockNode>()
-    private val serializationEnv = try {
-        setGlobalSerialization(true)
-    } catch (e: IllegalStateException) {
-        throw IllegalStateException("Using more than one InternalMockNetwork simultaneously is not supported.", e)
-    }
+    private val serializationEnv = checkNotNull(setDriverSerialization()) { "Using more than one mock network simultaneously is not supported." }
     private val sharedUserCount = AtomicInteger(0)
 
     /** A read only view of the current set of nodes. */
@@ -233,8 +233,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
         try {
             filesystem.getPath("/nodes").createDirectory()
             val notaryInfos = generateNotaryIdentities()
+            networkParameters = initialNetworkParameters.copy(notaries = notaryInfos)
             // The network parameters must be serialised before starting any of the nodes
-            networkParametersCopier = NetworkParametersCopier(networkParameters.copy(notaries = notaryInfos))
+            networkParametersCopier = NetworkParametersCopier(networkParameters)
             @Suppress("LeakingThis")
             // Notary nodes need a platform version >= network min platform version.
             notaryNodes = createNotaries()
@@ -253,12 +254,10 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
 
     @VisibleForTesting
     internal open fun createNotaries(): List<TestStartedNode> {
-        val version = VersionInfo(networkParameters.minimumPlatformVersion, "Mock release", "Mock revision", "Mock Vendor")
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating)),
-                    version = version
+                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating))
             ))
         }
     }
@@ -308,8 +307,6 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 internals.flowManager.registerInitiatedFlow(initiatingFlowClass, initiatedFlowClass)
                 return smm.changes.filter { it is StateMachineManager.Change.Add }.map { it.logic }.ofType(initiatedFlowClass)
             }
-
-
         }
 
         val mockNet = args.network
@@ -436,8 +433,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
                 Observable.empty<T>()
             }
         }
-    }
 
+        override fun makeParametersStorage(): NetworkParametersStorageInternal {
+            return MockNetworkParametersStorage()
+        }
+    }
 
     fun createUnstartedNode(parameters: InternalMockNodeParameters = InternalMockNodeParameters()): MockNode {
         return createUnstartedNode(parameters, defaultFactory)
@@ -567,10 +567,9 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     }
 
     fun stopNodes() {
-        try {
+        // Serialization env must be unset even if other parts of this method fail.
+        serializationEnv.use {
             nodes.forEach { it.started?.dispose() }
-        } finally {
-            serializationEnv.unset() // Must execute even if other parts of this method fail.
         }
         messagingNetwork.stop()
     }
@@ -618,8 +617,7 @@ private fun mockNodeConfiguration(certificatesDirectory: Path): NodeConfiguratio
         doReturn(FlowTimeoutConfiguration(1.hours, 3, backoffBase = 1.0)).whenever(it).flowTimeout
         doReturn(5.seconds.toMillis()).whenever(it).additionalNodeInfoPollingFrequencyMsec
         doReturn(null).whenever(it).devModeOptions
-        doReturn(null).whenever(it).cryptoServiceName
-        doReturn(null).whenever(it).cryptoServiceConf
+        doReturn(NetworkParameterAcceptanceSettings()).whenever(it).networkParameterAcceptanceSettings
     }
 }
 

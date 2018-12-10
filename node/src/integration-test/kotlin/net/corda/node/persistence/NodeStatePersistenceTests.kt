@@ -136,6 +136,6 @@ class SendMessageFlow(private val message: Message, private val notary: Party) :
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
+        return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
     }
 }

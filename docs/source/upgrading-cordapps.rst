@@ -633,10 +633,3 @@ Although not strictly related to versioning, AMQP serialisation dictates that we
   wildcard
 * Any superclass must adhere to the same rules, but can be abstract
 * Object graph cycles are not supported, so an object cannot refer to itself, directly or indirectly
-
-Writing enums
-~~~~~~~~~~~~~
-Elements cannot be added to enums in a new version of the code. Hence, enums are only a good fit for genuinely static
-data that will never change (e.g. days of the week). A ``Buy`` or ``Sell`` flag is another. However, something like
-``Trade Type`` or ``Currency Code`` will likely change. For those, it is preferable to choose another representation,
-such as a string.

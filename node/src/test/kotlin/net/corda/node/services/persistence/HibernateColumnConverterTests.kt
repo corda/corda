@@ -1,12 +1,21 @@
 package net.corda.node.services.persistence
 
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.Amount
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.flows.AbstractCashFlow
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.issuedBy
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.testing.internal.TestingNamedCacheFactory
@@ -17,6 +26,7 @@ import net.corda.testing.node.StartedMockNode
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 
 class HibernateColumnConverterTests {
@@ -24,6 +34,20 @@ class HibernateColumnConverterTests {
     private lateinit var bankOfCordaNode: StartedMockNode
     private lateinit var bankOfCorda: Party
     private lateinit var notary: Party
+
+    class TestCashIssueFlow(private val amount: Amount<Currency>,
+                            private val issuerBankPartyRef: OpaqueBytes,
+                            private val notary: Party) : AbstractCashFlow<AbstractCashFlow.Result>(tracker()) {
+        @Suspendable
+        override fun call(): AbstractCashFlow.Result {
+            val builder = TransactionBuilder(notary)
+            val issuer = ourIdentity.ref(issuerBankPartyRef)
+            val signers = Cash().generateIssue(builder, amount.issuedBy(issuer), ourIdentity, notary)
+            val tx = serviceHub.signInitialTransaction(builder, signers)
+            serviceHub.recordTransactions(tx)
+            return Result(tx, ourIdentity)
+        }
+    }
 
     @Before
     fun start() {
@@ -59,7 +83,7 @@ class HibernateColumnConverterTests {
         val newKeyAndCert = keyService.freshKeyAndCert(bankOfCordaNode.info.legalIdentitiesAndCerts[0], false)
         val randomNotary = Party(BOC_NAME, newKeyAndCert.owningKey)
 
-        val future = bankOfCordaNode.startFlow(CashIssueFlow(expected, ref, randomNotary))
+        val future = bankOfCordaNode.startFlow(TestCashIssueFlow(expected, ref, randomNotary))
         mockNet.runNetwork()
         val issueTx = future.getOrThrow().stx
         val output = issueTx.tx.outputsOfType<Cash.State>().single()
