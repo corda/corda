@@ -10,6 +10,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.TestNodeInfoBuilder
 import net.corda.testing.internal.createNodeInfoAndSigned
@@ -69,6 +70,32 @@ class NetworkMapClientTest {
         assertThat(networkMapClient.getNetworkMap().payload.nodeInfoHashes).containsExactly(nodeInfoHash, nodeInfoHash2)
         assertEquals(cacheTimeout, networkMapClient.getNetworkMap().cacheMaxAge)
         assertEquals(nodeInfo2, networkMapClient.getNodeInfo(nodeInfoHash2))
+    }
+
+    @Test
+    fun `publishing nodeInfo already existing under same name but different key fails`() {
+        val aliceOne = TestIdentity(ALICE_NAME, 42)
+
+        val nodeInfoOne = TestNodeInfoBuilder()
+        val (_, privateKeyOne) = nodeInfoOne.addLegalIdentity(ALICE_NAME, aliceOne.keyPair)
+
+        val signedNodeInfoOne = nodeInfoOne.build().signWith(listOf(privateKeyOne))
+
+        networkMapClient.publish(signedNodeInfoOne)
+
+        val aliceTwo = TestIdentity(ALICE_NAME, 77)
+
+        val nodeInfoTwo = TestNodeInfoBuilder()
+        val (_, privateKeyTwo) = nodeInfoTwo.addLegalIdentity(ALICE_NAME, aliceTwo.keyPair)
+
+        assertThat(privateKeyTwo.serialize()).isNotEqualTo(privateKeyOne.serialize())
+
+        val signedNodeInfoTwo = nodeInfoTwo.build().signWith(listOf(privateKeyTwo))
+
+        assertThat(signedNodeInfoTwo.serialize()).isNotEqualTo(signedNodeInfoOne.serialize())
+
+        // TODO sollecitom, this should fail
+        networkMapClient.publish(signedNodeInfoTwo)
     }
 
     @Test
