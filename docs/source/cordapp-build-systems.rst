@@ -368,12 +368,19 @@ There is an example project that demonstrates in ``samples`` called ``cordapp-co
 Minimum and target platform version
 -----------------------------------
 
-CorDapps can advertise their minimum and target platform version. The minimum platform version indicates that a node has to run at least this version in order to be able to run this CorDapp. The target platform version indicates that a CorDapp was tested with this version of the Corda Platform and should be run at this API level if possible. It provides a means of maintaining behavioural compatibility for the cases where the platform's behaviour has changed. These attributes are specified in the JAR manifest of the CorDapp, for example:
+CorDapps can advertise their minimum and target platform version. The minimum platform version indicates that a node has to run at least this
+version in order to be able to run this CorDapp. The target platform version indicates that a CorDapp was tested with this version of the Corda
+Platform and should be run at this API level if possible. It provides a means of maintaining behavioural compatibility for the cases where the
+platform's behaviour has changed. These attributes are specified in the JAR manifest of the CorDapp, for example:
 
 .. sourcecode:: groovy
 
     'Min-Platform-Version': 4
     'Target-Platform-Version': 4
+
+**Defaults**
+    - ``Target-Platform-Version`` (mandatory) is a whole number and must comply with the rules mentioned above.
+    - ``Min-Platform-Version`` (optional) will default to 1 if not specified.
 
 Using the `cordapp` Gradle plugin, this can be achieved by putting this in your CorDapp's `build.gradle`:
 
@@ -401,13 +408,46 @@ Without using the `cordapp` plugin, you can achieve the same by modifying the ja
             }
         }
 
+.. _cordapp_separation_ref:
+
 Separation of CorDapp contracts, flows and services
 ---------------------------------------------------
-It is recommended that Contract code (states, commands, verification logic) be packaged separately from Business Flows (and associated services).
-This decoupling enables Contracts to evolve independently from the Flows that use them. Contracts may even be specified and implemented by different
-providers (eg. Corda currently ships with a Cash financial contract which in turn is used in many other Flows and many other CorDapps).
+It is recommended that **contract** code (states, commands, verification logic) be packaged separately from **business flows** (and associated services).
+This decoupling enables *contracts* to evolve independently from the *flows* and *services* that use them. Contracts may even be specified and implemented by different
+providers (eg. Corda currently ships with a cash financial contract which in turn is used in many other flows and many other CorDapps).
 
-As of Corda 4, CorDapps can explicitly differentiate its type using the `cordapp` Gradle plugin as follows:
+As of Corda 4, CorDapps can explicitly differentiate their type by specifying the following attributes in the JAR manifest:
+
+.. sourcecode:: groovy
+
+    'Cordapp-Contract-Name'
+    'Cordapp-Contract-Version'
+    'Cordapp-Contract-Vendor'
+    'Cordapp-Contract-Licence'
+
+    'Cordapp-Workflow-Name'
+    'Cordapp-Workflow-Version'
+    'Cordapp-Workflow-Vendor'
+    'Cordapp-Workflow-Licence'
+
+**Defaults**
+
+``Cordapp-Contract-Name`` (optional) if specified, the following Contract related attributes are also used:
+
+    - ``Cordapp-Contract-Version`` (mandatory), must be a whole number starting from 1.
+    - ``Cordapp-Contract-Vendor`` (optional), defaults to UNKNOWN if not specified.
+    - ``Cordapp-Contract-Licence`` (optional), defaults to UNKNOWN if not specified.
+
+``Cordapp-Workflow-Name`` (optional) if specified, the following Workflow related attributes are also used:
+
+    - ``Cordapp-Workflow-Version`` (mandatory), must be a whole number starting from 1.
+    - ``Cordapp-Workflow-Vendor`` (optional), defaults to UNKNOWN if not specified.
+    - ``Cordapp-Workflow-Licence`` (optional), defaults to UNKNOWN if not specified.
+
+As with the general CorDapp attributes (minimum and target platform version), these can be specified using the Gradle `cordapp` plugin (recommended)
+or set manually in thejar task section of the associated CorDapp gradle configuration.
+
+Using the Gradle cordapp plugin:
 
 For a contract only CorDapp we specify the `contract` tag:
 
@@ -443,4 +483,38 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
             }
         }
 
-.. note:: it is possible, *but not recommended*,  to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
+.. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
+
+Without using the `cordapp` plugin, you can achieve the same by modifying the jar task as follows:
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        jar {
+            manifest {
+                attributes(
+                        'Cordapp-Contract-Name': "My contract name"
+                        'Cordapp-Contract-Version': 1
+                        'Cordapp-Contract-Vendor': "Vendor name"
+                        'Cordapp-Contract-Licence': "Vendor licence"
+                )
+            }
+        }
+
+.. container:: codeset
+
+    .. sourcecode:: groovy
+
+        jar {
+            manifest {
+                attributes(
+                        'Cordapp-Workflow-Name': "My flow name"
+                        'Cordapp-Workflow-Version': 1
+                        'Cordapp-Workflow-Vendor': "Vendor name"
+                        'Cordapp-Workflow-Licence': "Vendor licence"
+                )
+            }
+        }
+
+.. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar.

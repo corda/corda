@@ -144,7 +144,6 @@ cordapp {
     minimumPlatformVersion 1
     workflow {
         name "net/corda/samples/trader-demo"
-        version 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }

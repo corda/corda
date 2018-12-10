@@ -1,15 +1,17 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
+import net.corda.core.internal.cordapp.*
 import net.corda.core.internal.outputStream
-import net.corda.core.internal.cordapp.createTestManifest
 import net.corda.testing.node.TestCordapp
 import java.io.BufferedOutputStream
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.util.jar.Attributes
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
 
@@ -84,4 +86,26 @@ fun TestCordappImpl.packageAsJar(file: Path) {
             }
         }
     }
+}
+
+fun createTestManifest(name: String, version: String, vendor: String, licence: String, targetVersion: Int): Manifest {
+    val manifest = Manifest()
+
+    // Mandatory manifest attribute. If not present, all other entries are silently skipped.
+    manifest[Attributes.Name.MANIFEST_VERSION.toString()] = "1.0"
+
+    manifest[CORDAPP_CONTRACT_NAME] = name
+    manifest[CORDAPP_CONTRACT_VERSION] = version
+    manifest[CORDAPP_CONTRACT_VENDOR] = vendor
+    manifest[CORDAPP_CONTRACT_LICENCE] = licence
+
+    manifest[CORDAPP_WORKFLOW_NAME] = name
+    manifest[CORDAPP_WORKFLOW_VERSION] = version
+    manifest[CORDAPP_WORKFLOW_VENDOR] = vendor
+    manifest[CORDAPP_WORKFLOW_LICENCE] = licence
+
+    manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
+    manifest[MIN_PLATFORM_VERSION] = "1"
+
+    return manifest
 }

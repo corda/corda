@@ -62,12 +62,6 @@ artifacts {
 
 jar {
     baseName 'corda-finance'
-    exclude "META-INF/*.DSA"
-    exclude "META-INF/*.RSA"
-    exclude "META-INF/*.SF"
-    exclude "META-INF/*.MF"
-    exclude "META-INF/LICENSE"
-    exclude "META-INF/NOTICE"
 }
 
 cordapp {
