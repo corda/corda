@@ -27,7 +27,7 @@ data class CordappImpl(
         override val jarPath: URL,
         val info: Info,
         override val jarHash: SecureHash.SHA256,
-        override val notaryService: Class<out NotaryService>? = null,
+        val notaryService: Class<out NotaryService>?,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
         val isLoaded: Boolean = true) : Cordapp {
     override val name: String = jarName(jarPath)
