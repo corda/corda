@@ -221,7 +221,8 @@ input states (eg. spending_version >= creation_version)
 
 The Contract attachment non-downgrade rule is enforced in two locations:
 
-    - Transaction building, upon creation of new output states
+    - Transaction building, upon creation of new output states. During this step, the node also selects the latest available attachment
+    (eg. the contract code with the latest contract class version).
     - Transaction verification, upon resolution of existing transaction chains
 
 A Contracts version identifier is stored in the manifest information of the enclosing jar file. This version identifier should be a whole number starting from 1.
