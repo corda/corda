@@ -208,17 +208,22 @@ a flow:
 Contract attachment non-downgrade rule
 --------------------------------------
 
-Transaction verification enforces attachment contract non-downgrade rule:
-the version of the code used in the transaction that spends a state needs to be >= any version of the input states
-(``spending_version >= creation_version``). This rule is enforced at verification time, and also during transaction building.
-When transaction is verified, for a given contract class, the contract attachment of the output states must be of the same
-or newer version as the contract attachment of the input states.
-When creating a new transaction, the latest attachment (one with the biggest contract class version) is selected,
-and it must be at least equal to the version of contract attachment of the relevant input states.
+The contract attachment non-downgrade rule ensures that the transaction uses the contract code which is compatible with the contract code of input states.
+The compatibility is verified based of the contract code version number.
+Each contract code (contract attachment) has a whole number defined in the manifest file of the enclosing JAR file.
+When developing an upgraded contract code the version number should be increased, if missing it default to `1`, see CorDapp version identifiers.
 
-Non-downgrade rule protects against the possibility of malicious nodes selecting old and buggy contract code when spending newer states.
+Non-downgrade rule protects against the possibility of malicious nodes selecting old and incorrect contract code when spending newer states.
 The rule is enforced by the node, however the contract version is specified by Cordapp developer in the JAR file.
-Contract attachment version is a decimal number defined in the manifest file of a JAR file, and defaults to `1`, see CorDapp version identifiers.
+
+The Contract attachment non-downgrade rule is enforced in two locations:
+
+- Transaction building - the latest attachment (the contract code with the highest contract class version) is selected,
+  and it must be at least equal to the version of contract attachment of the relevant input states.
+
+- Transaction verification - the version of the code used in the transaction that spends a state needs to be the highest version
+  of the input states for a given contract class (``spending_version >= creation_version``).
+
 
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
