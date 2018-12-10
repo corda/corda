@@ -1,10 +1,7 @@
 package net.corda.core.serialization
 
 import net.corda.core.contracts.*
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.TransactionSignature
-import net.corda.core.crypto.generateKeyPair
+import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.node.NotaryInfo
@@ -72,18 +69,18 @@ class TransactionSerializationTests {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
-        override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
-    }
-    val notaryServices = object : MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY) {
-        override fun loadState(stateRef: StateRef): TransactionState<*> = inputState.state // Simulates the sate is recorded in node service
-    }
+    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY)
+    val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
     @Before
     fun setup() {
-        val dummyTransaction = TransactionBuilder(DUMMY_NOTARY).withItems(outputState, Command(TestCash.Commands.Issue(), arrayListOf(MEGA_CORP.owningKey))).toLedgerTransaction(megaCorpServices)
-        val fakeStateRef = StateRef(dummyTransaction.id,0)
+        //record fake transaction which created inputState
+        val fakeTx = megaCorpServices.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).withItems(outputState, Command(TestCash.Commands.Issue(), arrayListOf(MEGA_CORP.owningKey))))
+        megaCorpServices.recordTransactions(fakeTx)
+        notaryServices.recordTransactions(fakeTx)
+
+        val fakeStateRef = StateRef(fakeTx.id,0)
         inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef)
         tx = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey)))
     }

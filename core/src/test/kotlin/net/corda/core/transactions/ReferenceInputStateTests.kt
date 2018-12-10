@@ -8,6 +8,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.node.NotaryInfo
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -43,7 +44,7 @@ class ReferenceStateTests {
     val testSerialization = SerializationEnvironmentRule()
     val defaultIssuer = ISSUER.ref(1)
     val bobCash = Cash.State(amount = 1000.DOLLARS `issued by` defaultIssuer, owner = BOB_PARTY)
-    private val ledgerServices = MockServices(
+    private val ledgerServices = object: MockServices(
             cordappPackages = listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
             identityService = rigorousMock<IdentityServiceInternal>().also {
@@ -51,7 +52,14 @@ class ReferenceStateTests {
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
             networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
-    )
+    ) {
+        override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment {
+            //Effectively return contract version 1`
+            return object : AbstractAttachment({ byteArrayOf() }) {
+                override val id: SecureHash get() = throw UnsupportedOperationException()
+            }
+        }
+    }
 
     // This state has only been created to serve reference data so it cannot ever be used as an input or
     // output when it is being referred to. However, we might want all states to be referable, so this

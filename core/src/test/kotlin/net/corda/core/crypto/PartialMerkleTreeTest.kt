@@ -9,7 +9,9 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.ReferenceStateRef
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.finance.DOLLARS
 import net.corda.finance.`issued by`
@@ -59,6 +61,12 @@ class PartialMerkleTreeTest {
     private lateinit var txs: List<WireTransaction>
     private lateinit var testTx: WireTransaction
 
+    fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.recordTransactions(ctx: CoreTransaction, pubKey: PublicKey) {
+        interpreter.services.recordTransactions(SignedTransaction(ctx,
+                listOf(interpreter.services.keyManagementService.sign(SignableData(ctx.id,
+                        SignatureMetadata(4, Crypto.findSignatureScheme(pubKey).schemeNumberID)), pubKey))))
+    }
+
     @Before
     fun init() {
         hashed = nodes.map { it.serialize().sha256() }
@@ -71,9 +79,10 @@ class PartialMerkleTreeTest {
                 identityService = rigorousMock<IdentityServiceInternal>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
+                moreKeys = megaCorp.keyPair
         ).ledger(DUMMY_NOTARY) {
-            unverifiedTransaction {
+            recordTransactions(unverifiedTransaction {
                 attachments(Cash.PROGRAM_ID)
                 output(Cash.PROGRAM_ID, "MEGA_CORP cash",
                         Cash.State(
@@ -83,8 +92,9 @@ class PartialMerkleTreeTest {
                         Cash.State(
                                 amount = 900.DOLLARS `issued by` MEGA_CORP.ref(1, 1),
                                 owner = MINI_CORP))
-            }
-            transaction {
+            }, MEGA_CORP_PUBKEY)
+
+            recordTransactions(transaction {
                 attachments(Cash.PROGRAM_ID)
                 input("MEGA_CORP cash")
                 reference("dummy cash 1")
@@ -92,7 +102,7 @@ class PartialMerkleTreeTest {
                 command(MEGA_CORP_PUBKEY, Cash.Commands.Move())
                 timeWindow(TEST_TX_TIME)
                 this.verifies()
-            }
+            }, MEGA_CORP_PUBKEY)
         }
         txs = testLedger.interpreter.transactionsToVerify
         testTx = txs[0]
