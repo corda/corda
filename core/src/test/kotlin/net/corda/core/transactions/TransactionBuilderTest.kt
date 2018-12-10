@@ -10,8 +10,8 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage

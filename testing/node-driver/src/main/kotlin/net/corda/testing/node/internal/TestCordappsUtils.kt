@@ -2,6 +2,16 @@ package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.internal.cordapp.*
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_LICENCE
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VENDOR
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_LICENCE
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VENDOR
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.MIN_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.outputStream
 import net.corda.testing.node.TestCordapp
 import java.io.BufferedOutputStream

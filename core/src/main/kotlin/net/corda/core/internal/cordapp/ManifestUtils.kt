@@ -1,5 +1,17 @@
 package net.corda.core.internal.cordapp
 
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_LICENCE
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VENDOR
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_LICENCE
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VENDOR
+import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.MIN_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.UNKNOWN_VALUE
 import net.corda.core.utilities.loggerFor
 import java.util.jar.Manifest
 

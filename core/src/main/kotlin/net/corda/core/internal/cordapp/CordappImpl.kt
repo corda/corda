@@ -50,7 +50,6 @@ data class CordappImpl(
     data class Info(val shortName: String, override val vendor: String, override val version: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
         : CordappInfo(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion) {
         companion object {
-            const val UNKNOWN_VALUE = "Unknown"
             val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
         }
         override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
