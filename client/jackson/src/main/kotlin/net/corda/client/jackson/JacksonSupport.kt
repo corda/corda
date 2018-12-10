@@ -137,17 +137,20 @@ object JacksonSupport {
     /**
      * Creates a Jackson ObjectMapper that uses an [IdentityService] directly inside the node to deserialise parties from string names.
      *
-     * If [fuzzyIdentityMatch] is false, fields mapped to [Party] objects must be in X.500 name form and precisely
+     * @param fuzzyIdentityMatch If false, fields mapped to [Party] objects must be in X.500 name form and precisely
      * match an identity known from the network map. If true, the name is matched more leniently but if the match
      * is ambiguous a [JsonParseException] is thrown.
+     *
+     * @param fullParties If true then [Party] objects will be serialised as JSON objects, with the owning key serialised
+     * in addition to the name. For [PartyAndCertificate] objects the cert path will be included.
      */
-    @Deprecated("This is an internal method, do not use")
     @JvmStatic
     @JvmOverloads
     fun createInMemoryMapper(identityService: IdentityService,
                              factory: JsonFactory = JsonFactory(),
-                             fuzzyIdentityMatch: Boolean = false): ObjectMapper {
-        return configureMapper(IdentityObjectMapper(identityService, factory, fuzzyIdentityMatch))
+                             fuzzyIdentityMatch: Boolean = false,
+                             fullParties: Boolean = false): ObjectMapper {
+        return configureMapper(IdentityObjectMapper(identityService, factory, fuzzyIdentityMatch, fullParties))
     }
 
     @CordaInternal
