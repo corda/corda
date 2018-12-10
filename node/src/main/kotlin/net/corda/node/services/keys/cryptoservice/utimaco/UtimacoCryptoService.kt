@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
@@ -126,7 +127,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
     }
 
     override fun defaultTLSSignatureScheme(): SignatureScheme {
-        throw UnsupportedOperationException("Generating key pairs for TLS with the Utimaco CryptoService is not supported.")
+        return DEFAULT_TLS_SIGNATURE_SCHEME
     }
 
     fun generateKeyPair(alias: String, scheme: SignatureScheme, keyTemplate: CryptoServerCXI.KeyAttributes): PublicKey {
@@ -220,6 +221,7 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
 
     companion object {
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
+        val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
 
         private val keyAttributeForScheme: Map<Int, CryptoServerCXI.KeyAttributes> = mapOf(
                 Crypto.ECDSA_SECP256R1_SHA256.schemeNumberID to CryptoServerCXI.KeyAttributes().apply {
