@@ -55,10 +55,6 @@ dependencies {
     // For rendering the index page.
     compile "org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.3"
 
-    // Capsule is a library for building independently executable fat JARs.
-    // We only need this dependency to compile our Caplet against.
-    compileOnly "co.paralleluniverse:capsule:$capsule_version"
-
     integrationTestCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
 }
