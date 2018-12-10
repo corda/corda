@@ -7,27 +7,27 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.bmuschko:gradle-docker-plugin:3.4.4'
+        classpath 'com.spotify:docker-client:8.14.5'
     }
 }
 
 
-import com.bmuschko.gradle.docker.DockerRemoteApiPlugin
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
-import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+import com.spotify.docker.client.DefaultDockerClient
+import com.spotify.docker.client.DockerClient
+import com.spotify.docker.client.LoggingBuildHandler
+import com.spotify.docker.client.messages.RegistryAuth
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 apply plugin: 'kotlin'
-apply plugin: DockerRemoteApiPlugin
 apply plugin: 'application'
 // We need to set mainClassName before applying the shadow plugin.
 mainClassName = 'net.corda.core.ConfigExporterMain'
 apply plugin: 'com.github.johnrengelman.shadow'
 
 
-dependencies{
+dependencies {
     compile project(':node')
 }
 
@@ -36,13 +36,6 @@ shadowJar {
     classifier = null
     version = null
     zip64 true
-}
-
-docker{
-    registryCredentials  {
-        username = System.env.DOCKER_USERNAME
-        password = System.env.DOCKER_PASSWORD
-    }
 }
 
 task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
@@ -69,36 +62,40 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
 }
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-final String suffix = project.version.toString().toLowerCase().contains("snapshot") ?  runTime : "RELEASE"
-final zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
-final correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
+final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
+final GString[] zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
+final GString[] correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
 
-task buildOfficialZuluDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    inputDir = new File(project.buildDir, "docker-temp")
-    tags = zuluBuildTags
-    dockerFile = new File(new File(project.buildDir, "docker-temp"), "Dockerfile")
+static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
+    println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
+    final DockerClient docker = DefaultDockerClient.fromEnv().build()
+    def builtImageId = docker.build(dir, null, dockerFile, new LoggingBuildHandler())
+    for (String tag : tags) {
+        println("Tagging ${builtImageId} as: ${tag}")
+        docker.tag(builtImageId, tag)
+    }
 }
 
-task buildOfficialCorrettoDockerImage(type: DockerBuildImage, dependsOn: [buildDockerFolder]) {
-    inputDir = new File(project.buildDir, "docker-temp")
-    tags = correttoBuildTags
-    dockerFile = new File(new File(project.buildDir, "docker-temp"), "DockerfileAL")
+static pushImages(GString[] imagesToPush) {
+    final DockerClient docker = DefaultDockerClient.fromEnv().build()
+    for (String tag : imagesToPush) {
+        println("Pushing tag: ${tag}")
+        docker.push(tag, RegistryAuth.create(System.env.DOCKER_USERNAME, System.env.DOCKER_PASSWORD, null, null, null, null))
+    }
 }
 
-task pushZuluTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDockerImage]){
-    imageName = zuluBuildTags[0]
+task buildOfficialZuluDockerImage(dependsOn: [buildDockerFolder]) {
+    doLast {
+        buildImage(new File(project.buildDir, "docker-temp").toPath(), "Dockerfile", zuluBuildTags)
+        pushImages(zuluBuildTags)
+    }
 }
 
-task pushZuluLatestTag('type': DockerPushImage, dependsOn: [buildOfficialZuluDockerImage]){
-    imageName = zuluBuildTags[1]
+task buildOfficialCorrettoDockerImage(dependsOn: [buildDockerFolder]) {
+    doLast {
+        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileAL", correttoBuildTags)
+        pushImages(correttoBuildTags)
+    }
 }
 
-task pushCorrettoTimeStampedTag('type': DockerPushImage, dependsOn: [buildOfficialCorrettoDockerImage]){
-    imageName = correttoBuildTags[0]
-}
-
-task pushCorrettoLatestTag('type': DockerPushImage, dependsOn: [buildOfficialCorrettoDockerImage]){
-    imageName = correttoBuildTags[1]
-}
-
-task pushOfficialImages(dependsOn: [pushZuluTimeStampedTag, pushZuluLatestTag, pushCorrettoTimeStampedTag, pushCorrettoLatestTag])
+task pushOfficialImages(dependsOn: [buildOfficialZuluDockerImage, buildOfficialCorrettoDockerImage])
