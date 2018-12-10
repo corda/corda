@@ -140,7 +140,7 @@ const val DEFAULT_PAGE_SIZE = 200
 /**
  * Note: use [PageSpecification] to correctly handle a number of bounded pages of a pre-configured page size.
  */
-const val MAX_PAGE_SIZE = Int.MAX_VALUE
+const val MAX_PAGE_SIZE = Int.MAX_VALUE - 1
 
 /**
  * [PageSpecification] allows specification of a page number (starting from [DEFAULT_PAGE_NUM]) and page size
