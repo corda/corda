@@ -51,7 +51,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
                 targetPlatformVersion = targetPlatformVersion
         )
     }
-    // is it a Contract Jar?
+    // is it a Workflow (flows and services) Jar?
     if (this[CORDAPP_WORKFLOW_NAME] != null) {
         val name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName
         val version = parseVersion(this[CORDAPP_WORKFLOW_VERSION])
