@@ -123,7 +123,6 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 fillUpForSeller(false, cpIssuer, alice,
                         1200.DOLLARS `issued by` bank.ref(0), null, notary).second
             }
-
             insertFakeTransactions(alicesFakePaper, aliceNode, alice, notaryNode, bankNode)
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notary, bob, aliceNode, bobNode,
@@ -395,7 +394,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                             expect(TxRecord.Get(bobsFakeCash[0].id)),
                             // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
                             // Bob's transactions are valid, so she commits to the database
-                            //expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!))//,
+                            //expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)),
                             expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
                             expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!)),
                             expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
@@ -581,14 +580,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val bank = bankNode.info.singleIdentity()
         val issuer = bank.ref(1, 2, 3)
 
-        val bobsBadCash = bobNode.database.transaction {
+        bobNode.database.transaction {
             fillUpForBuyer(bobError, issuer, bob, notary, bobNode, bob, notaryNode, bankNode).second
         }
         val alicesFakePaper = aliceNode.database.transaction {
             fillUpForSeller(aliceError, issuer, alice, 1200.DOLLARS `issued by` issuer, null, notary).second
         }
 
-        //insertFakeTransactions(bobsBadCash, bobNode, bob, notaryNode, bankNode)
         insertFakeTransactions(alicesFakePaper, aliceNode, alice, notaryNode, bankNode)
 
         val (bobStateMachine, aliceResult) = runBuyerAndSeller(notary, bob, aliceNode, bobNode, "alice's paper".outputStateAndRef())
