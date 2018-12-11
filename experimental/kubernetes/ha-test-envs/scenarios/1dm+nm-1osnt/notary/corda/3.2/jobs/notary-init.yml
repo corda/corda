@@ -35,7 +35,7 @@ spec:
           mountPath: /opt/corda/notaryNodeInfo
       
       - name: upload-notary-certificates-secret
-        image: haregistry.azurecr.io/kubectl
+        image: haregistry.azurecr.io/kubectl:1.13.0
         args: ["kubectl create secret generic notary-certificates-secret --from-file=/opt/corda/certificates"]
         volumeMounts:
         - name: notary-empty-dir-certificates
@@ -43,7 +43,7 @@ spec:
       
       containers:
       - name: upload-notary-node-info-secret
-        image: haregistry.azurecr.io/kubectl
+        image: haregistry.azurecr.io/kubectl:1.13.0
         args: ["kubectl create secret generic notary-node-info-secret --from-file=/opt/corda/notaryNodeInfo"]
         volumeMounts:
         - name: notary-empty-dir-node-info

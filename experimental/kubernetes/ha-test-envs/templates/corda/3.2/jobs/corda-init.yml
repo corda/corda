@@ -33,7 +33,7 @@ spec:
 
       containers:
       - name: upload-{{ name }}-certificates-secret
-        image: haregistry.azurecr.io/kubectl
+        image: haregistry.azurecr.io/kubectl:1.13.0
         args: ["kubectl create secret generic {{ name }}-certificates-secret --from-file=/opt/corda/certificates"]
         volumeMounts:
         - name: {{ name }}-empty-dir-certificates

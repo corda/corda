@@ -43,21 +43,21 @@ kubectl create -f notary/r3-corda/3.2/pods/notary.yml
 
 wait_for "kubectl get pods | grep notary | grep Running"
 
-kubectl create configmap artemis-configmap --from-file=artemis/latest/configMaps
-kubectl create -f artemis/latest/services/artemis.yml
-kubectl create -f artemis/latest/deployments/artemis.yml
+kubectl create configmap artemis-configmap --from-file=artemis/2.6.3/configMaps
+kubectl create -f artemis/2.6.3/services/artemis.yml
+kubectl create -f artemis/2.6.3/deployments/artemis.yml
 
 wait_for "kubectl get pods | grep artemis | grep Running"
 
 kubectl create -f bridge/latest/services/bridge.yml
 
-kubectl create configmap partya-configmap --from-file=partya/3.2/configMaps
-kubectl create -f partya/3.2/services/partya.yml
-kubectl create -f partya/3.2/jobs/partya-init.yml
+kubectl create configmap partya-configmap --from-file=partya/r3-corda/3.2/configMaps
+kubectl create -f partya/r3-corda/3.2/services/corda.yml
+kubectl create -f partya/r3-corda/3.2/jobs/corda-init.yml
 
 wait_for "kubectl get pods | grep partya-init | grep Completed"
 
-kubectl create -f partya/3.2/pods/partya.yml
+kubectl create -f partya/r3-corda/3.2/pods/corda.yml
 
 wait_for "kubectl exec notary ls | grep network-parameters"
 kubectl cp notary:/opt/corda/network-parameters .
@@ -69,12 +69,12 @@ kubectl create -f bridge/latest/pods/bridge.yml
 
 wait_for "kubectl get pods | grep bridge | grep Running"
 
-kubectl create configmap partyb-configmap --from-file=partyb/3.2/configMaps
-kubectl create -f partyb/3.2/services/partyb.yml
-kubectl create -f partyb/3.2/jobs/partyb-init.yml
+kubectl create configmap partyb-configmap --from-file=partyb/r3-corda/3.2/configMaps
+kubectl create -f partyb/r3-corda/3.2/services/corda.yml
+kubectl create -f partyb/r3-corda/3.2/jobs/corda-init.yml
 
 wait_for "kubectl get pods | grep partyb-init | grep Completed"
 
-kubectl create -f partyb/3.2/pods/partyb.yml
+kubectl create -f partyb/r3-corda/3.2/pods/corda.yml
 
 kubectl create -f misc/kubernetes-dashboard.yml || true
