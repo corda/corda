@@ -51,8 +51,8 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
             from dbmigrator
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
-            from "src/docker/DockerfileAL"
-            from "src/docker/Dockerfile"
+            from "src/docker/DockerfileCorretto"
+            from "src/docker/DockerfileUbuntuZulu"
             rename(cordaJar.name, "corda.jar")
             rename(dbmigrator.name, "database-manager.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
@@ -63,6 +63,7 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
 final GString[] zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
+final GString[] alpineZuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:latest"]
 final GString[] correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
 
 static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
@@ -85,14 +86,26 @@ static pushImages(GString[] imagesToPush) {
 
 task buildOfficialZuluDockerImage(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "Dockerfile", zuluBuildTags)
-        pushImages(zuluBuildTags)
+        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileUbuntuZulu", zuluBuildTags)
+    }
+}
+
+task buildOfficialAplineZuluDockerImage(dependsOn: [buildDockerFolder]) {
+    doLast {
+        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileAlpineZulu", alpineZuluBuildTags)
     }
 }
 
 task buildOfficialCorrettoDockerImage(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileAL", correttoBuildTags)
+        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileCorretto", correttoBuildTags)
+    }
+}
+
+task pushOfficialImages(dependsOn: [buildOfficialZuluDockerImage, buildOfficialCorrettoDockerImage, buildOfficialAplineZuluDockerImage]){
+    doLast{
+        pushImages(zuluBuildTags)
+        pushImages(alpineZuluBuildTags)
         pushImages(correttoBuildTags)
     }
 }

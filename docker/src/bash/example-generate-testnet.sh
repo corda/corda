@@ -16,8 +16,7 @@ docker run -ti \
         -v $(pwd)/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
         entdocker.corda.r3cev.com/corda-enterprise-corretto-4.0-snapshot:latest db-migrate-create-jars
 
-docker run -ti \
-        --memory=2048m \
+docker run --memory=2048m \
         --cpus=2 \
         -v $(pwd)/docker/config:/etc/corda \
         -v $(pwd)/docker/certificates:/opt/corda/certificates \

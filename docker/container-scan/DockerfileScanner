@@ -22,3 +22,5 @@ ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 RUN git clone https://github.com/arminc/clair-scanner.git /gopath/src/clair-scanner
 RUN cd /gopath/src/clair-scanner && make && make ensure && make build && mv clair-scanner $GOROOT/bin/
+RUN mkdir /output/
+VOLUME ["/output"]

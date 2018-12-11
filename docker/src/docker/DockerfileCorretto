@@ -1,19 +1,22 @@
-FROM azul/zulu-openjdk:8u192
-
-RUN apt-get update && apt-get -y upgrade && apt-get -y install bash curl unzip
+FROM amazonlinux:2
+RUN amazon-linux-extras enable corretto8
+RUN yum -y install java-1.8.0-amazon-corretto-devel && \
+    yum -y install bash && \
+    yum -y install curl && \
+    yum -y install unzip
 
 # Create dirs
-RUN mkdir -p /opt/corda/cordapps
-RUN mkdir -p /opt/corda/persistence
-RUN mkdir -p /opt/corda/certificates
-RUN mkdir -p /opt/corda/drivers
-RUN mkdir -p /opt/corda/logs
-RUN mkdir -p /opt/corda/bin
-RUN mkdir -p /opt/corda/additional-node-infos
-RUN mkdir -p /etc/corda
+RUN mkdir -p /opt/corda/cordapps && \
+    mkdir -p /opt/corda/persistence && \
+    mkdir -p /opt/corda/certificates && \
+    mkdir -p /opt/corda/drivers && \
+    mkdir -p /opt/corda/logs && \
+    mkdir -p /opt/corda/bin && \
+    mkdir -p /opt/corda/additional-node-infos && \
+    mkdir -p /etc/corda
 
 # Create corda user
-RUN addgroup corda && \
+RUN groupadd corda && \
     useradd corda -g corda -m -d /opt/corda
 
 WORKDIR /opt/corda
@@ -29,8 +32,8 @@ ENV MY_P2P_PORT=10200
 ENV MY_RPC_PORT=10201
 ENV MY_RPC_ADMIN_PORT=10202
 
-RUN chown -R corda:corda /opt/corda
-RUN chown -R corda:corda /etc/corda
+RUN chown -R corda:corda /opt/corda  && \
+    chown -R corda:corda /etc/corda
 
 ##CORDAPPS FOLDER
 VOLUME ["/opt/corda/cordapps"]
@@ -65,10 +68,7 @@ ADD --chown=corda:corda db-migrate-execute-migration.sh /opt/corda/bin/db-migrat
 ##BASE CONFIG FOR GENERATOR
 ADD --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 ##SET EXECUTABLE PERMISSIONS
-RUN chmod +x /opt/corda/bin/config-generator
-RUN chmod +x /opt/corda/bin/run-corda
-RUN chmod +x /opt/corda/bin/db-migrate-create-jars
-RUN chmod +x /opt/corda/bin/db-migrate-execute-migration
+RUN chmod +x /opt/corda/bin/config-generator /opt/corda/bin/run-corda /opt/corda/bin/db-migrate-create-jars /opt/corda/bin/db-migrate-execute-migration
 
 ENV PATH=$PATH:/opt/corda/bin
 
