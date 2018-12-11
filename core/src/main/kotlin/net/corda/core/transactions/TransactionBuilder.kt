@@ -628,7 +628,7 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
     /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
-    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers)) }
+    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
