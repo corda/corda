@@ -24,6 +24,7 @@ import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
+import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
@@ -293,8 +294,8 @@ class CommercialPaperTestsGeneric {
 
         val moveTX = aliceDatabase.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
-            var builder = TransactionBuilder(dummyNotary.party)
-            builder = Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, alice.identity, AnonymousParty(megaCorp.publicKey)).first
+            val builder = TransactionBuilder(dummyNotary.party)
+            Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, alice.identity, AnonymousParty(megaCorp.publicKey))
             CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(alice.keyPair.public))
             val ptx = aliceServices.signInitialTransaction(builder)
             val ptx2 = megaCorpServices.addSignature(ptx)
@@ -313,9 +314,9 @@ class CommercialPaperTestsGeneric {
 
         megaCorpDatabase.transaction {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
-                var builder = TransactionBuilder(dummyNotary.party)
+                val builder = TransactionBuilder(dummyNotary.party)
                 builder.setTimeWindow(time, 30.seconds)
-                builder = CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), megaCorpServices, megaCorpServices.myInfo.singleIdentityAndCert())
+                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), megaCorpServices, megaCorpServices.myInfo.singleIdentityAndCert())
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = megaCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)

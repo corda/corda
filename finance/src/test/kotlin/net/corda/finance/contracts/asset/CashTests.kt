@@ -272,8 +272,8 @@ class CashTests {
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
             command(megaCorp.publicKey, Cash.Commands.Issue())
             tweak {
-                command(megaCorp.publicKey, Cash.Commands.Issue())
-                this `fails with` "there is only a single issue command"
+                command(miniCorp.publicKey, Cash.Commands.Issue())
+                this.verifies()
             }
             this.verifies()
         }
@@ -525,10 +525,10 @@ class CashTests {
 
     private fun makeSpend(services: ServiceHub, amount: Amount<Currency>, dest: AbstractParty): WireTransaction {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
-        var tx = TransactionBuilder(dummyNotary.party)
-        tx = database.transaction {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
             Cash.generateSpend(services, tx, amount, ourIdentity, dest)
-        }.first
+        }
         return tx.toWireTransaction(services)
     }
 
@@ -624,8 +624,8 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithParties() {
         database.transaction {
-            var tx = TransactionBuilder(dummyNotary.party)
-            tx = Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party)).first
+            val tx = TransactionBuilder(dummyNotary.party)
+            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -829,12 +829,13 @@ class CashTests {
 
     @Test
     fun multiSpend() {
-        val (tx, _) = database.transaction {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, TransactionBuilder(dummyNotary.party), payments, ourServices.myInfo.singleIdentityAndCert())
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
@@ -851,20 +852,21 @@ class CashTests {
 
     @Test
     fun generateSpendTwiceWithinATransaction() {
-        var (tx, _) = database.transaction {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, TransactionBuilder(dummyNotary.party), payments, ourServices.myInfo.singleIdentityAndCert())
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
-        tx = database.transaction {
+        database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.POUNDS),
                     PartyAndAmount(charlie.party.anonymise(), 150.POUNDS)
             )
             Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
-        }.first
+        }
 
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
