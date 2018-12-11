@@ -103,6 +103,7 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest[CordappInfo.CORDAPP_CONTRACT_NAME]  = name
     manifest[CordappInfo.CORDAPP_CONTRACT_VERSION] = DEFAULT_CORDAPP_VERSION.toString()
     manifest[CordappInfo.CORDAPP_WORKFLOW_NAME]  = name
+    manifest[CordappInfo.CORDAPP_WORKFLOW_VERSION] = DEFAULT_CORDAPP_VERSION.toString()
     manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
 
     return manifest

@@ -46,13 +46,20 @@ abstract class CordappInfo(open val name: String, open val vendor: String, open 
 /** a Contract Cordapp contains contract definitions (state, commands) and verification logic */
 data class Contract(override val name: String, override val vendor: String, val versionId: Int, val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
     : CordappInfo(name, vendor, versionId.toString(), minimumPlatformVersion, targetPlatformVersion) {
-    override fun description() = "Contract CorDapp: $name version $version by $vendor with licence $licence"
+    override fun description() = "Contract CorDapp: $name version $version by vendor $vendor with licence $licence"
     override fun hasUnknownFields(): Boolean = arrayOf(name, vendor, licence).any { it == UNKNOWN_VALUE }
 }
 
 /** a Workflow Cordapp contains flows and services used to implement business transactions using contracts and states persisted to the immutable ledger */
 data class Workflow(override val name: String, override val vendor: String, val versionId: Int, val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
     : CordappInfo(name, vendor, versionId.toString(), minimumPlatformVersion, targetPlatformVersion) {
-    override fun description() = "Workflow CorDapp: $name version $version by $vendor with licence $licence"
+    override fun description() = "Workflow CorDapp: $name version $version by vendor $vendor with licence $licence"
     override fun hasUnknownFields(): Boolean = arrayOf(name, vendor, licence).any { it == UNKNOWN_VALUE }
+}
+
+/** a Workflow Cordapp contains flows and services used to implement business transactions using contracts and states persisted to the immutable ledger */
+data class ContractAndWorkflow(val contract: Contract, val workflow: Workflow, override val name: String, override val vendor: String, val versionId: Int, val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
+    : CordappInfo("", "", "", minimumPlatformVersion, targetPlatformVersion) {
+    override fun description() = "Combined CorDapp: ${contract.description()}, ${workflow.description()}"
+    override fun hasUnknownFields(): Boolean = arrayOf(contract.name, contract.vendor, contract.licence, workflow.name, workflow.vendor, workflow.licence).any { it == UNKNOWN_VALUE }
 }

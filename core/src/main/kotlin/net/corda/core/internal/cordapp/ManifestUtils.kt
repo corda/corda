@@ -39,35 +39,35 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
 
     /** new identifiers (Corda 4) */
     // is it a Contract Jar?
-    if (this[CORDAPP_CONTRACT_NAME] != null) {
-        val name = this[CORDAPP_CONTRACT_NAME] ?: defaultName
-        val version = parseVersion(this[CORDAPP_CONTRACT_VERSION], CORDAPP_CONTRACT_VERSION)
-        val vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE
-        val licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE
-        return Contract(
-                name = name,
-                vendor = vendor,
-                versionId = version,
-                licence = licence,
-                minimumPlatformVersion = minPlatformVersion,
-                targetPlatformVersion = targetPlatformVersion
-        )
-    }
+    val contractInfo =
+        if (this[CORDAPP_CONTRACT_NAME] != null) {
+            Contract(name = this[CORDAPP_CONTRACT_NAME] ?: defaultName,
+                    vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE,
+                    versionId = parseVersion(this[CORDAPP_CONTRACT_VERSION], CORDAPP_CONTRACT_VERSION),
+                    licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE,
+                    minimumPlatformVersion = minPlatformVersion,
+                    targetPlatformVersion = targetPlatformVersion
+            )
+        } else null
+
     // is it a Workflow (flows and services) Jar?
-    if (this[CORDAPP_WORKFLOW_NAME] != null) {
-        val name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName
-        val version = parseVersion(this[CORDAPP_WORKFLOW_VERSION], CORDAPP_WORKFLOW_VERSION)
-        val vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE
-        val licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE
-        return Workflow(
-                name = name,
-                vendor = vendor,
-                versionId = version,
-                licence = licence,
-                minimumPlatformVersion = minPlatformVersion,
-                targetPlatformVersion = targetPlatformVersion
-        )
+    val workflowInfo =
+        if (this[CORDAPP_WORKFLOW_NAME] != null) {
+            Workflow(name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName,
+                    vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE,
+                    versionId = parseVersion(this[CORDAPP_WORKFLOW_VERSION], CORDAPP_WORKFLOW_VERSION),
+                    licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE,
+                    minimumPlatformVersion = minPlatformVersion,
+                    targetPlatformVersion = targetPlatformVersion
+            )
+        } else null
+
+    // combined Contract and Workflow Jar ?
+    if (contractInfo != null && workflowInfo != null) {
+        return ContractAndWorkflow(contractInfo, workflowInfo, "", "", 0, "", minPlatformVersion, targetPlatformVersion)
     }
+    else if (contractInfo != null) return contractInfo
+    else if (workflowInfo != null) return workflowInfo
 
     /** need to maintain backwards compatibility so use old identifiers if existent */
     val shortName = this["Name"] ?: defaultName
