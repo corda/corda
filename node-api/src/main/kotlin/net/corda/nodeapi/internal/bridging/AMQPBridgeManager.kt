@@ -201,7 +201,6 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
                     session?.rollback(false)
                 }
             }
-
             bridgeMetricsService?.packetAcceptedEvent(sendableMessage)
         }
     }
