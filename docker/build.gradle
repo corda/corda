@@ -10,7 +10,9 @@ buildscript {
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.LoggingBuildHandler
+import com.spotify.docker.client.ProgressHandler
+import com.spotify.docker.client.exceptions.DockerException
+import com.spotify.docker.client.messages.ProgressMessage
 import com.spotify.docker.client.messages.RegistryAuth
 
 import java.time.LocalDateTime
@@ -53,6 +55,7 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
             from "src/bash/generate-config.sh"
             from "src/docker/DockerfileCorretto"
             from "src/docker/DockerfileUbuntuZulu"
+            from "src/docker/DockerfileAlpineZulu"
             rename(cordaJar.name, "corda.jar")
             rename(dbmigrator.name, "database-manager.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
@@ -69,7 +72,18 @@ final GString[] correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise
 static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
     println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
-    def builtImageId = docker.build(dir, null, dockerFile, new LoggingBuildHandler())
+    def builtImageId = docker.build(dir, null, dockerFile, new ProgressHandler(){
+        @Override
+        void progress(ProgressMessage message) throws DockerException {
+                if (message.error() != null){
+                    throw new RuntimeException(message.error())
+                }else if (message.stream() != null){
+                    print(message.stream())
+                }else if (message.progress() != null){
+                    print(message.progress())
+                }
+        }
+    })
     for (String tag : tags) {
         println("Tagging ${builtImageId} as: ${tag}")
         docker.tag(builtImageId, tag)

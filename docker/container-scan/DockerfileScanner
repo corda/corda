@@ -1,4 +1,4 @@
-FROM debian:wheezy
+FROM ubuntu:18.04
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \
@@ -9,7 +9,6 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          apt-transport-https \
                          ca-certificates \
                          curl \
-                         python-software-properties \
                && rm -rf /var/lib/apt/lists/*
 
 ENV GOVERSION 1.9
