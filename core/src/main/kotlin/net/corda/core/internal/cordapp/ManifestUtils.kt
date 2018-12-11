@@ -12,6 +12,7 @@ import net.corda.core.internal.cordapp.CordappInfo.Companion.MIN_PLATFORM_VERSIO
 import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappInfo.Companion.UNKNOWN_VALUE
 import net.corda.core.internal.cordapp.CordappInfo.Companion.parseVersion
+import java.util.jar.Attributes
 import java.util.jar.Manifest
 
 operator fun Manifest.set(key: String, value: String): String? {
@@ -32,6 +33,7 @@ val Manifest.targetPlatformVersion: Int
 
 fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
 
+    /** Common attributes */
     val minPlatformVersion = this[MIN_PLATFORM_VERSION]?.toIntOrNull() ?: 1
     val targetPlatformVersion = this[TARGET_PLATFORM_VERSION]?.toIntOrNull() ?: minPlatformVersion
 

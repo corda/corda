@@ -2,15 +2,6 @@ package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.internal.cordapp.*
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_LICENCE
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_NAME
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VENDOR
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_LICENCE
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_NAME
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VENDOR
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.MIN_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.outputStream
 import net.corda.testing.node.TestCordapp
@@ -78,7 +69,7 @@ fun TestCordappImpl.packageAsJar(file: Path) {
             .scan()
 
     scanResult.use {
-        val manifest = createTestManifest(name, title, version, vendor, targetVersion, cordappVersion)
+        val manifest = createTestManifest(name, title, version, vendor, targetVersion)
         JarOutputStream(file.outputStream()).use { jos ->
             val time = FileTime.from(Instant.EPOCH)
             val manifestEntry = ZipEntry(JarFile.MANIFEST_NAME).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
@@ -98,24 +89,17 @@ fun TestCordappImpl.packageAsJar(file: Path) {
     }
 }
 
-fun createTestManifest(name: String, version: String, vendor: String, licence: String, targetVersion: Int): Manifest {
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
     manifest[Attributes.Name.MANIFEST_VERSION.toString()] = "1.0"
 
-    manifest[CORDAPP_CONTRACT_NAME] = name
-    manifest[CORDAPP_CONTRACT_VERSION] = version
-    manifest[CORDAPP_CONTRACT_VENDOR] = vendor
-    manifest[CORDAPP_CONTRACT_LICENCE] = licence
-
-    manifest[CORDAPP_WORKFLOW_NAME] = name
-    manifest[CORDAPP_WORKFLOW_VERSION] = version
-    manifest[CORDAPP_WORKFLOW_VENDOR] = vendor
-    manifest[CORDAPP_WORKFLOW_LICENCE] = licence
-
+    manifest["Name"] = name
+    manifest[Attributes.Name.IMPLEMENTATION_TITLE] = title
+    manifest[Attributes.Name.IMPLEMENTATION_VERSION] = version
+    manifest[Attributes.Name.IMPLEMENTATION_VENDOR] = vendor
     manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
-    manifest[MIN_PLATFORM_VERSION] = "1"
 
     return manifest
 }

@@ -1,8 +1,8 @@
 package net.corda.testing.node
 
 import net.corda.core.DoNotImplement
-import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.simplifyScanPackages
 import java.nio.file.Path
