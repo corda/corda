@@ -8,6 +8,7 @@ import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.*
+import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -44,3 +45,10 @@ fun createTestSerializationEnv(): SerializationEnvironment {
     )
 }
 
+fun <T> SerializationEnvironment.asTestContextEnv(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
+    try {
+        return asContextEnv(inheritable, callable)
+    } finally {
+        inVMExecutors.remove(this)
+    }
+}

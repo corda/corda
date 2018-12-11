@@ -45,7 +45,7 @@ class TypeModellingFingerPrinter(
  * Wrapper for the [Hasher] we use to generate fingerprints, providing methods for writing various kinds of content
  * into the hash.
  */
-internal class FingerprintWriter(debugEnabled: Boolean) {
+internal class FingerprintWriter(debugEnabled: Boolean = false) {
 
     companion object {
         private const val ARRAY_HASH: String = "Array = true"

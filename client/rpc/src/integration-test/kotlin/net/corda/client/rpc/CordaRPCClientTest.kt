@@ -9,7 +9,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.messaging.*
-import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -61,7 +60,8 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
     }
 
     @Before
-    fun setUp() {
+    override fun setUp() {
+        super.setUp()
         node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
         client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(
             maxReconnectAttempts = 5

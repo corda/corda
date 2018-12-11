@@ -4,15 +4,22 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.serialize
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -38,6 +45,11 @@ class TransactionBuilderTest {
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
     private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
+    private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
+            versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
+            uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
+    private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
     @Before
     fun setup() {
@@ -57,6 +69,7 @@ class TransactionBuilderTest {
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 
     @Test
@@ -110,6 +123,25 @@ class TransactionBuilderTest {
     }
 
     @Test
+    fun `multiple commands with same data are joined without duplicates in terms of signers`() {
+        val aliceParty = TestIdentity(ALICE_NAME).party
+        val bobParty = TestIdentity(BOB_NAME).party
+        val tx = TransactionBuilder(notary)
+        tx.addCommand(DummyCommandData, notary.owningKey, aliceParty.owningKey)
+        tx.addCommand(DummyCommandData, aliceParty.owningKey, bobParty.owningKey)
+
+        val commands = tx.commands()
+
+        assertThat(commands).hasSize(1)
+        assertThat(commands.single()).satisfies { cmd ->
+
+            assertThat(cmd.value).isEqualTo(DummyCommandData)
+            assertThat(cmd.signers).hasSize(3)
+            assertThat(cmd.signers).contains(notary.owningKey, bobParty.owningKey, aliceParty.owningKey)
+        }
+    }
+
+    @Test
     fun `automatic signature constraint`() {
         val aliceParty = TestIdentity(ALICE_NAME).party
         val bobParty = TestIdentity(BOB_NAME).party
@@ -122,6 +154,7 @@ class TransactionBuilderTest {
 
         doReturn(attachments).whenever(services).attachments
         doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
+        doReturn(listOf(contractAttachmentId)).whenever(attachments).queryAttachments(attachmentQueryCriteria, attachmentSort)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
         val builder = TransactionBuilder()

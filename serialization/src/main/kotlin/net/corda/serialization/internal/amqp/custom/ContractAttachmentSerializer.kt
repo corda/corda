@@ -32,5 +32,5 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
     }
 
     @KeepForDJVM
-    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?, val signers: List<PublicKey>, val version: String)
+    data class ContractAttachmentProxy(val attachment: Attachment, val contract: ContractClassName, val contracts: Set<ContractClassName>, val uploader: String?, val signers: List<PublicKey>, val version: Int)
 }
