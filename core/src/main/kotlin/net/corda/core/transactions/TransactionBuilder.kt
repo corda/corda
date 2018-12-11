@@ -132,7 +132,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                     createComponentGroups(
                             inputStates(),
                             resolvedOutputs,
-                            commands,
+                            commands(),
                             (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
                             notary,
                             window,
@@ -629,8 +629,8 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s. */
-    fun commands(): List<Command<*>> = ArrayList(commands)
+    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
+    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

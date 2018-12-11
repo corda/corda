@@ -123,6 +123,25 @@ class TransactionBuilderTest {
     }
 
     @Test
+    fun `multiple commands with same data are joined without duplicates in terms of signers`() {
+        val aliceParty = TestIdentity(ALICE_NAME).party
+        val bobParty = TestIdentity(BOB_NAME).party
+        val tx = TransactionBuilder(notary)
+        tx.addCommand(DummyCommandData, notary.owningKey, aliceParty.owningKey)
+        tx.addCommand(DummyCommandData, aliceParty.owningKey, bobParty.owningKey)
+
+        val commands = tx.commands()
+
+        assertThat(commands).hasSize(1)
+        assertThat(commands.single()).satisfies { cmd ->
+
+            assertThat(cmd.value).isEqualTo(DummyCommandData)
+            assertThat(cmd.signers).hasSize(3)
+            assertThat(cmd.signers).contains(notary.owningKey, bobParty.owningKey, aliceParty.owningKey)
+        }
+    }
+
+    @Test
     fun `automatic signature constraint`() {
         val aliceParty = TestIdentity(ALICE_NAME).party
         val bobParty = TestIdentity(BOB_NAME).party
