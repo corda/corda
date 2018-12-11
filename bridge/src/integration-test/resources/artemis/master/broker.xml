@@ -1,0 +1,203 @@
+<?xml version='1.0'?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<configuration xmlns="urn:activemq"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="urn:activemq /schema/artemis-configuration.xsd">
+
+    <core xmlns="urn:activemq:core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="urn:activemq:core ">
+
+        <name>0.0.0.0</name>
+
+        <persistence-enabled>true</persistence-enabled>
+
+        <journal-type>NIO</journal-type>
+
+        <paging-directory>./data/paging</paging-directory>
+
+        <bindings-directory>./data/bindings</bindings-directory>
+
+        <journal-directory>./data/journal</journal-directory>
+
+        <large-messages-directory>./data/large-messages</large-messages-directory>
+
+        <journal-datasync>true</journal-datasync>
+
+        <journal-min-files>2</journal-min-files>
+
+        <journal-pool-files>-1</journal-pool-files>
+
+        <journal-buffer-size>10M</journal-buffer-size>
+
+        <journal-file-size>10M</journal-file-size>
+
+        <id-cache-size>2000</id-cache-size>
+
+        <persist-id-cache>true</persist-id-cache>
+
+        <populate-validated-user>true</populate-validated-user>
+
+        <management-notification-address>internal.activemq.notifications</management-notification-address>
+
+        <connection-ttl-check-interval>20</connection-ttl-check-interval>
+
+        <jmx-management-enabled>false</jmx-management-enabled>
+
+
+        <journal-buffer-timeout>2876000</journal-buffer-timeout>
+
+
+        <journal-max-io>1</journal-max-io>
+
+        <disk-scan-period>5000</disk-scan-period>
+
+        <max-disk-usage>90</max-disk-usage>
+
+        <critical-analyzer>true</critical-analyzer>
+
+        <critical-analyzer-timeout>120000</critical-analyzer-timeout>
+
+        <critical-analyzer-check-period>60000</critical-analyzer-check-period>
+
+        <critical-analyzer-policy>HALT</critical-analyzer-policy>
+
+      <ha-policy>
+         <replication>
+            <master>
+              <check-for-live-server>true</check-for-live-server>
+            </master>
+         </replication>
+      </ha-policy>
+
+        <connectors>
+            <connector name="netty-live-connector">tcp://localhost:10131?sslEnabled=true;keyStorePath=./certificates/sslkeystore.jks;keyStorePassword=cordacadevpass;trustStorePath=./certificates/truststore.jks;trustStorePassword=trustpass</connector>
+            <connector name="netty-connector">tcp://localhost:10130?sslEnabled=true;keyStorePath=./certificates/sslkeystore.jks;keyStorePassword=cordacadevpass;trustStorePath=./certificates/truststore.jks;trustStorePassword=trustpass</connector>
+        </connectors>
+
+        <acceptors>
+            <!-- useEpoll means: it will use Netty epoll if you are on a system (Linux) that supports it -->
+            <!-- amqpCredits: The number of credits sent to AMQP producers -->
+            <!-- amqpLowCredits: The server will send the # credits specified at amqpCredits at this low mark -->
+
+            <!-- Acceptor for every supported protocol -->
+            <acceptor name="artemis">tcp://0.0.0.0:10130?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;protocols=CORE,AMQP;useEpoll=true;amqpCredits=1000;amqpLowCredits=300;sslEnabled=true;keyStorePath=./certificates/sslkeystore.jks;keyStorePassword=cordacadevpass;trustStorePath=./certificates/truststore.jks;trustStorePassword=trustpass;needClientAuth=true;enabledCipherSuites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;enabledProtocols=TLSv1.2</acceptor>
+        </acceptors>
+
+        <cluster-connections>
+            <cluster-connection name="test-cluster">
+                <connector-ref>netty-connector</connector-ref>
+                <static-connectors>
+                    <connector-ref>netty-connector</connector-ref>
+                    <connector-ref>netty-live-connector</connector-ref>
+                </static-connectors>
+            </cluster-connection>
+        </cluster-connections>
+
+
+        <security-settings>
+            <security-setting match="internal.#">
+                <permission type="createNonDurableQueue" roles="Client"/>
+                <permission type="deleteNonDurableQueue" roles="Client"/>
+                <permission type="createDurableQueue" roles="Client"/>
+                <permission type="deleteDurableQueue" roles="Client"/>
+                <permission type="createAddress" roles="Client"/>
+                <permission type="deleteAddress" roles="Client"/>
+                <permission type="consume" roles="Client"/>
+                <permission type="browse" roles="Client"/>
+                <permission type="send" roles="Client"/>
+                <!-- we need this otherwise ./artemis data imp wouldn't work -->
+                <permission type="manage" roles="Client"/>
+            </security-setting>
+            <security-setting match="p2p.inbound.#">
+                <permission type="createNonDurableQueue" roles="Client"/>
+                <permission type="deleteNonDurableQueue" roles="Client"/>
+                <permission type="createDurableQueue" roles="Client"/>
+                <permission type="deleteDurableQueue" roles="Client"/>
+                <permission type="createAddress" roles="Client"/>
+                <permission type="deleteAddress" roles="Client"/>
+                <permission type="consume" roles="Client"/>
+                <permission type="browse" roles="Client"/>
+                <permission type="send" roles="Client,Peer"/>
+                <!-- we need this otherwise ./artemis data imp wouldn't work -->
+                <permission type="manage" roles="Client"/>
+            </security-setting>
+            <security-setting match="verifier.requests">
+                <permission type="createNonDurableQueue" roles="Client"/>
+                <permission type="deleteNonDurableQueue" roles="Client"/>
+                <permission type="createDurableQueue" roles="Client"/>
+                <permission type="deleteDurableQueue" roles="Client"/>
+                <permission type="createAddress" roles="Client"/>
+                <permission type="deleteAddress" roles="Client"/>
+                <permission type="consume" roles="Client, Verifier"/>
+                <permission type="browse" roles="Client"/>
+                <permission type="send" roles="Client"/>
+                <!-- we need this otherwise ./artemis data imp wouldn't work -->
+                <permission type="manage" roles="Client"/>
+            </security-setting>
+            <security-setting match="verifier.responses">
+                <permission type="createNonDurableQueue" roles="Client"/>
+                <permission type="deleteNonDurableQueue" roles="Client"/>
+                <permission type="createDurableQueue" roles="Client"/>
+                <permission type="deleteDurableQueue" roles="Client"/>
+                <permission type="createAddress" roles="Client"/>
+                <permission type="deleteAddress" roles="Client"/>
+                <permission type="consume" roles="Client"/>
+                <permission type="browse" roles="Client"/>
+                <permission type="send" roles="Client,Verifier"/>
+                <!-- we need this otherwise ./artemis data imp wouldn't work -->
+                <permission type="manage" roles="Client"/>
+            </security-setting>
+        </security-settings>
+
+        <address-settings>
+            <!--default for catch all-->
+            <address-setting match="#">
+                <dead-letter-address>DLQ</dead-letter-address>
+                <expiry-address>ExpiryQueue</expiry-address>
+                <redelivery-delay>0</redelivery-delay>
+                <!-- with -1 only the global-max-size is in use for limiting -->
+                <max-size-bytes>-1</max-size-bytes>
+                <message-counter-history-day-limit>10</message-counter-history-day-limit>
+                <address-full-policy>PAGE</address-full-policy>
+                <auto-create-queues>true</auto-create-queues>
+                <auto-create-addresses>true</auto-create-addresses>
+                <auto-create-jms-queues>true</auto-create-jms-queues>
+                <auto-create-jms-topics>true</auto-create-jms-topics>
+            </address-setting>
+        </address-settings>
+
+        <addresses>
+        </addresses>
+
+        <broker-plugins>
+            <broker-plugin class-name="org.apache.activemq.artemis.core.server.plugin.impl.LoggingActiveMQServerPlugin">
+                <property key="LOG_ALL_EVENTS" value="true"/>
+                <property key="LOG_CONNECTION_EVENTS" value="true"/>
+                <property key="LOG_SESSION_EVENTS" value="true"/>
+                <property key="LOG_CONSUMER_EVENTS" value="true"/>
+                <property key="LOG_DELIVERING_EVENTS" value="true"/>
+                <property key="LOG_SENDING_EVENTS" value="true"/>
+                <property key="LOG_INTERNAL_EVENTS" value="true"/>
+            </broker-plugin>
+        </broker-plugins>
+
+    </core>
+</configuration>

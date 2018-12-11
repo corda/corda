@@ -37,8 +37,7 @@ fun startBridgeProcess(bridgePath: Path, debugPort: Int?): Process {
     )
 }
 
-fun DriverDSLImpl.startBridge(nodeName: CordaX500Name, bridgePort: Int, brokerPort: Int, configOverrides: Map<String, Any>): CordaFuture<BridgeHandle> {
-    val nodeDirectory = baseDirectory(nodeName)
+fun DriverDSLImpl.startBridge(nodeName: CordaX500Name, bridgePort: Int, brokerPort: Int, configOverrides: Map<String, Any>, nodeDirectory:Path = baseDirectory(nodeName)): CordaFuture<BridgeHandle> {
     val bridgeFolder = File("$nodeDirectory-bridge")
     bridgeFolder.mkdirs()
     createNetworkParams(bridgeFolder.toPath())

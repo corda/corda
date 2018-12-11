@@ -17,6 +17,8 @@ spec:
     - name: network-parameters-secret-volume
       mountPath: /opt/corda-firewall/network-parameters
       subPath: network-parameters
+{% for bridge_node in bridge_nodes %}    - name: {{ bridge_node }}-certificates-secret-volume
+      mountPath: /opt/corda-firewall/certificates{% endfor %}
 
   volumes:
   - name: {{ name }}-configmap-volume
@@ -25,5 +27,8 @@ spec:
   - name: network-parameters-secret-volume
     secret:
       secretName: network-parameters-secret
+  {% for bridge_node in bridge_nodes %}- name: {{ bridge_node }}-certificates-secret-volume
+    secret:
+      secretName: {{ bridge_node }}-certificates-secret{% endfor %}
 
   restartPolicy: Never

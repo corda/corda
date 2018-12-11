@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artemis
+spec:
+  selector:
+    matchLabels:
+      app: artemis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: artemis
+    spec:
+      initContainers:
+      - name: artemis-pod-setup
+        image: vromero/activemq-artemis:2.6.3
+        command: [ "/bin/sh", "-c", "--" ]
+        args: [ "cp -RL /opt/artemis-configmap/* /var/lib/artemis/etc" ]
+        volumeMounts:
+          - name: artemis-config-empty-dir-volume
+            mountPath: /var/lib/artemis/etc
+          - name: artemis-configmap-volume
+            mountPath: /opt/artemis-configmap
+          # TODO generate artemis own keys
+          - name: notary-certificates-secret-volume
+            mountPath: /opt/artemis-configmap/certificates
+
+      containers:
+        - name: artemis
+          image: vromero/activemq-artemis:2.6.3
+          volumeMounts:
+            - name: artemis-config-empty-dir-volume
+              mountPath: /var/lib/artemis/etc
+
+      volumes:
+        - name: artemis-config-empty-dir-volume
+          emptyDir: {}
+        - name: artemis-configmap-volume
+          configMap:
+            name: artemis-configmap
+        # TODO generate artemis own keys
+        - name: notary-certificates-secret-volume
+          secret:
+            secretName: notary-certificates-secret

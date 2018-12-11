@@ -29,7 +29,7 @@ spec:
           mountPath: /opt/doorman/certificates
       
       - name: upload-network-root-truststore-secret
-        image: haregistry.azurecr.io/kubectl
+        image: haregistry.azurecr.io/kubectl:1.13.0
         args: ["kubectl create secret generic network-root-truststore-secret --from-file=/opt/doorman/certificates/distribute-nodes/network-root-truststore.jks"]
         volumeMounts:
         - name: doorman-certificates-empty-dir-volume
@@ -37,7 +37,7 @@ spec:
       
       containers:
       - name: upload-doorman-certificates-secret
-        image: haregistry.azurecr.io/kubectl
+        image: haregistry.azurecr.io/kubectl:1.13.0
         args: ["kubectl create secret generic doorman-certificates-secret --from-file=/opt/doorman/certificates"]
         volumeMounts:
         - name: doorman-certificates-empty-dir-volume

@@ -25,6 +25,7 @@ Sub-commands
 ``import-ssl-key``: Key copying tool for creating bridge SSL keystore or add new node SSL identity to existing bridge SSL keystore.
 ``generate-internal-artemis-ssl-keystores``: Generate self-signed root and SSL certificates for internal communication between the services and external Artemis broker.
 ``generate-internal-tunnel-ssl-keystores``: Generate self-signed root and SSL certificates for internal communication between Bridge and Float.
+``configure-artemis``: Generates required configuration files for the external Artemis broker.
 ``install-shell-extensions``: Install alias and autocompletion for bash and zsh. See :doc:`cli-application-shell-extensions` for more info.
 
 
@@ -116,3 +117,46 @@ Command-line options
 * ``-b``, ``--base-directory=<baseDirectory>``: The node working directory where all the files are kept.
 * ``-h``, ``--help``: Show this help message and exit.
 * ``-V``, ``--version``: Print version information and exit.
+
+Artemis configuration
+----------------------
+
+Configuring an external Artemis broker to be used by Corda nodes and firewall components can be a little daunting. This tool will generate the necessary configuration files and install (if needed) a new Artemis instance.
+Please note that the generated configuration files will be copied to a destination supplied as an argument to the command, replacing existing ones.
+The keystore and truststore information will be downloaded by the clients when Artemis is configured in HA mode. Therefore, the tool will configure broker.xml with paths relative to the Artemis instance (for acceptors) and client's working directory (for connectors).
+For example, using the option --keystore ./artemiscerts/keystore.jks will require the keystore to be installed in $ARTEMIS_DIR/etc/artemiscerts and $NODE_OR_BRIDGE_DIR/artemiscerts.
+
+Command-line options
+~~~~~~~~~~~~~~~~~~~~
+.. code-block:: shell
+
+      ha-utilities configure-artemis [-hvV] [--logging-level=<loggingLevel>] [--install] [--distribution=<dist>] --path=<workingDir>  --user=<userX500Name> --acceptor-address=<acceptorHostAndPort> --keystore=<keyStore> --keystore-password=<keyStorePass> --truststore=<trustStore> --truststore-password=<trustStorePass> [--ha=<mode>] [--connectors=<connectors>[;<connectors>...]]
+
+* ``-v``, ``--verbose``, ``--log-to-console``: If set, prints logging to the console as well as to a file.
+* ``--logging-level=<loggingLevel>``: Enable logging at this level and higher. Possible values: ERROR, WARN, INFO, DEBUG, TRACE. Default: INFO
+* ``--install``: Install an Artemis instance at the specified path.
+* ``--distribution``: The path to the Artemis distribution used to install an instance.
+* ``--path``: The path where the generated configuration files will be installed. Used as the new instance location when using the --install option.
+* ``--user``: The X500 name of connecting users (clients). Example value: "O=Client, L=London, C=GB"
+* ``--acceptor-address``: The broker instance acceptor network address for incoming connections.
+* ``--keystore``: The SSL keystore path.
+* ``--keystore-password``: The SSL keystore password.
+* ``--truststore``: The SSL truststore path.
+* ``--truststore-password``: The SSL truststore password.
+* ``--ha``: The broker's working mode. If specified, the broker will be configured to work in HA mode. Valid values: NON_HA, MASTER, SLAVE
+* ``--connectors``: A list of network hosts and ports representing the Artemis connectors used for the Artemis HA cluster. The first entry in the list will be used by the instance configured with this tool. The connector entries are separated by commas (e.g. localhost:10000,localhost:10001,localhost:10002)
+* ``-h``, ``--help``: Show this help message and exit.
+* ``-V``, ``--version``: Print version information and exit.
+
+
+
+
+
+
+
+
+
+
+
+
+

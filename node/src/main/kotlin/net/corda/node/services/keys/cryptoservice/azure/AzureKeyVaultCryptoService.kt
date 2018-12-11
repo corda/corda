@@ -19,6 +19,7 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
@@ -118,8 +119,9 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
     }
 
     override fun defaultTLSSignatureScheme(): SignatureScheme {
-        throw UnsupportedOperationException("Generating key pairs for TLS with the Azure KeyVault CryptoService is not supported.")
+        return DEFAULT_TLS_SIGNATURE_SCHEME
     }
+
     private fun createIdentifier(alias: String) = keyVaultUrl.removeSuffix("/") + "/keys/" + alias
 
     private fun createKeyRequest(schemeNumberID: Int, alias: String, protection: Protection): CreateKeyRequest {
@@ -183,6 +185,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
 
     companion object {
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
+        val DEFAULT_TLS_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256
         // default protection when not set in config. See [AzureKeyVaultConfig].
         val DEFAULT_PROTECTION = Protection.HARDWARE
 
