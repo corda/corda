@@ -18,6 +18,7 @@ import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -341,11 +342,17 @@ class BullyLeaderTest {
     }
 
     private fun artemisReconnectionLoop(artemisClient: ArtemisSessionProvider, running: CountDownLatch) {
-        artemisClient.start()
-        try {
-            running.await()
-        } finally {
-            artemisClient.stop()
+        while (running.count > 0L) {
+            try {
+                artemisClient.start()
+                try {
+                    running.await()
+                } finally {
+                    artemisClient.stop()
+                }
+            } catch (ex: ActiveMQNotConnectedException) {
+
+            }
         }
     }
 

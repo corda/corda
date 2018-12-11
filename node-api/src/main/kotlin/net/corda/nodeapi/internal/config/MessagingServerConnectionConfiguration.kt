@@ -52,7 +52,7 @@ enum class MessagingServerConnectionConfiguration(
 
     CONTINUOUS_RETRY(
             failoverOnInitialAttempt = true,
-            initialConnectAttempts = -1,
+            initialConnectAttempts = 0,
             reconnectAttempts = -1,
             retryInterval = 5.seconds,
             retryIntervalMultiplier = 1.5,
