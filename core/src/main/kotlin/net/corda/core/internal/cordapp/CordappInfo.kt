@@ -23,17 +23,17 @@ abstract class CordappInfo(open val name: String, open val vendor: String, open 
         const val DEFAULT_CORDAPP_VERSION = 1
 
         /** Helper method for version identifier parsing */
-        fun parseVersion(versionStr: String?): Int {
+        fun parseVersion(versionStr: String?, attributeName: String): Int {
             if (versionStr == null)
-                throw CordappInvalidVersionException("Target versionId not specified. Please specify a whole number starting from 1.")
+                throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
             return try {
                 val version = versionStr.toInt()
                 if (version < 1) {
-                    throw CordappInvalidVersionException("Target versionId ($versionStr) must not be smaller than 1.")
+                    throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
                 }
                 return version
             } catch (e: NumberFormatException) {
-                throw CordappInvalidVersionException("Version identifier ($versionStr) must be a whole number starting from 1.")
+                throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
             }
         }
     }

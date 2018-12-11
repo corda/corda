@@ -41,7 +41,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
     // is it a Contract Jar?
     if (this[CORDAPP_CONTRACT_NAME] != null) {
         val name = this[CORDAPP_CONTRACT_NAME] ?: defaultName
-        val version = parseVersion(this[CORDAPP_CONTRACT_VERSION])
+        val version = parseVersion(this[CORDAPP_CONTRACT_VERSION], CORDAPP_CONTRACT_VERSION)
         val vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE
         val licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE
         return Contract(
@@ -56,7 +56,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
     // is it a Workflow (flows and services) Jar?
     if (this[CORDAPP_WORKFLOW_NAME] != null) {
         val name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName
-        val version = parseVersion(this[CORDAPP_WORKFLOW_VERSION])
+        val version = parseVersion(this[CORDAPP_WORKFLOW_VERSION], CORDAPP_WORKFLOW_VERSION)
         val vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE
         val licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE
         return Workflow(
