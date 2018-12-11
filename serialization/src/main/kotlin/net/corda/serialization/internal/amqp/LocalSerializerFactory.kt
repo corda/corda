@@ -85,6 +85,7 @@ class DefaultLocalSerializerFactory(
         private val customSerializerRegistry: CustomSerializerRegistry,
         private val onlyCustomSerializers: Boolean)
     : LocalSerializerFactory {
+
     companion object {
         val logger = contextLogger()
     }
