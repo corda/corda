@@ -123,6 +123,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 fillUpForSeller(false, cpIssuer, alice,
                         1200.DOLLARS `issued by` bank.ref(0), null, notary).second
             }
+
             insertFakeTransactions(alicesFakePaper, aliceNode, alice, notaryNode, bankNode)
 
             val (bobStateMachine, aliceResult) = runBuyerAndSeller(notary, bob, aliceNode, bobNode,
@@ -336,8 +337,8 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                 attachment(stream.toByteArray().inputStream())
             }
 
-            val (_,bobsFakeCash,bobsSignedTxns) = bobNode.database.transaction {
-                fillUpForBuyer(false, issuer, AnonymousParty(bob.owningKey), notary, bobNode, bob, notaryNode, bankNode)
+            val (_, bobsFakeCash, bobsSignedTxns) = bobNode.database.transaction {
+                fillUpForBuyerAndInsertFakeTrnactions(false, issuer, AnonymousParty(bob.owningKey), notary, bobNode, bob, notaryNode, bankNode)
             }
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, alice,
@@ -394,7 +395,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                             expect(TxRecord.Get(bobsFakeCash[0].id)),
                             // Bob answers with the transactions that are now all verifiable, as Alice bottomed out.
                             // Bob's transactions are valid, so she commits to the database
-                            //expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)),
+                            //expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[0].id]!!)), //TODO investigate missing event after introduction of signature constraints non-downgrade rule
                             expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
                             expect(TxRecord.Add(bobsSignedTxns[bobsFakeCash[2].id]!!)),
                             expect(TxRecord.Get(bobsFakeCash[0].id)), // Verify
@@ -441,7 +442,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             val bobsKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = bobNode.database.transaction {
-                fillUpForBuyer(false, issuer, AnonymousParty(bobsKey), notary, bobNode, bob, notaryNode, bankNode)
+                fillUpForBuyerAndInsertFakeTrnactions(false, issuer, AnonymousParty(bobsKey), notary, bobNode, bob, notaryNode, bankNode)
             }.second
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -462,9 +463,12 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // We need to declare this here, if we do it inside [expectEvents] kotlin throws an internal compiler error(!).
             val aliceTxExpectations = sequence(
-                   // expect { tx: SignedTransaction ->
-                   //     require(tx.id == bobsFakeCash[0].id)
-                   // },
+                    //TODO investigate missing event after introduction of signature constraints non-downgrade rule
+                    /*
+                    expect { tx: SignedTransaction ->
+                        require(tx.id == bobsFakeCash[0].id)
+                    },
+                    */
                     expect { tx: SignedTransaction ->
                         require(tx.id == bobsFakeCash[2].id)
                     },
@@ -474,10 +478,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             )
             aliceTxStream.expectEvents { aliceTxExpectations }
             val aliceMappingExpectations = sequence(
-//                    expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
-//                        require(stateMachineRunId == aliceSmId)
-//                        require(transactionId == bobsFakeCash[0].id)
-//                    },
+                    //TODO investigate missing event after introduction of signature constraints non-downgrade rule
+                    /*
+                    expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
+                        require(stateMachineRunId == aliceSmId)
+                        require(transactionId == bobsFakeCash[0].id)
+                    },
+                    */
                     expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[2].id)
@@ -581,7 +588,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val issuer = bank.ref(1, 2, 3)
 
         bobNode.database.transaction {
-            fillUpForBuyer(bobError, issuer, bob, notary, bobNode, bob, notaryNode, bankNode).second
+            fillUpForBuyerAndInsertFakeTrnactions(bobError, issuer, bob, notary, bobNode, bob, notaryNode, bankNode).second
         }
         val alicesFakePaper = aliceNode.database.transaction {
             fillUpForSeller(aliceError, issuer, alice, 1200.DOLLARS `issued by` issuer, null, notary).second
@@ -644,7 +651,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
     }
 
-    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyer(
+    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyerAndInsertFakeTrnactions(
             withError: Boolean,
             issuer: PartyAndReference,
             owner: AbstractParty,
