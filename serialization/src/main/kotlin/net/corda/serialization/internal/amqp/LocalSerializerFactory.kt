@@ -91,7 +91,7 @@ class DefaultLocalSerializerFactory(
     }
 
     private val serializersByType: MutableMap<TypeIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
-    private val typesByName = DefaultCacheProvider.createCache<String, Optional<Type>>()
+    private val typesByName = DefaultCacheProvider.createCache<String, Optional<LocalTypeInformation>>()
 
     override fun createDescriptor(typeInformation: LocalTypeInformation): Symbol =
             Symbol.valueOf("$DESCRIPTOR_DOMAIN:${fingerPrinter.fingerprint(typeInformation)}")
@@ -99,15 +99,14 @@ class DefaultLocalSerializerFactory(
     override fun getTypeInformation(type: Type): LocalTypeInformation = typeModel.inspect(type)
 
     override fun getTypeInformation(typeName: String): LocalTypeInformation? {
-        val type = typesByName.getOrPut(typeName) {
+        return typesByName.getOrPut(typeName) {
             val localType = try {
                     Class.forName(typeName, false, classloader)
                 } catch (_: ClassNotFoundException) {
                     null
                 }
-            Optional.ofNullable(localType)
+            Optional.ofNullable(localType?.run { getTypeInformation(this) })
         }.orElse(null)
-        return type?.run { getTypeInformation(type) }
     }
 
     override fun get(typeInformation: LocalTypeInformation): AMQPSerializer<Any> =
