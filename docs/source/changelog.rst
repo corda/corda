@@ -330,6 +330,8 @@ Unreleased
 
 * The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
 
+* Logging for P2P and RPC has been separated, to make it easier to enable all P2P or RPC logging without hand-picking loggers for individual classes.
+
 Version 3.3
 -----------
 
