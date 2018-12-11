@@ -194,6 +194,8 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
             try {
                 amqpClient.write(sendableMessage)
             } catch (ex: IllegalStateException) {
+                // Attempting to send a message while the AMQP client is disconnected may cause message loss.
+                // The failed message is rolled back after committing acknowledged messages.
                 lock.withLock {
                     ex.message?.let { logInfoWithMDC(it)}
                     logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
