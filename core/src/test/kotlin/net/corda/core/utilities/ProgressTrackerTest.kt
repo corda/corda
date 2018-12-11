@@ -180,7 +180,6 @@ class ProgressTrackerTest {
 
         // Put current state as a first change for simplicity when asserting.
         val stepsTreeNotification = mutableListOf(pt.allStepsLabels)
-        println(pt.allStepsLabels)
         pt.stepsTreeChanges.subscribe {
             stepsTreeNotification += it
         }
@@ -247,5 +246,22 @@ class ProgressTrackerTest {
         repeat(4) { pt.nextStep() }
         pt.currentStep = SimpleSteps.ONE
         assertEquals(SimpleSteps.TWO, pt.nextStep())
+    }
+
+    @Test
+    fun `all index changes seen if subscribed mid flow`() {
+        pt.setChildProgressTracker(SimpleSteps.TWO, pt2)
+
+        pt.currentStep = SimpleSteps.ONE
+        pt.currentStep = SimpleSteps.TWO
+
+        val stepsIndexNotifications = LinkedList<Int>()
+        pt.stepsTreeIndexChanges.subscribe() {
+            stepsIndexNotifications += it
+        }
+
+        pt2.currentStep = ChildSteps.AYY
+
+        assertThat(stepsIndexNotifications).containsExactlyElementsOf(listOf(1, 2, 4))
     }
 }

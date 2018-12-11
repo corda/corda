@@ -5,6 +5,7 @@ import net.corda.core.serialization.CordaSerializable
 import rx.Observable
 import rx.Subscription
 import rx.subjects.PublishSubject
+import rx.subjects.ReplaySubject
 import java.util.*
 
 /**
@@ -86,7 +87,7 @@ class ProgressTracker(vararg inputSteps: Step) {
     // This field won't be serialized.
     private val _changes by transient { PublishSubject.create<Change>() }
     private val _stepsTreeChanges by transient { PublishSubject.create<List<Pair<Int, String>>>() }
-    private val _stepsTreeIndexChanges by transient { PublishSubject.create<Int>() }
+    private val _stepsTreeIndexChanges by transient { ReplaySubject.create<Int>() }
 
     var currentStep: Step
         get() = steps[stepIndex]
@@ -147,8 +148,10 @@ class ProgressTracker(vararg inputSteps: Step) {
     /** The zero-bases index of the current step in a [allStepsLabels] list */
     var stepsTreeIndex: Int = -1
         private set(value) {
-            field = value
-            _stepsTreeIndexChanges.onNext(value)
+            if (value != field) {
+                field = value
+                _stepsTreeIndexChanges.onNext(value)
+            }
         }
 
     /**
