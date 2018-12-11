@@ -69,7 +69,10 @@ class TransactionSerializationTests {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY)
+    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
+        //override mock implementation with a real one
+        override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment = servicesForResolution.loadContractAttachment(stateRef, forContractClassName)
+    }
     val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder
 
@@ -78,8 +81,6 @@ class TransactionSerializationTests {
         //record fake transaction which created inputState
         val fakeTx = megaCorpServices.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).withItems(outputState, Command(TestCash.Commands.Issue(), arrayListOf(MEGA_CORP.owningKey))))
         megaCorpServices.recordTransactions(fakeTx)
-        notaryServices.recordTransactions(fakeTx)
-
         val fakeStateRef = StateRef(fakeTx.id,0)
         inputState = StateAndRef(TransactionState(TestCash.State(depositRef, 100.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), fakeStateRef)
         tx = TransactionBuilder(DUMMY_NOTARY).withItems(inputState, outputState, changeState, Command(TestCash.Commands.Move(), arrayListOf(MEGA_CORP.owningKey)))

@@ -467,8 +467,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                     /*
                     expect { tx: SignedTransaction ->
                         require(tx.id == bobsFakeCash[0].id)
-                    },
-                    */
+                    },*/
                     expect { tx: SignedTransaction ->
                         require(tx.id == bobsFakeCash[2].id)
                     },
@@ -483,8 +482,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
                     expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[0].id)
-                    },
-                    */
+                    },*/
                     expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[2].id)

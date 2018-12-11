@@ -350,6 +350,7 @@ open class MockServices private constructor(
     override fun loadState(stateRef: StateRef) = servicesForResolution.loadState(stateRef)
     override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
 
+    /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = dummyAttachment
 }
 
