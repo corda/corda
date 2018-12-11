@@ -23,6 +23,7 @@ import javax.persistence.*
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
+@Deprecated("Superseded by net.corda.node.services.keys.BasicHSMKeyManagementService")
 class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
