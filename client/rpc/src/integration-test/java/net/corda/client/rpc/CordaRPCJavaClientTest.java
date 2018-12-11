@@ -51,7 +51,6 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
 
-    private NodeWithInfo node;
     private CordaRPCClient client;
     private RPCConnection<CordaRPCOps> connection = null;
     private CordaRPCOps rpcProxy;
@@ -65,7 +64,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     @Override
     public void setUp() {
         super.setUp();
-        node = startNode(ALICE_NAME, 1000, singletonList(rpcUser));
+        NodeWithInfo node = startNode(ALICE_NAME, 1000, singletonList(rpcUser));
         client = new CordaRPCClient(requireNonNull(node.getNode().getConfiguration().getRpcOptions().getAddress()));
     }
 

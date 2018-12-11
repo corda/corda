@@ -6454,7 +6454,7 @@ public final class net.corda.testing.node.MockServicesKt extends java.lang.Objec
   @NotNull
   public static final T createMockCordaService(net.corda.testing.node.MockServices, kotlin.jvm.functions.Function1<? super net.corda.core.node.AppServiceHub, ? extends T>)
   @NotNull
-  public static final net.corda.node.services.identity.InMemoryIdentityService makeTestIdentityService(net.corda.core.identity.PartyAndCertificate...)
+  public static final net.corda.core.node.services.IdentityService makeTestIdentityService(net.corda.core.identity.PartyAndCertificate...)
 ##
 public final class net.corda.testing.node.NodeTestUtils extends java.lang.Object
   @NotNull

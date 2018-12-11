@@ -9,7 +9,6 @@ import net.corda.core.internal.concurrent.flatMap
 import net.corda.core.internal.location
 import net.corda.core.internal.toPath
 import net.corda.core.messaging.*
-import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
