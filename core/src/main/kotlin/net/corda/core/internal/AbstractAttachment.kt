@@ -21,7 +21,7 @@ const val RPC_UPLOADER = "rpc"
 const val P2P_UPLOADER = "p2p"
 const val UNKNOWN_UPLOADER = "unknown"
 
-private val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
+val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)
 
 fun isUploaderTrusted(uploader: String?): Boolean = uploader in TRUSTED_UPLOADERS
 

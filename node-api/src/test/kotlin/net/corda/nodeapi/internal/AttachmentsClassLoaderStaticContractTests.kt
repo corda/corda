@@ -9,6 +9,8 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersStorage
@@ -94,8 +96,10 @@ class AttachmentsClassLoaderStaticContractTests {
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         val contractAttachmentId = SecureHash.randomSHA256()
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(ATTACHMENT_PROGRAM_ID)),
-                versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION))
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                contractClassNamesCondition = Builder.equal(listOf(ATTACHMENT_PROGRAM_ID)),
+                versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
+                uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }

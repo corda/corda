@@ -294,6 +294,7 @@ class VaultWithCashTest {
                     dummyIssue.toLedgerTransaction(services).verify()
 
                     services.recordTransactions(dummyIssue)
+                    notaryServices.recordTransactions(dummyIssue) //simulate resolve transaction
                     dummyIssue
                 }
         database.transaction {
@@ -372,6 +373,10 @@ class VaultWithCashTest {
         database.transaction {
             val linearStates = vaultService.queryBy<DummyLinearContract.State>().states
             linearStates.forEach { println(it.state.data.linearId) }
+
+            //copy transactions to notary - simulates transaction resolution
+            services.validatedTransactions.getTransaction(deals.first().ref.txhash)?.apply { notaryServices.recordTransactions(this) }
+            services.validatedTransactions.getTransaction(linearStates.first().ref.txhash)?.apply { notaryServices.recordTransactions(this) }
 
             // Create a txn consuming different contract types
             val dummyMoveBuilder = TransactionBuilder(notary = notary).apply {

@@ -112,7 +112,9 @@ class CommercialPaperTestsGeneric {
     val testSerialization = SerializationEnvironmentRule()
 
     private val megaCorpRef = megaCorp.ref(123)
-    private val ledgerServices = MockServices(listOf("net.corda.finance.schemas"), megaCorp, miniCorp)
+    private val ledgerServices = object : MockServices(listOf("net.corda.finance.schemas"), megaCorp, miniCorp) {
+        override fun loadState(stateRef: StateRef): TransactionState<*> = TransactionState(thisTest.getPaper(), thisTest.getContract(), dummyNotary.party) // Simulates the state is recorded in the node service
+    }
 
     @Test
     fun `trade lifecycle test`() {
@@ -291,6 +293,7 @@ class CommercialPaperTestsGeneric {
         issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val issuePtx = megaCorpServices.signInitialTransaction(issueBuilder)
         val issueTx = notaryServices.addSignature(issuePtx)
+        aliceDatabase.transaction { aliceServices.recordTransactions(listOf(issueTx)) }
 
         val moveTX = aliceDatabase.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.

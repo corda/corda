@@ -6,8 +6,12 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.ComponentGroupEnum.COMMANDS_GROUP
 import net.corda.core.contracts.ComponentGroupEnum.OUTPUTS_GROUP
+import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
+import net.corda.core.contracts.Version
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.internal.createComponentGroups
@@ -109,13 +113,23 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveParameters = {
                     val hashToResolve = it ?: services.networkParametersStorage.defaultHash
                     services.networkParametersStorage.lookup(hashToResolve)
-                }
+                },
+                resolveContractAttachment = { services.loadContractAttachment(it) }
         )
+    }
+
+    // Helper for deprecated toLedgerTransaction
+    // TODO: revisit once Deterministic JVM code updated
+    private val missingAttachment: Attachment by lazy {
+        object : AbstractAttachment({ byteArrayOf() }) {
+            override val id: SecureHash get() = throw UnsupportedOperationException()
+        }
     }
 
     /**
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
      * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
+     * This invocation doesn't cheeks contact class version downgrade rule.
      *
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
@@ -131,14 +145,17 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters)
+        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters,
+                // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
+                { it -> resolveAttachment(it.txhash) ?: missingAttachment })
     }
 
     private fun toLedgerTransactionInternal(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
-            resolveParameters: (SecureHash?) -> NetworkParameters?
+            resolveParameters: (SecureHash?) -> NetworkParameters?,
+            resolveContractAttachment: (StateRef) -> Attachment
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -160,6 +177,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
+        //keep resolvedInputs lazy and resolve the inputs separately here to get Version
+        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map {
+            it.toStateAndRef()
+        }.groupBy { it.state.contract }
+        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> = inputStateContractClassToStateRefs.mapValues {
+            it.value.map { getContractVersion(resolveContractAttachment(it.ref)) }.max() ?: DEFAULT_CORDAPP_VERSION
+        }
+
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
                 outputs,
@@ -173,7 +198,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences
+                serializedResolvedReferences,
+                inputStateContractClassToMaxVersion
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -310,7 +336,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
          * For [ContractUpgradeWireTransaction] or [NotaryChangeWireTransaction] it knows how to recreate the output state in the correct classloader independent of the node's classpath.
          */
         @CordaInternal
-        internal fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
+        fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
             return if (services is ServiceHub) {
                 val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
                         ?: throw TransactionResolutionException(stateRef.txhash)
