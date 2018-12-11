@@ -191,7 +191,17 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
                     }
                 }
             }
-            amqpClient.write(sendableMessage)
+            try {
+                amqpClient.write(sendableMessage)
+            } catch (ex: IllegalStateException) {
+                lock.withLock {
+                    ex.message?.let { logInfoWithMDC(it)}
+                    logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
+                    session?.commit()
+                    session?.rollback(false)
+                }
+            }
+
             bridgeMetricsService?.packetAcceptedEvent(sendableMessage)
         }
     }
