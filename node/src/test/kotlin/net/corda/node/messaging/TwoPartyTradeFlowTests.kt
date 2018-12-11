@@ -338,7 +338,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
 
             val (_, bobsFakeCash, bobsSignedTxns) = bobNode.database.transaction {
-                fillUpForBuyerAndInsertFakeTrnactions(false, issuer, AnonymousParty(bob.owningKey), notary, bobNode, bob, notaryNode, bankNode)
+                fillUpForBuyerAndInsertFakeTransactions(false, issuer, AnonymousParty(bob.owningKey), notary, bobNode, bob, notaryNode, bankNode)
             }
             val alicesFakePaper = aliceNode.database.transaction {
                 fillUpForSeller(false, issuer, alice,
@@ -442,7 +442,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             val bobsKey = bobNode.services.keyManagementService.keys.single()
             val bobsFakeCash = bobNode.database.transaction {
-                fillUpForBuyerAndInsertFakeTrnactions(false, issuer, AnonymousParty(bobsKey), notary, bobNode, bob, notaryNode, bankNode)
+                fillUpForBuyerAndInsertFakeTransactions(false, issuer, AnonymousParty(bobsKey), notary, bobNode, bob, notaryNode, bankNode)
             }.second
 
             val alicesFakePaper = aliceNode.database.transaction {
@@ -586,7 +586,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         val issuer = bank.ref(1, 2, 3)
 
         bobNode.database.transaction {
-            fillUpForBuyerAndInsertFakeTrnactions(bobError, issuer, bob, notary, bobNode, bob, notaryNode, bankNode).second
+            fillUpForBuyerAndInsertFakeTransactions(bobError, issuer, bob, notary, bobNode, bob, notaryNode, bankNode).second
         }
         val alicesFakePaper = aliceNode.database.transaction {
             fillUpForSeller(aliceError, issuer, alice, 1200.DOLLARS `issued by` issuer, null, notary).second
@@ -649,7 +649,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
         }
     }
 
-    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyerAndInsertFakeTrnactions(
+    private fun LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.fillUpForBuyerAndInsertFakeTransactions(
             withError: Boolean,
             issuer: PartyAndReference,
             owner: AbstractParty,
