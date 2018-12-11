@@ -8,11 +8,10 @@ import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_LI
 import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_NAME
 import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VENDOR
 import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.cordapp.CordappInfo.Companion.MIN_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappInfo.Companion.UNKNOWN_VALUE
-import net.corda.core.utilities.loggerFor
+import net.corda.core.internal.cordapp.CordappInfo.Companion.parseVersion
 import java.util.jar.Manifest
 
 operator fun Manifest.set(key: String, value: String): String? {
@@ -33,8 +32,6 @@ val Manifest.targetPlatformVersion: Int
 
 fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
 
-    val log = loggerFor<Manifest>()
-
     val minPlatformVersion = this[MIN_PLATFORM_VERSION]?.toIntOrNull() ?: 1
     val targetPlatformVersion = this[TARGET_PLATFORM_VERSION]?.toIntOrNull() ?: minPlatformVersion
 
@@ -42,12 +39,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
     // is it a Contract Jar?
     if (this[CORDAPP_CONTRACT_NAME] != null) {
         val name = this[CORDAPP_CONTRACT_NAME] ?: defaultName
-        val version = try {
-            this[CORDAPP_CONTRACT_VERSION]?.toIntOrNull()
-        } catch (nfe: NumberFormatException) {
-            log.warn("Invalid version identifier (${this[CORDAPP_CONTRACT_VERSION]}) for $CORDAPP_CONTRACT_VERSION. Expected whole number, defaulting to $DEFAULT_CORDAPP_VERSION")
-            DEFAULT_CORDAPP_VERSION
-        } ?: DEFAULT_CORDAPP_VERSION
+        val version = parseVersion(this[CORDAPP_CONTRACT_VERSION])
         val vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE
         val licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE
         return Contract(
@@ -62,12 +54,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
     // is it a Contract Jar?
     if (this[CORDAPP_WORKFLOW_NAME] != null) {
         val name = this[CORDAPP_WORKFLOW_NAME] ?: defaultName
-        val version = try {
-            this[CORDAPP_WORKFLOW_VERSION]?.toIntOrNull()
-        } catch (nfe: NumberFormatException) {
-            log.warn("Invalid version identifier (${this[CORDAPP_WORKFLOW_VERSION]}) for $CORDAPP_WORKFLOW_VERSION. Expected whole number, defaulting to $DEFAULT_CORDAPP_VERSION")
-            DEFAULT_CORDAPP_VERSION
-        } ?: DEFAULT_CORDAPP_VERSION
+        val version = parseVersion(this[CORDAPP_WORKFLOW_VERSION])
         val vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE
         val licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE
         return Workflow(
@@ -92,3 +79,4 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
             targetPlatformVersion = targetPlatformVersion
     )
 }
+

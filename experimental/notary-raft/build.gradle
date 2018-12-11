@@ -41,7 +41,7 @@ cordapp {
     workflow {
         name "net/corda/experimental/notary-raft"
         versionId 1
-        vendorId "R3"
+        vendor "R3"
         licence "Open Source (Apache 2)"
     }
 }

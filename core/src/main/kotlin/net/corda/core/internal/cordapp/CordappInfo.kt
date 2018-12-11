@@ -1,5 +1,7 @@
 package net.corda.core.internal.cordapp
 
+import net.corda.core.cordapp.CordappInvalidVersionException
+
 /** abstract class used to maintain backwards compatibility */
 abstract class CordappInfo(open val name: String, open val vendor: String, open val version: String, open val minimumPlatformVersion: Int, open val targetPlatformVersion: Int) {
     companion object {
@@ -19,6 +21,21 @@ abstract class CordappInfo(open val name: String, open val vendor: String, open 
 
         const val UNKNOWN_VALUE = "Unknown"
         const val DEFAULT_CORDAPP_VERSION = 1
+
+        /** Helper method for version identifier parsing */
+        fun parseVersion(versionStr: String?): Int {
+            if (versionStr == null)
+                throw CordappInvalidVersionException("Target versionId not specified. Please specify a whole number starting from 1.")
+            return try {
+                val version = versionStr.toInt()
+                if (version < 1) {
+                    throw CordappInvalidVersionException("Target versionId ($versionStr) must not be smaller than 1.")
+                }
+                return version
+            } catch (e: NumberFormatException) {
+                throw CordappInvalidVersionException("Version identifier ($versionStr) must be a whole number starting from 1.")
+            }
+        }
     }
     abstract fun description(): String
     abstract fun hasUnknownFields(): Boolean
