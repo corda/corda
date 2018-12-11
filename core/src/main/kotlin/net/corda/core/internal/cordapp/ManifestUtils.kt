@@ -45,7 +45,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
         val version = try {
             this[CORDAPP_CONTRACT_VERSION]?.toIntOrNull()
         } catch (nfe: NumberFormatException) {
-            log.warn("Invalid version identifier ${this[CORDAPP_CONTRACT_VERSION]}. Defaulting to $DEFAULT_CORDAPP_VERSION")
+            log.warn("Invalid version identifier (${this[CORDAPP_CONTRACT_VERSION]}) for $CORDAPP_CONTRACT_VERSION. Expected whole number, defaulting to $DEFAULT_CORDAPP_VERSION")
             DEFAULT_CORDAPP_VERSION
         } ?: DEFAULT_CORDAPP_VERSION
         val vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE
@@ -65,7 +65,7 @@ fun Manifest.toCordappInfo(defaultName: String): CordappInfo {
         val version = try {
             this[CORDAPP_WORKFLOW_VERSION]?.toIntOrNull()
         } catch (nfe: NumberFormatException) {
-            log.warn("Invalid version identifier ${this[CORDAPP_CONTRACT_VERSION]}. Defaulting to $DEFAULT_CORDAPP_VERSION")
+            log.warn("Invalid version identifier (${this[CORDAPP_WORKFLOW_VERSION]}) for $CORDAPP_WORKFLOW_VERSION. Expected whole number, defaulting to $DEFAULT_CORDAPP_VERSION")
             DEFAULT_CORDAPP_VERSION
         } ?: DEFAULT_CORDAPP_VERSION
         val vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE
