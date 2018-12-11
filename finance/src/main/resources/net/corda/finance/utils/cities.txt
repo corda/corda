@@ -1000,3 +1000,6 @@ Belgaum (IN)	74.5	15.87
 # These have been added back by hand
 Cairo (EG)	31.25	30.06
 Zurich (CH)	8.55	47.36
+Troyan (BG)	42.89	21.71
+Vratsa (BG)	43.12	23.33
+Elena (BG)	42.56	25.53

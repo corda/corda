@@ -29,4 +29,13 @@ class ContractAttachment @JvmOverloads constructor(
     override fun toString(): String {
         return "ContractAttachment(attachment=${attachment.id}, contracts='$allContracts', uploader='$uploader', signed='$isSigned', version='$version')"
     }
+
+    companion object {
+        fun getContractVersion(attachment: Attachment) : Version =
+            if (attachment is ContractAttachment) {
+                attachment.version
+            } else {
+                DEFAULT_CORDAPP_VERSION
+            }
+    }
 }

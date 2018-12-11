@@ -3,6 +3,7 @@ package net.corda.testing.services
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
@@ -19,6 +20,7 @@ import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
 import java.util.*
+import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
 /**
@@ -98,14 +100,15 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
             val baseAttachment = MockAttachment({ bytes }, sha256, signers)
+            val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)) } catch (e: Exception) { DEFAULT_CORDAPP_VERSION }
             val attachment =
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment
                     else {
                         contractClassNames.map {contractClassName ->
-                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, 1, signers.isNotEmpty())
+                            val contractClassMetadata = ContractAttachmentMetadata(contractClassName, version, signers.isNotEmpty())
                             _contractClasses[contractClassMetadata] = sha256
                         }
-                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, 1)
+                        ContractAttachment(baseAttachment, contractClassNames.first(), contractClassNames.toSet(), uploader, signers, version)
                     }
             _files[sha256] = Pair(attachment, bytes)
         }

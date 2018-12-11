@@ -5,6 +5,8 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
+import net.corda.core.contracts.Version
+import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
@@ -54,7 +56,8 @@ private constructor(
         val privacySalt: PrivacySalt,
         /** Network parameters that were in force when the transaction was notarised. */
         override val networkParameters: NetworkParameters?,
-        override val references: List<StateAndRef<ContractState>>
+        override val references: List<StateAndRef<ContractState>>,
+        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName,Version>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -87,9 +90,10 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
-                serializedReferences: List<SerializedStateAndRef>? = null
+                serializedReferences: List<SerializedStateAndRef>? = null,
+                inputStatesContractClassNameToMaxVersion: Map<ContractClassName,Version>
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
@@ -134,12 +138,27 @@ private constructor(
 
             val internalTx = createLtxForVerification()
 
-            // TODO - verify for version downgrade
+            validateContractVersions(contractAttachmentsByContract)
             validatePackageOwnership(contractAttachmentsByContract)
             validateStatesAgainstContract(internalTx)
             val hashToSignatureConstrainedContracts = verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
             verifyConstraints(internalTx, contractAttachmentsByContract, hashToSignatureConstrainedContracts)
             verifyContracts(internalTx)
+        }
+    }
+
+    /**
+     * Verify that contract class versions of output states are not lower that versions of relevant input states.
+     */
+    @Throws(TransactionVerificationException::class)
+    private fun validateContractVersions(contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>>) {
+        contractAttachmentsByContract.forEach { contractClassName, attachments ->
+            val outputVersion = attachments.signed?.version ?: attachments.unsigned?.version ?: DEFAULT_CORDAPP_VERSION
+            inputStatesContractClassNameToMaxVersion[contractClassName]?.let {
+                if (it > outputVersion) {
+                    throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$it", "$outputVersion")
+                }
+            }
         }
     }
 
@@ -351,7 +370,8 @@ private constructor(
                     timeWindow = this.timeWindow,
                     privacySalt = this.privacySalt,
                     networkParameters = this.networkParameters,
-                    references = deserializedReferences
+                    references = deserializedReferences,
+                    inputStatesContractClassNameToMaxVersion = emptyMap()
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -864,7 +884,7 @@ private constructor(
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList(), emptyMap())
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     @DeprecatedConstructorForDeserialization(1)
@@ -878,7 +898,7 @@ private constructor(
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
             networkParameters: NetworkParameters
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), emptyMap())
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     fun copy(inputs: List<StateAndRef<ContractState>>,
@@ -900,7 +920,8 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references
+                references = references,
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
     }
 
@@ -925,7 +946,8 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references
+                references = references,
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
     }
 }
