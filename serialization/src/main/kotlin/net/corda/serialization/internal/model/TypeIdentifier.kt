@@ -223,15 +223,8 @@ sealed class TypeIdentifier {
  */
 internal fun Type.resolveAgainst(context: Type): Type = when (this) {
     is WildcardType -> this.upperBound
-    // Ignore types that we have created ourselves
     is ReconstitutedParameterizedType -> this
-    is ParameterizedType -> {
-        val resolved = ReconstitutedParameterizedType(
-                rawType,
-                ownerType,
-                actualTypeArguments.map { it.resolveAgainst(context) }.toTypedArray())
-        TypeToken.of(context).resolveType(resolved).type.upperBound
-    }
+    is ParameterizedType,
     is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
     else -> this
 }
@@ -246,6 +239,12 @@ private val Type.upperBound: Type
             this.upperBounds.isEmpty() || this.upperBounds.size > 1 -> this
             else -> this.upperBounds[0]
         }
+        // Ignore types that we have created ourselves
+        is ReconstitutedParameterizedType -> this
+        is ParameterizedType -> ReconstitutedParameterizedType(
+                rawType,
+                ownerType,
+                actualTypeArguments.map { it.upperBound }.toTypedArray())
         else -> this
     }
 
