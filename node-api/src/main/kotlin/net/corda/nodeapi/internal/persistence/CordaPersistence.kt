@@ -10,8 +10,10 @@ import rx.subjects.UnicastSubject
 import java.io.Closeable
 import java.sql.Connection
 import java.sql.SQLException
-import java.util.*
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import javax.persistence.AttributeConverter
 import javax.sql.DataSource
 
@@ -110,9 +112,29 @@ class CordaPersistence(
         return contextTransactionOrNull ?: newTransaction(isolation)
     }
 
+    private val liveTransactions = ConcurrentHashMap<UUID, DatabaseTransaction>()
+
     fun newTransaction(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        val outerTransaction = contextTransactionOrNull
         return DatabaseTransaction(isolation.jdbcValue, contextTransactionOrNull, this).also {
             contextTransactionOrNull = it
+            // Outer transaction only exists in a controlled scenario we can ignore.
+            if (outerTransaction == null) {
+                liveTransactions.put(it.id, it)
+                it.onClose { liveTransactions.remove(it.id) }
+            }
+        }
+    }
+
+    fun onAllOpenTransactionsClosed(callback: () -> Unit) {
+        val allOpen = liveTransactions.values.toList()
+        val counter = AtomicInteger(allOpen.size)
+        allOpen.forEach {
+            it.onClose {
+                if (counter.decrementAndGet() == 0) {
+                    callback()
+                }
+            }
         }
     }
 

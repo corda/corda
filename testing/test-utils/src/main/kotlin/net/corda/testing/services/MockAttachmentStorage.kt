@@ -6,15 +6,13 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.*
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
@@ -114,4 +112,12 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         }
         return sha256
     }
+
+    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+                versionCondition = Builder.greaterThanOrEqual(minContractVersion), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        return queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull()
+    }
+
 }

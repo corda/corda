@@ -74,5 +74,14 @@ interface AttachmentStorage {
     fun queryAttachments(criteria: AttachmentQueryCriteria): List<AttachmentId> {
         return queryAttachments(criteria, null)
     }
+
+    /**
+     * Find the Attachment Id of the contract attachment with the highest version for a given contract class name.
+     *
+     * @param contractClassName The fully qualified name of the contract class.
+     * @param minContractVersion The minimum contract version that should be returned.
+     * @return the [AttachmentId] of the contract, or null if none meet the criteria.
+     */
+    fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId?
 }
 
