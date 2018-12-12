@@ -101,7 +101,7 @@ data class NodeConfigurationImpl(
         val devModeOptions: DevModeOptions? = null
         const val useTestClock: Boolean = false
         const val lazyBridgeStart: Boolean = true
-        const val detectPublicIp: Boolean = true
+        const val detectPublicIp: Boolean = false
         val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
         val sshd: SSHDConfiguration? = null
         val transactionCacheSizeMegaBytes: Int? = null

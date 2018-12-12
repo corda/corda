@@ -12,6 +12,8 @@
       <module name="bank-of-corda-demo_integrationTest" target="1.8" />
       <module name="bank-of-corda-demo_main" target="1.8" />
       <module name="bank-of-corda-demo_test" target="1.8" />
+      <module name="behave-tools_main" target="1.8" />
+      <module name="behave-tools_test" target="1.8" />
       <module name="behave_behave" target="1.8" />
       <module name="behave_main" target="1.8" />
       <module name="behave_scenario" target="1.8" />
@@ -20,8 +22,17 @@
       <module name="blobinspector_test" target="1.8" />
       <module name="bootstrapper_main" target="1.8" />
       <module name="bootstrapper_test" target="1.8" />
+      <module name="bridge_integrationTest" target="1.8" />
+      <module name="bridge_main" target="1.8" />
+      <module name="bridge_test" target="1.8" />
+      <module name="bridgecapsule_main" target="1.6" />
+      <module name="bridgecapsule_smokeTest" target="1.6" />
+      <module name="bridgecapsule_test" target="1.6" />
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
+      <module name="business-network-demo_integrationTest" target="1.8" />
+      <module name="business-network-demo_main" target="1.8" />
+      <module name="business-network-demo_test" target="1.8" />
       <module name="canonicalizer_main" target="1.8" />
       <module name="canonicalizer_test" target="1.8" />
       <module name="cli_main" target="1.8" />
@@ -30,17 +41,33 @@
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
       <module name="cliutils_test" target="1.8" />
+      <module name="com.r3.corda_buildSrc_main" target="1.8" />
+      <module name="com.r3.corda_buildSrc_test" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_main" target="1.8" />
+      <module name="com.r3.corda_canonicalizer_test" target="1.8" />
       <module name="common-configuration-parsing_main" target="1.8" />
       <module name="common-configuration-parsing_test" target="1.8" />
       <module name="common-validation_main" target="1.8" />
       <module name="common-validation_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="consensus-benchmark_main" target="1.8" />
+      <module name="consensus-benchmark_test" target="1.8" />
+      <module name="contract_main" target="1.8" />
+      <module name="contract_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />
       <module name="contracts-states_main" target="1.8" />
       <module name="contracts-states_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
+      <module name="corda-enterprise-client_main" target="1.8" />
+      <module name="corda-enterprise-client_test" target="1.8" />
+      <module name="corda-enterprise-testing_main" target="1.8" />
+      <module name="corda-enterprise-testing_test" target="1.8" />
+      <module name="corda-enterprise-tools_main" target="1.8" />
+      <module name="corda-enterprise-tools_test" target="1.8" />
+      <module name="corda-enterprise_main" target="1.8" />
+      <module name="corda-enterprise_test" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
@@ -66,6 +93,8 @@
       <module name="cordformation_main" target="1.8" />
       <module name="cordformation_runnodes" target="1.8" />
       <module name="cordformation_test" target="1.8" />
+      <module name="core-deterministic-testing_main" target="1.8" />
+      <module name="core-deterministic-testing_test" target="1.8" />
       <module name="core-deterministic_main" target="1.8" />
       <module name="core-deterministic_test" target="1.8" />
       <module name="core_extraResource" target="1.8" />
@@ -75,8 +104,15 @@
       <module name="core_test" target="1.8" />
       <module name="data_main" target="1.8" />
       <module name="data_test" target="1.8" />
+      <module name="dbmigration_main" target="1.8" />
+      <module name="dbmigration_test" target="1.8" />
       <module name="demobench_main" target="1.8" />
       <module name="demobench_test" target="1.8" />
+      <module name="dist_binFiles" target="1.8" />
+      <module name="dist_installerFiles" target="1.8" />
+      <module name="dist_main" target="1.8" />
+      <module name="dist_readmeFiles" target="1.8" />
+      <module name="dist_test" target="1.8" />
       <module name="djvm_main" target="1.8" />
       <module name="djvm_test" target="1.8" />
       <module name="docker_main" target="1.8" />
@@ -91,6 +127,7 @@
       <module name="example-code_test" target="1.8" />
       <module name="experimental-behave_behave" target="1.8" />
       <module name="experimental-behave_main" target="1.8" />
+      <module name="experimental-behave_smokeTest" target="1.8" />
       <module name="experimental-behave_test" target="1.8" />
       <module name="experimental-kryo-hook_main" target="1.8" />
       <module name="experimental-kryo-hook_test" target="1.8" />
@@ -103,6 +140,11 @@
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
+      <module name="flow-hook_main" target="1.8" />
+      <module name="flow-hook_test" target="1.8" />
+      <module name="flow-worker_integrationTest" target="1.8" />
+      <module name="flow-worker_main" target="1.8" />
+      <module name="flow-worker_test" target="1.8" />
       <module name="flows_integrationTest" target="1.8" />
       <module name="flows_main" target="1.8" />
       <module name="flows_test" target="1.8" />
@@ -110,6 +152,15 @@
       <module name="gradle-plugins-cordapp_test" target="1.8" />
       <module name="graphs_main" target="1.8" />
       <module name="graphs_test" target="1.8" />
+      <module name="ha-testing_integrationTest" target="1.8" />
+      <module name="ha-testing_main" target="1.8" />
+      <module name="ha-testing_test" target="1.8" />
+      <module name="ha-utilities_main" target="1.8" />
+      <module name="ha-utilities_test" target="1.8" />
+      <module name="health-survey_main" target="1.8" />
+      <module name="health-survey_test" target="1.8" />
+      <module name="hsm-tool_main" target="1.8" />
+      <module name="hsm-tool_test" target="1.8" />
       <module name="irs-demo-cordapp_integrationTest" target="1.8" />
       <module name="irs-demo-cordapp_main" target="1.8" />
       <module name="irs-demo-cordapp_main~1" target="1.8" />
@@ -132,12 +183,20 @@
       <module name="jfx_integrationTest" target="1.8" />
       <module name="jfx_main" target="1.8" />
       <module name="jfx_test" target="1.8" />
+      <module name="jmeter_main" target="1.8" />
+      <module name="jmeter_test" target="1.8" />
+      <module name="jpa_main" target="1.8" />
+      <module name="jpa_test" target="1.8" />
       <module name="kryo-hook_main" target="1.8" />
       <module name="kryo-hook_test" target="1.8" />
+      <module name="launcher_main" target="1.8" />
+      <module name="launcher_test" target="1.8" />
       <module name="loadtest_main" target="1.8" />
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="mysql_main" target="1.8" />
+      <module name="mysql_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />
       <module name="net.corda-verifier_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />
@@ -167,14 +226,39 @@
       <module name="notary-bft-smart_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
+      <module name="notary-healthcheck-client_main" target="1.8" />
+      <module name="notary-healthcheck-client_test" target="1.8" />
+      <module name="notary-healthcheck-cordapp_integrationTest" target="1.8" />
+      <module name="notary-healthcheck-cordapp_main" target="1.8" />
+      <module name="notary-healthcheck-cordapp_test" target="1.8" />
+      <module name="notary-healthcheck_main" target="1.8" />
+      <module name="notary-healthcheck_test" target="1.8" />
       <module name="notary-raft_main" target="1.8" />
       <module name="notary-raft_test" target="1.8" />
+      <module name="notary_main" target="1.8" />
+      <module name="notary_test" target="1.8" />
+      <module name="notarytest_main" target="1.8" />
+      <module name="notarytest_test" target="1.8" />
+      <module name="perftestcordapp_integrationTest" target="1.8" />
+      <module name="perftestcordapp_main" target="1.8" />
+      <module name="perftestcordapp_test" target="1.8" />
       <module name="publish-utils_main" target="1.8" />
       <module name="publish-utils_test" target="1.8" />
+      <module name="qa-behave_main" target="1.8" />
+      <module name="qa-behave_test" target="1.8" />
+      <module name="qa_main" target="1.8" />
+      <module name="qa_test" target="1.8" />
       <module name="quasar-hook_main" target="1.8" />
       <module name="quasar-hook_test" target="1.8" />
       <module name="quasar-utils_main" target="1.8" />
       <module name="quasar-utils_test" target="1.8" />
+      <module name="rpc-proxy_main" target="1.8" />
+      <module name="rpc-proxy_rpcProxy" target="1.8" />
+      <module name="rpc-proxy_smokeTest" target="1.8" />
+      <module name="rpc-proxy_test" target="1.8" />
+      <module name="rpc-worker_integrationTest" target="1.8" />
+      <module name="rpc-worker_main" target="1.8" />
+      <module name="rpc-worker_test" target="1.8" />
       <module name="rpc_integrationTest" target="1.8" />
       <module name="rpc_main" target="1.8" />
       <module name="rpc_smokeTest" target="1.8" />
@@ -195,6 +279,7 @@
       <module name="shell_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
+      <module name="simm-valuation-demo_scenario" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
       <module name="smoke-test-utils_main" target="1.8" />
       <module name="smoke-test-utils_test" target="1.8" />

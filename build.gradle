@@ -54,7 +54,7 @@ buildscript {
     ext.rxjava_version = '1.3.8'
     ext.dokka_version = '0.9.17'
     ext.eddsa_version = '0.3.0' // Performance tuned version for enterprise.
-    ext.dependency_checker_version = '3.3.2'
+    ext.dependency_checker_version = '4.0.0'
     ext.commons_collections_version = '4.1'
     ext.beanutils_version = '1.9.3'
     ext.crash_version = 'cadb53544fbb3c0fb901445da614998a6a419488'
@@ -172,6 +172,12 @@ allprojects {
         failOnError = project.getProperty('owasp.failOnError')
         // by default CVSS is '11' which passes everything. Set between 0-10 to catch vulnerable deps
         failBuildOnCVSS = project.getProperty('owasp.failBuildOnCVSS').toFloat()
+
+        analyzers {
+            assemblyEnabled = false
+            nuspecEnabled = false
+            nugetconfEnabled = false
+        }
     }
     sourceCompatibility = 1.8
     targetCompatibility = 1.8

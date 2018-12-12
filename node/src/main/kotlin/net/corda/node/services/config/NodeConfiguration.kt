@@ -55,7 +55,7 @@ interface NodeConfiguration {
     // TODO Move into DevModeOptions
     val useTestClock: Boolean get() = false
     val lazyBridgeStart: Boolean
-    val detectPublicIp: Boolean get() = true
+    val detectPublicIp: Boolean get() = false
     val sshd: SSHDConfiguration?
     val database: DatabaseConfig
     val relay: RelayConfiguration?

@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.node.services.rpc
 
 import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Cache

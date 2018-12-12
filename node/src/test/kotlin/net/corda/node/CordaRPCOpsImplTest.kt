@@ -38,8 +38,8 @@ import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.rpc.CURRENT_RPC_CONTEXT
+import net.corda.node.services.rpc.RpcAuthContext
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
