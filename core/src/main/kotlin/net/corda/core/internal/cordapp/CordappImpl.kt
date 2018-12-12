@@ -2,6 +2,7 @@ package net.corda.core.internal.cordapp
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappInvalidVersionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.notary.NotaryService
@@ -25,7 +26,7 @@ data class CordappImpl(
         override val customSchemas: Set<MappedSchema>,
         override val allFlows: List<Class<out FlowLogic<*>>>,
         override val jarPath: URL,
-        val info: CordappInfo,
+        override val info: Cordapp.Info,
         override val jarHash: SecureHash.SHA256,
         val notaryService: Class<out NotaryService>?,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
@@ -34,8 +35,39 @@ data class CordappImpl(
 
     companion object {
         fun jarName(url: URL): String = url.toPath().fileName.toString().removeSuffix(".jar")
-    }
 
+        /** CorDapp manifest entries */
+        const val CORDAPP_CONTRACT_NAME = "Cordapp-Contract-Name"
+        const val CORDAPP_CONTRACT_VERSION = "Cordapp-Contract-Version"
+        const val CORDAPP_CONTRACT_VENDOR = "Cordapp-Contract-Vendor"
+        const val CORDAPP_CONTRACT_LICENCE = "Cordapp-Contract-Licence"
+
+        const val CORDAPP_WORKFLOW_NAME = "Cordapp-Workflow-Name"
+        const val CORDAPP_WORKFLOW_VERSION = "Cordapp-Workflow-Version"
+        const val CORDAPP_WORKFLOW_VENDOR = "Cordapp-Workflow-Vendor"
+        const val CORDAPP_WORKFLOW_LICENCE = "Cordapp-Workflow-Licence"
+
+        const val TARGET_PLATFORM_VERSION = "Target-Platform-Version"
+        const val MIN_PLATFORM_VERSION = "Min-Platform-Version"
+
+        const val UNKNOWN_VALUE = "Unknown"
+        const val DEFAULT_CORDAPP_VERSION = 1
+
+        /** Helper method for version identifier parsing */
+        fun parseVersion(versionStr: String?, attributeName: String): Int {
+            if (versionStr == null)
+                throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
+            return try {
+                val version = versionStr.toInt()
+                if (version < 1) {
+                    throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
+                }
+                return version
+            } catch (e: NumberFormatException) {
+                throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
+            }
+        }
+    }
     /**
      * An exhaustive list of all classes relevant to the node within this CorDapp
      *
@@ -44,15 +76,5 @@ data class CordappImpl(
     override val cordappClasses: List<String> = run {
         val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
         classList.mapNotNull { it?.name } + contractClassNames
-    }
-
-    /** original (to Corda 3) */
-    data class Info(val shortName: String, override val vendor: String, override val version: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
-        : CordappInfo(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion) {
-        companion object {
-            val UNKNOWN = Info(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, 1, 1)
-        }
-        override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
-        override fun description() = "CorDapp $name version $version by $vendor"
     }
 }

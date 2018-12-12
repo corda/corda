@@ -2,6 +2,7 @@ package net.corda.testing.internal
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.Default
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
@@ -40,7 +41,7 @@ class MockCordappProvider(
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
-                info = CordappImpl.Info.UNKNOWN,
+                info = Default.UNKNOWN,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash,
                 notaryService = null

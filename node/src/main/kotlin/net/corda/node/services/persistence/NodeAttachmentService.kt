@@ -13,8 +13,8 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria

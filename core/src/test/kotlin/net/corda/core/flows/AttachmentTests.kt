@@ -10,7 +10,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FetchAttachmentsFlow
 import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.hash
 import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.testing.core.ALICE_NAME

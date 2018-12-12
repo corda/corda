@@ -1,8 +1,8 @@
 package net.corda.testing.node.internal
 
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_NAME
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_WORKFLOW_NAME
-import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.inputStream
 import org.assertj.core.api.Assertions.assertThat

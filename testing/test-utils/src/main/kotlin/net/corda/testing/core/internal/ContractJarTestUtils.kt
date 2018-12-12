@@ -1,6 +1,6 @@
 package net.corda.testing.core.internal
 
-import net.corda.core.internal.cordapp.CordappInfo.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
 import net.corda.core.internal.delete
 import net.corda.core.internal.div
 import net.corda.core.internal.toPath

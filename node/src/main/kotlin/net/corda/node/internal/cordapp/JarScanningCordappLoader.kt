@@ -4,6 +4,7 @@ import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.Default
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
@@ -104,7 +105,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
                     if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
-                        logger.warn("Not loading CorDapp ${it.info.name} (${it.info.vendor}) as it requires minimum " +
+                        logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
                                 "platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
                         false
                     } else {
@@ -120,7 +121,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         if (certificates.isEmpty() || (certificates - blockedCertificates).isNotEmpty())
                             true // Cordapp is not signed or it is signed by at least one non-blacklisted certificate
                         else {
-                            logger.warn("Not loading CorDapp ${it.info.name} (${it.info.vendor}) as it is signed by development key(s) only: " +
+                            logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it is signed by development key(s) only: " +
                                     "${blockedCertificates.map { it.publicKey }}.")
                             false
                         }
@@ -130,7 +131,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return cordapps
     }
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: CordappImpl.Info.UNKNOWN }
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: Default.UNKNOWN }
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),

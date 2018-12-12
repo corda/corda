@@ -2,8 +2,11 @@ package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.internal.cordapp.*
-import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.outputStream
 import net.corda.testing.node.TestCordapp
 import java.io.BufferedOutputStream
@@ -100,10 +103,10 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest[Attributes.Name.IMPLEMENTATION_TITLE] = title
     manifest[Attributes.Name.IMPLEMENTATION_VERSION] = version
     manifest[Attributes.Name.IMPLEMENTATION_VENDOR] = vendor
-    manifest[CordappInfo.CORDAPP_CONTRACT_NAME]  = name
-    manifest[CordappInfo.CORDAPP_CONTRACT_VERSION] = DEFAULT_CORDAPP_VERSION.toString()
-    manifest[CordappInfo.CORDAPP_WORKFLOW_NAME]  = name
-    manifest[CordappInfo.CORDAPP_WORKFLOW_VERSION] = DEFAULT_CORDAPP_VERSION.toString()
+    manifest[CORDAPP_CONTRACT_NAME]  = name
+    manifest[CORDAPP_CONTRACT_VERSION] = version
+    manifest[CORDAPP_WORKFLOW_NAME]  = name
+    manifest[CORDAPP_WORKFLOW_VERSION] = version
     manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
 
     return manifest

@@ -2,7 +2,6 @@ package net.corda.testing.node
 
 import net.corda.core.DoNotImplement
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.cordapp.CordappInfo.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.simplifyScanPackages
 import java.nio.file.Path
@@ -26,9 +25,6 @@ interface TestCordapp {
 
     /** Returns the target platform version, defaults to the current platform version if not specified. */
     val targetVersion: Int
-
-    /** Returns the cordapp version. */
-    val cordappVersion: String
 
     /** Returns the config for this CorDapp, defaults to empty if not specified. */
     val config: Map<String, Any>
@@ -61,8 +57,6 @@ interface TestCordapp {
      *  Optionally can pass in the location of an existing java key store to use */
     fun signJar(keyStorePath: Path? = null): TestCordappImpl
 
-    fun withCordappVersion(version: String): TestCordappImpl
-
     class Factory {
         companion object {
             /**
@@ -80,11 +74,10 @@ interface TestCordapp {
             fun fromPackages(packageNames: Collection<String>): TestCordapp {
                 return TestCordappImpl(
                         name = "test-name",
-                        version = "1.0",
+                        version = "1",
                         vendor = "test-vendor",
                         title = "test-title",
                         targetVersion = PLATFORM_VERSION,
-                        cordappVersion = DEFAULT_CORDAPP_VERSION.toString(),
                         config = emptyMap(),
                         packages = simplifyScanPackages(packageNames),
                         classes = emptySet()
