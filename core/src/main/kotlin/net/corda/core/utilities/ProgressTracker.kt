@@ -237,7 +237,7 @@ class ProgressTracker(vararg inputSteps: Step) {
         val result = ArrayList<Pair<Int, Step>>()
         for (step in steps) {
             if (step == UNSTARTED) continue
-            if (level > 0 && step == DONE) continue
+            if (level > 0 && (step == DONE || step == STARTING)) continue
             result += Pair(level, step)
             getChildProgressTracker(step)?.let { result += it._allSteps(level + 1) }
         }
