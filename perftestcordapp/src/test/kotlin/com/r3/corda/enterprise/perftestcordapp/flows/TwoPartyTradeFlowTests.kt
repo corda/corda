@@ -53,6 +53,7 @@ import net.corda.testing.node.ledger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -321,7 +322,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         })
     }
-
+    @Ignore
     @Test
     fun `check dependencies of sale asset are resolved`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForAllNodes)
@@ -425,7 +426,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             }
         }
     }
-
+    @Ignore
     @Test
     fun `track works`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForAllNodes)
@@ -503,7 +504,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             aliceTxMappings.expectEvents { aliceMappingExpectations }
         }
     }
-
+    @Ignore
     @Test
     fun `dependency with error on buyer side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForAllNodes)
@@ -511,7 +512,7 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             runWithError(true, false, "at least one cash input")
         }
     }
-
+    @Ignore
     @Test
     fun `dependency with error on seller side`() {
         mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForAllNodes)
