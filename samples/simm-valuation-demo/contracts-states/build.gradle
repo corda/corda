@@ -9,8 +9,7 @@ cordapp {
         targetPlatformVersion = corda_platform_version.toInteger()
     }
     signing {
-        // We need to sign the output of the "shrink" task,
-        // but the jar signer doesn't support that yet.
+        // Cordapp is signed after the "shrink" task.
         enabled false
     }
     sealing {
@@ -79,8 +78,14 @@ task shrink(type: ProGuardTask) {
     keepclassmembers 'class com.google.** { *; }', includedescriptorclasses:true
     keepclassmembers 'class org.joda.** { *; }', includedescriptorclasses:true
 }
+
+task sign(type: net.corda.plugins.SignJar) {
+    inputJars shrink
+}
+
 jar.finalizedBy shrink
+shrink.finalizedBy sign
 
 artifacts {
-    shrinkArtifacts file: shrinkJar, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: shrink
+    shrinkArtifacts file: sign.outputJars.singleFile, name: project.name, type: 'jar', extension: 'jar', classifier: 'tiny', builtBy: sign
 }

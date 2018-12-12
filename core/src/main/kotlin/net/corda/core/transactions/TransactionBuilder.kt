@@ -5,6 +5,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
+import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -64,7 +65,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         private val log = contextLogger()
     }
 
-    private val inputsWithTransactionState = arrayListOf<TransactionState<ContractState>>()
+    private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
 
     /**
@@ -128,7 +129,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val (allContractAttachments: Collection<SecureHash>, resolvedOutputs: List<TransactionState<ContractState>>) = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
 
         // Final sanity check that all states have the correct constraints.
-        for (state in (inputsWithTransactionState + resolvedOutputs)) {
+        for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs)) {
             checkConstraintValidity(state)
         }
 
@@ -137,7 +138,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                     createComponentGroups(
                             inputStates(),
                             resolvedOutputs,
-                            commands,
+                            commands(),
                             (allContractAttachments + attachments).toSortedSet().toList(), // Sort the attachments to ensure transaction builds are stable.
                             notary,
                             window,
@@ -171,7 +172,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
 
-        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.groupBy { it.contract }
+        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map {it.state}.groupBy { it.contract }
         val outputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = outputs.groupBy { it.contract }
 
         val allContracts: Set<ContractClassName> = inputContractGroups.keys + outputContractGroups.keys
@@ -182,13 +183,15 @@ open class TransactionBuilder @JvmOverloads constructor(
         val refStateContractAttachments: List<AttachmentId> = referenceStateGroups
                 .filterNot { it.key in allContracts }
                 .map { refStateEntry ->
-                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, services)
+                    selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services)
                 }
+
+        val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?>> = allContracts.toSet()
                 .map { ctr ->
-                    handleContract(ctr, inputContractGroups[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
+                    handleContract(ctr, inputContractGroups[ctr], contractClassNameToInputStateRef[ctr], outputContractGroups[ctr], explicitAttachmentContractsMap[ctr], services)
                 }
 
         val resolvedStates: List<TransactionState<ContractState>> = contractAttachmentsAndResolvedOutputStates.mapNotNull { it.second }
@@ -222,6 +225,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     private fun handleContract(
             contractClassName: ContractClassName,
             inputStates: List<TransactionState<ContractState>>?,
+            inputStateRefs: Set<StateRef>?,
             outputStates: List<TransactionState<ContractState>>?,
             explicitContractAttachment: AttachmentId?,
             services: ServicesForResolution
@@ -281,6 +285,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                 false,
                 contractClassName,
                 inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
+                inputStateRefs,
                 services)
 
         // This will contain the hash of the JAR that will be used by this Transaction.
@@ -405,23 +410,20 @@ open class TransactionBuilder @JvmOverloads constructor(
 
     /**
      * This method should only be called for upgradeable contracts.
-     *
-     * For now we use the currently installed CorDapp version.
      */
-    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, services: ServicesForResolution): AttachmentId {
+    private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        //TODO will be set by the code pending in the other PR
-        val minimumRequiredContractClassVersion = DEFAULT_CORDAPP_VERSION
-
-        //TODO consider move it to attachment service method e.g. getContractAttachmentWithHighestVersion(contractClassName, minContractVersion)
+        val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max() ?: DEFAULT_CORDAPP_VERSION
+        //TODO could be moved as a single method of the attachment service method e.g. getContractAttachmentWithHighestContractVersion(contractClassName, minContractVersion)
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
-                versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion))
+                versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion),
+                uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
-        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states)
+        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
@@ -532,7 +534,7 @@ open class TransactionBuilder @JvmOverloads constructor(
     open fun addInputState(stateAndRef: StateAndRef<*>) = apply {
         checkNotary(stateAndRef)
         inputs.add(stateAndRef.ref)
-        inputsWithTransactionState.add(stateAndRef.state)
+        inputsWithTransactionState.add(stateAndRef)
         resolveStatePointers(stateAndRef.state)
         return this
     }
@@ -633,8 +635,8 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s. */
-    fun commands(): List<Command<*>> = ArrayList(commands)
+    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
+    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

@@ -257,12 +257,7 @@ data class TransformsSchema(val types: Map<String, EnumMap<TransformTypes, Mutab
          */
         fun build(schema: Schema, sf: LocalSerializerFactory): TransformsSchema {
             val transformsMap = schema.types.asSequence().mapNotNull { type ->
-                val localType = try {
-                    sf.classloader.loadClass(type.name)
-                } catch (_: ClassNotFoundException) {
-                    return@mapNotNull null
-                }
-                val localTypeInformation = sf.getTypeInformation(localType)
+                val localTypeInformation = sf.getTypeInformation(type.name)
                 if (localTypeInformation is LocalTypeInformation.AnEnum) {
                     localTypeInformation.transforms.source.let {
                         if (it.isEmpty()) null else type.name to it

@@ -4243,7 +4243,7 @@ public final class net.corda.core.node.services.vault.QueryCriteriaUtils extends
   public static final Class<O> resolveEnclosingObjectFromExpression(net.corda.core.node.services.vault.CriteriaExpression<O, ? extends R>)
   public static final int DEFAULT_PAGE_NUM = 1
   public static final int DEFAULT_PAGE_SIZE = 200
-  public static final int MAX_PAGE_SIZE = 2147483647
+  public static final int MAX_PAGE_SIZE = 2147483646
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.vault.Sort extends net.corda.core.node.services.vault.BaseSort
@@ -4946,6 +4946,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>)
+  public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, Integer)
   @NotNull
   public final java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>> getStates()
 ##

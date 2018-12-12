@@ -7,11 +7,17 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* Transaction building and verification enforces new contract attachment version non-downgrade rule.
+  For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
+  See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
+
 * Automatic Constraints propagation for hash-constrained states to signature-constrained states.
   This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
   by unsigned CorDapps in previous versions of Corda.
 
 * Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
+
+* Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
 
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must

@@ -6,7 +6,8 @@ import net.corda.core.internal.cordapp.CordappImpl.Info.Companion.UNKNOWN_VALUE
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
-fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
+//TODO implementationVersion parmemater and update `Implementation-Version` when we finally agree on a naming split for Contracts vs Flows jars.
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int, implementationVersion: String): Manifest {
     val manifest = Manifest()
 
     // Mandatory manifest attribute. If not present, all other entries are silently skipped.
@@ -19,7 +20,7 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
     manifest["Specification-Vendor"] = vendor
 
     manifest["Implementation-Title"] = title
-    manifest["Implementation-Version"] = version
+    manifest[Attributes.Name.IMPLEMENTATION_VERSION] = implementationVersion
     manifest["Implementation-Vendor"] = vendor
     manifest["Target-Platform-Version"] = targetVersion.toString()
 
@@ -28,6 +29,10 @@ fun createTestManifest(name: String, title: String, version: String, vendor: Str
 
 operator fun Manifest.set(key: String, value: String): String? {
     return mainAttributes.putValue(key, value)
+}
+
+operator fun Manifest.set(key: Attributes.Name, value: String): Any? {
+    return mainAttributes.put(key, value)
 }
 
 operator fun Manifest.get(key: String): String? = mainAttributes.getValue(key)
