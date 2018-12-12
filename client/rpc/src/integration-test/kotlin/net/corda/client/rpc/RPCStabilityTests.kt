@@ -9,7 +9,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule

@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.node.services.rpc
 
 import net.corda.core.context.InvocationContext
 import net.corda.node.internal.security.AuthorizingSubject
