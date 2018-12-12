@@ -20,6 +20,7 @@ import javax.sql.DataSource
 import liquibase.database.core.PostgresDatabase
 import liquibase.structure.DatabaseObject
 import liquibase.structure.core.Schema
+import java.io.Writer
 
 class SchemaMigration(
         val schemas: Set<MappedSchema>,

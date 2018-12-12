@@ -5,10 +5,7 @@ import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.jcabi.manifests.Manifests
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
-import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.*
 import net.corda.core.crypto.newSecureRandom
 import net.corda.core.crypto.sign
 import net.corda.core.flows.*
@@ -255,6 +252,10 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
     override fun registerUnloadHandler(runOnStop: () -> Unit) {
         this.runOnStop += runOnStop
+    }
+
+    override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment {
+        return servicesForResolution.loadContractAttachment(stateRef, forContractClassName)
     }
 
     private fun getVersionInfo(): VersionInfo {
