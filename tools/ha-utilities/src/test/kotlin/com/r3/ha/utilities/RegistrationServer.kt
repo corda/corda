@@ -3,22 +3,15 @@ package com.r3.ha.utilities
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.readFully
 import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.testing.node.internal.network.NetworkMapServer
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.server.ServerConnector
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
-import org.glassfish.jersey.server.ResourceConfig
-import org.glassfish.jersey.servlet.ServletContainer
 import java.io.ByteArrayOutputStream
-import java.io.Closeable
 import java.io.InputStream
-import java.net.InetSocketAddress
 import java.security.cert.X509Certificate
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -28,47 +21,10 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 
 /**
- * A simple registration web server implementing the "doorman" protocol using [X509Utilities].
+ * A simple registration web server implementing the "doorman" protocol using [X509Utilities] and NetworkMap capable of vending NetworkParams.
  * This server is intended for integration testing only.
  */
-class RegistrationServer(hostAndPort: NetworkHostAndPort = NetworkHostAndPort("localhost", 0),
-                         vararg additionalServices: Any) : Closeable {
-
-    private val server: Server
-    private val service = SimpleDoormanService()
-
-    init {
-        server = Server(InetSocketAddress(hostAndPort.host, hostAndPort.port)).apply {
-            handler = HandlerCollection().apply {
-                addHandler(ServletContextHandler().apply {
-                    contextPath = "/"
-                    val resourceConfig = ResourceConfig().apply {
-                        // Add your API provider classes (annotated for JAX-RS) here
-                        register(service)
-                        additionalServices.forEach { register(it) }
-                    }
-                    val jerseyServlet = ServletHolder(ServletContainer(resourceConfig)).apply { initOrder = 0 } // Initialise at server start
-                    addServlet(jerseyServlet, "/*")
-                })
-            }
-        }
-    }
-
-    fun start(): NetworkHostAndPort {
-        server.start()
-        // Wait until server is up to obtain the host and port.
-        while (!server.isStarted) {
-            Thread.sleep(500)
-        }
-        return server.connectors
-                .mapNotNull { it as? ServerConnector }
-                .first()
-                .let { NetworkHostAndPort(it.host, it.localPort) }
-    }
-
-    override fun close() {
-        server.stop()
-    }
+class RegistrationServer(hostAndPort: NetworkHostAndPort = NetworkHostAndPort("localhost", 0)) : NetworkMapServer(10.seconds, hostAndPort, additionalServices = *arrayOf(SimpleDoormanService())) {
 
     @Path("certificate")
     internal class SimpleDoormanService {

@@ -35,7 +35,7 @@ import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.ok
 import javax.ws.rs.core.Response.status
 
-class NetworkMapServer(private val pollInterval: Duration,
+open class NetworkMapServer(private val pollInterval: Duration,
                        hostAndPort: NetworkHostAndPort = NetworkHostAndPort("localhost", 0),
                        private val networkMapCertAndKeyPair: CertificateAndKeyPair = createDevNetworkMapCa(),
                        private val myHostNameValue: String = "test.host.name",
