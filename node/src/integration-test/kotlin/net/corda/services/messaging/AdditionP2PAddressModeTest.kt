@@ -32,7 +32,6 @@ class AdditionP2PAddressModeTest {
             val mainAddress = portAllocation.nextHostAndPort().toString()
             val altAddress = portAllocation.nextHostAndPort().toString()
             val haConfig = mutableMapOf<String, Any?>()
-            haConfig["detectPublicIp"] = false
             haConfig["p2pAddress"] = mainAddress //advertise this as primary
             haConfig["messagingServerAddress"] = altAddress // but actually host on the alternate address
             haConfig["messagingServerExternal"] = false
