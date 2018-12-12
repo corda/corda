@@ -39,25 +39,30 @@ shadowJar {
     zip64 true
 }
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar"]) {
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar", ":bridge:bridgecapsule:buildFirewallJar"]) {
     doLast {
         def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
         def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
+        def firewall = project(":bridge:bridgecapsule").buildFirewallJar.archivePath
         project.copy {
             into new File(project.buildDir, "docker-temp")
             from "src/bash/run-corda.sh"
+            from "src/bash/run-firewall.sh"
             from "src/bash/db-migrate-create-jars.sh"
             from "src/bash/db-migrate-execute-migration.sh"
             from cordaJar
             from shadowJar.archivePath
             from dbmigrator
+            from firewall
             from "src/config/starting-node.conf"
             from "src/bash/generate-config.sh"
             from "src/docker/DockerfileCorretto"
             from "src/docker/DockerfileUbuntuZulu"
             from "src/docker/DockerfileAlpineZulu"
+            from "src/docker/FirewallDockerfileCorretto"
             rename(cordaJar.name, "corda.jar")
             rename(dbmigrator.name, "database-manager.jar")
+            rename(firewall.name, "corda-firewall.jar")
             rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
     }
@@ -65,11 +70,13 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
-final GString[] zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"]
-final GString[] alpineZuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:latest"]
-final GString[] correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"]
 
-static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
+final Iterable<GString> zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"].asList()
+final Iterable<GString> alpineZuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:latest"].asList()
+final Iterable<GString> correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"].asList()
+final Iterable<GString> firewallTags = ["entdocker.corda.r3cev.com/corda-firewall-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-firewall-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"].asList()
+
+static buildImage(java.nio.file.Path dir, String dockerFile, Iterable<CharSequence> tags) {
     println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
     def builtImageId = docker.build(dir, null, dockerFile, new ProgressHandler(){
@@ -90,29 +97,38 @@ static buildImage(java.nio.file.Path dir, String dockerFile, GString[] tags) {
     }
 }
 
-static pushImages(GString[] imagesToPush) {
+static pushImages(Iterable<CharSequence> tags) {
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
-    for (String tag : imagesToPush) {
+    for (String tag : tags) {
         println("Pushing tag: ${tag}")
         docker.push(tag, RegistryAuth.create(System.env.DOCKER_USERNAME, System.env.DOCKER_PASSWORD, null, null, null, null))
     }
 }
 
+def dockerTempDir = new File(project.buildDir, "docker-temp")
+
+
 task buildOfficialZuluDockerImage(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileUbuntuZulu", zuluBuildTags)
+        buildImage(dockerTempDir.toPath(), "DockerfileUbuntuZulu", zuluBuildTags)
     }
 }
 
 task buildOfficialAplineZuluDockerImage(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileAlpineZulu", alpineZuluBuildTags)
+        buildImage(dockerTempDir.toPath(), "DockerfileAlpineZulu", alpineZuluBuildTags)
     }
 }
 
 task buildOfficialCorrettoDockerImage(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(new File(project.buildDir, "docker-temp").toPath(), "DockerfileCorretto", correttoBuildTags)
+        buildImage(dockerTempDir.toPath(), "DockerfileCorretto", correttoBuildTags)
+    }
+}
+
+task buildOfficialCorrettoFirewallDockerImage(dependsOn: [buildDockerFolder]) {
+    doLast {
+        buildImage(dockerTempDir.toPath(), "FirewallDockerfileCorretto",firewallTags)
     }
 }
 
