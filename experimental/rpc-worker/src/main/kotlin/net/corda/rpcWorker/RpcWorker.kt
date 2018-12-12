@@ -11,10 +11,10 @@ import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.services.config.SecurityConfiguration
-import net.corda.node.services.messaging.InternalRPCMessagingClient
 import net.corda.node.services.messaging.RPCOpsRouting
-import net.corda.node.services.messaging.RPCServerConfiguration
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.services.rpc.InternalRPCMessagingClient
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.node.utilities.EnterpriseNamedCacheFactory
 import net.corda.node.utilities.profiling.getTracingConfig
 import net.corda.nodeapi.internal.config.User

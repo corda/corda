@@ -16,7 +16,7 @@ import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions
-import net.corda.node.services.messaging.RPCServer
+import net.corda.node.services.rpc.RPCServer
 import net.corda.node.services.statemachine.ActionExecutorImpl
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.singleIdentity
