@@ -218,13 +218,20 @@ sealed class TypeIdentifier {
     }
 }
 
+/**
+ * Take all type parameters to their upper bounds, recursively resolving type variables against the provided context.
+ */
 internal fun Type.resolveAgainst(context: Type): Type = when (this) {
     is WildcardType -> this.upperBound
+    // Ignore types that we have created ourselves
     is ReconstitutedParameterizedType -> this
-    is ParameterizedType -> ReconstitutedParameterizedType(
-            rawType,
-            ownerType,
-            actualTypeArguments.map { it.resolveAgainst(context) }.toTypedArray())
+    is ParameterizedType -> {
+        val resolved = ReconstitutedParameterizedType(
+                rawType,
+                ownerType,
+                actualTypeArguments.map { it.resolveAgainst(context) }.toTypedArray())
+        TypeToken.of(context).resolveType(resolved).type.upperBound
+    }
     is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
     else -> this
 }
