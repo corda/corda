@@ -163,6 +163,10 @@ class CashTests {
             ourServices.fillWithSomeTestCash(issuerServices = megaCorpServices, ownedBy = ourIdentity, issuedBy = MEGA_CORP.ref(1), howMuch = 400.DOLLARS, outputNotary = DUMMY_NOTARY)
             ourServices.fillWithSomeTestCash(issuerServices = miniCorpServices, ownedBy = ourIdentity, issuedBy = MINI_CORP.ref(1), howMuch = 80.DOLLARS, outputNotary = DUMMY_NOTARY)
             ourServices.fillWithSomeTestCash(issuerServices = miniCorpServices, ownedBy = ourIdentity, issuedBy = MINI_CORP.ref(1), howMuch = 80.SWISS_FRANCS, outputNotary = DUMMY_NOTARY)
+
+            ourServices.fillWithSomeTestCash(issuerServices = megaCorpServices, ownedBy = ourIdentity, issuedBy = MEGA_CORP.ref(1), howMuch = 100.POUNDS, outputNotary = DUMMY_NOTARY)
+            ourServices.fillWithSomeTestCash(issuerServices = megaCorpServices, ownedBy = ourIdentity, issuedBy = MEGA_CORP.ref(1), howMuch = 400.POUNDS, outputNotary = DUMMY_NOTARY)
+            ourServices.fillWithSomeTestCash(issuerServices = miniCorpServices, ownedBy = ourIdentity, issuedBy = MINI_CORP.ref(1), howMuch = 80.POUNDS, outputNotary = DUMMY_NOTARY)
         }
 
         database.transaction {
@@ -330,8 +334,8 @@ class CashTests {
             output(Cash.PROGRAM_ID, inState.copy(amount = inState.amount * 2))
             command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
             tweak {
-                command(MEGA_CORP_PUBKEY, Cash.Commands.Issue())
-                this `fails with` "there is only a single issue command"
+                command(MINI_CORP_PUBKEY, Cash.Commands.Issue())
+                this.verifies()
             }
             this.verifies()
         }
@@ -911,5 +915,46 @@ class CashTests {
         assertEquals(MEGA_CORP, out(1).amount.token.issuer.party)
         assertEquals(MEGA_CORP, out(2).amount.token.issuer.party)
         assertEquals(MEGA_CORP, out(3).amount.token.issuer.party)
+   }
+
+    @Test
+    fun generateSpendTwiceWithinATransaction() {
+        val tx = TransactionBuilder(dummyNotary.party)
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
+            )
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+        database.transaction {
+            val payments = listOf(
+                    PartyAndAmount(miniCorpAnonymised, 400.POUNDS),
+                    PartyAndAmount(charlie.party.anonymise(), 150.POUNDS)
+            )
+            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+        }
+
+        val wtx = tx.toWireTransaction(ourServices)
+        fun out(i: Int) = wtx.getOutput(i) as Cash.State
+        assertEquals(8, wtx.outputs.size)
+
+        assertEquals(80.DOLLARS, out(0).amount.withoutIssuer())
+        assertEquals(320.DOLLARS, out(1).amount.withoutIssuer())
+        assertEquals(150.DOLLARS, out(2).amount.withoutIssuer())
+        assertEquals(30.DOLLARS, out(3).amount.withoutIssuer())
+        assertEquals(miniCorp.party, out(0).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(1).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(2).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(3).amount.token.issuer.party)
+
+        assertEquals(80.POUNDS, out(4).amount.withoutIssuer())
+        assertEquals(320.POUNDS, out(5).amount.withoutIssuer())
+        assertEquals(150.POUNDS, out(6).amount.withoutIssuer())
+        assertEquals(30.POUNDS, out(7).amount.withoutIssuer())
+        assertEquals(miniCorp.party, out(4).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(5).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(6).amount.token.issuer.party)
+        assertEquals(megaCorp.party, out(7).amount.token.issuer.party)
     }
 }
