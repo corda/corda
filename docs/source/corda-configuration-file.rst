@@ -166,9 +166,9 @@ The available config fields are listed below.
     If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
     This value can be overridden from the command line using the ``--dev-mode`` option.
 
-:detectPublicIp: This flag toggles the auto IP detection behaviour, it is enabled by default. On startup the node will
+:detectPublicIp: This flag toggles the auto IP detection behaviour, it is disabled by default. If enabled, on startup the node will
     attempt to discover its externally visible IP address first by looking for any public addresses on its network
-    interfaces, and then by sending an IP discovery request to the network map service. Set to ``false`` to disable.
+    interfaces, and then by sending an IP discovery request to the network map service. Set to ``true`` to enable.
 
 :compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
     obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
