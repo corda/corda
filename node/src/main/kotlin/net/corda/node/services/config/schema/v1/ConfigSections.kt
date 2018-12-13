@@ -49,6 +49,7 @@ import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {
@@ -210,6 +211,7 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
+    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
@@ -218,7 +220,7 @@ internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>
     private val schema by string().optional()
 
     override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
-        return valid(DatabaseConfig(configuration[runMigration], configuration[initialiseSchema], configuration[transactionIsolationLevel], configuration[schema], configuration[exportHibernateJMXStatistics], configuration[hibernateDialect], configuration[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(configuration[runMigration], configuration[initialiseSchema], configuration[initialiseAppSchema], configuration[transactionIsolationLevel], configuration[schema], configuration[exportHibernateJMXStatistics], configuration[hibernateDialect], configuration[mappedSchemaCacheSize]))
     }
 }
 

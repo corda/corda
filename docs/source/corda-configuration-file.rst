@@ -80,19 +80,28 @@ The available config fields are listed below.
 :database:  This section is used to configure JDBC and Hibernate related properties:
 
         :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to REPEATABLE_READ.
+            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to ``REPEATABLE_READ``.
 
         :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
 
-    :runMigration: Boolean on whether to run the database migration scripts at startup. Defaults to false.
-                   In production please keep it false. For more information please check :doc:`database-management`
-                   If migration is not run, on startup, the node will check if it's running on the correct database version.
+        :runMigration: Boolean on whether to run the database migration scripts at startup. Defaults to false.
+                       In production please keep it false. For more information please check :doc:`database-management`
+                       If migration is not run, on startup, the node will check if it's running on the correct database version.
 
-    :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
-                 (the value is passed to Hibernate property 'hibernate.default_schema').
+        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
+                     (the value is passed to Hibernate property 'hibernate.default_schema').
+    
+        :hibernateDialect: (optional) for explicit definition of ``hibernate.dialect`` property, for most cases Hibernate properly detect
+                           the correct value
 
-    :hibernateDialect: (optional) for explicit definition of ``hibernate.dialect`` property, for most cases Hibernate properly detect
-                       the correct value
+        :initialiseSchema: Boolean on whether to update database schema at startup (or create when node starts for the first time).
+            Defaults to ``true``. If set to ``false`` on startup, the node will validate if it's running against the compatible database schema.
+
+        :initialiseAppSchema: The property allows to override (downgrade) ``database.initialiseSchema`` for the Hibernate
+            DDL generation for CorDapp schemas. ``UPDATE`` performs an update of CorDapp schemas, while ``VALID`` only verifies
+            their integrity and ``NONE`` performs no check. By default (if the property is not specified) CorDapp schemas
+            creation is controlled by ``initialiseSchema``. When ``initialiseSchema`` is set to false then ``initialiseAppSchema``
+            may be set as ``VALID`` or ``NONE`` only.
 
 :dataSourceProperties: This section is used to configure the JDBC connection and database driver used for the nodes persistence.
     By default the node starts with an embedded H2 database instance.
@@ -104,7 +113,6 @@ The available config fields are listed below.
     :dataSource.url:      JDBC database URL.
     :dataSource.user:     Database user.
     :dataSource.password: Database password.
-
 
 :h2Port: Deprecated. Use ``h2Settings`` instead.
 
