@@ -160,7 +160,7 @@ This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitF
 Step 4. Upgrade your use of SwapIdentitiesFlow
 ----------------------------------------------
 
-The ``confidential-identities`` module is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
+The :ref:`confidential_identities_ref` API is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
 has been adjusted in the same way as ``FinalityFlow`` above, to close problems with confidential identities being injectable into a node
 outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
 the ``SwapIdentitiesFlow``.
@@ -172,6 +172,24 @@ Step 5. Possibly, adjust unit test code
 Use a ``MockNetworkConfigOverrides`` object instead. This is an API change we regret, but unfortunately in Corda 3 we accidentally exposed
 large amounts of the node internal code through this one API entry point. We have now insulated the test API from node internals and
 reduced the exposure.
+
+If you are constructing a MockServices for testing contracts, and your contract uses the Cash contract from the finance app, you
+now need to explicitly add ``net.corda.finance.contracts`` to the list of ``cordappPackages``. This is a part of the work to disentangle
+the finance app (which is really a demo app) from the Corda internals. Example::
+
+    val ledgerServices = MockServices(
+        listOf("net.corda.examples.obligation", "net.corda.testing.contracts"),
+        identityService = makeTestIdentityService(),
+        initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB"))
+    )
+
+becomes::
+
+    val ledgerServices = MockServices(
+        listOf("net.corda.examples.obligation", "net.corda.testing.contracts", "net.corda.finance.contracts"),
+        identityService = makeTestIdentityService(),
+        initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB"))
+    )
 
 Step 6. Security: refactor to avoid violating sealed packages
 -------------------------------------------------------------
@@ -229,3 +247,12 @@ that causes transaction details to be converted to a PDF and sent to a particula
 into shared business logic, but it makes perfect sense to put into a user-specific app they developed themselves.
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
+
+Step 10. Explore other new features that may be useful
+------------------------------------------------------
+
+Corda 4 adds several new APIs that help you build applications. Why not explore:
+
+* The `new withEntityManager API <api/javadoc/net/corda/core/node/ServiceHub.html#withEntityManager-block->`_ for using JPA inside your flows and services.
+* :ref:`reference_states`, that let you use an input state without consuming it.
+* :ref:`state_pointers`, that make it easier to 'point' to one state from another and follow the latest version of a linear state.
