@@ -22,32 +22,51 @@ as the minimum platform version.
 Significant Changes in 4.0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **Reference states**:
+Reference states
+++++++++++++++++
 
-  With Corda 4 we are introducing the concept of "reference input states". A reference input state is
-  a ``ContractState`` which can be referred to in a transaction by the contracts of input and output
-  states but, significantly, whose contract is not executed as part of the transaction verification process
-  and is not consumed when the transaction is committed to the ledger. Rather, it is checked
-  for "current-ness". In other words, the contract logic isn't run for the referencing transaction only.
-  It's still a normal state when it occurs in an input or output position.
+With Corda 4 we are introducing the concept of "reference input states". A reference input state is
+a ``ContractState`` which can be referred to in a transaction by the contracts of input and output
+states but, significantly, whose contract is not executed as part of the transaction verification process
+and is not consumed when the transaction is committed to the ledger. Rather, it is checked
+for "current-ness". In other words, the contract logic isn't run for the referencing transaction only.
+It's still a normal state when it occurs in an input or output position.
 
-* **Signature Constraints**
+CorDapp JAR Signing and Sealing
++++++++++++++++++++++++++++++++
 
+CorDapps built by the ``corda-gradle-plugins`` are now signed and sealed JAR files by default. This
+signing can be configured or disabled with the default certificate being the Corda development certificate.
 
-* **CorDapp JAR Signing and Sealing**:
+Signed CorDapps facilitate signature constraints checks which are an important part of the Corda security
+story allowing users to verify the contract code they're executing is as it should be!
 
-  CorDapps built by corda-gradle-plugins are now signed and sealed JAR files.
-  Signing can be configured or disabled, and it defaults to using the Corda development certificate.
-  Signed CorDapps facilitate signature constraints checks.
-  Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be disabled.
+Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be disabled.
 
-* **A more pleasing bootstrapper**
+Signature Constraints
++++++++++++++++++++++
 
-  The interface to the network boostrapper has undergone a signigicant overhaul to make the experience of
-  using and interacting with it simpler, faster, and just genreally more pleaesnt.
+<<< WRITE ME >>>
 
-  In addition, it supports all of the new network paramters that can optionally be set. See the
-  :doc:`changelog` for details on individual additions.
+A more pleasing bootstrapper
+++++++++++++++++++++++++++++
+
+The interface to the network boostrapper has undergone a significant overhaul to make the experience of
+using and interacting with it simpler, faster, and just generally more pleasant.
+
+In addition, it supports all of the new network parameters that can optionally be set. See the
+:doc:`changelog` for details on individual additions.
+
+<<< SCREEN SHOT >>>
+
+Transaction Tagging
++++++++++++++++++++
+
+Transactions verified under a Corda 4 and above node will have the currently valid signed ``NetworkParameter``
+file attached to each transaction. This will allow future introspection of states to ascertain what was
+the accepted global state of the network at the time they were notarised. Additionally, new signatures must
+be working with the current globally accepted parameters. This means older parameters where something
+was legal and no longer is cannot be used.
 
 RPC Changes
 ~~~~~~~~~~~
@@ -70,7 +89,7 @@ RPC Changes
   frameworks such as XML formatters, JSON libraries, GUI construction toolkits, scripting engines and so on.
 
   Effectively, the rich web applications written to interact with Corda nodes can operate free of the expectation
-  they be aware of every possible state type they may eve encounter within the vault of a node over its lifetime!.
+  they be aware of every possible state type they may ever encounter within the vault of a node over its lifetime!.
 
 * **SSL**
 
@@ -99,14 +118,8 @@ You can read more about the DJVM here: :doc:`key-concepts-djvm`. There are also 
 how to get started with the DJVM command-line tool, which allows you to run code in a deterministic
 sandbox and inspect the byte code transformations that the DJVM applies to your code.
 
-
-
 Other change of note
 ~~~~~~~~~~~~~~~~~~~~
-
-* **Transaction Tagging**
-
-<<< Someone should opine on this >>>
 
 * **Contract Upgrade Transactions**
 
@@ -116,12 +129,12 @@ Other change of note
 
   Added auto-accepting for a subset of network parameters, negating the need for a node operator to
   manually run an accept command on every parameter update. This behaviour can be turned off via the
-  node configuration.
+  node configuration. See :doc:`network-map`
 
 * **Retirement of non-elliptic Diffie-Hellman for TLS**
+
   The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
   as it is a legacy cipher family not supported by all native SSL/TLS implementations.
-
 
 * **The BelongsToContract Annotation**
 
@@ -163,8 +176,13 @@ Other change of note
 
 * **Error Code Generation**
 
-  Derive error code from exception signature so that we can reference that in centralised knowledge base.
-  Further, enrich exceptions and reported events for easier debugging and troubleshooting.
+  Stack traces generated within Corda are now hashed to produce a unique error code that can be
+  used to perform a lookup into a knowledge base. The hope is that common error conditions can
+  quickly be resolved and opaque errors explained in a more user friendly format to facilitate
+  faster debugging and trouble shooting.
+
+  At the moment, Stack Overflow is that knowledge base, with the error codes being converted
+  to a URL that links directly to the answer.
 
 * **A New Statemachine**
 
@@ -176,10 +194,10 @@ Other change of note
 API Changes
 ~~~~~~~~~~~
 
- * The API for the TestCordapp has been simplified
- * Don't expose StartedNode and AbstractNode as part of public test api (#2472)
- * The FlowStateMachine is no longer a part of the public API
- * Exposure of node internals in mock network
+ * The API for the ``TestCordapp`` has been simplified.
+ * stopped exposing the ``StartedNode`` and ``AbstractNode`` as part of the public test api.
+ * The ``FlowStateMachine`` has been removed from the publix API.
+ * Exposure of node internals in mock network.
  * New Vault Query : ``StateModificationStatus`` which can be ``MODIFIABLE``, ``NOT_MODIFIABLE``, or ``ALL``
  * Added ``is_modifiable`` column to the ``VaultStates`` table. A node that is a participant in a state will view it as
    ``MODIFIABLE`` whilst those it isn't are viewed as ``NOT_MODIFIABLE``
@@ -192,8 +210,9 @@ Minor Changes
  * We've raised the minimum JDK to 8u171, needed to get fixes for certain ZIP compression bugs
  * Upgraded to Kotlin 1.2.71
  * Upgraded to Gradle 4.10.1. (#3947)
- * Liquibase - The node now uses Liquibase to bootstrap and update itself. This is a transparent change with pre Corda 3 nodes seemlessly upgrading to operate
-   as if they'd been bootstrapped in this way. This also applies to the finance CorDapp module.
+ * Liquibase - The node now uses Liquibase to bootstrap and update itself. This is a transparent change with
+   pre Corda 3 nodes seamlessly upgrading to operate as if they'd been bootstrapped in this way.
+   This also applies to the finance CorDapp module.
  * Auto completion for the command line tooling (when enabled - see <<<some doc>>>)
  * New jokes - you're welcome! (and we're sorry!)
  * Version 2 of the serialization engine
