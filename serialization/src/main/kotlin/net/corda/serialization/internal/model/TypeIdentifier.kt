@@ -225,7 +225,12 @@ internal fun Type.resolveAgainst(context: Type): Type = when (this) {
     is WildcardType -> this.upperBound
     is ReconstitutedParameterizedType -> this
     is ParameterizedType,
-    is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
+    is TypeVariable<*> -> {
+        val resolved = TypeToken.of(context).resolveType(this).type.upperBound
+        // Given a class C<A, B : A> : I<B>, B will resolve to A and needs to be resolved again
+        // until it is no longer a type variable
+        if (resolved !is TypeVariable<*> || resolved == this) resolved else resolved.resolveAgainst(context)
+    }
     else -> this
 }
 
