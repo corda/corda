@@ -8,15 +8,62 @@ friendly for a developer working on the platform. It first has to be parsed and 
 which to determine API differences. The release version is still useful and every MQ message the node sends attaches it
 to the ``release-version`` header property for debugging purposes.
 
+Platform version
+----------------
+
 It is much easier to use a single incrementing integer value to represent the API version of the Corda platform, which
-is called the Platform Version. It is similar to Android's `API Level <https://developer.android.com/guide/topics/manifest/uses-sdk-element.html>`_.
+is called the *platform version*. It is similar to Android's `API Level <https://developer.android.com/guide/topics/manifest/uses-sdk-element.html>`_.
 It starts at 1 and will increment by exactly 1 for each release which changes any of the publicly exposed APIs in the
 entire platform. This includes public APIs on the node itself, the RPC system, messaging, serialisation, etc. API backwards
-compatibility will always be maintained, with the use of deprecation to migrate away from old APIs. In rare situations
-APIs may have to be removed, for example due to security issues. There is no relationship between the Platform Version
-and the release version - a change in the major, minor or patch values may or may not increase the Platform Version.
+compatibility will always be maintained, with the use of deprecation to suggest migration away from old APIs. In very rare
+situations APIs may have to be changed, for example due to security issues. There is no relationship between the platform version
+and the release version - a change in the major, minor or patch values may or may not increase the platform version. However
+we do endeavour to keep them synchronised for now, as a convenience.
 
-The Platform Version is part of the node's ``NodeInfo`` object, which is available from the ``ServiceHub``. This enables
+The platform version is part of the node's ``NodeInfo`` object, which is available from the ``ServiceHub``. This enables
 a CorDapp to find out which version it's running on and determine whether a desired feature is available. When a node
-registers with the Network Map Service it will use the node's Platform Version to enforce a minimum version requirement
-for the network.
+registers with the network map it will check its own version against the minimum version requirement for the network.
+
+Minimum platform version
+------------------------
+
+Applications can advertise a *minimum platform version* they require. If your app uses new APIs that were added in (for example) Corda 5,
+you should specify a minimum version of 5. This will ensure the app won't be loaded by older nodes. If you can *optionally* use the new
+APIs, you can keep the minimum set to a lower number. Attempting to use new APIs on older nodes can cause ``NoSuchMethodError`` exceptions
+and similar problems, so it's best to advertise the correct requirements so problems are caught up front, instead of at runtime.
+
+Target version
+--------------
+
+Applications can also advertise a *target version*. This is similar to the concept of the same name in Android and iOS.
+Apps should advertise the highest version of the platform they have been tested against. This allows the node to activate or deactivate
+backwards compatibility codepaths depending on whether they're necessary or not, as workarounds for apps designed for earlier versions.
+
+For example, consider an app that uses new features introduced in Corda 4, but which has passed regression testing on Corda 5. It will
+advertise a minimum platform version of 4 and a target version of 5. These numbers are published in the JAR manifest file.
+
+If this app is loaded into a Corda 6 node, that node may implement backwards compatibility workarounds for your app that make it slower,
+less secure, or less featureful. You can opt-in to getting the full benefits of the upgrade by changing your target version to 6. By doing
+this, you promise that you understood all the changes in Corda 6 and have thoroughly tested your app to prove it works.
+
+Target versioning is one of the mechanisms we have to keep the platform evolving and improving, without being permanently constrained to
+being bug-for-bug compatible with old versions. When no apps are loaded that target old versions, any emulations of older bugs or problems
+can be disabled.
+
+Publishing versions in your JAR manifest
+----------------------------------------
+
+In your ``build.gradle`` file, add a block like this::
+
+    cordapp {
+        info {
+            name "MegaApp"
+            vendor "MegaCorp"
+            targetPlatformVersion 5
+            minimumPlatformVersion 4
+        }
+    }
+
+This will put the necessary entries into your JAR manifest to set both version numbers. If they aren't specified, both default to 1.
+
+.. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
