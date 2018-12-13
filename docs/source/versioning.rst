@@ -3,7 +3,7 @@ Versioning
 
 As the Corda platform evolves and new features are added it becomes important to have a versioning system which allows
 its users to easily compare versions and know what feature are available to them. Each Corda release uses the standard
-semantic versioning scheme of ``major.minor.patch``. This is useful when making releases in the public domain but is not
+semantic versioning scheme of ``major.minor``. This is useful when making releases in the public domain but is not
 friendly for a developer working on the platform. It first has to be parsed and then they have three separate segments on
 which to determine API differences. The release version is still useful and every MQ message the node sends attaches it
 to the ``release-version`` header property for debugging purposes.
@@ -17,7 +17,7 @@ It starts at 1 and will increment by exactly 1 for each release which changes an
 entire platform. This includes public APIs on the node itself, the RPC system, messaging, serialisation, etc. API backwards
 compatibility will always be maintained, with the use of deprecation to suggest migration away from old APIs. In very rare
 situations APIs may have to be changed, for example due to security issues. There is no relationship between the platform version
-and the release version - a change in the major, minor or patch values may or may not increase the platform version. However
+and the release version - a change in the major or minor values may or may not increase the platform version. However
 we do endeavour to keep them synchronised for now, as a convenience.
 
 The platform version is part of the node's ``NodeInfo`` object, which is available from the ``ServiceHub``. This enables
@@ -30,7 +30,7 @@ Minimum platform version
 Applications can advertise a *minimum platform version* they require. If your app uses new APIs that were added in (for example) Corda 5,
 you should specify a minimum version of 5. This will ensure the app won't be loaded by older nodes. If you can *optionally* use the new
 APIs, you can keep the minimum set to a lower number. Attempting to use new APIs on older nodes can cause ``NoSuchMethodError`` exceptions
-and similar problems, so it's best to advertise the correct requirements so problems are caught up front, instead of at runtime.
+and similar problems, so you'd want to check the node version using ``ServiceHub.myInfo``.
 
 Target version
 --------------
@@ -48,7 +48,7 @@ this, you promise that you understood all the changes in Corda 6 and have thorou
 
 Target versioning is one of the mechanisms we have to keep the platform evolving and improving, without being permanently constrained to
 being bug-for-bug compatible with old versions. When no apps are loaded that target old versions, any emulations of older bugs or problems
-can be disabled.
+can be disabled (in Corda 4, an example of this is the old FinalityFlow handler that would accept any transactions into the vault, context free).
 
 Publishing versions in your JAR manifest
 ----------------------------------------
@@ -56,14 +56,17 @@ Publishing versions in your JAR manifest
 In your ``build.gradle`` file, add a block like this::
 
     cordapp {
-        info {
+        targetPlatformVersion 5
+        minimumPlatformVersion 4
+        contract {
             name "MegaApp"
             vendor "MegaCorp"
-            targetPlatformVersion 5
-            minimumPlatformVersion 4
+            license "MegaLicense"
+            versionId 1
         }
     }
 
-This will put the necessary entries into your JAR manifest to set both version numbers. If they aren't specified, both default to 1.
+This will put the necessary entries into your JAR manifest to set both platform version numbers. If they aren't specified, both default to 1.
+Your app can itself has a version number, which should always increment and must also always be an integer.
 
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
