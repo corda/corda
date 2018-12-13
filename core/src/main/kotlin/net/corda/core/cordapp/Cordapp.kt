@@ -80,19 +80,19 @@ interface Cordapp {
         }
 
         /** A Contract CorDapp contains contract definitions (state, commands) and verification logic */
-        data class Contract(override val shortName: String, override val vendor: String, override val version: String, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
+        data class Contract(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
             : Info {
-            val versionId: Int
-                get() = parseVersion(version, CORDAPP_CONTRACT_VERSION)
+            override val version: String
+                get() = versionId.toString()
             override fun toString() = "Contract CorDapp: $shortName version $version by vendor $vendor with licence $licence"
             override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, licence).any { it == UNKNOWN_VALUE }
         }
 
         /** A Workflow CorDapp contains flows and services used to implement business transactions using contracts and states persisted to the immutable ledger */
-        data class Workflow(override val shortName: String, override val vendor: String, override val version: String, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
+        data class Workflow(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
             : Info {
-            val versionId: Int
-                get() = parseVersion(version, CORDAPP_WORKFLOW_VERSION)
+            override val version: String
+                get() = versionId.toString()
             override fun toString() = "Workflow CorDapp: $shortName version $version by vendor $vendor with licence $licence"
             override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, licence).any { it == UNKNOWN_VALUE }
         }
@@ -110,7 +110,7 @@ interface Cordapp {
             override val version: String
                 get() = "Contract: ${contract.versionId}, Workflow: ${workflow.versionId}"
             override fun toString() = "Combined CorDapp: $contract, $workflow"
-            override fun hasUnknownFields(): Boolean = arrayOf(contract.shortName, contract.vendor, contract.licence, workflow.shortName, workflow.vendor, workflow.licence).any { it == UNKNOWN_VALUE }
+            override fun hasUnknownFields(): Boolean = contract.hasUnknownFields() || workflow.hasUnknownFields()
         }
     }
 }

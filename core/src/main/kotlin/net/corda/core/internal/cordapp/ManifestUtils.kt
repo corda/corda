@@ -9,10 +9,10 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_LI
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VENDOR
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.MIN_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
+import net.corda.core.internal.cordapp.CordappImpl.Companion.parseVersion
 import java.util.jar.Attributes
 import java.util.jar.Manifest
 
@@ -44,7 +44,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
         if (this[CORDAPP_CONTRACT_NAME] != null) {
             Cordapp.Info.Contract(shortName = this[CORDAPP_CONTRACT_NAME] ?: defaultName,
                     vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE,
-                    version = this[CORDAPP_CONTRACT_VERSION] ?: DEFAULT_CORDAPP_VERSION.toString(),
+                    versionId = parseVersion(this[CORDAPP_CONTRACT_VERSION], CORDAPP_CONTRACT_VERSION),
                     licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE,
                     minimumPlatformVersion = minPlatformVersion,
                     targetPlatformVersion = targetPlatformVersion
@@ -56,7 +56,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
         if (this[CORDAPP_WORKFLOW_NAME] != null) {
             Cordapp.Info.Workflow(shortName = this[CORDAPP_WORKFLOW_NAME] ?: defaultName,
                     vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE,
-                    version = this[CORDAPP_WORKFLOW_VERSION] ?: DEFAULT_CORDAPP_VERSION.toString(),
+                    versionId = parseVersion(this[CORDAPP_WORKFLOW_VERSION],CORDAPP_WORKFLOW_VERSION),
                     licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE,
                     minimumPlatformVersion = minPlatformVersion,
                     targetPlatformVersion = targetPlatformVersion
