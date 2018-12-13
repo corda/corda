@@ -1,7 +1,6 @@
 package net.corda.core.internal.cordapp
 
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.Default
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.utilities.loggerFor
@@ -68,7 +67,7 @@ object CordappInfoResolver {
                             targetPlatformVersion: Int = PLATFORM_VERSION,
                             block: () -> T): T {
         val currentResolver = cordappInfoResolver
-        cordappInfoResolver = { Default(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion) }
+        cordappInfoResolver = { Cordapp.Info.Default(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion, licence) }
         try {
             return block()
         } finally {

@@ -393,21 +393,6 @@ Using the `cordapp` Gradle plugin, this can be achieved by putting this in your 
             minimumPlatformVersion 4
         }
 
-Without using the `cordapp` plugin, you can achieve the same by modifying the jar task as shown in this example:
-
-.. container:: codeset
-
-    .. sourcecode:: groovy
-
-        jar {
-            manifest {
-                attributes(
-                        'Min-Platform-Version': 4
-                        'Target-Platform-Version': 4
-                )
-            }
-        }
-
 .. _cordapp_separation_ref:
 
 Separation of CorDapp contracts, flows and services
@@ -444,10 +429,7 @@ As of Corda 4, CorDapps can explicitly differentiate their type by specifying th
     - ``Cordapp-Workflow-Vendor`` (optional), defaults to UNKNOWN if not specified.
     - ``Cordapp-Workflow-Licence`` (optional), defaults to UNKNOWN if not specified.
 
-As with the general CorDapp attributes (minimum and target platform version), these can be specified using the Gradle `cordapp` plugin (recommended)
-or set manually in thejar task section of the associated CorDapp gradle configuration.
-
-Using the Gradle cordapp plugin:
+As with the general CorDapp attributes (minimum and target platform version), these can be specified using the Gradle `cordapp` plugin as follows:
 
 For a contract only CorDapp we specify the `contract` tag:
 
@@ -484,37 +466,3 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
         }
 
 .. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
-
-Without using the `cordapp` plugin, you can achieve the same by modifying the jar task as follows:
-
-.. container:: codeset
-
-    .. sourcecode:: groovy
-
-        jar {
-            manifest {
-                attributes(
-                        'Cordapp-Contract-Name': "My contract name"
-                        'Cordapp-Contract-Version': 1
-                        'Cordapp-Contract-Vendor': "Vendor name"
-                        'Cordapp-Contract-Licence': "Vendor licence"
-                )
-            }
-        }
-
-.. container:: codeset
-
-    .. sourcecode:: groovy
-
-        jar {
-            manifest {
-                attributes(
-                        'Cordapp-Workflow-Name': "My flow name"
-                        'Cordapp-Workflow-Version': 1
-                        'Cordapp-Workflow-Vendor': "Vendor name"
-                        'Cordapp-Workflow-Licence': "Vendor licence"
-                )
-            }
-        }
-
-.. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar.

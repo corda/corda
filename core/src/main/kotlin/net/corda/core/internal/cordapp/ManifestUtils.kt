@@ -1,6 +1,6 @@
 package net.corda.core.internal.cordapp
 
-import net.corda.core.cordapp.*
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_LICENCE
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VENDOR
@@ -42,7 +42,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
     // is it a Contract Jar?
     val contractInfo =
         if (this[CORDAPP_CONTRACT_NAME] != null) {
-            Contract(shortName = this[CORDAPP_CONTRACT_NAME] ?: defaultName,
+            Cordapp.Info.Contract(shortName = this[CORDAPP_CONTRACT_NAME] ?: defaultName,
                     vendor = this[CORDAPP_CONTRACT_VENDOR] ?: UNKNOWN_VALUE,
                     version = this[CORDAPP_CONTRACT_VERSION] ?: DEFAULT_CORDAPP_VERSION.toString(),
                     licence = this[CORDAPP_CONTRACT_LICENCE] ?: UNKNOWN_VALUE,
@@ -54,7 +54,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
     // is it a Workflow (flows and services) Jar?
     val workflowInfo =
         if (this[CORDAPP_WORKFLOW_NAME] != null) {
-            Workflow(shortName = this[CORDAPP_WORKFLOW_NAME] ?: defaultName,
+            Cordapp.Info.Workflow(shortName = this[CORDAPP_WORKFLOW_NAME] ?: defaultName,
                     vendor = this[CORDAPP_WORKFLOW_VENDOR] ?: UNKNOWN_VALUE,
                     version = this[CORDAPP_WORKFLOW_VERSION] ?: DEFAULT_CORDAPP_VERSION.toString(),
                     licence = this[CORDAPP_WORKFLOW_LICENCE] ?: UNKNOWN_VALUE,
@@ -65,7 +65,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
 
     // combined Contract and Workflow Jar ?
     if (contractInfo != null && workflowInfo != null) {
-        return ContractAndWorkflow(contractInfo, workflowInfo, "", "", 0, "", minPlatformVersion, targetPlatformVersion)
+        return Cordapp.Info.ContractAndWorkflow(contractInfo, workflowInfo, minPlatformVersion, targetPlatformVersion)
     }
     else if (contractInfo != null) return contractInfo
     else if (workflowInfo != null) return workflowInfo
@@ -74,7 +74,7 @@ fun Manifest.toCordappInfo(defaultName: String): Cordapp.Info {
     val shortName = this["Name"] ?: defaultName
     val vendor = this["Implementation-Vendor"] ?: UNKNOWN_VALUE
     val version = this["Implementation-Version"] ?: UNKNOWN_VALUE
-    return Default(
+    return Cordapp.Info.Default(
             shortName = shortName,
             vendor = vendor,
             version = version,

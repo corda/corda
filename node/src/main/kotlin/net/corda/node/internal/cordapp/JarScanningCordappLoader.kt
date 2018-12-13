@@ -4,12 +4,12 @@ import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.Default
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN
 import net.corda.core.internal.cordapp.CordappInfoResolver
 import net.corda.core.internal.cordapp.toCordappInfo
 import net.corda.core.internal.notary.NotaryService
@@ -131,7 +131,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return cordapps
     }
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: Default.UNKNOWN }
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: UNKNOWN }
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),

@@ -53,6 +53,9 @@ data class CordappImpl(
         const val UNKNOWN_VALUE = "Unknown"
         const val DEFAULT_CORDAPP_VERSION = 1
 
+        /** used for CorDapps that do not explicitly define attributes */
+        val UNKNOWN = Cordapp.Info.Default(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE,1, 1)
+
         /** Helper method for version identifier parsing */
         fun parseVersion(versionStr: String?, attributeName: String): Int {
             if (versionStr == null)
