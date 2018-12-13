@@ -24,6 +24,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -559,14 +560,33 @@ class NodeVaultService(
         }
     }
 
+    /**
+     * Returns a [DataFeed] containing the results of the provided query, along with the associated observable, containing any subsequent updates.
+     *
+     * Note that this method can be invoked concurrently with [NodeVaultService.notifyAll], which means there could be race conditions between reads
+     * performed here and writes performed there. These are prevented, using the following approach:
+     * - Observable updates emitted by [NodeVaultService.notifyAll] are buffered until the transaction's commit point
+     *   This means that it's as if publication is performed, after the transaction is committed.
+     * - Observable updates tracked by [NodeVaultService._trackBy] are buffered before the transaction (for the provided query) is open
+     *   and until the client's subscription. So, it's as if the customer is subscribed to the observable before the read's transaction is open.
+     *
+     * The combination of the 2 conditions described above guarantee that there can be no possible interleaving, where some states are not observed in the query
+     * (i.e. because read transaction opens, before write transaction is closed) and at the same time not included in the observable (i.e. because subscription
+     * is done before the publication of updates). However, this guarantee cannot be provided, in cases where the client invokes [VaultService.trackBy] with an open
+     * transaction.
+     */
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed())
+            if (contextDatabaseOrNull == null) {
+                log.warn("trackBy is called with an already existing, open DB transaction. As a result, there might be states missing from both the snapshot and observable, included in the returned data feed, because of race conditions.")
+            }
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed()
-                    .filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
-                    .map { filterContractStates(it, contractStateType) })
-            DataFeed(snapshotResults, updates)
+            val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
+                    .map { filterContractStates(it, contractStateType) }
+                    .map { filterOutDuplicates(it, snapshotResults) }
+            DataFeed(snapshotResults, filteredUpdates)
         }
     }
 
@@ -576,6 +596,15 @@ class NodeVaultService(
 
     private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
             stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
+
+    private fun <T: ContractState> filterOutDuplicates(update: Vault.Update<T>, page: Vault.Page<T>): Vault.Update<T> {
+        val pageStates = page.states.toSet()
+        return update.copy(consumed = filterOutStates(update.consumed, pageStates),
+                produced = filterOutStates(update.produced, pageStates))
+    }
+
+    private fun <T: ContractState> filterOutStates(originalStates: Set<StateAndRef<T>>, statesToFilterOut: Set<StateAndRef<T>>) =
+            originalStates.filter { !statesToFilterOut.contains(it) }.toSet()
 
     private fun getSession() = database.currentOrNew().session
     /**
