@@ -41,24 +41,13 @@ Significant Changes in 4.0
   Signed CorDapps facilitate signature constraints checks.
   Sealed JARs require a unique package to be shipped within a single CorDapp JAR. Sealing can be disabled.
 
-* **The Flow Hospital**
+* **A more pleasing bootstrapper**
 
-  Introducing the flow hospital - a component of the node that manages flows that have errored and whether
-  they should be retried from their previous checkpoints or have their errors propagate. Currently it
-  will respond to any error that occurs during the resolution of a received transaction as part of
-  ``FinalityFlow``. In such a scenario the receiving flow will be parked and retried on node restart. This
-  is to allow the node operator to rectify the situation as otherwise the node will have an incomplete view
-  of the ledger.
+  The interface to the network boostrapper has undergone a signigicant overhaul to make the experience of
+  using and interacting with it simpler, faster, and just genreally more pleaesnt.
 
-Determinism for fun and profit
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  THE DJVM!!!!
-
-  THE DETERMINATOR!!!!
-
-  see :doc:`key-concepts-djvm`
-
+  In addition, it supports all of the new network paramters that can optionally be set. See the
+  :doc:`changelog` for details on individual additions.
 
 RPC Changes
 ~~~~~~~~~~~
@@ -71,20 +60,39 @@ RPC Changes
   one shipped with Corda 4. However,  it does mean that Open Source and Enterprise Corda nodes will be
   able to interact with  clients using the same framework, greatly reducing the testing and deployment burden.
 
+* **The Carpenter Comes of Age**
+
+  With this switch to AMQP completed in the RPC framework the ``Class Carpenter`` feature moves from
+  niche feature of our serialization framework to powerful component. Clients can now freely download
+  objects, such as contract states, that they have no knowledge off (the defining class files being
+  absent from their classpath). Definitions for these classes will be synthesised on the fly from the binary
+  schemas embedded in the messages, and the resulting dynamically created objects fed into generic reflection-based
+  frameworks such as XML formatters, JSON libraries, GUI construction toolkits, scripting engines and so on.
+
+  Effectively, the rich web applications written to interact with Corda nodes can operate free of the expectation
+  they be aware of every possible state type they may eve encounter within the vault of a node over its lifetime!.
 
 * **SSL**
-  The Corda RPC ingrastruct ure can now be configured to utilise SSL for additional security. The
+
+  The Corda RPC infrastructure ure can now be configured to utilise SSL for additional security. The
   operator of a node wishing to enable this must of course generate and distribute a certificate in
   order for client applications to successfully connect. This is documented here :doc:`tutorial-clientrpc-api`
+
+Determinism for fun and profit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  THE DJVM!!!!
+
+  THE DETERMINATOR!!!!
+
+  see :doc:`key-concepts-djvm`
+
+
 
 Other change of note
 ~~~~~~~~~~~~~~~~~~~~
 
 * **Transaction Tagging**
-
-<<< Someone should opine on this >>>
-
-* **The Standalone Shell**
 
 <<< Someone should opine on this >>>
 
@@ -98,29 +106,29 @@ Other change of note
   manually run an accept command on every parameter update. This behaviour can be turned off via the
   node configuration.
 
-* **A more pleaseing bootstrapper**
-
-  The interface to the network boostrapper has undergone a signigicant overhaul to make the experience of
-  using and interacting with it simpler, faster, and just genreally more pleaesnt.
-
-  In addition, it supports all of the new network paramters that can optionally be set. See the
-  :doc:`changelog` for details on individual additions.
-
 * **Retirement of non-elliptic Diffie-Hellman for TLS**
   The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
   as it is a legacy cipher family not supported by all native SSL/TLS implementations.
 
-* **Clearing the Network Map cache**
-
-  Troubleshooting a nodes conectivity issues when not running as aprt ofa bootstrapped network was previously frustrating, clearing
-  the network map cache an often needed step yet only available through an RPC call. This can now be done via the ``--clear-network-map-cache command line flag``
 
 * **The BelongsToContract Annotation**
 
-  Prior to this there was no way to tie specific state types to specific contract type. This could result in the wrong contract being run and accepting the result.
-  For example, with ta cash state you could  convince someone who doesn't check that the state is a cash state even though it wasn't checked as such. the ``@BelongsToContract``
-  is thus introduced to do just this. See :doc:`api-contract-constraints` for more information.
+  CorDapps are currently expected to verify that the right contract is named in each state object.
+  This manual step is easy to miss, which would make the app less secure in a network where you trade
+  with potentially malicious counterparties. The platform now handles this for you by allowing you
+  to annotate states with which contract governs them.
 
+  If states are inner classes of a contract class, this association is automatic. See
+  :doc:`api-contract-constraints` for more information.
+
+* **The Flow Hospital**
+
+  Introducing the flow hospital - a component of the node that manages flows that have entered
+  an error state and whether they should be retried from their previous checkpoints or have their
+  errors propagate. Currently it will respond to any error that occurs during the resolution of a
+  received transaction as part of ``FinalityFlow``. In such a scenario the receiving flow will be parked
+  and retried on node restart. This is to allow the node operator to rectify the situation as otherwise
+  the node will have an incomplete view of the ledger.
 
 * **Package Namespace Ownership**
 
@@ -183,8 +191,7 @@ Minor Changes
  * Migrated away from FastClasspathScanner to ClassGraph
  * Notary backpressure added to the platform - a transparent change that none the less leads to a much stabler network
  * Added a Node commanline option for validating configuration ``java -jar corda-4.0.jar validate-configuration``
- 
-
+ * Added the ``--clear-network-map-cache`` command line flag
 
 .. _release_notes_v3_3:
 
