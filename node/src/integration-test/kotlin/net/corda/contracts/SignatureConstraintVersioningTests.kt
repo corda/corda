@@ -19,20 +19,31 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testMessage.Message
 import net.corda.testMessage.MessageState
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
+import org.junit.Assume.assumeTrue
+import org.junit.ClassRule
 import org.junit.Test
 import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class SignatureConstraintVersioningTests {
+class SignatureConstraintVersioningTests : IntegrationTest() {
+    companion object {
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+    }
 
     private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
     private val oldCordapp = base.withCordappVersion("2")
@@ -82,6 +93,7 @@ class SignatureConstraintVersioningTests {
     @Test
     fun `cannot evolve from higher contract class version to lower one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
+        assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database, as it uses H2 specific JDBC URL
 
         val port = incrementalPortAllocation(21_000).nextPort()
 
