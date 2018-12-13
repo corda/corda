@@ -164,18 +164,25 @@ class RoundTripTests {
         assertEquals(mapOf("foo" to "bar"), deserialized.changedMembership.state.data.metadata)
     }
 
-    interface RecursiveI<T> {
+    interface I2<T> {
         val t: T
     }
 
-    data class C<A, B : A>(override val t: B): RecursiveI<B>
+    data class C<A, B : A>(override val t: B): I2<B>
 
     @Test
     fun recursiveTypeVariableResolution() {
         val factory = testDefaultFactoryNoEvolution()
-        val instance = C<List<String>, ArrayList<String>>(ArrayList())
+        val instance = C<Collection<String>, List<String>>(emptyList())
+
         val bytes = SerializationOutput(factory).serialize(instance)
-        val deserialized = DeserializationInput(factory).deserialize(bytes)
-        assertEquals(instance, deserialized)
+        DeserializationInput(factory).deserialize(bytes)
+
+        assertEquals(
+                """
+                C (erased)(t: *): I2<*>
+                  t: *
+                """.trimIndent(),
+                factory.getTypeInformation(instance::class.java).prettyPrint())
     }
 }
