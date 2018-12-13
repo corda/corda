@@ -585,7 +585,7 @@ class NodeVaultService(
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
                     .map { filterContractStates(it, contractStateType) }
-                    .map { filterOutDuplicates(it, snapshotResults) }
+                    .filter { !containsDuplicates(it, snapshotResults) }
             DataFeed(snapshotResults, filteredUpdates)
         }
     }
@@ -597,14 +597,18 @@ class NodeVaultService(
     private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
             stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
 
-    private fun <T: ContractState> filterOutDuplicates(update: Vault.Update<T>, page: Vault.Page<T>): Vault.Update<T> {
-        val pageStates = page.states.toSet()
-        return update.copy(consumed = filterOutStates(update.consumed, pageStates),
-                produced = filterOutStates(update.produced, pageStates))
+    /**
+     * Filters out transactions that contains duplicates, aka states that are returned anyway in the query's result snapshot.
+     *
+     * Note: We only filter out transactions, where all the output states are included in the snapshot. This is done on purpose, because
+     *       transactions are netted (when published) and as a result, multiple transactions might have been netted, where some of them
+     *       are included in the snapshot result and some not. In this case, since we are not capable of reverting the netting and doing
+     *       partial exclusion, we decide to return some more updates, instead of losing them completely (not returning them either in
+     *       the snapshot or in the observable).
+     */
+    private fun <T: ContractState> containsDuplicates(update: Vault.Update<T>, page: Vault.Page<T>): Boolean {
+        return page.states.toSet().containsAll(update.produced)
     }
-
-    private fun <T: ContractState> filterOutStates(originalStates: Set<StateAndRef<T>>, statesToFilterOut: Set<StateAndRef<T>>) =
-            originalStates.filter { !statesToFilterOut.contains(it) }.toSet()
 
     private fun getSession() = database.currentOrNew().session
     /**
