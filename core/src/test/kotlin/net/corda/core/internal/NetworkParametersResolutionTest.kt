@@ -30,7 +30,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class ParametersResoultionTest {
+class NetworkParametersResolutionTest {
     // FetchParametersFlow is enabled if minimumPlatformVersion is >= 4
     private var params1: NetworkParameters = testNetworkParameters(epoch = 1, minimumPlatformVersion = 4)
     private lateinit var params2: NetworkParameters
