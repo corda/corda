@@ -7,7 +7,6 @@ Networks
    compatibility-zones
    permissioning
    network-map
-   versioning
    cipher-suites
    joining-a-compatibility-zone
    corda-testnet-intro
