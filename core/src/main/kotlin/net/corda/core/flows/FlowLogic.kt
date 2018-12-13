@@ -308,8 +308,6 @@ abstract class FlowLogic<out T> {
         logger.debug { "Calling subflow: $subLogic" }
         val result = stateMachine.subFlow(subLogic)
         logger.debug { "Subflow finished with result ${result.toString().abbreviate(300)}" }
-        // It's easy to forget this when writing flows so we just step it to the DONE state when it completes.
-        subLogic.progressTracker?.currentStep = ProgressTracker.DONE
         return result
     }
 
