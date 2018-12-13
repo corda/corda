@@ -1,7 +1,7 @@
-Corda Enterprise 3.0
+Corda Enterprise 4.0
 ====================
 
-Welcome to the documentation website for **Corda Enterprise 3.0**, based on the Corda 3.1 open source release. Corda Enterprise adds:
+Welcome to the documentation website for **Corda Enterprise 4.0**, based on the Corda 4.0 open source release. Corda Enterprise adds:
 
 * High performance, thanks to multi-threaded flow execution and extensive tuning.
 * Support for more database backends:
