@@ -40,11 +40,13 @@ Step 2. Add a "cordapp" section to your Gradle build file
 This is used by the Corda Gradle build plugin to populate your app JAR with useful information. It should look like this::
 
     cordapp {
-        info {
+        targetPlatformVersion 4
+        minimumPlatformVersion 4
+        contract {
             name "MegaApp"
             vendor "MegaCorp"
-            targetPlatformVersion 4
-            minimumPlatformVersion 4
+            license "A really expensive license"
+            versionId 1
         }
     }
 
@@ -169,24 +171,11 @@ Step 5. Security: refactor to avoid violating sealed packages
 Hardly any apps will need to do anything in this step.
 
 App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a sealed and signed JAR file.
-This means classes in your own CorDapps cannot be placed under the following packages:
+This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
 
-  .. sourcecode:: java
-
-     net.corda.finance
-     net.corda.finance.contracts
-     net.corda.finance.contracts.asset.cash.selection
-     net.corda.finance.contracts.asset
-     net.corda.finance.contracts.math
-     net.corda.finance.flows
-     net.corda.finance.internal
-     net.corda.finance.plugin
-     net.corda.finance.schemas
-     net.corda.finance.utils
-
-In the unlikely event that you were injecting code into ``net.corda.*`` package namespaces from your own apps, you will need to move them
-into a new package, e.g. *net/corda/finance/flows.MyClass.java* can be moved to *net/corda/finance/flows/company/MyClass.java*.
-Also your classes are no longer able to access non-public members of finance CorDapp classes.
+In the unlikely event that you were injecting code into ``net.corda.finance.*`` package namespaces from your own apps, you will need to move them
+into a new package, e.g. ``net/corda/finance/flows/MyClass.java`` can be moved to ``com/company/corda/finance/flows/MyClass.java``.
+As a consequence your classes are no longer able to access non-public members of finance CorDapp classes.
 
 When recompiling your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
 This is a security upgrade that ensures package-private visibility in Java code works correctly.
