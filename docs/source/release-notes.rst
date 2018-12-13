@@ -81,11 +81,23 @@ RPC Changes
 Determinism for fun and profit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  THE DJVM!!!!
+It is important that all nodes that process a transaction always agree on whether it is valid or not.
+Because transaction types are defined using JVM byte code, this means that the execution of that byte
+code must be fully deterministic. Out of the box a standard JVM is not fully deterministic, thus we must
+make some modifications in order to satisfy our requirements.
 
-  THE DETERMINATOR!!!!
+This version of Corda introduces a standalone DJVM module. Note that this has yet to be integrated with
+the rest of the platform. It will eventually become a part of the node and enforce deterministic and
+secure execution of smart contract code, which is mobile and may propagate around the network without
+human intervention.
 
-  see :doc:`key-concepts-djvm`
+Currently, it is released as an evaluation version. We want to give developers the ability to start
+trying it out and get used to developing deterministic code under the set of constraints that we
+envision will be placed on contract code in the future.
+
+You can read more about the DJVM here: :doc:`key-concepts-djvm`. There are also some instructions on
+how to get started with the DJVM command-line tool, which allows you to run code in a deterministic
+sandbox and inspect the byte code transformations that the DJVM applies to your code.
 
 
 
