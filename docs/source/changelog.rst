@@ -7,6 +7,13 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* New configuration property `database.initialiseAppSchema` with values `UPDATE`, `VALIDATE` and `NONE`.
+  The property controls the behavior of the Hibernate DDL generation. `UPDATE` performs an update of CorDapp schemas, while
+  `VALID` only verifies their integrity.  The property does not affect the node-specific DDL handling and
+   complements `database.initialiseSchema` to disable DDL handling altogether.
+
+* ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
+
 * Transaction building and verification enforces new contract attachment version non-downgrade rule.
   For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
   See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
@@ -212,28 +219,10 @@ Unreleased
 
 * Changes to the JSON/YAML serialisation format from ``JacksonSupport``, which also applies to the node shell:
 
-  * ``Instant`` and ``Date`` objects are serialised as ISO-8601 formatted strings rather than timestamps
-  * ``PublicKey`` objects are serialised and looked up according to their Base58 encoded string
-  * ``Party`` objects can be deserialised by looking up their public key, in addition to their name
-  * ``NodeInfo`` objects are serialised as an object and can be looked up using the same mechanism as ``Party``
-  * ``NetworkHostAndPort`` serialised according to its ``toString()``
-  * ``PartyAndCertificate`` is serialised as the name
-  * ``SerializedBytes`` is serialised by materialising the bytes into the object it represents, and then serialising that
-    object into YAML/JSON
-  * ``X509Certificate`` is serialised as an object with key fields such as ``issuer``, ``publicKey``, ``serialNumber``, etc.
-    The encoded bytes are also serialised into the ``encoded`` field. This can be used to deserialize an ``X509Certificate``
-    back.
-  * ``CertPath`` objects are serialised as a list of ``X509Certificate`` objects.
   * ``WireTransaction`` now nicely outputs into its components: ``id``, ``notary``, ``inputs``, ``attachments``, ``outputs``,
     ``commands``, ``timeWindow`` and ``privacySalt``. This can be deserialized back.
   * ``SignedTransaction`` is serialised into ``wire`` (i.e. currently only ``WireTransaction`` tested) and ``signatures``,
     and can be deserialized back.
-
-* ``fullParties`` boolean parameter added to ``JacksonSupport.createDefaultMapper`` and ``createNonRpcMapper``. If ``true``
-  then ``Party`` objects are serialised as JSON objects with the ``name`` and ``owningKey`` fields. For ``PartyAndCertificate``
-  the ``certPath`` is serialised.
-
-* Several members of ``JacksonSupport`` have been deprecated to highlight that they are internal and not to be used.
 
 * The Vault Criteria API has been extended to take a more precise specification of which class contains a field. This
   primarily impacts Java users; Kotlin users need take no action. The old methods have been deprecated but still work -

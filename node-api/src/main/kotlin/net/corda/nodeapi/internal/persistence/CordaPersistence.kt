@@ -20,10 +20,17 @@ import javax.sql.DataSource
  */
 const val NODE_DATABASE_PREFIX = "node_"
 
+enum class SchemaInitializationType{
+    NONE,
+    VALIDATE,
+    UPDATE
+}
+
 // This class forms part of the node config and so any changes to it must be handled with care
 data class DatabaseConfig(
         val runMigration: Boolean = Defaults.runMigration,
         val initialiseSchema: Boolean = Defaults.initialiseSchema,
+        val initialiseAppSchema: SchemaInitializationType = Defaults.initialiseAppSchema,
         val transactionIsolationLevel: TransactionIsolationLevel = Defaults.transactionIsolationLevel,
         val schema: String? = null,
         val exportHibernateJMXStatistics: Boolean = Defaults.exportHibernateJMXStatistics,
@@ -33,6 +40,7 @@ data class DatabaseConfig(
     object Defaults {
         val runMigration = false
         val initialiseSchema = true
+        val initialiseAppSchema = SchemaInitializationType.UPDATE
         val transactionIsolationLevel = TransactionIsolationLevel.REPEATABLE_READ
         val exportHibernateJMXStatistics = false
         val mappedSchemaCacheSize = 100L
