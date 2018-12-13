@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.node.services.rpc
 
 import co.paralleluniverse.common.util.SameThreadExecutor
 import com.github.benmanes.caffeine.cache.Cache
@@ -24,6 +24,7 @@ import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManager
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.logging.pushToLoggingContext
+import net.corda.node.services.messaging.RPCOpsRouting
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.externalTrace
 import net.corda.nodeapi.impersonatedActor

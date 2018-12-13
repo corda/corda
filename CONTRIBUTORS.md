@@ -61,6 +61,7 @@ see changes to this list.
 * Clinton Alexander (R3)
 * Clyde D'Cruz (Persistent Systems Limited)
 * cncorda
+* Craig Pastro
 * Credit Suisse
 * cyrsis
 * Dan Newton (Accenture)

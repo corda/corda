@@ -4,8 +4,8 @@ import net.corda.core.context.Trace
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
-import net.corda.node.services.messaging.ObservableContextInterface
-import net.corda.node.services.messaging.ObservableSubscription
+import net.corda.node.services.rpc.ObservableContextInterface
+import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
 import org.apache.qpid.proton.codec.Data

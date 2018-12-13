@@ -12,7 +12,7 @@ import net.corda.core.internal.toSynchronised
 import net.corda.node.internal.serialization.testutils.AMQPRoundTripRPCSerializationScheme
 import net.corda.node.internal.serialization.testutils.serializationContext
 import net.corda.node.serialization.amqp.RpcServerObservableSerializer
-import net.corda.node.services.messaging.ObservableSubscription
+import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
 import org.apache.activemq.artemis.api.core.SimpleString

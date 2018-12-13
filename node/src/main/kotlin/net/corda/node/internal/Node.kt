@@ -44,6 +44,8 @@ import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.*
 import net.corda.node.services.rpc.ArtemisRpcBroker
+import net.corda.node.services.rpc.InternalRPCMessagingClient
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.node.utilities.*
 import net.corda.node.utilities.profiling.getTracingConfig

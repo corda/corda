@@ -128,8 +128,17 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
             }
         } else {
             for (session in sessions) {
-                subFlow(SendTransactionFlow(session, notarised))
-                logger.info("Party ${session.counterparty} received the transaction.")
+                try {
+                    subFlow(SendTransactionFlow(session, notarised))
+                    logger.info("Party ${session.counterparty} received the transaction.")
+                } catch (e: UnexpectedFlowEndException) {
+                    throw UnexpectedFlowEndException(
+                            "${session.counterparty} has finished prematurely and we're trying to send them the finalised transaction. " +
+                                    "Did they forget to call ReceiveFinalityFlow? (${e.message})",
+                            e.cause,
+                            e.originalErrorId
+                    )
+                }
             }
         }
 

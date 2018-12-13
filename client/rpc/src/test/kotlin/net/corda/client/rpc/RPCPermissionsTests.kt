@@ -1,7 +1,7 @@
 package net.corda.client.rpc
 
 import net.corda.core.messaging.RPCOps
-import net.corda.node.services.messaging.rpcContext
+import net.corda.node.services.rpc.rpcContext
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver
