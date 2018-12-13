@@ -34,7 +34,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     })
     private val secureRandom = newSecureRandom()
 
-    private val delayedDischargeTimer = Timer("FlowHospitalDelayedDischargeTimer")
+    private val delayedDischargeTimer = Timer("FlowHospitalDelayedDischargeTimer", true)
     /**
      * The node was unable to initiate the [InitialSessionMessage] from [sender].
      */
