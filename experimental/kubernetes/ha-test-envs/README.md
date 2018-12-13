@@ -58,6 +58,14 @@ patch/replace the node.conf after generation.
 ```
 ./generate_from_template.py -o bridge/latest -t templates/bridge/latest -v '{"name":"bridge", "bridge_nodes":["partya"], "image":"haregistry.azurecr.io/corda-firewall"}'
 ```
+### R3 Corda Sample
+```
+./generate_from_template.py -o r3-corda/3.2 -t templates/r3-corda/3.2 -v '{"name":"corda", "legal_name":"O=Corda,L=London,C=GB", "image":"haregistry.azurecr.io/r3-corda:3.2"}'
+```
+### R3 Corda Hot/Cold Sample
+```
+./generate_from_template.py -o r3-corda-hot-cold/3.2 -t templates/r3-corda-hot-cold/3.2 -v '{"name":"hot-cold", "legal_name":"O=HotCold,L=London,C=GB", "image":"haregistry.azurecr.io/r3-corda:3.2"}'
+```
 
 ## Adding Cordapp, customizing docker images
 * Example creating a new docker image with the finance cordapp

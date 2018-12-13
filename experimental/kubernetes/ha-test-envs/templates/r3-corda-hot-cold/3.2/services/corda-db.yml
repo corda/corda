@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ name }}-db
+spec:
+  selector:
+    app: {{ name }}-db
+  ports:
+    - name: db
+      protocol: TCP
+      port: 1521
+    - name: web
+      protocol: TCP
+      port: 81
