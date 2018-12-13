@@ -157,7 +157,15 @@ finalised transaction. If the initiator is written in a backwards compatible way
 The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
 This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
 
-Step 4. Possibly, adjust unit test code
+Step 4. Upgrade your use of SwapIdentitiesFlow
+----------------------------------------------
+
+The ``confidential-identities`` module is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
+has been adjusted in the same way as ``FinalityFlow`` above, to close problems with confidential identities being injectable into a node
+outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
+the ``SwapIdentitiesFlow``.
+
+Step 5. Possibly, adjust unit test code
 ---------------------------------------
 
 ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration`` object.
@@ -165,7 +173,7 @@ Use a ``MockNetworkConfigOverrides`` object instead. This is an API change we re
 large amounts of the node internal code through this one API entry point. We have now insulated the test API from node internals and
 reduced the exposure.
 
-Step 5. Security: refactor to avoid violating sealed packages
+Step 6. Security: refactor to avoid violating sealed packages
 -------------------------------------------------------------
 
 Hardly any apps will need to do anything in this step.
@@ -180,7 +188,7 @@ As a consequence your classes are no longer able to access non-public members of
 When recompiling your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
 This is a security upgrade that ensures package-private visibility in Java code works correctly.
 
-Step 6. Security: Add BelongsToContract annotations
+Step 7. Security: Add BelongsToContract annotations
 ---------------------------------------------------
 
 In versions of the platform prior to v4, it was the responsibility of contract and flow logic to ensure that ``TransactionState`` objects
@@ -197,7 +205,7 @@ to be governed by a contract that is either:
 Learn more by reading ":ref:`implicit_constraint_types`". If an app targets Corda 3 or lower (i.e. does not specify a target version),
 states that point to contracts outside their package will trigger a log warning but validation will proceed.
 
-Step 7. Consider adopting signature constraints
+Step 8. Consider adopting signature constraints
 -----------------------------------------------
 
 :doc:`design/data-model-upgrades/signature-constraints` are a new data model feature introduced in Corda 4. They make it much easier to
@@ -212,7 +220,7 @@ You can read more about signature constraints and what they do in :doc:`api-cont
 automatically use them if your application JAR is signed. We recommend all JARs are signed. To start signing your JAR files, read
 :ref:`cordapp_build_system_signing_cordapp_jar_ref`.
 
-Step 8. Consider adding extension points to your flows
+Step 9. Consider adding extension points to your flows
 ------------------------------------------------------
 
 In Corda 4 it is possible for flows in one app to subclass and take over flows from another. This allows you to create generic, shared
