@@ -116,8 +116,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
         // Check that epochs are ordered in the transaction chain.
         with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
-            val currentEpoch = stx.getHashOrDefault().let { hash ->
-                getEpochFromHash(hash) ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $hash")
+            val currentEpoch = stx.netParamsHashOrDefault().let { hash ->
+                getEpochFromHash(hash) ?: throw IllegalStateException("Couldn't find root parameters epoch with hash $hash")
             }
             stxRootParametersMap[stx.id]?.forEach { parentHash ->
                 val parentEpoch = getEpochFromHash(parentHash)
@@ -148,7 +148,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         }
     }
 
-    private fun SignedTransaction.getHashOrDefault(): SecureHash = networkParametersHash
+    private fun SignedTransaction.netParamsHashOrDefault(): SecureHash = networkParametersHash
             ?: serviceHub.networkParametersStorage.defaultHash
 
     private fun page(pageNumber: Int, pageSize: Int): Set<SecureHash> {
@@ -202,7 +202,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // Add all input states and reference input states to the work queue.
             val inputHashes = mutableListOf<SecureHash>()
             for (stx in downloads) {
-                val rootHash = stx.getHashOrDefault()
+                val rootHash = stx.netParamsHashOrDefault()
                 val depsIds = (stx.inputs + stx.references).map { it.txhash }
                 // For all inputs and references transaction hashes record the network parameters hash that is parent in the graph.
                 depsIds.forEach { depId ->

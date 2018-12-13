@@ -24,6 +24,7 @@ import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -185,7 +186,7 @@ class ParametersResoultionTest {
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx1.id, stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
         mockNet.runNetwork()
-        Assertions.assertThatIllegalArgumentException().isThrownBy {
+        assertThatIllegalArgumentException().isThrownBy {
             future.getOrThrow()
         }.withMessageContaining("Network parameters are not ordered in the transaction graph for dependency transaction:" +
                 " ${stx2.id} and parent parameters hash: $currentHash")
