@@ -12,6 +12,7 @@ CorDapps
    cordapp-build-systems
    building-against-master
    debugging-a-cordapp
+   versioning
    upgrade-notes
    upgrading-cordapps
    secure-coding-guidelines
