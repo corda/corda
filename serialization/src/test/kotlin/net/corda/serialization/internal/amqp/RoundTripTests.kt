@@ -168,7 +168,7 @@ class RoundTripTests {
         val t: T
     }
 
-    data class C<A, B : A>(override val t: B): I2<B>
+    data class C<A, B : A>(override val t: B) : I2<B>
 
     @Test
     fun recursiveTypeVariableResolution() {
