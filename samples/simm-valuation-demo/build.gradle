@@ -138,3 +138,19 @@ task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
 }
+
+cordapp {
+    targetPlatformVersion = corda_platform_version.toInteger()
+    contract {
+        name "net/corda/vega/contracts"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "net/corda/vega/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+}
