@@ -79,24 +79,23 @@ class HibernateConfiguration(
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
 
-        val hbm2dll: String =
-        if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
-            "update"
-        } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
-                || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
-            "validate"
-        } else {
-            "none"
-        }
 
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.format_sql", "true")
-                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
-        if (isH2Database(jdbcUrl))
-            config.setProperty("hibernate.hbm2ddl.auto","update")
+        if (isH2Database(jdbcUrl)) {
+            val hbm2dll: String =
+                    if (databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+                        "update"
+                    } else if ((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                            || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+                        "validate"
+                    } else {
+                        "none"
+                    }
+            config.setProperty("hibernate.hbm2ddl.auto", hbm2dll)
+        }
         else if (!isNonStopSqlMxDatabase(jdbcUrl)) //Enterprise only NonStop database - NonStop Hibernate dialect doesn't support validation
             config.setProperty("hibernate.hbm2ddl.auto","validate")
 
