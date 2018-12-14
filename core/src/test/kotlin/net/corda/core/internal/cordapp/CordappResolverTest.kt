@@ -6,44 +6,44 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class CordappInfoResolverTest {
+class CordappResolverTest {
     @Before
     @After
     fun clearCordappInfoResolver() {
-        CordappInfoResolver.clear()
+        CordappResolver.clear()
     }
 
     @Test
     fun `the correct cordapp resolver is used after calling withCordappInfo`() {
         val defaultTargetVersion = 222
 
-        CordappInfoResolver.register(CordappImpl.TEST_INSTANCE.copy(
+        CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = defaultTargetVersion
         ))
-        assertEquals(defaultTargetVersion, CordappInfoResolver.currentTargetVersion)
+        assertEquals(defaultTargetVersion, CordappResolver.currentTargetVersion)
 
         val expectedTargetVersion = 555
-        CordappInfoResolver.withCordapp(targetPlatformVersion = expectedTargetVersion) {
-            val actualTargetVersion = CordappInfoResolver.currentTargetVersion
+        CordappResolver.withCordapp(targetPlatformVersion = expectedTargetVersion) {
+            val actualTargetVersion = CordappResolver.currentTargetVersion
             assertEquals(expectedTargetVersion, actualTargetVersion)
         }
-        assertEquals(defaultTargetVersion, CordappInfoResolver.currentTargetVersion)
+        assertEquals(defaultTargetVersion, CordappResolver.currentTargetVersion)
     }
 
     @Test
     fun `when more than one cordapp is registered for the same class, the resolver returns null`() {
-        CordappInfoResolver.register(CordappImpl.TEST_INSTANCE.copy(
+        CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = 222
         ))
-        CordappInfoResolver.register(CordappImpl.TEST_INSTANCE.copy(
+        CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 2,
                 targetPlatformVersion = 456
         ))
-        assertThat(CordappInfoResolver.currentCordapp).isNull()
+        assertThat(CordappResolver.currentCordapp).isNull()
     }
 }

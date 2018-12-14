@@ -11,7 +11,7 @@ import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
@@ -129,7 +129,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         }
                     }
                 }
-        cordapps.forEach(CordappInfoResolver::register)
+        cordapps.forEach(CordappResolver::register)
         return cordapps
     }
 
