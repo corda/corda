@@ -121,7 +121,7 @@ class FinalityHandlerTest {
     }
 
     private fun TestStartedNode.finaliseWithOldApi(stx: SignedTransaction): CordaFuture<SignedTransaction> {
-        return CordappInfoResolver.withCordappInfo(targetPlatformVersion = 3) {
+        return CordappInfoResolver.withCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             services.startFlow(FinalityFlow(stx)).resultFuture.apply {
                 mockNet.runNetwork()
