@@ -1,10 +1,6 @@
 package net.corda.testing.driver.internal
 
 import net.corda.testing.driver.PortAllocation
-import net.corda.testing.driver.internal.GlobalTestPortAllocation.enablingEnvVar
-import net.corda.testing.driver.internal.GlobalTestPortAllocation.enablingSystemProperty
-import net.corda.testing.driver.internal.GlobalTestPortAllocation.startingPortEnvVariable
-import net.corda.testing.driver.internal.GlobalTestPortAllocation.startingPortSystemProperty
 
 fun incrementalPortAllocation(startingPortIfNoEnv: Int): PortAllocation {
 
@@ -14,13 +10,16 @@ fun incrementalPortAllocation(startingPortIfNoEnv: Int): PortAllocation {
     }
 }
 
-private object GlobalTestPortAllocation : PortAllocation.Incremental(startingPort = startingPort) {
+private object GlobalTestPortAllocation : PortAllocation.Incremental(startingPort = startingPort())
 
-    const val enablingEnvVar = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_ENABLED"
-    const val startingPortEnvVariable = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_STARTING_PORT"
-    val enablingSystemProperty = enablingEnvVar.toLowerCase().replace("_", ".")
-    val startingPortSystemProperty = startingPortEnvVariable.toLowerCase().replace("_", ".")
-    const val startingPortDefaultValue = 5000
+private const val enablingEnvVar = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_ENABLED"
+private const val startingPortEnvVariable = "CORDA_TEST_GLOBAL_PORT_ALLOCATION_STARTING_PORT"
+private val enablingSystemProperty = enablingEnvVar.toLowerCase().replace("_", ".")
+private val startingPortSystemProperty = startingPortEnvVariable.toLowerCase().replace("_", ".")
+private const val startingPortDefaultValue = 5000
+
+
+private fun startingPort(): Int {
+
+    return System.getProperty(startingPortSystemProperty)?.toIntOrNull() ?: System.getenv(startingPortEnvVariable)?.toIntOrNull() ?: startingPortDefaultValue
 }
-
-private val startingPort: Int = System.getProperty(startingPortSystemProperty)?.toIntOrNull() ?: System.getenv(startingPortEnvVariable)?.toIntOrNull() ?: GlobalTestPortAllocation.startingPortDefaultValue
