@@ -43,6 +43,40 @@ Optionally run the node's webserver as well by opening a terminal window in the 
 
 .. warning:: The node webserver is for testing purposes only and will be removed soon.
 
+.. _setting_jvm_args:
+
+Setting JVM arguments
+~~~~~~~~~~~~~~~~~~~~~
+
+There are several ways of setting JVM arguments for the node process (particularly the garbage collector and the memory settings).
+They are listed here in order of increasing priority, i.e. if the same flag is set in a way lower in this list, it will override
+anything set earlier.
+
+:Default arguments in capsule: The capuled corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
+   low) 512 MB of heap space and turns on the G1 garbage collector, ensuring low pause times for garbage collection.
+
+:Node configuration: The node configuration file can specify custom default JVM arguments by adding a section like::
+
+      custom = {
+         jvmArgs: [ '-Xmx1G', '-XX:+UseG1GC' ]
+      }
+
+   Note that this will completely replace any defaults set by capsule above, not just the flags that are set here, so if you use this
+   to set e.g. the memory, you also need to set the garbage collector, or it will revert to whatever default your JVM is using.
+
+:Capsule command line flag: You can use a special capsule command line flag to set JVM arguments only for the Corda process, not the
+      launcher that actually starts it::
+
+      java -Dcapsule.jvm.args="-Xmx:1G" corda.jar
+
+   This will override any ``-Xmx`` value set previously, but not interfere with any other JVM arguments that are configured in a way above.
+   This is particarly useful for either setting large memory allowances that you don't want to give to the launcher or for setting values that
+   can only be set on one process at a time, e.g. a debug port.
+
+:Command line flag: You can set JVM args on the command line that apply to the launcher process and the node process as in the example
+      above. This will override any value for the same flag set any other way.
+
+
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
 The node can optionally be started with the following command-line options:

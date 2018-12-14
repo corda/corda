@@ -266,6 +266,11 @@ The available config fields are listed below.
     :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
                                        more granular level. Defaults to an empty list.
 
+:custom: Set custom command line attributes on the node process via the capsule launcher
+
+        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified in the fat jar, but can be overriden
+                  from the command line. See :ref:`setting_jvm_args` for details on arguments precedence.
+
 Examples
 --------
 
