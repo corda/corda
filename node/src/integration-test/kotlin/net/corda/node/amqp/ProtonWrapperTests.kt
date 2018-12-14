@@ -49,7 +49,7 @@ class ProtonWrapperTests {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val portAllocation = incrementalPortAllocation(10000)
+    private val portAllocation = incrementalPortAllocation(15000) // use 15000 to move us out of harms way
     private val serverPort = portAllocation.nextPort()
     private val serverPort2 = portAllocation.nextPort()
     private val artemisPort = portAllocation.nextPort()
@@ -207,9 +207,10 @@ class ProtonWrapperTests {
         val amqpServer2 = createServer(serverPort2)
         val amqpClient = createClient()
         try {
-            val serverConnected = amqpServer.onConnection.toFuture()
-            val serverConnected2 = amqpServer2.onConnection.toFuture()
-            val clientConnected = amqpClient.onConnection.toBlocking().iterator
+            // The filter here is to prevent rogue RPC clients from messing us up
+            val serverConnected = amqpServer.onConnection.filter { it.remoteCert != null }.toFuture()
+            val serverConnected2 = amqpServer2.onConnection.filter { it.remoteCert != null }.toFuture()
+            val clientConnected = amqpClient.onConnection.filter { it.remoteCert != null }.toBlocking().iterator
             amqpServer.start()
             amqpClient.start()
             val serverConn1 = serverConnected.get()
