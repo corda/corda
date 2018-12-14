@@ -3,13 +3,18 @@ package net.corda.nodeapi.internal
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.*
+import net.corda.core.contracts.Command
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.PartyAndReference
+import net.corda.core.contracts.StateAndContract
+import net.corda.core.contracts.TypeOnlyCommandData
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
@@ -94,7 +99,6 @@ class AttachmentsClassLoaderStaticContractTests {
         val contractAttachmentId = SecureHash.randomSHA256()
         doReturn(contractAttachmentId).whenever(attachmentStorage)
                 .getContractAttachmentWithHighestContractVersion(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID, DEFAULT_CORDAPP_VERSION)
-
     }
 
     @Test

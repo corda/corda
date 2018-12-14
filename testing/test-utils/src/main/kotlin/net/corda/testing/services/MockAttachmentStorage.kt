@@ -12,12 +12,16 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
-import java.util.*
+import java.util.HashMap
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
@@ -119,5 +123,4 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         return queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull()
     }
-
 }
