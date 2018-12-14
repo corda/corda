@@ -49,10 +49,10 @@ Setting JVM arguments
 ~~~~~~~~~~~~~~~~~~~~~
 
 There are several ways of setting JVM arguments for the node process (particularly the garbage collector and the memory settings).
-They are listed here in order of increasing priority, i.e. if the same flag is set in a way lower in this list, it will override
+They are listed here in order of increasing priority, i.e. if the same flag is set in a way later in this list, it will override
 anything set earlier.
 
-:Default arguments in capsule: The capuled corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
+:Default arguments in capsule: The capsuled corda node has default flags set to ``-Xmx512m -XX:+UseG1GC`` - this gives the node (a relatively
    low) 512 MB of heap space and turns on the G1 garbage collector, ensuring low pause times for garbage collection.
 
 :Node configuration: The node configuration file can specify custom default JVM arguments by adding a section like::
@@ -65,11 +65,12 @@ anything set earlier.
    to set e.g. the memory, you also need to set the garbage collector, or it will revert to whatever default your JVM is using.
 
 :Capsule command line flag: You can use a special capsule command line flag to set JVM arguments only for the Corda process, not the
-      launcher that actually starts it::
+   launcher that actually starts it::
 
       java -Dcapsule.jvm.args="-Xmx:1G" corda.jar
 
-   This will override any ``-Xmx`` value set previously, but not interfere with any other JVM arguments that are configured in a way above.
+   Setting a flag like this will override any value for this flag, but not interfere with any other JVM arguments that are configured in a
+   way above. In this example, it would reset the maximum heap memory to ``-Xmx1G`` but not touch the garbage collector settings.
    This is particarly useful for either setting large memory allowances that you don't want to give to the launcher or for setting values that
    can only be set on one process at a time, e.g. a debug port.
 
