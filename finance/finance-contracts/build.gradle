@@ -37,7 +37,7 @@ task testJar(type: Jar) {
 }
 
 jar {
-    baseName 'corda-finance-contracts-states'
+    baseName 'corda-finance-contracts'
 }
 
 artifacts {

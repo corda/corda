@@ -29,7 +29,7 @@ dependencies {
     cordaCompile project(':core')
     compile project(':confidential-identities')
 
-    cordapp project(':finance:finance-contracts-states')
+    cordapp project(':finance:finance-contracts')
     
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"

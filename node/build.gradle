@@ -128,12 +128,12 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':finance:finance-contracts-states')
+    testCompile project(':finance:finance-contracts')
     testCompile project(':finance')
     testCompile project(':finance:isolated')
 
     // sample test schemas
-    testCompile project(path: ':finance:finance-contracts-states', configuration: 'testArtifacts')
+    testCompile project(path: ':finance:finance-contracts', configuration: 'testArtifacts')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"

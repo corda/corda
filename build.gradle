@@ -363,7 +363,7 @@ bintrayConfig {
             'corda-djvm',
             'corda',
             'corda-finance',
-            'corda-finance-contracts-states',
+            'corda-finance-contracts',
             'corda-node',
             'corda-node-api',
             'corda-test-common',
