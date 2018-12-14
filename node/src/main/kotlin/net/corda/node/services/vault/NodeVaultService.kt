@@ -585,7 +585,7 @@ class NodeVaultService(
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
             val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
                     .map { filterContractStates(it, contractStateType) }
-                    .filter { !containsDuplicates(it, snapshotResults) }
+                    .filter { !hasBeenSeen(it, snapshotResults) }
             DataFeed(snapshotResults, filteredUpdates)
         }
     }
@@ -598,19 +598,25 @@ class NodeVaultService(
             stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
 
     /**
-     * Filters out transactions that contains duplicates, aka states that are returned anyway in the query's result snapshot.
+     * Filters out updates that have been seen, aka being reflected in the query's result snapshot.
      *
-     * Note: We only filter out transactions, where all the output states are included in the snapshot. This is done on purpose, because
-     *       transactions are netted (when published) and as a result, multiple transactions might have been netted, where some of them
-     *       are included in the snapshot result and some not. In this case, since we are not capable of reverting the netting and doing
+     * An update is reflected in the snapshot, if both of the following conditions hold:
+     * - all the states produced by the update are included in the snapshot (regardless of whether they are consumed).
+     * - all the states consumed by the update are included in the snapshot, AND they are consumed.
+     *
+     * Note: An update can contain multiple transactions (with netting performed on them). As a result, some of these transactions
+     *       can be included in the snapshot result, while some are not. In this case, since we are not capable of reverting the netting and doing
      *       partial exclusion, we decide to return some more updates, instead of losing them completely (not returning them either in
      *       the snapshot or in the observable).
      */
-    private fun <T: ContractState> containsDuplicates(update: Vault.Update<T>, page: Vault.Page<T>): Boolean {
-        val pageStatesRefs = page.states.map { it.ref }.toSet()
+    private fun <T: ContractState> hasBeenSeen(update: Vault.Update<T>, snapshotPage: Vault.Page<T>): Boolean {
+        val snapshotStatesRefs = snapshotPage.statesMetadata.map { it.ref }.toSet()
+        val snapshotConsumedStatesRefs = snapshotPage.statesMetadata.filter { it.consumedTime != null }
+                                                        .map { it.ref }.toSet()
         val updateProducedStatesRefs = update.produced.map { it.ref }.toSet()
+        val updateConsumedStatesRefs = update.consumed.map { it.ref }.toSet()
 
-        return pageStatesRefs.containsAll(updateProducedStatesRefs)
+        return snapshotStatesRefs.containsAll(updateProducedStatesRefs) && snapshotConsumedStatesRefs.containsAll(updateConsumedStatesRefs)
     }
 
     private fun getSession() = database.currentOrNew().session
