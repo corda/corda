@@ -24,7 +24,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextDatabaseOrNull
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -579,13 +579,17 @@ class NodeVaultService(
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return mutex.locked {
             val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed())
-            if (contextDatabaseOrNull != null) {
+            if (contextTransactionOrNull != null) {
                 log.warn("trackBy is called with an already existing, open DB transaction. As a result, there might be states missing from both the snapshot and observable, included in the returned data feed, because of race conditions.")
             }
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
+            val snapshotStatesRefs = snapshotResults.statesMetadata.map { it.ref }.toSet()
+            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }
+                    .map { it.ref }.toSet()
             val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
                     .map { filterContractStates(it, contractStateType) }
-                    .filter { !hasBeenSeen(it, snapshotResults) }
+                    .filter { !hasBeenSeen(it, snapshotStatesRefs, snapshotConsumedStatesRefs) }
+
             DataFeed(snapshotResults, filteredUpdates)
         }
     }
@@ -609,10 +613,7 @@ class NodeVaultService(
      *       partial exclusion, we decide to return some more updates, instead of losing them completely (not returning them either in
      *       the snapshot or in the observable).
      */
-    private fun <T: ContractState> hasBeenSeen(update: Vault.Update<T>, snapshotPage: Vault.Page<T>): Boolean {
-        val snapshotStatesRefs = snapshotPage.statesMetadata.map { it.ref }.toSet()
-        val snapshotConsumedStatesRefs = snapshotPage.statesMetadata.filter { it.consumedTime != null }
-                                                        .map { it.ref }.toSet()
+    private fun <T: ContractState> hasBeenSeen(update: Vault.Update<T>, snapshotStatesRefs: Set<StateRef>, snapshotConsumedStatesRefs: Set<StateRef>): Boolean {
         val updateProducedStatesRefs = update.produced.map { it.ref }.toSet()
         val updateConsumedStatesRefs = update.consumed.map { it.ref }.toSet()
 
