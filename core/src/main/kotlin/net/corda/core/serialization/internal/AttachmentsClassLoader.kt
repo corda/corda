@@ -48,7 +48,11 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         // Mighty unclean, but we need a quick stopgap to the bug it's addressing.
         // TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
         object CorDappsClassLoaderHolder {
-            lateinit var instance: ClassLoader
+            var instance: ClassLoader? = null
+
+            fun set(instance: ClassLoader) {
+                this.instance = instance
+            }
         }
 
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
@@ -147,9 +151,9 @@ internal object AttachmentsClassLoaderBuilder {
     private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
             .toSynchronised()
 
-    fun build(attachments: List<Attachment>, parentClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()): AttachmentsClassLoader {
+    fun build(attachments: List<Attachment>, parentClassLoader: ClassLoader? = null): AttachmentsClassLoader {
         return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
-            AttachmentsClassLoader(attachments, parentClassLoader)
+            AttachmentsClassLoader(attachments, parentClassLoader ?: ClassLoader.getSystemClassLoader())
         }
     }
 

@@ -149,7 +149,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).also {
         // Mighty unclean, but we need a quick stopgap to the bug it's addressing.
         // TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
-        AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.instance = it.appClassLoader
+        AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.set(it.appClassLoader)
     }
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
