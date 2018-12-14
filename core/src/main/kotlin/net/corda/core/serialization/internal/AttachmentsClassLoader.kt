@@ -45,6 +45,12 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
         }
 
+        // Mighty unclean, but we need a quick stopgap to the bug it's addressing.
+        // TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
+        object CorDappsClassLoaderHolder {
+            lateinit var instance: ClassLoader
+        }
+
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just ignore any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
@@ -141,16 +147,19 @@ internal object AttachmentsClassLoaderBuilder {
     private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
             .toSynchronised()
 
-    fun build(attachments: List<Attachment>): AttachmentsClassLoader {
+    fun build(attachments: List<Attachment>, parentClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()): AttachmentsClassLoader {
         return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
-            AttachmentsClassLoader(attachments)
+            AttachmentsClassLoader(attachments, parentClassLoader)
         }
     }
 
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
 
+
         // Create classloader from the attachments.
-        val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
+        // TODO This should not default to the CorDapps classloader, but it's needed for now to stop a bug preventing CorDapps with dependencies on other CorDapps from working as attachments.
+        // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
+        val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments, AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.instance)
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
