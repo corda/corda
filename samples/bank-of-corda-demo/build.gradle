@@ -9,6 +9,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
+    cordapp project(':finance:finance-contracts-states')
     cordapp project(':finance')
 
     // Corda integration dependencies
@@ -35,6 +36,7 @@ def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
         cordapp project(':finance')
+        cordapp project(':finance:finance-contracts-states')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"

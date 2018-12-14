@@ -59,6 +59,9 @@ processSmokeTestResources {
     from(project(':finance').tasks['jar']) {
         rename 'finance-(.*)', 'finance.jar'
     }
+    from(project(':finance:finance-contracts-states').tasks['jar']) {
+        rename 'finance-contracts-states(.*)', 'finance-contracts-states.jar'
+    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
@@ -82,6 +85,7 @@ dependencies {
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')
+    smokeTestCompile project(':finance:finance-contracts-states')
     smokeTestCompile project(':finance')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"

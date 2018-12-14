@@ -8,20 +8,7 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda finance modules'
-
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-        resources {
-            srcDir file('src/integration-test/resources')
-        }
-    }
-}
+description 'Corda finance modules - contracts states'
 
 dependencies {
     // Note the :finance module is a CorDapp in its own right
@@ -29,8 +16,6 @@ dependencies {
     cordaCompile project(':core')
     compile project(':confidential-identities')
 
-    cordapp project(':finance:finance-contracts-states')
-    
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
 
@@ -44,8 +29,6 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntime
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task testJar(type: Jar) {
@@ -53,24 +36,18 @@ task testJar(type: Jar) {
     from sourceSets.test.output
 }
 
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
+jar {
+    baseName 'corda-finance-contracts-states'
 }
 
 artifacts {
     testArtifacts testJar
 }
-
-jar {
-    baseName 'corda-finance'
-}
-
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
-    workflow {
-        name "net/corda/finance/flows"
+    contract {
+        name "net/corda/finance/contracts"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"

@@ -5,6 +5,9 @@ dependencies {
     testCompile project(path: ':serialization-deterministic', configuration: 'deterministicArtifacts')
     testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'deterministicArtifacts')
     testCompile project(path: ':core-deterministic:testing:data', configuration: 'testData')
+    testCompile(project(':finance:finance-contracts-states')) {
+        transitive = false
+    }
     testCompile(project(':finance')) {
         transitive = false
     }

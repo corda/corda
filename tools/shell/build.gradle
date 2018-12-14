@@ -63,6 +63,7 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':test-utils')
+    testCompile project(':finance:finance-contracts-states')
     testCompile project(':finance')
 
     // Jsh: Testing SSH server.
