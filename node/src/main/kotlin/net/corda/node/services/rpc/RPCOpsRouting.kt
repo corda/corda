@@ -1,4 +1,4 @@
-package net.corda.node.services.messaging
+package net.corda.node.services.rpc
 
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.RPCOps
