@@ -77,8 +77,8 @@ class HsmSimulator(portAllocation: PortAllocation,
 
         val log = contextLogger()
 
-        private const val HSM_STARTUP_SLEEP_INTERVAL_MS = 500L
-        private const val HSM_STARTUP_POLL_MAX_COUNT = 10
+        private const val HSM_STARTUP_SLEEP_INTERVAL_MS = 1000L
+        private const val HSM_STARTUP_POLL_MAX_COUNT = 30
     }
 
     val address = portAllocation.nextHostAndPort()
