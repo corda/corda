@@ -49,35 +49,33 @@ class CashPaymentFlowTests {
         val expectedPayment = 500.DOLLARS
         val expectedChange = 1500.DOLLARS
 
-        bankOfCordaNode.transaction {
-            // Register for vault updates
-            val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
-            val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
-            val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
+        // Register for vault updates
+        val criteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)
+        val (_, vaultUpdatesBoc) = bankOfCordaNode.services.vaultService.trackBy<Cash.State>(criteria)
+        val (_, vaultUpdatesBankClient) = aliceNode.services.vaultService.trackBy<Cash.State>(criteria)
 
-            val future = bankOfCordaNode.startFlow(CashPaymentFlow(expectedPayment, payTo))
-            mockNet.runNetwork()
-            future.getOrThrow()
+        val future = bankOfCordaNode.startFlow(CashPaymentFlow(expectedPayment, payTo))
+        mockNet.runNetwork()
+        future.getOrThrow()
 
-            // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
-            // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
-            vaultUpdatesBoc.expectEvents {
-                expect { (consumed, produced) ->
-                    assertThat(consumed).hasSize(1)
-                    assertThat(produced).hasSize(1)
-                    val changeState = produced.single().state.data
-                    assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
-                }
+        // Check Bank of Corda vault updates - we take in some issued cash and split it into $500 to the notary
+        // and $1,500 back to us, so we expect to consume one state, produce one state for our own vault
+        vaultUpdatesBoc.expectEvents {
+            expect { (consumed, produced) ->
+                assertThat(consumed).hasSize(1)
+                assertThat(produced).hasSize(1)
+                val changeState = produced.single().state.data
+                assertEquals(expectedChange.`issued by`(bankOfCorda.ref(ref)), changeState.amount)
             }
+        }
 
-            // Check notary node vault updates
-            vaultUpdatesBankClient.expectEvents {
-                expect { (consumed, produced) ->
-                    assertThat(consumed).isEmpty()
-                    assertThat(produced).hasSize(1)
-                    val paymentState = produced.single().state.data
-                    assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
-                }
+        // Check notary node vault updates
+        vaultUpdatesBankClient.expectEvents {
+            expect { (consumed, produced) ->
+                assertThat(consumed).isEmpty()
+                assertThat(produced).hasSize(1)
+                val paymentState = produced.single().state.data
+                assertEquals(expectedPayment.`issued by`(bankOfCorda.ref(ref)), paymentState.amount)
             }
         }
     }

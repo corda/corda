@@ -607,7 +607,10 @@ class NodeVaultService(
      *       the snapshot or in the observable).
      */
     private fun <T: ContractState> containsDuplicates(update: Vault.Update<T>, page: Vault.Page<T>): Boolean {
-        return page.states.toSet().containsAll(update.produced)
+        val pageStatesRefs = page.states.map { it.ref }.toSet()
+        val updateProducedStatesRefs = update.produced.map { it.ref }.toSet()
+
+        return pageStatesRefs.containsAll(updateProducedStatesRefs)
     }
 
     private fun getSession() = database.currentOrNew().session
