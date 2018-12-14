@@ -8,7 +8,7 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
+import net.corda.finance.contracts.asset.AbstractCashSelection
 import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.issuedBy
 import net.corda.testing.core.singleIdentity

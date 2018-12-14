@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.asset.cash.selection
+package net.corda.finance.contracts.asset
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
@@ -12,7 +12,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.utilities.*
-import net.corda.finance.contracts.asset.Cash
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -21,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
- * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
+ * Default implementation in finance workflow module uses H2 database and a custom function within H2 to perform aggregation.
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */

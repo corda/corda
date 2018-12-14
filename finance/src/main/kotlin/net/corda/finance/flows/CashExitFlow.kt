@@ -13,7 +13,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.ProgressTracker
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.cash.selection.AbstractCashSelection
+import net.corda.finance.contracts.asset.AbstractCashSelection
 import net.corda.finance.flows.AbstractCashFlow.Companion.FINALISING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.GENERATING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.SIGNING_TX
