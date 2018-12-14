@@ -4,7 +4,6 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
 import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
@@ -13,6 +12,7 @@ import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution

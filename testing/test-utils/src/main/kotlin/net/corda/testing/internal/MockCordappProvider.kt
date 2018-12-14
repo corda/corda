@@ -5,6 +5,7 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.cordapp.CordappLoader
@@ -40,7 +41,7 @@ class MockCordappProvider(
                 serializationCustomSerializers = emptyList(),
                 customSchemas = emptySet(),
                 jarPath = Paths.get("").toUri().toURL(),
-                info = CordappImpl.Info.UNKNOWN,
+                info = UNKNOWN,
                 allFlows = emptyList(),
                 jarHash = SecureHash.allOnesHash,
                 notaryService = null

@@ -20,6 +20,7 @@ see changes to this list.
 * Andrzej Grzesik (R3)
 * Anthony Keenan (R3)
 * Anthony Woolley (Société Générale)
+* Anton Markov (Industria)
 * Anton Semenov (Commerzbank)
 * Antonio Cerrato (SEB)
 * Antony Lewis (R3)

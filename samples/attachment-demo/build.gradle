@@ -114,10 +114,12 @@ jar {
 }
 
 cordapp {
-    info {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    workflow {
         name "net/corda/samples/attachment-demo"
+        versionId 1
         vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
+        licence "Open Source (Apache 2)"
     }
 }
