@@ -54,6 +54,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.lang.Integer.min
 import java.security.SecureRandom
 import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
@@ -627,7 +628,7 @@ class SingleThreadedStateMachineManager(
     private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
             timeoutScheduler.schedule({
-                val event = Event.Error(FlowTimeoutException(maxRestartCount))
+                val event = Event.Error(FlowTimeoutException())
                 flow.fiber.scheduleEvent(event)
             }, delay, TimeUnit.SECONDS)
         }
@@ -635,7 +636,7 @@ class SingleThreadedStateMachineManager(
 
     private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
         return with(serviceHub.configuration.flowTimeout) {
-            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, min(retryCount, maxRestartCount).toDouble()).toLong()
             maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
         }
     }
