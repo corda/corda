@@ -50,15 +50,8 @@ class InfrequentlyMutatedCache<K : Any, V : Any>(name: String, cacheFactory: Nam
         val tx = contextTransactionOrNull
         value.invalidators.incrementAndGet()
         if (tx != null) {
-            tx.database.onAllOpenTransactionsClosed { decrementInvalidators(key, value) }
-            /*
-            tx.onCommit {
-                decrementInvalidators(key, value)
-            }
-            tx.onRollback {
-                decrementInvalidators(key, value)
-            }
-            */
+            // When we close, we can't start using caching again until all simultaneously open transactions are closed.
+            tx.onClose { tx.database.onAllOpenTransactionsClosed { decrementInvalidators(key, value) } }
         } else {
             decrementInvalidators(key, value)
         }

@@ -128,11 +128,15 @@ class CordaPersistence(
 
     fun onAllOpenTransactionsClosed(callback: () -> Unit) {
         val allOpen = liveTransactions.values.toList()
-        val counter = AtomicInteger(allOpen.size)
-        allOpen.forEach {
-            it.onClose {
-                if (counter.decrementAndGet() == 0) {
-                    callback()
+        if (allOpen.isEmpty()) {
+            callback()
+        } else {
+            val counter = AtomicInteger(allOpen.size)
+            allOpen.forEach {
+                it.onClose {
+                    if (counter.decrementAndGet() == 0) {
+                        callback()
+                    }
                 }
             }
         }
