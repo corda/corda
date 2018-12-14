@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* CordDapps with custom ``MappedSchema`` (backing database tables) require Liquibase database migration scrip for all databases including H2.
+  Before a migration script was mandatory only for databases other than H2.
 
 * New configuration property `database.initialiseAppSchema` with values `UPDATE`, `VALIDATE` and `NONE`.
   The property controls the behavior of the Hibernate DDL generation. `UPDATE` performs an update of CorDapp schemas, while
