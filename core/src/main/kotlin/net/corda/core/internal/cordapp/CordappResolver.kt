@@ -9,8 +9,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Provides a way to acquire information about the calling CorDapp.
  */
-object CordappInfoResolver {
-    private val logger = loggerFor<CordappInfoResolver>()
+object CordappResolver {
+    private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
     // TODO Use the StackWalker API once we migrate to Java 9+
