@@ -18,6 +18,13 @@ Unreleased
   For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
   See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
 
+* Standardised CorDapp version identifiers in jar manifests (aligned with associated cordapp Gradle plugin changes).
+  Updated all samples to reflect new conventions.
+
+* Introduction of unique CorDapp version identifiers in jar manifests for contract and flows/services CorDapps.
+  Updated all sample CorDapps to reflect new conventions.
+  See :ref:`CorDapp separation <cordapp_separation_ref>` for further information.
+
 * Automatic Constraints propagation for hash-constrained states to signature-constrained states.
   This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
   by unsigned CorDapps in previous versions of Corda.

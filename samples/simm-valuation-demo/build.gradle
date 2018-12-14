@@ -159,8 +159,17 @@ task scenarioJar(type: Jar, dependsOn: classes) {
 }
 
 cordapp {
-    info {
-        vendor = 'R3'
-        targetPlatformVersion = corda_platform_version.toInteger()
+    targetPlatformVersion = corda_platform_version.toInteger()
+    contract {
+        name "net/corda/vega/contracts"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "net/corda/vega/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }

@@ -4,10 +4,8 @@ def javaHome = System.getProperty('java.home')
 def shrinkJar = file("$buildDir/libs/${project.name}-${project.version}-tiny.jar")
 
 cordapp {
-    info {
-        vendor = 'R3'
-        targetPlatformVersion = corda_platform_version.toInteger()
-    }
+    targetPlatformVersion = corda_platform_version.toInteger()
+    minimumPlatformVersion 1
     signing {
         // Cordapp is signed after the "shrink" task.
         enabled false
@@ -15,6 +13,12 @@ cordapp {
     sealing {
         // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
         enabled false
+    }
+    contract {
+        name "net/corda/vega/contracts"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }
 

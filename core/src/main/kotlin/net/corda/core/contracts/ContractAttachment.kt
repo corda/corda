@@ -1,7 +1,7 @@
 package net.corda.core.contracts
 
 import net.corda.core.KeepForDJVM
-import net.corda.core.cordapp.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 

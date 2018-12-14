@@ -1,7 +1,10 @@
 package net.corda.testing.node.internal
 
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
+import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.inputStream
-import net.corda.node.internal.cordapp.get
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -34,8 +37,9 @@ class TestCordappsUtilsTest {
 
         val jarFile = packageAsJar(cordapp)
         JarInputStream(jarFile.inputStream()).use {
-            assertThat(it.manifest["Target-Platform-Version"]).isEqualTo("123")
-            assertThat(it.manifest["Name"]).isEqualTo("TestCordappsUtilsTest")
+            assertThat(it.manifest[TARGET_PLATFORM_VERSION]).isEqualTo("123")
+            assertThat(it.manifest[CORDAPP_CONTRACT_NAME]).isEqualTo("TestCordappsUtilsTest")
+            assertThat(it.manifest[CORDAPP_WORKFLOW_NAME]).isEqualTo("TestCordappsUtilsTest")
         }
     }
 

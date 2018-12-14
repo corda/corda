@@ -1,13 +1,12 @@
 package net.corda.core.internal.rules
 
 import net.corda.core.contracts.ContractState
-import net.corda.core.utilities.contextLogger
+import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.utilities.warnOnce
 import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.jar.JarInputStream
-import java.util.jar.Manifest
 
 // This file provides rules that depend on the targetVersion of the current Contract or Flow.
 // Rules defined in this package are automatically removed from the DJVM in core-deterministic,
@@ -47,9 +46,4 @@ object StateContractValidationEnforcementRule {
 
         return targetVersion >= 4
     }
-}
-
-private val Manifest.targetPlatformVersion: Int get() {
-    val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
-    return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
 }

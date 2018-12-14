@@ -6,6 +6,7 @@ import net.corda.core.contracts.TransactionVerificationException.OverlappingAtta
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.internal.toSynchronised
@@ -18,7 +19,6 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
-import java.util.jar.Manifest
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -107,14 +107,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                 log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
             }
         }
-
-        // This was reused from: https://github.com/corda/corda/pull/4240.
-        // TODO - Once that is merged it should be extracted to a utility.
-        private val Manifest.targetPlatformVersion: Int
-            get() {
-                val minPlatformVersion = mainAttributes.getValue("Min-Platform-Version")?.toInt() ?: 1
-                return mainAttributes.getValue("Target-Platform-Version")?.toInt() ?: minPlatformVersion
-            }
 
         @VisibleForTesting
         private fun readAttachment(attachment: Attachment, filepath: String): ByteArray {

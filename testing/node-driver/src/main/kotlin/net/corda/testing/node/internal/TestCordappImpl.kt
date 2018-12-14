@@ -8,7 +8,6 @@ data class TestCordappImpl(override val name: String,
                            override val vendor: String,
                            override val title: String,
                            override val targetVersion: Int,
-                           override val cordappVersion: String,
                            override val config: Map<String, Any>,
                            override val packages: Set<String>,
                            override val signJar: Boolean = false,
@@ -25,8 +24,6 @@ data class TestCordappImpl(override val name: String,
     override fun withTitle(title: String): TestCordappImpl = copy(title = title)
 
     override fun withTargetVersion(targetVersion: Int): TestCordappImpl = copy(targetVersion = targetVersion)
-
-    override fun withCordappVersion(version: String): TestCordappImpl = copy(cordappVersion = version)
 
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
