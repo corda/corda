@@ -5,6 +5,7 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
@@ -188,6 +189,15 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
 
             For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent(), null)
+
+
+    /**
+     * If the network parameters associated with an input state in a transaction are more recent than the network parameters of the new transaction itself.
+     */
+    @KeepForDJVM
+    class TransactionNetworkParameterOrderingException(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
+        : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch} with this transaction " +
+            "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable

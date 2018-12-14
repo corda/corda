@@ -17,6 +17,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.debug
 import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
@@ -62,6 +63,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
+    private var networkParametersForInputs: Map<StateRef,NetworkParameters?>? = null
 
     init {
         checkBaseInvariants()
@@ -89,12 +91,14 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
+                inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>,
+                resolveNetworkParametersForInputs: Map<StateRef, NetworkParameters?>? = null
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
+                this.networkParametersForInputs = resolveNetworkParametersForInputs
             }
         }
     }
@@ -130,6 +134,10 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
+
+        // verify that network parameters of this transaction are equal or more recent than network parameters of txn inputs (where these are tagged)
+        verifyNetworkParameters()
+
         val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
@@ -155,6 +163,20 @@ private constructor(
             inputStatesContractClassNameToMaxVersion[contractClassName]?.let {
                 if (it > outputVersion) {
                     throw TransactionVerificationException.TransactionVerificationVersionException(this.id, contractClassName, "$it", "$outputVersion")
+                }
+            }
+        }
+    }
+
+    private fun verifyNetworkParameters() {
+        if (networkParameters != null) {
+            networkParametersForInputs?.forEach { inputStateRef, inputNetworkParameters ->
+                if (inputNetworkParameters == null) {
+                    logger.debug { "Skipping verification check as txn with stateRef $inputStateRef has no tagged network parameters." }
+                }
+                else {
+                    if (networkParameters.epoch < inputNetworkParameters.epoch)
+                        throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, inputStateRef, networkParameters, inputNetworkParameters)
                 }
             }
         }

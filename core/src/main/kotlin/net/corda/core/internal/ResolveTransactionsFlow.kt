@@ -104,8 +104,11 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
 
-            if (minimumPlatformVersion >= 4)
-                checkNetworkParametersOrdered(stx)
+            // Considerations in checking ordering:
+            // C4 Node => C4 Node (valid checking)
+            // C3 Node => C4 Node (checking not required as C3 Node txns will not be tagged
+            // C4 Node => C3 Node (no checking as C3 codebase will not know about NP tagging, but here is where a malicious downgrade attack could be attempted by the C4 sender)
+            checkNetworkParametersOrdered(stx)
 
             stx.verify(serviceHub)
             serviceHub.recordTransactions(StatesToRecord.NONE, listOf(stx))
@@ -116,15 +119,20 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         // We should have all dependent parameters resolved at this point using FetchParametersFlow, if not we fallback to network map.
         // Check that epochs are ordered in the transaction chain.
         with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
-            val currentEpoch = stx.netParamsHashOrDefault().let { hash ->
-                getEpochFromHash(hash) ?: throw IllegalStateException("Couldn't find root parameters epoch with hash $hash")
-            }
-            stxRootParametersMap[stx.id]?.forEach { parentHash ->
-                val parentEpoch = getEpochFromHash(parentHash)
-                        ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $parentHash")
-                if (currentEpoch > parentEpoch) {
-                    throw IllegalArgumentException("Network parameters are not ordered in the transaction graph " +
-                            "for dependency transaction: ${stx.id} and parent parameters hash: $parentHash")
+            // only check txn if tagged with NP's and
+            // NP's specifies a minPlatformVersion >=4 (otherwise we can assume it was sent from a pre-Corda 4 node)
+            stx.networkParametersHash?.let { hash ->
+                val stxnNetworkParams = lookup(hash) ?: throw IllegalStateException("Unable to lookup network parameters for hash $hash")
+                if (stxnNetworkParams.minimumPlatformVersion >= 4) {
+                    val stxnEpoch = stxnNetworkParams.epoch
+                    stxRootParametersMap[stx.id]?.forEach { parentHash ->
+                        val parentEpoch = getEpochFromHash(parentHash)
+                                ?: throw IllegalArgumentException("Couldn't find root parameters epoch with hash $parentHash")
+                        if (stxnEpoch > parentEpoch) {
+                            throw IllegalArgumentException("Network parameters are not ordered in the transaction graph " +
+                                    "for dependency transaction: ${stx.id} and parent parameters hash: $parentHash")
+                        }
+                    }
                 }
             }
         }
@@ -140,6 +148,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             if (stx == null) {
                 currentHash
             } else {
+                // TODO: defaultHash should refer to a genesis hash (not currentHash)
+                // pre-Corda 4 txns will not have NP's
                 stx.networkParametersHash ?: defaultHash
             }
         }
@@ -202,13 +212,17 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // Add all input states and reference input states to the work queue.
             val inputHashes = mutableListOf<SecureHash>()
             for (stx in downloads) {
-                val rootHash = stx.netParamsHashOrDefault()
-                val depsIds = (stx.inputs + stx.references).map { it.txhash }
-                // For all inputs and references transaction hashes record the network parameters hash that is parent in the graph.
-                depsIds.forEach { depId ->
-                    stxRootParametersMap.computeIfAbsent(depId) { mutableSetOf() }.add(rootHash)
+                val rootHash = stx.networkParametersHash
+                // only Corda 4+ txns will have NP's
+                rootHash?.let {
+                    val depsIds = (stx.inputs + stx.references).map { it.txhash }
+                    // For all inputs and references transaction hashes record the network parameters hash that is parent in the graph.
+                    // TODO: is this logic correct? Should we not be using the NP's of the original depIds txns (not the NP's of the stx)
+                    depsIds.forEach { depId ->
+                        stxRootParametersMap.computeIfAbsent(depId) { mutableSetOf() }.add(rootHash)
+                    }
+                    inputHashes.addAll(depsIds)
                 }
-                inputHashes.addAll(depsIds)
             }
 
             nextRequests.addAll(inputHashes)

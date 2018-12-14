@@ -109,7 +109,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                     val hashToResolve = it ?: services.networkParametersStorage.defaultHash
                     services.networkParametersStorage.lookup(hashToResolve)
                 },
-                resolveContractAttachment = { services.loadContractAttachment(it) }
+                resolveContractAttachment = { services.loadContractAttachment(it) },
+                resolveNetworkParameters = { resolveNetworkParameters(it, services) }
         )
     }
 
@@ -137,12 +138,14 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
             @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-            resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
+            resolveParameters: (SecureHash?) -> NetworkParameters? = { null }, // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
+            resolveNetworkParameters: (StateRef) -> Pair<StateRef, NetworkParameters?>? = { null }
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
         return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters,
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { it -> resolveAttachment(it.txhash) ?: missingAttachment })
+                { it -> resolveAttachment(it.txhash) ?: missingAttachment },
+                resolveNetworkParameters)
     }
 
     private fun toLedgerTransactionInternal(
@@ -150,7 +153,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRefAsSerialized: (StateRef) -> SerializedBytes<TransactionState<ContractState>>?,
             resolveParameters: (SecureHash?) -> NetworkParameters?,
-            resolveContractAttachment: (StateRef) -> Attachment
+            resolveContractAttachment: (StateRef) -> Attachment,
+            resolveNetworkParameters: (StateRef) -> Pair<StateRef, NetworkParameters?>?
     ): LedgerTransaction {
         // Look up public keys to authenticated identities.
         val authenticatedCommands = commands.lazyMapped { cmd, _ ->
@@ -171,6 +175,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
+
+        val resolveNetworkParametersForInputs = (inputs + references).map { resolveNetworkParameters(it) }.mapNotNull { it }.toMap()
 
         //keep resolvedInputs lazy and resolve the inputs separately here to get Version
         val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map {
@@ -194,7 +200,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                inputStateContractClassToMaxVersion
+                inputStateContractClassToMaxVersion,
+                resolveNetworkParametersForInputs
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -346,6 +353,21 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 services.loadState(stateRef).serialize()
             }
         }
+    }
+
+    @CordaInternal
+    internal fun resolveNetworkParameters(stateRef: StateRef, services: ServicesForResolution) : Pair<StateRef,NetworkParameters?> {
+        if (services is ServiceHub) {
+            val txn = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
+                    ?: throw TransactionResolutionException(stateRef.txhash)
+            val txnHash = txn.networkParametersHash
+            return if (txnHash != null) {
+                Pair(stateRef, services.networkParametersStorage.lookup(txnHash))
+            } else {
+                Pair(stateRef, null)
+            }
+        }
+        throw TransactionResolutionException(stateRef.txhash)
     }
 
     @DeleteForDJVM
