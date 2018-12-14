@@ -2,16 +2,13 @@ package net.corda.testing.internal
 
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.testing.services.MockAttachmentStorage
-import java.nio.file.Paths
 import java.security.PublicKey
 import java.util.jar.Attributes
 
@@ -30,22 +27,7 @@ class MockCordappProvider(
             signers: List<PublicKey> = emptyList(),
             jarManifestAttributes: Map<String,String> = emptyMap()
     ): AttachmentId {
-        val cordapp = CordappImpl(
-                contractClassNames = listOf(contractClassName),
-                initiatedFlows = emptyList(),
-                rpcFlows = emptyList(),
-                serviceFlows = emptyList(),
-                schedulableFlows = emptyList(),
-                services = emptyList(),
-                serializationWhitelists = emptyList(),
-                serializationCustomSerializers = emptyList(),
-                customSchemas = emptySet(),
-                jarPath = Paths.get("").toUri().toURL(),
-                info = UNKNOWN,
-                allFlows = emptyList(),
-                jarHash = SecureHash.allOnesHash,
-                notaryService = null
-        )
+        val cordapp = CordappImpl.TEST_INSTANCE.copy(contractClassNames = listOf(contractClassName))
         val jarManifestAttributesWithObligatoryElement = jarManifestAttributes.toMutableMap()
         jarManifestAttributesWithObligatoryElement.putIfAbsent(Attributes.Name.MANIFEST_VERSION.toString(), "1.0")
         if (cordappRegistry.none { it.first.contractClassNames.contains(contractClassName) && it.second == contractHash }) {

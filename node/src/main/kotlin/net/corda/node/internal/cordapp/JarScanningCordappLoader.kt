@@ -4,14 +4,15 @@ import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
 import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
+import net.corda.core.cordapp.CordappInvalidVersionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN
+import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_INFO
 import net.corda.core.internal.cordapp.CordappInfoResolver
-import net.corda.core.internal.cordapp.toCordappInfo
+import net.corda.core.internal.cordapp.get
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.services.CordaService
@@ -31,6 +32,7 @@ import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarInputStream
+import java.util.jar.Manifest
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 
@@ -89,7 +91,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         private fun URL.restricted(rootPackageName: String? = null) = RestrictedURL(this, rootPackageName)
 
         private fun jarUrlsInDirectory(directory: Path): List<URL> {
-
             return if (!directory.exists()) {
                 emptyList()
             } else {
@@ -100,13 +101,14 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             }
         }
     }
+
     private fun loadCordapps(): List<CordappImpl> {
         val cordapps = cordappJarPaths
                 .map { url -> scanCordapp(url).use { it.toCordapp(url) } }
                 .filter {
-                    if (it.info.minimumPlatformVersion > versionInfo.platformVersion) {
+                    if (it.minimumPlatformVersion > versionInfo.platformVersion) {
                         logger.warn("Not loading CorDapp ${it.info.shortName} (${it.info.vendor}) as it requires minimum " +
-                                "platform version ${it.info.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
+                                "platform version ${it.minimumPlatformVersion} (This node is running version ${versionInfo.platformVersion}).")
                         false
                     } else {
                         true
@@ -127,11 +129,15 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         }
                     }
                 }
-        cordapps.forEach { CordappInfoResolver.register(it.cordappClasses, it.info) }
+        cordapps.forEach(CordappInfoResolver::register)
         return cordapps
     }
+
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: UNKNOWN }
+        val manifest: Manifest? = url.url.openStream().use { JarInputStream(it).manifest }
+        val info = parseCordappInfo(manifest, CordappImpl.jarName(url.url))
+        val minPlatformVersion = manifest?.get(CordappImpl.MIN_PLATFORM_VERSION)?.toIntOrNull() ?: 1
+        val targetPlatformVersion = manifest?.get(CordappImpl.TARGET_PLATFORM_VERSION)?.toIntOrNull() ?: minPlatformVersion
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
@@ -146,8 +152,65 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 url.url,
                 info,
                 getJarHash(url.url),
+                minPlatformVersion,
+                targetPlatformVersion,
                 findNotaryService(this)
         )
+    }
+
+    private fun parseCordappInfo(manifest: Manifest?, defaultName: String): Cordapp.Info {
+        if (manifest == null) return UNKNOWN_INFO
+
+        /** new identifiers (Corda 4) */
+        // is it a Contract Jar?
+        val contractInfo = if (manifest[CordappImpl.CORDAPP_CONTRACT_NAME] != null) {
+            Cordapp.Info.Contract(
+                    shortName = manifest[CordappImpl.CORDAPP_CONTRACT_NAME] ?: defaultName,
+                    vendor = manifest[CordappImpl.CORDAPP_CONTRACT_VENDOR] ?: CordappImpl.UNKNOWN_VALUE,
+                    versionId = parseVersion(manifest[CordappImpl.CORDAPP_CONTRACT_VERSION], CordappImpl.CORDAPP_CONTRACT_VERSION),
+                    licence = manifest[CordappImpl.CORDAPP_CONTRACT_LICENCE] ?: CordappImpl.UNKNOWN_VALUE
+            )
+        } else {
+            null
+        }
+
+        // is it a Workflow (flows and services) Jar?
+        val workflowInfo = if (manifest[CordappImpl.CORDAPP_WORKFLOW_NAME] != null) {
+            Cordapp.Info.Workflow(
+                    shortName = manifest[CordappImpl.CORDAPP_WORKFLOW_NAME] ?: defaultName,
+                    vendor = manifest[CordappImpl.CORDAPP_WORKFLOW_VENDOR] ?: CordappImpl.UNKNOWN_VALUE,
+                    versionId = parseVersion(manifest[CordappImpl.CORDAPP_WORKFLOW_VERSION], CordappImpl.CORDAPP_WORKFLOW_VERSION),
+                    licence = manifest[CordappImpl.CORDAPP_WORKFLOW_LICENCE] ?: CordappImpl.UNKNOWN_VALUE
+            )
+        } else {
+            null
+        }
+
+        when {
+            // combined Contract and Workflow Jar?
+            contractInfo != null && workflowInfo != null -> return Cordapp.Info.ContractAndWorkflow(contractInfo, workflowInfo)
+            contractInfo != null -> return contractInfo
+            workflowInfo != null -> return workflowInfo
+        }
+
+        return Cordapp.Info.Default(
+                shortName = manifest["Name"] ?: defaultName,
+                vendor = manifest["Implementation-Vendor"] ?: CordappImpl.UNKNOWN_VALUE,
+                version = manifest["Implementation-Version"] ?: CordappImpl.UNKNOWN_VALUE,
+                licence = CordappImpl.UNKNOWN_VALUE
+        )
+    }
+
+    private fun parseVersion(versionStr: String?, attributeName: String): Int {
+        if (versionStr == null) {
+            throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
+        }
+        val version = versionStr.toIntOrNull()
+                ?: throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
+        if (version < 1) {
+            throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
+        }
+        return version
     }
 
     private fun findNotaryService(scanResult: RestrictedScanResult): Class<out NotaryService>? {

@@ -2,12 +2,10 @@ package net.corda.core.cordapp
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
+import net.corda.core.cordapp.Cordapp.Info.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN_VALUE
-import net.corda.core.internal.cordapp.CordappImpl.Companion.parseVersion
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
@@ -21,7 +19,8 @@ import java.net.URL
  *
  * This will only need to be constructed manually for certain kinds of tests.
  *
- * @property name Cordapp name - derived from the base name of the Cordapp JAR (therefore may not be unique)
+ * @property name Cordapp name - derived from the base name of the Cordapp JAR (therefore may not be unique). This is different to
+ * [Cordapp.Info.shortName] which should be used instead.
  * @property contractClassNames List of contracts
  * @property initiatedFlows List of initiatable flow classes
  * @property rpcFlows List of RPC initiable flows classes
@@ -33,7 +32,10 @@ import java.net.URL
  * @property customSchemas List of custom schemas
  * @property allFlows List of all flow classes
  * @property jarPath The path to the JAR for this CorDapp
+ * @property cordappClasses An exhaustive list of all classes relevant to the node within this CorDapp
  * @property jarHash Hash of the jar
+ * @property minimumPlatformVersion The minimum platform version this CorDapp will run on.
+ * @property targetPlatformVersion The target platform version this CorDapp was designed and tested on.
  */
 @DoNotImplement
 @DeleteForDJVM
@@ -53,11 +55,14 @@ interface Cordapp {
     val cordappClasses: List<String>
     val info: Info
     val jarHash: SecureHash.SHA256
+    val minimumPlatformVersion: Int
+    val targetPlatformVersion: Int
 
     /**
-     * CorDapp's information, including vendor and version.
+     * Further information about the CorDapp extracted from its MANIFEST. The sub-types [Default], [Contract] and [Workflow] determine what
+     * type of CorDapp this is.
      *
-     * @property shortName Cordapp's shortName
+     * @property shortName Cordapp's name
      * @property vendor Cordapp's vendor
      * @property version Cordapp's version
      */
@@ -67,40 +72,44 @@ interface Cordapp {
         val vendor: String
         val version: String
         val licence: String
-        val minimumPlatformVersion: Int
-        val targetPlatformVersion: Int
 
         fun hasUnknownFields(): Boolean
 
-        /** CorDapps that do not separate Contracts and Flows into separate jars (pre Corda 4) */
-        data class Default(override val shortName: String, override val vendor: String, override val version: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int, override val licence: String = UNKNOWN_VALUE)
-            : Info {
+        /**
+         * CorDapps created on V3 which bundle contracts and flows into the same jar. This is effectively
+         * [ContractAndWorkflow] but without the integer versioning.
+         */
+        data class Default(override val shortName: String, override val vendor: String, override val version: String, override val licence: String) : Info {
             override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, version).any { it == UNKNOWN_VALUE }
             override fun toString() = "CorDapp $shortName version $version by $vendor with licence $licence"
         }
 
-        /** A Contract CorDapp contains contract definitions (state, commands) and verification logic */
-        data class Contract(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
-            : Info {
+        /**
+         * A contract CorDapp contains contract definitions (state, commands) and verification logic
+         * @property versionId integer version of the CorDapp. [version] is the toString of this.
+         */
+        data class Contract(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String) : Info {
             override val version: String
                 get() = versionId.toString()
-            override fun toString() = "Contract CorDapp: $shortName version $version by vendor $vendor with licence $licence"
+            override fun toString() = "Contract CorDapp: $shortName version $versionId by vendor $vendor with licence $licence"
             override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, licence).any { it == UNKNOWN_VALUE }
         }
 
-        /** A Workflow CorDapp contains flows and services used to implement business transactions using contracts and states persisted to the immutable ledger */
-        data class Workflow(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
-            : Info {
+        /**
+         * A workflow CorDapp contains flows and services used to implement business transactions using contracts and states persisted to the
+         * immutable ledger
+         * @property versionId integer version of the CorDapp. [version] is the toString of this.
+         */
+        data class Workflow(override val shortName: String, override val vendor: String, val versionId: Int, override val licence: String) : Info {
             override val version: String
                 get() = versionId.toString()
-            override fun toString() = "Workflow CorDapp: $shortName version $version by vendor $vendor with licence $licence"
+            override fun toString() = "Workflow CorDapp: $shortName version $versionId by vendor $vendor with licence $licence"
             override fun hasUnknownFields(): Boolean = arrayOf(shortName, vendor, licence).any { it == UNKNOWN_VALUE }
         }
 
-        /** A CorDapp that includes both Contract and Workflow classes (not recommended) */
+        /** A CorDapp that includes both contract and workflow classes, and defined in terms of [Contract] and [Workflow]. */
         // TODO: future work in Gradle cordapp plugins to enforce separation of Contract and Workflow classes into separate jars
-        data class ContractAndWorkflow(val contract: Contract, val workflow: Workflow, override val minimumPlatformVersion: Int, override val targetPlatformVersion: Int)
-            : Info {
+        data class ContractAndWorkflow(val contract: Contract, val workflow: Workflow) : Info {
             override val shortName: String
                 get() = "Contract: ${contract.shortName}, Workflow: ${workflow.shortName}"
             override val vendor: String
@@ -108,7 +117,7 @@ interface Cordapp {
             override val licence: String
                 get() = "Contract: ${contract.licence}, Workflow: ${workflow.licence}"
             override val version: String
-                get() = "Contract: ${contract.versionId}, Workflow: ${workflow.versionId}"
+                get() = "Contract: ${contract.version}, Workflow: ${workflow.version}"
             override fun toString() = "Combined CorDapp: $contract, $workflow"
             override fun hasUnknownFields(): Boolean = contract.hasUnknownFields() || workflow.hasUnknownFields()
         }
