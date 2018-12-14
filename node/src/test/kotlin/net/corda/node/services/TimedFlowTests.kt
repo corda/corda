@@ -155,7 +155,9 @@ class TimedFlowTests {
                 setTimeWindow(services.clock.instant(), 30.seconds)
                 addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
             }
-            val flow = NotaryFlow.Client(issueTx)
+            val flow = object : NotaryFlow.Client(issueTx) {
+                override val canBeRestarted: Boolean = true
+            }
             val progressTracker = flow.progressTracker
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
             val progressTrackerDone = getDoneFuture(progressTracker)
@@ -193,7 +195,9 @@ class TimedFlowTests {
                     setTimeWindow(services.clock.instant(), 30.seconds)
                     addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
                 }
-                val flow = NotaryFlow.Client(issueTx)
+                val flow = object : NotaryFlow.Client(issueTx) {
+                    override val canBeRestarted: Boolean = true
+                }
                 val progressTracker = flow.progressTracker
                 assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
                 val progressTrackerDone = getDoneFuture(progressTracker)
@@ -225,7 +229,9 @@ class TimedFlowTests {
                     setTimeWindow(services.clock.instant(), 30.seconds)
                     addOutputState(DummyContract.SingleOwnerState(owner = info.singleIdentity()), DummyContract.PROGRAM_ID, AlwaysAcceptAttachmentConstraint)
                 }
-                val flow = NotaryFlow.Client(issueTx)
+                val flow = object : NotaryFlow.Client(issueTx) {
+                    override val canBeRestarted: Boolean = true
+                }
                 val progressTracker = flow.progressTracker
                 assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
                 val progressTrackerDone = getDoneFuture(progressTracker)

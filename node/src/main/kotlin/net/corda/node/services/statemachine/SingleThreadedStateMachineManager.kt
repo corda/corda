@@ -762,7 +762,7 @@ class SingleThreadedStateMachineManager(
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
                 val flowLogic = flow.fiber.logic
-                if (flowLogic is TimedFlow) scheduleTimeout(id)
+                if ((flowLogic as? TimedFlow)?.canBeRestarted ?: false) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {
