@@ -172,10 +172,18 @@ artifacts {
 }
 
 cordapp {
-    info {
-        name "net/corda/irs-demo"
-        vendor "Corda Open Source"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    contract {
+        name "net/corda/irs-demo/contract"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "net/corda/irs-demo/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }

@@ -62,30 +62,22 @@ artifacts {
 
 jar {
     baseName 'corda-finance'
-    exclude "META-INF/*.DSA"
-    exclude "META-INF/*.RSA"
-    exclude "META-INF/*.SF"
-    exclude "META-INF/*.MF"
-    exclude "META-INF/LICENSE"
-    exclude "META-INF/NOTICE"
-
-    manifest {
-        attributes(
-                "Manifest-Version": "1.0",
-                "Specification-Title": description,
-                "Specification-Version": version,
-                "Specification-Vendor": "Corda Open Source",
-                "Implementation-Title": "$group.$baseName",
-        )
-    }
 }
 
 cordapp {
-    info {
-        name "net/corda/finance"
-        vendor "Corda Open Source"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    contract {
+        name "net/corda/finance/contracts"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "net/corda/finance/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
     // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
     // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"

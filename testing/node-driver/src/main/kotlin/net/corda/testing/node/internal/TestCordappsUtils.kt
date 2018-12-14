@@ -1,15 +1,22 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
+import net.corda.core.internal.cordapp.*
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
+import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
 import net.corda.core.internal.outputStream
-import net.corda.node.internal.cordapp.createTestManifest
 import net.corda.testing.node.TestCordapp
 import java.io.BufferedOutputStream
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.util.jar.Attributes
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
 
@@ -66,7 +73,7 @@ fun TestCordappImpl.packageAsJar(file: Path) {
             .scan()
 
     scanResult.use {
-        val manifest = createTestManifest(name, title, version, vendor, targetVersion, cordappVersion)
+        val manifest = createTestManifest(name, title, version, vendor, targetVersion)
         JarOutputStream(file.outputStream()).use { jos ->
             val time = FileTime.from(Instant.EPOCH)
             val manifestEntry = ZipEntry(JarFile.MANIFEST_NAME).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
@@ -84,4 +91,23 @@ fun TestCordappImpl.packageAsJar(file: Path) {
             }
         }
     }
+}
+
+fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
+    val manifest = Manifest()
+
+    // Mandatory manifest attribute. If not present, all other entries are silently skipped.
+    manifest[Attributes.Name.MANIFEST_VERSION.toString()] = "1.0"
+
+    manifest["Name"] = name
+    manifest[Attributes.Name.IMPLEMENTATION_TITLE] = title
+    manifest[Attributes.Name.IMPLEMENTATION_VERSION] = version
+    manifest[Attributes.Name.IMPLEMENTATION_VENDOR] = vendor
+    manifest[CORDAPP_CONTRACT_NAME]  = name
+    manifest[CORDAPP_CONTRACT_VERSION] = version
+    manifest[CORDAPP_WORKFLOW_NAME]  = name
+    manifest[CORDAPP_WORKFLOW_VERSION] = version
+    manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
+
+    return manifest
 }

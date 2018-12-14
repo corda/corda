@@ -35,8 +35,8 @@ import kotlin.test.assertNotNull
 class SignatureConstraintVersioningTests {
 
     private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
-    private val oldCordapp = base.withCordappVersion("2")
-    private val newCordapp = base.withCordappVersion("3")
+    private val oldCordapp = base.withVersion("2")
+    private val newCordapp = base.withVersion("3")
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
     private val message = Message("Hello world!")
     private val transformetMessage = Message(message.value + "A")

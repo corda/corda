@@ -9,7 +9,9 @@ import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
+import net.corda.core.internal.cordapp.CordappImpl.Companion.UNKNOWN
 import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.toCordappInfo
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.node.services.CordaService
@@ -129,7 +131,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return cordapps
     }
     private fun RestrictedScanResult.toCordapp(url: RestrictedURL): CordappImpl {
-        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: CordappImpl.Info.UNKNOWN }
+        val info = url.url.openStream().let(::JarInputStream).use { it.manifest?.toCordappInfo(CordappImpl.jarName(url.url)) ?: UNKNOWN }
         return CordappImpl(
                 findContractClassNames(this),
                 findInitiatedFlows(this),
