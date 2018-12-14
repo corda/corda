@@ -56,11 +56,11 @@ processSmokeTestResources {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
     }
-    from(project(':finance').tasks['jar']) {
-        rename 'finance-(.*)', 'finance.jar'
+    from(project(':finance:finance-flows').tasks['jar']) {
+        rename 'finance-flows-(.*)', 'finance-flows.jar'
     }
     from(project(':finance:finance-contracts').tasks['jar']) {
-        rename 'finance-contracts(.*)', 'finance-contracts.jar'
+        rename 'finance-contracts-(.*)', 'finance-contracts.jar'
     }
 }
 
@@ -86,7 +86,7 @@ dependencies {
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')
     smokeTestCompile project(':finance:finance-contracts')
-    smokeTestCompile project(':finance')
+    smokeTestCompile project(':finance:finance-flows')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
     smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"

@@ -58,7 +58,8 @@ dependencies {
     compile "com.spotify:docker-client:$docker_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
-    compile project(':finance')
+    compile project(':finance:finance-contracts')
+    compile project(':finance:finance-flows')
     compile project(':node-api')
     compile project(':client:rpc')
 

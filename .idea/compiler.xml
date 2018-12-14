@@ -108,6 +108,9 @@
       <module name="finance-contracts-states_test" target="1.8" />
       <module name="finance-contracts_main" target="1.8" />
       <module name="finance-contracts_test" target="1.8" />
+      <module name="finance-flows_integrationTest" target="1.8" />
+      <module name="finance-flows_main" target="1.8" />
+      <module name="finance-flows_test" target="1.8" />
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />

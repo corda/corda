@@ -6,7 +6,7 @@ configurations {
 
 dependencies {
     testCompile project(':core')
-    testCompile project(':finance')
+    testCompile project(':finance:finance-flows')
     testCompile project(':node-driver')
     testCompile project(path: ':core-deterministic:testing:verifier', configuration: 'runtimeArtifacts')
 

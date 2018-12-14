@@ -42,7 +42,8 @@ dependencies {
     compile project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
 
     // Corda Plugins: dependent flows and services
-    compile project(':finance')
+    compile project(':finance:finance-contracts')
+    compile project(':finance:finance-flows')
 }
 
 mainClassName = "net.corda.docs.ClientRpcTutorialKt"

@@ -12,7 +12,8 @@ compileTestKotlin {
 
 dependencies {
     compile project(':core')
-    compile project(':finance')
+    compile project(':finance:finance-contracts')
+    compile project(':finance:finance-flows')
 
     // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.
     compile "org.ow2.asm:asm:$asm_version"

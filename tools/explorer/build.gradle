@@ -24,7 +24,8 @@ dependencies {
     compile project(':client:jfx')
     compile project(':client:mock')
     compile project(':node-driver')
-    compile project(':finance')
+    compile project(':finance:finance-contracts')
+    compile project(':finance:finance-flows')
 
     // Capsule is a library for building independently executable fat JARs.
     // We only need this dependency to compile our Caplet against.

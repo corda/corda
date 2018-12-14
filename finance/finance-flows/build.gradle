@@ -8,17 +8,29 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
 
-description 'Corda finance module - contracts'
+description 'Corda finance module - flows'
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
 
 dependencies {
     // Note the :finance module is a CorDapp in its own right
-    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
+    // and CorDapps using :finance: features should use 'cordapp' not 'compile' linkage.
     cordaCompile project(':core')
     compile project(':confidential-identities')
 
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-
+    cordapp project(':finance:finance-contracts')
+    
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"
@@ -29,6 +41,8 @@ dependencies {
 
 configurations {
     testArtifacts.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task testJar(type: Jar) {
@@ -36,18 +50,30 @@ task testJar(type: Jar) {
     from sourceSets.test.output
 }
 
-jar {
-    baseName 'corda-finance-contracts'
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 artifacts {
     testArtifacts testJar
 }
+
+jar {
+    baseName 'corda-finance-flows'
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
-    contract {
-        name "net/corda/finance/contracts"
+    workflow {
+        name "net/corda/finance/flows"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"

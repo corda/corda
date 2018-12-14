@@ -10,7 +10,7 @@ dependencies {
 
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:finance-contracts')
-    cordapp project(':finance')
+    cordapp project(':finance:finance-flows')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -35,7 +35,7 @@ def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     nodeDefaults {
-        cordapp project(':finance')
+        cordapp project(':finance:finance-flows')
         cordapp project(':finance:finance-contracts')
     }
     node {
@@ -60,7 +60,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         extraConfig = [
                 h2Settings: [address: "localhost:10017"]
         ]
-        cordapp(project(':finance')) {
+        cordapp(project(':finance:finance-flows')) {
             config "issuableCurrencies = [ USD ]"
         }
     }

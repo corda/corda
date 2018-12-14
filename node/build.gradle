@@ -129,7 +129,7 @@ dependencies {
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
     testCompile project(':finance:finance-contracts')
-    testCompile project(':finance')
+    testCompile project(':finance:finance-flows')
     testCompile project(':finance:isolated')
 
     // sample test schemas

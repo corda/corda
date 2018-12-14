@@ -8,7 +8,7 @@ dependencies {
     testCompile(project(':finance:finance-contracts')) {
         transitive = false
     }
-    testCompile(project(':finance')) {
+    testCompile(project(':finance:finance-flows')) {
         transitive = false
     }
 
