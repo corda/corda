@@ -64,18 +64,18 @@ anything set earlier.
    Note that this will completely replace any defaults set by capsule above, not just the flags that are set here, so if you use this
    to set e.g. the memory, you also need to set the garbage collector, or it will revert to whatever default your JVM is using.
 
-:Capsule command line flag: You can use a special capsule command line flag to set JVM arguments only for the Corda process, not the
-   launcher that actually starts it::
+:Capsule specific system property: You can use a special system property that Capsule understands to set JVM arguments only for the Corda
+   process, not the launcher that actually starts it::
 
       java -Dcapsule.jvm.args="-Xmx:1G" corda.jar
 
-   Setting a flag like this will override any value for this flag, but not interfere with any other JVM arguments that are configured in a
-   way above. In this example, it would reset the maximum heap memory to ``-Xmx1G`` but not touch the garbage collector settings.
+   Setting a property like this will override any value for this property, but not interfere with any other JVM arguments that are configured
+   in any way mentioned above. In this example, it would reset the maximum heap memory to ``-Xmx1G`` but not touch the garbage collector settings.
    This is particarly useful for either setting large memory allowances that you don't want to give to the launcher or for setting values that
    can only be set on one process at a time, e.g. a debug port.
 
 :Command line flag: You can set JVM args on the command line that apply to the launcher process and the node process as in the example
-      above. This will override any value for the same flag set any other way.
+      above. This will override any value for the same flag set any other way, but will leave any other JVM arguments alone.
 
 
 Command-line options

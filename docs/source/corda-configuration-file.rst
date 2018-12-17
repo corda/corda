@@ -198,9 +198,6 @@ The available config fields are listed below.
 
         .. note:: This is an unsupported configuration.
 
-:jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
-    only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
-
 :systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
     of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
 
@@ -266,10 +263,11 @@ The available config fields are listed below.
     :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
                                        more granular level. Defaults to an empty list.
 
-:custom: Set custom command line attributes on the node process via the capsule launcher
+:custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 
-        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified in the fat jar, but can be overriden
-                  from the command line. See :ref:`setting_jvm_args` for details on arguments precedence.
+        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified from ``corda.jar``, but can be
+                  overriden from the command line. See :ref:`setting_jvm_args` for examples and details on the precedence of the different
+                  approaches to settings arguments.
 
 Examples
 --------
