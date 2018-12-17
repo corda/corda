@@ -101,6 +101,12 @@ The available config fields are listed below.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
+:messagingServerExternal: If ``messagingServerAddress`` is specified the default assumption is that the artemis broker is running externally.
+     Setting this to ``false`` overrides this behaviour and runs the artemis internally to the node, but bound to the address specified in ``messagingServerAddress``.
+     This allows the address and port advertised in ``p2pAddress`` to differ from the local binding,
+     especially if there is external remapping by firewalls, load balancers , or routing rules. Note that ``detectPublicIp`` should be set to ``false`` to ensure
+     that no translation of the ``p2pAddress`` occurs before it is sent to the network map.
+
 :p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
