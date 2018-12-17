@@ -50,16 +50,26 @@ Target versioning is one of the mechanisms we have to keep the platform evolving
 being bug-for-bug compatible with old versions. When no apps are loaded that target old versions, any emulations of older bugs or problems
 can be disabled (in Corda 4, an example of this is the old FinalityFlow handler that would accept any transactions into the vault, context free).
 
-Publishing versions in your JAR manifest
-----------------------------------------
+Publishing versions in your JAR manifests
+-----------------------------------------
 
-In your ``build.gradle`` file, add a block like this::
+A well structured CorDapp should be split into two separate modules:
+
+1. A contracts jar, that contains your states and contract logic.
+2. A workflows jar, that contains your flows, services and other support libraries.
+
+The reason for this split is that the contract JAR will be attached to transactions and sent around the network, because this code is what
+defines the data structures and smart contract logic all nodes will validate. If the rest of your app is a part of that same JAR, it'll get
+sent around the network too even though it's not needed and will never be used. By splitting your app into a contracts JAR and a workflows
+JAR that depends on the contracts JAR, this problem is avoided.
+
+In the ``build.gradle`` file for your contract module, add a block like this::
 
     cordapp {
         targetPlatformVersion 5
         minimumPlatformVersion 4
         contract {
-            name "MegaApp"
+            name "MegaApp Contracts"
             vendor "MegaCorp"
             license "MegaLicense"
             versionId 1
@@ -68,5 +78,22 @@ In your ``build.gradle`` file, add a block like this::
 
 This will put the necessary entries into your JAR manifest to set both platform version numbers. If they aren't specified, both default to 1.
 Your app can itself has a version number, which should always increment and must also always be an integer.
+
+And in the ``build.gradle`` file for your workflows jar, add a block like this::
+
+    cordapp {
+        targetPlatformVersion 5
+        minimumPlatformVersion 4
+        workflow {
+            name "MegaApp"
+            vendor "MegaCorp"
+            license "MegaLicense"
+            versionId 1
+        }
+    }
+
+It's entirely expected and reasonable to have an open source contracts module and a proprietary workflow module - the latter may contain
+sophisticated or proprietary business logic, machine learning models, even user interface code. There's nothing that restricts it to just
+being Corda flows or services.
 
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
