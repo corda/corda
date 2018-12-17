@@ -73,13 +73,9 @@ open class TransactionBuilder @JvmOverloads constructor(
     }
 
     protected var references: MutableList<StateRef> = arrayListOf()
-        private set(value) {
-            field = value
-        }
+        private set
     protected var serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
-        private set(value) {
-            field = value
-        }
+        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
