@@ -111,14 +111,15 @@ The available config fields are listed below.
 :additionalP2PAddresses: An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
     Nodes can use this configuration option to advertise HA endpoints and aliases to external parties. If not specified the default value is an empty list.
 
-:flowTimeout: When a flow implementing the ``TimedFlow`` interface and setting the ``isTimeoutEnabled`` flag does not complete in time,
-    it is restarted from the initial checkpoint. Currently only used for notarisation requests with clustered notaries: if a notary
-    replica dies while processing a notarisation request, the client flow eventually times out and gets restarted. On restart the request is
-    resent to a different notary replica in a round-robin fashion (assuming the notary is clustered). Note that the flow will keep
-    retrying forever.
+:flowTimeout: When a flow implementing the ``TimedFlow`` interface and setting the ``isTimeoutEnabled`` flag does not complete within a
+    defined elapsed time, it is restarted from the initial checkpoint. Currently only used for notarisation requests with clustered
+    notaries: if a notary cluster member dies while processing a notarisation request, the client flow eventually times out and gets
+    restarted. On restart the request is resent to a different notary cluster member in a round-robin fashion. Note that the flow will
+    keep retrying forever.
 
         :timeout: The initial flow timeout period, e.g. `30 seconds`.
-        :maxRestartCount: The number of retries the back-off time keeps growing for. Afterwards, it will stay at the latest value.
+        :maxRestartCount: The number of retries the back-off time keeps growing for. For subsequent retries, the timeout value will remain
+                 constant.
         :backoffBase: The base of the exponential backoff, `t_{wait} = timeout * backoffBase^{retryCount}`.
 
 :rpcAddress: (Deprecated) The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
