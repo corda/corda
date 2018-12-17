@@ -10,7 +10,6 @@ import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.unwrap
 import net.corda.stubs.WithText
 import net.corda.testing.core.singleIdentity
@@ -23,17 +22,17 @@ import org.junit.Ignore
 import org.junit.Test
 import java.security.PublicKey
 
-class TransactionAttachmentsTests {
+class ContractAttachmentTests {
     // TODO un-ignore after fixing the driver in terms of classpath for external nodes.
     @Ignore("This test always passes because the driver adds the classpath of the running test to out of process nodes.")
     @Test
     fun `state inheriting from type in another CorDapp works in terms of attachments resolution`() {
-        val cordapp1 = cordappForClasses(MessageContract.MessageState::class.java, Initiator::class.java, Responder::class.java, MessageContract::class.java, MessageContract.Commands::class.java, MessageContract.Commands.Create::class.java)
-        val cordapp2 = cordappForClasses(WithText::class.java)
+        val messageCordapp = cordappForClasses(MessageContract::class.java, Initiator::class.java, Responder::class.java)
+        val dependencyCordapp = cordappForClasses(WithText::class.java)
 
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptyList())) {
-            val nodeA = startNode(NodeParameters(additionalCordapps = setOf(cordapp1, cordapp2))).getOrThrow()
-            val nodeB = startNode(NodeParameters(additionalCordapps = setOf(cordapp1, cordapp2))).getOrThrow()
+            val nodeA = startNode(NodeParameters(additionalCordapps = setOf(messageCordapp, dependencyCordapp))).getOrThrow()
+            val nodeB = startNode(NodeParameters(additionalCordapps = setOf(messageCordapp, dependencyCordapp))).getOrThrow()
 
             val message = "Hello hello, is there anybody in there?"
             assertThatCode {
@@ -48,7 +47,7 @@ class TransactionAttachmentsTests {
         @Suspendable
         override fun call() {
             val outputState = MessageContract.MessageState(message, listOf(ourIdentity, target))
-            val builder = TransactionBuilder(notary).addOutputState(outputState, MessageContract.PROGRAM_ID).addCommand(createMessage(ourIdentity.owningKey))
+            val builder = TransactionBuilder(notary).addOutputState(outputState, MessageContract.CONTRACT_NAME).addCommand(createMessage(ourIdentity.owningKey))
             val signedTx = serviceHub.signInitialTransaction(builder)
             val session = initiateFlow(target)
             val signedByAllTx = session.sendAndReceive<SignedTransaction>(signedTx).unwrap { it }
@@ -81,19 +80,16 @@ class TransactionAttachmentsTests {
         }
 
         override fun verify(tx: LedgerTransaction) {
-            logger.warn("MICHELE - VERIFYING!")
             val command = tx.commandsOfType<MessageContract.Commands.Create>().singleOrNull()
             require(command != null) { "Create command must be there" }
             val state: WithText = tx.outputsOfType<MessageContract.MessageState>().single()
             require(state.text.isNotEmpty()) { "Message text cannot be empty!" }
-            logger.warn("MICHELE - VERIFIED!")
         }
 
         override val text: String = "Contract!"
 
         companion object {
-            const val PROGRAM_ID: ContractClassName = "net.corda.node.TransactionAttachmentsTests\$MessageContract"
-            val logger = loggerFor<MessageContract>()
+            const val CONTRACT_NAME: ContractClassName = "net.corda.node.TransactionAttachmentsTests\$MessageContract"
         }
     }
 }
