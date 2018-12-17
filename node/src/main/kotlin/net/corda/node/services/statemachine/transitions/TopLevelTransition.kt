@@ -93,13 +93,10 @@ class TopLevelTransition(
 
     private fun enterSubFlowTransition(event: Event.EnterSubFlow): TransitionResult {
         return builder {
-            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion)
+            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion, event.retryableTimedFlow)
             when (subFlow) {
                 is Try.Success -> {
-                    val containsTimedSubFlows = currentState.checkpoint.subFlowStack.any {
-                        TimedFlow::class.java.isAssignableFrom(it.flowClass)
-                    }
-                    val isCurrentSubFlowTimed = TimedFlow::class.java.isAssignableFrom(event.subFlowClass)
+                    val containsTimedSubflow = containsTimedFlows(currentState.checkpoint.subFlowStack)
                     currentState = currentState.copy(
                             checkpoint = currentState.checkpoint.copy(
                                     subFlowStack = currentState.checkpoint.subFlowStack + subFlow.value
@@ -107,7 +104,7 @@ class TopLevelTransition(
                     )
                     // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
                     // been scheduled already.
-                    if (isCurrentSubFlowTimed && !containsTimedSubFlows) {
+                    if (event.retryableTimedFlow && !containsTimedSubflow) {
                         actions.add(Action.ScheduleFlowTimeout(currentState.flowLogic.runId))
                     }
                 }
@@ -125,8 +122,7 @@ class TopLevelTransition(
             if (checkpoint.subFlowStack.isEmpty()) {
                 freshErrorTransition(UnexpectedEventInState())
             } else {
-                val lastSubFlowClass = checkpoint.subFlowStack.last().flowClass
-                val isLastSubFlowTimed = TimedFlow::class.java.isAssignableFrom(lastSubFlowClass)
+                val isLastSubFlowTimed = checkpoint.subFlowStack.last().retryableTimedFlow
                 val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
@@ -142,7 +138,7 @@ class TopLevelTransition(
     }
 
     private fun containsTimedFlows(subFlowStack: List<SubFlow>): Boolean {
-        return subFlowStack.any { TimedFlow::class.java.isAssignableFrom(it.flowClass) }
+        return subFlowStack.any { it.retryableTimedFlow }
     }
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {

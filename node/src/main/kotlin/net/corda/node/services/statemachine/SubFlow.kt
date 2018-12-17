@@ -16,10 +16,14 @@ sealed class SubFlow {
     // Version of the code.
     abstract val subFlowVersion: SubFlowVersion
 
+    abstract val retryableTimedFlow: Boolean
+
     /**
      * An inlined subflow.
      */
-    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion) : SubFlow()
+    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion) : SubFlow() {
+        override val retryableTimedFlow: Boolean = false
+    }
 
     /**
      * An initiating subflow.
@@ -32,11 +36,12 @@ sealed class SubFlow {
             override val flowClass: Class<FlowLogic<*>>,
             val classToInitiateWith: Class<in FlowLogic<*>>,
             val flowInfo: FlowInfo,
-            override val subFlowVersion: SubFlowVersion
+            override val subFlowVersion: SubFlowVersion,
+            override val retryableTimedFlow: Boolean
     ) : SubFlow()
 
     companion object {
-        fun create(flowClass: Class<FlowLogic<*>>, subFlowVersion: SubFlowVersion): Try<SubFlow> {
+        fun create(flowClass: Class<FlowLogic<*>>, subFlowVersion: SubFlowVersion, retryableTimedFlow: Boolean): Try<SubFlow> {
             // Are we an InitiatingFlow?
             val initiatingAnnotations = getInitiatingFlowAnnotations(flowClass)
             return when (initiatingAnnotations.size) {
@@ -46,7 +51,7 @@ sealed class SubFlow {
                 1 -> {
                     val initiatingAnnotation = initiatingAnnotations[0]
                     val flowContext = FlowInfo(initiatingAnnotation.second.version, flowClass.appName)
-                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion))
+                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion, retryableTimedFlow))
                 }
                 else -> {
                     Try.Failure(IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated " +

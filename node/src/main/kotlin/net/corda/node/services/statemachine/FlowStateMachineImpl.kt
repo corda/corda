@@ -273,7 +273,8 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 Event.EnterSubFlow(subFlow.javaClass,
                         createSubFlowVersion(
                                 serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
-                        )
+                        ),
+                        (subFlow as? TimedFlow)?.canBeRestarted ?: false
                 ),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true

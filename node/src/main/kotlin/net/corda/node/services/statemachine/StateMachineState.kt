@@ -69,9 +69,10 @@ data class Checkpoint(
                 flowLogicClass: Class<FlowLogic<*>>,
                 frozenFlowLogic: SerializedBytes<FlowLogic<*>>,
                 ourIdentity: Party,
-                subFlowVersion: SubFlowVersion
+                subFlowVersion: SubFlowVersion,
+                retryableTimedFlow: Boolean
         ): Try<Checkpoint> {
-            return SubFlow.create(flowLogicClass, subFlowVersion).map { topLevelSubFlow ->
+            return SubFlow.create(flowLogicClass, subFlowVersion, retryableTimedFlow).map { topLevelSubFlow ->
                 Checkpoint(
                         invocationContext = invocationContext,
                         ourIdentity = ourIdentity,

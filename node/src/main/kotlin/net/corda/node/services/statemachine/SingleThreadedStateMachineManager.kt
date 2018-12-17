@@ -545,7 +545,15 @@ class SingleThreadedStateMachineManager(
 
         val flowCorDappVersion = createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(
+                invocationContext,
+                flowStart,
+                flowLogic.javaClass,
+                frozenFlowLogic,
+                ourIdentity,
+                flowCorDappVersion,
+                (flowLogic as? TimedFlow)?.canBeRestarted ?: false
+        ).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,

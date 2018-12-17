@@ -80,7 +80,7 @@ sealed class Event {
      *
      * @param subFlowClass the [Class] of the subflow, to be used to determine whether it's Initiating or inlined.
      */
-    data class EnterSubFlow(val subFlowClass: Class<FlowLogic<*>>, val subFlowVersion: SubFlowVersion ) : Event()
+    data class EnterSubFlow(val subFlowClass: Class<FlowLogic<*>>, val subFlowVersion: SubFlowVersion, val retryableTimedFlow: Boolean) : Event()
 
     /**
      * Signal the leaving of a subflow.
