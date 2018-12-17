@@ -17,6 +17,7 @@ import com.spotify.docker.client.messages.RegistryAuth
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.stream.Collectors
 
 evaluationDependsOn(":node:capsule")
 evaluationDependsOn(":tools:dbmigration")
@@ -71,24 +72,58 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
 final String suffix = project.version.toString().toLowerCase().contains("snapshot") ? runTime : "RELEASE"
 
-final Iterable<GString> zuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-zulu-${project.version.toString().toLowerCase()}:latest"].asList()
-final Iterable<GString> alpineZuluBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-alpine-zulu-${project.version.toString().toLowerCase()}:latest"].asList()
-final Iterable<GString> correttoBuildTags = ["entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"].asList()
-final Iterable<GString> firewallTags = ["entdocker.corda.r3cev.com/corda-firewall-enterprise-corretto-${project.version.toString().toLowerCase()}:${suffix}", "entdocker.corda.r3cev.com/corda-firewall-enterprise-corretto-${project.version.toString().toLowerCase()}:latest"].asList()
+final String nodeImageBase = "entdocker.corda.r3cev.com/corda-enterprise"
+final String firewallImageBase = "entdocker.corda.r3cev.com/corda-firewall"
+
+enum BASE {
+    ALPINE_ZULU("alpine-zulu"),
+    UBUNTU_ZULU("ubunut-zulu"),
+    AL_CORRETTO("corretto"),
+    OFFICIAL("")
+    private String knownAs
+
+    String versionString(String baseTag, String version) {
+        return "${baseTag}-${knownAs}" +
+                "${knownAs.isEmpty() ? "" : "-"}" +
+                "${version}"
+    }
+
+    BASE(String knownAs) {
+        this.knownAs = knownAs
+    }
+}
+
+static Iterable<String> buildTags(String imageName, String suffix) {
+    return [suffix, "latest"].stream().map({ toAppend -> "${imageName}:${toAppend}".toString() }).collect(Collectors.toList())
+}
+
+static List<String> buildImages(String baseTag, String suffix, String version, Map<BASE, Tuple2<java.nio.file.Path, String>> imagesToBuild) {
+    final List<String> tagsToScan = new ArrayList()
+    imagesToBuild.forEach({ base, filePair ->
+        java.nio.file.Path buildDir = filePair.first
+        String dockerFile = filePair.second
+        String imageName = base.versionString(baseTag, version)
+                Iterable<String> tags = buildTags(imageName, suffix)
+        buildImage(buildDir, dockerFile, tags)
+        tagsToScan.addAll(tags)
+    })
+    return tagsToScan
+}
+
 
 static buildImage(java.nio.file.Path dir, String dockerFile, Iterable<CharSequence> tags) {
     println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
-    def builtImageId = docker.build(dir, null, dockerFile, new ProgressHandler(){
+    def builtImageId = docker.build(dir, null, dockerFile, new ProgressHandler() {
         @Override
         void progress(ProgressMessage message) throws DockerException {
-                if (message.error() != null){
-                    throw new RuntimeException(message.error())
-                }else if (message.stream() != null){
-                    print(message.stream())
-                }else if (message.progress() != null){
-                    print(message.progress())
-                }
+            if (message.error() != null) {
+                throw new RuntimeException(message.error())
+            } else if (message.stream() != null) {
+                print(message.stream())
+            } else if (message.progress() != null) {
+                print(message.progress())
+            }
         }
     })
     for (String tag : tags) {
@@ -106,29 +141,38 @@ static pushImages(Iterable<CharSequence> tags) {
 }
 
 def dockerTempDir = new File(project.buildDir, "docker-temp")
+final List<String> tagsBuilt = new ArrayList<String>()
 
-
-task buildOfficialZuluDockerImage(dependsOn: [buildDockerFolder]) {
+task buildAllImages(dependsOn: [buildDockerFolder]) {
     doLast {
-        buildImage(dockerTempDir.toPath(), "DockerfileUbuntuZulu", zuluBuildTags)
+        def dockerDirectory = dockerTempDir.toPath()
+        Map<BASE, Tuple2<java.nio.file.Path, String>> nodeTaskMap = [
+                (BASE.ALPINE_ZULU): new Tuple2<>(dockerDirectory, "DockerfileAlpineZulu"),
+                (BASE.UBUNTU_ZULU): new Tuple2<>(dockerDirectory, "DockerfileUbuntuZulu"),
+                (BASE.AL_CORRETTO): new Tuple2<>(dockerDirectory, "DockerfileCorretto"),
+                (BASE.OFFICIAL)   : new Tuple2<>(dockerDirectory, "DockerfileCorretto")
+        ]
+
+        Map<BASE, Tuple2<java.nio.file.Path, String>> firewallTaskMap = [
+                (BASE.AL_CORRETTO): new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto"),
+                (BASE.OFFICIAL)   : new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto")
+        ]
+
+        tagsBuilt.addAll(buildImages(nodeImageBase, suffix, project.version.toString().toLowerCase(), nodeTaskMap))
+        tagsBuilt.addAll(buildImages(firewallImageBase, suffix, project.version.toString().toLowerCase(), firewallTaskMap))
+
     }
 }
 
-task buildOfficialAplineZuluDockerImage(dependsOn: [buildDockerFolder]) {
+task scanAllImages(dependsOn: [buildAllImages]) {
     doLast {
-        buildImage(dockerTempDir.toPath(), "DockerfileAlpineZulu", alpineZuluBuildTags)
+
     }
 }
 
-task buildOfficialCorrettoDockerImage(dependsOn: [buildDockerFolder]) {
+task pushAllImages(dependsOn: [buildAllImages]) {
     doLast {
-        buildImage(dockerTempDir.toPath(), "DockerfileCorretto", correttoBuildTags)
-    }
-}
-
-task buildOfficialCorrettoFirewallDockerImage(dependsOn: [buildDockerFolder]) {
-    doLast {
-        buildImage(dockerTempDir.toPath(), "FirewallDockerfileCorretto",firewallTags)
+        pushImages(tagsBuilt)
     }
 }
 
