@@ -43,10 +43,15 @@ This is used by the Corda Gradle build plugin to populate your app JAR with usef
         targetPlatformVersion 4
         minimumPlatformVersion 4
         contract {
-            name "MegaApp"
+            name "MegaApp Contracts"
             vendor "MegaCorp"
-            license "A really expensive license"
+            license "A liberal, open source license"
             versionId 1
+        }
+        workflow {
+            name "MegaApp flows"
+            vendor "MegaCorp"
+            license "A really expensive proprietary license"
         }
     }
 
@@ -54,6 +59,12 @@ Name and vendor can be set to any string you like, they don't have to be Corda i
 introduced in Corda 4. Learn more by reading :doc:`versioning`. Setting a target version of 4 disables workarounds for various
 bugs that may exist in your app, so by doing this you are promising that you have thoroughly tested your app on the new version.
 Using a high target version is a good idea because some features and improvements are only available to apps that opt in.
+
+The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into two separate JARs/modules,
+one that contains on-ledger validation code like states and contracts, and one for the rest (called by convention the "workflows"
+module although it can contain a lot more than just flows: services would also go here, for instance). For simplicity, here we
+use one JAR for both, but this is in general an anti-pattern and can result in your flow logic code being sent over the network to
+arbitrary third party peers, even though they don't need it.
 
 Step 3. Upgrade your use of FinalityFlow
 ----------------------------------------
