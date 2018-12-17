@@ -46,6 +46,7 @@ import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
+import net.corda.node.utilities.isRestartableTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
@@ -552,7 +553,7 @@ class SingleThreadedStateMachineManager(
                 frozenFlowLogic,
                 ourIdentity,
                 flowCorDappVersion,
-                (flowLogic as? TimedFlow)?.canBeRestarted ?: false
+                flowLogic.isRestartableTimedFlow()
         ).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
@@ -770,7 +771,7 @@ class SingleThreadedStateMachineManager(
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
                 val flowLogic = flow.fiber.logic
-                if ((flowLogic as? TimedFlow)?.canBeRestarted ?: false) scheduleTimeout(id)
+                if (flowLogic.isRestartableTimedFlow()) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {

@@ -24,6 +24,7 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.logging.pushToLoggingContext
 import net.corda.node.services.statemachine.transitions.FlowContinuation
 import net.corda.node.services.statemachine.transitions.StateMachine
+import net.corda.node.utilities.isRestartableTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
@@ -274,7 +275,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                         createSubFlowVersion(
                                 serviceHub.cordappProvider.getCordappForFlow(subFlow), serviceHub.myInfo.platformVersion
                         ),
-                        (subFlow as? TimedFlow)?.canBeRestarted ?: false
+                        subFlow.isRestartableTimedFlow()
                 ),
                 isDbTransactionOpenOnEntry = true,
                 isDbTransactionOpenOnExit = true

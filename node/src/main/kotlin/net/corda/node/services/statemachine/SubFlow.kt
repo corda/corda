@@ -21,9 +21,7 @@ sealed class SubFlow {
     /**
      * An inlined subflow.
      */
-    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion) : SubFlow() {
-        override val retryableTimedFlow: Boolean = false
-    }
+    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion, override val retryableTimedFlow: Boolean) : SubFlow()
 
     /**
      * An initiating subflow.
@@ -46,7 +44,7 @@ sealed class SubFlow {
             val initiatingAnnotations = getInitiatingFlowAnnotations(flowClass)
             return when (initiatingAnnotations.size) {
                 0 -> {
-                    Try.Success(Inlined(flowClass, subFlowVersion))
+                    Try.Success(Inlined(flowClass, subFlowVersion, retryableTimedFlow))
                 }
                 1 -> {
                     val initiatingAnnotation = initiatingAnnotations[0]
