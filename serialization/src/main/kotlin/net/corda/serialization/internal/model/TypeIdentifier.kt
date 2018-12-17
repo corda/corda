@@ -225,7 +225,10 @@ internal fun Type.resolveAgainst(context: Type): Type = when (this) {
     is WildcardType -> this.upperBound
     is ReconstitutedParameterizedType -> this
     is ParameterizedType,
-    is TypeVariable<*> -> TypeToken.of(context).resolveType(this).type.upperBound
+    is TypeVariable<*> -> {
+        val resolved = TypeToken.of(context).resolveType(this).type.upperBound
+        if (resolved !is TypeVariable<*> || resolved == this) resolved else resolved.resolveAgainst(context)
+    }
     else -> this
 }
 

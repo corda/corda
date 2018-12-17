@@ -6,7 +6,7 @@ import org.hibernate.Session
 import org.hibernate.Transaction
 import rx.subjects.PublishSubject
 import java.sql.Connection
-import java.util.*
+import java.util.UUID
 import javax.persistence.EntityManager
 
 fun currentDBSession(): Session = contextTransaction.session
@@ -77,6 +77,7 @@ class DatabaseTransaction(
 
     internal val boundary = PublishSubject.create<CordaPersistence.Boundary>()
     private var committed = false
+    private var closed = false
 
     fun commit() {
         if (sessionDelegate.isInitialized()) {
@@ -106,7 +107,10 @@ class DatabaseTransaction(
         }
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
-            boundary.onNext(CordaPersistence.Boundary(id, committed))
+            synchronized(this) {
+                closed = true
+                boundary.onNext(CordaPersistence.Boundary(id, committed))
+            }
         }
     }
 
@@ -116,6 +120,11 @@ class DatabaseTransaction(
 
     fun onRollback(callback: () -> Unit) {
         boundary.filter { !it.success }.subscribe { callback() }
+    }
+
+    @Synchronized
+    fun onClose(callback: () -> Unit) {
+        if (closed) callback() else boundary.subscribe { callback() }
     }
 }
 

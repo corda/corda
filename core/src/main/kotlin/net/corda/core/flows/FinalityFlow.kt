@@ -5,7 +5,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
@@ -82,7 +82,7 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
         if (sessions == null) {
-            require(CordappInfoResolver.currentTargetVersion < 4) {
+            require(CordappResolver.currentTargetVersion < 4) {
                 "A flow session for each external participant to the transaction must be provided. If you wish to continue " +
                         "using this insecure API then specify a target platform version of less than 4 for your CorDapp."
             }

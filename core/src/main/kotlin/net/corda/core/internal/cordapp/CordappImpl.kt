@@ -2,9 +2,10 @@ package net.corda.core.internal.cordapp
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappInvalidVersionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.NotaryService
 import net.corda.core.internal.toPath
 import net.corda.core.schemas.MappedSchema
@@ -12,6 +13,7 @@ import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import java.net.URL
+import java.nio.file.Paths
 
 @DeleteForDJVM
 data class CordappImpl(
@@ -28,10 +30,19 @@ data class CordappImpl(
         override val jarPath: URL,
         override val info: Cordapp.Info,
         override val jarHash: SecureHash.SHA256,
+        override val minimumPlatformVersion: Int,
+        override val targetPlatformVersion: Int,
         val notaryService: Class<out NotaryService>?,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
-        val isLoaded: Boolean = true) : Cordapp {
+        val isLoaded: Boolean = true
+) : Cordapp {
     override val name: String = jarName(jarPath)
+
+    // TODO: Also add [SchedulableFlow] as a Cordapp class
+    override val cordappClasses: List<String> = run {
+        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
+        classList.mapNotNull { it?.name } + contractClassNames
+    }
 
     companion object {
         fun jarName(url: URL): String = url.toPath().fileName.toString().removeSuffix(".jar")
@@ -54,30 +65,26 @@ data class CordappImpl(
         const val DEFAULT_CORDAPP_VERSION = 1
 
         /** used for CorDapps that do not explicitly define attributes */
-        val UNKNOWN = Cordapp.Info.Default(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE,1, 1)
+        val UNKNOWN_INFO = Cordapp.Info.Default(UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE, UNKNOWN_VALUE)
 
-        /** Helper method for version identifier parsing */
-        fun parseVersion(versionStr: String?, attributeName: String): Int {
-            if (versionStr == null)
-                throw CordappInvalidVersionException("Target versionId attribute $attributeName not specified. Please specify a whole number starting from 1.")
-            return try {
-                val version = versionStr.toInt()
-                if (version < 1) {
-                    throw CordappInvalidVersionException("Target versionId ($versionStr) for attribute $attributeName must not be smaller than 1.")
-                }
-                return version
-            } catch (e: NumberFormatException) {
-                throw CordappInvalidVersionException("Version identifier ($versionStr) for attribute $attributeName must be a whole number starting from 1.")
-            }
-        }
-    }
-    /**
-     * An exhaustive list of all classes relevant to the node within this CorDapp
-     *
-     * TODO: Also add [SchedulableFlow] as a Cordapp class
-     */
-    override val cordappClasses: List<String> = run {
-        val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
-        classList.mapNotNull { it?.name } + contractClassNames
+        @VisibleForTesting
+        val TEST_INSTANCE = CordappImpl(
+                contractClassNames = emptyList(),
+                initiatedFlows = emptyList(),
+                rpcFlows = emptyList(),
+                serviceFlows = emptyList(),
+                schedulableFlows = emptyList(),
+                services = emptyList(),
+                serializationWhitelists = emptyList(),
+                serializationCustomSerializers = emptyList(),
+                customSchemas = emptySet(),
+                jarPath = Paths.get("").toUri().toURL(),
+                info = CordappImpl.UNKNOWN_INFO,
+                allFlows = emptyList(),
+                jarHash = SecureHash.allOnesHash,
+                minimumPlatformVersion = 1,
+                targetPlatformVersion = PLATFORM_VERSION,
+                notaryService = null
+        )
     }
 }
