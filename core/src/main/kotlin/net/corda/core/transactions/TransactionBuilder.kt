@@ -54,6 +54,10 @@ open class TransactionBuilder @JvmOverloads constructor(
 ) {
     private companion object {
         private val log = contextLogger()
+
+        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
+
+        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
     }
 
     constructor(
@@ -65,16 +69,16 @@ open class TransactionBuilder @JvmOverloads constructor(
             commands: MutableList<Command<*>> = arrayListOf(),
             window: TimeWindow? = null,
             privacySalt: PrivacySalt = PrivacySalt(),
-            references: MutableList<StateRef> = arrayListOf(),
-            serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+            references: MutableList<StateRef> = defaultReferencesList(),
+            serviceHub: ServiceHub? = defaultServiceHub()
     ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
         this.references = references
         this.serviceHub = serviceHub
     }
 
-    protected var references: MutableList<StateRef> = arrayListOf()
+    protected var references: MutableList<StateRef> = defaultReferencesList()
         private set
-    protected var serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+    protected var serviceHub: ServiceHub? = defaultServiceHub()
         private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
