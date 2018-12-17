@@ -257,13 +257,13 @@ Interacting with the example CorDapp
 
 Via HTTP
 ~~~~~~~~
-The nodes' webservers are run via separate, client-side Java Springboot servers that connect to the node via RPC which are configured inside the clients module
+The nodes' webservers are run via separate, client-side Java Springboot servers that connect to the node via a proxy RPC connection object. The code for these exists within the clients module
 
 * PartyA: ``localhost:8080``
 * PartyB: ``localhost:8081``
 * PartyC: ``localhost:8082``
 
-These ports are defined in each nodes runPartyServer gradle task in ``clients/build.gradle`` and can be started by running ``./gradlew runPartyAServer``, ``./gradlew runPartyBServer`` and ``./gradlew runPartyCServer`` in separate terminal windows within the clients directory.
+These ports are defined in each nodes runPartyServer gradle task in ``clients/build.gradle``. Each node corresponding server can be started by running ``./gradlew runPartyAServer``, ``./gradlew runPartyBServer`` and ``./gradlew runPartyCServer`` in separate terminal windows within the clients directory.
 
 
 Each node webserver exposes the following endpoints:
@@ -284,7 +284,7 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X POST 'http://localhost:8080/spring/api/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X POST 'http://localhost:8080/spring/api/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US' -H "Content-Type: application/www-xform"
 
 Note that both PartyA's port number (``8080``) and PartyB are referenced in the POST request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
