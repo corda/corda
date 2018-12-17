@@ -21,5 +21,5 @@ interface IdempotentFlow
  */
 // TODO: allow specifying retry settings per flow
 interface TimedFlow : IdempotentFlow {
-    val canBeRestarted: Boolean
+    val isTimeoutEnabled: Boolean
 }

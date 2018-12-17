@@ -16,12 +16,12 @@ sealed class SubFlow {
     // Version of the code.
     abstract val subFlowVersion: SubFlowVersion
 
-    abstract val retryableTimedFlow: Boolean
+    abstract val isEnabledTimedFlow: Boolean
 
     /**
      * An inlined subflow.
      */
-    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion, override val retryableTimedFlow: Boolean) : SubFlow()
+    data class Inlined(override val flowClass: Class<FlowLogic<*>>, override val subFlowVersion: SubFlowVersion, override val isEnabledTimedFlow: Boolean) : SubFlow()
 
     /**
      * An initiating subflow.
@@ -35,21 +35,21 @@ sealed class SubFlow {
             val classToInitiateWith: Class<in FlowLogic<*>>,
             val flowInfo: FlowInfo,
             override val subFlowVersion: SubFlowVersion,
-            override val retryableTimedFlow: Boolean
+            override val isEnabledTimedFlow: Boolean
     ) : SubFlow()
 
     companion object {
-        fun create(flowClass: Class<FlowLogic<*>>, subFlowVersion: SubFlowVersion, retryableTimedFlow: Boolean): Try<SubFlow> {
+        fun create(flowClass: Class<FlowLogic<*>>, subFlowVersion: SubFlowVersion, isEnabledTimedFlow: Boolean): Try<SubFlow> {
             // Are we an InitiatingFlow?
             val initiatingAnnotations = getInitiatingFlowAnnotations(flowClass)
             return when (initiatingAnnotations.size) {
                 0 -> {
-                    Try.Success(Inlined(flowClass, subFlowVersion, retryableTimedFlow))
+                    Try.Success(Inlined(flowClass, subFlowVersion, isEnabledTimedFlow))
                 }
                 1 -> {
                     val initiatingAnnotation = initiatingAnnotations[0]
                     val flowContext = FlowInfo(initiatingAnnotation.second.version, flowClass.appName)
-                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion, retryableTimedFlow))
+                    Try.Success(Initiating(flowClass, initiatingAnnotation.first, flowContext, subFlowVersion, isEnabledTimedFlow))
                 }
                 else -> {
                     Try.Failure(IllegalArgumentException("${InitiatingFlow::class.java.name} can only be annotated " +

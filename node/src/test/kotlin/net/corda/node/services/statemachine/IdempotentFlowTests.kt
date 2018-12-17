@@ -66,7 +66,7 @@ class IdempotentFlowTests {
     }
 
     private class TimedSubflow : FlowLogic<Unit>(), TimedFlow {
-        override val canBeRestarted: Boolean = true
+        override val isTimeoutEnabled: Boolean = true
 
         @Suspendable
         override fun call() {

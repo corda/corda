@@ -15,7 +15,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
@@ -46,7 +45,7 @@ import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
-import net.corda.node.utilities.isRestartableTimedFlow
+import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
@@ -553,7 +552,7 @@ class SingleThreadedStateMachineManager(
                 frozenFlowLogic,
                 ourIdentity,
                 flowCorDappVersion,
-                flowLogic.isRestartableTimedFlow()
+                flowLogic.isEnabledTimedFlow()
         ).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
@@ -771,7 +770,7 @@ class SingleThreadedStateMachineManager(
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
                 val flowLogic = flow.fiber.logic
-                if (flowLogic.isRestartableTimedFlow()) scheduleTimeout(id)
+                if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {

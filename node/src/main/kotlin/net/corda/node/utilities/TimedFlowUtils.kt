@@ -7,6 +7,6 @@ import net.corda.core.internal.TimedFlow
  * Check if a flow logic is a [TimedFlow] and if yes whether it actually can be restarted. Only flows that match both criteria should time
  * out and get restarted.
  */
-internal fun FlowLogic<*>.isRestartableTimedFlow(): Boolean {
-    return (this as? TimedFlow)?.canBeRestarted ?: false
+internal fun FlowLogic<*>.isEnabledTimedFlow(): Boolean {
+    return (this as? TimedFlow)?.isTimeoutEnabled ?: false
 }

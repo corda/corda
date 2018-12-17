@@ -2,7 +2,6 @@ package net.corda.node.services.statemachine.transitions
 
 import net.corda.core.flows.InitiatingFlow
 import net.corda.core.internal.FlowIORequest
-import net.corda.core.internal.TimedFlow
 import net.corda.core.utilities.Try
 import net.corda.node.services.statemachine.*
 
@@ -93,7 +92,7 @@ class TopLevelTransition(
 
     private fun enterSubFlowTransition(event: Event.EnterSubFlow): TransitionResult {
         return builder {
-            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion, event.retryableTimedFlow)
+            val subFlow = SubFlow.create(event.subFlowClass, event.subFlowVersion, event.isEnabledTimedFlow)
             when (subFlow) {
                 is Try.Success -> {
                     val containsTimedSubflow = containsTimedFlows(currentState.checkpoint.subFlowStack)
@@ -104,7 +103,7 @@ class TopLevelTransition(
                     )
                     // We don't schedule a timeout if there already is a timed subflow on the stack - a timeout had
                     // been scheduled already.
-                    if (event.retryableTimedFlow && !containsTimedSubflow) {
+                    if (event.isEnabledTimedFlow && !containsTimedSubflow) {
                         actions.add(Action.ScheduleFlowTimeout(currentState.flowLogic.runId))
                     }
                 }
@@ -122,7 +121,7 @@ class TopLevelTransition(
             if (checkpoint.subFlowStack.isEmpty()) {
                 freshErrorTransition(UnexpectedEventInState())
             } else {
-                val isLastSubFlowTimed = checkpoint.subFlowStack.last().retryableTimedFlow
+                val isLastSubFlowTimed = checkpoint.subFlowStack.last().isEnabledTimedFlow
                 val newSubFlowStack = checkpoint.subFlowStack.dropLast(1)
                 currentState = currentState.copy(
                         checkpoint = checkpoint.copy(
@@ -138,7 +137,7 @@ class TopLevelTransition(
     }
 
     private fun containsTimedFlows(subFlowStack: List<SubFlow>): Boolean {
-        return subFlowStack.any { it.retryableTimedFlow }
+        return subFlowStack.any { it.isEnabledTimedFlow }
     }
 
     private fun suspendTransition(event: Event.Suspend): TransitionResult {

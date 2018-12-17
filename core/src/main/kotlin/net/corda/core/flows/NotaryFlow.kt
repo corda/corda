@@ -48,7 +48,7 @@ class NotaryFlow {
             fun tracker() = ProgressTracker(REQUESTING, VALIDATING)
         }
 
-        override val canBeRestarted: Boolean
+        override val isTimeoutEnabled: Boolean
             get() {
                 val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
                 return serviceHub.networkMapCache.getNodesByLegalIdentityKey(notaryParty.owningKey).size > 1
