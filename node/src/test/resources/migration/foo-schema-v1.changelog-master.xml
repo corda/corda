@@ -2,7 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-    <changeSet author="R3.Corda" id="foos">
+    <changeSet author="R3.Corda" id="foos-1">
         <createTable tableName="foos">
             <column name="foo_id" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
@@ -11,6 +11,8 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="foos-2">
         <addPrimaryKey columnNames="foo_id" constraintName="foos_pkey" tableName="foos"/>
     </changeSet>
 </databaseChangeLog>

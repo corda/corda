@@ -32,6 +32,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -175,8 +176,10 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory()): CordaPersistence {
+    val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
+    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys)
+    persistence.startHikariPool(hikariProperties, databaseConfig, schemas)
     return persistence
 }
 

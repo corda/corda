@@ -112,15 +112,6 @@ finalised transaction. If the initiator is written in a backwards compatible way
 The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
 This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
 
-Cordapps database migration script
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For Cordapps with custom ``MappedSchema`` (having associated database tables for storing custom contract states, see :doc:`api-persistence`),
-Liquibase migration script is required when Corda node is running against H2.
-Before v4.0 Liquibase script was mandatory for all databases except H2.
-See (:doc:`database-management`) how to create a Liquibase database migration script.
-
-
 Upgrading from Corda Open Source
 --------------------------------
 

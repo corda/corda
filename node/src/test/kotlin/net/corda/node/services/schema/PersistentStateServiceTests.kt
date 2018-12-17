@@ -4,7 +4,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
@@ -49,8 +48,7 @@ class PersistentStateServiceTests {
     fun `test child objects are persisted`() {
         val testSchema = TestSchema
         val schemaService = object : SchemaService {
-            override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(testSchema to SchemaService.SchemaOptions(),
-                    CommonSchemaV1 to SchemaService.SchemaOptions())
+            override val schemaOptions: Map<MappedSchema, SchemaService.SchemaOptions> = mapOf(testSchema to SchemaService.SchemaOptions())
 
             override fun selectSchemas(state: ContractState): Iterable<MappedSchema> = setOf(testSchema)
 

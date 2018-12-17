@@ -810,7 +810,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        val schemas = schemaService.schemaOptions.keys
+        val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
+        val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
         database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader.appClassLoader)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
