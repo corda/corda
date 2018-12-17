@@ -3,14 +3,7 @@ package net.corda.nodeapi.internal
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.contracts.Command
-import net.corda.core.contracts.CommandData
-import net.corda.core.contracts.Contract
-import net.corda.core.contracts.ContractAttachment
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.PartyAndReference
-import net.corda.core.contracts.StateAndContract
-import net.corda.core.contracts.TypeOnlyCommandData
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
