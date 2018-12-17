@@ -157,9 +157,9 @@ class MessagingExecutor(
     private fun sendJob(job: Job.Send) {
         val mqAddress = resolver.resolveTargetToArtemisQueue(job.target)
         val artemisMessage = cordaToArtemisMessage(job.message, job.target)
-        log.trace {
+        log.debug {
             "Send to: $mqAddress topic: ${job.message.topic} " +
-                    "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId}"
+                    "sessionID: ${job.message.topic} id: ${job.message.uniqueMessageId} size: ${artemisMessage?.bodySize}"
         }
         producer.send(SimpleString(mqAddress), artemisMessage) {
             job.timer.stop()
@@ -201,7 +201,7 @@ class MessagingExecutor(
     }
 
     private fun acknowledgeJob(job: Job.Acknowledge) {
-        log.debug {
+        log.trace {
             val id = job.message.getStringProperty(HDR_DUPLICATE_DETECTION_ID)
             "Acking $id"
         }

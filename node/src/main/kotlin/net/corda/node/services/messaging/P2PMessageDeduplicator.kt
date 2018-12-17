@@ -4,6 +4,9 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.utilities.debug
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.trace
 import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -20,6 +23,13 @@ typealias SenderHashToSeqNo = Pair<String, Long?>
  * Encapsulate the de-duplication logic.
  */
 class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaPersistence) {
+    companion object {
+        private val log = loggerFor<P2PMessageDeduplicator>()
+
+        private fun formatMessageForLogging(msg: ReceivedMessage): String = "${msg.uniqueMessageId} sender=${msg.senderUUID} senderSequenceNumber=${msg.senderSeqNo}"
+        private fun formatMetaForLogging(deduplicationId: DeduplicationId, messageMeta: MessageMeta?): String = "$deduplicationId senderHash=${messageMeta?.senderHash} senderSequenceNumber=${messageMeta?.senderSeqNo}"
+    }
+
     // A temporary in-memory set of deduplication IDs and associated high water mark details.
     // When we receive a message we don't persist the ID immediately,
     // so we store the ID here in the meantime (until the persisting db tx has committed). This is because Artemis may
@@ -48,7 +58,11 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         )
     }
 
-    private fun isDuplicateInDatabase(msg: ReceivedMessage): Boolean = database.transaction { msg.uniqueMessageId in processedMessages }
+    private fun isDuplicateInDatabase(msg: ReceivedMessage): Boolean = database.transaction {
+        val inDb = msg.uniqueMessageId in processedMessages
+        log.trace { "${formatMessageForLogging(msg)} ${if (inDb) "is" else "is NOT"} in the database." }
+        inDb
+    }
 
     /**
      * We assign the sender a random identifier [ourSenderUUID] (passed to [MessagingExecutor]). If the sender is also the creator of a message
@@ -64,10 +78,14 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private fun isDuplicateWithPotentialOptimization(receivedSenderUUID: String, receivedSenderSeqNo: Long, msg: ReceivedMessage): Boolean {
         val senderKey = SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)
         val (senderHash, existingSeqNoHWM) = senderUUIDSeqNoHWM.computeIfAbsent(senderKey) {
-            highestSeqNoHWMInDatabaseFor(senderKey)
+            val senderHashToSeqNo = highestSeqNoHWMInDatabaseFor(senderKey)
+            log.trace { "${formatMessageForLogging(msg)} senderHash=${senderHashToSeqNo.first} fetched highest sequence number from database of ${senderHashToSeqNo.second}" }
+            senderHashToSeqNo
         }
+        log.trace { "${formatMessageForLogging(msg)} senderHash=$senderHash high water mark is $existingSeqNoHWM" }
         val isNewHWM = (existingSeqNoHWM == null || existingSeqNoHWM < receivedSenderSeqNo)
         return if (isNewHWM) {
+            log.trace { "${formatMessageForLogging(msg)} senderHash=$senderHash is new high water mark vs. $existingSeqNoHWM" }
             senderUUIDSeqNoHWM[senderKey] = senderHash to receivedSenderSeqNo
             false
         } else isDuplicateInDatabase(msg)
@@ -96,8 +114,10 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
      */
     fun isDuplicate(msg: ReceivedMessage): Boolean {
         if (beingProcessedMessages.containsKey(msg.uniqueMessageId)) {
+            log.trace { "${formatMessageForLogging(msg)} is currently being processed." }
             return true
         }
+        log.trace { "${formatMessageForLogging(msg)} is NOT currently being processed." }
         val receivedSenderUUID = msg.senderUUID
         val receivedSenderSeqNo = msg.senderSeqNo
         // If we have received a new higher sequence number, then it cannot be a duplicate, and we don't need to check database.
@@ -119,14 +139,18 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         // We don't want a mix of nulls and values so we ensure that here.
         val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) senderUUIDSeqNoHWM[SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)]?.first else null
         val senderSeqNo: Long? = if (senderHash != null) msg.senderSeqNo else null
-        beingProcessedMessages[msg.uniqueMessageId] = MessageMeta(Instant.now(), senderHash, senderSeqNo)
+        val messageMeta = MessageMeta(Instant.now(), senderHash, senderSeqNo)
+        beingProcessedMessages[msg.uniqueMessageId] = messageMeta
+        log.debug { "${formatMetaForLogging(msg.uniqueMessageId, messageMeta)} will be processed." }
     }
 
     /**
      * Called inside a DB transaction to persist [deduplicationId].
      */
     fun persistDeduplicationId(deduplicationId: DeduplicationId) {
-        processedMessages[deduplicationId] = beingProcessedMessages[deduplicationId]!!
+        val messageMeta = beingProcessedMessages[deduplicationId]!!
+        log.trace { "${formatMetaForLogging(deduplicationId, messageMeta)} persisted to database." }
+        processedMessages[deduplicationId] = messageMeta
     }
 
     /**
@@ -134,7 +158,8 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
      * Any subsequent redelivery will be deduplicated using the DB.
      */
     fun signalMessageProcessFinish(deduplicationId: DeduplicationId) {
-        beingProcessedMessages.remove(deduplicationId)
+        val messageMeta = beingProcessedMessages.remove(deduplicationId)
+        log.debug { "${formatMetaForLogging(deduplicationId, messageMeta)} is no longer being processed." }
     }
 
     @Entity

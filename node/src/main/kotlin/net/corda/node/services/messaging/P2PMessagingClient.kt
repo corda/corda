@@ -409,7 +409,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
             val receivedSenderUUID = message.getStringProperty(P2PMessagingHeaders.senderUUID)
             val receivedSenderSeqNo = if (message.containsProperty(P2PMessagingHeaders.senderSeqNo)) message.getLongProperty(P2PMessagingHeaders.senderSeqNo) else null
             val isSessionInit = message.getStringProperty(P2PMessagingHeaders.Type.KEY) == P2PMessagingHeaders.Type.SESSION_INIT_VALUE
-            log.trace { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId senderUUID: $receivedSenderUUID senderSeqNo: $receivedSenderSeqNo isSessionInit: $isSessionInit" }
+            log.debug { "Received message from: ${message.address} user: $user topic: $topic id: $uniqueMessageId senderUUID: $receivedSenderUUID senderSeqNo: $receivedSenderSeqNo isSessionInit: $isSessionInit size: ${message.bodySize}" }
 
             return ArtemisReceivedMessage(topic, CordaX500Name.parse(user), platformVersion, uniqueMessageId, receivedSenderUUID, receivedSenderSeqNo, isSessionInit, message)
         } catch (e: Exception) {
@@ -454,7 +454,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
                     deduplicator.signalMessageProcessStart(cordaMessage)
                     deliver(cordaMessage, artemisMessage)
                 } else {
-                    log.trace { "Discard duplicate message ${cordaMessage.uniqueMessageId} for ${cordaMessage.topic}" }
+                    log.debug { "Discard duplicate message id: ${cordaMessage.uniqueMessageId} senderUUID: ${cordaMessage.senderUUID} senderSeqNo: ${cordaMessage.senderSeqNo} isSessionInit: ${cordaMessage.isSessionInit}" }
                     messagingExecutor!!.acknowledge(artemisMessage)
                 }
             }
