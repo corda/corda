@@ -4,9 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.*
 import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
+import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.testing.node.internal.TestCordappDirectories
 import net.corda.testing.node.internal.cordappForPackages
-import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -96,8 +96,8 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/no-min-or-target-version.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         loader.cordapps.forEach {
-            assertThat(it.info.targetPlatformVersion).isEqualTo(1)
-            assertThat(it.info.minimumPlatformVersion).isEqualTo(1)
+            assertThat(it.targetPlatformVersion).isEqualTo(1)
+            assertThat(it.minimumPlatformVersion).isEqualTo(1)
         }
     }
 
@@ -108,8 +108,8 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-target-3.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         val cordapp = loader.cordapps.first()
-        assertThat(cordapp.info.targetPlatformVersion).isEqualTo(3)
-        assertThat(cordapp.info.minimumPlatformVersion).isEqualTo(2)
+        assertThat(cordapp.targetPlatformVersion).isEqualTo(3)
+        assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }
 
     @Test
@@ -119,8 +119,8 @@ class JarScanningCordappLoaderTest {
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         // exclude the core cordapp
         val cordapp = loader.cordapps.single { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl") }
-        assertThat(cordapp.info.targetPlatformVersion).isEqualTo(2)
-        assertThat(cordapp.info.minimumPlatformVersion).isEqualTo(2)
+        assertThat(cordapp.targetPlatformVersion).isEqualTo(2)
+        assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }
 
     @Test

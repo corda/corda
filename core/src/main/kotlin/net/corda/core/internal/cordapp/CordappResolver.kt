@@ -9,12 +9,12 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Provides a way to acquire information about the calling CorDapp.
  */
-object CordappInfoResolver {
-    private val logger = loggerFor<CordappInfoResolver>()
-    private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp.Info>> = ConcurrentHashMap()
+object CordappResolver {
+    private val logger = loggerFor<CordappResolver>()
+    private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
 
     // TODO Use the StackWalker API once we migrate to Java 9+
-    private var cordappInfoResolver: () -> Cordapp.Info? = {
+    private var cordappResolver: () -> Cordapp? = {
         Exception().stackTrace
                 .mapNotNull { cordappClasses[it.className] }
                 // If there is more than one cordapp registered for a class name we can't determine the "correct" one and return null.
@@ -26,8 +26,8 @@ object CordappInfoResolver {
      * This could happen when trying to run different versions of the same CorDapp on the same node.
      */
     @Synchronized
-    fun register(classes: List<String>, cordapp: Cordapp.Info) {
-        classes.forEach {
+    fun register(cordapp: Cordapp) {
+        cordapp.cordappClasses.forEach {
             if (cordappClasses.containsKey(it)) {
                 logger.warn("More than one CorDapp registered for $it.")
                 cordappClasses[it] = cordappClasses[it]!! + cordapp
@@ -46,32 +46,28 @@ object CordappInfoResolver {
      * @return Information about the CorDapp from which the invoker is called, null if called outside a CorDapp or the
      * calling CorDapp cannot be reliably determined.
      */
-    val currentCordappInfo: Cordapp.Info? get() = cordappInfoResolver()
+    val currentCordapp: Cordapp? get() = cordappResolver()
 
     /**
      * Returns the target version of the current calling CorDapp. Defaults to the current platform version if there isn't one.
      */
     // TODO It may be the default is wrong and this should be Int? instead
-    val currentTargetVersion: Int get() = currentCordappInfo?.targetPlatformVersion ?: PLATFORM_VERSION
+    val currentTargetVersion: Int get() = currentCordapp?.targetPlatformVersion ?: PLATFORM_VERSION
 
     /**
-     * Temporarily apply a fake CorDapp.Info with the given parameters. For use in testing.
+     * Temporarily apply a fake CorDapp with the given parameters. For use in testing.
      */
     @Synchronized
     @VisibleForTesting
-    fun <T> withCordappInfo(shortName: String = "CordappInfoResolver.withCordappInfo",
-                            vendor: String = "Corda",
-                            version: String = "1",
-                            licence: String = "Apache",
-                            minimumPlatformVersion: Int = 1,
-                            targetPlatformVersion: Int = PLATFORM_VERSION,
-                            block: () -> T): T {
-        val currentResolver = cordappInfoResolver
-        cordappInfoResolver = { Cordapp.Info.Default(shortName, vendor, version, minimumPlatformVersion, targetPlatformVersion, licence) }
+    fun <T> withCordapp(minimumPlatformVersion: Int = 1, targetPlatformVersion: Int = PLATFORM_VERSION, block: () -> T): T {
+        val currentResolver = cordappResolver
+        cordappResolver = {
+            CordappImpl.TEST_INSTANCE.copy(minimumPlatformVersion = minimumPlatformVersion, targetPlatformVersion = targetPlatformVersion)
+        }
         try {
             return block()
         } finally {
-            cordappInfoResolver = currentResolver
+            cordappResolver = currentResolver
         }
     }
 

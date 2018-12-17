@@ -5,7 +5,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.packageName
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -121,7 +121,7 @@ class FinalityHandlerTest {
     }
 
     private fun TestStartedNode.finaliseWithOldApi(stx: SignedTransaction): CordaFuture<SignedTransaction> {
-        return CordappInfoResolver.withCordappInfo(targetPlatformVersion = 3) {
+        return CordappResolver.withCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             services.startFlow(FinalityFlow(stx)).resultFuture.apply {
                 mockNet.runNetwork()
