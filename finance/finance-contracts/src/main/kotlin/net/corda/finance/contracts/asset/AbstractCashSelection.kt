@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
- * Default implementation in finance workflow module uses H2 database and a custom function within H2 to perform aggregation.
+ * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */

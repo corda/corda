@@ -1,2 +1,108 @@
+apply plugin: 'kotlin'
+// Java Persistence API support: create no-arg constructor
+// see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
+apply plugin: 'kotlin-jpa'
+apply plugin: CanonicalizerPlugin
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'
+
+/**
+ * NOTE: this build.gradle file is maintained for backwards compatibility purposes.
+ *       It will build a `corda-finance.jar` including all Contracts and Flows.
+ *       From Corda 4 it is strongly recommended that CorDapps dependent on the `corda-finance.jar`
+ *       explicitly declare dependencies on either/both of the corda finance sub-modules:
+ *          corda-finance-contract => generates `corda-finance-contract.jar`
+ *          corda-finance-flows    => generates `corda-finance-flows.jar`
+ *       Third party CorDapps should remember to include these sub-module dependencies using the `cordapp` Corda Gradle plug-in
+ *          cordapp project(':finance:finance-flows')
+ *          cordapp project(':finance:finance-contracts')
+ */
+
+sourceSets {
+    integrationTest {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/integration-test/kotlin')
+        }
+        resources {
+            srcDir file('src/integration-test/resources')
+        }
+    }
+}
+
+dependencies {
+    // Note the :finance module is a CorDapp in its own right
+    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
+    cordaCompile project(':core')
+    compile project(':confidential-identities')
+
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
+
+    testCompile project(':test-utils')
+    testCompile project(path: ':core', configuration: 'testArtifacts')
+    testCompile "junit:junit:$junit_version"
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+task integrationTest(type: Test, dependsOn: []) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+artifacts {
+    testArtifacts testJar
+}
+
+jar {
+    baseName 'corda-finance'
+    exclude "META-INF/*.DSA"
+    exclude "META-INF/*.RSA"
+    exclude "META-INF/*.SF"
+    exclude "META-INF/*.MF"
+    exclude "META-INF/LICENSE"
+    exclude "META-INF/NOTICE"
+
+    manifest {
+        attributes(
+                "Manifest-Version": "1.0",
+                "Specification-Title": description,
+                "Specification-Version": version,
+                "Specification-Vendor": "Corda Open Source",
+                "Implementation-Title": "$group.$baseName",
+        )
+    }
+}
+
+cordapp {
+    info {
+        name "net/corda/finance"
+        vendor "Corda Open Source"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+    // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
+    // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
+}
+
+publish {
+    name jar.baseName
+}
