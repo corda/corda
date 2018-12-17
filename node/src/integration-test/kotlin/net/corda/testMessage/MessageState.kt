@@ -55,7 +55,7 @@ open class MessageContract : Contract {
         val command = tx.commands.requireSingleCommand<Commands.Send>()
         requireThat {
             // Generic constraints around the IOU transaction.
-            "No inputs should be consumed when sending a message." using (tx.inputs.isEmpty())
+           // "No inputs should be consumed when sending a message." using (tx.inputs.isEmpty())
             "Only one output state should be created." using (tx.outputs.size == 1)
             val out = tx.outputsOfType<MessageState>().single()
             "Message sender must sign." using (command.signers.containsAll(out.participants.map { it.owningKey }))
