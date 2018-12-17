@@ -7,6 +7,10 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* TimedFlows (used for notarisations) will never give up trying to reach the notary, as this would leave the states in the
+  notarisation request in an undefined state (unknown whether the spent has been notarised, i.e. has happened, or not). Also,
+  retries have been disabled for single node notaries.
+
 * New configuration property `database.initialiseAppSchema` with values `UPDATE`, `VALIDATE` and `NONE`.
   The property controls the behavior of the Hibernate DDL generation. `UPDATE` performs an update of CorDapp schemas, while
   `VALID` only verifies their integrity.  The property does not affect the node-specific DDL handling and
