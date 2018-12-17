@@ -11,7 +11,6 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
-import net.corda.stubs.WithText
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
@@ -91,5 +90,9 @@ class ContractAttachmentTests {
         companion object {
             const val CONTRACT_NAME: ContractClassName = "net.corda.node.TransactionAttachmentsTests\$MessageContract"
         }
+    }
+
+    interface WithText {
+        val text: String
     }
 }

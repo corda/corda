@@ -49,7 +49,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         // TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
         object CorDappsClassLoaderHolder {
             var instance: ClassLoader? = null
-
             fun set(instance: ClassLoader) {
                 this.instance = instance
             }
