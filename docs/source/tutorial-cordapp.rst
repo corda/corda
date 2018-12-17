@@ -130,7 +130,7 @@ The example CorDapp has the following structure:
 The key files and directories are as follows:
 
 * The **root directory** contains some gradle files, a README and a LICENSE
-* **config** contains log4j configs
+* **config** contains log4j2 configs
 * **gradle** contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
