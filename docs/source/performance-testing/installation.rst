@@ -70,7 +70,3 @@ something like this::
     [Install]
     WantedBy=multi-user.target
 
-Sampler Client SDK
-==================
-
-Coming soon.

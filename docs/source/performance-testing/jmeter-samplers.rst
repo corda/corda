@@ -144,14 +144,36 @@ Loading a Custom Sampler Client
 -------------------------------
 
 The JAR file for the custom sampler needs to be added to the search path of JMeter in order for the Java sampler to
-be able to load it. The ``-XadditionalSearchPaths`` flag can be used to do this.
+be able to load it. The ``-XadditionalSearchPaths`` flag can be used to do this. It takes a list of semicolon separated
+directories or JAR files that all will be scanned by JMeter and added to the classpath to run tests.
 
 If the custom sampler uses flows or states from another CorDapp that is not packaged with the
 JMeter Corda package, this needs to be on the classpath for the JMeter instance running the sampler as the RPC interface
-requires instantiating classes to serialize them. The JMeter property ``user.classpath`` can be used to set up additional
-class paths to search for required classes.
+requires instantiating classes to serialize them. The easiest way to achieve this is to add it to the list of additional
+search paths. A typical invocation would look like::
+
+  java -jar jmeter-corda.jar <other args...> -XaddditionalSearchPaths=/home/<user>/mySampler.jar;/home/<user>/myCorDapp.jar
+
+  or:
+
+  java -jar jmeter-corda.jar <other args...> -XaddditionalSearchPaths=/home/<user>/mySampler.jar;<node installation dir>/cordapps/myCordapp.jar
+
+When using JMeter servers for remote invocation, the exact same version of the sampler JAR needs to be deployed on each
+server, and be added to the command line of the JMeter server process (with the same ``-XadditionalSearchPaths`` argument).
+In this case, the node running the CorDapp and the JMeter server process both need to have the same version of the CorDapp - it needs to be
+installed as a CorDapp on the node, and needs to be on the class path of the JMeter server process. The JMeter process can either load its own
+copy of the CorDapp JAR or point to the CorDapp folder of the node installation.
+
+In the case of JMeter remote invocation, the JMeter client might not actually  need the CorDapp package on the classpath,
+as the interaction with the CorDapp is happening server side - in this case, only the server process needs to have the CorDapp JAR
+file on its search path.
+
 
 Writing a Custom Sampler Client
 -------------------------------
 
-Coming soon
+An SDK with examples on how to write samplers to drive different CorDapps is availabe at https://github.com/corda/jmeter-sampler
+The SDK and sampler code is freely available, but please note that it requires access to a licensed local Corda Enterprise installation
+to be used.
+
+See the README and the annotated code examples in the SDK for instructions how to build your own custom sampler.
