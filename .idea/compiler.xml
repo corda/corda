@@ -149,6 +149,8 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="net.corda-blobinspector_main" target="1.8" />
+      <module name="net.corda-blobinspector_test" target="1.8" />
       <module name="net.corda-finance-contracts-states_main" target="1.8" />
       <module name="net.corda-finance-contracts-states_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />

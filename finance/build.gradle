@@ -15,10 +15,10 @@ description 'Corda finance modules'
  *       It will build a `corda-finance.jar` including all Contracts and Flows.
  *       From Corda 4 it is strongly recommended that CorDapps dependent on the `corda-finance.jar`
  *       explicitly declare dependencies on either/both of the corda finance sub-modules:
- *          corda-finance-contract => generates `corda-finance-contract.jar`
- *          corda-finance-flows    => generates `corda-finance-flows.jar`
+ *          corda-finance-contract  => generates `corda-finance-contract.jar`
+ *          corda-finance-workflows => generates `corda-finance-workflows.jar`
  *       Third party CorDapps should remember to include these sub-module dependencies using the `cordapp` Corda Gradle plug-in
- *          cordapp project(':finance:finance-flows')
+ *          cordapp project(':finance:finance-workflows')
  *          cordapp project(':finance:finance-contracts')
  */
 

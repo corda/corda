@@ -59,7 +59,7 @@ dependencies {
     compile "io.reactivex:rxjava:$rxjava_version"
 
     compile project(':finance:finance-contracts')
-    compile project(':finance:finance-flows')
+    compile project(':finance:finance-workflows')
     compile project(':node-api')
     compile project(':client:rpc')
 

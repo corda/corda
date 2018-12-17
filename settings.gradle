@@ -4,7 +4,7 @@ rootProject.name = 'corda-project'
 include 'confidential-identities'
 include 'finance'   // maintained for backwards compatibility only
 include 'finance:finance-contracts'
-include 'finance:finance-flows'
+include 'finance:finance-workflows'
 include 'finance:isolated'
 include 'core'
 include 'docs'

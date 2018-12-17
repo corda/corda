@@ -25,7 +25,7 @@ sourceSets {
 
 dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
-    // cordapp project(':finance:finance-flows')
+    // cordapp project(':finance:finance-workflows')
     // cordapp project(':finance:finance-contracts')
     cordaCompile project(':core')
     compile project(':confidential-identities')
@@ -61,7 +61,7 @@ artifacts {
 }
 
 jar {
-    baseName 'corda-finance-flows'
+    baseName 'corda-finance-workflows'
 }
 
 configurations {

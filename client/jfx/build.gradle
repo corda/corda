@@ -27,7 +27,7 @@ sourceSets {
 dependencies {
     compile project(':core')
     compile project(':finance:finance-contracts')
-    compile project(':finance:finance-flows')
+    compile project(':finance:finance-workflows')
     compile project(':client:rpc')
 
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
