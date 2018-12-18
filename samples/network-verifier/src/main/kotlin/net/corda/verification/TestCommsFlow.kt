@@ -1,6 +1,7 @@
 package net.corda.verification
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
@@ -62,6 +63,7 @@ class TestCommsFlowResponder(private val otherSideSession: FlowSession) : FlowLo
 }
 
 @CordaSerializable
+@BelongsToContract(CommsTestContract::class)
 data class CommsTestState(val responses: List<String>, val issuer: AbstractParty) : ContractState {
     override val participants: List<AbstractParty>
         get() = listOf(issuer)
