@@ -140,22 +140,21 @@ class BackpressureHandlingTest {
     }
 
     @Test
-    fun `health check flows get restarted`() {
+    fun `health check flows don't get restarted`() {
         node.run {
             val flow = HealthCheckFlow(Monitorable(notary, notary))
             val progressTracker = flow.progressTracker
             assertNotEquals(ProgressTracker.DONE, progressTracker.currentStep)
             val progressTrackerDone = getDoneFuture(progressTracker)
 
-            services.startFlow(flow).resultFuture.get()
-            progressTrackerDone.get()
-
-            // the wait time should be the configured default time out if it hasn't been updated
-            val metricName = MetricRegistry.name(ScheduledCheckFlow.cleanX500forMetrics(notary.name), "reportedWaitTimeSeconds")
-            val metricsRegistry = (flow.serviceHub as ServiceHubInternal).monitoringService.metrics
-            val gauge = metricsRegistry.gauges[metricName]
-            assertNotNull(gauge)
-            assertEquals(defaultFlowTimeout.seconds, (gauge as HealthCheckFlow.NotaryClientFlow.WaitTimeLatchedGauge).currentWaitTime.get())
+            val resultFuture = services.startFlow(flow).resultFuture
+            var exceptionThrown = false
+            try {
+                resultFuture.get(3, TimeUnit.SECONDS)
+            } catch (e: TimeoutException) {
+                exceptionThrown = true
+            }
+            assertTrue(exceptionThrown, "Health check flow timed out unexpectedly")
         }
     }
 

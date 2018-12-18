@@ -62,6 +62,9 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
      */
     class NotaryClientFlow(private val stx: SignedTransaction, private val party: Party, private val notaryParty: Party) : NotaryFlow.Client(stx) {
 
+        // Notary health checks should never be retried - they are run on a schedule anyway.
+        override val isTimeoutEnabled: Boolean = false
+
         @Suspendable
         @Throws(NotaryException::class)
         override fun call(): List<TransactionSignature> {

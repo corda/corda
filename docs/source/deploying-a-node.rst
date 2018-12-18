@@ -55,6 +55,7 @@ handling, and ensures the Corda service is run at boot.
               ]
           }
       ]
+      custom { jvmArgs = [ '-Xmx2048m', '-XX:+UseG1GC' ] }
 
 7. Make the following changes to ``/opt/corda/node.conf``:
 
@@ -89,7 +90,7 @@ handling, and ensures the Corda service is run at boot.
        Type=simple
        User=corda
        WorkingDirectory=/opt/corda
-       ExecStart=/usr/bin/java -Xmx2048m -jar /opt/corda/corda.jar
+       ExecStart=/usr/bin/java -jar /opt/corda/corda.jar
        Restart=on-failure
 
        [Install]
@@ -107,14 +108,15 @@ handling, and ensures the Corda service is run at boot.
         respawn
         setuid corda
         chdir /opt/corda
-        exec java -Xmx2048m -jar /opt/corda/corda.jar
+        exec java -jar /opt/corda/corda.jar
 
 9. Make the following changes to ``corda.service`` or ``corda.conf``:
 
     * Make sure the service description is informative - particularly if you plan to run multiple nodes.
     * Change the username to the user account you want to use to run Corda. **We recommend that this user account is
       not root**
-    * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter
+    * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter in
+      the config file
     * **SystemD**: Make sure the ``corda.service`` file is owned by root with the correct permissions:
 
         * ``sudo chown root:root /etc/systemd/system/corda.service``

@@ -37,6 +37,7 @@ import net.corda.node.services.statemachine.interceptors.*
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
+import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
 import net.corda.serialization.internal.withTokenContext
@@ -527,7 +528,8 @@ class MultiThreadedStateMachineManager(
         val frozenFlowLogic = (flowLogic as FlowLogic<*>).checkpointSerialize(context = checkpointSerializationContext!!)
 
         val flowCorDappVersion = FlowStateMachineImpl.createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion, flowLogic.isEnabledTimedFlow())
+                .getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
@@ -610,7 +612,7 @@ class MultiThreadedStateMachineManager(
     private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
             timeoutScheduler.schedule({
-                val event = Event.Error(FlowTimeoutException(maxRestartCount))
+                val event = Event.Error(FlowTimeoutException())
                 flow.fiber.scheduleEvent(event)
             }, delay, TimeUnit.SECONDS)
         }
@@ -740,7 +742,7 @@ class MultiThreadedStateMachineManager(
                 oldFlow.resultFuture.captureLater(flow.resultFuture)
             }
             val flowLogic = flow.fiber.logic
-            if (flowLogic is TimedFlow) scheduleTimeout(id)
+            if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
             flow.fiber.scheduleEvent(Event.DoRemainingWork)
             when (checkpoint.flowState) {
                 is FlowState.Unstarted -> {
