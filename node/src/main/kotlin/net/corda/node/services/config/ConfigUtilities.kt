@@ -61,7 +61,7 @@ object ConfigHelper {
         val environmentOverrides = systemEnvironment().cordaEntriesOnly()
         val finalConfig = configOverrides
                 // Add substitution values here
-                .withFallback(configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName.toString()))) //for database integration tests
+                .withFallback(configOf("custom.nodeOrganizationName" to parseToDbSchemaFriendlyName(baseDirectory.fileName?.toString() ?: "root"))) //for database integration tests
                 .withFallback(systemOverrides) //for database integration tests
                 .withFallback(environmentOverrides) //for database integration tests
                 .withFallback(configOf("baseDirectory" to baseDirectory.toString()))
