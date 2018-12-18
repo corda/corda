@@ -96,4 +96,9 @@ It's entirely expected and reasonable to have an open source contracts module an
 sophisticated or proprietary business logic, machine learning models, even user interface code. There's nothing that restricts it to just
 being Corda flows or services.
 
+.. important:: The ``versionId`` specified for the JAR manifest is checked by the platform. Downgrades are not allowed: you cannot take a state
+   that was created with version 5 of your app, and then create a state with version 4. This is to prevent attacks in which bugs
+   are fixed, but an adversary uses an old version of the app to continue exploiting them. Version tracking in states is handled for you
+   automatically as long as the information is provided in your Gradle file. See ":ref:`contract_non-downgrade_rule_ref`" for more information.
+
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
