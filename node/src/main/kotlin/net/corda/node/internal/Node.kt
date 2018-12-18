@@ -43,7 +43,9 @@ import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
 import net.corda.node.services.config.*
-import net.corda.node.services.messaging.*
+import net.corda.node.services.messaging.ArtemisMessagingServer
+import net.corda.node.services.messaging.MessagingService
+import net.corda.node.services.messaging.P2PMessagingClient
 import net.corda.node.services.rpc.ArtemisRpcBroker
 import net.corda.node.services.rpc.InternalRPCMessagingClient
 import net.corda.node.services.rpc.RPCServerConfiguration
@@ -311,6 +313,9 @@ open class Node(configuration: NodeConfiguration,
 
     private fun getAdvertisedAddress(): NetworkHostAndPort {
         return with(configuration) {
+            require(p2pAddress.host != "0.0.0.0") {
+                "Invalid p2pAddress: $p2pAddress contains 0.0.0.0 which is not suitable as an advertised node address"
+            }
             val host = if (detectPublicIp) {
                 tryDetectIfNotPublicHost(p2pAddress.host) ?: p2pAddress.host
             } else {
@@ -323,10 +328,11 @@ open class Node(configuration: NodeConfiguration,
     /**
      * Checks whether the specified [host] is a public IP address or hostname. If not, tries to discover the current
      * machine's public IP address to be used instead by looking through the network interfaces.
-     * TODO this code used to rely on the networkmap node, we might want to look at a different solution.
      */
     private fun tryDetectIfNotPublicHost(host: String): String? {
-        return if (!AddressUtils.isPublic(host)) {
+        return if (host.toLowerCase() == "localhost") {
+            log.warn("p2pAddress specified as localhost. Trying to autodetect a suitable public address to advertise in network map." +
+                    "To disable autodetect set detectPublicIp = false in the node.conf, or consider using messagingServerAddress and messagingServerExternal")
             val foundPublicIP = AddressUtils.tryDetectPublicIP()
             if (foundPublicIP == null) {
                 try {
