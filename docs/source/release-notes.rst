@@ -194,15 +194,13 @@ Other change of note
 API Changes
 ~~~~~~~~~~~
 
- * The API for the ``TestCordapp`` has been simplified.
- * stopped exposing the ``StartedNode`` and ``AbstractNode`` as part of the public test api.
+ * Stopped exposing the ``StartedNode`` and ``AbstractNode`` as part of the public test api.
  * The ``FlowStateMachine`` has been removed from the publix API.
  * Exposure of node internals in mock network.
  * New Vault Query : ``StateModificationStatus`` which can be ``MODIFIABLE``, ``NOT_MODIFIABLE``, or ``ALL``
  * Added ``is_modifiable`` column to the ``VaultStates`` table. A node that is a participant in a state will view it as
    ``MODIFIABLE`` whilst those it isn't are viewed as ``NOT_MODIFIABLE``
  * Further to the above, ``getCashBalances`` has been updated to only query for MODIFIABLE states as we only want to count cash states which we own!
- * Vault Queries are now case insensitive.
 
 Minor Changes
 ~~~~~~~~~~~~~
@@ -213,6 +211,7 @@ Minor Changes
  * Liquibase - The node now uses Liquibase to bootstrap and update itself. This is a transparent change with
    pre Corda 3 nodes seamlessly upgrading to operate as if they'd been bootstrapped in this way.
    This also applies to the finance CorDapp module.
+ * Vault Queries are now case insensitive.
  * Auto completion for the command line tooling (when enabled - see <<<some doc>>>)
  * New jokes - you're welcome! (and we're sorry!)
  * Version 2 of the serialization engine
