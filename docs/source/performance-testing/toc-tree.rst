@@ -13,3 +13,4 @@ This section contains the documentation on running performance test of Corda Ent
   jmeter-samplers
   jmeter-testplans
   r3-performance-runs
+      practical-considerations
