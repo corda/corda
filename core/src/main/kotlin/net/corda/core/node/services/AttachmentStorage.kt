@@ -85,5 +85,8 @@ interface AttachmentStorage {
      * @return the [AttachmentId] of the contract, or null if none meet the criteria.
      */
     fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId?
+
+    // TODO: docs
+    fun getContractAttachments(contractClassName: String): Set<AttachmentId>
 }
 

@@ -54,7 +54,6 @@ class NodeAttachmentService(
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
-
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 
@@ -405,30 +404,37 @@ class NodeAttachmentService(
 
     private val contractsCache = InfrequentlyMutatedCache<String, NavigableMap<Int, AttachmentId>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
 
-    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
-        val versions: NavigableMap<Int, AttachmentId> = contractsCache.get(contractClassName) { name ->
-            val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
-                    versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-            val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-            database.transaction {
-                val session = currentDBSession()
-                val criteriaBuilder = session.criteriaBuilder
+    private fun getContractAttachmentVersions(contractClassName: String):  NavigableMap<Int, AttachmentId> = contractsCache.get(contractClassName) { name ->
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
+                versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        database.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
 
-                val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
-                val root = criteriaQuery.from(DBAttachment::class.java)
+            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+            val root = criteriaQuery.from(DBAttachment::class.java)
 
-                val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
 
-                // parse criteria and build where predicates
-                criteriaParser.parse(attachmentQueryCriteria, attachmentSort)
+            // parse criteria and build where predicates
+            criteriaParser.parse(attachmentQueryCriteria, attachmentSort)
 
-                // prepare query for execution
-                val query = session.createQuery(criteriaQuery)
+            // prepare query for execution
+            val query = session.createQuery(criteriaQuery)
 
-                // execution
-                TreeMap(query.resultList.map { it.version to AttachmentId.parse(it.attId) }.toMap())
-            }
+            // execution
+            TreeMap(query.resultList.map { it.version to AttachmentId.parse(it.attId) }.toMap())
         }
+    }
+
+    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+        val versions: NavigableMap<Int, AttachmentId> = getContractAttachmentVersions(contractClassName)
         return versions.tailMap(minContractVersion, true).lastEntry()?.value
     }
+
+    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
+        return getContractAttachmentVersions(contractClassName).values.toSet()
+    }
+
 }
