@@ -128,7 +128,12 @@ distributions {
                 fileMode = 0444
             }
             from(project(':finance:finance-contracts').tasks.jar) {
-                rename 'corda-finance-contracts(.*)', 'corda-finance.jar'
+                rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
+                into 'cordapps'
+                fileMode = 0444
+            }
+            from(project(':finance:finance-workflows').tasks.jar) {
+                rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
                 into 'cordapps'
                 fileMode = 0444
             }
