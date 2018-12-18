@@ -35,7 +35,7 @@ dependencies {
     // Specify your cordapp's dependencies below, including dependent cordapps
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
 
-    cordaCompile project(':node-driver')
+    testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:${assertj_version}"
 }
@@ -53,6 +53,7 @@ def rpcUsersList = [
                  "InvokeRpc.wellKnownPartyFromX500Name"
          ]]
 ]
+
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
@@ -163,12 +164,17 @@ idea {
 }
 
 jar {
-    from sourceSets.test.output
+    from sourceSets.main.output
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+task testJar(type: Jar) {
+    classifier "test"
+    from sourceSets.test.output
+}
+
 artifacts {
-    demoArtifacts jar
+    demoArtifacts testJar
 }
 
 cordapp {

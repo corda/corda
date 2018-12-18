@@ -17,7 +17,6 @@ buildscript {
 
 import org.yaml.snakeyaml.DumperOptions
 
-
 plugins {
 	id 'com.craigburke.client-dependencies' version '1.4.0'
 }
@@ -66,11 +65,14 @@ dependencies {
         exclude module: "spring-boot-starter-logging"
         exclude module: "logback-classic"
     }
+	compile('org.springframework.boot:spring-boot-starter-log4j2')
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     compile project(":client:rpc")
     compile project(":client:jackson")
-    compile project(":test-utils")
-    compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+	compile project(":samples:irs-demo:cordapp")
+
+    testCompile project(":test-utils")
+    testCompile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
 
 	// JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
@@ -82,7 +84,7 @@ dependencies {
 }
 
 jar {
-    from sourceSets.test.output
+    from sourceSets.main.output
     dependsOn clientInstall
 }
 
