@@ -402,9 +402,23 @@ class NodeAttachmentService(
         }
     }
 
-    private val contractsCache = InfrequentlyMutatedCache<String, NavigableMap<Int, AttachmentId>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+    private data class AttachmentIds(val signed: AttachmentId?, val unsigned: AttachmentId?) {
+        init {
+            // One of them at least must exist.
+            check(signed != null || unsigned != null)
+        }
 
-    private fun getContractAttachmentVersions(contractClassName: String):  NavigableMap<Int, AttachmentId> = contractsCache.get(contractClassName) { name ->
+        fun toList(): List<AttachmentId> =
+            if(signed != null) {
+                if(unsigned != null) {
+                    listOf(signed, unsigned)
+                } else listOf(signed)
+            } else listOf(unsigned!!)
+    }
+
+    private val contractsCache = InfrequentlyMutatedCache<String, NavigableMap<Int, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+
+    private fun getContractAttachmentVersions(contractClassName: String):  NavigableMap<Int, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
@@ -424,17 +438,26 @@ class NodeAttachmentService(
             val query = session.createQuery(criteriaQuery)
 
             // execution
-            TreeMap(query.resultList.map { it.version to AttachmentId.parse(it.attId) }.toMap())
+            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it) }.toMap())
         }
     }
 
+    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Int, AttachmentIds> {
+        check(it.value.size <= 2)
+        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }.singleOrNull()
+        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }.singleOrNull()
+        return it.key to AttachmentIds(signed, unsigned)
+    }
+
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
-        val versions: NavigableMap<Int, AttachmentId> = getContractAttachmentVersions(contractClassName)
-        return versions.tailMap(minContractVersion, true).lastEntry()?.value
+        val versions: NavigableMap<Int, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
+        return newestAttachmentIds?.toList()?.first()
     }
 
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
-        return getContractAttachmentVersions(contractClassName).values.toSet()
+        val versions: NavigableMap<Int, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        return versions.values.flatMap { it.toList() }.toSet()
     }
 
 }
