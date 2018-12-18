@@ -6,8 +6,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
-import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
+import net.corda.nodeapi.internal.config.SslConfiguration
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.core.remoting.impl.netty.NettyConnectorFactory
 import org.apache.activemq.artemis.core.remoting.impl.netty.TransportConstants
@@ -115,6 +115,7 @@ class ArtemisTcpTransport {
                 options.putAll(defaultSSLOptions)
                 (keyStore to trustStore).addToTransportOptions(options)
             }
+            options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
@@ -136,6 +137,7 @@ class ArtemisTcpTransport {
                 options.putAll(config.toTransportOptions())
                 options.putAll(defaultSSLOptions)
             }
+            options[TransportConstants.HANDSHAKE_TIMEOUT] = 0 // Suppress core.server.lambda$channelActive$0 - AMQ224088 error from load balancer type connections
             return TransportConfiguration(acceptorFactoryClassName, options)
         }
 
@@ -159,7 +161,7 @@ class ArtemisTcpTransport {
         }
 
         fun rpcInternalAcceptorTcpTransport(hostAndPort: NetworkHostAndPort, config: SslConfiguration): TransportConfiguration {
-            return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions())
+            return TransportConfiguration(acceptorFactoryClassName, defaultArtemisOptions(hostAndPort) + defaultSSLOptions + config.toTransportOptions() + (TransportConstants.HANDSHAKE_TIMEOUT to 0))
         }
     }
 }
