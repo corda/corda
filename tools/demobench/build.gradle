@@ -50,8 +50,8 @@ dependencies {
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
     compile project(':client:rpc')
-    compile project(':finance:finance-contracts')
-    compile project(':finance:finance-workflows')
+    compile project(':finance:contracts')
+    compile project(':finance:workflows')
 
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
@@ -127,12 +127,12 @@ distributions {
                 into 'corda'
                 fileMode = 0444
             }
-            from(project(':finance:finance-contracts').tasks.jar) {
+            from(project(':finance:contracts').tasks.jar) {
                 rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
                 into 'cordapps'
                 fileMode = 0444
             }
-            from(project(':finance:finance-workflows').tasks.jar) {
+            from(project(':finance:workflows').tasks.jar) {
                 rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
                 into 'cordapps'
                 fileMode = 0444

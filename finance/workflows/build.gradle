@@ -25,12 +25,12 @@ sourceSets {
 
 dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
-    // cordapp project(':finance:finance-workflows')
-    // cordapp project(':finance:finance-contracts')
+    // cordapp project(':finance:workflows')
+    // cordapp project(':finance:contracts')
     cordaCompile project(':core')
     compile project(':confidential-identities')
 
-    cordapp project(':finance:finance-contracts')
+    cordapp project(':finance:contracts')
     
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

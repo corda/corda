@@ -10,8 +10,8 @@ description 'Corda client mock modules'
 
 dependencies {
     compile project(":core")
-    compile project(':finance:finance-workflows')
-    compile project(':finance:finance-contracts')
+    compile project(':finance:workflows')
+    compile project(':finance:contracts')
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"

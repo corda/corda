@@ -25,8 +25,8 @@ configurations {
 
 dependencies {
     // The irs demo CorDapp depends upon Cash CorDapp features
-    cordapp project(':finance:finance-contracts')
-    cordapp project(':finance:finance-workflows')
+    cordapp project(':finance:contracts')
+    cordapp project(':finance:workflows')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')

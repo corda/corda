@@ -18,11 +18,11 @@ description 'Corda finance modules'
  *          corda-finance-contract  => generates `corda-finance-contract.jar`
  *          corda-finance-workflows => generates `corda-finance-workflows.jar`
  *       Third party CorDapps should remember to include these sub-module dependencies using the `cordapp` Corda Gradle plug-in
- *          cordapp project(':finance:finance-workflows')
- *          cordapp project(':finance:finance-contracts')
+ *          cordapp project(':finance:workflows')
+ *          cordapp project(':finance:contracts')
  */
 
-def mainProjects = [':finance:finance-contracts',':finance:finance-workflows', ':confidential-identities']
+def mainProjects = [':finance:contracts',':finance:workflows', ':confidential-identities']
 
 jar.dependsOn mainProjects.collect{ it+":compileJava"}
 jar {
