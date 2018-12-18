@@ -50,14 +50,36 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val references: MutableList<StateRef> = arrayListOf(),
-        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+        protected var privacySalt: PrivacySalt = PrivacySalt()
 ) {
-
     private companion object {
         private val log = contextLogger()
+
+        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
+
+        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
     }
+
+    constructor(
+            notary: Party? = null,
+            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+            inputs: MutableList<StateRef> = arrayListOf(),
+            attachments: MutableList<SecureHash> = arrayListOf(),
+            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+            commands: MutableList<Command<*>> = arrayListOf(),
+            window: TimeWindow? = null,
+            privacySalt: PrivacySalt = PrivacySalt(),
+            references: MutableList<StateRef> = defaultReferencesList(),
+            serviceHub: ServiceHub? = defaultServiceHub()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
+        this.references = references
+        this.serviceHub = serviceHub
+    }
+
+    protected var references: MutableList<StateRef> = defaultReferencesList()
+        private set
+    protected var serviceHub: ServiceHub? = defaultServiceHub()
+        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -469,8 +491,9 @@ open class TransactionBuilder @JvmOverloads constructor(
         // Recursively resolve all pointers.
         while (statePointerQueue.isNotEmpty()) {
             val nextStatePointer = statePointerQueue.pop()
-            if (serviceHub != null) {
-                val resolvedStateAndRef = nextStatePointer.resolve(serviceHub)
+            val hub = serviceHub
+            if (hub != null) {
+                val resolvedStateAndRef = nextStatePointer.resolve(hub)
                 // Don't add dupe reference states because CoreTransaction doesn't allow it.
                 if (resolvedStateAndRef.ref !in referenceStates()) {
                     addReferenceState(resolvedStateAndRef.referenced())
