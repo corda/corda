@@ -8,14 +8,12 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.services.MAX_CONSTRAINT_DATA_SIZE
 import net.corda.core.node.services.Vault
-import net.corda.core.schemas.MappedSchema
-import net.corda.core.schemas.PersistentState
-import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.schemas.StatePersistable
+import net.corda.core.schemas.*
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.OpaqueBytes
 import org.hibernate.annotations.Immutable
 import org.hibernate.annotations.Type
+import java.io.Serializable
 import java.time.Instant
 import java.util.*
 import javax.persistence.*
@@ -161,47 +159,35 @@ object VaultSchemaV1 : MappedSchema(
         constructor(txId: String, note: String) : this(0, txId, note)
     }
 
+    @Embeddable
+    @Immutable
+    data class PersistentStateRefAndKey(/* Foreign key. */ @Embedded override var stateRef: PersistentStateRef?, @Column(name = "public_key_hash", nullable = false) var publicKeyHash: String?) : DirectStatePersistable, Serializable {
+        constructor() : this(null, null)
+    }
+
     @Entity
     @Table(name = "state_party", indexes = [Index(name = "state_party_idx", columnList = "public_key_hash")])
     class PersistentParty(
-            @Id
-            @GeneratedValue
-            @Column(name = "id", unique = true, nullable = false)
-            val id: Long?,
-
-            // Foreign key.
-            @Column(name = "state_ref")
-            val stateRef: PersistentStateRef,
-
-            @Column(name = "public_key_hash", nullable = false)
-            val publicKeyHash: String,
+            @EmbeddedId
+            override val compositeKey: PersistentStateRefAndKey,
 
             @Column(name = "x500_name", nullable = true)
             var x500Name: AbstractParty? = null
-    ) : StatePersistable {
+    ) : IndirectStatePersistable<PersistentStateRefAndKey> {
         constructor(stateRef: PersistentStateRef, abstractParty: AbstractParty)
-                : this(null, stateRef, abstractParty.owningKey.toStringShort(), abstractParty)
+                : this(PersistentStateRefAndKey(stateRef, abstractParty.owningKey.toStringShort()), abstractParty)
     }
 
     @Entity
     @Immutable
     @Table(name = "v_pkey_hash_ex_id_map")
     class StateToExternalId(
-            @Id
-            @GeneratedValue
-            @Column(name = "id", unique = true, nullable = false)
-            val id: Long,
-
-            // Foreign key.
-            @Column(name = "state_ref")
-            val stateRef: PersistentStateRef,
-
-            @Column(name = "public_key_hash")
-            val publicKeyHash: String,
+            @EmbeddedId
+            override val compositeKey: PersistentStateRefAndKey,
 
             @Column(name = "external_id")
             @Type(type = "uuid-char")
             val externalId: UUID
-    ) : StatePersistable
+    ) : IndirectStatePersistable<PersistentStateRefAndKey>
 }
 
