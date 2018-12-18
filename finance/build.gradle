@@ -22,61 +22,19 @@ description 'Corda finance modules'
  *          cordapp project(':finance:finance-contracts')
  */
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-        resources {
-            srcDir file('src/integration-test/resources')
-        }
-    }
-}
+def mainProjects = [':finance:finance-contracts',':finance:finance-workflows', ':confidential-identities']
 
-dependencies {
-    // Note the :finance module is a CorDapp in its own right
-    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
-    cordaCompile project(':core')
-    compile project(':confidential-identities')
-
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile "junit:junit:$junit_version"
-
-    // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
-}
-
-configurations {
-    testArtifacts.extendsFrom testRuntime
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-artifacts {
-    testArtifacts testJar
-}
-
+jar.dependsOn mainProjects.collect{ it+":compileJava"}
 jar {
     baseName 'corda-finance'
+    from files(mainProjects.collect{ project(it).sourceSets.main.output })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 cordapp {
+    signing {
+        enabled false
+    }
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     contract {
@@ -91,8 +49,6 @@ cordapp {
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
-    // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
-    // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 }
 
 publish {
