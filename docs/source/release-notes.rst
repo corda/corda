@@ -15,7 +15,7 @@ and improve Corda in a myriad of ways.
 
 Just as Corda 3 was a commitment brought with it a commitment to wire and API stability, Corda 4
 comes with those same guarantees. States valid in Corda 3 will be transparently usable in Corda 4 whilst
-we have strived to keep the API stable. Of course, where we've introduced new features not available in
+we have striven to keep the API stable. Of course, where we've introduced new features not available in
 older version app developers will have to wait for their Compatibility Zone operators to adopt version 4
 as the minimum platform version.
 
@@ -182,7 +182,7 @@ Other change of note
   faster debugging and trouble shooting.
 
   At the moment, Stack Overflow is that knowledge base, with the error codes being converted
-  to a URL that links directly to the answer.
+  to a URL that redirects either directly to the answer or to an appropriate search on Stack Overflow.
 
 * **A New Statemachine**
 
