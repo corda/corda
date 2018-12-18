@@ -111,6 +111,9 @@
       <module name="finance-flows_integrationTest" target="1.8" />
       <module name="finance-flows_main" target="1.8" />
       <module name="finance-flows_test" target="1.8" />
+      <module name="finance-workflows_integrationTest" target="1.8" />
+      <module name="finance-workflows_main" target="1.8" />
+      <module name="finance-workflows_test" target="1.8" />
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
