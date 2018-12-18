@@ -152,6 +152,8 @@ class TimedFlowMultiThreadedSMMTests : IntegrationTest() {
     @StartableByRPC
     @InitiatingFlow
     class TimedInitiatorFlow(private val other: Party) : AbstractTimedFlow(tracker()), TimedFlow {
+        override val isTimeoutEnabled: Boolean = true
+
         @Suspendable
         override fun call() {
             progressTracker.currentStep = STEP_1
