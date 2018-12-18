@@ -86,7 +86,13 @@ interface AttachmentStorage {
      */
     fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId?
 
-    // TODO: docs
+    /**
+     * Find the Attachment Ids of the contract attachments for a given contract class name
+     * from trusted upload sources.
+     *
+     * @param contractClassName The fully qualified name of the contract class.
+     * @return the [AttachmentId]s of the contract attachments, or an empty set if none meet the criteria.
+     */
     fun getContractAttachments(contractClassName: String): Set<AttachmentId>
 }
 
