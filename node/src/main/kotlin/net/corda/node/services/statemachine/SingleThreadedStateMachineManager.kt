@@ -15,7 +15,6 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.ThreadBox
-import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
@@ -46,6 +45,7 @@ import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
+import net.corda.node.utilities.isEnabledTimedFlow
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
 import net.corda.serialization.internal.CheckpointSerializeAsTokenContextImpl
@@ -54,6 +54,7 @@ import org.apache.activemq.artemis.utils.ReusableLatch
 import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.lang.Integer.min
 import java.security.SecureRandom
 import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
@@ -544,7 +545,15 @@ class SingleThreadedStateMachineManager(
 
         val flowCorDappVersion = createSubFlowVersion(serviceHub.cordappProvider.getCordappForFlow(flowLogic), serviceHub.myInfo.platformVersion)
 
-        val initialCheckpoint = Checkpoint.create(invocationContext, flowStart, flowLogic.javaClass, frozenFlowLogic, ourIdentity, flowCorDappVersion).getOrThrow()
+        val initialCheckpoint = Checkpoint.create(
+                invocationContext,
+                flowStart,
+                flowLogic.javaClass,
+                frozenFlowLogic,
+                ourIdentity,
+                flowCorDappVersion,
+                flowLogic.isEnabledTimedFlow()
+        ).getOrThrow()
         val startedFuture = openFuture<Unit>()
         val initialState = StateMachineState(
                 checkpoint = initialCheckpoint,
@@ -627,7 +636,7 @@ class SingleThreadedStateMachineManager(
     private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
             timeoutScheduler.schedule({
-                val event = Event.Error(FlowTimeoutException(maxRestartCount))
+                val event = Event.Error(FlowTimeoutException())
                 flow.fiber.scheduleEvent(event)
             }, delay, TimeUnit.SECONDS)
         }
@@ -635,7 +644,7 @@ class SingleThreadedStateMachineManager(
 
     private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
         return with(serviceHub.configuration.flowTimeout) {
-            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, min(retryCount, maxRestartCount).toDouble()).toLong()
             maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
         }
     }
@@ -761,7 +770,7 @@ class SingleThreadedStateMachineManager(
                     oldFlow.resultFuture.captureLater(flow.resultFuture)
                 }
                 val flowLogic = flow.fiber.logic
-                if (flowLogic is TimedFlow) scheduleTimeout(id)
+                if (flowLogic.isEnabledTimedFlow()) scheduleTimeout(id)
                 flow.fiber.scheduleEvent(Event.DoRemainingWork)
                 when (checkpoint.flowState) {
                     is FlowState.Unstarted -> {

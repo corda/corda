@@ -292,15 +292,7 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
     object DoctorTimeout : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
             if (newError is FlowTimeoutException) {
-                if (history.notDischargedForTheSameThingMoreThan(newError.maxRetries, this, currentState)) {
-                    return Diagnosis.DISCHARGE
-                } else {
-                    val errorMsg = "Maximum number of retries reached for flow ${flowFiber.snapshot().flowLogic.javaClass}. " +
-                            "If the flow involves notarising a transaction, it means that no response was received from the notary." +
-                            "This could be either due to the the notary being overloaded or unable to reach this node."
-                    newError.setMessage(errorMsg)
-                    log.warn(errorMsg)
-                }
+                return Diagnosis.DISCHARGE
             }
             return Diagnosis.NOT_MY_SPECIALTY
         }
