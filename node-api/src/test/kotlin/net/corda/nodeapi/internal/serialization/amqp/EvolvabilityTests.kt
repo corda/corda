@@ -665,4 +665,26 @@ class EvolvabilityTests {
         assertEquals(4, deserializedC.d)
         assertEquals(5, deserializedC.e)
     }
+
+    // Class as it was serialized, with additional enum field.
+    // enum class NewEnum { ONE, TWO, BUCKLE_MY_SHOE }
+    // data class Evolved(val fnord: String, val newEnum: NewEnum)
+
+    // Class before evolution
+    data class Evolved(val fnord: String)
+
+    @Test
+    fun evolutionWithCarpentry() {
+        val resource = "EvolvabilityTests.evolutionWithCarpentry"
+        val sf = testDefaultFactory()
+        // Uncomment to recreate
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(Evolved("dronf", NewEnum.BUCKLE_MY_SHOE)).bytes)
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+
+        val sc2 = url.readBytes()
+        val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
+
+        assertEquals("dronf", deserialized.fnord)
+    }
 }
