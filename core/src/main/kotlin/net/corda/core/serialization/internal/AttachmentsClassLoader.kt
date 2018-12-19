@@ -157,12 +157,12 @@ internal object AttachmentsClassLoaderBuilder {
     }
 
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
-
-
         // Create classloader from the attachments.
         // TODO This should not default to the CorDapps classloader, but it's needed for now to stop a bug preventing CorDapps with dependencies on other CorDapps from working as attachments.
         // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
-        val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments, AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.instance)
+        val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
+        val cordappsClassLoader = AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.instance
+        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(attachmentsClassLoader, it) } ?: attachmentsClassLoader
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
@@ -170,6 +170,28 @@ internal object AttachmentsClassLoaderBuilder {
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(transactionSerializationContext) {
             block(transactionClassLoader)
+        }
+    }
+}
+
+private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassLoader() {
+    constructor(classLoader: ClassLoader, vararg classLoaders: ClassLoader) : this(sequenceOf(classLoader, *classLoaders))
+
+    private val classLoaders = classLoaders.toList()
+
+    override fun loadClass(name: String?): Class<*> {
+        for (classLoader in classLoaders) {
+            try {
+                return classLoader.loadClass(name)
+            } catch (e: ClassNotFoundException) {
+                // Keep iterating without failing.
+            }
+        }
+        val contextClassLoader = Thread.currentThread().contextClassLoader
+        return if (contextClassLoader != null) {
+            contextClassLoader.loadClass(name)
+        } else {
+            throw ClassNotFoundException(name)
         }
     }
 }
