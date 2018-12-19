@@ -46,7 +46,7 @@ class CordappController : Controller() {
         if (!config.cordappsDir.isDirectory()) return emptyList()
         return config.cordappsDir.walk(1) { paths ->
             paths.filter(Path::isCordapp)
-                 .filter { financeCordappJars.map { !it.endsWith(it.fileName) }.any { true } }
+                 .filter { financeCordappJars.any { !it.endsWith(it.fileName) } }
                  .toList()
         }
     }
