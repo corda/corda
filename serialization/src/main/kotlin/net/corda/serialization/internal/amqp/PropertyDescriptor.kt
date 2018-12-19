@@ -207,7 +207,9 @@ private data class PropertyNamedMethod(val fieldName: String, val classifier: Me
     fun hasValidSignature(): Boolean = method.run {
         when (classifier) {
             GET -> parameterCount == 0 && returnType != Void.TYPE
-            SET -> parameterCount == 1 && returnType == Void.TYPE
+            // We don't check the return type, because some Java frameworks (such as Lombok) generate setters
+            // with non-void returns for method chaining.
+            SET -> parameterCount == 1
             IS -> parameterCount == 0 &&
                     (returnType == Boolean::class.java ||
                             returnType == Boolean::class.javaObjectType)
