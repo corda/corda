@@ -45,6 +45,9 @@ import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
 
+typealias ClassName = String
+typealias Version = Int
+
 /**
  * Stores attachments using Hibernate to database.
  */
@@ -402,6 +405,7 @@ class NodeAttachmentService(
         }
     }
 
+    // Holds onto a signed and/or unsigned attachment (at one or the other).
     private data class AttachmentIds(val signed: AttachmentId?, val unsigned: AttachmentId?) {
         init {
             // One of them at least must exist.
@@ -409,16 +413,21 @@ class NodeAttachmentService(
         }
 
         fun toList(): List<AttachmentId> =
-            if(signed != null) {
-                if(unsigned != null) {
-                    listOf(signed, unsigned)
-                } else listOf(signed)
-            } else listOf(unsigned!!)
+                if(signed != null) {
+                    if(unsigned != null) {
+                        listOf(signed, unsigned)
+                    } else listOf(signed)
+                } else listOf(unsigned!!)
     }
 
-    private val contractsCache = InfrequentlyMutatedCache<String, NavigableMap<Int, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+    /**
+     * This caches contract attachment versions by contract class name.  For each version, we support one signed and one unsigned attachment, since that is allowed.
+     *
+     * It is correctly invalidated as new attachments are uploaded.
+     */
+    private val contractsCache = InfrequentlyMutatedCache<ClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
 
-    private fun getContractAttachmentVersions(contractClassName: String):  NavigableMap<Int, AttachmentIds> = contractsCache.get(contractClassName) { name ->
+    private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
@@ -442,7 +451,7 @@ class NodeAttachmentService(
         }
     }
 
-    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Int, AttachmentIds> {
+    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Version, AttachmentIds> {
         check(it.value.size <= 2)
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }.singleOrNull()
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }.singleOrNull()
@@ -450,13 +459,13 @@ class NodeAttachmentService(
     }
 
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
-        val versions: NavigableMap<Int, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
         return newestAttachmentIds?.toList()?.first()
     }
 
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
-        val versions: NavigableMap<Int, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toList() }.toSet()
     }
 
