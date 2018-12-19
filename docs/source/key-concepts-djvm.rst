@@ -7,22 +7,6 @@ Deterministic JVM
 Introduction
 ~~~~~~~~~~~~
 
-The code in the DJVM module has not yet been integrated with the rest of the platform.  It will eventually become a
-part of the node and enforce deterministic and secure execution of smart contract code, which is mobile and may
-propagate around the network without human intervention.
-
-Currently, it stands alone as an evaluation version. We want to give developers the ability to start trying it out and
-get used to developing deterministic code under the set of constraints that we envision will be placed on contract code
-in the future.
-
-.. warning::
-    The deterministic sandbox is currently a standalone evaluation version of what we, in the future, want to integrate
-    with the Corda platform to protect execution of contract code and ensure deterministic behaviour.
-
-
-Motivation and Overview
-~~~~~~~~~~~~~~~~~~~~~~~
-
 It is important that all nodes that process a transaction always agree on whether it is valid or not. Because
 transaction types are defined using JVM byte code, this means that the execution of that byte code must be fully
 deterministic. Out of the box a standard JVM is not fully deterministic, thus we must make some modifications in order
@@ -32,9 +16,16 @@ So, what does it mean for a piece of code to be fully deterministic?  Ultimately
 as a function, is pure. In other words, given the same set of inputs, it will always produce the same set of outputs
 without inflicting any side-effects that might later affect the computation.
 
+.. important:: The code in the DJVM module has not yet been integrated with the rest of the platform.  It will eventually become a
+   part of the node and enforce deterministic and secure execution of smart contract code, which is mobile and may
+   propagate around the network without human intervention.
+
+   Currently, it stands alone as an evaluation version. We want to give developers the ability to start trying it out and
+   get used to developing deterministic code under the set of constraints that we envision will be placed on contract code
+   in the future.
 
 Non-Determinism
-...............
+~~~~~~~~~~~~~~~
 
 For a program running on the JVM, non-determinism could be introduced by a range of sources, for instance:
 
@@ -65,7 +56,7 @@ generation for ``java.lang.Object``. Contract code is rewritten the first time i
 for future use.
 
 Abstraction
-...........
+~~~~~~~~~~~
 
 The sandbox is abstracted away as an executor which takes as input an implementation of the interface
 ``SandboxedRunnable<in Input, out Output>``, dereferenced by a ``ClassSource``. This interface has a single method that
@@ -319,11 +310,11 @@ Further work is planned:
 Command-line Tool
 ~~~~~~~~~~~~~~~~~
 
-Open your terminal and navigate to the ``djvm`` folder. Then issue the following command:
+Open your terminal and navigate to the ``djvm`` directory in the Corda source tree. Then issue the following command:
 
 ::
 
-  djvm > ./shell/install
+  $ ./shell/install
 
 
 This will build the DJVM tool and install a shortcut on Bash-enabled systems. It will also generate a Bash completion
@@ -331,18 +322,18 @@ file and store it in the ``shell`` folder. This file can be sourced from your Ba
 
 ::
 
-  djvm > cd ~
-  ~ > djvm
+  $ cd ~
+  $ djvm
 
 Now, you can create a new Java file from a skeleton that ``djvm`` provides, compile the file, and consequently run it
 by issuing the following commands:
 
 ::
 
-  ~ > djvm new Hello
-  ~ > vim tmp/net/corda/sandbox/Hello.java
-  ~ > djvm build Hello
-  ~ > djvm run Hello
+  $ djvm new Hello
+  $ vim tmp/net/corda/sandbox/Hello.java
+  $ djvm build Hello
+  $ djvm run Hello
 
 This run will produce some output similar to this:
 
