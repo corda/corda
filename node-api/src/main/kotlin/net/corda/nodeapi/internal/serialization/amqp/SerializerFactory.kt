@@ -223,6 +223,7 @@ open class SerializerFactory(
         val notationByName = schemaAndDescriptor.schemas.schema.types.associate { it.name to it }
         val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
             try {
+                logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
                 name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
                 metaSchema.buildFor(notation, classloader)
