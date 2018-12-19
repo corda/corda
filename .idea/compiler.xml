@@ -42,6 +42,10 @@
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
+      <module name="corda-project_buildSrc_main" target="1.8" />
+      <module name="corda-project_buildSrc_test" target="1.8" />
+      <module name="corda-project_canonicalizer_main" target="1.8" />
+      <module name="corda-project_canonicalizer_test" target="1.8" />
       <module name="corda-project_main" target="1.8" />
       <module name="corda-project_test" target="1.8" />
       <module name="corda-smoke-test-utils_main" target="1.8" />
@@ -100,6 +104,16 @@
       <module name="explorer-capsule_test" target="1.6" />
       <module name="explorer_main" target="1.8" />
       <module name="explorer_test" target="1.8" />
+      <module name="finance-contracts-states_main" target="1.8" />
+      <module name="finance-contracts-states_test" target="1.8" />
+      <module name="finance-contracts_main" target="1.8" />
+      <module name="finance-contracts_test" target="1.8" />
+      <module name="finance-flows_integrationTest" target="1.8" />
+      <module name="finance-flows_main" target="1.8" />
+      <module name="finance-flows_test" target="1.8" />
+      <module name="finance-workflows_integrationTest" target="1.8" />
+      <module name="finance-workflows_main" target="1.8" />
+      <module name="finance-workflows_test" target="1.8" />
       <module name="finance_integrationTest" target="1.8" />
       <module name="finance_main" target="1.8" />
       <module name="finance_test" target="1.8" />
@@ -138,6 +152,10 @@
       <module name="loadtest_test" target="1.8" />
       <module name="mock_main" target="1.8" />
       <module name="mock_test" target="1.8" />
+      <module name="net.corda-blobinspector_main" target="1.8" />
+      <module name="net.corda-blobinspector_test" target="1.8" />
+      <module name="net.corda-finance-contracts-states_main" target="1.8" />
+      <module name="net.corda-finance-contracts-states_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />
       <module name="net.corda-verifier_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />
@@ -193,6 +211,8 @@
       <module name="shell_integrationTest" target="1.8" />
       <module name="shell_main" target="1.8" />
       <module name="shell_test" target="1.8" />
+      <module name="simm-valuation-demo-contracts-states_main" target="1.8" />
+      <module name="simm-valuation-demo-contracts-states_test" target="1.8" />
       <module name="simm-valuation-demo_integrationTest" target="1.8" />
       <module name="simm-valuation-demo_main" target="1.8" />
       <module name="simm-valuation-demo_test" target="1.8" />
