@@ -66,6 +66,8 @@ class IdempotentFlowTests {
     }
 
     private class TimedSubflow : FlowLogic<Unit>(), TimedFlow {
+        override val isTimeoutEnabled: Boolean = true
+
         @Suspendable
         override fun call() {
             subFlowExecutionCounter.incrementAndGet() // No checkpoint should be taken before invoking IdempotentSubFlow,

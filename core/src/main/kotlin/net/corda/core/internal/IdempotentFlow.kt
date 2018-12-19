@@ -20,4 +20,6 @@ interface IdempotentFlow
  * persisted. Otherwise, it wouldn't be possible to correctly reset the [TimedFlow].
  */
 // TODO: allow specifying retry settings per flow
-interface TimedFlow : IdempotentFlow
+interface TimedFlow : IdempotentFlow {
+    val isTimeoutEnabled: Boolean
+}

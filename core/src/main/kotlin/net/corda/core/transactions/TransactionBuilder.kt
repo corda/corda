@@ -16,9 +16,7 @@ import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -26,8 +24,10 @@ import net.corda.core.utilities.warnOnce
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import java.util.*
-import kotlin.collections.ArrayList
+import java.util.ArrayDeque
+import java.util.UUID
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
@@ -50,14 +50,36 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val references: MutableList<StateRef> = arrayListOf(),
-        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+        protected var privacySalt: PrivacySalt = PrivacySalt()
 ) {
-
     private companion object {
         private val log = contextLogger()
+
+        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
+
+        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
     }
+
+    constructor(
+            notary: Party? = null,
+            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+            inputs: MutableList<StateRef> = arrayListOf(),
+            attachments: MutableList<SecureHash> = arrayListOf(),
+            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+            commands: MutableList<Command<*>> = arrayListOf(),
+            window: TimeWindow? = null,
+            privacySalt: PrivacySalt = PrivacySalt(),
+            references: MutableList<StateRef> = defaultReferencesList(),
+            serviceHub: ServiceHub? = defaultServiceHub()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
+        this.references = references
+        this.serviceHub = serviceHub
+    }
+
+    protected var references: MutableList<StateRef> = defaultReferencesList()
+        private set
+    protected var serviceHub: ServiceHub? = defaultServiceHub()
+        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -411,13 +433,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max() ?: DEFAULT_CORDAPP_VERSION
-        //TODO could be moved as a single method of the attachment service method e.g. getContractAttachmentWithHighestContractVersion(contractClassName, minContractVersion)
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
-                versionCondition = Builder.greaterThanOrEqual(minimumRequiredContractClassVersion),
-                uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-
-        return services.attachments.queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull() ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
+        return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
+                ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
@@ -474,8 +491,9 @@ open class TransactionBuilder @JvmOverloads constructor(
         // Recursively resolve all pointers.
         while (statePointerQueue.isNotEmpty()) {
             val nextStatePointer = statePointerQueue.pop()
-            if (serviceHub != null) {
-                val resolvedStateAndRef = nextStatePointer.resolve(serviceHub)
+            val hub = serviceHub
+            if (hub != null) {
+                val resolvedStateAndRef = nextStatePointer.resolve(hub)
                 // Don't add dupe reference states because CoreTransaction doesn't allow it.
                 if (resolvedStateAndRef.ref !in referenceStates()) {
                     addReferenceState(resolvedStateAndRef.referenced())

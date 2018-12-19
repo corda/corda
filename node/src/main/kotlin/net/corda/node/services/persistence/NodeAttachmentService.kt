@@ -13,15 +13,18 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
+import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -35,7 +38,9 @@ import java.io.InputStream
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
-import java.util.*
+import java.util.NavigableMap
+import java.util.Optional
+import java.util.TreeMap
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -333,6 +338,7 @@ class NodeAttachmentService(
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
+                    contractClassNames.forEach { contractsCache.invalidate(it) }
                     return@withContractsInJar id
                 }
                 if (isUploaderTrusted(uploader)) {
@@ -343,6 +349,8 @@ class NodeAttachmentService(
                         attachment.uploader = uploader
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
+                        contractClassNames.forEach { contractsCache.invalidate(it) }
+                        // TODO: this is racey. ENT-2870
                         attachmentCache.invalidate(id)
                         attachmentContentCache.invalidate(id)
                     }
@@ -393,5 +401,34 @@ class NodeAttachmentService(
             // execution
             query.resultList.map { AttachmentId.parse(it.attId) }
         }
+    }
+
+    private val contractsCache = InfrequentlyMutatedCache<String, NavigableMap<Int, AttachmentId>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+
+    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+        val versions: NavigableMap<Int, AttachmentId> = contractsCache.get(contractClassName) { name ->
+            val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
+                    versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
+            val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+            database.transaction {
+                val session = currentDBSession()
+                val criteriaBuilder = session.criteriaBuilder
+
+                val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+                val root = criteriaQuery.from(DBAttachment::class.java)
+
+                val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+
+                // parse criteria and build where predicates
+                criteriaParser.parse(attachmentQueryCriteria, attachmentSort)
+
+                // prepare query for execution
+                val query = session.createQuery(criteriaQuery)
+
+                // execution
+                TreeMap(query.resultList.map { it.version to AttachmentId.parse(it.attId) }.toMap())
+            }
+        }
+        return versions.tailMap(minContractVersion, true).lastEntry()?.value
     }
 }
