@@ -178,21 +178,13 @@ class NodeStatePersistenceTests {
                 assertEquals(expectedMessage, retrievedMessage, "Final unconsumed regulator state is incorrect")
             }
 
-            // Check there's only one unconsumed state if an old transaction followed by the current transaction is sent
+            // Check that sending an old transaction doesn't result in a new unconsumed state
             val message = Message("A")
             buildTransactionChain(message, 4)
             sendTransactionToObserver(1)
             sendTransactionToObserver(3)
             val outputMessage = Message("AAAA")
             checkObserverTransactions(outputMessage)
-
-            // Check that sending an old transaction doesn't result in a new unconsumed state
-            val message2 = Message("B")
-            buildTransactionChain(message2, 4)
-            sendTransactionToObserver(7)
-            sendTransactionToObserver(5)
-            val outputMessage2 = Message("BAAA")
-            checkObserverTransactions(outputMessage2)
         }
     }
 }
@@ -275,7 +267,7 @@ class SendMessageFlow2(private val stateRef: StateAndRef<MessageState>, private 
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
         progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, FINALISING_TRANSACTION.childProgressTracker()))
+        return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
     }
 }
 
