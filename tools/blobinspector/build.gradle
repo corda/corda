@@ -12,7 +12,7 @@ dependencies {
 
     testCompile(project(':test-utils')) {
         exclude module: 'node-api'
-        exclude module: 'finance-contracts'
+        exclude module: 'contracts'
     }
 }
 
