@@ -20,11 +20,13 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Pluggable interface to allow for different cash selection provider implementations
- * Default implementation [CashSelectionH2Impl] uses H2 database and a custom function within H2 to perform aggregation.
+ * Default implementation in finance workflow module uses H2 database and a custom function within H2 to perform aggregation.
  * Custom implementations must implement this interface and declare their implementation in
  * META-INF/services/net.corda.contracts.asset.CashSelection
  */
-abstract class AbstractCashSelection {
+// TODO: make parameters configurable when we get CorDapp configuration.
+abstract class AbstractCashSelection(private val maxRetries : Int = 8, private val retrySleep : Int = 100,
+                                     private val retryCap : Int = 2000) {
     companion object {
         val instance = AtomicReference<AbstractCashSelection>()
 
@@ -44,12 +46,6 @@ abstract class AbstractCashSelection {
 
         private val log = contextLogger()
     }
-
-    // coin selection retry loop counter, sleep (msecs) and lock for selecting states
-    // TODO: make parameters configurable when we get CorDapp configuration.
-    private val MAX_RETRIES = 8
-    private val RETRY_SLEEP = 100
-    private val RETRY_CAP = 2000
 
     /**
      * Upon dynamically loading configured Cash Selection algorithms declared in META-INF/services
@@ -101,13 +97,13 @@ abstract class AbstractCashSelection {
         val stateAndRefs = mutableListOf<StateAndRef<Cash.State>>()
 
         // DOCSTART CASHSELECT 1
-        for (retryCount in 1..MAX_RETRIES) {
+        for (retryCount in 1..maxRetries) {
             if (!attemptSpend(services, amount, lockId, notary, onlyFromIssuerParties, withIssuerRefs, stateAndRefs)) {
                 log.warn("Coin selection failed on attempt $retryCount")
                 // TODO: revisit the back off strategy for contended spending.
-                if (retryCount != MAX_RETRIES) {
+                if (retryCount != maxRetries) {
                     stateAndRefs.clear()
-                    val durationMillis = (minOf(RETRY_SLEEP.shl(retryCount), RETRY_CAP / 2) * (1.0 + Math.random())).toInt()
+                    val durationMillis = (minOf(retrySleep.shl(retryCount), retryCap / 2) * (1.0 + Math.random())).toInt()
                     FlowLogic.sleep(durationMillis.millis)
                 } else {
                     log.warn("Insufficient spendable states identified for $amount")
