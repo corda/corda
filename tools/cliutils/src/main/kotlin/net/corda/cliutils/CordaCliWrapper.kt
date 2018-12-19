@@ -53,6 +53,7 @@ object CordaSystemUtils {
 
 object ShellConstants {
     const val RED = "\u001B[31m"
+    const val YELLOW = "\u001B[33m"
     const val RESET = "\u001B[0m"
 }
 
@@ -86,8 +87,8 @@ fun CordaCliWrapper.start(args: Array<String>) {
         if (this.verbose || this.subCommands().any { it.verbose }) {
             throwable.printStackTrace()
         } else {
-            System.err.println("*ERROR*: ${throwable.rootMessage ?: "Use --verbose for more details"}")
         }
+        printError(throwable.rootMessage ?: "Use --verbose for more details")
         exitProcess(ExitCodes.FAILURE)
     }
 }
@@ -184,6 +185,18 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
     }
 
     fun printHelp() = cmd.usage(System.out)
+
+}
+
+fun printWarning(message: String) = System.err.println("${ShellConstants.YELLOW}$message${ShellConstants.RESET}")
+fun printError(message: String) = System.err.println("${ShellConstants.RED}$message${ShellConstants.RESET}")
+
+
+/**
+ * Useful commonly used constants applicable to many CLI tools
+ */
+object CommonCliConstants {
+    const val BASE_DIR = "--base-directory"
 }
 
 /**

@@ -1,5 +1,6 @@
 package net.corda.node.services
 
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.CordaRuntimeException
@@ -13,18 +14,22 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.serialize
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
@@ -63,14 +68,20 @@ class AttachmentLoadingTests {
     }
 
     private val services = object : ServicesForResolution {
+        private val testNetworkParameters = testNetworkParameters().addNotary(DUMMY_NOTARY)
         override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
         override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
+        override fun loadContractAttachment(stateRef: StateRef, interestedContractClassName : ContractClassName?): Attachment = throw NotImplementedError()
         override val identityService = rigorousMock<IdentityService>().apply {
             doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
         }
         override val attachments: AttachmentStorage get() = this@AttachmentLoadingTests.attachments
         override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
-        override val networkParameters: NetworkParameters = testNetworkParameters()
+        override val networkParameters: NetworkParameters = testNetworkParameters
+        override val networkParametersStorage: NetworkParametersStorage get() = rigorousMock<NetworkParametersStorage>().apply {
+            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentHash
+            doReturn(testNetworkParameters).whenever(this).lookup(any())
+        }
     }
 
     @Test
@@ -93,8 +104,9 @@ class AttachmentLoadingTests {
     fun `test that attachments retrieved over the network are not used for code`() {
         withoutTestSerialization {
             driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptySet())) {
-                val bankA = startNode(providedName = bankAName, additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")).getOrThrow()
-                val bankB = startNode(providedName = bankBName, additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")).getOrThrow()
+                val additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")
+                val bankA = startNode(NodeParameters(providedName = bankAName, additionalCordapps = additionalCordapps)).getOrThrow()
+                val bankB = startNode(NodeParameters(providedName = bankBName, additionalCordapps = additionalCordapps)).getOrThrow()
                 assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
                     bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
                 }

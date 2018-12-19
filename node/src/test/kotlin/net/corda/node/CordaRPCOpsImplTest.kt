@@ -8,21 +8,23 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
+import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.extractFile
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
+import net.corda.core.node.services.StatesNotAvailableException
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.ColumnPredicate
 import net.corda.core.node.services.vault.EqualityComparisonOperator
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
@@ -31,11 +33,13 @@ import net.corda.finance.GBP
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.node.internal.security.AuthorizingSubject
 import net.corda.node.internal.security.RPCSecurityManagerImpl
+import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.node.services.messaging.CURRENT_RPC_CONTEXT
-import net.corda.node.services.messaging.RpcAuthContext
+import net.corda.node.services.rpc.CURRENT_RPC_CONTEXT
+import net.corda.node.services.rpc.RpcAuthContext
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.internal.config.User
 import net.corda.testing.core.ALICE_NAME
@@ -56,20 +60,23 @@ import org.junit.Before
 import org.junit.Test
 import rx.Observable
 import java.io.ByteArrayOutputStream
-import java.util.jar.JarInputStream
+import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 // Mock an AuthorizingSubject instance sticking to a fixed set of permissions
-private fun buildSubject(principal: String, permissionStrings: Set<String>) =
-        RPCSecurityManagerImpl.fromUserList(
-                id = AuthServiceId("TEST"),
-                users = listOf(User(username = principal,
-                        password = "",
-                        permissions = permissionStrings)))
-                .buildSubject(principal)
+private fun buildSubject(principal: String, permissionStrings: Set<String>): AuthorizingSubject {
+    return RPCSecurityManagerImpl.fromUserList(
+            id = AuthServiceId("TEST"),
+            users = listOf(User(
+                    username = principal,
+                    password = "",
+                    permissions = permissionStrings
+            ))
+    ).buildSubject(principal)
+}
 
 class CordaRPCOpsImplTest {
     private companion object {
@@ -87,7 +94,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance"))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))
@@ -163,11 +170,13 @@ class CordaRPCOpsImplTest {
     @Test
     fun `issue and move`() {
         @Suppress("DEPRECATION")
-        withPermissions(invokeRpc(CordaRPCOps::stateMachinesFeed),
+        withPermissions(
+                invokeRpc(CordaRPCOps::stateMachinesFeed),
                 invokeRpc(CordaRPCOps::internalVerifiedTransactionsFeed),
                 invokeRpc("vaultTrackBy"),
                 startFlow<CashIssueFlow>(),
-                startFlow<CashPaymentFlow>()) {
+                startFlow<CashPaymentFlow>()
+        ) {
             aliceNode.database.transaction {
                 stateMachineUpdates = rpc.stateMachinesFeed().updates
                 transactions = rpc.internalVerifiedTransactionsFeed().updates
@@ -183,7 +192,8 @@ class CordaRPCOpsImplTest {
             mockNet.runNetwork()
 
             var issueSmId: StateMachineRunId? = null
-            var moveSmId: StateMachineRunId? = null
+            var paymentSmId: StateMachineRunId? = null
+            var paymentRecSmId: StateMachineRunId? = null
             stateMachineUpdates.expectEvents {
                 sequence(
                         // ISSUE
@@ -191,14 +201,20 @@ class CordaRPCOpsImplTest {
                             issueSmId = add.id
                         },
                         expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == issueSmId)
+                            assertThat(remove.id).isEqualTo(issueSmId)
                         },
-                        // MOVE
+                        // PAYMENT
                         expect { add: StateMachineUpdate.Added ->
-                            moveSmId = add.id
+                            paymentSmId = add.id
+                        },
+                        expect { add: StateMachineUpdate.Added ->
+                            paymentRecSmId = add.id
                         },
                         expect { remove: StateMachineUpdate.Removed ->
-                            require(remove.id == moveSmId)
+                            assertThat(remove.id).isEqualTo(paymentRecSmId)
+                        },
+                        expect { remove: StateMachineUpdate.Removed ->
+                            assertThat(remove.id).isEqualTo(paymentSmId)
                         }
                 )
             }
@@ -371,6 +387,39 @@ class CordaRPCOpsImplTest {
             val killed = rpc.killFlow(flow.id)
             assertThat(killed).isTrue()
             assertThat(rpc.stateMachinesSnapshot().map { info -> info.id }).doesNotContain(flow.id)
+        }
+    }
+
+    @Test
+    fun `killing a flow releases soft lock`() {
+        withPermissions(all()) {
+            val issuerRef = OpaqueBytes("BankOfMars".toByteArray())
+            val cash = rpc.startFlow(::CashIssueFlow, 10.DOLLARS, issuerRef, notary).returnValue.getOrThrow().stx.tx.outRefsOfType<Cash.State>().single()
+
+            val flow = rpc.startFlow(::SoftLock, cash.ref, Duration.ofMinutes(5))
+
+            var locked = false
+            while (!locked) {
+                try {
+                    rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow()
+                } catch (e: StatesNotAvailableException) {
+                    locked = true
+                }
+            }
+
+            val killed = rpc.killFlow(flow.id)
+            assertThat(killed).isTrue()
+            assertThatCode { rpc.startFlow(::SoftLock, cash.ref, Duration.ofSeconds(1)).returnValue.getOrThrow() }.doesNotThrowAnyException()
+        }
+    }
+
+    @StartableByRPC
+    class SoftLock(private val stateRef: StateRef, private val duration: Duration) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            logger.info("Soft locking state with hash $stateRef...")
+            serviceHub.vaultService.softLockReserve(runId.uuid, NonEmptySet.of(stateRef))
+            sleep(duration)
         }
     }
 

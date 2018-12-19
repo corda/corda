@@ -32,7 +32,7 @@ class HibernateConfiguration(
         private val attributeConverters: Collection<AttributeConverter<*, *>>,
         private val jdbcUrl: String,
         cacheFactory: NamedCacheFactory,
-        val cordappClassLoader: ClassLoader? = null
+        val customClassLoader: ClassLoader? = null
 ) {
     companion object {
         private val logger = contextLogger()
@@ -73,12 +73,22 @@ class HibernateConfiguration(
         logger.info("Creating session factory for schemas: $schemas")
         val serviceRegistry = BootstrapServiceRegistryBuilder().build()
         val metadataSources = MetadataSources(serviceRegistry)
+
+        val hbm2dll: String =
+        if(databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE) {
+            "update"
+        } else if((!databaseConfig.initialiseSchema && databaseConfig.initialiseAppSchema == SchemaInitializationType.UPDATE)
+                || databaseConfig.initialiseAppSchema == SchemaInitializationType.VALIDATE) {
+            "validate"
+        } else {
+            "none"
+        }
+
         // We set a connection provider as the auto schema generation requires it.  The auto schema generation will not
         // necessarily remain and would likely be replaced by something like Liquibase.  For now it is very convenient though.
-        // TODO: replace auto schema generation as it isn't intended for production use, according to Hibernate docs.
         val config = Configuration(metadataSources).setProperty("hibernate.connection.provider_class", NodeDatabaseConnectionProvider::class.java.name)
-                .setProperty("hibernate.hbm2ddl.auto", if (databaseConfig.initialiseSchema) "update" else "validate")
                 .setProperty("hibernate.format_sql", "true")
+                .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
 
         schemas.forEach { schema ->
@@ -86,7 +96,7 @@ class HibernateConfiguration(
             schema.mappedTypes.forEach { config.addAnnotatedClass(it) }
         }
 
-        val sessionFactory = buildSessionFactory(config, metadataSources, cordappClassLoader)
+        val sessionFactory = buildSessionFactory(config, metadataSources, customClassLoader)
         logger.info("Created session factory for schemas: $schemas")
 
         // export Hibernate JMX statistics
@@ -112,13 +122,13 @@ class HibernateConfiguration(
         }
     }
 
-    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, cordappClassLoader: ClassLoader?): SessionFactory {
+    private fun buildSessionFactory(config: Configuration, metadataSources: MetadataSources, customClassLoader: ClassLoader?): SessionFactory {
         config.standardServiceRegistryBuilder.applySettings(config.properties)
 
-        if (cordappClassLoader != null) {
+        if (customClassLoader != null) {
             config.standardServiceRegistryBuilder.addService(
                     ClassLoaderService::class.java,
-                    ClassLoaderServiceImpl(cordappClassLoader))
+                    ClassLoaderServiceImpl(customClassLoader))
         }
 
         val metadataBuilder = metadataSources.getMetadataBuilder(config.standardServiceRegistryBuilder.build())

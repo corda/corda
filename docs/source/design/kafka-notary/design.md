@@ -1,6 +1,6 @@
 # High Performance CFT Notary Service
 
-.. important:: This design document describes a feature of Corda Enterprise.
+.. important:: This design document describes a prototyped but not shipped feature of Corda Enterprise. There are presently no plans to ship this notary.
 
 ## Overview
 
@@ -26,10 +26,6 @@ Out-of-scope:
 
 - Validating notary service.
 - Byzantine fault-tolerance.
-
-## Timeline
-
-No strict delivery timeline requirements, depends on client throughput needs. Estimated delivery by end of Q3 2018.
 
 ## Requirements
 

@@ -6,10 +6,12 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
+import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
 import org.junit.Rule
 import org.junit.Test
@@ -118,11 +120,13 @@ class TransactionTests {
         val commands = emptyList<CommandWithParties<CommandData>>()
         val attachments = listOf<Attachment>(ContractAttachment(rigorousMock<Attachment>().also {
             doReturn(SecureHash.zeroHash).whenever(it).id
-        }, DummyContract.PROGRAM_ID))
+            doReturn(fakeAttachment("nothing", "nada").inputStream()).whenever(it).open()
+        }, DummyContract.PROGRAM_ID, uploader = "app"))
+        attachments.first().openAsJAR()
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        val transaction = LedgerTransaction(
+        val transaction = LedgerTransaction.create(
                 inputs,
                 outputs,
                 commands,
@@ -131,7 +135,9 @@ class TransactionTests {
                 null,
                 timeWindow,
                 privacySalt,
-                testNetworkParameters()
+                testNetworkParameters(),
+                emptyList(),
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
 
         transaction.verify()
@@ -164,7 +170,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
-        fun buildTransaction() = LedgerTransaction(
+        fun buildTransaction() = LedgerTransaction.create(
                 inputs,
                 outputs,
                 commands,
@@ -172,7 +178,10 @@ class TransactionTests {
                 id,
                 notary,
                 timeWindow,
-                privacySalt
+                privacySalt,
+                testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
+                emptyList(),
+                inputStatesContractClassNameToMaxVersion = emptyMap()
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }

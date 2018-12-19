@@ -71,9 +71,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp project(':samples:simm-valuation-demo:flows')
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     }
-    signing {
-        enabled false
-    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
@@ -143,8 +140,17 @@ task integrationTest(type: Test, dependsOn: []) {
 }
 
 cordapp {
-    info {
-        vendor = 'R3'
-        targetPlatformVersion = corda_platform_version.toInteger()
+    targetPlatformVersion = corda_platform_version.toInteger()
+    contract {
+        name "net/corda/vega/contracts"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    workflow {
+        name "net/corda/vega/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }

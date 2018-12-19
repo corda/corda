@@ -5,7 +5,6 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.internal.InheritableThreadLocalToggleField
 import net.corda.core.internal.SimpleToggleField
 import net.corda.core.internal.ThreadLocalToggleField
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 
@@ -71,11 +70,13 @@ private class SerializationEnvironmentImpl(
 }
 
 private val _nodeSerializationEnv = SimpleToggleField<SerializationEnvironment>("nodeSerializationEnv", true)
-@VisibleForTesting
-val _globalSerializationEnv = SimpleToggleField<SerializationEnvironment>("globalSerializationEnv")
-@VisibleForTesting
+/** Should be set once in main. */
+var nodeSerializationEnv by _nodeSerializationEnv
+
+val _driverSerializationEnv = SimpleToggleField<SerializationEnvironment>("driverSerializationEnv")
+
 val _contextSerializationEnv = ThreadLocalToggleField<SerializationEnvironment>("contextSerializationEnv")
-@VisibleForTesting
+
 val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<SerializationEnvironment>("inheritableContextSerializationEnv") { stack ->
     stack.fold(false) { isAGlobalThreadBeingCreated, e ->
         isAGlobalThreadBeingCreated ||
@@ -83,12 +84,17 @@ val _inheritableContextSerializationEnv = InheritableThreadLocalToggleField<Seri
                 (e.className == "java.util.concurrent.ForkJoinPool\$DefaultForkJoinWorkerThreadFactory" && e.methodName == "newThread")
     }
 }
-private val serializationEnvProperties = listOf(_nodeSerializationEnv, _globalSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
+
+private val serializationEnvFields = listOf(_nodeSerializationEnv, _driverSerializationEnv, _contextSerializationEnv, _inheritableContextSerializationEnv)
+
+val _allEnabledSerializationEnvs: List<Pair<String, SerializationEnvironment>>
+    get() = serializationEnvFields.mapNotNull { it.get()?.let { env -> Pair(it.name, env) } }
+
 val effectiveSerializationEnv: SerializationEnvironment
-    get() = serializationEnvProperties.map { Pair(it, it.get()) }.filter { it.second != null }.run {
-        singleOrNull()?.run {
-            second!!
-        } ?: throw IllegalStateException("Expected exactly 1 of {${serializationEnvProperties.joinToString(", ") { it.name }}} but got: {${joinToString(", ") { it.first.name }}}")
+    get() {
+        return _allEnabledSerializationEnvs.let {
+            checkNotNull(it.singleOrNull()?.second) {
+                "Expected exactly 1 of {${serializationEnvFields.joinToString(", ") { it.name }}} but got: {${it.joinToString(", ") { it.first }}}"
+            }
+        }
     }
-/** Should be set once in main. */
-var nodeSerializationEnv by _nodeSerializationEnv

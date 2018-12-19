@@ -4,6 +4,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.AttachmentConstraint
+import net.corda.core.contracts.AutomaticPlaceholderConstraint
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.contracts.ContractState
@@ -96,6 +97,15 @@ interface TransactionDSLInterpreter : Verifies, OutputStateLookup {
      * @param attachmentId The attachment
      */
     fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>)
+
+    /**
+     * Attaches an attachment containing the named contract to the transaction.
+     * @param contractClassName The contract class to attach.
+     * @param attachmentId The attachment.
+     * @param signers The signers.
+     * @param jarManifestAttributes The JAR manifest file attributes.
+     */
+    fun _attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>, jarManifestAttributes: Map<String,String>)
 }
 
 /**
@@ -147,37 +157,37 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, notary: Party, contractState: ContractState) =
-            output(contractClassName, label, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, label, notary, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, encumbrance, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a labelled output to the transaction.
      */
     fun output(contractClassName: ContractClassName, label: String, contractState: ContractState) =
-            output(contractClassName, label, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, label, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, notary: Party, contractState: ContractState) =
-            output(contractClassName, null, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, encumbrance: Int, contractState: ContractState) =
-            output(contractClassName, null, notary, encumbrance, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, encumbrance, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds an output to the transaction.
      */
     fun output(contractClassName: ContractClassName, contractState: ContractState) =
-            output(contractClassName, null, notary, null, AutomaticHashConstraint, contractState)
+            output(contractClassName, null, notary, null, AutomaticPlaceholderConstraint, contractState)
 
     /**
      * Adds a command to the transaction.
@@ -202,7 +212,7 @@ class TransactionDSL<out T : TransactionDSLInterpreter>(interpreter: T, private 
      */
     fun attachment(contractClassName: ContractClassName) = _attachment(contractClassName)
 
-    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>) = _attachment(contractClassName, attachmentId, signers)
+    fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId, signers: List<PublicKey>, jarManifestAttributes: Map<String,String> = emptyMap()) = _attachment(contractClassName, attachmentId, signers, jarManifestAttributes)
     fun attachment(contractClassName: ContractClassName, attachmentId: AttachmentId) = _attachment(contractClassName, attachmentId, emptyList())
 
     fun attachments(vararg contractClassNames: ContractClassName) = contractClassNames.forEach { attachment(it) }

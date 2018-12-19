@@ -206,6 +206,18 @@ You can shut the node down via shell:
 * ``gracefulShutdown`` will put node into draining mode, and shut down when there are no flows running
 * ``shutdown`` will shut the node down immediately
 
+Output Formats
+**********************
+
+You can choose the format in which the output of the commands will be shown.
+
+To see what is the format that's currently used, you can type ``output-format get``.
+
+To update the format, you can type ``output-format set json``.
+
+The currently supported formats are ``json``, ``yaml``. The default format is ``yaml``.
+
+
 Flow commands
 *************
 

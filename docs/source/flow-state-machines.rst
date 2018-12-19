@@ -227,8 +227,8 @@ Next, we call another subflow called ``SignTransactionFlow``. ``SignTransactionF
 
 The transaction then needs to be finalized. This is the the process of sending the transaction to a notary to assert
 (with another signature) that the time-window in the transaction (if any) is valid and there are no double spends.
-In this flow, finalization is handled by the buyer, so we just wait for the signed transaction to appear in our
-transaction storage. It will have the same ID as the one we started with but more signatures.
+In this flow, finalization is handled by the buyer, we just wait for them to send it to us. It will have the same ID as
+the one we started with but more signatures.
 
 Implementing the buyer
 ----------------------
@@ -314,9 +314,11 @@ On the buyer side, we use ``FinalityFlow`` to finalise the transaction. It will:
 * Record the transaction in the local vault, if it is relevant (i.e. involves the owner of the node).
 * Send the fully signed transaction to the other participants for recording as well.
 
-.. warning:: If the seller stops before sending the finalised transaction to the buyer, the seller is left with a
-   valid transaction but the buyer isn't, so they can't spend the asset they just purchased! This sort of thing is not
-   always a risk (as the seller may not gain anything from that sort of behaviour except a lawsuit), but if it is, a future
+On the seller side we use ``ReceiveFinalityFlow`` to receive and record the finalised transaction.
+
+.. warning:: If the buyer stops before sending the finalised transaction to the seller, the buyer is left with a
+   valid transaction but the seller isn't, so they don't get the cash! This sort of thing is not
+   always a risk (as the buyer may not gain anything from that sort of behaviour except a lawsuit), but if it is, a future
    version of the platform will allow you to ask the notary to send you the transaction as well, in case your counterparty
    does not. This is not the default because it reveals more private info to the notary.
 

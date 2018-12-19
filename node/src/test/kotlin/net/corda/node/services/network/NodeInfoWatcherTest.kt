@@ -6,7 +6,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.size
 import net.corda.core.node.services.KeyManagementService
-import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.NODE_INFO_DIRECTORY
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
 import net.corda.testing.core.ALICE_NAME

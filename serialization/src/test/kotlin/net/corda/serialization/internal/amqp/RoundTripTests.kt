@@ -1,15 +1,28 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
+import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.math.BigInteger
+import kotlin.test.assertEquals
 
 class RoundTripTests {
+
     @Test
     fun mutableBecomesImmutable() {
         data class C(val l: MutableList<String>)
@@ -119,5 +132,57 @@ class RoundTripTests {
         val bytes = SerializationOutput(factory).serialize(instance)
         val deserialized = DeserializationInput(factory).deserialize(bytes) as I
         assertThat(deserialized.squared).isEqualTo(2)
+    }
+
+    data class MembershipState<out T: Any>(val metadata: T): ContractState {
+        override val participants: List<AbstractParty>
+            get() = emptyList()
+    }
+
+    data class OnMembershipChanged(val changedMembership : StateAndRef<MembershipState<Any>>)
+
+    @Test
+    fun canSerializeClassesWithUntypedProperties() {
+        val data = MembershipState<Any>(mapOf("foo" to "bar"))
+        val party = Party(
+                CordaX500Name(organisation = "Test Corp", locality = "Madrid", country = "ES"),
+                entropyToKeyPair(BigInteger.valueOf(83)).public)
+        val transactionState = TransactionState(
+                data,
+                "foo",
+                party
+        )
+        val ref = StateRef(SecureHash.zeroHash, 0)
+        val instance = OnMembershipChanged(StateAndRef(
+                transactionState,
+                ref
+        ))
+
+        val factory = testDefaultFactoryNoEvolution().apply { register(PublicKeySerializer) }
+        val bytes = SerializationOutput(factory).serialize(instance)
+        val deserialized = DeserializationInput(factory).deserialize(bytes)
+        assertEquals(mapOf("foo" to "bar"), deserialized.changedMembership.state.data.metadata)
+    }
+
+    interface I2<T> {
+        val t: T
+    }
+
+    data class C<A, B : A>(override val t: B) : I2<B>
+
+    @Test
+    fun recursiveTypeVariableResolution() {
+        val factory = testDefaultFactoryNoEvolution()
+        val instance = C<Collection<String>, List<String>>(emptyList())
+
+        val bytes = SerializationOutput(factory).serialize(instance)
+        DeserializationInput(factory).deserialize(bytes)
+
+        assertEquals(
+                """
+                C (erased)(t: *): I2<*>
+                  t: *
+                """.trimIndent(),
+                factory.getTypeInformation(instance::class.java).prettyPrint())
     }
 }

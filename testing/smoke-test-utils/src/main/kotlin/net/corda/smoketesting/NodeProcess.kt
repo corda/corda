@@ -3,13 +3,17 @@ package net.corda.smoketesting
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
+import net.corda.core.identity.Party
 import net.corda.core.internal.*
+import net.corda.core.node.NotaryInfo
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.common.internal.testNetworkParameters
+import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Instant
@@ -58,15 +62,7 @@ class NodeProcess(
 
         private companion object {
             val javaPath: Path = Paths.get(System.getProperty("java.home"), "bin", "java")
-            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(systemDefault())
-            val defaultNetworkParameters = run {
-                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
-                    // TODO There are no notaries in the network parameters for smoke test nodes. If this is required then we would
-                    // need to introduce the concept of a "network" which predefines the notaries, like the driver and MockNetwork
-                    NetworkParametersCopier(testNetworkParameters())
-                }
-            }
-
+            val formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss.SSS").withZone(systemDefault())
             init {
                 checkNotOnClasspath("net.corda.node.Corda") {
                     "Smoke test has the node in its classpath. Please remove the offending dependency."
@@ -74,16 +70,38 @@ class NodeProcess(
             }
         }
 
+        private lateinit var networkParametersCopier: NetworkParametersCopier
+
         private val nodesDirectory = (buildDirectory / formatter.format(Instant.now())).createDirectories()
+
+        private var notaryParty: Party? = null
+
+        private fun createNetworkParameters(notaryInfo: NotaryInfo, nodeDir: Path) {
+            try {
+                networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+            } catch (_: IllegalStateException) {
+                // Assuming serialization env not in context.
+                AMQPClientSerializationScheme.createSerializationEnv().asContextEnv {
+                    networkParametersCopier = NetworkParametersCopier(testNetworkParameters(notaries = listOf(notaryInfo)))
+                }
+            }
+            networkParametersCopier.install(nodeDir)
+        }
 
         fun baseDirectory(config: NodeConfig): Path = nodesDirectory / config.commonName
 
         fun create(config: NodeConfig): NodeProcess {
             val nodeDir = baseDirectory(config).createDirectories()
             log.info("Node directory: {}", nodeDir)
+            if (config.isNotary) {
+                require(notaryParty == null) { "Only one notary can be created." }
+                notaryParty = DevIdentityGenerator.installKeyStoreWithNodeIdentity(nodeDir, config.legalName)
+            } else {
+                require(notaryParty != null) { "Notary not created. Please call `create` with a notary config first." }
+            }
 
             (nodeDir / "node.conf").writeText(config.toText())
-            defaultNetworkParameters.install(nodeDir)
+            createNetworkParameters(NotaryInfo(notaryParty!!, false), nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))

@@ -7,7 +7,7 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.rpcDriver

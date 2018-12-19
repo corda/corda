@@ -27,7 +27,20 @@ object SuggestedDetails {
 
     private var cursor = 0
 
-    val nextBank: Pair<String, String> get() = banks[cursor++ % banks.size]
+    fun nextBank(exists: (String) -> Boolean): Pair<String, String> {
+        for (i in 0 until banks.size) {
+            val bank = banks[cursor]
+            if (!exists(bank.first)) {
+                return bank
+            }
+            cursor = (cursor + 1) % banks.size
+        }
+        return banks[cursor]
+    }
+
+    fun reset() {
+        cursor = 0
+    }
 }
 
 class NodeData {

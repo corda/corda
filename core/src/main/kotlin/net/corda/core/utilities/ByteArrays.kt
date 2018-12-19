@@ -68,8 +68,8 @@ sealed class ByteSequence(private val _bytes: ByteArray, val offset: Int, val si
      * This method cannot be used to get bytes before [offset] or after [offset]+[size], and never makes a new array.
      */
     fun slice(start: Int = 0, end: Int = size): ByteBuffer {
-        require(start >= 0)
-        require(end >= 0)
+        require(start >= 0) { "Starting index must be greater than or equal to 0" }
+        require(end >= 0){"End index must be greater or equal to 0"}
         val clampedStart = min(start, size)
         val clampedEnd = min(end, size)
         return ByteBuffer.wrap(_bytes, offset + clampedStart, max(0, clampedEnd - clampedStart)).asReadOnlyBuffer()
@@ -155,7 +155,7 @@ open class OpaqueBytes(bytes: ByteArray) : ByteSequence(bytes, 0, bytes.size) {
     }
 
     init {
-        require(bytes.isNotEmpty())
+        require(bytes.isNotEmpty()) { "Byte Array must not be empty" }
     }
 
     /**
@@ -193,7 +193,7 @@ fun String.parseAsHex(): ByteArray = DatatypeConverter.parseHexBinary(this)
 @KeepForDJVM
 class OpaqueBytesSubSequence(override val bytes: ByteArray, offset: Int, size: Int) : ByteSequence(bytes, offset, size) {
     init {
-        require(offset >= 0 && offset < bytes.size)
-        require(size >= 0 && offset + size <= bytes.size)
+        require(offset >= 0 && offset < bytes.size) { "Offset must be greater than or equal to 0, and less than the size of the backing array" }
+        require(size >= 0 && offset + size <= bytes.size) { "Sub-sequence size must be greater than or equal to 0, and less than the size of the backing array" }
     }
 }

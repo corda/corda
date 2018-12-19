@@ -4,18 +4,20 @@ import com.google.common.util.concurrent.MoreExecutors
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignedData
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readObject
+import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
+import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.node.services.api.NetworkMapCacheInternal
+import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
 import net.corda.nodeapi.exceptions.OutdatedNetworkParameterHashException
+import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
@@ -32,7 +34,8 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val nodeInfoWatcher: NodeInfoWatcher,
                         private val networkMapClient: NetworkMapClient?,
                         private val baseDirectory: Path,
-                        private val extraNetworkMapKeys: List<UUID>
+                        private val extraNetworkMapKeys: List<UUID>,
+                        private val networkParametersStorage: NetworkParametersStorageInternal
 ) : AutoCloseable {
     companion object {
         private val logger = contextLogger()
@@ -45,20 +48,40 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
     }
     private var newNetworkParameters: Pair<ParametersUpdate, SignedNetworkParameters>? = null
     private var fileWatcherSubscription: Subscription? = null
+    private var autoAcceptNetworkParameters: Boolean = true
     private lateinit var trustRoot: X509Certificate
     private lateinit var currentParametersHash: SecureHash
+    private lateinit var ourNodeInfo: SignedNodeInfo
     private lateinit var ourNodeInfoHash: SecureHash
+    private lateinit var networkParameters: NetworkParameters
+    private lateinit var keyManagementService: KeyManagementService
+    private lateinit var excludedAutoAcceptNetworkParameters: Set<String>
 
     override fun close() {
         fileWatcherSubscription?.unsubscribe()
         MoreExecutors.shutdownAndAwaitTermination(networkMapPoller, 50, TimeUnit.SECONDS)
     }
 
-    fun start(trustRoot: X509Certificate, currentParametersHash: SecureHash, ourNodeInfoHash: SecureHash) {
+    fun start(trustRoot: X509Certificate,
+              currentParametersHash: SecureHash,
+              ourNodeInfo: SignedNodeInfo,
+              networkParameters: NetworkParameters,
+              keyManagementService: KeyManagementService,
+              networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings) {
         require(fileWatcherSubscription == null) { "Should not call this method twice." }
         this.trustRoot = trustRoot
         this.currentParametersHash = currentParametersHash
-        this.ourNodeInfoHash = ourNodeInfoHash
+        this.ourNodeInfo = ourNodeInfo
+        this.ourNodeInfoHash = ourNodeInfo.raw.hash
+        this.networkParameters = networkParameters
+        this.keyManagementService = keyManagementService
+        this.autoAcceptNetworkParameters = networkParameterAcceptanceSettings.autoAcceptEnabled
+        this.excludedAutoAcceptNetworkParameters = networkParameterAcceptanceSettings.excludedAutoAcceptableParameters
+
+        val autoAcceptNetworkParametersNames = NetworkParameters.autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
+        if (autoAcceptNetworkParameters && autoAcceptNetworkParametersNames.isNotEmpty()) {
+            logger.info("Auto-accept enabled for network parameter changes which modify only: $autoAcceptNetworkParametersNames")
+        }
         watchForNodeInfoFiles()
         if (networkMapClient != null) {
             watchHttpNetworkMap()
@@ -187,7 +210,8 @@ The node will shutdown now.""")
             return
         }
         val newSignedNetParams = networkMapClient.getNetworkParameters(update.newParametersHash)
-        val newNetParams = newSignedNetParams.verifiedNetworkMapCert(trustRoot)
+        val newNetParams = newSignedNetParams.verifiedNetworkParametersCert(trustRoot)
+        networkParametersStorage.saveParameters(newSignedNetParams)
         logger.info("Downloaded new network parameters: $newNetParams from the update: $update")
         newNetworkParameters = Pair(update, newSignedNetParams)
         val updateInfo = ParametersUpdateInfo(
@@ -195,7 +219,15 @@ The node will shutdown now.""")
                 newNetParams,
                 update.description,
                 update.updateDeadline)
-        parametersUpdatesTrack.onNext(updateInfo)
+
+        if (autoAcceptNetworkParameters && networkParameters.canAutoAccept(newNetParams, excludedAutoAcceptNetworkParameters)) {
+            logger.info("Auto-accepting network parameter update ${update.newParametersHash}")
+            acceptNewNetworkParameters(update.newParametersHash) { hash ->
+                hash.serialize().sign { keyManagementService.sign(it.bytes, ourNodeInfo.verified().legalIdentities[0].owningKey) }
+            }
+        } else {
+            parametersUpdatesTrack.onNext(updateInfo)
+        }
     }
 
     fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
@@ -204,7 +236,7 @@ The node will shutdown now.""")
         // Add persisting of newest parameters from update.
         val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
         // We should check that we sign the right data structure hash.
-        val newNetParams = signedNewNetParams.verifiedNetworkMapCert(trustRoot)
+        val newNetParams = signedNewNetParams.verifiedNetworkParametersCert(trustRoot)
         val newParametersHash = signedNewNetParams.raw.hash
         if (parametersHash == newParametersHash) {
             // The latest parameters have priority.

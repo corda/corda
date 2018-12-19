@@ -1,52 +1,31 @@
 package net.corda.node.internal
 
-import net.corda.core.internal.div
-import net.corda.node.InitialRegistrationCmdLineOptions
-import net.corda.node.internal.subcommands.InitialRegistrationCli
-import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
+import com.google.common.io.Files
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.BeforeClass
 import org.junit.Test
-import org.slf4j.event.Level
-import picocli.CommandLine
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.channels.OverlappingFileLockException
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
+import kotlin.test.assertFailsWith
 
 class NodeStartupTest {
-    private val startup = NodeStartupCli()
+    @Test
+    fun `test that you cant start two nodes in the same directory`() {
+        val dir = Files.createTempDir().toPath()
 
-    companion object {
-        private lateinit var workingDirectory: Path
+        val latch = CountDownLatch(1)
 
-        @BeforeClass
-        @JvmStatic
-        fun initDirectories() {
-            workingDirectory = Paths.get(".").normalize().toAbsolutePath()
+        thread(start = true) {
+            val node = NodeStartup()
+            assertThat(node.isNodeRunningAt(dir)).isTrue()
+            latch.countDown()
         }
-    }
 
-    @Test
-    fun `no command line arguments`() {
-        CommandLine.populateCommand(startup)
-        assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory)
-        assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "node.conf")
-        assertThat(startup.verbose).isEqualTo(false)
-        assertThat(startup.loggingLevel).isEqualTo(Level.INFO)
-        assertThat(startup.cmdLineOptions.noLocalShell).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.sshdServer).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.justGenerateNodeInfo).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.justGenerateRpcSslCerts).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.unknownConfigKeysPolicy).isEqualTo(UnknownConfigKeysPolicy.FAIL)
-        assertThat(startup.cmdLineOptions.devMode).isEqualTo(null)
-        assertThat(startup.cmdLineOptions.clearNetworkMapCache).isEqualTo(false)
-        assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
-    }
+        // wait until the file has been created on the other thread
+        latch.await()
 
-    @Test
-    fun `--base-directory`() {
-        CommandLine.populateCommand(startup, "--base-directory", (workingDirectory / "another-base-dir").toString())
-        assertThat(startup.cmdLineOptions.baseDirectory).isEqualTo(workingDirectory / "another-base-dir")
-        assertThat(startup.cmdLineOptions.configFile).isEqualTo(workingDirectory / "another-base-dir" / "node.conf")
-        assertThat(startup.cmdLineOptions.networkRootTrustStorePathParameter).isEqualTo(null)
+        // Check that I can't start up another node in the same directory
+        val anotherNode = NodeStartup()
+        assertFailsWith<OverlappingFileLockException> { anotherNode.isNodeRunningAt(dir) }
     }
 }

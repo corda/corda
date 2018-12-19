@@ -1,9 +1,11 @@
 package net.corda.tools.shell
 
+import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -61,7 +63,7 @@ import kotlin.concurrent.thread
 // TODO: Add command history.
 // TODO: Command completion.
 // TODO: Do something sensible with commands that return a future.
-// TODO: Configure default renderers, send objects down the pipeline, add commands to do json/xml/yaml outputs.
+// TODO: Configure default renderers, send objects down the pipeline, add support for xml output format.
 // TODO: Add a command to view last N lines/tail/control log4j2 loggers.
 // TODO: Review or fix the JVM commands which have bitrotted and some are useless.
 // TODO: Get rid of the 'java' command, it's kind of worthless.
@@ -78,6 +80,15 @@ object InteractiveShell {
     private var classLoader: ClassLoader? = null
     private lateinit var shellConfiguration: ShellConfiguration
     private var onExit: () -> Unit = {}
+
+    @JvmStatic
+    fun getCordappsClassloader() = classLoader
+
+    enum class OutputFormat {
+        JSON,
+        YAML
+    }
+
     /**
      * Starts an interactive shell connected to the local terminal. This shell gives administrator access to the node
      * internals.
@@ -113,6 +124,7 @@ object InteractiveShell {
             }
         }
 
+        ExternalResolver.INSTANCE.addCommand("output-format", "Commands to inspect and update the output format.", OutputFormatCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("run", "Runs a method from the CordaRPCOps interface on the node.", RunShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("flow", "Commands to work with flows. Flows are how you can change the ledger.", FlowShellCommand::class.java)
         ExternalResolver.INSTANCE.addCommand("start", "An alias for 'flow start'", StartShellCommand::class.java)
@@ -187,6 +199,16 @@ object InteractiveShell {
         throw e.cause ?: e
     }
 
+    @JvmStatic
+    fun setOutputFormat(outputFormat: OutputFormat) {
+        this.outputFormat = outputFormat
+    }
+
+    @JvmStatic
+    fun getOutputFormat(): OutputFormat {
+        return outputFormat
+    }
+
     fun createYamlInputMapper(rpcOps: CordaRPCOps): ObjectMapper {
         // Return a standard Corda Jackson object mapper, configured to use YAML by default and with extra
         // serializers.
@@ -199,8 +221,13 @@ object InteractiveShell {
         }
     }
 
-    private fun createOutputMapper(): ObjectMapper {
-        return JacksonSupport.createNonRpcMapper().apply {
+    private fun createOutputMapper(outputFormat: OutputFormat): ObjectMapper {
+        val factory = when(outputFormat) {
+            OutputFormat.JSON -> JsonFactory()
+            OutputFormat.YAML -> YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
+        }
+
+        return JacksonSupport.createNonRpcMapper(factory).apply {
             // Register serializers for stateful objects from libraries that are special to the RPC system and don't
             // make sense to print out to the screen. For classes we own, annotations can be used instead.
             val rpcModule = SimpleModule().apply {
@@ -214,8 +241,8 @@ object InteractiveShell {
         }
     }
 
-    // TODO: This should become the default renderer rather than something used specifically by commands.
-    private val outputMapper by lazy { createOutputMapper() }
+    // TODO: A default renderer could be used, instead of an object mapper. See: http://www.crashub.org/1.3/reference.html#_renderers
+    private var outputFormat = OutputFormat.YAML
 
     @VisibleForTesting
     lateinit var latch: CountDownLatch
@@ -232,7 +259,7 @@ object InteractiveShell {
                               output: RenderPrintWriter,
                               rpcOps: CordaRPCOps,
                               ansiProgressRenderer: ANSIProgressRenderer,
-                              om: ObjectMapper = outputMapper) {
+                              inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
         val matches = try {
             rpcOps.registeredFlows().filter { nameFragment in it }
         } catch (e: PermissionException) {
@@ -257,7 +284,7 @@ object InteractiveShell {
         try {
             // Show the progress tracker on the console until the flow completes or is interrupted with a
             // Ctrl-C keypress.
-            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, om)
+            val stateObservable = runFlowFromString({ clazz, args -> rpcOps.startTrackedFlowDynamic(clazz, *args) }, inputData, flowClazz, inputObjectMapper)
 
             latch = CountDownLatch(1)
             ansiProgressRenderer.render(stateObservable, latch::countDown)
@@ -411,7 +438,8 @@ object InteractiveShell {
     }
 
     @JvmStatic
-    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps, om: ObjectMapper): Any? {
+    fun runRPCFromString(input: List<String>, out: RenderPrintWriter, context: InvocationContext<out Any>, cordaRPCOps: CordaRPCOps,
+                         inputObjectMapper: ObjectMapper): Any? {
         val cmd = input.joinToString(" ").trim { it <= ' ' }
         if (cmd.startsWith("startflow", ignoreCase = true)) {
             // The flow command provides better support and startFlow requires special handling anyway due to
@@ -426,11 +454,11 @@ object InteractiveShell {
         var result: Any? = null
         try {
             InputStreamSerializer.invokeContext = context
-            val parser = StringToMethodCallParser(CordaRPCOps::class.java, om)
+            val parser = StringToMethodCallParser(CordaRPCOps::class.java, inputObjectMapper)
             val call = parser.parse(cordaRPCOps, cmd)
             result = call.call()
             if (result != null && result !== kotlin.Unit && result !is Void) {
-                result = printAndFollowRPCResponse(result, out)
+                result = printAndFollowRPCResponse(result, out, outputFormat)
             }
             if (result is Future<*>) {
                 if (!result.isDone) {
@@ -526,19 +554,11 @@ object InteractiveShell {
         }
     }
 
-    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter): CordaFuture<Unit> {
+    private fun printAndFollowRPCResponse(response: Any?, out: PrintWriter, outputFormat: OutputFormat): CordaFuture<Unit> {
+        val outputMapper = createOutputMapper(outputFormat)
 
         val mapElement: (Any?) -> String = { element -> outputMapper.writerWithDefaultPrettyPrinter().writeValueAsString(element) }
-        val mappingFunction: (Any?) -> String = { value ->
-            if (value is Collection<*>) {
-                value.joinToString(",${System.lineSeparator()}  ", "[${System.lineSeparator()}  ", "${System.lineSeparator()}]") { element ->
-                    mapElement(element)
-                }
-            } else {
-                mapElement(value)
-            }
-        }
-        return maybeFollow(response, mappingFunction, out)
+        return maybeFollow(response, mapElement, out)
     }
 
     private class PrintingSubscriber(private val printerFun: (Any?) -> String, private val toStream: PrintWriter) : Subscriber<Any>() {

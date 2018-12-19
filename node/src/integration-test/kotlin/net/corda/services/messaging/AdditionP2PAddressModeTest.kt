@@ -17,14 +17,14 @@ import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
 import org.junit.Test
 import java.util.*
 
 class AdditionP2PAddressModeTest {
-    private val portAllocation = PortAllocation.Incremental(27182)
+    private val portAllocation = incrementalPortAllocation(27182)
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))
@@ -32,7 +32,6 @@ class AdditionP2PAddressModeTest {
             val mainAddress = portAllocation.nextHostAndPort().toString()
             val altAddress = portAllocation.nextHostAndPort().toString()
             val haConfig = mutableMapOf<String, Any?>()
-            haConfig["detectPublicIp"] = false
             haConfig["p2pAddress"] = mainAddress //advertise this as primary
             haConfig["messagingServerAddress"] = altAddress // but actually host on the alternate address
             haConfig["messagingServerExternal"] = false

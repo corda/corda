@@ -8,10 +8,19 @@ import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.serialization.serialize
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -35,13 +44,22 @@ class TransactionBuilderTest {
     private val services = rigorousMock<ServicesForResolution>()
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
+    private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
+    private val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+            contractClassNamesCondition = Builder.equal(listOf("net.corda.testing.contracts.DummyContract")),
+            versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
+            uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
+    private val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
 
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()
+        val networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
+        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
+        doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentHash
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
-        doReturn(testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)).whenever(services).networkParameters
+        doReturn(networkParameters).whenever(services).networkParameters
 
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
@@ -50,7 +68,8 @@ class TransactionBuilderTest {
         doReturn(contractAttachmentId).whenever(attachment).id
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
-        doReturn(emptyList<Party>()).whenever(attachment).signers
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 
     @Test
@@ -67,6 +86,7 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
+        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersStorage.currentHash)
     }
 
     @Test
@@ -103,6 +123,25 @@ class TransactionBuilderTest {
     }
 
     @Test
+    fun `multiple commands with same data are joined without duplicates in terms of signers`() {
+        val aliceParty = TestIdentity(ALICE_NAME).party
+        val bobParty = TestIdentity(BOB_NAME).party
+        val tx = TransactionBuilder(notary)
+        tx.addCommand(DummyCommandData, notary.owningKey, aliceParty.owningKey)
+        tx.addCommand(DummyCommandData, aliceParty.owningKey, bobParty.owningKey)
+
+        val commands = tx.commands()
+
+        assertThat(commands).hasSize(1)
+        assertThat(commands.single()).satisfies { cmd ->
+
+            assertThat(cmd.value).isEqualTo(DummyCommandData)
+            assertThat(cmd.signers).hasSize(3)
+            assertThat(cmd.signers).contains(notary.owningKey, bobParty.owningKey, aliceParty.owningKey)
+        }
+    }
+
+    @Test
     fun `automatic signature constraint`() {
         val aliceParty = TestIdentity(ALICE_NAME).party
         val bobParty = TestIdentity(BOB_NAME).party
@@ -115,6 +154,7 @@ class TransactionBuilderTest {
 
         doReturn(attachments).whenever(services).attachments
         doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
+        doReturn(listOf(contractAttachmentId)).whenever(attachments).queryAttachments(attachmentQueryCriteria, attachmentSort)
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
         val builder = TransactionBuilder()
@@ -128,12 +168,12 @@ class TransactionBuilderTest {
     private val unsignedAttachment = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<PublicKey> get() = emptyList()
+        override val signerKeys: List<PublicKey> get() = emptyList()
     }, DummyContract.PROGRAM_ID)
 
     private fun signedAttachment(vararg parties: Party) = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
-        override val signers: List<PublicKey> get() = parties.map { it.owningKey }
-    }, DummyContract.PROGRAM_ID, signers = parties.map { it.owningKey })
+        override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
+    }, DummyContract.PROGRAM_ID, signerKeys = parties.map { it.owningKey })
 }

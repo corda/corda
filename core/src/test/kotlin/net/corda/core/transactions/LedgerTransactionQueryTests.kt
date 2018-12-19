@@ -7,7 +7,9 @@ import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.node.NotaryInfo
 import net.corda.node.services.api.IdentityServiceInternal
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.*
 import net.corda.testing.internal.rigorousMock
@@ -29,10 +31,15 @@ class LedgerTransactionQueryTests {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     private val keyPair = generateKeyPair()
-    private val services = MockServices(listOf("net.corda.testing.contracts"), CordaX500Name("MegaCorp", "London", "GB"),
+    private val services = MockServices(
+            listOf("net.corda.testing.contracts"),
+            TestIdentity(CordaX500Name("MegaCorp", "London", "GB"), keyPair),
             rigorousMock<IdentityServiceInternal>().also {
                 doReturn(null).whenever(it).partyFromKey(keyPair.public)
-            }, keyPair)
+            },
+            testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
+            keyPair
+    )
     private val identity: Party = services.myInfo.singleIdentity()
 
     @Before
@@ -46,11 +53,12 @@ class LedgerTransactionQueryTests {
         data class Cmd3(val id: Int) : CommandData, Commands // Unused command, required for command not-present checks.
     }
 
-
+    @BelongsToContract(DummyContract::class)
     private class StringTypeDummyState(val data: String) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
 
+    @BelongsToContract(DummyContract::class)
     private class IntTypeDummyState(val data: Int) : ContractState {
         override val participants: List<AbstractParty> = emptyList()
     }
@@ -72,7 +80,7 @@ class LedgerTransactionQueryTests {
         )
         services.recordTransactions(fakeIssueTx)
         val dummyStateRef = StateRef(fakeIssueTx.id, 0)
-        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, null), dummyStateRef)
+        return StateAndRef(TransactionState(dummyState, DummyContract.PROGRAM_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), dummyStateRef)
     }
 
     private fun makeDummyTransaction(): LedgerTransaction {

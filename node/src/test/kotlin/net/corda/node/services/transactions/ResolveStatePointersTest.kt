@@ -3,6 +3,7 @@ package net.corda.node.services.transactions
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -11,6 +12,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -25,14 +27,7 @@ class ResolveStatePointersTest {
     private val myself = TestIdentity(CordaX500Name("Me", "London", "GB"))
     private val notary = TestIdentity(DUMMY_NOTARY_NAME, 20)
     private val cordapps = listOf("net.corda.testing.contracts")
-    private val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
-            cordappPackages = cordapps,
-            identityService = makeTestIdentityService(notary.identity, myself.identity),
-            initialIdentity = myself,
-            networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-    )
-
-    private val services = databaseAndServices.second
+    private lateinit var services: MockServices
 
     private data class Bar(
             override val participants: List<AbstractParty> = listOf(),
@@ -56,6 +51,17 @@ class ResolveStatePointersTest {
             recordTransactions(listOf(tx))
             tx.tx.outRefsOfType<Bar>().single()
         }
+    }
+
+    @Before
+    fun setUp() {
+        val databaseAndServices = MockServices.makeTestDatabaseAndMockServices(
+                cordappPackages = cordapps,
+                identityService = makeTestIdentityService(notary.identity, myself.identity),
+                initialIdentity = myself,
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(notary.party, true)))
+        )
+        services = databaseAndServices.second
     }
 
     @Test
@@ -154,5 +160,4 @@ class ResolveStatePointersTest {
         val foo = ltx.outputs.single().data as Foo<Bar>
         assertEquals(stateAndRef, foo.baz.resolve(ltx))
     }
-
 }

@@ -36,10 +36,12 @@ publish {
 }
 
 cordapp {
-    info {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    workflow {
         name "net/corda/experimental/notary-raft"
-        vendor "Corda Open Source"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }

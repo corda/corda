@@ -20,10 +20,12 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.issueInvalidState
 import net.corda.node.services.messaging.Message
 import net.corda.node.services.statemachine.InitialSessionMessage
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
@@ -46,7 +48,8 @@ class ValidatingNotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4))
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
@@ -97,11 +100,34 @@ class ValidatingNotaryServiceTests {
     }
 
     @Test
+    fun `should reject transaction without network parameters`() {
+        val inputState = issueState(aliceNode.services, alice).ref
+        val wtx = createWireTransaction(inputs = listOf(inputState),
+                attachments = emptyList(),
+                outputs = emptyList(),
+                commands = listOf(dummyCommand(alice.owningKey)),
+                notary = notary,
+                timeWindow = null)
+        assertThat(wtx.networkParametersHash).isNull()
+        val sig = aliceNode.services.keyManagementService.sign(
+                SignableData(wtx.id, SignatureMetadata(1, Crypto.findSignatureScheme(alice.owningKey).schemeNumberID)), alice.owningKey
+        )
+        val stx = SignedTransaction(wtx, listOf(sig))
+        assertThat(stx.networkParametersHash).isNull()
+
+        val future = runNotaryClient(stx)
+        val ex = assertFailsWith(NotaryException::class) { future.getOrThrow() }
+        val notaryError = ex.error as NotaryError.TransactionInvalid
+        assertThat(notaryError.cause).hasMessageContaining("Transaction for notarisation doesn't contain network parameters hash.")
+    }
+
+    @Test
     fun `should sign a unique transaction with a valid time-window`() {
         val stx = run {
-            val inputState = issueState(aliceNode.services, alice)
+            val inputStates = issueStates(aliceNode.services, alice)
             val tx = TransactionBuilder(notary)
-                    .addInputState(inputState)
+                    .addInputState(inputStates[0])
+                    .addInputState(inputStates[1])
                     .addCommand(dummyCommand(alice.owningKey))
                     .setTimeWindow(Instant.now(), 30.seconds)
             aliceNode.services.signInitialTransaction(tx)
@@ -172,7 +198,7 @@ class ValidatingNotaryServiceTests {
     fun `notarise issue tx with time-window`() {
         val stx = run {
             val tx = DummyContract.generateInitial(Random().nextInt(), notary, alice.ref(0))
-                        .setTimeWindow(Instant.now(), 30.seconds)
+                    .setTimeWindow(Instant.now(), 30.seconds)
             aliceNode.services.signInitialTransaction(tx)
         }
 
@@ -332,6 +358,15 @@ class ValidatingNotaryServiceTests {
         val signedByNode = serviceHub.signInitialTransaction(tx)
         val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
         serviceHub.recordTransactions(stx)
-        return StateAndRef(tx.outputStates().first(), StateRef(stx.id, 0))
+        return StateAndRef(stx.coreTransaction.outputs.first(), StateRef(stx.id, 0))
+    }
+
+    private fun issueStates(serviceHub: ServiceHub, identity: Party): List<StateAndRef<*>> {
+        val tx = DummyContract.generateInitial(Random().nextInt(), notary, identity.ref(0))
+        val signedByNode = serviceHub.signInitialTransaction(tx)
+        val stx = notaryNode.services.addSignature(signedByNode, notary.owningKey)
+        serviceHub.recordTransactions(stx)
+        return listOf(StateAndRef(stx.coreTransaction.outputs[0], StateRef(stx.id, 0)),
+                StateAndRef(stx.coreTransaction.outputs[1], StateRef(stx.id, 1)))
     }
 }

@@ -151,6 +151,12 @@ interface SerializationContext {
      */
     val lenientCarpenterEnabled: Boolean
     /**
+     * If true the serialization evolver will fail if the binary to be deserialized contains more fields then the current object from the classpath.
+     *
+     * The default is false.
+     */
+    val preventDataLoss: Boolean
+    /**
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
@@ -172,15 +178,21 @@ interface SerializationContext {
     fun withLenientCarpenter(): SerializationContext
 
     /**
+     * Return a new context based on this one but with a strict evolution.
+     * @see preventDataLoss
+     */
+    fun withPreventDataLoss(): SerializationContext
+
+    /**
      * Helper method to return a new context based on this context with the deserialization class loader changed.
      */
     fun withClassLoader(classLoader: ClassLoader): SerializationContext
 
     /**
-     * Helper method to return a new context based on this context with the appropriate class loader constructed from the passed attachment identifiers.
-     * (Requires the attachment storage to have been enabled).
+     * Does not do anything.
      */
     @Throws(MissingAttachmentsException::class)
+    @Deprecated("There is no reason to call this. This method does not actually do anything.")
     fun withAttachmentsClassLoader(attachmentHashes: List<SecureHash>): SerializationContext
 
     /**
@@ -300,13 +312,8 @@ class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
         /**
          * Serializes the given object and returns a [SerializedBytes] wrapper for it. An alias for [Any.serialize]
          * intended to make the calling smoother for Java users.
-         *
-         * TODO: Take out the @CordaInternal annotation post-Enterprise GA when we can add API again.
-         *
-         * @suppress
          */
         @JvmStatic
-        @CordaInternal
         @JvmOverloads
         fun <T : Any> from(obj: T, serializationFactory: SerializationFactory = SerializationFactory.defaultFactory,
                            context: SerializationContext = serializationFactory.defaultContext): SerializedBytes<T> {

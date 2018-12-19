@@ -1,21 +1,105 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint.isSatisfiedBy
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
+import net.corda.core.crypto.keys
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.warnOnce
+import org.slf4j.LoggerFactory
+import java.lang.annotation.Inherited
 import java.security.PublicKey
 
-/** Constrain which contract-code-containing attachment can be used with a [ContractState]. */
+/**
+ * This annotation should only be added to [Contract] classes.
+ * If the annotation is present, then we assume that [Contract.verify] will ensure that the output states have an acceptable constraint.
+ * If the annotation is missing, then the default - secure - constraint propagation logic is enforced by the platform.
+ */
+@Target(AnnotationTarget.CLASS)
+@Inherited
+annotation class NoConstraintPropagation
+
+/**
+ * Constrain which contract-code-containing attachment can be used with a [Contract].
+ * */
 @CordaSerializable
 @DoNotImplement
 interface AttachmentConstraint {
     /** Returns whether the given contract attachment can be used with the [ContractState] associated with this constraint object. */
     fun isSatisfiedBy(attachment: Attachment): Boolean
+
+    private companion object {
+        private val log = contextLogger()
+    }
+
+    /**
+     * This method will be used in conjunction with [NoConstraintPropagation]. It is run during transaction verification when the contract is not annotated with [NoConstraintPropagation].
+     * When constraints propagation is enabled, constraints set on output states need to follow certain rules with regards to constraints of input states.
+     *
+     * Rules:
+     *  * It is allowed for output states to inherit the exact same constraint as the input states.
+     *  * The [AlwaysAcceptAttachmentConstraint] is not allowed to transition to a different constraint, as that could be used to hide malicious behaviour.
+     *  * Anything (except the [AlwaysAcceptAttachmentConstraint]) can be transitioned to a [HashAttachmentConstraint].
+     *  * You can transition from the [WhitelistedByZoneAttachmentConstraint] to the [SignatureAttachmentConstraint] only if all signers of the JAR are required to sign in the future.
+     *  * You can transition from a [HashAttachmentConstraint] to a [SignatureAttachmentConstraint] when the following conditions are met:
+     *  *  1. Jar contents (per entry, by hashcode) of both original (unsigned) and signed contract jars are identical
+     *  *     Note: this step is enforced in the [AttachmentsClassLoader] no overlap rule checking.
+     *  *  2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
+     *
+     * TODO - SignatureConstraint third party signers.
+     */
+    @CordaInternal
+    fun canBeTransitionedFrom(input: AttachmentConstraint, attachment: AttachmentWithContext): Boolean {
+        val output = this
+        return when {
+            // These branches should not happen, as this has been already checked.
+            input is AutomaticPlaceholderConstraint || output is AutomaticPlaceholderConstraint -> throw IllegalArgumentException("Illegal constraint: AutomaticPlaceholderConstraint.")
+            input is AutomaticHashConstraint || output is AutomaticHashConstraint -> throw IllegalArgumentException("Illegal constraint: AutomaticHashConstraint.")
+
+            // Transition to the same constraint.
+            input == output -> true
+
+            // You can't transition from the AlwaysAcceptAttachmentConstraint to anything else, as it could hide something illegal.
+            input is AlwaysAcceptAttachmentConstraint && output !is AlwaysAcceptAttachmentConstraint -> false
+
+            // Nothing can be migrated from the HashConstraint except a HashConstraint with the same Hash. (This check is redundant, but added for clarity)
+            input is HashAttachmentConstraint && output is HashAttachmentConstraint -> input == output
+
+            // Anything (except the AlwaysAcceptAttachmentConstraint) can be transformed to a HashAttachmentConstraint.
+            input !is HashAttachmentConstraint && output is HashAttachmentConstraint -> true
+
+            // The SignatureAttachmentConstraint allows migration from a Signature constraint with the same key.
+            // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key.
+            input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> input.key == output.key
+
+            // You can transition from the WhitelistConstraint to the SignatureConstraint only if all signers of the JAR are required to sign in the future.
+            input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
+                attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
+
+            // Transition from Hash to Signature constraint requires
+            // signer(s) of signature-constrained output state is same as signer(s) of registered package namespace
+            input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
+                val packageOwnerPK = attachment.networkParameters.getPackageOwnerOf(attachment.contractAttachment.allContracts)
+                if (packageOwnerPK == null) {
+                    log.warn("Missing registered java package owner for ${attachment.contractAttachment.contract} in network parameters: ${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
+                    return false
+                }
+                else if (!packageOwnerPK.isFulfilledBy(output.key) ) {
+                    log.warn("Java package owner keys do not match signature constrained output state keys")
+                    return false
+                }
+                return true
+            }
+            else -> false
+        }
+    }
 }
 
 /** An [AttachmentConstraint] where [isSatisfiedBy] always returns true. */
@@ -47,26 +131,63 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
-            val whitelist = attachment.whitelistedContractImplementations ?: throw IllegalStateException("Unable to verify WhitelistedByZoneAttachmentConstraint - whitelist not specified")
-            attachment.id in (whitelist[attachment.stateContract] ?: emptyList())
+            val whitelist = attachment.networkParameters.whitelistedContractImplementations
+            attachment.id in (whitelist[attachment.contract] ?: emptyList())
         } else false
     }
 }
 
-/**
- * This [AttachmentConstraint] is a convenience class that will be automatically resolved to a [HashAttachmentConstraint].
- * The resolution occurs in [TransactionBuilder.toWireTransaction] and uses the [TransactionState.contract] value
- * to find a corresponding loaded [Cordapp] that contains such a contract, and then uses that [Cordapp] as the
- * [Attachment].
- *
- * If, for any reason, this class is not automatically resolved the default implementation is to fail, because the
- * intent of this class is that it should be replaced by a correct [HashAttachmentConstraint] and verify against an
- * actual [Attachment].
- */
 @KeepForDJVM
+@Deprecated("The name is no longer valid as multiple constraints were added.", replaceWith = ReplaceWith("AutomaticPlaceholderConstraint"), level = DeprecationLevel.WARNING)
 object AutomaticHashConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder")
+        throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticHashConstraint placeholder.")
+    }
+}
+
+/**
+ * This [AttachmentConstraint] is a convenience class that acts as a placeholder and will be automatically resolved by the platform when set on an output state.
+ * It is the default constraint of all output states.
+ *
+ * The resolution occurs in [TransactionBuilder.toWireTransaction] and is based on the input states and the attachments.
+ * If the [Contract] was not annotated with [NoConstraintPropagation], then the platform will ensure the correct constraint propagation.
+ */
+@KeepForDJVM
+object AutomaticPlaceholderConstraint : AttachmentConstraint {
+    override fun isSatisfiedBy(attachment: Attachment): Boolean {
+        throw UnsupportedOperationException("Contracts cannot be satisfied by an AutomaticPlaceholderConstraint placeholder.")
+    }
+}
+
+private val logger = LoggerFactory.getLogger(AttachmentConstraint::class.java)
+private val validConstraints = setOf(
+        AlwaysAcceptAttachmentConstraint::class,
+        HashAttachmentConstraint::class,
+        WhitelistedByZoneAttachmentConstraint::class,
+        SignatureAttachmentConstraint::class)
+
+/**
+ * Fails if the constraint is not of a known type.
+ * Only the Corda core is allowed to implement the [AttachmentConstraint] interface.
+ */
+internal fun checkConstraintValidity(state: TransactionState<*>) {
+    require(state.constraint::class in validConstraints) { "Found state ${state.contract} with an illegal constraint: ${state.constraint}" }
+    if (state.constraint is AlwaysAcceptAttachmentConstraint) {
+        logger.warnOnce("Found state ${state.contract} that is constrained by the insecure: AlwaysAcceptAttachmentConstraint.")
+    }
+}
+
+/**
+ * Check for the [NoConstraintPropagation] annotation on the contractClassName.
+ * If it's present it means that the automatic secure core behaviour is not applied, and it's up to the contract developer to enforce a secure propagation logic.
+ */
+internal fun ContractClassName.contractHasAutomaticConstraintPropagation(classLoader: ClassLoader? = null) =
+        (classLoader ?: NoConstraintPropagation::class.java.classLoader)
+                .loadClass(this).getAnnotation(NoConstraintPropagation::class.java) == null
+
+fun ContractClassName.warnContractWithoutConstraintPropagation(classLoader: ClassLoader? = null) {
+    if (!this.contractHasAutomaticConstraintPropagation(classLoader)) {
+        logger.warnOnce("Found contract $this with automatic constraint propagation disabled.")
     }
 }
 
@@ -81,5 +202,5 @@ data class SignatureAttachmentConstraint(
         val key: PublicKey
 ) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean =
-        key.isFulfilledBy(attachment.signers.map { it })
+        key.isFulfilledBy(attachment.signerKeys.map { it })
 }

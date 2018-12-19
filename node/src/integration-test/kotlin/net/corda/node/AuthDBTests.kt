@@ -50,7 +50,8 @@ class AuthDBTests : NodeBasedTest() {
     lateinit var passwordEncryption: PasswordEncryption
 
     @Before
-    fun setup() {
+    override fun setUp() {
+        super.setUp()
         db = UsersDB(
                 name = "SecurityDataSourceTestDB",
                 users = listOf(UserAndRoles(username = "user",

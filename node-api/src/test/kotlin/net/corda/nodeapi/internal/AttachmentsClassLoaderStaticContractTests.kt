@@ -8,9 +8,16 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
+import net.corda.core.internal.RPC_UPLOADER
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -18,6 +25,7 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
+import net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests.AttachmentDummyContract.Companion.ATTACHMENT_PROGRAM_ID
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
@@ -44,7 +52,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     class AttachmentDummyContract : Contract {
         companion object {
-            private const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
+            const val ATTACHMENT_PROGRAM_ID = "net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract"
         }
 
         data class State(val magicNumber: Int = 0) : ContractState {
@@ -67,20 +75,33 @@ class AttachmentsClassLoaderStaticContractTests {
         }
     }
 
-    private val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
-        override val id: SecureHash get() = throw UnsupportedOperationException()
+    private val networkParameters = testNetworkParameters()
+
+    private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
+        doReturn(networkParameters.serialize().hash).whenever(it).currentHash
     }
 
-    private val attachments = rigorousMock<AttachmentStorage>().also {
-            doReturn(unsignedAttachment).whenever(it).openAttachment(any())
-    }
-
-    private val serviceHub = rigorousMock<ServicesForResolution>().also {
+    private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
-        doReturn(testNetworkParameters()).whenever(it).networkParameters
-        doReturn(attachments).whenever(it).attachments
+        doReturn(networkParametersStorage).whenever(it).networkParametersStorage
+        doReturn(networkParameters).whenever(it).networkParameters
+        val attachmentStorage = rigorousMock<AttachmentStorage>()
+        doReturn(attachmentStorage).whenever(it).attachments
+        val attachment = rigorousMock<ContractAttachment>()
+        doReturn(attachment).whenever(attachmentStorage).openAttachment(any())
+        doReturn(it.cordappProvider.getContractAttachmentID(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).id
+        doReturn(setOf(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)).whenever(attachment).allContracts
+        doReturn("app").whenever(attachment).uploader
+        doReturn(emptyList<Party>()).whenever(attachment).signerKeys
+        val contractAttachmentId = SecureHash.randomSHA256()
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                contractClassNamesCondition = Builder.equal(listOf(ATTACHMENT_PROGRAM_ID)),
+                versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
+                uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 
     @Test
@@ -96,7 +117,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     @Test
     fun `verify that contract DummyContract is in classPath`() {
-        val contractClass = Class.forName("net.corda.nodeapi.internal.AttachmentsClassLoaderStaticContractTests\$AttachmentDummyContract")
+        val contractClass = Class.forName(ATTACHMENT_PROGRAM_ID)
         assertThat(contractClass.newInstance()).isInstanceOf(Contract::class.java)
     }
 

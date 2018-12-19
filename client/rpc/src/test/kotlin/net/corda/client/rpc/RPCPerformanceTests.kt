@@ -4,7 +4,7 @@ import com.google.common.base.Stopwatch
 import net.corda.core.messaging.RPCOps
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.testing.internal.performance.div
 import net.corda.testing.node.internal.RPCDriverDSL
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector

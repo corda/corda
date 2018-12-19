@@ -2,12 +2,17 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
 cordapp {
-    info {
-        vendor = 'R3'
-        targetPlatformVersion = corda_platform_version.toInteger()
-    }
-    signing {
+    targetPlatformVersion = corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    sealing {
+        // Cannot seal JAR because other module also defines classes in the package net.corda.vega.analytics
         enabled false
+    }
+    workflow {
+        name "net/corda/vega/flows"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }
 
@@ -33,4 +38,8 @@ dependencies {
     compile "com.opengamma.strata:strata-collect:$strata_version"
     compile "com.opengamma.strata:strata-loader:$strata_version"
     compile "com.opengamma.strata:strata-math:$strata_version"
+}
+
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

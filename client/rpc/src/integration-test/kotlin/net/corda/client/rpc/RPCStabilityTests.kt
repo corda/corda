@@ -9,11 +9,11 @@ import net.corda.core.messaging.RPCOps
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.*
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.eventually
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.testThreadFactory
 import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.config.ActiveMQDefaultConfiguration
@@ -39,7 +39,7 @@ class RPCStabilityTests {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private val pool = Executors.newFixedThreadPool(10, testThreadFactory())
-    private val portAllocation = PortAllocation.Incremental(10000)
+    private val portAllocation = incrementalPortAllocation(10000)
 
     @After
     fun shutdown() {

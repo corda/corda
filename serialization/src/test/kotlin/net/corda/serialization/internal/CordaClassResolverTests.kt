@@ -14,6 +14,8 @@ import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
 import net.corda.testing.internal.rigorousMock
@@ -22,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
 import java.lang.IllegalStateException
+import java.net.URL
 import java.sql.Connection
 import java.util.*
 import kotlin.test.assertEquals
@@ -112,6 +115,7 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("isolated.jar")
     }
 
     private val emptyWhitelistContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, null)
@@ -201,7 +205,7 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(DefaultSerializable::class.java)
     }
 
-    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = AttachmentsClassLoaderTests.ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
+    private fun importJar(storage: AttachmentStorage, uploader: String = DEPLOYED_CORDAPP_UPLOADER) = ISOLATED_CONTRACTS_JAR_PATH.openStream().use { storage.importAttachment(it, uploader, "") }
 
     @Test(expected = KryoException::class)
     fun `Annotation does not work in conjunction with AttachmentClassLoader annotation`() {
@@ -212,8 +216,8 @@ class CordaClassResolverTests {
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `Attempt to load contract attachment with the incorrect uploader should fails with IAE`() {
+    @Test(expected = MissingAttachmentsException::class)
+    fun `Attempt to load contract attachment with the incorrect uploader should fails with MissingAttachmentsException`() {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })

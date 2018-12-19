@@ -137,23 +137,23 @@ Use the ``ServiceHub`` ``jdbcSession`` function to obtain a JDBC connection as i
   :start-after: DOCSTART JdbcSession
   :end-before: DOCEND JdbcSession
 
-JDBC session's can be used in Flows and Service Plugins (see ":doc:`flow-state-machines`")
+JDBC sessions can be used in flows and services (see ":doc:`flow-state-machines`").
 
-The following example illustrates the creation of a custom corda service using a jdbcSession:
+The following example illustrates the creation of a custom Corda service using a ``jdbcSession``:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART CustomVaultQuery
   :end-before: DOCEND CustomVaultQuery
 
 which is then referenced within a custom flow:
 
-.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/CustomVaultQuery.kt
+.. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/vault/CustomVaultQuery.kt
   :language: kotlin
   :start-after: DOCSTART TopupIssuer
   :end-before: DOCEND TopupIssuer
 
-For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`
+For examples on testing ``@CordaService`` implementations, see the oracle example :doc:`here <oracles>`.
 
 JPA Support
 -----------
@@ -165,7 +165,7 @@ useful if off-ledger data must be maintained in conjunction with on-ledger state
               as a custom schema. See Samples below.
 
 The code snippet below defines a ``PersistentFoo`` type inside ``FooSchemaV1``. Note that ``PersistentFoo`` is added to
-a list of mapped types which is passed to ``MappedSChema``. This is exactly how state schemas are defined, except that
+a list of mapped types which is passed to ``MappedSchema``. This is exactly how state schemas are defined, except that
 the entity in this case should not subclass ``PersistentState`` (as it is not a state object). See examples:
 
 .. container:: codeset
@@ -174,7 +174,6 @@ the entity in this case should not subclass ``PersistentState`` (as it is not a 
 
         public class FooSchema {}
 
-        @CordaSerializable
         public class FooSchemaV1 extends MappedSchema {
             FooSchemaV1() {
                 super(FooSchema.class, 1, ImmutableList.of(PersistentFoo.class));
@@ -209,9 +208,8 @@ Instances of ``PersistentFoo`` can be persisted inside a flow as follows:
     .. sourcecode:: java
 
         PersistentFoo foo = new PersistentFoo(new UniqueIdentifier().getId().toString(), "Bar");
-        node.getServices().withEntityManager(entityManager -> {
+        serviceHub.withEntityManager(entityManager -> {
             entityManager.persist(foo);
-            entityManager.flush();
             return null;
         });
 

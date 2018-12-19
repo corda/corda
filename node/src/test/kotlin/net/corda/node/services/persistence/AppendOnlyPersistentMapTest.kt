@@ -4,12 +4,14 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -22,22 +24,21 @@ import javax.persistence.PersistenceException
 @RunWith(Parameterized::class)
 class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     companion object {
-
         private val scenarios = arrayOf<Scenario>(
-                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Read, Outcome.Fail, Outcome.Fail),
-                Scenario(false, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success),
-                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Fail, Outcome.Success),
-                Scenario(false, ReadOrWrite.Write, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit),
-                Scenario(false, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success),
-                Scenario(false, ReadOrWrite.Read, ReadOrWrite.WriteDuplicateAllowed, Outcome.Fail, Outcome.Success),
-                Scenario(false, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.WriteDuplicateAllowed, Outcome.Success, Outcome.SuccessButErrorOnCommit, Outcome.Fail),
-                Scenario(true, ReadOrWrite.Read, ReadOrWrite.Read, Outcome.Success, Outcome.Success),
-                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.Success),
-                Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail),
-                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit),
-                Scenario(true, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.Read, Outcome.Fail, Outcome.Success),
-                Scenario(true, ReadOrWrite.Read, ReadOrWrite.WriteDuplicateAllowed, Outcome.Success, Outcome.Fail),
-                Scenario(true, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.WriteDuplicateAllowed, Outcome.Fail, Outcome.Fail)
+                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Read, Outcome.Fail, Outcome.Fail, isCached = false),
+                Scenario(false, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success, null),
+                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Fail, Outcome.Success, isCached = false),
+                Scenario(false, ReadOrWrite.Write, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit, isCached = null),
+                Scenario(false, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success, null),
+                Scenario(false, ReadOrWrite.Read, ReadOrWrite.WriteDuplicateAllowed, Outcome.Fail, Outcome.Success, isCached = true),
+                Scenario(false, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.WriteDuplicateAllowed, Outcome.Success, Outcome.SuccessButErrorOnCommit, Outcome.Fail, null),
+                Scenario(true, ReadOrWrite.Read, ReadOrWrite.Read, Outcome.Success, Outcome.Success, isCached = false),
+                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.Success, isCached = null),
+                Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail, isCached = true),
+                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit, isCached = null),
+                Scenario(true, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.Read, Outcome.Fail, Outcome.Success, isCached = null),
+                Scenario(true, ReadOrWrite.Read, ReadOrWrite.WriteDuplicateAllowed, Outcome.Success, Outcome.Fail, isCached = true),
+                Scenario(true, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.WriteDuplicateAllowed, Outcome.Fail, Outcome.Fail, isCached = null)
         )
 
         @Parameterized.Parameters(name = "{0}")
@@ -53,7 +54,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
                         val b: ReadOrWrite,
                         val aExpected: Outcome,
                         val bExpected: Outcome,
-                        val bExpectedIfSingleThreaded: Outcome = bExpected)
+                        val bExpectedIfSingleThreaded: Outcome = bExpected,
+                        val isCached: Boolean?)
 
     private val database = configureDatabase(makeTestDataSourceProperties(),
             DatabaseConfig(),
@@ -63,6 +65,36 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     @After
     fun closeDatabase() {
         database.close()
+    }
+
+    @Test
+    fun `getIfCached behaves as expected`() {
+        if (scenario.isCached != null) {
+            prepopulateIfRequired()
+            val map = createMap()
+            when (scenario.b) {
+                ReadOrWrite.Read -> { /* Do nothing */
+                }
+                ReadOrWrite.Write -> {
+                    // Cause a read-thru
+                    database.transaction { map.get(1) }
+                }
+                ReadOrWrite.WriteDuplicateAllowed -> {
+                    // Write a value that overwrites anything pre-populated potentially.
+                    database.transaction { map.addWithDuplicatesAllowed(1, "Y") }
+                }
+            }
+
+            val cachedValue = map.getIfCached(1)
+            val expectedValue = if (scenario.isCached!!) {
+                when (scenario.b) {
+                    ReadOrWrite.Read -> throw IllegalStateException("Do nothing and isCached = true is not a valid combination.")
+                    ReadOrWrite.Write -> "X"
+                    ReadOrWrite.WriteDuplicateAllowed -> "Y"
+                }
+            } else null
+            assertEquals(expectedValue, cachedValue)
+        }
     }
 
     @Test
@@ -124,7 +156,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     @Test
     fun `concurrent test purge between A and B`() {
         // Writes intentionally do not check the database first, so purging between read and write changes behaviour
-        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit))
+        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail, isCached = true) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit, isCached = true))
         scenario = remapped[scenario] ?: scenario
         prepopulateIfRequired()
         val map = createMap()
@@ -159,8 +191,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
     fun `test purge mid-way in a single transaction`() {
         // Writes intentionally do not check the database first, so purging between read and write changes behaviour
         // Also, a purge after write causes the subsequent read to flush to the database, causing the read to generate a constraint violation when single threaded (in same database transaction).
-        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit),
-                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.Success) to Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit))
+        val remapped = mapOf(Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Success, Outcome.Fail, isCached = true) to Scenario(true, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit, isCached = true),
+                Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.Success, isCached = null) to Scenario(true, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.SuccessButErrorOnCommit, Outcome.SuccessButErrorOnCommit, isCached = null))
         scenario = remapped[scenario] ?: scenario
         prepopulateIfRequired()
         val map = createMap()

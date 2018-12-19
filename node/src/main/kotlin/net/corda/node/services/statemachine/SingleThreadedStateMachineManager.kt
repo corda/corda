@@ -13,7 +13,11 @@ import net.corda.core.flows.FlowInfo
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.ThreadBox
+import net.corda.core.internal.TimedFlow
+import net.corda.core.internal.bufferUntilSubscribed
+import net.corda.core.internal.castIfPossible
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.map
 import net.corda.core.internal.concurrent.openFuture
@@ -34,7 +38,11 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.shouldCheckCheckpoints
 import net.corda.node.services.messaging.DeduplicationHandler
 import net.corda.node.services.statemachine.FlowStateMachineImpl.Companion.createSubFlowVersion
-import net.corda.node.services.statemachine.interceptors.*
+import net.corda.node.services.statemachine.interceptors.DumpHistoryOnErrorInterceptor
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationChecker
+import net.corda.node.services.statemachine.interceptors.FiberDeserializationCheckingInterceptor
+import net.corda.node.services.statemachine.interceptors.HospitalisingInterceptor
+import net.corda.node.services.statemachine.interceptors.PrintingInterceptor
 import net.corda.node.services.statemachine.transitions.StateMachine
 import net.corda.node.utilities.AffinityExecutor
 import net.corda.node.utilities.injectOldProgressTracker
@@ -47,11 +55,13 @@ import org.apache.logging.log4j.LogManager
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.security.SecureRandom
-import java.util.*
-import java.util.concurrent.*
+import java.util.HashSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.streams.toList
 
 /**
@@ -172,7 +182,7 @@ class SingleThreadedStateMachineManager(
      * @param allowedUnsuspendedFiberCount Optional parameter is used in some tests.
      */
     override fun stop(allowedUnsuspendedFiberCount: Int) {
-        require(allowedUnsuspendedFiberCount >= 0)
+        require(allowedUnsuspendedFiberCount >= 0){"allowedUnsuspendedFiberCount must be greater than or equal to zero"}
         mutex.locked {
             if (stopping) throw IllegalStateException("Already stopping!")
             stopping = true
@@ -579,22 +589,54 @@ class SingleThreadedStateMachineManager(
                 if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
                 scheduledTimeout.retryCount
             } else 0
-            val scheduledFuture = scheduleTimeoutException(flow, retryCount)
+            val scheduledFuture = scheduleTimeoutException(flow, calculateDefaultTimeoutSeconds(retryCount))
             timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount + 1)
         } else {
             logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
         }
     }
 
+    private fun resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+        if (timeoutSeconds < serviceHub.configuration.flowTimeout.timeout.seconds) {
+            logger.debug { "Ignoring request to set time-out on timed flow $flowId to $timeoutSeconds seconds which is shorter than default of ${serviceHub.configuration.flowTimeout.timeout.seconds} seconds." }
+            return
+        }
+        logger.debug { "Processing request to set time-out on timed flow $flowId to $timeoutSeconds seconds." }
+        mutex.locked {
+            resetCustomTimeout(flowId, timeoutSeconds)
+        }
+    }
+
+    private fun InnerState.resetCustomTimeout(flowId: StateMachineRunId, timeoutSeconds: Long) {
+        val flow = flows[flowId]
+        if (flow != null) {
+            val scheduledTimeout = timedFlows[flowId]
+            val retryCount = if (scheduledTimeout != null) {
+                val timeoutFuture = scheduledTimeout.scheduledFuture
+                if (!timeoutFuture.isDone) scheduledTimeout.scheduledFuture.cancel(true)
+                scheduledTimeout.retryCount
+            } else 0
+            val scheduledFuture = scheduleTimeoutException(flow, timeoutSeconds)
+            timedFlows[flowId] = ScheduledTimeout(scheduledFuture, retryCount)
+        } else {
+            logger.warn("Unable to schedule timeout for flow $flowId – flow not found.")
+        }
+    }
+
     /** Schedules a [FlowTimeoutException] to be fired in order to restart the flow. */
-    private fun scheduleTimeoutException(flow: Flow, retryCount: Int): ScheduledFuture<*> {
+    private fun scheduleTimeoutException(flow: Flow, delay: Long): ScheduledFuture<*> {
         return with(serviceHub.configuration.flowTimeout) {
-            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
-            val jitteredDelaySeconds = maxOf(1L, timeoutDelaySeconds/2 + (Math.random() * timeoutDelaySeconds/2).toLong())
             timeoutScheduler.schedule({
                 val event = Event.Error(FlowTimeoutException(maxRestartCount))
                 flow.fiber.scheduleEvent(event)
-            }, jitteredDelaySeconds, TimeUnit.SECONDS)
+            }, delay, TimeUnit.SECONDS)
+        }
+    }
+
+    private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
+        return with(serviceHub.configuration.flowTimeout) {
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
         }
     }
 
@@ -642,7 +684,8 @@ class SingleThreadedStateMachineManager(
                 stateMachine = StateMachine(id, secureRandom),
                 serviceHub = serviceHub,
                 checkpointSerializationContext = checkpointSerializationContext!!,
-                unfinishedFibers = unfinishedFibers
+                unfinishedFibers = unfinishedFibers,
+                waitTimeUpdateHook = { flowId, timeout -> resetCustomTimeout(flowId, timeout) }
         )
     }
 
@@ -775,10 +818,10 @@ class SingleThreadedStateMachineManager(
     ) {
         drainFlowEventQueue(flow)
         // final sanity checks
-        require(lastState.pendingDeduplicationHandlers.isEmpty())
-        require(lastState.isRemoved)
-        require(lastState.checkpoint.subFlowStack.size == 1)
-        require(flow.fiber.id !in sessionToFlow.values)
+        require(lastState.pendingDeduplicationHandlers.isEmpty()) { "Flow cannot be removed until all pending deduplications have completed" }
+        require(lastState.isRemoved) { "Flow must be in removable state before removal" }
+        require(lastState.checkpoint.subFlowStack.size == 1) { "Checkpointed stack must be empty" }
+        require(flow.fiber.id !in sessionToFlow.values) { "Flow fibre must not be needed by an existing session" }
         flow.resultFuture.set(removalReason.flowReturnValue)
         lastState.flowLogic.progressTracker?.currentStep = ProgressTracker.DONE
         changesPublisher.onNext(StateMachineManager.Change.Removed(lastState.flowLogic, Try.Success(removalReason.flowReturnValue)))

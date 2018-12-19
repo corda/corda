@@ -20,6 +20,7 @@ see changes to this list.
 * Andrzej Grzesik (R3)
 * Anthony Keenan (R3)
 * Anthony Woolley (Société Générale)
+* Anton Markov (Industria)
 * Anton Semenov (Commerzbank)
 * Antonio Cerrato (SEB)
 * Antony Lewis (R3)
@@ -61,9 +62,11 @@ see changes to this list.
 * Clinton Alexander (R3)
 * Clyde D'Cruz (Persistent Systems Limited)
 * cncorda
+* Craig Pastro
 * Credit Suisse
 * cyrsis
 * Dan Newton (Accenture)
+* Daniel Krajnik (BCS Technology International)
 * Daniel Roig (SEB)
 * Dave Hudson (R3)
 * David John Grundy (Dankse Bank)
@@ -90,6 +93,7 @@ see changes to this list.
 * Igor Nitto (R3)
 * Igor Panov
 * Ivan Schasny (R3)
+* Ivaylo Tonev (Industria)
 * James Brown (R3)
 * James Carlyle (R3)
 * Janis Olekss (Accenture)
@@ -202,6 +206,7 @@ see changes to this list.
 * tomtau
 * Tudor Malene (R3)
 * Tushar Singh Bora (Accenture)
+* Vardan Nadkarni (Persistent Systems Limited)
 * varunkm
 * Venelin Stoykov (INDUSTRIA)
 * verymahler

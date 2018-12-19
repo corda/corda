@@ -1,5 +1,6 @@
 package net.corda.node.internal.cordapp
 
+import net.corda.core.cordapp.Cordapp
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.internal.cordapp.CordappImpl
@@ -28,10 +29,12 @@ internal object VirtualCordapp {
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(),
-                info = CordappImpl.Info("corda-core", versionInfo.vendor, versionInfo.releaseVersion, 1, versionInfo.platformVersion),
+                info = Cordapp.Info.Default("corda-core", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
                 allFlows = listOf(),
                 jarPath = ContractUpgradeFlow.javaClass.location, // Core JAR location
                 jarHash = SecureHash.allOnesHash,
+                minimumPlatformVersion = 1,
+                targetPlatformVersion = versionInfo.platformVersion,
                 notaryService = null,
                 isLoaded = false
         )
@@ -49,10 +52,12 @@ internal object VirtualCordapp {
                 serializationWhitelists = listOf(),
                 serializationCustomSerializers = listOf(),
                 customSchemas = setOf(NodeNotarySchemaV1),
-                info = CordappImpl.Info("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, 1, versionInfo.platformVersion),
+                info = Cordapp.Info.Default("corda-notary", versionInfo.vendor, versionInfo.releaseVersion, "Open Source (Apache 2)"),
                 allFlows = listOf(),
                 jarPath = SimpleNotaryService::class.java.location,
                 jarHash = SecureHash.allOnesHash,
+                minimumPlatformVersion = 1,
+                targetPlatformVersion = versionInfo.platformVersion,
                 notaryService = SimpleNotaryService::class.java,
                 isLoaded = false
         )

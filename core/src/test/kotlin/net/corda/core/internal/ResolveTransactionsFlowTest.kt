@@ -122,13 +122,17 @@ class ResolveTransactionsFlowTest {
             notaryNode.services.addSignature(ptx, notary.owningKey)
         }
 
+        megaCorpNode.transaction {
+            megaCorpNode.services.recordTransactions(stx2)
+        }
+
         val stx3 = DummyContract.move(listOf(stx1.tx.outRef(0), stx2.tx.outRef(0)), miniCorp).let { builder ->
             val ptx = megaCorpNode.services.signInitialTransaction(builder)
             notaryNode.services.addSignature(ptx, notary.owningKey)
         }
 
         megaCorpNode.transaction {
-            megaCorpNode.services.recordTransactions(stx2, stx3)
+            megaCorpNode.services.recordTransactions(stx3)
         }
 
         val p = TestFlow(setOf(stx3.id), megaCorp)
@@ -208,12 +212,15 @@ class ResolveTransactionsFlowTest {
                 }
             }
         }
+        megaCorpNode.transaction {
+            megaCorpNode.services.recordTransactions(dummy1)
+        }
         val dummy2: SignedTransaction = DummyContract.move(dummy1.tx.outRef(0), miniCorp).let {
             val ptx = megaCorpNode.services.signInitialTransaction(it)
             notaryNode.services.addSignature(ptx, notary.owningKey)
         }
         megaCorpNode.transaction {
-            megaCorpNode.services.recordTransactions(dummy1, dummy2)
+            megaCorpNode.services.recordTransactions(dummy2)
         }
         return Pair(dummy1, dummy2)
     }

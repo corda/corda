@@ -117,7 +117,7 @@ open class NetworkRegistrationHelper(
         return if (cryptoService.containsKey(nodeCaKeyAlias)) {
             cryptoService.getPublicKey(nodeCaKeyAlias)!!
         } else {
-            cryptoService.generateKeyPair(nodeCaKeyAlias, X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME.schemeNumberID)
+            cryptoService.generateKeyPair(nodeCaKeyAlias, cryptoService.defaultTLSSignatureScheme())
         }
     }
 
@@ -372,7 +372,7 @@ class NodeRegistrationHelper(
 private class FixedPeriodLimitedRetrialStrategy(times: Int, private val period: Duration) : (Duration?) -> Duration? {
 
     init {
-        require(times > 0)
+        require(times > 0){"Retry attempts must be larger than zero"}
     }
 
     private var counter = times

@@ -40,7 +40,7 @@ class LoggingBuyerFlow(private val otherSideSession: FlowSession) : BuyerFlow(ot
         cpIssuance.attachments.first().let {
             println("""
 
-The issuance of the commercial paper came with an attachment. You can find it in the attachments directory: $it.jar
+The issuance of the commercial paper came with an attachment with hash $it.
 
 ${Emoji.renderIfSupported(cpIssuance)}""")
         }

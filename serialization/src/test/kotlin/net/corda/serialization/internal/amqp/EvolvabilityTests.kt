@@ -7,6 +7,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
@@ -147,6 +148,34 @@ class EvolvabilityTests {
 
         assertEquals(B, deserializedCC.b)
         assertEquals(D, deserializedCC.d)
+    }
+
+    @Suppress("UNUSED_VARIABLE")
+    @Test
+    fun removeParameterWithCalculatedParameter() {
+        val sf = testDefaultFactory()
+        val resource = "EvolvabilityTests.removeParameterWithCalculatedParameter"
+
+        // Original version of the class as it was serialised
+        // data class CC(val a: Int, val b: String, val c: String, val d: Int) {
+        //     @get:SerializableCalculatedProperty
+        //     val e: String get() = "$b $c"
+        // }
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(CC(1, "hello", "world", 2)).bytes)
+
+
+        data class CC(val b: String, val d: Int) {
+            @get:SerializableCalculatedProperty
+            val e: String get() = "$b sailor"
+        }
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+        val sc2 = url.readBytes()
+        val deserializedCC = DeserializationInput(sf).deserialize(SerializedBytes<CC>(sc2))
+
+        assertEquals("hello", deserializedCC.b)
+        assertEquals(2, deserializedCC.d)
+        assertEquals("hello sailor", deserializedCC.e)
     }
 
     @Suppress("UNUSED_VARIABLE")
@@ -461,6 +490,17 @@ class EvolvabilityTests {
         assertEquals(oa, outer.a)
         assertEquals(ia, outer.b.a)
         assertEquals(null, outer.b.b)
+
+        // Repeat, but receiving a message with the newer version of Inner
+        val newVersion = SerializationOutput(sf).serializeAndReturnSchema(Outer(oa, Inner(ia, "new value")))
+        val model = AMQPRemoteTypeModel()
+        val remoteTypeInfo = model.interpret(SerializationSchemas(newVersion.schema, newVersion.transformsSchema))
+        println(remoteTypeInfo)
+
+        val newOuter = DeserializationInput(sf).deserialize(SerializedBytes<Outer>(newVersion.obj.bytes))
+        assertEquals(oa, newOuter.a)
+        assertEquals(ia, newOuter.b.a)
+        assertEquals("new value", newOuter.b.b)
     }
 
     @Test
@@ -648,5 +688,27 @@ class EvolvabilityTests {
         assertEquals(2, deserializedC.b)
         assertEquals(4, deserializedC.d)
         assertEquals(5, deserializedC.e)
+    }
+
+    // Class as it was serialized, with additional enum field.
+    // enum class NewEnum { ONE, TWO, BUCKLE_MY_SHOE }
+    // data class Evolved(val fnord: String, val newEnum: NewEnum)
+
+    // Class before evolution
+    data class Evolved(val fnord: String)
+
+    @Test
+    fun evolutionWithCarpentry() {
+        val resource = "EvolvabilityTests.evolutionWithCarpentry"
+        val sf = testDefaultFactory()
+        // Uncomment to recreate
+        // File(URI("$localPath/$resource")).writeBytes(SerializationOutput(sf).serialize(Evolved("dronf", NewEnum.BUCKLE_MY_SHOE)).bytes)
+
+        val url = EvolvabilityTests::class.java.getResource(resource)
+
+        val sc2 = url.readBytes()
+        val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
+
+        assertEquals("dronf", deserialized.fnord)
     }
 }

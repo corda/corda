@@ -1,6 +1,6 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.internal.toSynchronised
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.ByteSequence
@@ -37,9 +37,9 @@ class AbstractAMQPSerializationSchemeTest {
                 null)
 
 
-        val factory = TestSerializerFactory(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
+        val factory = SerializerFactoryBuilder.build(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
         val maxFactories = 512
-        val backingMap = AccessOrderLinkedHashMap<Pair<ClassWhitelist, ClassLoader>, SerializerFactory>({ maxFactories })
+        val backingMap = AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>({ maxFactories }).toSynchronised()
         val scheme = object : AbstractAMQPSerializationScheme(emptySet(), backingMap, createSerializerFactoryFactory()) {
             override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
                 return factory
@@ -54,7 +54,6 @@ class AbstractAMQPSerializationSchemeTest {
             }
 
         }
-
 
         IntStream.range(0, 2048).parallel().forEach {
             val context = if (ThreadLocalRandom.current().nextBoolean()) {

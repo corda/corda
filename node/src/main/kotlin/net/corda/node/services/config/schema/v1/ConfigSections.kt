@@ -13,6 +13,7 @@ import net.corda.common.configuration.parsing.internal.nested
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
+import net.corda.core.internal.notary.NotaryServiceFlow
 import net.corda.node.services.config.AuthDataSourceType
 import net.corda.node.services.config.CertChainPolicyConfig
 import net.corda.node.services.config.CertChainPolicyType
@@ -41,6 +42,7 @@ import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {
@@ -164,10 +166,11 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val validating by boolean()
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
     private val className by string().optional().withDefaultValue("net.corda.node.services.transactions.SimpleNotaryService")
+    private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {
-        return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[extraConfig]))
+        return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig]))
     }
 }
 
@@ -201,12 +204,13 @@ internal object SSHDConfigurationSpec : Configuration.Specification<SSHDConfigur
 
 internal object DatabaseConfigSpec : Configuration.Specification<DatabaseConfig>("DatabaseConfig") {
     private val initialiseSchema by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.initialiseSchema)
+    private val initialiseAppSchema by enum(SchemaInitializationType::class).optional().withDefaultValue(DatabaseConfig.Defaults.initialiseAppSchema)
     private val transactionIsolationLevel by enum(TransactionIsolationLevel::class).optional().withDefaultValue(DatabaseConfig.Defaults.transactionIsolationLevel)
     private val exportHibernateJMXStatistics by boolean().optional().withDefaultValue(DatabaseConfig.Defaults.exportHibernateJMXStatistics)
     private val mappedSchemaCacheSize by long().optional().withDefaultValue(DatabaseConfig.Defaults.mappedSchemaCacheSize)
 
     override fun parseValid(configuration: Config): Valid<DatabaseConfig> {
-        return valid(DatabaseConfig(configuration[initialiseSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))
+        return valid(DatabaseConfig(configuration[initialiseSchema], configuration[initialiseAppSchema], configuration[transactionIsolationLevel], configuration[exportHibernateJMXStatistics], configuration[mappedSchemaCacheSize]))
     }
 }
 

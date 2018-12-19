@@ -1,14 +1,14 @@
 package net.corda.testing.internal
 
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.DoNotImplement
-import net.corda.core.serialization.internal.*
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal._inheritableContextSerializationEnv
 import net.corda.node.serialization.amqp.AMQPServerSerializationScheme
 import net.corda.node.serialization.kryo.KRYO_CHECKPOINT_CONTEXT
 import net.corda.node.serialization.kryo.KryoCheckpointSerializer
 import net.corda.serialization.internal.*
+import net.corda.testing.common.internal.asContextEnv
 import net.corda.testing.core.SerializationEnvironmentRule
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -29,7 +29,7 @@ fun <T> withoutTestSerialization(callable: () -> T): T { // TODO: Delete this, s
     }
 }
 
-internal fun createTestSerializationEnv(): SerializationEnvironment {
+fun createTestSerializationEnv(): SerializationEnvironment {
     val factory = SerializationFactoryImpl().apply {
         registerScheme(AMQPClientSerializationScheme(emptyList()))
         registerScheme(AMQPServerSerializationScheme(emptyList()))
@@ -45,30 +45,10 @@ internal fun createTestSerializationEnv(): SerializationEnvironment {
     )
 }
 
-/**
- * Should only be used by Driver and MockNode.
- * @param armed true to install, false to do nothing and return a dummy env.
- */
-fun setGlobalSerialization(armed: Boolean): GlobalSerializationEnvironment {
-    return if (armed) {
-        object : GlobalSerializationEnvironment, SerializationEnvironment by createTestSerializationEnv() {
-            override fun unset() {
-                _globalSerializationEnv.set(null)
-                inVMExecutors.remove(this)
-            }
-        }.also {
-            _globalSerializationEnv.set(it)
-        }
-    } else {
-        rigorousMock<GlobalSerializationEnvironment>().also {
-            doNothing().whenever(it).unset()
-        }
+fun <T> SerializationEnvironment.asTestContextEnv(inheritable: Boolean = false, callable: (SerializationEnvironment) -> T): T {
+    try {
+        return asContextEnv(inheritable, callable)
+    } finally {
+        inVMExecutors.remove(this)
     }
 }
-
-@DoNotImplement
-interface GlobalSerializationEnvironment : SerializationEnvironment {
-    /** Unset this environment. */
-    fun unset()
-}
-

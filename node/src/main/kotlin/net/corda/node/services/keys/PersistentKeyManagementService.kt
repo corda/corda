@@ -14,10 +14,7 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
-import javax.persistence.Lob
+import javax.persistence.*
 
 /**
  * A persistent re-implementation of [E2ETestKeyManagementService] to support node re-start.
@@ -26,10 +23,11 @@ import javax.persistence.Lob
  *
  * This class needs database transactions to be in-flight during method calls and init.
  */
+@Deprecated("Superseded by net.corda.node.services.keys.BasicHSMKeyManagementService")
 class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identityService: PersistentIdentityService,
                                      private val database: CordaPersistence) : SingletonSerializeAsToken(), KeyManagementServiceInternal {
     @Entity
-    @javax.persistence.Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
+    @Table(name = "${NODE_DATABASE_PREFIX}our_key_pairs")
     class PersistentKey(
             @Id
             @Column(name = "public_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)

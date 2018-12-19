@@ -148,7 +148,9 @@ class ClassCarpenterImpl @JvmOverloads constructor (override val whitelist: Clas
             }
         }
 
-        require(schema.name in _loaded)
+        if (schema.name !in _loaded){
+            throw ClassNotFoundException(schema.name)
+        }
 
         return _loaded[schema.name]!!
     }

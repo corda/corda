@@ -7,6 +7,8 @@ import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.*;
 import net.corda.serialization.internal.amqp.Schema;
+import net.corda.serialization.internal.model.RemoteTypeInformation;
+import net.corda.serialization.internal.model.TypeIdentifier;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
 import org.junit.Rule;
@@ -66,42 +68,23 @@ public class JavaCalculatedValuesToClassCarpenterTest extends AmqpCarpenterBase 
         ObjectAndEnvelope<C> objAndEnv = new DeserializationInput(factory)
                 .deserializeAndReturnEnvelope(serialized, C.class, context);
 
-        C amqpObj = objAndEnv.getObj();
-        Schema schema = objAndEnv.getEnvelope().getSchema();
-
-        assertEquals(2, amqpObj.getI());
-        assertEquals("4", amqpObj.getSquared());
-        assertEquals(2, schema.getTypes().size());
-        assertTrue(schema.getTypes().get(0) instanceof CompositeType);
-
-        CompositeType concrete = (CompositeType) schema.getTypes().get(0);
-        assertEquals(3, concrete.getFields().size());
-        assertEquals("doubled", concrete.getFields().get(0).getName());
-        assertEquals("int", concrete.getFields().get(0).getType());
-        assertEquals("i", concrete.getFields().get(1).getName());
-        assertEquals("int", concrete.getFields().get(1).getType());
-        assertEquals("squared", concrete.getFields().get(2).getName());
-        assertEquals("string", concrete.getFields().get(2).getType());
-
-        assertEquals(0, AMQPSchemaExtensions.carpenterSchema(schema, ClassLoader.getSystemClassLoader()).getSize());
-        Schema mangledSchema = ClassCarpenterTestUtilsKt.mangleNames(schema, singletonList(C.class.getTypeName()));
-        CarpenterMetaSchema l2 = AMQPSchemaExtensions.carpenterSchema(mangledSchema, ClassLoader.getSystemClassLoader());
-        String mangledClassName = ClassCarpenterTestUtilsKt.mangleName(C.class.getTypeName());
-
-        assertEquals(1, l2.getSize());
-        net.corda.serialization.internal.carpenter.Schema carpenterSchema = l2.getCarpenterSchemas().stream()
-                .filter(s -> s.getName().equals(mangledClassName))
+        TypeIdentifier typeToMangle = TypeIdentifier.Companion.forClass(C.class);
+        Envelope env = objAndEnv.getEnvelope();
+        RemoteTypeInformation typeInformation = getTypeInformation(env).values().stream()
+                .filter(it -> it.getTypeIdentifier().equals(typeToMangle))
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("No schema found for mangled class name " + mangledClassName));
+                .orElseThrow(IllegalStateException::new);
 
-        Class<?> pinochio = new ClassCarpenterImpl(AllWhitelist.INSTANCE).build(carpenterSchema);
+        RemoteTypeInformation renamed = rename(typeInformation, typeToMangle, mangle(typeToMangle));
+
+        Class<?> pinochio = load(renamed);
         Object p = pinochio.getConstructors()[0].newInstance(4, 2, "4");
 
-        assertEquals(pinochio.getMethod("getI").invoke(p), amqpObj.getI());
-        assertEquals(pinochio.getMethod("getSquared").invoke(p), amqpObj.getSquared());
-        assertEquals(pinochio.getMethod("getDoubled").invoke(p), amqpObj.getDoubled());
+        assertEquals(2, pinochio.getMethod("getI").invoke(p));
+        assertEquals("4", pinochio.getMethod("getSquared").invoke(p));
+        assertEquals(4, pinochio.getMethod("getDoubled").invoke(p));
 
         Parent upcast = (Parent) p;
-        assertEquals(upcast.getDoubled(), amqpObj.getDoubled());
+        assertEquals(4, upcast.getDoubled());
     }
 }

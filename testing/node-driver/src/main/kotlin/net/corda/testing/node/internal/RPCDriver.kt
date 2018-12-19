@@ -19,8 +19,8 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
 import net.corda.node.internal.security.RPCSecurityManagerImpl
-import net.corda.node.services.messaging.RPCServer
-import net.corda.node.services.messaging.RPCServerConfiguration
+import net.corda.node.services.rpc.RPCServer
+import net.corda.node.services.rpc.RPCServerConfiguration
 import net.corda.nodeapi.RPCApi
 import net.corda.nodeapi.internal.ArtemisTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
@@ -28,6 +28,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.MAX_MESSAGE_SIZE
 import net.corda.testing.driver.JmxPolicy
 import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
@@ -102,8 +103,8 @@ val rpcTestUser = User("user1", "test", permissions = emptySet())
 val fakeNodeLegalName = CordaX500Name(organisation = "Not:a:real:name", locality = "Nowhere", country = "GB")
 
 // Use a global pool so that we can run RPC tests in parallel
-private val globalPortAllocation = PortAllocation.Incremental(10000)
-private val globalDebugPortAllocation = PortAllocation.Incremental(5005)
+private val globalPortAllocation = incrementalPortAllocation(10000)
+private val globalDebugPortAllocation = incrementalPortAllocation(5005)
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
@@ -116,7 +117,7 @@ fun <A> rpcDriver(
         waitForNodesToFinish: Boolean = false,
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
-        jmxPolicy: JmxPolicy = JmxPolicy(),
+        @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
@@ -140,12 +141,12 @@ fun <A> rpcDriver(
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
-                            cordappsForAllNodes = cordappsForAllNodes
+                            cordappsForAllNodes = cordappsForAllNodes,
+                            signCordapps = false
                     ), externalTrace
             ),
             coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = false
+            dsl = dsl
     )
 }
 

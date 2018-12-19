@@ -88,7 +88,7 @@ class ListsSerializationTest {
         payload.add(2)
         val wrongPayloadType = WrongPayloadType(payload)
         Assertions.assertThatThrownBy { wrongPayloadType.serialize() }
-                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declaredType")
+                .isInstanceOf(NotSerializableException::class.java).hasMessageContaining("Cannot derive collection type for declared type")
     }
 
     @CordaSerializable
@@ -107,7 +107,9 @@ class ListsSerializationTest {
         val container = CovariantContainer(payload)
 
         fun verifyEnvelopeBody(envelope: Envelope) {
-            envelope.schema.types.single { typeNotation -> typeNotation.name == java.util.List::class.java.name + "<?>" }
+            envelope.schema.types.single { typeNotation ->
+                typeNotation.name == "java.util.List<${Parent::class.java.name}>"
+            }
         }
 
         assertEqualAfterRoundTripSerialization(container, { bytes -> verifyEnvelope(bytes, ::verifyEnvelopeBody) })

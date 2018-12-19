@@ -7,7 +7,6 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.rpc.NodeRpcOptions
-import net.corda.node.services.keys.cryptoservice.SupportedCryptoServices
 import net.corda.nodeapi.BrokerRpcSslOptions
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
 import net.corda.nodeapi.internal.config.FileBasedCertificateStoreSupplier
@@ -15,6 +14,7 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.SslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaInitializationType
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -75,8 +75,7 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = Defaults.jmxReporterType,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val cryptoServiceName: SupportedCryptoServices? = null,
-        override val cryptoServiceConf: String? = null
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -94,7 +93,7 @@ data class NodeConfigurationImpl(
         val devModeOptions: DevModeOptions? = null
         const val useTestClock: Boolean = false
         const val lazyBridgeStart: Boolean = true
-        const val detectPublicIp: Boolean = true
+        const val detectPublicIp: Boolean = false
         val additionalNodeInfoPollingFrequencyMsec: Long = 5.seconds.toMillis()
         val sshd: SSHDConfiguration? = null
         val transactionCacheSizeMegaBytes: Int? = null
@@ -108,12 +107,17 @@ data class NodeConfigurationImpl(
         val flowMonitorSuspensionLoggingThresholdMillis: Duration = NodeConfiguration.DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS
         val jmxReporterType: JmxReporterType = NodeConfiguration.defaultJmxReporterType
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
+        val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
         fun messagingServerExternal(messagingServerAddress: NetworkHostAndPort?) = messagingServerAddress != null
 
-        fun database(devMode: Boolean) = DatabaseConfig(initialiseSchema = devMode, exportHibernateJMXStatistics = devMode)
+        fun database(devMode: Boolean) = DatabaseConfig(
+                initialiseSchema = devMode,
+                initialiseAppSchema = if(devMode) SchemaInitializationType.UPDATE else SchemaInitializationType.VALIDATE,
+                exportHibernateJMXStatistics = devMode
+        )
     }
 
     companion object {
@@ -201,7 +205,6 @@ data class NodeConfigurationImpl(
         errors += validateTlsCertCrlConfig()
         errors += validateNetworkServices()
         errors += validateH2Settings()
-        errors += validateCryptoService()
         return errors
     }
 
@@ -222,14 +225,6 @@ data class NodeConfigurationImpl(
         val errors = mutableListOf<String>()
         if (h2port != null && h2Settings != null) {
             errors += "cannot specify both 'h2port' and 'h2Settings'"
-        }
-        return errors
-    }
-
-    private fun validateCryptoService(): List<String> {
-        val errors = mutableListOf<String>()
-        if (cryptoServiceName == null && cryptoServiceConf != null) {
-            errors += "'cryptoServiceName' is mandatory when 'cryptoServiceConf' is specified"
         }
         return errors
     }

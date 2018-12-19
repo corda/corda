@@ -55,9 +55,7 @@ object TwoPartyDealFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession.counterparty))
-            val anonymousMe = txIdentities[ourIdentity] ?: ourIdentity.anonymise()
-            val anonymousCounterparty = txIdentities[otherSideSession.counterparty] ?: otherSideSession.counterparty.anonymise()
+            val (anonymousMe, anonymousCounterparty) = subFlow(SwapIdentitiesFlow(otherSideSession))
             // DOCEND 2
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
@@ -71,7 +69,7 @@ object TwoPartyDealFlow {
 
             val txId = subFlow(signTransactionFlow).id
 
-            return waitForLedgerCommit(txId)
+            return subFlow(ReceiveFinalityFlow(otherSideSession, expectedTxId = txId))
         }
 
         @Suspendable
@@ -81,8 +79,7 @@ object TwoPartyDealFlow {
     /**
      * Abstracted bilateral deal flow participant that is recipient of initial communication.
      */
-    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker(),
-                                val regulators: Set<Party> = emptySet()) : FlowLogic<SignedTransaction>() {
+    abstract class Secondary<U>(override val progressTracker: ProgressTracker = Secondary.tracker()) : FlowLogic<SignedTransaction>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Waiting for deal info.")
@@ -124,7 +121,7 @@ object TwoPartyDealFlow {
             logger.trace("Got signatures from other party, verifying ... ")
 
             progressTracker.currentStep = RECORDING
-            val ftx = subFlow(FinalityFlow(stx, regulators + otherSideSession.counterparty))
+            val ftx = subFlow(FinalityFlow(stx, otherSideSession))
             logger.trace("Recorded transaction.")
 
             return ftx
@@ -132,6 +129,7 @@ object TwoPartyDealFlow {
 
         @Suspendable
         private fun receiveAndValidateHandshake(): Handshake<U> {
+            subFlow(SwapIdentitiesFlow(otherSideSession))
             progressTracker.currentStep = RECEIVING
             // Wait for a trade request to come in on our pre-provided session ID.
             val handshake = otherSideSession.receive<Handshake<U>>()
@@ -141,8 +139,8 @@ object TwoPartyDealFlow {
                 // Verify the transaction identities represent the correct parties
                 val wellKnownOtherParty = serviceHub.identityService.wellKnownPartyFromAnonymous(it.primaryIdentity)
                 val wellKnownMe = serviceHub.identityService.wellKnownPartyFromAnonymous(it.secondaryIdentity)
-                require(wellKnownOtherParty == otherSideSession.counterparty)
-                require(wellKnownMe == ourIdentity)
+                require(wellKnownOtherParty == otherSideSession.counterparty){"Well known party for handshake identity ${it.primaryIdentity} does not match counterparty"}
+                require(wellKnownMe == ourIdentity){"Well known party for handshake identity ${it.secondaryIdentity} does not match ourIdentity"}
                 validateHandshake(it)
             }
         }

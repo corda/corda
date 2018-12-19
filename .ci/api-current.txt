@@ -431,7 +431,9 @@ public static final class net.corda.core.contracts.AmountTransfer$Companion exte
 public interface net.corda.core.contracts.Attachment extends net.corda.core.contracts.NamedByHash
   public void extractFile(String, java.io.OutputStream)
   @NotNull
-  public abstract java.util.List<java.security.PublicKey> getSigners()
+  public abstract java.util.List<java.security.PublicKey> getSignerKeys()
+  @NotNull
+  public abstract java.util.List<net.corda.core.identity.Party> getSigners()
   public abstract int getSize()
   @NotNull
   public abstract java.io.InputStream open()
@@ -454,6 +456,9 @@ public final class net.corda.core.contracts.AttachmentResolutionException extend
 public final class net.corda.core.contracts.AutomaticHashConstraint extends java.lang.Object implements net.corda.core.contracts.AttachmentConstraint
   public boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
   public static final net.corda.core.contracts.AutomaticHashConstraint INSTANCE
+##
+public @interface net.corda.core.contracts.BelongsToContract
+  public abstract Class<? extends net.corda.core.contracts.Contract> value()
 ##
 @CordaSerializable
 public final class net.corda.core.contracts.Command extends java.lang.Object
@@ -539,7 +544,7 @@ public final class net.corda.core.contracts.ContractAttachment extends java.lang
   @NotNull
   public net.corda.core.crypto.SecureHash getId()
   @NotNull
-  public java.util.List<java.security.PublicKey> getSigners()
+  public java.util.List<net.corda.core.identity.Party> getSigners()
   public int getSize()
   @Nullable
   public final String getUploader()
@@ -2266,14 +2271,12 @@ public final class net.corda.core.flows.NotaryFlow extends java.lang.Object
 ##
 @DoNotImplement
 @InitiatingFlow
-public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.flows.FlowLogic implements net.corda.core.internal.TimedFlow
+public static class net.corda.core.flows.NotaryFlow$Client extends net.corda.core.internal.BackpressureAwareTimedFlow
   public <init>(net.corda.core.transactions.SignedTransaction)
   public <init>(net.corda.core.transactions.SignedTransaction, net.corda.core.utilities.ProgressTracker)
   @Suspendable
   @NotNull
   public java.util.List<net.corda.core.crypto.TransactionSignature> call()
-  @NotNull
-  protected final net.corda.core.identity.Party checkTransaction()
   @NotNull
   public net.corda.core.utilities.ProgressTracker getProgressTracker()
   @Suspendable
@@ -2301,7 +2304,7 @@ public final class net.corda.core.flows.ReceiveStateAndRefFlow extends net.corda
   @NotNull
   public java.util.List<net.corda.core.contracts.StateAndRef<T>> call()
 ##
-public final class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
+public class net.corda.core.flows.ReceiveTransactionFlow extends net.corda.core.flows.FlowLogic
   public <init>(net.corda.core.flows.FlowSession)
   public <init>(net.corda.core.flows.FlowSession, boolean)
   public <init>(net.corda.core.flows.FlowSession, boolean, net.corda.core.node.StatesToRecord)
@@ -3289,8 +3292,12 @@ public static final class net.corda.core.node.services.Vault$Page extends java.l
 @CordaSerializable
 public static final class net.corda.core.node.services.Vault$StateMetadata extends java.lang.Object
   public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant)
+  public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus)
+  public <init>(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus, net.corda.core.node.services.Vault$ConstraintInfo)
   @NotNull
   public final net.corda.core.contracts.StateRef component1()
+  @Nullable
+  public final net.corda.core.node.services.Vault$ConstraintInfo component10()
   @NotNull
   public final String component2()
   @NotNull
@@ -3305,9 +3312,17 @@ public static final class net.corda.core.node.services.Vault$StateMetadata exten
   public final String component7()
   @Nullable
   public final java.time.Instant component8()
+  @Nullable
+  public final net.corda.core.node.services.Vault$RelevancyStatus component9()
   @NotNull
   public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant)
+  @NotNull
+  public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus)
+  @NotNull
+  public final net.corda.core.node.services.Vault$StateMetadata copy(net.corda.core.contracts.StateRef, String, java.time.Instant, java.time.Instant, net.corda.core.node.services.Vault$StateStatus, net.corda.core.identity.AbstractParty, String, java.time.Instant, net.corda.core.node.services.Vault$RelevancyStatus, net.corda.core.node.services.Vault$ConstraintInfo)
   public boolean equals(Object)
+  @Nullable
+  public final net.corda.core.node.services.Vault$ConstraintInfo getConstraintInfo()
   @Nullable
   public final java.time.Instant getConsumedTime()
   @NotNull
@@ -3322,9 +3337,12 @@ public static final class net.corda.core.node.services.Vault$StateMetadata exten
   public final java.time.Instant getRecordedTime()
   @NotNull
   public final net.corda.core.contracts.StateRef getRef()
+  @Nullable
+  public final net.corda.core.node.services.Vault$RelevancyStatus getRelevancyStatus()
   @NotNull
   public final net.corda.core.node.services.Vault$StateStatus getStatus()
   public int hashCode()
+  @NotNull
   public String toString()
 ##
 @CordaSerializable
@@ -3445,22 +3463,45 @@ public static final class net.corda.core.node.services.vault.AttachmentQueryCrit
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>)
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>)
   public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>)
+  public <init>(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>, net.corda.core.node.services.vault.ColumnPredicate<Integer>)
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> component1()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> component2()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant> component3()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> component4()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>> component5()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Boolean> component6()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Integer> component7()
   @NotNull
   public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>)
+  @NotNull
+  public final net.corda.core.node.services.vault.AttachmentQueryCriteria$AttachmentsQueryCriteria copy(net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<String>, net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>>, net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>>, net.corda.core.node.services.vault.ColumnPredicate<Boolean>, net.corda.core.node.services.vault.ColumnPredicate<Integer>)
   public boolean equals(Object)
   @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<String>> getContractClassNamesCondition()
+  @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> getFilenameCondition()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<java.util.List<java.security.PublicKey>> getSignersCondition()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<java.time.Instant> getUploadDateCondition()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<String> getUploaderCondition()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Integer> getVersionCondition()
   public int hashCode()
+  @Nullable
+  public final net.corda.core.node.services.vault.ColumnPredicate<Boolean> isSignedCondition()
+  @NotNull
   public String toString()
   @NotNull
   public java.util.Collection<javax.persistence.criteria.Predicate> visit(net.corda.core.node.services.vault.AttachmentsQueryCriteriaParser)
@@ -4023,7 +4064,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$Fungi
   @Nullable
   public final java.util.List<net.corda.core.identity.AbstractParty> getOwner()
   @Nullable
-  public final java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
+  public java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
   @Nullable
   public final net.corda.core.node.services.vault.ColumnPredicate<Long> getQuantity()
   @NotNull
@@ -4060,7 +4101,7 @@ public static final class net.corda.core.node.services.vault.QueryCriteria$Linea
   @Nullable
   public final java.util.List<String> getExternalId()
   @Nullable
-  public final java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
+  public java.util.List<net.corda.core.identity.AbstractParty> getParticipants()
   @NotNull
   public net.corda.core.node.services.Vault$StateStatus getStatus()
   @Nullable
@@ -4202,7 +4243,7 @@ public final class net.corda.core.node.services.vault.QueryCriteriaUtils extends
   public static final Class<O> resolveEnclosingObjectFromExpression(net.corda.core.node.services.vault.CriteriaExpression<O, ? extends R>)
   public static final int DEFAULT_PAGE_NUM = 1
   public static final int DEFAULT_PAGE_SIZE = 200
-  public static final int MAX_PAGE_SIZE = 2147483647
+  public static final int MAX_PAGE_SIZE = 2147483646
 ##
 @CordaSerializable
 public final class net.corda.core.node.services.vault.Sort extends net.corda.core.node.services.vault.BaseSort
@@ -4287,16 +4328,16 @@ public abstract class net.corda.core.node.services.vault.SortAttribute extends j
 ##
 @CordaSerializable
 public static final class net.corda.core.node.services.vault.SortAttribute$Custom extends net.corda.core.node.services.vault.SortAttribute
-  public <init>(Class<? extends net.corda.core.schemas.PersistentState>, String)
+  public <init>(Class<? extends net.corda.core.schemas.StatePersistable>, String)
   @NotNull
-  public final Class<? extends net.corda.core.schemas.PersistentState> component1()
+  public final Class<? extends net.corda.core.schemas.StatePersistable> component1()
   @NotNull
   public final String component2()
   @NotNull
-  public final net.corda.core.node.services.vault.SortAttribute$Custom copy(Class<? extends net.corda.core.schemas.PersistentState>, String)
+  public final net.corda.core.node.services.vault.SortAttribute$Custom copy(Class<? extends net.corda.core.schemas.StatePersistable>, String)
   public boolean equals(Object)
   @NotNull
-  public final Class<? extends net.corda.core.schemas.PersistentState> getEntityStateClass()
+  public final Class<? extends net.corda.core.schemas.StatePersistable> getEntityStateClass()
   @NotNull
   public final String getEntityStateColumnName()
   public int hashCode()
@@ -4905,6 +4946,7 @@ public static final class net.corda.core.transactions.LedgerTransaction$InOutGro
 @CordaSerializable
 public final class net.corda.core.transactions.MissingContractAttachments extends net.corda.core.flows.FlowException
   public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>)
+  public <init>(java.util.List<? extends net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>>, Integer)
   @NotNull
   public final java.util.List<net.corda.core.contracts.TransactionState<net.corda.core.contracts.ContractState>> getStates()
 ##
@@ -5873,8 +5915,6 @@ public interface net.corda.testing.driver.DriverDSL
 public final class net.corda.testing.driver.DriverParameters extends java.lang.Object
   public <init>()
   public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, java.util.Map<String, ?>, boolean, boolean)
-  public <init>(boolean, java.nio.file.Path, net.corda.testing.driver.PortAllocation, net.corda.testing.driver.PortAllocation, java.util.Map<String, String>, boolean, boolean, boolean, java.util.List<net.corda.testing.node.NotarySpec>, java.util.List<String>, net.corda.testing.driver.JmxPolicy, net.corda.core.node.NetworkParameters, boolean, boolean)
   public final boolean component1()
   @NotNull
   public final java.util.List<String> component10()
@@ -5958,12 +5998,12 @@ public final class net.corda.testing.driver.JmxPolicy extends java.lang.Object
   public <init>()
   public <init>(boolean, net.corda.testing.driver.PortAllocation)
   public final boolean component1()
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation component2()
   @NotNull
   public final net.corda.testing.driver.JmxPolicy copy(boolean, net.corda.testing.driver.PortAllocation)
   public boolean equals(Object)
-  @Nullable
+  @NotNull
   public final net.corda.testing.driver.PortAllocation getJmxHttpServerPortAllocation()
   public final boolean getStartJmxHttpServer()
   public int hashCode()
@@ -6061,7 +6101,7 @@ public abstract class net.corda.testing.driver.PortAllocation extends java.lang.
   public abstract int nextPort()
 ##
 @DoNotImplement
-public static final class net.corda.testing.driver.PortAllocation$Incremental extends net.corda.testing.driver.PortAllocation
+public static class net.corda.testing.driver.PortAllocation$Incremental extends net.corda.testing.driver.PortAllocation
   public <init>(int)
   @NotNull
   public final java.util.concurrent.atomic.AtomicInteger getPortCounter()
@@ -6365,7 +6405,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.node.services.NetworkMapCache getNetworkMapCache()
   @NotNull
-  public final net.corda.core.node.NetworkParameters getNetworkParameters()
+  public net.corda.core.node.NetworkParameters getNetworkParameters()
   @NotNull
   protected final net.corda.core.node.ServicesForResolution getServicesForResolution()
   @NotNull
@@ -6415,7 +6455,7 @@ public final class net.corda.testing.node.MockServicesKt extends java.lang.Objec
   @NotNull
   public static final T createMockCordaService(net.corda.testing.node.MockServices, kotlin.jvm.functions.Function1<? super net.corda.core.node.AppServiceHub, ? extends T>)
   @NotNull
-  public static final net.corda.node.services.identity.InMemoryIdentityService makeTestIdentityService(net.corda.core.identity.PartyAndCertificate...)
+  public static final net.corda.core.node.services.IdentityService makeTestIdentityService(net.corda.core.identity.PartyAndCertificate...)
 ##
 public final class net.corda.testing.node.NodeTestUtils extends java.lang.Object
   @NotNull
@@ -6828,7 +6868,6 @@ public final class net.corda.testing.core.SerializationEnvironmentRule extends j
   public static final net.corda.testing.core.SerializationEnvironmentRule$Companion Companion
 ##
 public static final class net.corda.testing.core.SerializationEnvironmentRule$Companion extends java.lang.Object
-  public final T run(String, kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.SerializationEnvironment, ? extends T>)
 ##
 public final class net.corda.testing.core.TestConstants extends java.lang.Object
   @NotNull

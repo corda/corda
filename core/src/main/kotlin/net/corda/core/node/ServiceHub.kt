@@ -5,10 +5,7 @@ import net.corda.core.DoNotImplement
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
-import net.corda.core.crypto.Crypto
-import net.corda.core.crypto.SignableData
-import net.corda.core.crypto.SignatureMetadata
-import net.corda.core.crypto.TransactionSignature
+import net.corda.core.crypto.*
 import net.corda.core.flows.ContractUpgradeFlow
 import net.corda.core.node.services.*
 import net.corda.core.serialization.SerializeAsToken
@@ -41,6 +38,9 @@ interface ServicesForResolution {
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
 
+    /** Provides access to storage of historical network parameters that are used in transaction resolution */
+    val networkParametersStorage: NetworkParametersStorage
+
     /** Returns the network parameters the node is operating under. */
     val networkParameters: NetworkParameters
 
@@ -64,6 +64,9 @@ interface ServicesForResolution {
     // as the existing transaction store will become encrypted at some point
     @Throws(TransactionResolutionException::class)
     fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
+
+    @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
+    fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName? = null): Attachment
 }
 
 /**

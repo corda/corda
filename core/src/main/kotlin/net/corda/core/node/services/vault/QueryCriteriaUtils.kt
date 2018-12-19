@@ -10,6 +10,7 @@ import net.corda.core.node.services.vault.ColumnPredicate.*
 import net.corda.core.node.services.vault.EqualityComparisonOperator.*
 import net.corda.core.node.services.vault.LikenessOperator.*
 import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
 import java.lang.reflect.Field
 import kotlin.jvm.internal.CallableReference
@@ -139,7 +140,8 @@ const val DEFAULT_PAGE_SIZE = 200
 /**
  * Note: use [PageSpecification] to correctly handle a number of bounded pages of a pre-configured page size.
  */
-const val MAX_PAGE_SIZE = Int.MAX_VALUE
+// Here we subtract 1 to allow the Vault to figure out whether there are more results and pages by querying for `pageSize + 1`.
+const val MAX_PAGE_SIZE = Int.MAX_VALUE - 1
 
 /**
  * [PageSpecification] allows specification of a page number (starting from [DEFAULT_PAGE_NUM]) and page size
@@ -212,7 +214,8 @@ data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseS
     enum class AttachmentSortAttribute(val columnName: String) {
         INSERTION_DATE("insertion_date"),
         UPLOADER("uploader"),
-        FILENAME("filename")
+        FILENAME("filename"),
+        VERSION ("version")
     }
 
     @CordaSerializable
@@ -234,7 +237,7 @@ sealed class SortAttribute {
      * [entityStateColumnName] should reference an entity attribute name as defined by the associated mapped schema
      * (for example, [CashSchemaV1.PersistentCashState::currency.name])
      */
-    data class Custom(val entityStateClass: Class<out PersistentState>,
+    data class Custom(val entityStateClass: Class<out StatePersistable>,
                       val entityStateColumnName: String) : SortAttribute()
 }
 

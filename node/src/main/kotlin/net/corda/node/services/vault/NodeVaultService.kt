@@ -72,7 +72,7 @@ class NodeVaultService(
     }
 
     private val mutex = ThreadBox(InnerState())
-    private lateinit var criteriaBuilder: CriteriaBuilder
+    private val criteriaBuilder: CriteriaBuilder by lazy { database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder }
     private val persistentStateService = PersistentStateService(schemaService)
 
     /**
@@ -82,7 +82,6 @@ class NodeVaultService(
     private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
 
     override fun start() {
-        criteriaBuilder = database.hibernateConfig.sessionFactoryForRegisteredSchemas.criteriaBuilder
         bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
             update.produced.forEach {
@@ -132,8 +131,15 @@ class NodeVaultService(
                 //
                 // Adding a new column in the "VaultStates" table was considered the best approach.
                 val keys = stateOnly.participants.map { it.owningKey }
+                val persistentStateRef = PersistentStateRef(stateAndRef.key)
                 val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
                 val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
+                // Save a row for each party in the state_party table.
+                // TODO: Perhaps these can be stored in a batch?
+                stateOnly.participants.forEach { participant ->
+                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participant)
+                    session.save(persistentParty)
+                }
                 val stateToAdd = VaultSchemaV1.VaultStates(
                         notary = stateAndRef.value.state.notary,
                         contractStateClassName = stateAndRef.value.state.data.javaClass.name,
@@ -143,7 +149,7 @@ class NodeVaultService(
                         constraintType = constraintInfo.type(),
                         constraintData = constraintInfo.data()
                 )
-                stateToAdd.stateRef = PersistentStateRef(stateAndRef.key)
+                stateToAdd.stateRef = persistentStateRef
                 session.save(stateToAdd)
             }
             consumedStateRefs.forEach { stateRef ->
@@ -497,7 +503,8 @@ class NodeVaultService(
             if (!skipPagingChecks && !paging.isDefault) {
                 // pagination
                 if (paging.pageNumber < DEFAULT_PAGE_NUM) throw VaultQueryException("Page specification: invalid page number ${paging.pageNumber} [page numbers start from $DEFAULT_PAGE_NUM]")
-                if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [must be a value between 1 and $MAX_PAGE_SIZE]")
+                if (paging.pageSize < 1) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [minimum is 1]")
+                if (paging.pageSize > MAX_PAGE_SIZE) throw VaultQueryException("Page specification: invalid page size ${paging.pageSize} [maximum is $MAX_PAGE_SIZE]")
             }
 
             // For both SQLServer and PostgresSQL, firstResult must be >= 0. So we set a floor at 0.

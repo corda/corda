@@ -3,8 +3,7 @@ package net.corda.core.node.services
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
 import net.corda.core.crypto.SecureHash
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.*
 import java.io.IOException
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException
@@ -69,5 +68,11 @@ interface AttachmentStorage {
      * @return true if it's in there
      */
     fun hasAttachment(attachmentId: AttachmentId): Boolean
+
+    // Note: cannot apply @JvmOverloads to interfaces nor interface implementations.
+    // Java Helpers.
+    fun queryAttachments(criteria: AttachmentQueryCriteria): List<AttachmentId> {
+        return queryAttachments(criteria, null)
+    }
 }
 

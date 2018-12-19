@@ -2,7 +2,7 @@ package net.corda.nodeapi.internal.network
 
 import net.corda.core.internal.*
 import net.corda.core.utilities.contextLogger
-import net.corda.nodeapi.internal.NODE_INFO_DIRECTORY
+import net.corda.core.internal.NODE_INFO_DIRECTORY
 import rx.Observable
 import rx.Scheduler
 import rx.Subscription

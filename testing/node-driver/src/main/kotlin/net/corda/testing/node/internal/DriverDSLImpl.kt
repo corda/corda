@@ -6,9 +6,9 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.*
@@ -27,6 +27,7 @@ import net.corda.node.internal.NodeWithInfo
 import net.corda.node.internal.clientSslOptionsCompatibleWith
 import net.corda.node.services.Permissions
 import net.corda.node.services.config.*
+import net.corda.node.services.config.NodeConfiguration.Companion.cordappDirectoriesKey
 import net.corda.node.utilities.registration.HTTPNetworkRegistrationService
 import net.corda.node.utilities.registration.NodeRegistrationHelper
 import net.corda.nodeapi.internal.DevIdentityGenerator
@@ -42,16 +43,13 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.*
-import net.corda.testing.driver.VerifierType
 import net.corda.testing.driver.internal.InProcessImpl
 import net.corda.testing.driver.internal.NodeHandleInternal
 import net.corda.testing.driver.internal.OutOfProcessImpl
-import net.corda.testing.internal.setGlobalSerialization
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.User
 import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -71,6 +69,7 @@ import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -92,7 +91,8 @@ class DriverDSLImpl(
         val networkParameters: NetworkParameters,
         val notaryCustomOverrides: Map<String, Any?>,
         val inMemoryDB: Boolean,
-        val cordappsForAllNodes: Collection<TestCordapp>
+        val cordappsForAllNodes: Collection<TestCordapp>,
+        val signCordapps: Boolean
 ) : InternalDriverDSL {
 
     private var _executorService: ScheduledExecutorService? = null
@@ -126,8 +126,6 @@ class DriverDSLImpl(
 
     //TODO: remove this once we can bundle quasar properly.
     private val quasarJarPath: String by lazy { resolveJar(".*quasar.*\\.jar$") }
-
-    private val jolokiaJarPath: String by lazy { resolveJar(".*jolokia-jvm-.*-agent\\.jar$") }
 
     private fun NodeConfig.checkAndOverrideForInMemoryDB(): NodeConfig = this.run {
         if (inMemoryDB && corda.dataSourceProperties.getProperty("dataSource.url").startsWith("jdbc:h2:")) {
@@ -185,46 +183,14 @@ class DriverDSLImpl(
         }
     }
 
-    override fun startNode(defaultParameters: NodeParameters,
-                           providedName: CordaX500Name?,
-                           rpcUsers: List<User>,
-                           verifierType: VerifierType,
-                           customOverrides: Map<String, Any?>,
-                           startInSameProcess: Boolean?,
-                           maximumHeapSize: String): CordaFuture<NodeHandle> {
-        return startNode(
-                defaultParameters,
-                providedName,
-                rpcUsers,
-                verifierType,
-                customOverrides,
-                startInSameProcess,
-                maximumHeapSize,
-                defaultParameters.additionalCordapps,
-                defaultParameters.regenerateCordappsOnStart
-        )
-    }
-
-    override fun startNode(
-            defaultParameters: NodeParameters,
-            providedName: CordaX500Name?,
-            rpcUsers: List<User>,
-            verifierType: VerifierType,
-            customOverrides: Map<String, Any?>,
-            startInSameProcess: Boolean?,
-            maximumHeapSize: String,
-            additionalCordapps: Collection<TestCordapp>,
-            regenerateCordappsOnStart: Boolean,
-            flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>
-    ): CordaFuture<NodeHandle> {
+    override fun startNode(parameters: NodeParameters): CordaFuture<NodeHandle> {
         val p2pAddress = portAllocation.nextHostAndPort()
         // TODO: Derive name from the full picked name, don't just wrap the common name
-        val name = providedName
-                ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
+        val name = parameters.providedName ?: CordaX500Name("${oneOf(names).organisation}-${p2pAddress.port}", "London", "GB")
 
         val registrationFuture = if (compatibilityZone?.rootCert != null) {
             // We don't need the network map to be available to be able to register the node
-            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config())
+            startNodeRegistration(name, compatibilityZone.rootCert, compatibilityZone.config(), parameters.customOverrides)
         } else {
             doneFuture(Unit)
         }
@@ -232,26 +198,20 @@ class DriverDSLImpl(
         return registrationFuture.flatMap {
             networkMapAvailability.flatMap {
                 // But starting the node proper does require the network map
-                startRegisteredNode(name, it, rpcUsers, verifierType, customOverrides, startInSameProcess, maximumHeapSize, p2pAddress, additionalCordapps, regenerateCordappsOnStart, flowOverrides)
+                startRegisteredNode(name, it, parameters, p2pAddress, signCordapps)
             }
         }
     }
 
     private fun startRegisteredNode(name: CordaX500Name,
                                     localNetworkMap: LocalNetworkMap?,
-                                    rpcUsers: List<User>,
-                                    verifierType: VerifierType,
-                                    customOverrides: Map<String, Any?>,
-                                    startInSameProcess: Boolean? = null,
-                                    maximumHeapSize: String = "512m",
+                                    parameters: NodeParameters,
                                     p2pAddress: NetworkHostAndPort = portAllocation.nextHostAndPort(),
-                                    additionalCordapps: Collection<TestCordapp> = emptySet(),
-                                    regenerateCordappsOnStart: Boolean = false,
-                                    flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()): CordaFuture<NodeHandle> {
+                                    signCordapps: Boolean = false): CordaFuture<NodeHandle> {
         val rpcAddress = portAllocation.nextHostAndPort()
         val rpcAdminAddress = portAllocation.nextHostAndPort()
         val webAddress = portAllocation.nextHostAndPort()
-        val users = rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
+        val users = parameters.rpcUsers.map { it.copy(permissions = it.permissions + DRIVER_REQUIRED_PERMISSIONS) }
         val czUrlConfig = when (compatibilityZone) {
             null -> emptyMap()
             is SharedCompatibilityZoneParams ->
@@ -261,7 +221,15 @@ class DriverDSLImpl(
                         "networkServices.networkMapURL" to compatibilityZone.networkMapURL().toString())
         }
 
-        val flowOverrideConfig = flowOverrides.entries.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) }.let { FlowOverrideConfig(it) }
+        val jmxPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation.nextPort() else null
+        val jmxConfig = if (jmxPort != null) {
+            mapOf(NodeConfiguration::jmxMonitoringHttpPort.name to jmxPort)
+        } else {
+            emptyMap()
+        }
+
+        val flowOverrideConfig = FlowOverrideConfig(parameters.flowOverrides.map { FlowOverride(it.key.canonicalName, it.value.canonicalName) })
+        
         val overrides = configOf(
                 NodeConfiguration::myLegalName.name to name.toString(),
                 NodeConfiguration::p2pAddress.name to p2pAddress.toString(),
@@ -269,35 +237,37 @@ class DriverDSLImpl(
                 "rpcSettings.adminAddress" to rpcAdminAddress.toString(),
                 NodeConfiguration::useTestClock.name to useTestClock,
                 NodeConfiguration::rpcUsers.name to if (users.isEmpty()) defaultRpcUserList else users.map { it.toConfig().root().unwrapped() },
-                NodeConfiguration::verifierType.name to verifierType.name,
+                NodeConfiguration::verifierType.name to parameters.verifierType.name,
                 NodeConfiguration::flowOverrides.name to flowOverrideConfig.toConfig().root().unwrapped()
-        ) + czUrlConfig + customOverrides
+        ) + czUrlConfig + jmxConfig + parameters.customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory(name),
                 allowMissingConfig = true,
                 configOverrides = if (overrides.hasPath("devMode")) overrides else overrides + mapOf("devMode" to true)
         )).checkAndOverrideForInMemoryDB()
-        return startNodeInternal(config, webAddress, startInSameProcess, maximumHeapSize, localNetworkMap, additionalCordapps, regenerateCordappsOnStart)
+        return startNodeInternal(config, webAddress, localNetworkMap, parameters, signCordapps)
     }
 
     private fun startNodeRegistration(
             providedName: CordaX500Name,
             rootCert: X509Certificate,
-            networkServicesConfig: NetworkServicesConfig
+            networkServicesConfig: NetworkServicesConfig,
+            customOverrides: Map<String, Any?> = mapOf()
     ): CordaFuture<NodeConfig> {
         val baseDirectory = baseDirectory(providedName).createDirectories()
+        val overrides = configOf(
+                "p2pAddress" to portAllocation.nextHostAndPort().toString(),
+                "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
+                "myLegalName" to providedName.toString(),
+                "rpcSettings" to mapOf(
+                        "address" to portAllocation.nextHostAndPort().toString(),
+                        "adminAddress" to portAllocation.nextHostAndPort().toString()
+                ),
+                "devMode" to false) + customOverrides
         val config = NodeConfig(ConfigHelper.loadConfig(
                 baseDirectory = baseDirectory,
                 allowMissingConfig = true,
-                configOverrides = configOf(
-                        "p2pAddress" to portAllocation.nextHostAndPort().toString(),
-                        "compatibilityZoneURL" to networkServicesConfig.doormanURL.toString(),
-                        "myLegalName" to providedName.toString(),
-                        "rpcSettings" to mapOf(
-                                "address" to portAllocation.nextHostAndPort().toString(),
-                                "adminAddress" to portAllocation.nextHostAndPort().toString()
-                        ),
-                        "devMode" to false)
+                configOverrides = overrides
         )).checkAndOverrideForInMemoryDB()
 
         val versionInfo = VersionInfo(PLATFORM_VERSION, "1", "1", "1")
@@ -327,12 +297,6 @@ class DriverDSLImpl(
                     "--network-root-truststore-password=$rootTruststorePassword"
             ).map { config }
         }
-    }
-
-    private enum class ClusterType(val validating: Boolean, val clusterName: CordaX500Name) {
-        VALIDATING_RAFT(true, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_RAFT(false, CordaX500Name("Raft", "Zurich", "CH")),
-        NON_VALIDATING_BFT(false, CordaX500Name("BFT", "Zurich", "CH"))
     }
 
     @Suppress("DEPRECATION")
@@ -395,6 +359,13 @@ class DriverDSLImpl(
             notaryInfos.zip(listOfFutureNodeHandles) { (identity, validating), nodeHandlesFuture ->
                 NotaryHandle(identity, validating, nodeHandlesFuture)
             }
+        }
+        try {
+            _notaries.map { notary -> notary.map { handle -> handle.nodeHandles } }.getOrThrow(notaryHandleTimeout).forEach { future -> future.getOrThrow(notaryHandleTimeout) }
+        } catch (e: ListenProcessDeathException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
+        } catch (e: TimeoutException) {
+            throw IllegalStateException("Unable to start notaries. A required port might be bound already.", e)
         }
     }
 
@@ -491,9 +462,7 @@ class DriverDSLImpl(
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
-                spec.rpcUsers,
-                spec.verifierType,
-                customOverrides = notaryConfig + customOverrides
+                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides)
         ).map { listOf(it) }
     }
 
@@ -519,9 +488,8 @@ class DriverDSLImpl(
         val firstNodeFuture = startRegisteredNode(
                 nodeNames[0],
                 localNetworkMap,
-                spec.rpcUsers,
-                spec.verifierType,
-                customOverrides = notaryConfig(clusterAddress))
+                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(clusterAddress))
+        )
 
         // All other nodes will join the cluster
         val restNodeFutures = nodeNames.drop(1).map {
@@ -529,9 +497,7 @@ class DriverDSLImpl(
             startRegisteredNode(
                     it,
                     localNetworkMap,
-                    spec.rpcUsers,
-                    spec.verifierType,
-                    customOverrides = notaryConfig(nodeAddress, clusterAddress)
+                    NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig(nodeAddress, clusterAddress))
             )
         }
 
@@ -551,13 +517,10 @@ class DriverDSLImpl(
      */
     private fun startOutOfProcessMiniNode(config: NodeConfig, vararg extraCmdLineFlag: String): CordaFuture<Unit> {
         val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-        val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
         val process = startOutOfProcessNode(
                 config,
                 quasarJarPath,
                 debugPort,
-                jolokiaJarPath,
-                monitorPort,
                 systemProperties,
                 "512m",
                 *extraCmdLineFlag
@@ -570,11 +533,9 @@ class DriverDSLImpl(
 
     private fun startNodeInternal(specifiedConfig: NodeConfig,
                                   webAddress: NetworkHostAndPort,
-                                  startInProcess: Boolean?,
-                                  maximumHeapSize: String,
                                   localNetworkMap: LocalNetworkMap?,
-                                  additionalCordapps: Collection<TestCordapp>,
-                                  regenerateCordappsOnStart: Boolean = false): CordaFuture<NodeHandle> {
+                                  parameters: NodeParameters,
+                                  signCordapps: Boolean = false): CordaFuture<NodeHandle> {
         val visibilityHandle = networkVisibilityController.register(specifiedConfig.corda.myLegalName)
         val baseDirectory = specifiedConfig.corda.baseDirectory.createDirectories()
         localNetworkMap?.networkParametersCopier?.install(baseDirectory)
@@ -587,24 +548,24 @@ class DriverDSLImpl(
 
         val useHTTPS = specifiedConfig.typesafe.run { hasPath("useHTTPS") && getBoolean("useHTTPS") }
 
-        val existingCorDappDirectoriesOption = if (regenerateCordappsOnStart) {
+        val existingCorDappDirectories = if (parameters.regenerateCordappsOnStart) {
             emptyList()
-        } else if (specifiedConfig.typesafe.hasPath(NodeConfiguration.cordappDirectoriesKey)) {
-            specifiedConfig.typesafe.getStringList(NodeConfiguration.cordappDirectoriesKey)
+        } else if (specifiedConfig.typesafe.hasPath(cordappDirectoriesKey)) {
+            specifiedConfig.typesafe.getStringList(cordappDirectoriesKey)
         } else {
             emptyList()
         }
 
         // Instead of using cordappsForAllNodes we get only these that are missing from additionalCordapps
         // This way we prevent errors when we want the same CordApp but with different config
-        val appOverrides = additionalCordapps.map { it.name to it.version}.toSet()
+        val appOverrides = parameters.additionalCordapps.map { it.name to it.version }.toSet()
         val baseCordapps = cordappsForAllNodes.filter { !appOverrides.contains(it.name to it.version) }
 
-        val cordappDirectories = existingCorDappDirectoriesOption + (baseCordapps + additionalCordapps).map { TestCordappDirectories.getJarDirectory(it).toString() }
+        val cordappDirectories = existingCorDappDirectories + (baseCordapps + parameters.additionalCordapps).map { TestCordappDirectories.getJarDirectory(it, signJar = signCordapps).toString() }
 
-        val config = NodeConfig(specifiedConfig.typesafe.withValue(NodeConfiguration.cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
+        val config = NodeConfig(specifiedConfig.typesafe.withValue(cordappDirectoriesKey, ConfigValueFactory.fromIterable(cordappDirectories.toSet())))
 
-        if (startInProcess ?: startNodesInProcess) {
+        if (parameters.startInSameProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
@@ -631,8 +592,7 @@ class DriverDSLImpl(
             return nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
-            val monitorPort = if (jmxPolicy.startJmxHttpServer) jmxPolicy.jmxHttpServerPortAllocation?.nextPort() else null
-            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, jolokiaJarPath, monitorPort, systemProperties, maximumHeapSize)
+            val process = startOutOfProcessNode(config, quasarJarPath, debugPort, systemProperties, parameters.maximumHeapSize)
 
             // Destroy the child process when the parent exits.This is needed even when `waitForAllNodesToFinish` is
             // true because we don't want orphaned processes in the case that the parent process is terminated by the
@@ -694,12 +654,13 @@ class DriverDSLImpl(
      * Keeping [Config] around is needed as the user may specify extra config options not specified in [NodeConfiguration].
      */
     private class NodeConfig(val typesafe: Config) {
-        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().orThrow()
+        val corda: NodeConfiguration = typesafe.parseAsNodeConfiguration().value()
     }
 
     companion object {
         internal val log = contextLogger()
 
+        private val notaryHandleTimeout = Duration.ofMinutes(1)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**
@@ -761,16 +722,11 @@ class DriverDSLImpl(
                 config: NodeConfig,
                 quasarJarPath: String,
                 debugPort: Int?,
-                jolokiaJarPath: String,
-                monitorPort: Int?,
                 overriddenSystemProperties: Map<String, String>,
                 maximumHeapSize: String,
                 vararg extraCmdLineFlag: String
         ): Process {
-
-            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, " +
-                    "debug port is " + (debugPort ?: "not enabled") + ", " +
-                    "jolokia monitoring port is " + (monitorPort ?: "not enabled"))
+            log.info("Starting out-of-process Node ${config.corda.myLegalName.organisation}, debug port is " + (debugPort ?: "not enabled"))
             // Write node.conf
             writeConfig(config.corda.baseDirectory, "node.conf", config.typesafe.toNodeOnly())
 
@@ -796,7 +752,6 @@ class DriverDSLImpl(
                     "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
-            val jolokiaAgent = monitorPort?.let { "-javaagent:$jolokiaJarPath=port=$monitorPort,host=localhost" }
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
 
             val arguments = mutableListOf(
@@ -810,7 +765,7 @@ class DriverDSLImpl(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
-                    extraJvmArguments = extraJvmArguments + listOfNotNull(jolokiaAgent),
+                    extraJvmArguments = extraJvmArguments,
                     workingDirectory = config.corda.baseDirectory,
                     maximumHeapSize = maximumHeapSize
             )
@@ -821,7 +776,7 @@ class DriverDSLImpl(
             writeConfig(handle.baseDirectory, "web-server.conf", handle.toWebServerConfig())
             return ProcessUtilities.startJavaProcess(
                     className = className, // cannot directly get class for this, so just use string
-                    arguments = listOf("--base-directory", handle.baseDirectory.toString()),
+                    arguments = listOf(BASE_DIR, handle.baseDirectory.toString()),
                     jdwpPort = debugPort,
                     extraJvmArguments = listOf("-Dname=node-${handle.p2pAddress}-webserver") +
                             inheritFromParentProcess().map { "-D${it.first}=${it.second}" },
@@ -940,7 +895,7 @@ private class NetworkVisibilityController {
                         // Nothing to do here but better being exhaustive.
                     }
                 }
-            }, { _ ->
+            }, {
                 // Nothing to do on errors here.
             })
             return future
@@ -1000,11 +955,10 @@ interface InternalDriverDSL : DriverDSL {
  */
 fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDsl: D,
-        initialiseSerialization: Boolean = true,
         coerce: (D) -> DI,
         dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(initialiseSerialization)
+    val serializationEnv = setDriverSerialization()
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
     try {
         driverDsl.start()
@@ -1015,7 +969,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.unset()
+        serializationEnv?.close()
     }
 }
 
@@ -1032,7 +986,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
         driverDslWrapper: (DriverDSLImpl) -> D,
         coerce: (D) -> DI, dsl: DI.() -> A
 ): A {
-    val serializationEnv = setGlobalSerialization(true)
+    val serializationEnv = setDriverSerialization()
     val driverDsl = driverDslWrapper(
             DriverDSLImpl(
                     portAllocation = defaultParameters.portAllocation,
@@ -1049,7 +1003,8 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes()
+                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
+                    signCordapps = false
             )
     )
     val shutdownHook = addShutdownHook(driverDsl::shutdown)
@@ -1062,7 +1017,7 @@ fun <DI : DriverDSL, D : InternalDriverDSL, A> genericDriver(
     } finally {
         driverDsl.shutdown()
         shutdownHook.cancel()
-        serializationEnv.unset()
+        serializationEnv?.close()
     }
 }
 
@@ -1133,7 +1088,6 @@ fun <A> internalDriver(
         debugPortAllocation: PortAllocation = DriverParameters().debugPortAllocation,
         systemProperties: Map<String, String> = DriverParameters().systemProperties,
         useTestClock: Boolean = DriverParameters().useTestClock,
-        initialiseSerialization: Boolean = true,
         startNodesInProcess: Boolean = DriverParameters().startNodesInProcess,
         waitForAllNodesToFinish: Boolean = DriverParameters().waitForAllNodesToFinish,
         notarySpecs: List<NotarySpec> = DriverParameters().notarySpecs,
@@ -1143,6 +1097,7 @@ fun <A> internalDriver(
         notaryCustomOverrides: Map<String, Any?> = DriverParameters().notaryCustomOverrides,
         inMemoryDB: Boolean = DriverParameters().inMemoryDB,
         cordappsForAllNodes: Collection<TestCordapp> = DriverParameters().cordappsForAllNodes(),
+        signCordapps: Boolean = false,
         dsl: DriverDSLImpl.() -> A
 ): A {
     return genericDriver(
@@ -1161,11 +1116,11 @@ fun <A> internalDriver(
                     networkParameters = networkParameters,
                     notaryCustomOverrides = notaryCustomOverrides,
                     inMemoryDB = inMemoryDB,
-                    cordappsForAllNodes = cordappsForAllNodes
+                    cordappsForAllNodes = cordappsForAllNodes,
+                    signCordapps = signCordapps
             ),
             coerce = { it },
-            dsl = dsl,
-            initialiseSerialization = initialiseSerialization
+            dsl = dsl
     )
 }
 
@@ -1186,14 +1141,15 @@ internal fun DriverParameters.cordappsForAllNodes(): Collection<TestCordapp> = c
         ?: cordappsInCurrentAndAdditionalPackages(extraCordappPackagesToScan)
 
 fun DriverDSL.startNode(providedName: CordaX500Name, devMode: Boolean, parameters: NodeParameters = NodeParameters()): CordaFuture<NodeHandle> {
-    var customOverrides = emptyMap<String, String>()
-    if (!devMode) {
+    val customOverrides = if (!devMode) {
         val nodeDir = baseDirectory(providedName)
         val certificatesDirectory = nodeDir / "certificates"
         val signingCertStore = CertificateStoreStubs.Signing.withCertificatesDirectory(certificatesDirectory)
         val p2pSslConfig = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory)
         p2pSslConfig.configureDevKeyAndTrustStores(providedName, signingCertStore, certificatesDirectory)
-        customOverrides = mapOf("devMode" to "false")
+        parameters.customOverrides + mapOf("devMode" to "false")
+    } else {
+        parameters.customOverrides
     }
-    return startNode(parameters, providedName = providedName, customOverrides = customOverrides)
+    return startNode(parameters.copy(providedName = providedName, customOverrides = customOverrides))
 }
