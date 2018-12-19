@@ -10,6 +10,7 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.Version
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
@@ -44,9 +45,6 @@ import java.util.TreeMap
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
-
-typealias ClassName = String
-typealias Version = Int
 
 /**
  * Stores attachments using Hibernate to database.
@@ -86,7 +84,7 @@ class NodeAttachmentService(
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [(Index(name = "att_id_idx", columnList = "att_id"))])
     class DBAttachment(
             @Id
             @Column(name = "att_id", nullable = false)
@@ -425,7 +423,7 @@ class NodeAttachmentService(
      *
      * It is correctly invalidated as new attachments are uploaded.
      */
-    private val contractsCache = InfrequentlyMutatedCache<ClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+    private val contractsCache = InfrequentlyMutatedCache<ContractClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
 
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
