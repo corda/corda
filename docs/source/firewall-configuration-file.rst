@@ -1,10 +1,10 @@
 Firewall configuration
-======================
+**********************
 
 .. contents::
 
 File location
--------------
+=============
 When starting a standalone firewall (in bridge, or float mode), the ``corda-firewall.jar`` file defaults to reading the firewall's configuration from a ``firewall.conf`` file in
 the directory from which the command to launch the process is executed. The syntax is:
 
@@ -28,7 +28,7 @@ Where:
 * ``--version``, ``-V``: Print version information and exit.
 
 Format
-------
+======
 The firewall configuration file uses the HOCON format which is superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
@@ -39,7 +39,7 @@ The firewall configuration file uses the HOCON format which is superset of JSON.
               This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them
 
 Defaults
---------
+========
 A set of default configuration options are loaded from the built-in resource file. Any options you do not specify in
 your own ``firewall.conf`` file will use these defaults:
 
@@ -47,7 +47,7 @@ your own ``firewall.conf`` file will use these defaults:
     :language: javascript
    
 Firewall operating modes
-------------------------
+========================
 .. note:: By default, the Corda node assumes that it will carry out the peer-to-peer functions of the ``bridge`` internally!
           Before running a dedicated firewall process, it is essential to turn off the dev mode component by setting the
           ``enterpriseConfiguration.externalBridge`` property of the ``node.conf`` file to ``true``.
@@ -70,7 +70,7 @@ The particular mode is selected via the required ``firewallMode`` configuration 
   the ``TLS`` socket server key and certificates into the ``FloatOuter``. The process will then start listening for inbound connection from peer nodes.
 
 Fields
-------
+======
 The available config fields are listed below. ``baseDirectory`` is available as a substitution value and contains the
 absolute path to the firewall's base directory.
 
@@ -204,7 +204,7 @@ absolute path to the firewall's base directory.
             :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
             
 :haConfig: Optionally the ``SenderReceiver`` and ``BridgeInner`` modes can be run in a hot-warm configuration, which determines the active instance using an external master election service.
-    Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see <https://en.wikipedia.org/wiki/Bully_algorithm>) via Publish/Subscribe messages on the artemis broker.
+    Currently, the leader election process can be delegated to Zookeeper, or the firewall can use the ``Bully Algorithm`` (see `here <https://en.wikipedia.org/wiki/Bully_algorithm>`_) via Publish/Subscribe messages on the artemis broker.
     For production it is recommended that a Zookeeper cluster be used as this will protect against network partitioning scenarios. However, the ``Bully Algorithm`` mode does not require any additional server processes.
     Eventually other electors may be supported e.g. ``etcd``. This configuration section controls these options:
 
@@ -241,253 +241,619 @@ absolute path to the firewall's base directory.
     This parameter can be used to facilitate F5 "TCP Echo" health-check monitor. Only when TCP posting starting with ``healthCheckPhrase`` in UTF-8 encoding is sent to application port the server will echo the same pass phrase back.
 
 Complete example
-----------------
-As an example to show all features the following is a walk through of the configuration for a pair of HA hot-cold Nodes,
+================
+As an example to show all features, the following is a walk-through of the configuration steps to set-up a pair of HA hot-cold nodes for two separate legal identities,
 connected to by a HA hot-warm set of ``BridgeInner`` and ``FloatOuter`` that use some simple certificates to secure the
 control tunnel and a SOCKS5 proxy for outgoing connectivity (see diagram).
 This is also the recommended full enterprise deployment pattern, although there are plenty of alternative deployment options.
 
-.. image:: resources/bridge/ha_bridge_float_socks.png
+Conceptually deployment will be done as follows:
+
+.. image:: resources/ha/deployment_concept.png
      :scale: 100%
      :align: center
 
-In this example it is assumed that the corda nodes are deployed on ``nodeserver1`` and ``nodeserver2`` using Azure SQL Server ``nodeda.database.windows.net/corda`` as clustered storage. The ``BridgeInner`` instances run on ``bridgeserver1`` and ``bridgeserver2``.
-The SOCKS5 proxy is at ``socksproxy`` port 1234. The ``FloatOuter`` instances run in the DMZ with dual homed machines with addresses ``dmzinternal1`` and ``dmzinternal2`` as the side exposed to the
-internal trusted zone. The externally accessible addresses of the DMZ servers are ``dmzexternal1`` and ``dmzexternal2``, which the Internet facing firewall/load balancer maps to ``banka.com``.
-There is also a zookeeper (must be version ``3.5.3-beta``) cluster on ``zookeep1``, ``zookeep2`` and ``zookeep3``.
+In this example it is assumed that a large organisation is running two nodes that represent two distinct legal entities. Each node/entity has its own set of CorDapps installed
+and its own transaction storage (vault). These two nodes are running within a Green/Trusted Zone and can be interacted with via RPC calls from clients (either standalone or embedded in other applications).
+In order to be able to communicate outside of the organisation, special provisions are made in the form of Bridge, Float and SOCKS Proxy.
 
-First, the nodes need to be configured in hot-cold mode, with external bridge mode enabled. The nodes will host the P2P Artemis internally, with the journal folder replicated between hot and cold nodes.
-It is essential that the node registration process be followed on one node and the resulting certificates, keys and network-parameters nodeInfo files are synchronised across the setup. In particular the 
-``BridgeInner`` setup needs a certificates folder containing the ``sslkeystore.jks`` and ``truststore.jks``. copied from the node and a copied ``network-parameters`` file in the workspace folder.
-The ``FloatOuter`` instances needs a copied ``network-parameters`` file only as the public facing SSL is provisioned from the ``BridgeInner``.
+The following diagram illustrates physical deployment of the example setup discussed above:
 
-In this example the tunnel connection uses local certs which can be generated with Java keytool from the SDK. An example script would be:
+.. image:: resources/ha/physical_deployment.png
+     :scale: 100%
+     :align: center
+
+.. note:: The arrows on the diagram show in which direction connection is initiated. The actual data exchange may then be happening in both directions.
+
+
+In this example it is assumed that the Corda nodes are deployed on ``vmNodesPrimary`` and ``vmNodesSecondary`` using Azure SQL Server as clustered storage.
+
+The Float instances run on ``vmFloat1`` and ``vmFloat2`` which are located in the DMZ.
+
+The SOCKS5 proxy is running on ``vmSocks`` which also resides in the DMZ.
+
+Each of the ``vmInfra1`` and ``vmInfra2`` computers host: ZooKeeper cluster participant, Bridge instance and Artemis cluster participant.
+
+To facilitate High Availability requirement deployment is split onto two data centers.
+
+Keystores generation
+--------------------
+
+A special tool was created to simplify generation of the keystores. For more information please see :doc:`HA Utilities <ha-utilities>`.
+This section explains how to generate a number of internally used keystores. Commands below can be executed on any machine as long as it will
+be easy enough to copy results to the other machines including DMZ hosts.
+
+It is also advisable to create an application user account (say ``corda``) and use it instead of using own personal user.
+
+.. _Capsule Cache Directory:
+
+.. note:: All the ``java -jar ...`` commands below run so-called Fat Capsule Jar. This process involves up-packing content of the Fat Jar into temporary location.
+    By default it is set to ``~/.capsule/apps/<APPLICATION_NAME>``. Application user setup may prevent creating directories and files at this location. To provide an
+    alternative, environment variable ``CAPSULE_CACHE_DIR`` can be used.
+
+    Capsule unpacks content of the Fat Jar only once and subsequent runs perform faster than initial one. However, in order to perform a clean run, it is advised to delete Capsule cache directory.
+
+Tunnel keystore generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For Float and Bridge to communicate a tunnel keystore has to be created as follows:
+
+.. |ha_util_jar_name| replace:: corda-tools-ha-utilities-|version|.jar
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| generate-internal-tunnel-ssl-keystores -p tunnelStorePass -e tunnelPrivateKeyPassword -t tunnelTrustpass
+
+This should produce files: ``tunnel/float.jks``, ``tunnel/tunnel-truststore.jks`` and ``tunnel/bridge.jks`` which will be used later on.
+
+Artemis keystore generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Bridge communicates to Artemis which requires a separate keystore.
+
+Due to Artemis limitations the password for the keystore should be the same as the password for the private keys in the store. The tool below caters for these
+arrangements. Artemis trust password can and should be different.
+
+The tool should be used as follows:
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| generate-internal-artemis-ssl-keystores -p artemisStorePass -t artemisTrustpass
+
+This should produce files: ```artemis/artemis-truststore.jks``, ``artemis/artemis.jks`` which will be used later on.
+
+Node VMs setup
+--------------
+
+As shown on the Physical deployment diagram above there will be two separate machines in two distinct data centres hosting Corda Nodes for Legal Entity A and Legal Entity B.
+For this setup, each machine is powerful enough to host nodes for both entities with all the CorDapps and two datacentres are used for High Availability purposes.
+
+Before nodes can be configured, Corda Network administrator will need to provide:
+
+1. Network root trust store file: ``network-root-truststore.jks``;
+2. Corda Network URL for Doorman e.g.: ``http://r3-doorman:10001``;
+3. Corda Network URL for NetworkMap e.g.: ``http://r3-netman:10001``.
+
+Initially, the nodes configuration is performed on ``vmNodesPrimary`` host and then there is a special paragraph that details ``vmNodesSecondary`` setup.
+
+Files ``artemis/artemis.jks`` and ``artemis/artemis-truststore.jks`` should be copied from `Artemis keystore generation`_ stage.
+
+Corda FAT Jar ``corda.jar`` from Corda Enterprise distribution should also be copied into base directory.
+
+Any CorDapps the node is meant to be working with should be installed into ``cordapps`` directory.
+
+Creating node configuration files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since there will be two distinct nodes serving two different legal entities they are meant to have two difference X.500 names, please see
+``myLegalName`` field in the config files below.
+
+Also these two separate node may have different passwords to protected their keystore (``keyStorePassword``) and their trust store (``trustStorePassword``).
+
+Suggested configuration for node serving ``Entity A`` on ``vmNodesPrimary`` would be a ``entityA/node.conf`` files containing:
+
+..  code-block:: javascript
+
+    myLegalName = "O=Entity A,L=London,C=GB"
+    p2pAddress = "banka.com:10005" // Host and port exposed by Internet facing firewall/load balancer in front of float servers in DMZ.
+    messagingServerAddress = "vmInfra1:11005" // Specifying endpoints of remote Artemis instances, Note: SWAP1
+    messagingServerExternal = true // Specifying that it is an external instance
+    // Public keystore settings
+    keyStorePassword = "entityAStorePass"
+    trustStorePassword = "entityATrustPass"
+    // RPC settings
+    rpcSettings {
+        address = "0.0.0.0:10006"
+        adminAddress = "0.0.0.0:10026"
+    }
+    dataSourceProperties { // Point at clustered Azure SQL Server
+        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+        dataSource.url = "jdbc:sqlserver://entityAdb.database.windows.net:1433;databaseName=corda;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+        dataSource.user = Corda
+        dataSource.password = password
+    }
+    database {
+        transactionIsolationLevel = READ_COMMITTED
+        runMigration = false
+        schema = dbo
+    }
+    security {
+        authService {
+            dataSource {
+                type = INMEMORY
+                users = [
+                    {
+                        password = password
+                        permissions = [
+                            ALL
+                        ]
+                        username=user
+                    }
+                ]
+            }
+        }
+    }
+    useTestClock = false
+    enterpriseConfiguration = {
+        externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
+        messagingServerConnectionConfiguration = "CONTINUOUS_RETRY"
+        messagingServerBackupAddresses = ["vmInfra2:11005"] // See "messagingServerAddress" above, Note: SWAP1
+        mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
+            on = true
+            updateInterval = 20000
+            waitInterval = 40000
+        }
+        messagingServerSslConfiguration = {
+		    sslKeystore = artemis/artemis.jks
+		    keyStorePassword = artemisStorePass
+		    trustStoreFile = artemis/artemis-truststore.jks
+		    trustStorePassword = artemisTrustpass
+        }
+    }
+    networkServices {
+        doormanURL = "http://r3-doorman:10001"
+        networkMapURL = "http://r3-netman:10001"
+    }
+    devMode = false // Turn off things like key autogeneration and require proper doorman registration.
+    detectPublicIp = false // Do not perform any public IP lookup on the host.
+
+
+For "sibling" node serving ``Entity B`` on ``vmNodesPrimary`` would be a ``entityB/node.conf`` file containing:
+
+..  code-block:: javascript
+
+    myLegalName = "O=Entity B,L=London,C=GB"
+    p2pAddress = "banka.com:10005" // Host and port exposed by Internet facing firewall/load balancer in front of float servers in DMZ.
+    messagingServerAddress = "vmInfra1:11005" // Specifying endpoints of remote Artemis instances, Note: SWAP1
+    messagingServerExternal = true // Specifying that it is an external instance
+    // Public keystore settings
+    keyStorePassword = "entityBStorePass"
+    trustStorePassword = "entityBTrustPass"
+    // RPC settings
+    rpcSettings {
+        address = "0.0.0.0:10006"
+        adminAddress = "0.0.0.0:10026"
+    }
+    dataSourceProperties { // Point at clustered Azure SQL Server
+        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+        dataSource.url = "jdbc:sqlserver://entityAdb.database.windows.net:1433;databaseName=corda;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+        dataSource.user = Corda
+        dataSource.password = password
+    }
+    database {
+        transactionIsolationLevel = READ_COMMITTED
+        runMigration = false
+        schema = dbo
+    }
+    security {
+        authService {
+            dataSource {
+                type = INMEMORY
+                users = [
+                    {
+                        password = password
+                        permissions = [
+                            ALL
+                        ]
+                        username=user
+                    }
+                ]
+            }
+        }
+    }
+    useTestClock = false
+    enterpriseConfiguration = {
+        externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
+        messagingServerConnectionConfiguration = "CONTINUOUS_RETRY"
+        messagingServerBackupAddresses = ["vmInfra2:11005"] // See "messagingServerAddress" above, Note: SWAP1
+        mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
+            on = true
+            updateInterval = 20000
+            waitInterval = 40000
+        }
+        messagingServerSslConfiguration = {
+		    sslKeystore = artemis/artemis.jks
+		    keyStorePassword = artemisStorePass
+		    trustStoreFile = artemis/artemis-truststore.jks
+		    trustStorePassword = artemisTrustpass
+        }
+    }
+    networkServices {
+        doormanURL = "http://r3-doorman:10001"
+        networkMapURL = "http://r3-netman:10001"
+    }
+    devMode = false // Turn off things like key autogeneration and require proper doorman registration.
+    detectPublicIp = false // Do not perform any public IP lookup on the host.
+
+Nodes keystores generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Given two configuration files above, in order to produce node keystores the following command should be used:
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| node-registration --config-files=./entityA/node.conf --config-files=./entityB/node.conf --network-root-truststore=network-root-truststore.jks --network-root-truststore-password=trustpass
+
+After successful execution this will produce two directories ``Entity_A/certificates`` and ``Entity_B/certificates`` containing the following files:
+
+1. ``truststore.jks``, the network/zone operator's root certificate in keystore with a locally configurable password as protection against certain attacks;
+
+2. ``nodekeystore.jks``, which stores the node’s identity key pairs and certificates;
+
+3. ``sslkeystore.jks``, which stores the node’s TLS key pair and its certificate.
+
+These are the keystores that will be used by each of the nodes.
+
+Also, file called ``network-parameters`` will be produced which represents global parameters for this Corda Network.
+
+.. _Http Proxy Setup:
+
+.. note:: Whenever communication needs to happen to NetworkMap or Doorman the process established *direct* HTTP (or HTTPS) connection with ``doormanURL`` or  ``networkMapURL``.
+    Due to network firewall policy in place it might be necessary to specify proxy's host and port for this connection to be successful.
+    Therefore when running Java command to start Capsule Jar it is necessary to add the following ``-D`` parameters.
+
+    .. parsed-literal::
+
+        -Dcapsule.jvm.args="-Dhttp.proxyHost=10.0.0.100 -Dhttp.proxyPort=8800 -Dhttps.proxyHost=10.0.0.100 -Dhttps.proxyPort=8800"
+
+Keystore aggregation for the Bridge
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since there is a single Bridge instance representing multiple nodes, it will need to have an aggregated SSL keystore representing all the nodes.
+In order to produce such aggregated keystore, the following command should be used:
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| import-ssl-key --bridge-keystore-password=bridgeKeyStorePassword --bridge-keystore=./nodesCertificates/nodesUnitedSslKeystore.jks --node-keystores=./Entity_A/certificates/sslkeystore.jks --node-keystore-passwords=entityAStorePass --node-keystores=./Entity_B/certificates/sslkeystore.jks --node-keystore-passwords=entityBStorePass
+
+As a result ``./nodesCertificates/nodesUnitedSslKeystore.jks`` file will be produced containing 2 entries.
+
+``vmNodeSecondary`` setup
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``vmNodeSecondary`` is supposed to be an almost exact replica of ``vmNodesPrimary`` host. The only difference between those two machines that they are
+residing in two different data centres for BCP purposes.
+
+Since all the keystores been already created on ``vmNodesPrimary`` and nodes X.500 names been registered with Doorman, all it takes to clone ``vmNodesPrimary`` setup
+onto ``vmNodesSecondary`` is to copy base directories with all the files recursively for ``Entity A`` and ``Entity B``.
+
+The only thing in node configuration files that ought to be changed is configuration of Artemis connectivity. This is needed to ensure DataCentre locality whenever possible.
+
+See ``SWAP1`` note in the ``node.conf`` files.
+For both nodes (``Entity A`` and ``Entity B``) configured on ``vmNodeSecondary``:
+
+- ``messagingServerAddress`` should be set to ``vmInfra2:11005`` ;
+- ``enterpriseConfiguration.messagingServerBackupAddresses`` should be set to ``["vmInfra2:11005"]``.
+
+Float VMs setup
+---------------
+
+It is advisable for each of the hosts ``vmFloat1`` and ``vmFloat2`` to be dual homed machines with two network interfaces. However, this is not mandated.
+Addresses ``vmFloat1-int`` and ``vmFloat2-int`` are exposed to the internal trusted zone only.
+The externally accessible addresses of the DMZ servers are ``vmFloat1-ext`` and ``vmFloat2-ext``, which the Internet facing firewall/load balancer maps to ``banka.com``.
+
+Each of the ``vmFloat1`` and ``vmFloat2`` should have a base directory where Corda Firewall will be installed.
+
+Configuration file: ``firewall.conf`` for ``vmFloat1`` should look as follows:
+
+..  code-block:: javascript
+
+    firewallMode = FloatOuter
+    inboundConfig {
+        listeningAddress = "vmFloat1-ext:10005" // NB: Replace with "vmFloat2-ext:10005" on vmFloat2 host
+    }
+    floatOuterConfig {
+        floatAddress = "vmFloat1-int:12005" // NB: Replace with "vmFloat2-int:12005" on vmFloat2 host
+        expectedCertificateSubject = "CN=bridge, O=Corda, L=London, C=GB" // This X.500 name must align with name that Bridge received at the time of internal certificates generation.
+        tunnelSSLConfiguration {
+               keyStorePassword = "tunnelStorePass"
+               keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
+               trustStorePassword = "tunnelTrustpass"
+               sslKeystore = "./tunnel/float.jks"
+               trustStoreFile = "./tunnel/tunnel-truststore.jks"
+               crlCheckSoftFail = true
+        }
+    }
+    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
+    healthCheckPhrase = "HelloCorda"
+
+Files ``tunnel/float.jks`` and ``tunnel/tunnel-truststore.jks`` should be copied from `Tunnel keystore generation`_ stage.
+``network-parameters`` file should be copied from one of the node hosts, which has already been produced from `Nodes keystores generation`_ stage.
+
+``corda-firewall.jar`` is included into Corda Enterprise distribution and should be copied into base directory on ``vmFloat1`` and ``vmFloat2`` hosts.
+
+Infra VMs setup
+---------------
+
+``vmInfra1`` and ``vmInfra2`` are hosting infrastructural processes which enable nodes to perform in/out communication with the rest of Corda Network.
+
+The following process will be hosted by each of the VMs:
+
+1. Apache ZooKeeper cluster participant;
+
+2. Bridge instance;
+
+3. Artemis cluster participant.
+
+Apache ZooKeeper setup
+^^^^^^^^^^^^^^^^^^^^^^
+
+Apache ZooKeeper(ZK) is needed to facilitate leader election among two hot-warm Bridge Instances.
+We require using version ``3.5.3-beta`` and have 3 cluster participants which will be hosted on ``vmInfra1``, ``vmInfra2`` and ``vmZkWitness``.
+
+Assuming ``/opt/corda`` is the base directory for ZK instance on ``vmInfra1`` the following files needs to be created:
+
+1. ``config/zoo1/zoo.cfg`` containing:
+
+..  code-block:: javascript
+
+    dataDir=/opt/corda/config/zoo1/
+    syncLimit=2
+    initLimit=5
+    tickTime=2000
+    dynamicConfigFile=/opt/corda/config/zoo1/zoo.cfg.dynamic
+
+On ``vmInfra2`` ``zoo1`` should be replaced with ``zoo2``.
+On ``vmZkWitness`` ``zoo1`` should be replaced with ``zoo3``
+
+2. ``config/zoo1/zoo.cfg.dynamic`` containing:
+
+..  code-block:: javascript
+
+    server.1=vmInfra1:4000:4001:participant;10.155.0.5:11105
+    server.2=vmInfra2:4000:4001:participant;10.155.0.6:11105
+    server.3=vmZkWitness:4000:4001:participant;10.155.0.7:11105
+
+``10.155.0.x`` are assumed to be trusted zone corresponding IP addresses of each of the VMs.
+The content of this file is identical across all 3 hosts: ``vmInfra1``, ``vmInfra2`` and ``vmZkWitness``.
+
+
+3. ``config/zoo1/myid`` containing:
+
+..  code-block:: javascript
+
+    1
+
+On ``vmInfra2`` it should contain ``2``.
+
+On ``vmZkWitness`` it should contain ``3``.
+
+Bridge instances setup
+^^^^^^^^^^^^^^^^^^^^^^
+
+Base directory for Bridge instance should be created on each of the ``vmInfra1`` and ``vmInfra2`` hosts.
+
+File copy from previous stages:
+
+- Files ``tunnel/bridge.jks`` and ``tunnel/tunnel-truststore.jks`` should be copied from `Tunnel keystore generation`_ stage.
+
+- Files ``artemis/artemis.jks`` and ``artemis/artemis-truststore.jks`` should be copied from `Artemis keystore generation`_ stage.
+
+- File ``nodesCertificates/nodesUnitedSslKeystore.jks`` should be copied from `Keystore aggregation for the Bridge`_ stage.
+
+- File ``network-parameters`` should be copied from `Nodes keystores generation`_ stage.
+
+``corda-firewall.jar`` is included into Corda Enterprise distribution and should be copied into Bridge base directory on ``vmInfra1`` and ``vmInfra2`` hosts.
+
+Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
+
+..  code-block:: javascript
+
+    bridgeMode = BridgeInner
+
+    // Public SSL settings
+    keyStorePassword = "bridgeKeyStorePassword"
+    sslKeystore = "nodesCertificates/nodesUnitedSslKeystore.jks"
+    trustStorePassword = "nodeKeyStoreTrustPass"
+    trustStoreFile = "nodesCertificates/nodesTrustStore.jks"
+
+    outboundConfig {
+        artemisBrokerAddress = "vmInfra1:11005" // NB: for vmInfra2 swap artemisBrokerAddress and alternateArtemisBrokerAddresses. Note: SWAP2
+        alternateArtemisBrokerAddresses = ["vmInfra2:11005"] // Note: SWAP2
+        socksProxyConfig {
+           version = SOCKS5
+           proxyAddress = "vmSocks:1080"
+           username = "proxyuser"
+           password = "password"
+        }
+
+        artemisSSLConfiguration : {
+            keyStorePassword = "artemisStorePass"
+            trustStorePassword = "artemisTrustpass"
+            sslKeystore = "artemis/artemis.jks"
+            trustStoreFile = "artemis/artemis-truststore.jks"
+            crlCheckSoftFail = true
+        }
+    }
+    bridgeInnerConfig {
+        floatAddresses = ["vmFloat1:12005", "vmFloat2:12005"] // NB: for vmInfra2 change the ordering. Note: SWAP3
+        expectedCertificateSubject = "CN=float, O=Corda, L=London, C=GB" // This X.500 name should match to the name of the Float component which was used during Tunnel keystore generation above.
+        tunnelSSLConfiguration {
+            keyStorePassword = "tunnelStorePass"
+            keyStorePrivateKeyPassword = "tunnelPrivateKeyPassword"
+            trustStorePassword = "tunnelTrustpass"
+            sslKeystore = "./tunnel/bridge.jks"
+            trustStoreFile = "./tunnel/tunnel-truststore.jks"
+            crlCheckSoftFail = true
+        }
+    }
+    haConfig {
+        haConnectionString = "zk://vmInfra1:11105,zk://vmInfra2:11105,zk://vmZkWitness:11105" // NB: for vmInfra2 change the ordering. Note: SWAP4
+    }
+    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
+
+Artemis cluster participant
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Artemis will be deployed as a standalone process cluster and will be used as a communication bus for multiple applications(nodes and bridges). The required configuration files can be easily generated using
+the ``ha-utilities`` command line tool. The tool can also install a configured Artemis instance provided that a distribution already exists. For the purpose of this example, commands are provided
+to use the ``ha-utilities`` to install and configure 2 Artemis instances in HA mode.
+
+``ha-utilities`` with ``configure-artemis`` option will create two configurations for two processes known as ``master`` and ``slave``. For more information please see:
+`Artemis HA Documentation <https://activemq.apache.org/artemis/docs/latest/ha.html>`_
+
+Apache Artemis distribution can be downloaded from `here <https://activemq.apache.org/artemis/download.html>`_.
+
+``vmInfra1`` box will host Artemis ``master`` instance. To generate application distribution with the config files, please run:
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| configure-artemis --install --distribution ${ARTEMIS_DISTRIBUTION_DIR} --path ${WORKING_DIR}/artemis-master --user "CN=artemis, O=Corda, L=London, C=GB" --ha MASTER --acceptor-address vmInfra1:11005 --keystore ./artemis/artemis.jks --keystore-password artemisStorePass --truststore ./artemis/artemis-truststore.jks --truststore-password artemisTrustpass --connectors vmInfra1:11005,vmInfra2:11005
+
+Where ``ARTEMIS_DISTRIBUTION_DIR`` - is the path to the directory where Artemis was downloaded and extracted. Example: ``/home/apache-artemis-2.6.3``
+
+Files ``artemis/artemis.jks`` and ``artemis/artemis-truststore.jks`` from `Artemis keystore generation`_ stage need to be copied into ``${WORKING_DIR}/artemis-master/etc/artemis``.
+
+.. note:: Due to the way Artemis handles connections in HA mode, the ``.jks`` files are configured with relative paths. This means that they will have to be installed in the same path relative to the bridge's and node's working directory.
+
+``vmInfra2`` setup
+^^^^^^^^^^^^^^^^^^
+
+``vmInfra2`` Artemis cluster participant setup
+""""""""""""""""""""""""""""""""""""""""""""""
+
+Repeat steps from `Artemis cluster participant`_ section for ``WORKING_DIR`` creation as well as keystores copy and Apache Artemis distribution download.
+
+``vmInfra2`` box will host Artemis ``slave`` instance. To generate application distribution with the config files, please run:
+
+.. parsed-literal::
+
+    java -jar |ha_util_jar_name| configure-artemis --install --distribution ${ARTEMIS_DISTRIBUTION_DIR} --path ${WORKING_DIR}/artemis-slave --user "CN=artemis, O=Corda, L=London, C=GB" --ha SLAVE --acceptor-address vmInfra2:11005 --keystore ./artemis/artemis.jks --keystore-password artemisStorePass --truststore ./artemis/artemis-truststore.jks --truststore-password artemisTrustpass --connectors vmInfra2:11005,vmInfra1:11005
+
+Where ``ARTEMIS_DISTRIBUTION_DIR`` - is the path to the directory where Artemis was downloaded and extracted. Example: ``/home/apache-artemis-2.6.3``
+
+Files ``artemis/artemis.jks`` and ``artemis/artemis-truststore.jks`` from `Artemis keystore generation`_ stage need to be copied into ``${WORKING_DIR}/artemis-slave/etc/artemis``.
+
+``vmInfra2`` Bridge instance setup
+""""""""""""""""""""""""""""""""""
+
+``vmInfra1`` setup been done in the section above `Bridge instances setup`_.
+
+For ``vmInfra2`` the whole of base directory can be copied across to ``vmInfra2`` and then ``firewall.conf`` ought to be modified.
+
+Please see ``SWAP2``, ``SWAP3`` and ``SWAP4`` comments in the configuration file. The key principle here is to ensure DataCentre locality whenever possible,
+making same DataCentre connection a priority. This applies to Artemis connection, Float connection and Zookeeper connection.
+
+Starting all up
+^^^^^^^^^^^^^^^
+
+Please see `Http Proxy Setup`_ note above on connectivity through the proxy.
+
+Please see `Capsule Cache Directory`_ note above explaining details of running Capsule Fat Jars.
+
+Starting Float processes
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to run each of the Float processes on ``vmFloat1`` and ``vmFloat2``, in the base directory chosen during `Float VMs setup`_, the following command should be executed:
 
 ..  code-block:: bash
 
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatroot -validity 1000 -dname "CN=Float Root,O=Tunnel,L=London,C=GB" -ext bc:ca:true,pathlen:1 -keystore floatca.jks -storepass capass -keypass cakeypass
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias bridgecert -validity 1000 -dname "CN=Bridge Local,O=Tunnel,L=London,C=GB" -ext bc:ca:false -keystore bridge.jks -storepass bridgepass -keypass bridgepass
-    keytool.exe -genkeypair -keyalg EC -keysize 256 -alias floatcert -validity 1000 -dname "CN=Float Local,O=Tunnel,L=London,C=GB" -ext bc:ca:false -keystore float.jks -storepass floatpass -keypass floatpass
+    java –jar corda-firewall.jar corda-firewall
 
-    keytool.exe -exportcert -rfc -alias floatroot -keystore floatca.jks -storepass capass -keypass cakeypass > root.pem
-    keytool.exe -importcert -noprompt -file root.pem -alias root -keystore trust.jks -storepass trustpass
+.. note:: When Float is started, since there is no Bridge connected to it yet, the Java process will be running but the Float will not be active yet and therefore
+          will not be accepting inbound connections.
 
-    keytool.exe -certreq -alias bridgecert -keystore bridge.jks -storepass bridgepass -keypass bridgepass | keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku:true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > bridge.pem
-    cat root.pem bridge.pem >> bridgechain.pem
-    keytool.exe -importcert -noprompt -file bridgechain.pem -alias bridgecert -keystore bridge.jks -storepass bridgepass -keypass bridgepass
+.. todo:: Reference specific phrase from the logs.
 
-    keytool.exe -certreq -alias floatcert -keystore float.jks -storepass floatpass -keypass floatpass | keytool.exe -gencert -ext ku:c=dig,keyEncipherment -ext: eku::true=serverAuth,clientAuth -rfc -keystore floatca.jks -alias floatroot -storepass capass -keypass cakeypass > float.pem
-    cat root.pem float.pem >> floatchain.pem
-    keytool.exe -importcert -noprompt -file floatchain.pem -alias floatcert -keystore float.jks -storepass floatpass -keypass floatpass
+Starting Apache ZooKeeper processes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The resulting ``trust.jks`` and ``bridge.jks`` should be copied to a ``<workspace>/bridgecerts`` folder on the ``BridgeInner`` instances. The ``trust.jks`` and ``float.jks`` should be copied to a ``<workspace>/floatcerts`` folder on the ``FloatOuter`` instances.
+With configuration completed during `Apache ZooKeeper setup`_ stage, start ZK instance using the following command in the base directory:
 
-Typical configuration for ``nodeserver1`` would be a ``node.conf`` files containing:
+On ``vmInfra1`` host:
 
-..  code-block:: javascript
+.. code-block:: bash
 
-    myLegalName = "O=Bank A,L=London,C=GB"
-    p2pAddress = "banka.com:10005" // Host and port exposed by Internet facing firewall/load balancer in front of float servers in DMZ.
-    messagingServerAddress = "nodeserver1:11005" // specifying a different port to the advertised port as an example
-    messagingServerExternal = false // override default behaviour and ensure that Artemis runs in process.
-    rpcSettings {
-        address = "nodeserver1:10006"
-        adminAddress = "nodeserver1:10026"
-    }
-    dataSourceProperties { // Point at clustered Azure SQL Server
-        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
-        dataSource.url = "jdbc:sqlserver://nodedb.database.windows.net:1433;databaseName=corda;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
-        dataSource.user = Corda
-        dataSource.password = password
-    }
-    database {
-        transactionIsolationLevel = READ_COMMITTED
-        runMigration = false
-        schema = dbo
-    }
-    security {
-        authService {
-            dataSource {
-                type = INMEMORY
-                users = [
-                    {
-                        password = password
-                        permissions = [
-                            ALL
-                        ]
-                        username=user
-                    }
-                ]
-        }
-        }
-    }
-    useTestClock = false
-    enterpriseConfiguration = {
-        externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
-        mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
-            on = true
-            updateInterval = 20000
-            waitInterval = 40000
-        }
-    }
-    compatibilityZoneURL = "http://r3-doorman:10001"
-    devMode = false // Turn off things like key autogeneration and require proper doorman registration.
+    ./zookeeper/bin/zkServer.sh --config /opt/corda/config/zoo1 start
 
-Typical configuration for ``nodeserver2`` would be a ``node.conf`` files containing:
+On ``vmInfra2`` host:
 
-..  code-block:: javascript
+.. code-block:: bash
 
-    myLegalName = "O=Bank A,L=London,C=GB"
-    p2pAddress = "banka.com:10005" // Host and port exposed by Internet facing firewall/load balancer in front of float servers in DMZ.
-    messagingServerAddress = "nodeserver2:11005" // specifying a different port to the advertised port as an example
-    messagingServerExternal = false // override default behaviour and ensure that Artemis runs in process.
-    rpcSettings {
-        address = "nodeserver2:10006"
-        adminAddress = "nodeserver2:10026"
-    }
-    dataSourceProperties { // Point at clustered Azure SQL Server
-        dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
-        dataSource.url = "jdbc:sqlserver://nodedb.database.windows.net:1433;databaseName=corda;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
-        dataSource.user = Corda
-        dataSource.password = password
-    }
-    database {
-        transactionIsolationLevel = READ_COMMITTED
-        runMigration = false
-        schema = dbo
-    }
-    security {
-        authService {
-            dataSource {
-                type = INMEMORY
-                users = [
-                    {
-                        password = password
-                        permissions = [
-                            ALL
-                        ]
-                        username=user
-                    }
-                ]
-        }
-        }
-    }
-    useTestClock = false
-    enterpriseConfiguration = {
-        externalBridge = true // Ensure node doesn't run P2P AMQP bridge, instead delegate to the BridgeInner.
-        mutualExclusionConfiguration = { // Enable the protective heartbeat logic so that only one node instance is ever running.
-            on = true
-            updateInterval = 20000
-            waitInterval = 40000
-        }
-    }
-    compatibilityZoneURL = "http://r3-doorman:10001"
-    devMode = false // Turn off things like key autogeneration and require proper doorman registration.
+    ./zookeeper/bin/zkServer.sh --config /opt/corda/config/zoo2 start
 
+On ``vmZkWitness`` host:
 
-Configuration in ``firewall.conf`` for ``bridgeserver1``:
+.. code-block:: bash
 
-..  code-block:: javascript
-    
-    firewallMode = BridgeInner // Set the mode the  corda-firewall.jar runs as appropriately.
-    outboundConfig { // Required section
-        artemisBrokerAddress = "nodeserver1:11005" // point at primary Artemis address in the node
-        alternateArtemisBrokerAddresses = [ "nodeserver2:11005" ] // List any other HA Artemis addresses
-        proxyConfig { // Enable SOCKS proxying by specifying this section
-            version = SOCKS5
-            proxyAddress = "proxyserver:12345"
-            username = "proxyuser"
-            password = "password"
-        }
-    }
-    bridgeInnerConfig { // Required section
-        floatAddresses = ["dmzinternal1:12005", "dmzinternal2:12005"] // The BridgeInner initiates a connection to one of this pool of FloatOuter and round-robins
-        expectedCertificateSubject = "CN=Float Local,O=Tunnel,L=London,C=GB" // This must align with the certificate subject used by the FloatOuter control.
-        tunnelSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
-               keyStorePassword = "bridgepass"
-               trustStorePassword = "trustpass"
-               sslKeystore = "./bridgecerts/bridge.jks"
-               trustStoreFile = "./bridgecerts/trust.jks"
-               crlCheckSoftFail = true
-        }
-    }
-    haConfig { // Enable HA pointing at Zookeeper cluster for master selection.
-        haConnectionString = "zk://zookeep1:11105,zk://zookeep2:11105 ,zk://zookeep3:11105"
-    }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
+    ./zookeeper/bin/zkServer.sh --config /opt/corda/config/zoo3 start
 
-Configuration in ``firewall.conf`` for ``bridgeserver2``:
+.. todo:: Reference specific phrase from the logs, confirming master election.
 
-..  code-block:: javascript  
+Starting Artemis cluster
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-    firewallMode = BridgeInner // Set the mode the  corda-firewall.jar runs as appropriately.
-    outboundConfig { // Required section
-        artemisBrokerAddress = "nodeserver2:11005" // point at primary Artemis address in the node
-        alternateArtemisBrokerAddresses = [ "nodeserver1:11005" ] // List any other HA Artemis addresses
-        proxyConfig { // Enable SOCKS proxying by specifying this section
-            version = SOCKS5
-            proxyAddress = "proxyserver:12345"
-            username = "proxyuser"
-            password = "password"
-        }
-    }
-    bridgeInnerConfig { // Required section
-        floatAddresses = ["dmzinternal2:12005", "dmzinternal1:12005"] // The BridgeInner initiates a connection to one of this pool of FloatOuter and round-robins
-        expectedCertificateSubject = "CN=Float Local,O=Tunnel,L=London,C=GB" // This must align with the certificate subject used by the FloatOuter control.
-        tunnelSSLConfiguration { // Use a tunnel specific set of certificates distinct from the node's sslkeystore.jks and truststore.jks.
-               keyStorePassword = "bridgepass"
-               trustStorePassword = "trustpass"
-               sslKeystore = "./bridgecerts/bridge.jks"
-               trustStoreFile = "./bridgecerts/trust.jks"
-               crlCheckSoftFail = true
-        }
-    }
-    haConfig { // Enable HA pointing at Zookeeper cluster for master selection.
-        haConnectionString = "zk://zookeep1:11105,zk://zookeep2:11105 ,zk://zookeep3:11105"
-    }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
+In order to start Artemis, the following command should be issued for ``master`` on ``vmInfra1``:
 
-    
-Configuration in ``firewall.conf`` for ``floatserver1``:
+.. parsed-literal::
+    ${WORKING_DIR}/artemis-master/bin/artemis run
 
-..  code-block:: javascript  
+In order to start Artemis, the following command should be issued for ``slave`` on ``vmInfra2``:
 
-    firewallMode = FloatOuter // Set the mode the  corda-firewall.jar runs as appropriately.
-    inboundConfig { // Required section
-        listeningAddress = "dmzexternal1:10005" // expose the listening port on the out NIC
-    }
-    floatOuterConfig { // Required section
-        floatAddress = "dmzinternal1:12005" // await control instructions on inner NIC
-        expectedCertificateSubject = "CN=Bridge Local,O=Tunnel,L=London,C=GB" // Must line up with X500 Subject of certificates on BridgeInner
-        tunnelSSLConfiguration {
-               keyStorePassword = "floatpass"
-               trustStorePassword = "trustpass"
-               sslKeystore = "./floatcerts/float.jks"
-               trustStoreFile = "./floatcerts/trust.jks"
-               crlCheckSoftFail = true
-        }
-    }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
-    
-Configuration in ``firewall.conf`` for ``floatserver2``:
+.. parsed-literal::
+    ${WORKING_DIR}/artemis-slave/bin/artemis run
 
-..  code-block:: javascript  
+.. todo:: Reference specific phrase from the logs, confirming successful start-up.
 
-    firewallMode = FloatOuter // Set the mode the  corda-firewall.jar runs as appropriately.
-    inboundConfig { // Required section
-        listeningAddress = "dmzexternal2:10005" // expose the listening port on the out NIC
-    }
-    floatOuterConfig { // Required section
-        floatAddress = "dmzinternal2:12005" // await control instructions on inner NIC
-        expectedCertificateSubject = "CN=Bridge Local,O=Tunnel,L=London,C=GB" // Must line up with X500 Subject of certificates on BridgeInner
-        tunnelSSLConfiguration {
-               keyStorePassword = "floatpass"
-               trustStorePassword = "trustpass"
-               sslKeystore = "./floatcerts/float.jks"
-               trustStoreFile = "./floatcerts/trust.jks"
-               crlCheckSoftFail = true
-        }
-    }
-    networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node after registration and here is expected in the workspace folder.
+Starting Bridge processes
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
+There will be two Bridge instances running on ``vmInfra1`` and ``vmInfra2``. They will be running in Hot-Warm mode whereby one on the processes
+is active(leader) and the other one is running, but it a passive mode(follower).
 
+Should primary process goes down or otherwise becomes unavailable, the stand-by process will take over. Apache Zookeper cluster will be used to ensure this leader transition process happens smoothly.
+
+In order to run each of the Bridge processes the following command should be executed on ``vmInfra1`` and ``vmInfra2``:
+
+..  code-block:: bash
+
+    java –jar corda-firewall.jar corda-firewall
+
+.. todo:: Reference specific phrase from the logs, confirming successful start-up.
+
+Starting node processes
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Each of the boxes ``vmNodesPrimary`` and ``vmNodesSecondary`` is capable of hosting both nodes for ``Entity A`` and ``Entity B`` at the same time.
+
+``vmNodesPrimary`` and ``vmNodesSecondary`` are meant to be located in different datacentres and in case when one of the datacentres is unavailable, the whole application plant will be running
+on the other datacentre hardware.
+
+In this setup Corda Nodes for each of the entities work in Hot-Cold mode. Which means that if the node is running on ``vmNodesPrimary``, the node for the same identity on ``vmNodesSecondary`` cannot even be started.
+For more information, please see :doc:`Hot-cold high availability deployment <hot-cold-deployment>`.
+
+This implies that when starting nodes they should be running in re-start loop.
+
+In order to start Corda Node normally on any of the hosts (``vmNodesPrimary`` or ``vmNodesSecondary``) for either of the entities (``Entity A`` or ``Entity B``) the following command should
+be used from the base directory:
+
+..  code-block:: bash
+
+    java –jar corda.jar
+
+.. todo:: Reference specific phrase from the logs, confirming successful start-up.
+
+Performing basic health checks
+------------------------------
+
+.. todo:: Mention use of ``healthCheckPhrase`` for Float
