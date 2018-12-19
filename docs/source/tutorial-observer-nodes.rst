@@ -46,3 +46,7 @@ Caveats
 * Nodes only record each transaction once. If a node has already recorded a transaction in non-observer mode, it cannot
   later re-record the same transaction as an observer. This issue is tracked here:
   https://r3-cev.atlassian.net/browse/CORDA-883
+
+* Observer nodes will only record the states of the transactions sent to them, and not any previous transactions in the
+  chain. If the observer node is required to follow the creation and deletion states, then each transaction in the chain
+  must be sent individually.
