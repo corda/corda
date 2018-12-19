@@ -20,10 +20,6 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageContract
-import net.corda.testMessage.MessageState
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -34,6 +30,7 @@ import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import net.corda.core.utilities.unwrap
+import net.corda.testMessage.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 
@@ -43,7 +40,6 @@ class NodeStatePersistenceTests {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
-                isDebug = true,
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
@@ -80,7 +76,6 @@ class NodeStatePersistenceTests {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))
         val message = Message("Hello world!")
         val stateAndRef: StateAndRef<MessageState>? = driver(DriverParameters(
-                isDebug = true,
                 inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
                 extraCordappPackagesToScan = listOf(MessageState::class.packageName)
@@ -111,7 +106,7 @@ class NodeStatePersistenceTests {
 
     @Test
     fun `Broadcasting an old transaction will cause 2 unconsumed states`() {
-        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), startFlow<SendMessageFlow2>(), startFlow<ReportToCounterparty>(), invokeRpc("vaultQuery") ,
+        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), startFlow<SendMessageFlowConsuming>(), startFlow<ReportToCounterparty>(), invokeRpc("vaultQuery") ,
                 invokeRpc("internalVerifiedTransactionsSnapshot")))
         val regulatorUser = User("mark", "dadada", setOf(startFlow<ReceiveReportedTransaction>(), invokeRpc("vaultQuery")))
 
@@ -138,7 +133,7 @@ class NodeStatePersistenceTests {
 
                 for (_i in 0.until(chainLength -1 )) {
                     CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                        it.proxy.startFlow(::SendMessageFlow2, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
+                        it.proxy.startFlow(::SendMessageFlowConsuming, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
                     }
 
                     result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -181,8 +176,8 @@ class NodeStatePersistenceTests {
             // Check that sending an old transaction doesn't result in a new unconsumed state
             val message = Message("A")
             buildTransactionChain(message, 4)
-            sendTransactionToObserver(1)
             sendTransactionToObserver(3)
+            sendTransactionToObserver(1)
             val outputMessage = Message("AAAA")
             checkObserverTransactions(outputMessage)
         }
@@ -232,7 +227,7 @@ class SendMessageFlow(private val message: Message, private val notary: Party) :
 
 
 @StartableByRPC
-class SendMessageFlow2(private val stateRef: StateAndRef<MessageState>, private val notary: Party) : FlowLogic<SignedTransaction>() {
+class SendMessageFlowConsuming(private val stateRef: StateAndRef<MessageState>, private val notary: Party) : FlowLogic<SignedTransaction>() {
     companion object {
         object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
         object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
@@ -253,12 +248,7 @@ class SendMessageFlow2(private val stateRef: StateAndRef<MessageState>, private 
         val oldMessageState = stateRef.state.data
         val messageState = MessageState(Message(oldMessageState.message.value + "A"), ourIdentity,  stateRef.state.data.linearId)
         val txCommand = Command(MessageContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        //val output  = TransactionState(messageState, MESSAGE_CONTRACT_PROGRAM_ID, notary)
-        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef
-
-                //        dummyCommand(ourIdentity.owningKey)
-                //,Command(MessageContract.Commands.Send(),ourIdentity.owningKey)
-        )
+        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CONTRACT_PROGRAM_ID), txCommand, stateRef)
 
         progressTracker.currentStep = VERIFYING_TRANSACTION
         txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
