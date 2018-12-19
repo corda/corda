@@ -34,6 +34,15 @@ Unreleased
   This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
   by unsigned CorDapps in previous versions of Corda.
 
+* You can now load different CorDapps for different nodes in the node-driver and mock-network. This previously wasn't possible with the
+  ``DriverParameters.extraCordappPackagesToScan`` and ``MockNetwork.cordappPackages`` parameters as all the nodes would get the same CorDapps.
+  See ``TestCordapp``, ``NodeParameters.additionalCordapps`` and ``MockNodeParameters.additionalCordapps``.
+
+* ``DriverParameters.extraCordappPackagesToScan`` and ``MockNetwork.cordappPackages`` have been deprecated as they do not support the new
+  CorDapp versioning and MANIFEST metadata support that has been added. They create artificial CorDapp jars which do not preserve these
+  settings and thus may produce incorrect results when testing. It is recommended ``DriverParameters.cordappsForAllNodes`` and
+  ``MockNetworkParameters.cordappsForAllNodes`` be used instead.
+
 * Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
 
 * Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
@@ -135,9 +144,6 @@ Unreleased
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.
-
-* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork``
-  and ``MockServices``.
 
 * Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 

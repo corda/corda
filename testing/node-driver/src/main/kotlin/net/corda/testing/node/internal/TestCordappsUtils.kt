@@ -1,41 +1,40 @@
 package net.corda.testing.node.internal
 
-import io.github.classgraph.ClassGraph
-import net.corda.core.internal.cordapp.*
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_NAME
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_NAME
-import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_WORKFLOW_VERSION
-import net.corda.core.internal.cordapp.CordappImpl.Companion.TARGET_PLATFORM_VERSION
-import net.corda.core.internal.outputStream
 import net.corda.testing.node.TestCordapp
-import java.io.BufferedOutputStream
-import java.nio.file.Path
-import java.nio.file.attribute.FileTime
-import java.time.Instant
-import java.util.jar.Attributes
-import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
-import java.util.jar.Manifest
-import java.util.zip.ZipEntry
 import kotlin.reflect.KClass
 
+/**
+ * Reference to the finance CorDapp in this repo. The metadata is taken directly from finance/build.gradle, including the fact that the jar
+ * is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance")`.
+ */
+// TODO We can't use net.corda.finance as it's only containined by the finance:isolated module
 @JvmField
-val FINANCE_CORDAPP: TestCordappImpl = cordappForPackages("net.corda.finance")
+val FINANCE_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.internal")
 
-/** Creates a [TestCordappImpl] for each package. */
-fun cordappsForPackages(vararg packageNames: String): List<TestCordappImpl> = cordappsForPackages(packageNames.asList())
+fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 
-fun cordappsForPackages(packageNames: Iterable<String>): List<TestCordappImpl> {
-    return simplifyScanPackages(packageNames).map { cordappForPackages(it) }
+fun cordappsForPackages(packageNames: Iterable<String>): Set<CustomCordapp> {
+    return simplifyScanPackages(packageNames).mapTo(HashSet()) { cordappWithPackages(it) }
 }
 
-/** Creates a single [TestCordappImpl] containing all the given packges. */
-fun cordappForPackages(vararg packageNames: String): TestCordappImpl {
-    return TestCordapp.Factory.fromPackages(*packageNames) as TestCordappImpl
-}
+/**
+ * Create a *custom* CorDapp which contains all the classes and resoures located in the given packages. The CorDapp's metadata will be the
+ * default values as defined in the [CustomCordapp] c'tor. Use the `copy` to change them. This means the metadata will *not* be the one defined
+ * in the original CorDapp(s) that the given packages may represent. If this is not what you want then use [findCordapp] instead.
+ */
+fun cordappWithPackages(vararg packageNames: String): CustomCordapp = CustomCordapp(packages = simplifyScanPackages(packageNames.asList()))
 
-fun cordappForClasses(vararg classes: Class<*>): TestCordappImpl = cordappForPackages().withClasses(*classes)
+/** Create a *custom* CorDapp which contains just the given classes. */
+// TODO Rename to cordappWithClasses
+fun cordappForClasses(vararg classes: Class<*>): CustomCordapp = CustomCordapp(packages = emptySet(), classes = classes.toSet())
+
+/**
+ * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for
+ * [TestCordapp.Factory.findCordapp] but returns the internal [TestCordappImpl].
+ */
+fun findCordapp(packageName: String, config: Map<String, Any> = emptyMap()): TestCordappImpl {
+    return TestCordapp.Factory.findCordapp(packageName, config) as TestCordappImpl
+}
 
 fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
     val stackTrace = Throwable().stackTrace
@@ -61,53 +60,4 @@ fun simplifyScanPackages(scanPackages: Iterable<String>): Set<String> {
             else -> soFar + packageName
         }
     }
-}
-
-fun TestCordappImpl.packageAsJar(file: Path) {
-    // Don't mention "classes" in the error message as that feature is only available internally
-    require(packages.isNotEmpty() || classes.isNotEmpty()) { "At least one package must be specified" }
-
-    val scanResult = ClassGraph()
-            .whitelistPackages(*packages.toTypedArray())
-            .whitelistClasses(*classes.map { it.name }.toTypedArray())
-            .scan()
-
-    scanResult.use {
-        val manifest = createTestManifest(name, title, version, vendor, targetVersion)
-        JarOutputStream(file.outputStream()).use { jos ->
-            val time = FileTime.from(Instant.EPOCH)
-            val manifestEntry = ZipEntry(JarFile.MANIFEST_NAME).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-            jos.putNextEntry(manifestEntry)
-            manifest.write(BufferedOutputStream(jos))
-            jos.closeEntry()
-
-            // The same resource may be found in different locations (this will happen when running from gradle) so just
-            // pick the first one found.
-            scanResult.allResources.asMap().forEach { path, resourceList ->
-                val entry = ZipEntry(path).setCreationTime(time).setLastAccessTime(time).setLastModifiedTime(time)
-                jos.putNextEntry(entry)
-                resourceList[0].open().use { it.copyTo(jos) }
-                jos.closeEntry()
-            }
-        }
-    }
-}
-
-fun createTestManifest(name: String, title: String, version: String, vendor: String, targetVersion: Int): Manifest {
-    val manifest = Manifest()
-
-    // Mandatory manifest attribute. If not present, all other entries are silently skipped.
-    manifest[Attributes.Name.MANIFEST_VERSION.toString()] = "1.0"
-
-    manifest["Name"] = name
-    manifest[Attributes.Name.IMPLEMENTATION_TITLE] = title
-    manifest[Attributes.Name.IMPLEMENTATION_VERSION] = version
-    manifest[Attributes.Name.IMPLEMENTATION_VENDOR] = vendor
-    manifest[CORDAPP_CONTRACT_NAME]  = name
-    manifest[CORDAPP_CONTRACT_VERSION] = version
-    manifest[CORDAPP_WORKFLOW_NAME]  = name
-    manifest[CORDAPP_WORKFLOW_VERSION] = version
-    manifest[TARGET_PLATFORM_VERSION] = targetVersion.toString()
-
-    return manifest
 }

@@ -4,6 +4,8 @@ import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.contracts.SignatureAttachmentConstraint
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.withoutIssuer
+import net.corda.core.internal.deleteRecursively
+import net.corda.core.internal.div
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -25,7 +27,8 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPP
-import org.assertj.core.api.Assertions
+import net.corda.testing.node.internal.cordappWithPackages
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
 class CordappConstraintsTests {
@@ -35,6 +38,7 @@ class CordappConstraintsTests {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
+        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
     }
 
     @Test
@@ -44,9 +48,11 @@ class CordappConstraintsTests {
                 inMemoryDB = false
         )) {
 
-            val alice = startNode(NodeParameters(additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
+            val alice = startNode(NodeParameters(
+                    additionalCordapps = listOf(FINANCE_CORDAPP),
                     providedName = ALICE_NAME,
-                    rpcUsers = listOf(user))).getOrThrow()
+                    rpcUsers = listOf(user)
+            )).getOrThrow()
 
             val expected = 500.DOLLARS
             val ref = OpaqueBytes.of(0x01)
@@ -57,8 +63,8 @@ class CordappConstraintsTests {
             val states = alice.rpc.vaultQueryBy<Cash.State>().states
             printVault(alice, states)
 
-            Assertions.assertThat(states).hasSize(1)
-            Assertions.assertThat(states[0].state.constraint is SignatureAttachmentConstraint)
+            assertThat(states).hasSize(1)
+            assertThat(states[0].state.constraint).isInstanceOf(SignatureAttachmentConstraint::class.java)
         }
     }
 
@@ -70,9 +76,11 @@ class CordappConstraintsTests {
         )) {
 
             println("Starting the node using unsigned contract jar ...")
-            val alice = startNode(NodeParameters(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP),
-                    rpcUsers = listOf(user))).getOrThrow()
+            val alice = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP),
+                    rpcUsers = listOf(user)
+            )).getOrThrow()
 
             val expected = 500.DOLLARS
             val ref = OpaqueBytes.of(0x01)
@@ -82,7 +90,7 @@ class CordappConstraintsTests {
             // Query vault
             val states = alice.rpc.vaultQueryBy<Cash.State>().states
             printVault(alice, states)
-            Assertions.assertThat(states).hasSize(1)
+            assertThat(states).hasSize(1)
 
             // Restart the node and re-query the vault
             println("Shutting down the node ...")
@@ -90,14 +98,15 @@ class CordappConstraintsTests {
             alice.stop()
 
             println("Restarting the node using signed contract jar ...")
-            val restartedNode = startNode(NodeParameters(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar()),
-                    regenerateCordappsOnStart = true
+            (baseDirectory(ALICE_NAME) / "cordapps").deleteRecursively()
+            val restartedNode = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed())
             )).getOrThrow()
 
             val statesAfterRestart = restartedNode.rpc.vaultQueryBy<Cash.State>().states
             printVault(restartedNode, statesAfterRestart)
-            Assertions.assertThat(statesAfterRestart).hasSize(1)
+            assertThat(statesAfterRestart).hasSize(1)
 
             val issueTx2 = restartedNode.rpc.startFlow(::CashIssueFlow, expected, ref, defaultNotaryIdentity).returnValue.getOrThrow()
             println("Issued 2nd transaction: $issueTx2")
@@ -106,19 +115,19 @@ class CordappConstraintsTests {
             val allStates = restartedNode.rpc.vaultQueryBy<Cash.State>().states
             printVault(restartedNode, allStates)
 
-            Assertions.assertThat(allStates).hasSize(2)
-            Assertions.assertThat(allStates[0].state.constraint is HashAttachmentConstraint)
-            Assertions.assertThat(allStates[1].state.constraint is SignatureAttachmentConstraint)
+            assertThat(allStates).hasSize(2)
+            assertThat(allStates[0].state.constraint).isInstanceOf(HashAttachmentConstraint::class.java)
+            assertThat(allStates[1].state.constraint).isInstanceOf(SignatureAttachmentConstraint::class.java)
         }
     }
 
     @Test
     fun `issue and consume cash using hash constraints`() {
-        driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP),
-                extraCordappPackagesToScan = listOf("net.corda.finance"),
+        driver(DriverParameters(
+                cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false)) {
-
+                inMemoryDB = false
+        )) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
                     startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
@@ -145,10 +154,10 @@ class CordappConstraintsTests {
             val aliceStates = aliceQuery.states
             printVault(alice, aliceQuery.states)
 
-            Assertions.assertThat(aliceStates).hasSize(1)
-            Assertions.assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
+            assertThat(aliceStates).hasSize(1)
+            assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
+            assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
 
             // Check Bob Vault Updates
             vaultUpdatesBob.expectEvents {
@@ -165,23 +174,23 @@ class CordappConstraintsTests {
             val bobStates = bobQuery.states
             printVault(bob, bobQuery.states)
 
-            Assertions.assertThat(bobStates).hasSize(1)
-            Assertions.assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
-            Assertions.assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
+            assertThat(bobStates).hasSize(1)
+            assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+            assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
         }
     }
 
     @Test
     fun `issue and consume cash using signature constraints`() {
-        driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP.signJar()),
-                extraCordappPackagesToScan = listOf("net.corda.finance"),
+        driver(DriverParameters(
+                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
-                inMemoryDB = false)) {
-
+                inMemoryDB = false
+        )) {
             val (alice, bob) = listOf(
-                    startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar()))),
-                    startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user), additionalCordapps = listOf(FINANCE_CORDAPP.signJar())))
+                    startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(user))),
+                    startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(user)))
             ).map { it.getOrThrow() }
 
             // Issue Cash
@@ -205,10 +214,10 @@ class CordappConstraintsTests {
             val aliceStates = aliceQuery.states
             printVault(alice, aliceStates)
 
-            Assertions.assertThat(aliceStates).hasSize(1)
-            Assertions.assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
+            assertThat(aliceStates).hasSize(1)
+            assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
+            assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
 
             // Check Bob Vault Updates
             vaultUpdatesBob.expectEvents {
@@ -225,10 +234,10 @@ class CordappConstraintsTests {
             val bobStates = bobQuery.states
             printVault(bob, bobStates)
 
-            Assertions.assertThat(bobStates).hasSize(1)
-            Assertions.assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
-            Assertions.assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
+            assertThat(bobStates).hasSize(1)
+            assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+            assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
         }
     }
 
@@ -239,13 +248,15 @@ class CordappConstraintsTests {
         val keyStoreDir = SelfCleaningDir()
         val packageOwnerKey = keyStoreDir.path.generateKey()
 
-        driver(DriverParameters(cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+        driver(DriverParameters(
+                cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                extraCordappPackagesToScan = listOf("net.corda.finance"),
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4,
-                        packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)),
-                inMemoryDB = false)) {
-
+                networkParameters = testNetworkParameters(
+                        minimumPlatformVersion = 4,
+                        packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)
+                ),
+                inMemoryDB = false
+        )) {
             val (alice, bob) = listOf(
                     startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
                     startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
@@ -270,15 +281,17 @@ class CordappConstraintsTests {
             bob.stop()
 
             println("Restarting the node for $ALICE_NAME ...")
-            val restartedAlice = startNode(NodeParameters(providedName = ALICE_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
-                    regenerateCordappsOnStart = true
+            (baseDirectory(ALICE_NAME) / "cordapps").deleteRecursively()
+            val restartedAlice = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed(keyStoreDir.path))
             )).getOrThrow()
 
             println("Restarting the node for $BOB_NAME ...")
-            val restartedBob = startNode(NodeParameters(providedName = BOB_NAME,
-                    additionalCordapps = listOf(FINANCE_CORDAPP.signJar(keyStoreDir.path)),
-                    regenerateCordappsOnStart = true
+            (baseDirectory(BOB_NAME) / "cordapps").deleteRecursively()
+            val restartedBob = startNode(NodeParameters(
+                    providedName = BOB_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed(keyStoreDir.path))
             )).getOrThrow()
 
             // Register for Bob vault updates
@@ -295,10 +308,10 @@ class CordappConstraintsTests {
             val aliceStates = aliceQuery.states
             printVault(alice, aliceStates)
 
-            Assertions.assertThat(aliceStates).hasSize(1)
-            Assertions.assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
-            Assertions.assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
+            assertThat(aliceStates).hasSize(1)
+            assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
+            assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
 
             // Check Bob Vault Updates
             vaultUpdatesBob.expectEvents {
@@ -316,10 +329,10 @@ class CordappConstraintsTests {
             val bobStates = bobQuery.states
             printVault(bob, bobStates)
 
-            Assertions.assertThat(bobStates).hasSize(1)
-            Assertions.assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
-            Assertions.assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
-            Assertions.assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
+            assertThat(bobStates).hasSize(1)
+            assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+            assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
 
             // clean-up
             keyStoreDir.close()

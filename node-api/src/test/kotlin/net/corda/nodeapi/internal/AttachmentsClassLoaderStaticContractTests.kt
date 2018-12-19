@@ -26,8 +26,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertEquals
@@ -112,7 +111,6 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private fun cordappLoaderForPackages(packages: Collection<String>): CordappLoader {
-        val dirs = cordappsForPackages(packages).map { TestCordappDirectories.getJarDirectory(it) }
-        return JarScanningCordappLoader.fromDirectories(dirs)
+        return JarScanningCordappLoader.fromJarUrls(listOf(cordappWithPackages(*packages.toTypedArray()).jarFile.toUri().toURL()))
     }
 }

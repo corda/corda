@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static net.corda.finance.Currencies.DOLLARS;
 import static net.corda.node.services.Permissions.invokeRpc;
@@ -32,6 +33,7 @@ import static net.corda.testing.core.ExpectKt.expectEvents;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;
 import static net.corda.testing.driver.Driver.driver;
+import static net.corda.testing.node.internal.TestCordappsUtilsKt.FINANCE_CORDAPP;
 import static org.junit.Assert.assertEquals;
 
 public class JavaIntegrationTestingTutorial {
@@ -40,7 +42,7 @@ public class JavaIntegrationTestingTutorial {
         // START 1
         driver(new DriverParameters()
                 .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(singletonList("net.corda.finance")), dsl -> {
+                .withCordappsForAllNodes(singleton(FINANCE_CORDAPP)), dsl -> {
 
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),

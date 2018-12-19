@@ -46,7 +46,7 @@ class FinalityHandlerTest {
                 legalName = BOB_NAME,
                 // The node disables the FinalityHandler completely if there are no old CorDapps loaded, so we need to add
                 // a token old CorDapp to keep the handler running.
-                additionalCordapps = setOf(cordappForPackages(javaClass.packageName).withTargetVersion(3))
+                additionalCordapps = setOf(cordappWithPackages(javaClass.packageName).copy(targetPlatformVersion = 3))
         ))
 
         val stx = alice.issueCashTo(bob)
@@ -75,7 +75,7 @@ class FinalityHandlerTest {
         val bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
                 // Make sure the target version is 4, and not the current platform version which may be greater
-                additionalCordapps = setOf(FINANCE_CORDAPP.withTargetVersion(4))
+                additionalCordapps = setOf(cordappWithPackages("net.corda.finance").copy(targetPlatformVersion = 4))
         ))
 
         val stx = alice.issueCashTo(bob)

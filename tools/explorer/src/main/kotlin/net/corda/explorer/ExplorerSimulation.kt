@@ -83,12 +83,12 @@ class ExplorerSimulation(private val options: OptionSet) {
             val issuerGBP = startNode(NodeParameters(
                     providedName = ukBankName,
                     rpcUsers = listOf(manager),
-                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
+                    additionalCordapps = listOf(FINANCE_CORDAPP.copy(config = mapOf("issuableCurrencies" to listOf("GBP"))))
             ))
             val issuerUSD = startNode(NodeParameters(
                     providedName = usaBankName,
                     rpcUsers = listOf(manager),
-                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
+                    additionalCordapps = listOf(FINANCE_CORDAPP.copy(config = mapOf("issuableCurrencies" to listOf("USD"))))
             ))
 
             notaryNode = defaultNotaryNode.get()
