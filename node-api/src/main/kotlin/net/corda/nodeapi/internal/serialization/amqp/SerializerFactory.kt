@@ -218,28 +218,34 @@ open class SerializerFactory(
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
      * if not, use the [ClassCarpenter] to generate a class to use in it's place.
      */
-    private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor, sentinel: Boolean = false) {
+    private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
         val metaSchema = CarpenterMetaSchema.newInstance()
-        for (typeNotation in schemaAndDescriptor.schemas.schema.types) {
-            logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=${typeNotation.name}" }
+        val notationByName = schemaAndDescriptor.schemas.schema.types.associate { it.name to it }
+        val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
             try {
-                val serialiser = processSchemaEntry(typeNotation)
-                // if we just successfully built a serializer for the type but the type fingerprint
-                // doesn't match that of the serialised object then we are dealing with  different
-                // instance of the class, as such we need to build an EvolutionSerializer
-                if (serialiser.typeDescriptor != typeNotation.descriptor.name) {
-                    getEvolutionSerializer(typeNotation, serialiser, schemaAndDescriptor.schemas)
-                }
+                name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
-                if (sentinel) throw e
-                metaSchema.buildFor(typeNotation, classloader)
+                metaSchema.buildFor(notation, classloader)
+                null
             }
-        }
+        }.toMap()
 
         if (metaSchema.isNotEmpty()) {
             val mc = MetaCarpenter(metaSchema, classCarpenter)
             mc.build()
-            processSchema(schemaAndDescriptor, true)
+        }
+
+        val carpented = notationByName.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
+            processSchemaEntry(notation)
+        }
+
+        val allLocalSerializers = noCarpentryRequired + carpented
+
+        allLocalSerializers.forEach { (name, serializer) ->
+            val typeNotation = notationByName[name]!!
+            if (serializer.typeDescriptor != typeNotation.descriptor.name ) {
+                getEvolutionSerializer(typeNotation, serializer, schemaAndDescriptor.schemas)
+            }
         }
     }
 
