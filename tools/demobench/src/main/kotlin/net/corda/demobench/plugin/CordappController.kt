@@ -13,7 +13,6 @@ import kotlin.streams.toList
 
 class CordappController : Controller() {
     companion object {
-        const val FINANCE_CORDAPP_FILENAME = "corda-finance"
         const val FINANCE_CONTRACTS_CORDAPP_FILENAME = "corda-finance-contracts"
         const val FINANCE_WORKFLOWS_CORDAPP_FILENAME = "corda-finance-workflows"
     }
