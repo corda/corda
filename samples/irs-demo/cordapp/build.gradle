@@ -54,7 +54,6 @@ def rpcUsersList = [
          ]]
 ]
 
-
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
 
@@ -170,6 +169,7 @@ jar {
 
 task testJar(type: Jar) {
     classifier "test"
+    from sourceSets.main.output
     from sourceSets.test.output
 }
 
