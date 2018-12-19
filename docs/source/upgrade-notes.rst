@@ -203,7 +203,7 @@ becomes::
     )
 
 You may need to use the new ``TestCordapp`` API when testing with the node driver or mock network, especially if you decide to stick with the
-old ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests does not honour CorDapp versioning.
+pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests does not honour CorDapp versioning.
 
 Step 6. Security: refactor to avoid violating sealed packages
 -------------------------------------------------------------

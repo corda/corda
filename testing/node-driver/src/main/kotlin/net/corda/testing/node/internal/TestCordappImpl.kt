@@ -19,6 +19,8 @@ import kotlin.streams.toList
  * build the CorDapp jar. This allows us to inherit the CorDapp's MANIFEST information without having to do any extra processing.
  */
 data class TestCordappImpl(override val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal {
+    override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
+
     override fun withoutMeta(): TestCordappImpl = copy(config = emptyMap())
 
     override val jarFile: Path

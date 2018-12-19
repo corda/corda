@@ -19,8 +19,11 @@ interface TestCordapp {
     /** The package used to find the CorDapp. This may not be the root package of the CorDapp. */
     val scanPackage: String
 
-    /** Returns the config to be applied on this CorDapp, defaults to empty if not specified. */
+    /** Returns the config for on this CorDapp, defaults to empty if not specified. */
     val config: Map<String, Any>
+
+    /** Returns a copy of this [TestCordapp] but with the specified CorDapp config. */
+    fun withConfig(config: Map<String, Any>): TestCordapp
 
     class Factory {
         companion object {
@@ -30,13 +33,9 @@ interface TestCordapp {
              * is also thrown if no CorDapp is found.
              *
              * @param scanPackage The package name used to find the CorDapp. This does not need to be the root package.
-             * @param config config to be applied with the CorDapp.
              */
             @JvmStatic
-            @JvmOverloads
-            fun findCordapp(scanPackage: String, config: Map<String, Any> = emptyMap()): TestCordapp {
-                return TestCordappImpl(scanPackage = scanPackage, config = config)
-            }
+            fun findCordapp(scanPackage: String): TestCordapp = TestCordappImpl(scanPackage = scanPackage, config = emptyMap())
         }
     }
 }

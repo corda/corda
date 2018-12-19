@@ -41,7 +41,9 @@ data class CustomCordapp(
 
     override val scanPackage: String get() = throw UnsupportedOperationException()
 
-    override fun withoutMeta(): CustomCordapp = copy(sign = null, config = emptyMap())
+    override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
+
+    override fun withoutMeta(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
 
     fun signed(keyStorePath: Path? = null): CustomCordapp = copy(sign = Sign(keyStorePath))
 

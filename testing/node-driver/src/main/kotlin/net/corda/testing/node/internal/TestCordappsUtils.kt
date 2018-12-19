@@ -32,9 +32,7 @@ fun cordappForClasses(vararg classes: Class<*>): CustomCordapp = CustomCordapp(p
  * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for
  * [TestCordapp.Factory.findCordapp] but returns the internal [TestCordappImpl].
  */
-fun findCordapp(packageName: String, config: Map<String, Any> = emptyMap()): TestCordappImpl {
-    return TestCordapp.Factory.findCordapp(packageName, config) as TestCordappImpl
-}
+fun findCordapp(scanPackage: String): TestCordappImpl = TestCordapp.Factory.findCordapp(scanPackage) as TestCordappImpl
 
 fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
     val stackTrace = Throwable().stackTrace
