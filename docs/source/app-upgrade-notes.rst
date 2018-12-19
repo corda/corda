@@ -23,16 +23,25 @@ from the new features in the latest release.
 Step 1. Adjust the version numbers in your Gradle build files
 -------------------------------------------------------------
 
+Alter the versions you depend on in your Gradle file like so:
+
 .. sourcecode:: groovy
 
     ext.corda_release_version = '4.0'
-    ext.corda_gradle_plugins_version = '4.0.36'
+    ext.corda_gradle_plugins_version = '4.0.37'
     ext.kotlin_version = '1.2.71'
     ext.quasar_version = '0.7.10'
 
-.. important:: Apps targeting Corda 4 may not at this time use Kotlin 1.3, as it was released too late in the development cycle
+.. note:: You may wish to update your kotlinOptions to use language level 1.2, to benefit from the new features. Apps targeting Corda 4
+   may not at this time use Kotlin 1.3, as it was released too late in the development cycle
    for us to risk an upgrade. Sorry! Future work on app isolation will make it easier for apps to use newer Kotlin versions than
    the node itself uses.
+
+You should also ensure you're using Gradle 4.10 (but not 5). If you use the Gradle wrapper, run::
+
+    ./gradlew wrapper --gradle-version 4.10.3
+
+Otherwise just upgrade your installed copy in the usual manner for your operating system.
 
 Step 2. Add a "cordapp" section to your Gradle build file
 ---------------------------------------------------------
@@ -45,20 +54,30 @@ This is used by the Corda Gradle build plugin to populate your app JAR with usef
         contract {
             name "MegaApp Contracts"
             vendor "MegaCorp"
-            license "A liberal, open source license"
+            licence "A liberal, open source licence"
             versionId 1
         }
         workflow {
             name "MegaApp flows"
             vendor "MegaCorp"
-            license "A really expensive proprietary license"
+            licence "A really expensive proprietary licence"
+            versionId 1
         }
     }
 
-Name and vendor can be set to any string you like, they don't have to be Corda identities. Target versioning is a new concept
+.. important:: Watch out for the UK spelling of the word licence (with a c).
+
+Name, vendor and licence can be set to any string you like, they don't have to be Corda identities. Target versioning is a new concept
 introduced in Corda 4. Learn more by reading :doc:`versioning`. Setting a target version of 4 disables workarounds for various
 bugs that may exist in your app, so by doing this you are promising that you have thoroughly tested your app on the new version.
 Using a high target version is a good idea because some features and improvements are only available to apps that opt in.
+
+The new ``versionId`` number is used to block state downgrades: when a state constraint can be satisfied by multiple attachments,
+the version is tracked in the ledger and cannot decrement. This ensures security fixes in CorDapps stick and can't be reversed by
+downgrading states to an earlier version. See ":ref:`contract_non-downgrade_rule_ref`" for more information. In future, the version
+attached to the workflow JAR will also be used to help implement smoother upgrade and migration features. If the "normal" version number
+of your app as defined in your Gradle file follows the convention of always being a whole number starting from 1, you can just refer
+to that variable directly to set the version id.
 
 The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into two separate JARs/modules,
 one that contains on-ledger validation code like states and contracts, and one for the rest (called by convention the "workflows"
@@ -66,8 +85,8 @@ module although it can contain a lot more than just flows: services would also g
 use one JAR for both, but this is in general an anti-pattern and can result in your flow logic code being sent over the network to
 arbitrary third party peers, even though they don't need it.
 
-Step 3. Upgrade your use of FinalityFlow
-----------------------------------------
+Step 3. Security: Upgrade your use of FinalityFlow
+--------------------------------------------------
 
 The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, so requires counterparty nodes to accept any and
 all signed transactions that are sent to it, without checks. It is **highly** recommended that existing CorDapps migrate
@@ -168,8 +187,8 @@ finalised transaction. If the initiator is written in a backwards compatible way
 The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
 This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
 
-Step 4. Upgrade your use of SwapIdentitiesFlow
-----------------------------------------------
+Step 4. Security: Upgrade your use of SwapIdentitiesFlow
+--------------------------------------------------------
 
 The :ref:`confidential_identities_ref` API is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
 has been adjusted in the same way as ``FinalityFlow`` above, to close problems with confidential identities being injectable into a node
@@ -205,22 +224,7 @@ becomes::
 You may need to use the new ``TestCordapp`` API when testing with the node driver or mock network, especially if you decide to stick with the
 pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests does not honour CorDapp versioning.
 
-Step 6. Security: refactor to avoid violating sealed packages
--------------------------------------------------------------
-
-Hardly any apps will need to do anything in this step.
-
-App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a sealed and signed JAR file.
-This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
-
-In the unlikely event that you were injecting code into ``net.corda.finance.*`` package namespaces from your own apps, you will need to move them
-into a new package, e.g. ``net/corda/finance/flows/MyClass.java`` can be moved to ``com/company/corda/finance/flows/MyClass.java``.
-As a consequence your classes are no longer able to access non-public members of finance CorDapp classes.
-
-When recompiling your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
-This is a security upgrade that ensures package-private visibility in Java code works correctly.
-
-Step 7. Security: Add BelongsToContract annotations
+Step 6. Security: Add BelongsToContract annotations
 ---------------------------------------------------
 
 In versions of the platform prior to v4, it was the responsibility of contract and flow logic to ensure that ``TransactionState`` objects
@@ -237,20 +241,48 @@ to be governed by a contract that is either:
 Learn more by reading ":ref:`implicit_constraint_types`". If an app targets Corda 3 or lower (i.e. does not specify a target version),
 states that point to contracts outside their package will trigger a log warning but validation will proceed.
 
-Step 8. Consider adopting signature constraints
------------------------------------------------
+Step 7. Learn about signature constraints and JAR signing
+---------------------------------------------------------
 
 :doc:`design/data-model-upgrades/signature-constraints` are a new data model feature introduced in Corda 4. They make it much easier to
-deploy application upgrades smoothly and in a decentralised manner. We strongly recommend all apps move to using signature constraints
-as soon as feasible, as they represent the best tradeoff between the different upgrade control models.
-
-.. important:: You will be able to use this feature if the compatibility zone you plan to deploy on has raised its minimum platform version
-   to 4. Otherwise attempting to use signature constraints will throw an exception, because other nodes would not understand it or be able
-   to check the correctness of the transaction. Please take this into account for your own schedule planning.
+deploy application upgrades smoothly and in a decentralised manner. Signature constraints are the new default mode for CorDapps, and
+the act of upgrading your app to use the version 4 Gradle plugins will result in your app being automatically signed, and new states
+automatically using new signature constraints selected automatically based on these signing keys.
 
 You can read more about signature constraints and what they do in :doc:`api-contract-constraints`. The ``TransactionBuilder`` class will
-automatically use them if your application JAR is signed. We recommend all JARs are signed. To start signing your JAR files, read
-:ref:`cordapp_build_system_signing_cordapp_jar_ref`.
+automatically use them if your application JAR is signed. **We recommend all JARs are signed**. To learn how to sign your JAR files, read
+:ref:`cordapp_build_system_signing_cordapp_jar_ref`. In dev mode, all JARs are signed by developer certificates. If a JAR that was signed
+with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for COrda 4
+to production you will need to generate signing keys and integrate them with the build process.
+
+Step 8. Security: package namespace handling
+--------------------------------------------
+
+Almost no apps will be affected by these changes, but they're important to know about.
+
+There are two improvements to how Java package protection is handled in Corda 4:
+
+1. Package sealing
+2. Package namespace ownership
+
+**Sealing.** App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a sealed and signed JAR file.
+This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
+
+In the unlikely event that you were injecting code into ``net.corda.finance.*`` package namespaces from your own apps, you will need to move them
+into a new package, e.g. ``net/corda/finance/flows/MyClass.java`` can be moved to ``com/company/corda/finance/flows/MyClass.java``.
+As a consequence your classes are no longer able to access non-public members of finance CorDapp classes.
+
+When recompiling your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
+This is a security upgrade that ensures package-private visibility in Java code works correctly. If other apps could define classes in your own
+packages, they could call package-private methods, which may not be expected by the developers.
+
+**Namespace ownership.** This part is only relevant if you are joining a production compatibility zone. You may wish to contact your zone operator
+and request ownership of your root package namespaces (e.g. ``com.megacorp.*``), with the signing keys you will be using to sign your app JARs.
+The zone operator can then add your signing key to the network parameters, and prevent attackers defining types in your own package namespaces.
+Whilst this feature is optional and not strictly required, it may be helpful to block attacks at the boundaries of a Corda based application
+where type names may be taken "as read". You can learn more about this feature and the motivation for it by reading
+":doc:`design/data-model-upgrades/package-namespace-ownership`".
+
 
 Step 9. Consider adding extension points to your flows
 ------------------------------------------------------
