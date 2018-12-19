@@ -10,77 +10,45 @@ apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda finance modules'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-        resources {
-            srcDir file('src/integration-test/resources')
-        }
-    }
-}
+/**
+ * NOTE: this build.gradle file is maintained for backwards compatibility purposes.
+ *       It will build a `corda-finance.jar` including all Contracts and Flows.
+ *       From Corda 4 it is strongly recommended that CorDapps dependent on the `corda-finance.jar`
+ *       explicitly declare dependencies on either/both of the corda finance sub-modules:
+ *          corda-finance-contract  => generates `corda-finance-contract.jar`
+ *          corda-finance-workflows => generates `corda-finance-workflows.jar`
+ *       Third party CorDapps should remember to include these sub-module dependencies using the `cordapp` Corda Gradle plug-in
+ *          cordapp project(':finance:workflows')
+ *          cordapp project(':finance:contracts')
+ */
 
-dependencies {
-    // Note the :finance module is a CorDapp in its own right
-    // and CorDapps using :finance features should use 'cordapp' not 'compile' linkage.
-    cordaCompile project(':core')
-    compile project(':confidential-identities')
+def mainProjects = [':finance:contracts',':finance:workflows', ':confidential-identities']
 
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-
-    testCompile project(':test-utils')
-    testCompile project(path: ':core', configuration: 'testArtifacts')
-    testCompile "junit:junit:$junit_version"
-
-    // AssertJ: for fluent assertions for testing
-    testCompile "org.assertj:assertj-core:$assertj_version"
-}
-
-configurations {
-    testArtifacts.extendsFrom testRuntime
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-artifacts {
-    testArtifacts testJar
-}
-
+jar.dependsOn mainProjects.collect{ it+":compileJava"}
 jar {
     baseName 'corda-finance'
+    from files(mainProjects.collect{ project(it).sourceSets.main.output })
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 cordapp {
+    signing {
+        enabled false
+    }
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     contract {
-        name "net/corda/finance/contracts"
+        name "Corda Finance Demo"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
     workflow {
-        name "net/corda/finance/flows"
+        name "Corda Finance Demo"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
     }
-    // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
-    // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
 }
 
 publish {
