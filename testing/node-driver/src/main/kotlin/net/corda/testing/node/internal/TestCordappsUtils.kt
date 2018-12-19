@@ -4,12 +4,26 @@ import net.corda.testing.node.TestCordapp
 import kotlin.reflect.KClass
 
 /**
- * Reference to the finance CorDapp in this repo. The metadata is taken directly from finance/build.gradle, including the fact that the jar
- * is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance")`.
+ * Reference to the finance-contracts CorDapp in this repo. The metadata is taken directly from finance/contracts/build.gradle, including the
+ * fact that the jar is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance.contracts")`.
+ *
+ * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the flows as well.
  */
-// TODO We can't use net.corda.finance as it's only containined by the finance:isolated module
+// TODO We can't use net.corda.finance.contracts as finance-workflows contains the package net.corda.finance.contracts.asset.cash.selection. This should be renamed.
 @JvmField
-val FINANCE_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.internal")
+val FINANCE_CONTRACTS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.schemas")
+
+/**
+ * Reference to the finance-workflows CorDapp in this repo. The metadata is taken directly from finance/workflows/build.gradle, including the
+ * fact that the jar is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance.flows")`.
+ *
+ * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the contract classes as well.
+ */
+@JvmField
+val FINANCE_WORKFLOWS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.flows")
+
+@JvmField
+val FINANCE_CORDAPPS: List<TestCordappInternal> = listOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
 
 fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 

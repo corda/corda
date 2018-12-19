@@ -26,9 +26,6 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.driver.*
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.CustomCordapp
-import net.corda.testing.node.internal.FINANCE_CORDAPP
-import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -40,11 +37,8 @@ class CordappConstraintsTests {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
-        // This is referencing the real finance CorDapp, which includes the fact that it's signed
-        val SIGNED_FINANCE_CORDAPP: TestCordappImpl = FINANCE_CORDAPP
-        // On the other hand this is creating a separate *custom* CorDapp which contains the same contents as the finance module. It's
-        // unsigned which is the default of CustomCordapp.
-        val UNSIGNED_FINANCE_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.finance")
+        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
+        val SIGNED_FINANCE_CORDAPP = UNSIGNED_FINANCE_CORDAPP.signed()
     }
 
     @Test
@@ -53,7 +47,6 @@ class CordappConstraintsTests {
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 inMemoryDB = false
         )) {
-
             val alice = startNode(NodeParameters(
                     additionalCordapps = listOf(SIGNED_FINANCE_CORDAPP),
                     providedName = ALICE_NAME,
@@ -80,7 +73,6 @@ class CordappConstraintsTests {
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 inMemoryDB = false
         )) {
-
             println("Starting the node using unsigned contract jar ...")
             val alice = startNode(NodeParameters(
                     providedName = ALICE_NAME,
@@ -107,7 +99,7 @@ class CordappConstraintsTests {
             (baseDirectory(ALICE_NAME) / "cordapps").deleteRecursively()
             val restartedNode = startNode(NodeParameters(
                     providedName = ALICE_NAME,
-                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed())
+                    additionalCordapps = listOf(SIGNED_FINANCE_CORDAPP)
             )).getOrThrow()
 
             val statesAfterRestart = restartedNode.rpc.vaultQueryBy<Cash.State>().states
@@ -249,7 +241,6 @@ class CordappConstraintsTests {
 
     @Test
     fun `issue cash and transfer using hash to signature constraints migration`() {
-
         // signing key setup
         val keyStoreDir = SelfCleaningDir()
         val packageOwnerKey = keyStoreDir.path.generateKey()

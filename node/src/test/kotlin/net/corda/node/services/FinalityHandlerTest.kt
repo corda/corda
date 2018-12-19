@@ -37,10 +37,7 @@ class FinalityHandlerTest {
     fun `sent to flow hospital on error and attempted retry on node restart`() {
         // Setup a network where only Alice has the finance CorDapp and it sends a cash tx to Bob who doesn't have the
         // CorDapp. Bob's FinalityHandler will error when validating the tx.
-        val alice = mockNet.createNode(InternalMockNodeParameters(
-                legalName = ALICE_NAME,
-                additionalCordapps = setOf(FINANCE_CORDAPP)
-        ))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
 
         var bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
@@ -67,10 +64,7 @@ class FinalityHandlerTest {
 
     @Test
     fun `disabled if there are no old CorDapps loaded`() {
-        val alice = mockNet.createNode(InternalMockNodeParameters(
-                legalName = ALICE_NAME,
-                additionalCordapps = setOf(FINANCE_CORDAPP)
-        ))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
 
         val bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
