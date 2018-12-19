@@ -26,7 +26,9 @@ import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.driver.*
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.TestCordappImpl
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -38,7 +40,11 @@ class CordappConstraintsTests {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
-        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
+        // This is referencing the real finance CorDapp, which includes the fact that it's signed
+        val SIGNED_FINANCE_CORDAPP: TestCordappImpl = FINANCE_CORDAPP
+        // On the other hand this is creating a separate *custom* CorDapp which contains the same contents as the finance module. It's
+        // unsigned which is the default of CustomCordapp.
+        val UNSIGNED_FINANCE_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.finance")
     }
 
     @Test
@@ -49,7 +55,7 @@ class CordappConstraintsTests {
         )) {
 
             val alice = startNode(NodeParameters(
-                    additionalCordapps = listOf(FINANCE_CORDAPP),
+                    additionalCordapps = listOf(SIGNED_FINANCE_CORDAPP),
                     providedName = ALICE_NAME,
                     rpcUsers = listOf(user)
             )).getOrThrow()
@@ -184,7 +190,7 @@ class CordappConstraintsTests {
     @Test
     fun `issue and consume cash using signature constraints`() {
         driver(DriverParameters(
-                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                cordappsForAllNodes = listOf(SIGNED_FINANCE_CORDAPP),
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
                 inMemoryDB = false
         )) {

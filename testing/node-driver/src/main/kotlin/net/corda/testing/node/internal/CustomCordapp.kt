@@ -30,7 +30,7 @@ data class CustomCordapp(
         val versionId: Int = 1,
         val targetPlatformVersion: Int = PLATFORM_VERSION,
         val classes: Set<Class<*>> = emptySet(),
-        val sign: Sign? = null,
+        val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
 ) : TestCordappInternal {
     init {
@@ -43,9 +43,9 @@ data class CustomCordapp(
 
     override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
 
-    override fun withoutMeta(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
+    override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
 
-    fun signed(keyStorePath: Path? = null): CustomCordapp = copy(sign = Sign(keyStorePath))
+    fun signed(keyStorePath: Path? = null): CustomCordapp = copy(signingInfo = SigningInfo(keyStorePath))
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
@@ -70,12 +70,12 @@ data class CustomCordapp(
     }
 
     private fun signJar(jarFile: Path) {
-        if (sign != null) {
+        if (signingInfo != null) {
             val testKeystore = "_teststore"
             val alias = "Test"
             val pwd = "secret!"
-            val keyStorePathToUse = if (sign.keyStorePath != null) {
-                sign.keyStorePath
+            val keyStorePathToUse = if (signingInfo.keyStorePath != null) {
+                signingInfo.keyStorePath
             } else {
                 defaultJarSignerDirectory.createDirectories()
                 if (!(defaultJarSignerDirectory / testKeystore).exists()) {
@@ -109,7 +109,7 @@ data class CustomCordapp(
         return ZipEntry(name).setCreationTime(epochFileTime).setLastAccessTime(epochFileTime).setLastModifiedTime(epochFileTime)
     }
 
-    data class Sign(val keyStorePath: Path? = null)
+    data class SigningInfo(val keyStorePath: Path? = null)
 
     companion object {
         private val logger = contextLogger()

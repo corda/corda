@@ -18,7 +18,7 @@ interface TestCordappInternal : TestCordapp {
     val jarFile: Path
 
     /** Return a copy of this TestCordappInternal but without any metadata, such as configs and signing information. */
-    fun withoutMeta(): TestCordappInternal
+    fun withOnlyJarContents(): TestCordappInternal
 
     companion object {
         fun installCordapps(baseDirectory: Path, nodeSpecificCordapps: Set<TestCordappInternal>, generalCordapps: Set<TestCordappInternal>) {
@@ -26,7 +26,7 @@ interface TestCordappInternal : TestCordapp {
             checkNoConflicts(generalCordapps)
 
             // Precedence is given to node-specific CorDapps
-            val allCordapps = nodeSpecificCordapps + generalCordapps.filter { it.withoutMeta() !in nodeSpecificCordappsWithoutMeta }
+            val allCordapps = nodeSpecificCordapps + generalCordapps.filter { it.withOnlyJarContents() !in nodeSpecificCordappsWithoutMeta }
             // Ignore any duplicate jar files
             val jarToCordapp  = allCordapps.associateBy { it.jarFile }
 
@@ -41,7 +41,7 @@ interface TestCordappInternal : TestCordapp {
         }
 
         private fun checkNoConflicts(cordapps: Set<TestCordappInternal>): Set<TestCordappInternal> {
-            val cordappsWithoutMeta = cordapps.groupBy { it.withoutMeta() }
+            val cordappsWithoutMeta = cordapps.groupBy { it.withOnlyJarContents() }
             cordappsWithoutMeta.forEach { require(it.value.size == 1) { "Conflicting CorDapps specified: ${it.value}" } }
             return cordappsWithoutMeta.keys
         }

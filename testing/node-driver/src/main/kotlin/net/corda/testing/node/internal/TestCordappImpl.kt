@@ -21,7 +21,7 @@ import kotlin.streams.toList
 data class TestCordappImpl(override val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal {
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
-    override fun withoutMeta(): TestCordappImpl = copy(config = emptyMap())
+    override fun withOnlyJarContents(): TestCordappImpl = copy(config = emptyMap())
 
     override val jarFile: Path
         get() {
