@@ -45,15 +45,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
         }
 
-        // Mighty unclean, but we need a quick stopgap to the bug it's addressing.
-        // TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
-        object CorDappsClassLoaderHolder {
-            var instance: ClassLoader? = null
-            fun set(instance: ClassLoader) {
-                this.instance = instance
-            }
-        }
-
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just ignore any class in those 2 packages.
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
@@ -138,6 +129,15 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     }
 }
 
+// Mighty unclean, but we need a quick stopgap to the bug it's addressing.
+// TODO Remove ASAP after proper handling of dependent CorDapps with regards to attachments.
+object CorDappsClassLoaderHolder {
+    var instance: ClassLoader? = null
+    fun set(instance: ClassLoader) {
+        this.instance = instance
+    }
+}
+
 /**
  * This is just a factory that provides a cache to avoid constructing expensive [AttachmentsClassLoader]s.
  */
@@ -161,7 +161,7 @@ internal object AttachmentsClassLoaderBuilder {
         // TODO This should not default to the CorDapps classloader, but it's needed for now to stop a bug preventing CorDapps with dependencies on other CorDapps from working as attachments.
         // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
         val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
-        val cordappsClassLoader = AttachmentsClassLoader.Companion.CorDappsClassLoaderHolder.instance
+        val cordappsClassLoader = CorDappsClassLoaderHolder.instance
         val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(attachmentsClassLoader, it) } ?: attachmentsClassLoader
 
         // Create a new serializationContext for the current Transaction.
@@ -180,19 +180,14 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassL
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String?): Class<*> {
-        for (classLoader in classLoaders) {
+        for (classLoader in (classLoaders + parent + Thread.currentThread().contextClassLoader).filterNotNull()) {
             try {
                 return classLoader.loadClass(name)
             } catch (e: ClassNotFoundException) {
                 // Keep iterating without failing.
             }
         }
-        val contextClassLoader = Thread.currentThread().contextClassLoader
-        return if (contextClassLoader != null) {
-            contextClassLoader.loadClass(name)
-        } else {
-            throw ClassNotFoundException(name)
-        }
+        throw ClassNotFoundException(name)
     }
 }
 
