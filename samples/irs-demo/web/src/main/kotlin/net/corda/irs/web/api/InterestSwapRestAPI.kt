@@ -6,6 +6,7 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
+import net.corda.irs.api.NodeInterestRates
 import net.corda.irs.contract.InterestRateSwap
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.*
@@ -60,9 +61,15 @@ class InterestRateSwapAPI {
         return states.map { it.state.data }.toTypedArray()
     }
 
-    @GetMapping("demodate")
+    @GetMapping("/demodate")
     fun fetchDemoDate(): LocalDate {
         return LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
+    }
+
+    @PostMapping("/fixes")
+    fun storeFixes(@RequestBody file: String): ResponseEntity<Any?> {
+        rpc.startFlow(NodeInterestRates::UploadFixesFlow, file).returnValue.getOrThrow()
+        return ResponseEntity.ok().build()
     }
 
     @GetMapping("/deals")

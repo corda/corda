@@ -31,7 +31,7 @@ class InterestRatesSwapDemoAPI {
 
     @PutMapping("demodate")
     fun storeDemoDate(@RequestBody newDemoDate: LocalDate): ResponseEntity<Any?> {
-        val priorDemoDate = fetchDemoDate()
+        val priorDemoDate = LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
         // Can only move date forwards
         if (newDemoDate.isAfter(priorDemoDate)) {
             rpc.startFlow(UpdateBusinessDayFlow::Broadcast, newDemoDate).returnValue.getOrThrow()
@@ -40,16 +40,5 @@ class InterestRatesSwapDemoAPI {
         val msg = "demodate is already $priorDemoDate and can only be updated with a later date"
         logger.error("Attempt to set demodate to $newDemoDate but $msg")
         return ResponseEntity.status(HttpStatus.CONFLICT).body(msg)
-    }
-
-    @GetMapping("demodate")
-    fun fetchDemoDate(): LocalDate {
-        return LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
-    }
-
-    @PostMapping("fixes")
-    fun storeFixes(@RequestBody file: String): ResponseEntity<Any?> {
-        rpc.startFlow(NodeInterestRates::UploadFixesFlow, file).returnValue.getOrThrow()
-        return ResponseEntity.ok().build()
     }
 }
