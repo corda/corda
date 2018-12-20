@@ -174,33 +174,31 @@ internal object AttachmentsClassLoaderBuilder {
     }
 }
 
-private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassLoader() {
+private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: ClassLoader? = null) : ClassLoader(parent) {
     constructor(classLoader: ClassLoader, vararg classLoaders: ClassLoader) : this(sequenceOf(classLoader, *classLoaders))
 
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String?): Class<*> {
-        for (candidate in candidates) {
+        for (classLoader in classLoaders) {
             try {
-                return candidate.loadClass(name)
+                return classLoader.loadClass(name)
             } catch (e: ClassNotFoundException) {
                 // Keep iterating without failing.
             }
         }
-        throw ClassNotFoundException(name)
+        return super.loadClass(name)
     }
 
     override fun getResource(name: String): URL? {
-        for (candidate in candidates) {
-            val url = candidate.getResource(name)
+        for (classLoader in classLoaders) {
+            val url = classLoader.getResource(name)
             if (url != null) {
                 return url
             }
         }
-        return null
+        return super.getResource(name)
     }
-
-    private val candidates: List<ClassLoader> get() = (classLoaders + parent + Thread.currentThread().contextClassLoader).filterNotNull()
 }
 
 /**
