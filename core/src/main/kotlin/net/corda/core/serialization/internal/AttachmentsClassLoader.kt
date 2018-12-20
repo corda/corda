@@ -180,15 +180,27 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassL
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String?): Class<*> {
-        for (classLoader in (classLoaders + parent + Thread.currentThread().contextClassLoader).filterNotNull()) {
+        for (candidate in candidates) {
             try {
-                return classLoader.loadClass(name)
+                return candidate.loadClass(name)
             } catch (e: ClassNotFoundException) {
                 // Keep iterating without failing.
             }
         }
         throw ClassNotFoundException(name)
     }
+
+    override fun getResource(name: String): URL? {
+        for (candidate in candidates) {
+            val url = candidate.getResource(name)
+            if (url != null) {
+                return url
+            }
+        }
+        return null
+    }
+
+    private val candidates: List<ClassLoader> get() = (classLoaders + parent + Thread.currentThread().contextClassLoader).filterNotNull()
 }
 
 /**
