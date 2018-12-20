@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import java.net.URI
 import net.corda.irs.flows.AutoOfferFlow
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * This provides a simplified API, currently for demonstration use only.
@@ -55,6 +58,11 @@ class InterestRateSwapAPI {
         val vault = rpc.vaultQueryBy<InterestRateSwap.State>().states
         val states = vault.filterStatesOfType<InterestRateSwap.State>()
         return states.map { it.state.data }.toTypedArray()
+    }
+
+    @GetMapping("demodate")
+    fun fetchDemoDate(): LocalDate {
+        return LocalDateTime.ofInstant(rpc.currentNodeTime(), ZoneId.systemDefault()).toLocalDate()
     }
 
     @GetMapping("/deals")
