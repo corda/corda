@@ -87,7 +87,7 @@ properly for future releases.
 
 .. note:: Whilst it's currently a convention that Corda releases have the platform version number as their
    major version i.e. Corda 3.3 implements platform version 3, this is not actually required and may in
-   future not hold true. You should know the platform version of the node releases you wan to target.
+   future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
 It is used to block state downgrades: when a state constraint can be satisfied
@@ -104,7 +104,7 @@ third party peers, even though they don't need it.
 
 In future, the version ID attached to the workflow JAR will also be used to help implement smoother upgrade
 and migration features. You may directly reference the gradle version number of your app when setting the
-cordapp specific versionId identifiers if this follows the convention of always being a whole number
+CorDapp specific versionId identifiers if this follows the convention of always being a whole number
 starting from 1.
 
 If you use the finance demo app, you should adjust your dependencies so you depend on the finance-contracts
@@ -280,7 +280,7 @@ automatically using new signature constraints selected automatically based on th
 You can read more about signature constraints and what they do in :doc:`api-contract-constraints`. The ``TransactionBuilder`` class will
 automatically use them if your application JAR is signed. **We recommend all JARs are signed**. To learn how to sign your JAR files, read
 :ref:`cordapp_build_system_signing_cordapp_jar_ref`. In dev mode, all JARs are signed by developer certificates. If a JAR that was signed
-with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for COrda 4
+with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
 Step 8. Security: Package namespace handling
