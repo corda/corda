@@ -1,13 +1,19 @@
-================================
-Percona, the underlying Database
-================================
+==========================================================
+Percona XtraDB Cluster, the underlying replicated Database
+==========================================================
 
-Percona's `documentation page <https://www.percona.com/doc>`__ explains the installation in detail.
+Percona's `documentation page <https://www.percona.com/doc/percona-xtradb-cluster/LATEST/index.html>`__ explains the installation in detail.
 
-In this section we're setting up a
-three-node Percona cluster.  A three-node cluster can tolerate one crash
-fault. In production, you probably want to run five nodes, to be able to 
-tolerate up to two faults.
+.. note::
+
+    When setting up on Red Hat Enterprise Linux and CentOS make sure SELinux is *disabled* (we found issues even with the *permissive* mode).
+    Otherwise you might get state transfer errors when starting up the second node, such as:
+    ``[Warning] WSREP: 0.0 (pxc-cluster-node-1): State transfer to 1.0 (pxc-cluster-node-2) failed: -2 (No such file or directory)``
+
+    Note also that **each** Percona XtraDB Cluster node requires multiple ports to be opened, the defaults are: 3306, 4444, 4567 and 4568.
+
+In this section we're setting up a three-node Percona cluster.  A three-node cluster can tolerate one crash
+fault. In production, you probably want to run five nodes, to be able to tolerate up to two faults.
 
 Host names and IP addresses used in the example are listed in the table below.
 
