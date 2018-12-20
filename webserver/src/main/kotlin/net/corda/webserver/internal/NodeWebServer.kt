@@ -5,10 +5,7 @@ import io.netty.channel.unix.Errors
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
-import net.corda.core.internal.div
 import net.corda.core.internal.errors.AddressBindingException
-import net.corda.core.internal.exists
-import net.corda.core.internal.list
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.contextLogger
 import net.corda.webserver.WebServerConfig
@@ -30,13 +27,9 @@ import java.io.IOException
 import java.io.Writer
 import java.lang.reflect.InvocationTargetException
 import java.net.BindException
-import java.net.URL
-import java.net.URLClassLoader
 import java.nio.file.NoSuchFileException
-import java.nio.file.Path
 import java.util.*
 import javax.servlet.http.HttpServletRequest
-import kotlin.streams.toList
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
@@ -211,22 +204,9 @@ class NodeWebServer(val config: WebServerConfig) {
         return connection.proxy
     }
 
-
-    private fun jarUrlsInDirectory(directory: Path): List<URL> {
-        return if (!directory.exists()) {
-            emptyList()
-        } else {
-            directory.list { paths ->
-                // `toFile()` can't be used here...
-                paths.filter { it.toString().endsWith(".jar") }.map { it.toUri().toURL() }.toList()
-            }
-        }
-    }
-
-    /** Fetch WebServerPluginRegistry classes registered in META-INF/services/net.corda.webserver.services.WebServerPluginRegistry files that exist in the classpath or in cordapps */
+    /** Fetch WebServerPluginRegistry classes registered in META-INF/services/net.corda.webserver.services.WebServerPluginRegistry files that exist in the classpath */
     val pluginRegistries: List<WebServerPluginRegistry> by lazy {
-        val urls = jarUrlsInDirectory(config.baseDirectory / "cordapps").toTypedArray()
-        ServiceLoader.load(WebServerPluginRegistry::class.java, URLClassLoader(urls, javaClass.classLoader)).toList()
+        ServiceLoader.load(WebServerPluginRegistry::class.java).toList()
     }
 
     /** Used for useful info that we always want to show, even when not logging to the console */
