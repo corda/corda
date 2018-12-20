@@ -33,6 +33,9 @@ import net.corda.core.utilities.unwrap
 import net.corda.testMessage.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.node.internal.InternalMockNetwork
+import net.corda.testing.node.internal.cordappForPackages
+import net.corda.testing.node.internal.startFlow
 
 class NodeStatePersistenceTests {
     @Test
@@ -105,82 +108,56 @@ class NodeStatePersistenceTests {
 
 
     @Test
-    fun `Broadcasting an old transaction will cause 2 unconsumed states`() {
-        val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), startFlow<SendMessageFlowConsuming>(), startFlow<ReportToCounterparty>(), invokeRpc("vaultQuery") ,
-                invokeRpc("internalVerifiedTransactionsSnapshot")))
-        val regulatorUser = User("mark", "dadada", setOf(startFlow<ReceiveReportedTransaction>(), invokeRpc("vaultQuery")))
+    fun `Broadcasting an old transaction does not cause 2 unconsumed states`() {
+        val mockNet = InternalMockNetwork(
+                cordappsForAllNodes = listOf(cordappForPackages(MessageState::class.packageName)),
+                networkSendManuallyPumped = false,
+                threadPerNode = true)
 
-        driver(DriverParameters(
-                startNodesInProcess = isQuasarAgentSpecified(),
-                extraCordappPackagesToScan = listOf(MessageState::class.packageName),
-                inMemoryDB = false
-        )) {
+        val node = mockNet.createPartyNode(ALICE_NAME)
+        val regulator = mockNet.createPartyNode(BOB_NAME)
+        val notary = mockNet.defaultNotaryIdentity
+        regulator.registerInitiatedFlow(ReceiveReportedTransaction::class.java)
 
-            val nodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).getOrThrow()
-            val regulator = startNode(providedName = BOB_NAME, rpcUsers = listOf(regulatorUser)).getOrThrow()
+        fun buildTransactionChain(initialMessage: Message, chainLength: Int) {
+            node.services.startFlow(SendMessageFlow(initialMessage, notary)).resultFuture.getOrThrow()
+            var result = node.services.vaultService.queryBy(MessageState::class.java).states.filter {
+                it.state.data.message.value.startsWith(initialMessage.value)
+            }.singleOrNull()
 
-            fun buildTransactionChain(initialMessage: Message, chainLength: Int): StateAndRef<MessageState> {
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::SendMessageFlow, initialMessage, defaultNotaryIdentity).returnValue.getOrThrow()
-                }
-
-                var result : StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.filter {
-                            it.state.data.message.value.startsWith(initialMessage.value)
-                        }.singleOrNull()
-                }
-
-                for (_i in 0.until(chainLength -1 )) {
-                    CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                        it.proxy.startFlow(::SendMessageFlowConsuming, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
-                    }
-
-                    result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                        val page = it.proxy.vaultQuery(MessageState::class.java)
-                        page.states.filter {
-                            it.state.data.message.value.startsWith(initialMessage.value)
-                        }.singleOrNull()
-                    }
-                }
-
-                return result!!
+            for (_i in 0.until(chainLength -1 )) {
+                node.services.startFlow(SendMessageFlowConsuming(result!!, notary)).resultFuture.getOrThrow()
+                result = node.services.vaultService.queryBy(MessageState::class.java).states.filter {
+                    it.state.data.message.value.startsWith(initialMessage.value)
+                }.singleOrNull()
             }
-
-            fun sendTransactionToObserver(transactionIdx: Int) {
-                val transaction = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val transactions = it.proxy.internalVerifiedTransactionsSnapshot()
-                    transactions[transactionIdx]
-                }
-
-                //send
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::ReportToCounterparty, regulator.nodeInfo.singleIdentity(), transaction).returnValue.getOrThrow()
-                }
-            }
-
-            fun checkObserverTransactions(expectedMessage: Message) {
-                val regulatorStates = CordaRPCClient(regulator.rpcAddress).start(regulatorUser.username, regulatorUser.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.filter {
-                        it.state.data.message.value.startsWith(expectedMessage.value[0])
-                    }
-                }
-
-                assertNotNull(regulatorStates, "Could not find any regulator states")
-                assertEquals(1, regulatorStates.size, "Incorrect number of unconsumed regulator states")
-                val retrievedMessage = regulatorStates.singleOrNull()!!.state.data.message
-                assertEquals(expectedMessage, retrievedMessage, "Final unconsumed regulator state is incorrect")
-            }
-
-            // Check that sending an old transaction doesn't result in a new unconsumed state
-            val message = Message("A")
-            buildTransactionChain(message, 4)
-            sendTransactionToObserver(3)
-            sendTransactionToObserver(1)
-            val outputMessage = Message("AAAA")
-            checkObserverTransactions(outputMessage)
         }
+
+        fun sendTransactionToObserver(transactionIdx: Int) {
+            val transactionList = node.services.validatedTransactions.track().snapshot
+            node.services.startFlow(ReportToCounterparty(regulator.info.singleIdentity(), transactionList[transactionIdx])).resultFuture.getOrThrow()
+        }
+
+        fun checkObserverTransactions(expectedMessage: Message) {
+            val regulatorStates = regulator.services.vaultService.queryBy(MessageState::class.java).states.filter {
+                it.state.data.message.value.startsWith(expectedMessage.value[0])
+            }
+
+            assertNotNull(regulatorStates, "Could not find any regulator states")
+            assertEquals(1, regulatorStates.size, "Incorrect number of unconsumed regulator states")
+            val retrievedMessage = regulatorStates.singleOrNull()!!.state.data.message
+            assertEquals(expectedMessage, retrievedMessage, "Final unconsumed regulator state is incorrect")
+        }
+
+        // Check that sending an old transaction doesn't result in a new unconsumed state
+        val message = Message("A")
+        buildTransactionChain(message, 4)
+        sendTransactionToObserver(3)
+        sendTransactionToObserver(1)
+        val outputMessage = Message("AAAA")
+        checkObserverTransactions(outputMessage)
+
+        mockNet.stopNodes()
     }
 }
 
