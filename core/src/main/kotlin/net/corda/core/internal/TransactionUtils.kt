@@ -74,7 +74,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
         return components.originalList as List<T>
     }
 
-    return components.lazyMapped { component, internalIndex ->
+    return components.mapIndexed { internalIndex, component ->
         try {
             factory.deserialize(component, clazz.java, context)
         } catch (e: MissingAttachmentsException) {
@@ -83,6 +83,15 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
             throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
         }
     }
+//    return components.lazyMapped { component, internalIndex ->
+//        try {
+//            factory.deserialize(component, clazz.java, context)
+//        } catch (e: MissingAttachmentsException) {
+//            throw e
+//        } catch (e: Exception) {
+//            throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
+//        }
+//    }
 }
 
 /**

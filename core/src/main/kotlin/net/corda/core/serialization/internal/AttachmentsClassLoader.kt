@@ -174,7 +174,7 @@ internal object AttachmentsClassLoaderBuilder {
     }
 }
 
-private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: ClassLoader? = ClassLoader.getSystemClassLoader()) : ClassLoader(parent) {
+private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassLoader() {
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String?): Class<*> {
@@ -185,7 +185,7 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: 
                 // Keep iterating without failing.
             }
         }
-        return super.loadClass(name)
+        throw ClassNotFoundException(name)
     }
 
     override fun getResource(name: String): URL? {
@@ -195,7 +195,7 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: 
                 return url
             }
         }
-        return super.getResource(name)
+        return null
     }
 }
 
