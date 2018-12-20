@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Cordapp provider and store. For querying CorDapps for their attachment and vice versa.
  */
-open class CordappProviderImpl(private val cordappLoader: CordappLoader,
+open class CordappProviderImpl(val cordappLoader: CordappLoader,
                                private val cordappConfigProvider: CordappConfigProvider,
                                private val attachmentStorage: AttachmentStorage) : SingletonSerializeAsToken(), CordappProviderInternal {
     companion object {

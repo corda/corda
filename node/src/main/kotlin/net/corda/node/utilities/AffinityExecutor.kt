@@ -81,9 +81,5 @@ interface AffinityExecutor : Executor {
                 execute { f.set(queue.isEmpty() && activeCount == 1) }
             } while (!f.get())
         }
-
-        fun setContextClassloader(classLoader: ClassLoader) {
-            threads.forEach { it.contextClassLoader = classLoader }
-        }
     }
 }

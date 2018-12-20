@@ -160,10 +160,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     init {
         // TODO Break cyclic dependency
         identityService.database = database
-
-        // This sets the Cordapp classloader on the threads that are used to execute flow logic.
-        // Needed because in previous versions we used Thread.contextClassLoader to resolve services defined in cordapps.
-        serverThread.setContextClassloader(cordappLoader.appClassLoader)
     }
 
     val networkMapCache = PersistentNetworkMapCache(cacheFactory, database, identityService).tokenize()
