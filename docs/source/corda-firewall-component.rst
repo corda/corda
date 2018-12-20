@@ -205,7 +205,7 @@ possible with a shared bridge, any other configuration previously presented can 
 Apache ZooKeeper
 ----------------
 Apache ZooKeeper is used in Corda firewall to manage the hot/warm bridge clusters, because hot/hot is not supported, ZooKeeper is used to ensure only 1 instance of the bridge is active at all time.
-ZooKeeper instance is also used for signals failover when the active bridge is disconnected.
+ZooKeeper instance is also used for signals failover when the active bridge is disconnected. ZooKeeper does not process or store any data regarding transactions or P2P communication.
 
 Setting up ZooKeeper cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
