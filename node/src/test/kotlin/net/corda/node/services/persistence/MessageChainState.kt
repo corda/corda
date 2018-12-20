@@ -48,7 +48,7 @@ object MessageChainSchemaV1 : MappedSchema(
     ) : PersistentState()
 }
 
-const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.testMessage.MessageChainContract"
+const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.node.services.persistence.MessageChainContract"
 
 open class MessageChainContract : Contract {
     override fun verify(tx: LedgerTransaction) {

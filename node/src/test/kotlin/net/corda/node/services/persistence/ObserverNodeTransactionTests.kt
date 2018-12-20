@@ -170,17 +170,15 @@ class ContinueMessageChainFlow(private val stateRef: StateAndRef<MessageChainSta
 @StartableByRPC
 class ReportToCounterparty(
         private val regulator: Party,
-        private val signedTx: SignedTransaction) : FlowLogic<SignedTransaction>() {
+        private val signedTx: SignedTransaction) : FlowLogic<Unit>() {
 
     @Suspendable
-    override fun call(): SignedTransaction {
+    override fun call() {
         val session = initiateFlow(regulator)
 
         subFlow(IdentitySyncFlow.Send(session, signedTx.tx))
 
         subFlow(SendTransactionFlow(session, signedTx))
-        val stx = session.receive<SignedTransaction>().unwrap { it }
-        return stx
     }
 }
 
