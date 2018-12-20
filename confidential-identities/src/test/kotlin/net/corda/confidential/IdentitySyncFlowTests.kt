@@ -18,7 +18,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.CHARLIE_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
@@ -35,7 +35,7 @@ class IdentitySyncFlowTests {
     fun before() {
         // We run this in parallel threads to help catch any race conditions that may exist.
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                cordappsForAllNodes = FINANCE_CORDAPPS,
                 networkSendManuallyPumped = false,
                 threadPerNode = true
         )

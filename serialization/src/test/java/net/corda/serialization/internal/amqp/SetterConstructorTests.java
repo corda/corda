@@ -25,7 +25,12 @@ public class SetterConstructorTests {
 
         public void setA(int a) { this.a = a; }
         public void setB(int b) { this.b = b; }
-        public void setC(int c) { this.c = c; }
+
+        // See https://r3-cev.atlassian.net/browse/CORDA-2352
+        public C setC(int c) {
+            this.c = c;
+            return this;
+        }
     }
 
     static class C2 {

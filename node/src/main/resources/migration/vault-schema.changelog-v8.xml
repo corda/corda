@@ -6,9 +6,6 @@
         <createTable tableName="state_party">
             <column name="output_index" type="INT"/>
             <column name="transaction_id" type="NVARCHAR(64)"/>
-            <column name="id" type="BIGINT">
-                <constraints nullable="false"/>
-            </column>
             <column name="public_key_hash" type="NVARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
@@ -33,7 +30,6 @@
         </createIndex>
         <createView viewName="v_pkey_hash_ex_id_map">
             select
-                state_party.id,
                 state_party.public_key_hash,
                 state_party.transaction_id,
                 state_party.output_index,
