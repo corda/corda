@@ -67,23 +67,34 @@ This is used by the Corda Gradle build plugin to populate your app JAR with usef
 
 .. important:: Watch out for the UK spelling of the word licence (with a c).
 
-Name, vendor and licence can be set to any string you like, they don't have to be Corda identities. Target versioning is a new concept
-introduced in Corda 4. Learn more by reading :doc:`versioning`. Setting a target version of 4 disables workarounds for various
-bugs that may exist in your app, so by doing this you are promising that you have thoroughly tested your app on the new version.
-Using a high target version is a good idea because some features and improvements are only available to apps that opt in.
+Name, vendor and licence can be set to any string you like, they don't have to be Corda identities.
 
-The new ``versionId`` number is used to block state downgrades: when a state constraint can be satisfied by multiple attachments,
-the version is tracked in the ledger and cannot decrement. This ensures security fixes in CorDapps stick and can't be reversed by
-downgrading states to an earlier version. See ":ref:`contract_non-downgrade_rule_ref`" for more information. In future, the version
-attached to the workflow JAR will also be used to help implement smoother upgrade and migration features. If the "normal" version number
-of your app as defined in your Gradle file follows the convention of always being a whole number starting from 1, you can just refer
-to that variable directly to set the version id.
+Target versioning is a new concept introduced in Corda 4. Learn more by reading :doc:`versioning`.
+Setting a target version of 4 opts in to changes that might not be 100% backwards compatible, such as
+API semantics changes or disabling workarounds for bugs that may be in your apps, so by doing this you
+are promising that you have thoroughly tested your app on the new version. Using a high target version is
+a good idea because some features and improvements are only available to apps that opt in.
 
-The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into two separate JARs/modules,
-one that contains on-ledger validation code like states and contracts, and one for the rest (called by convention the "workflows"
-module although it can contain a lot more than just flows: services would also go here, for instance). For simplicity, here we
-use one JAR for both, but this is in general an anti-pattern and can result in your flow logic code being sent over the network to
-arbitrary third party peers, even though they don't need it.
+The minimum platform version is just the (major) version number of the node that you require, so if you
+start using new APIs and features in Corda 4, you should set this to 4. Unfortunately Corda 3 and below
+do not know about this metadata and don't check it, so your app will still be loaded in such nodes and
+then crash at runtime. However it's good to get in the habit of setting this properly for future releases.
+
+The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
+It is used to block state downgrades: when a state constraint can be satisfied
+by multiple attachments, the version is tracked in the ledger and cannot decrement. This ensures security
+fixes in CorDapps stick and can't be reversed by downgrading states to an earlier version. See
+":ref:`contract_non-downgrade_rule_ref`" for more information. In future, the version attached to the
+workflow JAR will also be used to help implement smoother upgrade and migration features. If the "normal"
+version number of your app as defined in your Gradle file follows the convention of always being a whole
+number starting from 1, you can just refer to that variable directly to set the version id.
+
+The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
+two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
+for the rest (called by convention the "workflows" module although it can contain a lot more than just flows:
+services would also go here, for instance). For simplicity, here we use one JAR for both, but this is in
+general an anti-pattern and can result in your flow logic code being sent over the network to arbitrary
+third party peers, even though they don't need it.
 
 Step 3. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
@@ -92,10 +103,11 @@ The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, s
 all signed transactions that are sent to it, without checks. It is **highly** recommended that existing CorDapps migrate
 away to the new API, as otherwise things like business network membership checks won't be reliably enforced.
 
-This is a two step process:
+This is a three step process:
 
 1. Change the flow that calls ``FinalityFlow``
 2. Change or create the flow that will receive the finalised transaction.
+3. Make sure your application's minimum and target version numbers are both set to 4 (see step 2).
 
 As an example, let's take a very simple flow that finalises a transaction without the involvement of a counterpart flow:
 
