@@ -1,0 +1,62 @@
+apply plugin: 'kotlin'
+// Java Persistence API support: create no-arg constructor
+// see: http://stackoverflow.com/questions/32038177/kotlin-with-jpa-default-constructor-hell
+apply plugin: 'kotlin-jpa'
+apply plugin: CanonicalizerPlugin
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Corda finance module - contracts'
+
+dependencies {
+    // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
+    // cordapp project(':finance:workflows')
+    // cordapp project(':finance:contracts')
+    cordaCompile project(':core')
+    compile project(':confidential-identities')
+
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
+
+    testCompile project(':test-utils')
+    testCompile project(path: ':core', configuration: 'testArtifacts')
+    testCompile "junit:junit:$junit_version"
+
+    // AssertJ: for fluent assertions for testing
+    testCompile "org.assertj:assertj-core:$assertj_version"
+}
+
+configurations {
+    testArtifacts.extendsFrom testRuntime
+}
+
+task testJar(type: Jar) {
+    classifier "tests"
+    from sourceSets.test.output
+}
+
+jar {
+    baseName 'corda-finance-contracts'
+}
+
+artifacts {
+    testArtifacts testJar
+}
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    contract {
+        name "Corda Finance Demo"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
+    }
+    // By default the Cordapp is signed by Corda development certificate, for production build pass the following system properties to Gradle to use specific keystore e.g:
+    // ./gradlew -Dsigning.enabled="true" -Dsigning.keystore="/path/to/keystore.jks" -Dsigning.alias="alias" -Dsigning.storepass="password" -Dsigning.keypass="password"
+}
+
+publish {
+    name jar.baseName
+}

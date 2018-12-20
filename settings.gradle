@@ -2,7 +2,9 @@
 // output JAR from the capsule then the buildCordaJAR task goes into an infinite loop.
 rootProject.name = 'corda-enterprise'
 include 'confidential-identities'
-include 'finance'
+include 'finance'   // maintained for backwards compatibility only
+include 'finance:contracts'
+include 'finance:workflows'
 include 'finance:isolated'
 include 'core'
 include 'docs'
