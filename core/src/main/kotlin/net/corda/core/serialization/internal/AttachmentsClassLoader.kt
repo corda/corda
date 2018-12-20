@@ -150,9 +150,9 @@ internal object AttachmentsClassLoaderBuilder {
     private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
             .toSynchronised()
 
-    fun build(attachments: List<Attachment>, parentClassLoader: ClassLoader? = null): AttachmentsClassLoader {
+    fun build(attachments: List<Attachment>): AttachmentsClassLoader {
         return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
-            AttachmentsClassLoader(attachments, parentClassLoader ?: ClassLoader.getSystemClassLoader())
+            AttachmentsClassLoader(attachments)
         }
     }
 
