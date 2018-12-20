@@ -84,10 +84,6 @@ application development please continue to refer to `the main project documentat
    json.rst
    deterministic-modules.rst
    troubleshooting.rst
-   design/reference-states/design.md
-   design/threat-model/corda-threat-model.md
-   design/data-model-upgrades/signature-constraints.md
-   design/data-model-upgrades/package-namespace-ownership.md
    performance-testing/toc-tree.rst
 
 .. conditional-toctree::

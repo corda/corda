@@ -24,7 +24,8 @@ dependencies {
     compile project(':client:jfx')
     compile project(':client:mock')
     compile project(':node-driver')
-    compile project(':finance')
+    compile project(':finance:contracts')
+    compile project(':finance:workflows')
 
     // Additional CorDapps that will be displayed in the GUI.
     compile project(':samples:business-network-demo')

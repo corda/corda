@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Upgrading a CorDapp (outside of platform version upgrades)
-==========================================================
+Release new CorDapp versions
+============================
 
 .. note:: This document only concerns the upgrading of CorDapps and not the Corda platform itself (wire format, node
    database schemas, etc.).
