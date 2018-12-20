@@ -22,7 +22,7 @@ import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.internal.performance.div
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.performance.startPublishingFixedRateInjector
 import net.corda.testing.node.internal.performance.startReporter
@@ -97,7 +97,7 @@ class NodePerformanceTests {
         internalDriver(
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = listOf(user))),
                 startNodesInProcess = true,
-                cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages("net.corda.finance")
+                cordappsForAllNodes = FINANCE_CORDAPPS
         ) {
             val notary = defaultNotaryNode.getOrThrow() as InProcess
             val metricRegistry = startReporter(this.shutdownManager, notary.internalServices.monitoringService.metrics)

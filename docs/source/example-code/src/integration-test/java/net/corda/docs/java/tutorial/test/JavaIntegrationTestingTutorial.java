@@ -32,6 +32,7 @@ import static net.corda.testing.core.ExpectKt.expectEvents;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;
 import static net.corda.testing.driver.Driver.driver;
+import static net.corda.testing.node.internal.TestCordappsUtilsKt.FINANCE_CORDAPPS;
 import static org.junit.Assert.assertEquals;
 
 public class JavaIntegrationTestingTutorial {
@@ -40,7 +41,7 @@ public class JavaIntegrationTestingTutorial {
         // START 1
         driver(new DriverParameters()
                 .withStartNodesInProcess(true)
-                .withExtraCordappPackagesToScan(singletonList("net.corda.finance")), dsl -> {
+                .withCordappsForAllNodes(FINANCE_CORDAPPS), dsl -> {
 
             User aliceUser = new User("aliceUser", "testPassword1", new HashSet<>(asList(
                     startFlow(CashIssueAndPaymentFlow.class),

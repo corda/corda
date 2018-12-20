@@ -256,8 +256,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
         val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
         if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
-            val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
-            val attachmentIds = services.attachments.queryAttachments(attachmentQueryCriteria)
+            val attachmentIds = services.attachments.getContractAttachments(contractClassName)
             // only switchover if we have both signed and unsigned attachments for the given contract class name
             if (attachmentIds.isNotEmpty() && attachmentIds.size == 2)  {
                 val attachmentsToUse = attachmentIds.map {
