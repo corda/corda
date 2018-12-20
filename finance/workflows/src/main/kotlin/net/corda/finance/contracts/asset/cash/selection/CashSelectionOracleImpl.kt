@@ -5,6 +5,7 @@ import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.*
+import net.corda.finance.contracts.asset.AbstractCashSelection
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet

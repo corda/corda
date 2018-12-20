@@ -6,6 +6,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
+import net.corda.finance.contracts.asset.AbstractCashSelection
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
