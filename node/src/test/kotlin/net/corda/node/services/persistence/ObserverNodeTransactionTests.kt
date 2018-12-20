@@ -18,7 +18,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.cordappForPackages
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -33,7 +33,7 @@ class ObserverNodeTransactionTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(cordappForPackages(MessageChainState::class.packageName)),
+                cordappsForAllNodes = listOf(cordappWithPackages(MessageChainState::class.packageName)),
                 networkSendManuallyPumped = false,
                 threadPerNode = true)
     }

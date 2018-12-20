@@ -17,6 +17,10 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.invokeRpc
 import net.corda.node.services.Permissions.Companion.startFlow
+import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageContract
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
@@ -26,7 +30,6 @@ import org.junit.Test
 import java.lang.management.ManagementFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import net.corda.testMessage.*
 
 class NodeStatePersistenceTests {
     @Test
@@ -97,7 +100,6 @@ class NodeStatePersistenceTests {
         assertEquals(message, retrievedMessage)
     }
 }
-
 
 fun isQuasarAgentSpecified(): Boolean {
     val jvmArgs = ManagementFactory.getRuntimeMXBean().inputArguments
