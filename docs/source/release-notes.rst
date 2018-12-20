@@ -186,6 +186,25 @@ into shared business logic, but it makes perfect sense to put into a user-specif
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
 
+Target/minimum versions
++++++++++++++++++++++++
+
+Applications can now specify a **target version** in their JAR manifest. The target version declares
+which version of the platform the app was tested against. By incrementing the target version, app developers
+can opt in to desirable changes that might otherwise not be entirely backwards compatible. For example
+in a future release when the deterministic JVM is integrated and enabled, apps will need to opt in to
+determinism by setting the target version to a high enough value.
+
+Target versioning has a proven track record in both iOS and Android of enabling platforms to preserve
+strong backwards compatibility, whilst also moving forward with new features and bug fixes. We recommend
+that maintained applications always try and target the latest version of the platform. Setting a target
+version does not imply your app *requires* a node of that version, merely that it's been tested against
+that version and can handle any opt-in changes.
+
+Applications may also specify a **minimum platform version**. If you try to install an app in a node that
+is too old to satisfy this requirement, the app won't be loaded. App developers can set their min platform
+version requirement if they start using new features and APIs.
+
 Dependency upgrades
 +++++++++++++++++++
 
