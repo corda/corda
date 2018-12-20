@@ -26,7 +26,7 @@ import java.net.*
  * AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
  * file paths.
  */
-class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
+class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader? = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
 
     init {
@@ -150,7 +150,7 @@ internal object AttachmentsClassLoaderBuilder {
     private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
             .toSynchronised()
 
-    fun build(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()): AttachmentsClassLoader {
+    fun build(attachments: List<Attachment>, parent: ClassLoader? = ClassLoader.getSystemClassLoader()): AttachmentsClassLoader {
         return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
             AttachmentsClassLoader(attachments, parent)
         }
@@ -161,8 +161,9 @@ internal object AttachmentsClassLoaderBuilder {
         // TODO This should not default to the CorDapps classloader, but it's needed for now to stop a bug preventing CorDapps with dependencies on other CorDapps from working as attachments.
         // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
         val cordappsClassLoader = CorDappsClassLoaderHolder.instance
-        val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
-        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(sequenceOf(attachmentsClassLoader, it)) } ?: attachmentsClassLoader
+        val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments, cordappsClassLoader)
+//        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(sequenceOf(attachmentsClassLoader, it)) } ?: attachmentsClassLoader
+        val transactionClassLoader = attachmentsClassLoader
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
