@@ -1,4 +1,4 @@
-package net.corda.testMessage
+package net.corda.node.services.persistence
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
@@ -13,14 +13,14 @@ import javax.persistence.Entity
 import javax.persistence.Table
 
 @CordaSerializable
-data class Message(val value: String)
+data class MessageData(val value: String)
 
-data class MessageState(val message: Message, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
+data class MessageChainState(val message: MessageData, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
     override val participants: List<AbstractParty> = listOf(by)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {
-            is MessageSchemaV1 -> MessageSchemaV1.PersistentMessage(
+            is MessageChainSchemaV1 -> MessageChainSchemaV1.PersistentMessage(
                     by = by.name.toString(),
                     value = message.value
             )
@@ -28,12 +28,12 @@ data class MessageState(val message: Message, val by: Party, override val linear
         }
     }
 
-    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(MessageSchemaV1)
+    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(MessageChainSchemaV1)
 }
 
-object MessageSchema
-object MessageSchemaV1 : MappedSchema(
-        schemaFamily = MessageSchema.javaClass,
+object MessageChainSchema
+object MessageChainSchemaV1 : MappedSchema(
+        schemaFamily = MessageChainSchema.javaClass,
         version = 1,
         mappedTypes = listOf(PersistentMessage::class.java)) {
 
@@ -48,16 +48,15 @@ object MessageSchemaV1 : MappedSchema(
     ) : PersistentState()
 }
 
-const val MESSAGE_CONTRACT_PROGRAM_ID = "net.corda.testMessage.MessageContract"
+const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.testMessage.MessageChainContract"
 
-open class MessageContract : Contract {
+open class MessageChainContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands.Send>()
         requireThat {
             // Generic constraints around the IOU transaction.
-            "No inputs should be consumed when sending a message." using (tx.inputs.isEmpty())
             "Only one output state should be created." using (tx.outputs.size == 1)
-            val out = tx.outputsOfType<MessageState>().single()
+            val out = tx.outputsOfType<MessageChainState>().single()
             "Message sender must sign." using (command.signers.containsAll(out.participants.map { it.owningKey }))
 
             "Message value must not be empty." using (out.message.value.isNotBlank())
@@ -68,3 +67,4 @@ open class MessageContract : Contract {
         class Send : Commands
     }
 }
+
