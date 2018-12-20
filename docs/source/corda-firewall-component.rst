@@ -10,7 +10,8 @@ firewall and protocol break on all internet facing endpoints. The ``corda-firewa
 network functionality of the basic Corda Enterprise node, so that this can be operated separately from the security sensitive
 JVM runtime of the node. This gives separation of functionality and ensures that the legal identity keys are not
 used in the same process as the internet TLS connections. Also, it adds support for enterprise deployment requirements,
-such as High Availability (HA) and SOCKS proxy support.
+such as High Availability (HA) and SOCKS proxy support. The firewall can also serve two or more nodes, thus reducing
+the deployment complexity of multiple nodes in the same network.
 
 This document is intended to provide an overview of the architecture and options available.
 
@@ -29,7 +30,7 @@ permission controls managed directly inside the node JVM. For Corda Enterprise d
 secure and configurable isolation component that is available using code inside ``corda-firewall.jar``. This
 component is designed to provide a clear protocol break and thus prevents the node and Artemis server ever being
 directly exposed to peers. For simpler deployments with no DMZ the float and bridge logic can also be run as a
-single application behind the firewall, but still protecting the node and hosted Artemis. In future we may also host
+single application behind the firewall, but still protecting the node and hosted Artemis. It is also possible to host
 the Artemis server out of process and shared across nodes, but this will be transparent to peers as the interchange
 protocol will continue to be AMQP 1.0 over TLS.
 
@@ -154,8 +155,8 @@ the ``firewallMode`` property in the ``firewall.conf`` should be set to ``Bridge
 The diagram below shows such a non-HA deployment. This would not be recommended for production, unless used as part of a cold DR type standby.
 
 .. note::  Note that whilst the bridge needs access to the official TLS private
-        key, the tunnel link should use a private set of link specific keys and certificates. The float will be provisioned
-        dynamically with the official TLS key when activated via the tunnel and this key will never be stored in the DMZ:
+           key, the tunnel link should use a private set of link specific keys and certificates. The float will be provisioned
+           dynamically with the official TLS key when activated via the tunnel and this key will never be stored in the DMZ:
 
 .. image:: resources/bridge/bridge_and_float.png
      :scale: 100%
@@ -211,3 +212,9 @@ The above example shows multiple Corda bridges (NodeA and NodeB) connecting to t
 Node A and B have their own namespaces in ZooKeeper, which allow them to operate in the same ZooKeeper without interfering each other.
 
 This setup can be configured by setting NodeA and B's ``haConfig.haTopic`` to ``/corda/bridge/NodeA`` and ``/coda/bridge/NodeB`` respectively, the parent nodes (/corda and /corda/bridge) will be created automatically upon connection.
+
+ZooKeeper alternative
+---------------------
+It is possible to have the hot-warm capability of the bridge and float clusters without the added deployment complexity of a ZooKeeper cluster. The firewall provides a ``Bully Algorithm`` implementation for master election which can be enabled
+by simply changing the ``haConnectionString`` configuration property from ``zk://<host>:<port>`` to ``bully://<host>:<port>``. This feature uses Publish/Subscribe messages on the P2P Artemis messaging broker for coordination. Please be aware that
+this approach does not protect against network partitioning problems, therefore it is strongly recommended to use ZooKeeper in production environments.
