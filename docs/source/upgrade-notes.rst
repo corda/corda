@@ -176,8 +176,8 @@ has been adjusted in the same way as ``FinalityFlow`` above, to close problems w
 outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
 the ``SwapIdentitiesFlow``.
 
-Step 5. Possibly, adjust unit test code
----------------------------------------
+Step 5. Possibly, adjust test code
+----------------------------------
 
 ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration`` object.
 Use a ``MockNetworkConfigOverrides`` object instead. This is an API change we regret, but unfortunately in Corda 3 we accidentally exposed
@@ -201,6 +201,9 @@ becomes::
         identityService = makeTestIdentityService(),
         initialIdentity = TestIdentity(CordaX500Name("TestIdentity", "", "GB"))
     )
+
+You may need to use the new ``TestCordapp`` API when testing with the node driver or mock network, especially if you decide to stick with the
+pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests does not honour CorDapp versioning.
 
 Step 6. Security: refactor to avoid violating sealed packages
 -------------------------------------------------------------

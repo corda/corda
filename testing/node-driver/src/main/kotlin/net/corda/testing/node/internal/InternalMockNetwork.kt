@@ -92,7 +92,7 @@ data class InternalMockNodeParameters(
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
         val configOverrides: MockNodeConfigOverrides? = null,
         val version: VersionInfo = MOCK_VERSION_INFO,
-        val additionalCordapps: Collection<TestCordapp>? = null,
+        val additionalCordapps: Collection<TestCordappInternal> = emptyList(),
         val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
@@ -100,7 +100,7 @@ data class InternalMockNodeParameters(
             mockNodeParameters.entropyRoot,
             mockNodeParameters.configOverrides,
             MOCK_VERSION_INFO,
-            mockNodeParameters.additionalCordapps
+            uncheckedCast(mockNodeParameters.additionalCordapps)
     )
 }
 
@@ -141,15 +141,17 @@ interface TestStartedNode {
     fun <T : FlowLogic<*>> registerInitiatedFlow(initiatingFlowClass: Class<out FlowLogic<*>>, initiatedFlowClass: Class<T>, track: Boolean = false): Observable<T>
 }
 
-open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNetworkParameters(),
+open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
+                               // TODO InternalMockNetwork does not need MockNetworkParameters
+                               defaultParameters: MockNetworkParameters = MockNetworkParameters(),
                                val networkSendManuallyPumped: Boolean = defaultParameters.networkSendManuallyPumped,
                                val threadPerNode: Boolean = defaultParameters.threadPerNode,
                                servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy = defaultParameters.servicePeerAllocationStrategy,
                                val notarySpecs: List<MockNetworkNotarySpec> = defaultParameters.notarySpecs,
-                               val testDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+                               val testDirectory: Path = Paths.get("build") / "mock-network" /  getTimestampAsDirectoryName(),
                                initialNetworkParameters: NetworkParameters = testNetworkParameters(),
                                val defaultFactory: (MockNodeArgs) -> MockNode = { args -> MockNode(args) },
-                               val cordappsForAllNodes: Collection<TestCordapp> = emptySet(),
+                               cordappsForAllNodes: Collection<TestCordappInternal> = emptySet(),
                                val autoVisibleNodes: Boolean = true) : AutoCloseable {
 
     var networkParameters: NetworkParameters = initialNetworkParameters
@@ -174,6 +176,7 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
     private val _nodes = mutableListOf<MockNode>()
     private val serializationEnv = checkNotNull(setDriverSerialization()) { "Using more than one mock network simultaneously is not supported." }
     private val sharedUserCount = AtomicInteger(0)
+    private val combinedCordappsForAllNodes = cordappsForPackages(cordappPackages) + cordappsForAllNodes
 
     /** A read only view of the current set of nodes. */
     val nodes: List<MockNode> get() = _nodes
@@ -466,12 +469,11 @@ open class InternalMockNetwork(defaultParameters: MockNetworkParameters = MockNe
             doReturn(parameters.legalName ?: CordaX500Name("Mock Company $id", "London", "GB")).whenever(it).myLegalName
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
+            doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
             parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 
-        val cordapps = (parameters.additionalCordapps ?: emptySet()) + cordappsForAllNodes
-        val cordappDirectories = cordapps.map { TestCordappDirectories.getJarDirectory(it) }.distinct()
-        doReturn(cordappDirectories).whenever(config).cordappDirectories
+        TestCordappInternal.installCordapps(baseDirectory, parameters.additionalCordapps.toSet(), combinedCordappsForAllNodes)
 
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, flowManager = parameters.flowManager))
         _nodes += node
