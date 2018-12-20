@@ -4398,6 +4398,14 @@ public static class net.corda.core.schemas.CommonSchemaV1$LinearState extends ne
   public void setParticipants(java.util.Set<net.corda.core.identity.AbstractParty>)
   public void setUuid(java.util.UUID)
 ##
+public interface net.corda.core.schemas.DirectStatePersistable extends net.corda.core.schemas.StatePersistable
+  @Nullable
+  public abstract net.corda.core.schemas.PersistentStateRef getStateRef()
+##
+public interface net.corda.core.schemas.IndirectStatePersistable extends net.corda.core.schemas.StatePersistable
+  @NotNull
+  public abstract T getCompositeKey()
+##
 public class net.corda.core.schemas.MappedSchema extends java.lang.Object
   public <init>(Class<?>, int, Iterable<? extends Class<?>>)
   @NotNull
