@@ -1,7 +1,6 @@
 package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.confidential.IdentitySyncFlow
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.StateAndRef
@@ -123,7 +122,6 @@ class StartMessageChainFlow(private val message: MessageData, private val notary
     }
 }
 
-
 @StartableByRPC
 class ContinueMessageChainFlow(private val stateRef: StateAndRef<MessageChainState>,
                                private val notary: Party) : FlowLogic<SignedTransaction>() {
@@ -174,22 +172,15 @@ class ReportToCounterparty(
     @Suspendable
     override fun call() {
         val session = initiateFlow(regulator)
-
-        subFlow(IdentitySyncFlow.Send(session, signedTx.tx))
-
         subFlow(SendTransactionFlow(session, signedTx))
     }
 }
-
 
 @InitiatedBy(ReportToCounterparty::class)
 class ReceiveReportedTransaction(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
 
     @Suspendable
     override fun call() {
-
-        subFlow(IdentitySyncFlow.Receive(otherSideSession))
-
         subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ALL_VISIBLE))
     }
 }
