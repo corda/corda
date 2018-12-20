@@ -43,10 +43,14 @@ You should also ensure you're using Gradle 4.10 (but not 5). If you use the Grad
 
 Otherwise just upgrade your installed copy in the usual manner for your operating system.
 
-Step 2. Add a "cordapp" section to your Gradle build file
----------------------------------------------------------
+Step 2. Update your Gradle build file
+-------------------------------------
 
-This is used by the Corda Gradle build plugin to populate your app JAR with useful information. It should look like this::
+There are several adjustments that are beneficial to make to your Gradle build file, beyond simply incrementing the versions
+as described in step 1.
+
+**Provide app metadata.** This is used by the Corda Gradle build plugin to populate your app JAR with useful information.
+It should look like this::
 
     cordapp {
         targetPlatformVersion 4
@@ -75,28 +79,38 @@ API semantics changes or disabling workarounds for bugs that may be in your apps
 are promising that you have thoroughly tested your app on the new version. Using a high target version is
 a good idea because some features and improvements are only available to apps that opt in.
 
-The minimum platform version is just the (major) version number of the node that you require, so if you
+The minimum platform version is the platform version of the node that you require, so if you
 start using new APIs and features in Corda 4, you should set this to 4. Unfortunately Corda 3 and below
 do not know about this metadata and don't check it, so your app will still be loaded in such nodes and
 may exhibit undefined behaviour at runtime. However it's good to get in the habit of setting this
 properly for future releases.
 
+.. note:: Whilst it's currently a convention that Corda releases have the platform version number as their
+   major version i.e. Corda 3.3 implements platform version 3, this is not actually required and may in
+   future not hold true. You should know the platform version of the node releases you wan to target.
+
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
 It is used to block state downgrades: when a state constraint can be satisfied
 by multiple attachments, the version is tracked in the ledger and cannot decrement. This ensures security
 fixes in CorDapps stick and can't be reversed by downgrading states to an earlier version. See
-":ref:`contract_non-downgrade_rule_ref`" for more information. In future, the version attached to the
-workflow JAR will also be used to help implement smoother upgrade and migration features. You may directly
-reference the gradle version number of your app when setting the cordapp specific versionId identifiers
-if this follows the convention of always being a whole number starting from 1, you can just refer to that
-variable directly to set the version id.
+":ref:`contract_non-downgrade_rule_ref`" for more information.
 
-The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
+**Split your app into contract and workflow JARs.** The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
 for the rest (called by convention the "workflows" module although it can contain a lot more than just flows:
 services would also go here, for instance). For simplicity, here we use one JAR for both, but this is in
 general an anti-pattern and can result in your flow logic code being sent over the network to arbitrary
 third party peers, even though they don't need it.
+
+In future, the version ID attached to the workflow JAR will also be used to help implement smoother upgrade
+and migration features. You may directly reference the gradle version number of your app when setting the
+cordapp specific versionId identifiers if this follows the convention of always being a whole number
+starting from 1.
+
+If you use the finance demo app, you should adjust your dependencies so you depend on the finance-contracts
+and finance-workflows artifacts from your own contract and workflow JAR respectively. Although a single
+finance jar still exists in Corda 4 for backwards compatibility, it should not be installed or used for
+updated apps. This way, only the code that needs to be on the ledger actually will be.
 
 Step 3. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
@@ -269,7 +283,7 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for COrda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
-Step 8. Security: package namespace handling
+Step 8. Security: Package namespace handling
 --------------------------------------------
 
 Almost no apps will be affected by these changes, but they're important to know about.
@@ -279,8 +293,8 @@ There are two improvements to how Java package protection is handled in Corda 4:
 1. Package sealing
 2. Package namespace ownership
 
-**Sealing.** App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a sealed and signed JAR file.
-This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
+**Sealing.** App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a set of sealed and
+signed JAR files. This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
 
 In the unlikely event that you were injecting code into ``net.corda.finance.*`` package namespaces from your own apps, you will need to move them
 into a new package, e.g. ``net/corda/finance/flows/MyClass.java`` can be moved to ``com/company/corda/finance/flows/MyClass.java``.
