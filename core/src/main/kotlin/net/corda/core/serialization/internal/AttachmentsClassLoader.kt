@@ -162,7 +162,7 @@ internal object AttachmentsClassLoaderBuilder {
         // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
         val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
         val cordappsClassLoader = CorDappsClassLoaderHolder.instance
-        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(attachmentsClassLoader, it) } ?: attachmentsClassLoader
+        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(sequenceOf(attachmentsClassLoader, it)) } ?: attachmentsClassLoader
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
@@ -174,15 +174,13 @@ internal object AttachmentsClassLoaderBuilder {
     }
 }
 
-private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: ClassLoader? = null) : ClassLoader(parent) {
-    constructor(classLoader: ClassLoader, vararg classLoaders: ClassLoader) : this(sequenceOf(classLoader, *classLoaders))
-
+private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: ClassLoader? = ClassLoader.getSystemClassLoader()) : ClassLoader(parent) {
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String?): Class<*> {
-        for (classLoader in classLoaders) {
+        for (candidate in candidates) {
             try {
-                return classLoader.loadClass(name)
+                return candidate.loadClass(name)
             } catch (e: ClassNotFoundException) {
                 // Keep iterating without failing.
             }
@@ -191,14 +189,16 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: 
     }
 
     override fun getResource(name: String): URL? {
-        for (classLoader in classLoaders) {
-            val url = classLoader.getResource(name)
+        for (candidate in candidates) {
+            val url = candidate.getResource(name)
             if (url != null) {
                 return url
             }
         }
         return super.getResource(name)
     }
+
+    private val candidates: List<ClassLoader> get() = (classLoaders + parent + Thread.currentThread().contextClassLoader).filterNotNull()
 }
 
 /**
