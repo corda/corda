@@ -72,6 +72,13 @@ interface AMQPConfiguration {
     val healthCheckPhrase: String?
         get() = null
 
+    /**
+     * An optional set of IPv4/IPv6 remote address strings which will be compared to the remote address of inbound connections and these will only log at TRACE level
+     */
+    @JvmDefault
+    val silencedIPs: Set<String>
+        get() = emptySet()
+
     @JvmDefault
     val enableSNI: Boolean
         get() = true

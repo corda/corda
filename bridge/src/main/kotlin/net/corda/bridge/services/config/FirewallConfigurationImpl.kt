@@ -94,7 +94,8 @@ data class FirewallConfigurationImpl(
         override val p2pConfirmationWindowSize: Int = 1048576,
         override val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
         override val auditServiceConfiguration: AuditServiceConfigurationImpl,
-        override val healthCheckPhrase: String? = null) : FirewallConfiguration {
+        override val healthCheckPhrase: String? = null,
+        override val silencedIPs: Set<String> = emptySet()) : FirewallConfiguration {
     init {
         when (firewallMode) {
             FirewallMode.SenderReceiver -> require(inboundConfig != null && outboundConfig != null) { "Missing required configuration" }

@@ -61,7 +61,8 @@ internal data class Version3BridgeConfigurationImpl(
         val politeShutdownPeriod: Int = 1000,
         val p2pConfirmationWindowSize: Int = 1048576,
         val whitelistedHeaders: List<String> = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.toList(),
-        val healthCheckPhrase: String? = null
+        val healthCheckPhrase: String? = null,
+        val silencedIPs: Set<String> = emptySet()
 ) {
     fun toConfig(): FirewallConfiguration {
         return FirewallConfigurationImpl(
@@ -86,7 +87,8 @@ internal data class Version3BridgeConfigurationImpl(
                 p2pConfirmationWindowSize,
                 whitelistedHeaders,
                 AuditServiceConfigurationImpl(60), // Same as `firewalldefault.conf`, new in v4
-                healthCheckPhrase
+                healthCheckPhrase,
+                silencedIPs
         )
     }
 }

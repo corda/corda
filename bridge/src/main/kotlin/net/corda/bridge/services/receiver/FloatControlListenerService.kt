@@ -73,6 +73,7 @@ class FloatControlListenerService(val conf: FirewallConfiguration,
                 override val maxMessageSize: Int = maximumMessageSize
                 override val trace: Boolean = conf.enableAMQPPacketTrace
                 override val healthCheckPhrase = conf.healthCheckPhrase
+                override val silencedIPs: Set<String> = conf.silencedIPs
             }
             val controlServer = AMQPServer(floatControlAddress.host,
                     floatControlAddress.port,

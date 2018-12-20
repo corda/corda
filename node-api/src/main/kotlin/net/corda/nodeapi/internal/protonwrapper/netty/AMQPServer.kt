@@ -68,6 +68,7 @@ class AMQPServer(val hostName: String,
             val (sslHandler, keyManagerFactoriesMap) = createSSLHandler(amqpConfiguration, ch)
             pipeline.addLast("sslHandler", sslHandler)
             if (conf.trace) pipeline.addLast("logger", LoggingHandler(LogLevel.INFO))
+            val supressLogs = ch.remoteAddress()?.hostString in amqpConfiguration.silencedIPs
             pipeline.addLast(AMQPChannelHandler(true,
                     null,
                     // Passing a mapping of legal names to key managers to be able to pick the correct one after
@@ -76,6 +77,7 @@ class AMQPServer(val hostName: String,
                     conf.userName,
                     conf.password,
                     conf.trace,
+                    supressLogs,
                     { channel, change ->
                         parent.clientChannels[channel.remoteAddress()] = channel
                         parent._onConnection.onNext(change)
@@ -114,7 +116,10 @@ class AMQPServer(val hostName: String,
 
             val server = ServerBootstrap()
             // TODO Needs more configuration control when we profile. e.g. to use EPOLL on Linux
-            server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java).option(ChannelOption.SO_BACKLOG, 100).handler(LoggingHandler(LogLevel.INFO)).childHandler(ServerChannelInitializer(this))
+            server.group(bossGroup, workerGroup).channel(NioServerSocketChannel::class.java)
+                    .option(ChannelOption.SO_BACKLOG, 100)
+                    .handler(NettyServerEventLogger(LogLevel.INFO, configuration.silencedIPs))
+                    .childHandler(ServerChannelInitializer(this))
 
             log.info("Try to bind $port")
             val channelFuture = server.bind(hostName, port).sync() // block/throw here as better to know we failed to claim port than carry on

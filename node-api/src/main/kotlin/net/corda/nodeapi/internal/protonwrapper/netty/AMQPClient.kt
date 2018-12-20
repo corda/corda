@@ -192,6 +192,7 @@ class AMQPClient(val targets: List<NetworkHostAndPort>,
                     conf.userName,
                     conf.password,
                     conf.trace,
+                    false,
                     { _, change ->
                         parent.retryInterval = MIN_RETRY_INTERVAL // reset to fast reconnect if we connect properly
                         parent._onConnection.onNext(change)
