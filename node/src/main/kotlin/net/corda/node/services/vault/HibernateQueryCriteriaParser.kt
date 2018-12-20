@@ -544,9 +544,9 @@ class HibernateQueryCriteriaParser(val contractStateType: Class<out ContractStat
             }
             predicateSet.add(joinPredicate)
 
-                        // resolve general criteria expressions
-                        @Suppress("UNCHECKED_CAST")
-                        parseExpression(entityRoot as Root<L>, criteria.expression, predicateSet)
+            // resolve general criteria expressions
+            @Suppress("UNCHECKED_CAST")
+            parseExpression(entityRoot as Root<L>, criteria.expression, predicateSet)
         } catch (e: Exception) {
             e.message?.let { message ->
                 if (message.contains("Not an entity"))
