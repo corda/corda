@@ -10,13 +10,13 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
-import net.corda.core.internal.cordapp.set
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.security.RPCSecurityManagerImpl
 import net.corda.node.internal.startHikariPool

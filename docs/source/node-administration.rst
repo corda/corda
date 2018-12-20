@@ -11,9 +11,9 @@ option will affect all modules.
 
 It may be the case that you require to amend the log level of a particular subset of modules (e.g., if you'd like to take a
 closer look at hibernate activity). So, for more bespoke logging configuration, the logger settings can be completely overridden
-with a `Log4j 2 <https://logging.apache.org/log4j/2.x>`_ configuration file assigned to the ``log4j.configurationFile`` system property.
+with a `Log4j2 <https://logging.apache.org/log4j/2.x>`_ configuration file assigned to the ``log4j.configurationFile`` system property.
 
-The node is using log4j asynchronous logging by default (configured via log4j2 properties file in its resources)
+The node is using log4j2 asynchronous logging by default (configured via log4j2 properties file in its resources)
 to ensure that log message flushing is not slowing down the actual processing.
 If you need to switch to synchronous logging (e.g. for debugging/testing purposes), you can override this behaviour
 by adding ``-DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector`` to the node's

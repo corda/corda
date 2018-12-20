@@ -698,7 +698,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     // TODO Add public API to allow the node operator to accept or reject
     private fun installFinalityHandler() {
         // Disable the insecure FinalityHandler if none of the loaded CorDapps are old enough to require it.
-        val cordappsNeedingFinalityHandler = cordappLoader.cordapps.filter { it.info.targetPlatformVersion < 4 }
+        val cordappsNeedingFinalityHandler = cordappLoader.cordapps.filter { it.targetPlatformVersion < 4 }
         if (cordappsNeedingFinalityHandler.isEmpty()) {
             log.info("FinalityHandler is disabled as there are no CorDapps loaded which require it")
         } else {

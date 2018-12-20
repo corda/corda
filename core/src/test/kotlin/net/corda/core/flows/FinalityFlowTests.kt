@@ -4,7 +4,7 @@ import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.identity.Party
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -14,7 +14,6 @@ import net.corda.finance.issuedBy
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.flow.willThrow
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
@@ -65,7 +64,7 @@ class FinalityFlowTests : WithFinality {
     fun `prevent use of the old API if the CorDapp target version is 4`() {
         val bob = createBob()
         val stx = aliceNode.issuesCashTo(bob)
-        val resultFuture = CordappInfoResolver.withCordappInfo(targetPlatformVersion = 4) {
+        val resultFuture = CordappResolver.withCordapp(targetPlatformVersion = 4) {
             @Suppress("DEPRECATION")
             aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
         }
@@ -77,9 +76,9 @@ class FinalityFlowTests : WithFinality {
     @Test
     fun `allow use of the old API if the CorDapp target version is 3`() {
         // We need Bob to load at least one old CorDapp so that its FinalityHandler is enabled
-        val bob = createBob(cordapps = listOf(cordappForPackages("com.template").withTargetVersion(3)))
+        val bob = createBob(cordapps = listOf(cordappWithPackages("com.template").copy(targetPlatformVersion = 3)))
         val stx = aliceNode.issuesCashTo(bob)
-        val resultFuture = CordappInfoResolver.withCordappInfo(targetPlatformVersion = 3) {
+        val resultFuture = CordappResolver.withCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
         }
@@ -87,7 +86,7 @@ class FinalityFlowTests : WithFinality {
         assertThat(bob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 
-    private fun createBob(cordapps: List<TestCordapp> = emptyList()): TestStartedNode {
+    private fun createBob(cordapps: List<TestCordappInternal> = emptyList()): TestStartedNode {
         return mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME, additionalCordapps = cordapps))
     }
 

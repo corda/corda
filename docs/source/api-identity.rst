@@ -1,11 +1,6 @@
 API: Identity
 =============
 
-.. note:: Before reading this page, you should be familiar with the key concepts of :doc:`key-concepts-identity`.
-
-.. warning:: The ``confidential-identities`` module is still not stabilised, so this API may change in future releases.
-   See :doc:`corda-api`.
-
 .. contents::
 
 Party
@@ -37,8 +32,14 @@ basis.
 The ``PartyAndCertificate`` class is also used by the network map service to represent well-known identities, with the
 certificate path proving the certificate was issued by the doorman service.
 
+.. _confidential_identities_ref:
+
 Confidential identities
 -----------------------
+
+.. warning:: The ``confidential-identities`` module is still not stabilised, so this API may change in future releases.
+   See :doc:`corda-api`.
+
 Confidential identities are key pairs where the corresponding X.509 certificate (and path) are not made public, so that
 parties who are not involved in the transaction cannot identify the owner. They are owned by a well-known identity,
 which must sign the X.509 certificate. Before constructing a new transaction the involved parties must generate and

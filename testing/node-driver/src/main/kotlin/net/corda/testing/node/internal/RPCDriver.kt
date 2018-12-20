@@ -32,9 +32,7 @@ import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.fromUserList
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.api.core.TransportConfiguration
 import org.apache.activemq.artemis.api.core.client.ActiveMQClient
@@ -108,20 +106,21 @@ private val globalDebugPortAllocation = incrementalPortAllocation(5005)
 
 fun <A> rpcDriver(
         isDebug: Boolean = false,
-        driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+        driverDirectory: Path = Paths.get("build") / "rpc-driver" /  getTimestampAsDirectoryName(),
         portAllocation: PortAllocation = globalPortAllocation,
         debugPortAllocation: PortAllocation = globalDebugPortAllocation,
         systemProperties: Map<String, String> = emptyMap(),
         useTestClock: Boolean = false,
         startNodesInProcess: Boolean = false,
         waitForNodesToFinish: Boolean = false,
+        extraCordappPackagesToScan: List<String> = emptyList(),
         notarySpecs: List<NotarySpec> = emptyList(),
         externalTrace: Trace? = null,
         @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
         networkParameters: NetworkParameters = testNetworkParameters(),
         notaryCustomOverrides: Map<String, Any?> = emptyMap(),
         inMemoryDB: Boolean = true,
-        cordappsForAllNodes: Collection<TestCordapp> = cordappsInCurrentAndAdditionalPackages(),
+        cordappsForAllNodes: Collection<TestCordappInternal>? = null,
         dsl: RPCDriverDSL.() -> A
 ): A {
     return genericDriver(
@@ -135,14 +134,14 @@ fun <A> rpcDriver(
                             isDebug = isDebug,
                             startNodesInProcess = startNodesInProcess,
                             waitForAllNodesToFinish = waitForNodesToFinish,
+                            extraCordappPackagesToScan = extraCordappPackagesToScan,
                             notarySpecs = notarySpecs,
                             jmxPolicy = jmxPolicy,
                             compatibilityZone = null,
                             networkParameters = networkParameters,
                             notaryCustomOverrides = notaryCustomOverrides,
                             inMemoryDB = inMemoryDB,
-                            cordappsForAllNodes = cordappsForAllNodes,
-                            signCordapps = false
+                            cordappsForAllNodes = cordappsForAllNodes
                     ), externalTrace
             ),
             coerce = { it },

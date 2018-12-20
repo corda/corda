@@ -6,6 +6,7 @@ import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.AbstractAttachment
+import net.corda.core.internal.TRUSTED_UPLOADERS
 import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.readFully
@@ -15,11 +16,12 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.ColumnPredicate
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
-import java.util.*
+import java.util.HashMap
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
@@ -27,7 +29,6 @@ import java.util.jar.JarInputStream
  * A mock implementation of [AttachmentStorage] for use within tests
  */
 class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
-
     private data class ContractAttachmentMetadata(val name: ContractClassName, val version: Int, val isSigned: Boolean)
 
     private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
@@ -113,5 +114,17 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
             _files[sha256] = Pair(attachment, bytes)
         }
         return sha256
+    }
+
+    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
+                versionCondition = Builder.greaterThanOrEqual(minContractVersion), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        return queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull()
+    }
+
+    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
+        return queryAttachments(attachmentQueryCriteria).toSet()
     }
 }

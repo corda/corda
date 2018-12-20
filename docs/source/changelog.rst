@@ -7,6 +7,11 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+* TimedFlows (only used by the notary client flow) will never give up trying to reach the notary, as this would leave the states
+  in the notarisation request in an undefined state (unknown whether the spend has been notarised, i.e. has happened, or not). Also,
+  retries have been disabled for single node notaries since in this case they offer no potential benefits, unlike for a notary cluster with
+  several members who might have different availability.
+
 * New configuration property `database.initialiseAppSchema` with values `UPDATE`, `VALIDATE` and `NONE`.
   The property controls the behavior of the Hibernate DDL generation. `UPDATE` performs an update of CorDapp schemas, while
   `VALID` only verifies their integrity.  The property does not affect the node-specific DDL handling and
@@ -28,6 +33,15 @@ Unreleased
 * Automatic Constraints propagation for hash-constrained states to signature-constrained states.
   This allows Corda 4 signed CorDapps using signature constraints to consume existing hash constrained states generated
   by unsigned CorDapps in previous versions of Corda.
+
+* You can now load different CorDapps for different nodes in the node-driver and mock-network. This previously wasn't possible with the
+  ``DriverParameters.extraCordappPackagesToScan`` and ``MockNetwork.cordappPackages`` parameters as all the nodes would get the same CorDapps.
+  See ``TestCordapp``, ``NodeParameters.additionalCordapps`` and ``MockNodeParameters.additionalCordapps``.
+
+* ``DriverParameters.extraCordappPackagesToScan`` and ``MockNetwork.cordappPackages`` have been deprecated as they do not support the new
+  CorDapp versioning and MANIFEST metadata support that has been added. They create artificial CorDapp jars which do not preserve these
+  settings and thus may produce incorrect results when testing. It is recommended ``DriverParameters.cordappsForAllNodes`` and
+  ``MockNetworkParameters.cordappsForAllNodes`` be used instead.
 
 * Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
 
@@ -130,9 +144,6 @@ Unreleased
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.
-
-* Introduced ``TestCorDapp`` and utilities to support asymmetric setups for nodes through ``DriverDSL``, ``MockNetwork``
-  and ``MockServices``.
 
 * Change type of the ``checkpoint_value`` column. Please check the upgrade-notes on how to update your database.
 

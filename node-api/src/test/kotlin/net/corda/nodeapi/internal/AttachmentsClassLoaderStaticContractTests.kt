@@ -8,16 +8,10 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
-import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersStorage
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.AttachmentSort
-import net.corda.core.node.services.vault.Builder
-import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -32,8 +26,7 @@ import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.MockCordappConfigProvider
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.services.MockAttachmentStorage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertEquals
@@ -96,12 +89,8 @@ class AttachmentsClassLoaderStaticContractTests {
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         val contractAttachmentId = SecureHash.randomSHA256()
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                contractClassNamesCondition = Builder.equal(listOf(ATTACHMENT_PROGRAM_ID)),
-                versionCondition = Builder.greaterThanOrEqual(DEFAULT_CORDAPP_VERSION),
-                uploaderCondition = Builder.`in`(listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER)))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage).queryAttachments(attachmentQueryCriteria, attachmentSort)
+        doReturn(contractAttachmentId).whenever(attachmentStorage)
+                .getContractAttachmentWithHighestContractVersion(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID, DEFAULT_CORDAPP_VERSION)
     }
 
     @Test
@@ -122,7 +111,6 @@ class AttachmentsClassLoaderStaticContractTests {
     }
 
     private fun cordappLoaderForPackages(packages: Collection<String>): CordappLoader {
-        val dirs = cordappsForPackages(packages).map { TestCordappDirectories.getJarDirectory(it) }
-        return JarScanningCordappLoader.fromDirectories(dirs)
+        return JarScanningCordappLoader.fromJarUrls(listOf(cordappWithPackages(*packages.toTypedArray()).jarFile.toUri().toURL()))
     }
 }

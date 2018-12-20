@@ -119,7 +119,7 @@ class NodeController(check: atRuntime = ::checkExists) : Controller() {
 
             (config.nodeDir / "node.conf").writeText(config.nodeConfig.toNodeConfText())
             (config.nodeDir / "web-server.conf").writeText(config.nodeConfig.toWebServerConfText())
-            (cordappConfigDir / "${CordappController.FINANCE_CORDAPP_FILENAME}.conf").writeText(config.nodeConfig.toFinanceConfText())
+            (cordappConfigDir / "${CordappController.FINANCE_WORKFLOWS_CORDAPP_FILENAME}.conf").writeText(config.nodeConfig.toFinanceConfText())
 
             // Execute the Corda node
             val cordaEnv = System.getenv().toMutableMap().apply {

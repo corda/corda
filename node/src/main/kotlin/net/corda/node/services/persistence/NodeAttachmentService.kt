@@ -10,18 +10,22 @@ import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
+import net.corda.core.contracts.Version
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VERSION
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.vault.HibernateAttachmentQueryCriteriaParser
+import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
@@ -35,7 +39,9 @@ import java.io.InputStream
 import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
-import java.util.*
+import java.util.NavigableMap
+import java.util.Optional
+import java.util.TreeMap
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
@@ -49,7 +55,6 @@ class NodeAttachmentService(
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
-
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 
@@ -79,7 +84,7 @@ class NodeAttachmentService(
     }
 
     @Entity
-    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [Index(name = "att_id_idx", columnList = "att_id")])
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments", indexes = [(Index(name = "att_id_idx", columnList = "att_id"))])
     class DBAttachment(
             @Id
             @Column(name = "att_id", nullable = false)
@@ -333,6 +338,7 @@ class NodeAttachmentService(
                     session.save(attachment)
                     attachmentCount.inc()
                     log.info("Stored new attachment $id")
+                    contractClassNames.forEach { contractsCache.invalidate(it) }
                     return@withContractsInJar id
                 }
                 if (isUploaderTrusted(uploader)) {
@@ -343,6 +349,8 @@ class NodeAttachmentService(
                         attachment.uploader = uploader
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
+                        contractClassNames.forEach { contractsCache.invalidate(it) }
+                        // TODO: this is racey. ENT-2870
                         attachmentCache.invalidate(id)
                         attachmentContentCache.invalidate(id)
                     }
@@ -394,4 +402,69 @@ class NodeAttachmentService(
             query.resultList.map { AttachmentId.parse(it.attId) }
         }
     }
+
+    // Holds onto a signed and/or unsigned attachment (at least one or the other).
+    private data class AttachmentIds(val signed: AttachmentId?, val unsigned: AttachmentId?) {
+        init {
+            // One of them at least must exist.
+            check(signed != null || unsigned != null)
+        }
+
+        fun toList(): List<AttachmentId> =
+                if(signed != null) {
+                    if(unsigned != null) {
+                        listOf(signed, unsigned)
+                    } else listOf(signed)
+                } else listOf(unsigned!!)
+    }
+
+    /**
+     * This caches contract attachment versions by contract class name.  For each version, we support one signed and one unsigned attachment, since that is allowed.
+     *
+     * It is correctly invalidated as new attachments are uploaded.
+     */
+    private val contractsCache = InfrequentlyMutatedCache<ContractClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
+
+    private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
+        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
+                versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        database.transaction {
+            val session = currentDBSession()
+            val criteriaBuilder = session.criteriaBuilder
+
+            val criteriaQuery = criteriaBuilder.createQuery(DBAttachment::class.java)
+            val root = criteriaQuery.from(DBAttachment::class.java)
+
+            val criteriaParser = HibernateAttachmentQueryCriteriaParser(criteriaBuilder, criteriaQuery, root)
+
+            // parse criteria and build where predicates
+            criteriaParser.parse(attachmentQueryCriteria, attachmentSort)
+
+            // prepare query for execution
+            val query = session.createQuery(criteriaQuery)
+
+            // execution
+            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it) }.toMap())
+        }
+    }
+
+    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Version, AttachmentIds> {
+        check(it.value.size <= 2)
+        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }.singleOrNull()
+        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }.singleOrNull()
+        return it.key to AttachmentIds(signed, unsigned)
+    }
+
+    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
+        return newestAttachmentIds?.toList()?.first()
+    }
+
+    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
+        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        return versions.values.flatMap { it.toList() }.toSet()
+    }
+
 }

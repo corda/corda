@@ -52,7 +52,6 @@ We look forward to seeing what you can do with Corda!
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
-   building-container-images.rst
    cli-application-shell-extensions.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
@@ -84,6 +83,7 @@ We look forward to seeing what you can do with Corda!
    design/threat-model/corda-threat-model.md
    design/data-model-upgrades/signature-constraints.md
    design/data-model-upgrades/package-namespace-ownership.md
+   design/targetversion/design.md
 
 .. conditional-toctree::
    :caption: Participate

@@ -5,7 +5,7 @@ import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StateMachineRunId
-import net.corda.core.internal.cordapp.CordappInfoResolver
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.packageName
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
@@ -37,16 +37,13 @@ class FinalityHandlerTest {
     fun `sent to flow hospital on error and attempted retry on node restart`() {
         // Setup a network where only Alice has the finance CorDapp and it sends a cash tx to Bob who doesn't have the
         // CorDapp. Bob's FinalityHandler will error when validating the tx.
-        val alice = mockNet.createNode(InternalMockNodeParameters(
-                legalName = ALICE_NAME,
-                additionalCordapps = setOf(FINANCE_CORDAPP)
-        ))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
 
         var bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
                 // The node disables the FinalityHandler completely if there are no old CorDapps loaded, so we need to add
                 // a token old CorDapp to keep the handler running.
-                additionalCordapps = setOf(cordappForPackages(javaClass.packageName).withTargetVersion(3))
+                additionalCordapps = setOf(cordappWithPackages(javaClass.packageName).copy(targetPlatformVersion = 3))
         ))
 
         val stx = alice.issueCashTo(bob)
@@ -67,15 +64,12 @@ class FinalityHandlerTest {
 
     @Test
     fun `disabled if there are no old CorDapps loaded`() {
-        val alice = mockNet.createNode(InternalMockNodeParameters(
-                legalName = ALICE_NAME,
-                additionalCordapps = setOf(FINANCE_CORDAPP)
-        ))
+        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
 
         val bob = mockNet.createNode(InternalMockNodeParameters(
                 legalName = BOB_NAME,
                 // Make sure the target version is 4, and not the current platform version which may be greater
-                additionalCordapps = setOf(FINANCE_CORDAPP.withTargetVersion(4))
+                additionalCordapps = setOf(cordappWithPackages("net.corda.finance").copy(targetPlatformVersion = 4))
         ))
 
         val stx = alice.issueCashTo(bob)
@@ -121,7 +115,7 @@ class FinalityHandlerTest {
     }
 
     private fun TestStartedNode.finaliseWithOldApi(stx: SignedTransaction): CordaFuture<SignedTransaction> {
-        return CordappInfoResolver.withCordappInfo(targetPlatformVersion = 3) {
+        return CordappResolver.withCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             services.startFlow(FinalityFlow(stx)).resultFuture.apply {
                 mockNet.runNetwork()

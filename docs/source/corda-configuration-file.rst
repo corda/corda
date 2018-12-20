@@ -101,6 +101,12 @@ The available config fields are listed below.
 
 :messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
 
+:messagingServerExternal: If ``messagingServerAddress`` is specified the default assumption is that the artemis broker is running externally.
+     Setting this to ``false`` overrides this behaviour and runs the artemis internally to the node, but bound to the address specified in ``messagingServerAddress``.
+     This allows the address and port advertised in ``p2pAddress`` to differ from the local binding,
+     especially if there is external remapping by firewalls, load balancers , or routing rules. Note that ``detectPublicIp`` should be set to ``false`` to ensure
+     that no translation of the ``p2pAddress`` occurs before it is sent to the network map.
+
 :p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
 
     .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
@@ -111,13 +117,15 @@ The available config fields are listed below.
 :additionalP2PAddresses: An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
     Nodes can use this configuration option to advertise HA endpoints and aliases to external parties. If not specified the default value is an empty list.
 
-:flowTimeout: When a flow implementing the ``TimedFlow`` interface does not complete in time, it is restarted from the
-    initial checkpoint. Currently only used for notarisation requests: if a notary replica dies while processing a notarisation request,
-    the client flow eventually times out and gets restarted. On restart the request is resent to a different notary replica
-    in a round-robin fashion (assuming the notary is clustered).
+:flowTimeout: When a flow implementing the ``TimedFlow`` interface and setting the ``isTimeoutEnabled`` flag does not complete within a
+    defined elapsed time, it is restarted from the initial checkpoint. Currently only used for notarisation requests with clustered
+    notaries: if a notary cluster member dies while processing a notarisation request, the client flow eventually times out and gets
+    restarted. On restart the request is resent to a different notary cluster member in a round-robin fashion. Note that the flow will
+    keep retrying forever.
 
         :timeout: The initial flow timeout period, e.g. `30 seconds`.
-        :maxRestartCount: Maximum number of times the flow will restart before resulting in an error.
+        :maxRestartCount: The number of retries the back-off time keeps growing for. For subsequent retries, the timeout value will remain
+                 constant.
         :backoffBase: The base of the exponential backoff, `t_{wait} = timeout * backoffBase^{retryCount}`.
 
 :rpcAddress: (Deprecated) The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
@@ -198,9 +206,6 @@ The available config fields are listed below.
 
         .. note:: This is an unsupported configuration.
 
-:jvmArgs: An optional list of JVM args, as strings, which replace those inherited from the command line when launching via ``corda.jar``
-    only. e.g. ``jvmArgs = [ "-Xmx220m", "-Xms220m", "-XX:+UseG1GC" ]``
-
 :systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
     of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
 
@@ -265,6 +270,12 @@ The available config fields are listed below.
 
     :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
                                        more granular level. Defaults to an empty list.
+
+:custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
+
+        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified from ``corda.jar``, but can be
+                  overriden from the command line. See :ref:`setting_jvm_args` for examples and details on the precedence of the different
+                  approaches to settings arguments.
 
 Examples
 --------

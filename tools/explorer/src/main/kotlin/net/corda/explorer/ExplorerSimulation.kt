@@ -31,7 +31,8 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import java.time.Instant
 import java.util.*
 
@@ -71,7 +72,7 @@ class ExplorerSimulation(private val options: OptionSet) {
         val portAllocation = incrementalPortAllocation(20000)
         driver(DriverParameters(
                 portAllocation = portAllocation,
-                cordappsForAllNodes = listOf(FINANCE_CORDAPP),
+                cordappsForAllNodes = FINANCE_CORDAPPS,
                 waitForAllNodesToFinish = true,
                 jmxPolicy = JmxPolicy.defaultEnabled()
         )) {
@@ -83,12 +84,12 @@ class ExplorerSimulation(private val options: OptionSet) {
             val issuerGBP = startNode(NodeParameters(
                     providedName = ukBankName,
                     rpcUsers = listOf(manager),
-                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("GBP"))))
+                    additionalCordapps = listOf(FINANCE_WORKFLOWS_CORDAPP.copy(config = mapOf("issuableCurrencies" to listOf("GBP"))))
             ))
             val issuerUSD = startNode(NodeParameters(
                     providedName = usaBankName,
                     rpcUsers = listOf(manager),
-                    additionalCordapps = listOf(FINANCE_CORDAPP.withConfig(mapOf("issuableCurrencies" to listOf("USD"))))
+                    additionalCordapps = listOf(FINANCE_WORKFLOWS_CORDAPP.copy(config = mapOf("issuableCurrencies" to listOf("USD"))))
             ))
 
             notaryNode = defaultNotaryNode.get()
