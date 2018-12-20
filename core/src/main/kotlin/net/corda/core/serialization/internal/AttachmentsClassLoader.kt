@@ -166,6 +166,7 @@ internal object AttachmentsClassLoaderBuilder {
 //        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(sequenceOf(attachmentsClassLoader, it)) } ?: attachmentsClassLoader
 
         val cordappsClassLoader = CorDappsClassLoaderHolder.instance
+        // Here we could use a try-catch to attempt the operation with the original AttachmentsClassLoader, then try again with the cascade.
         val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments, cordappsClassLoader)
 
         // Create a new serializationContext for the current Transaction.
