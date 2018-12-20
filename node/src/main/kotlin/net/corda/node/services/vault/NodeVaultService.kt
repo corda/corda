@@ -136,8 +136,8 @@ class NodeVaultService(
                 val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
                 // Save a row for each party in the state_party table.
                 // TODO: Perhaps these can be stored in a batch?
-                stateOnly.participants.forEach { participant ->
-                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participant)
+                stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
+                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
                     session.save(persistentParty)
                 }
                 val stateToAdd = VaultSchemaV1.VaultStates(
