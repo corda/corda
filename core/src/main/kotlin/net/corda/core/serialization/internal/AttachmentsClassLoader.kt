@@ -150,9 +150,9 @@ internal object AttachmentsClassLoaderBuilder {
     private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
             .toSynchronised()
 
-    fun build(attachments: List<Attachment>): AttachmentsClassLoader {
+    fun build(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()): AttachmentsClassLoader {
         return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
-            AttachmentsClassLoader(attachments)
+            AttachmentsClassLoader(attachments, parent)
         }
     }
 
@@ -174,7 +174,7 @@ internal object AttachmentsClassLoaderBuilder {
     }
 }
 
-private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassLoader() {
+private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) : ClassLoader(parent) {
     private val classLoaders = classLoaders.toList()
 
     override fun loadClass(name: String): Class<*> {
