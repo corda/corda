@@ -177,7 +177,7 @@ internal object AttachmentsClassLoaderBuilder {
 private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>) : ClassLoader() {
     private val classLoaders = classLoaders.toList()
 
-    override fun loadClass(name: String?): Class<*> {
+    override fun loadClass(name: String): Class<*> {
         for (classLoader in classLoaders) {
             try {
                 return classLoader.loadClass(name)
