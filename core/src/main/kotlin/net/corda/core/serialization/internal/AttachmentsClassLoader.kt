@@ -160,10 +160,13 @@ internal object AttachmentsClassLoaderBuilder {
         // Create classloader from the attachments.
         // TODO This should not default to the CorDapps classloader, but it's needed for now to stop a bug preventing CorDapps with dependencies on other CorDapps from working as attachments.
         // TODO A proper fix would require gathering information about dependent CorDapps with hashes at build time, and importing these as attachments as well.
-        val cordappsClassLoader = CorDappsClassLoaderHolder.instance
-        val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments, cordappsClassLoader)
+        // This doesn't work!
+//        val cordappsClassLoader = CorDappsClassLoaderHolder.instance
+//        val attachmentsClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
 //        val transactionClassLoader = cordappsClassLoader?.let { CascadingClassLoader(sequenceOf(attachmentsClassLoader, it)) } ?: attachmentsClassLoader
-        val transactionClassLoader = attachmentsClassLoader
+
+        val cordappsClassLoader = CorDappsClassLoaderHolder.instance
+        val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments, cordappsClassLoader)
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
@@ -186,7 +189,7 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: 
                 // Keep iterating without failing.
             }
         }
-        throw ClassNotFoundException(name)
+        return super.loadClass(name)
     }
 
     override fun getResource(name: String): URL? {
@@ -196,7 +199,7 @@ private class CascadingClassLoader(classLoaders: Sequence<ClassLoader>, parent: 
                 return url
             }
         }
-        return null
+        return super.getResource(name)
     }
 }
 
