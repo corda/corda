@@ -32,7 +32,7 @@ import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.FINANCE_CORDAPP
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.ProcessUtilities
 import net.corda.testing.node.internal.internalDriver
 import org.apache.activemq.artemis.core.config.FileDeploymentManager
@@ -150,8 +150,8 @@ class HABrokerFailoverTest : IntegrationTest() {
                     )
             ), nodeDirectory = nodeBaseDir)
 
-            val bobNode = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(aliceUser), additionalCordapps = setOf(FINANCE_CORDAPP))).getOrThrow()
-            val aliceNode = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), customOverrides = nodeConfiguration, additionalCordapps = setOf(FINANCE_CORDAPP))).getOrThrow()
+            val bobNode = startNode(NodeParameters(providedName = BOB_NAME, rpcUsers = listOf(aliceUser), additionalCordapps = FINANCE_CORDAPPS)).getOrThrow()
+            val aliceNode = startNode(NodeParameters(providedName = ALICE_NAME, rpcUsers = listOf(aliceUser), customOverrides = nodeConfiguration, additionalCordapps = FINANCE_CORDAPPS)).getOrThrow()
 
             aBridgeFuture.getOrThrow()
 

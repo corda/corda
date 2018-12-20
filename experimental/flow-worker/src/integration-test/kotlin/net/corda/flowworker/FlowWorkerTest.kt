@@ -33,8 +33,8 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.FINANCE_CORDAPP
-import net.corda.testing.node.internal.TestCordappDirectories
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.TestCordappInternal
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -85,8 +85,6 @@ class FlowWorkerTest {
     private val bankAInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1111)), listOf(bankAPartyAndCertificate), 1, 1)
     private val bankBInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1112)), listOf(bankBPartyAndCertificate), 1, 1)
 
-    private val cordappDirectories = listOf(TestCordappDirectories.getJarDirectory(FINANCE_CORDAPP))
-
     @Test
     fun `cash issue`() {
         val baseDirectory = DriverParameters().driverDirectory
@@ -94,9 +92,13 @@ class FlowWorkerTest {
         nodeDirectory.createDirectories()
         val brokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        val config = genericConfig().copy(myLegalName = DUMMY_BANK_A_NAME, baseDirectory = nodeDirectory,
-                messagingServerAddress = brokerAddress, dataSourceProperties = MockServices.makeTestDataSourceProperties(),
-                cordappDirectories = cordappDirectories)
+        TestCordappInternal.installCordapps(nodeDirectory, FINANCE_CORDAPPS)
+        val config = genericConfig().copy(
+                myLegalName = DUMMY_BANK_A_NAME,
+                baseDirectory = nodeDirectory,
+                messagingServerAddress = brokerAddress,
+                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+        )
         // create test certificates
         config.configureWithDevSSLCertificate()
 
@@ -151,9 +153,14 @@ class FlowWorkerTest {
         val bankANodeDirectory = baseDirectory / DUMMY_BANK_A_NAME.organisation / "flowWorker"
         bankANodeDirectory.createDirectories()
         val bankAbrokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
-        val bankAConfig = genericConfig().copy(myLegalName = DUMMY_BANK_A_NAME, baseDirectory = bankANodeDirectory,
-                messagingServerAddress = bankAbrokerAddress, dataSourceProperties = MockServices.makeTestDataSourceProperties(),
-                cordappDirectories = cordappDirectories)
+
+        TestCordappInternal.installCordapps(bankANodeDirectory, FINANCE_CORDAPPS)
+        val bankAConfig = genericConfig().copy(
+                myLegalName = DUMMY_BANK_A_NAME,
+                baseDirectory = bankANodeDirectory,
+                messagingServerAddress = bankAbrokerAddress,
+                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+        )
         // create test certificates
         bankAConfig.configureWithDevSSLCertificate()
 
@@ -173,9 +180,14 @@ class FlowWorkerTest {
         val bankBNodeDirectory = baseDirectory / DUMMY_BANK_B_NAME.organisation / "flowWorker"
         bankBNodeDirectory.createDirectories()
         val bankBbrokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
-        val bankBConfig = genericConfig().copy(myLegalName = DUMMY_BANK_B_NAME, baseDirectory = bankBNodeDirectory,
-                messagingServerAddress = bankBbrokerAddress, dataSourceProperties = MockServices.makeTestDataSourceProperties(),
-                cordappDirectories = cordappDirectories)
+
+        TestCordappInternal.installCordapps(bankBNodeDirectory, FINANCE_CORDAPPS)
+        val bankBConfig = genericConfig().copy(
+                myLegalName = DUMMY_BANK_B_NAME,
+                baseDirectory = bankBNodeDirectory,
+                messagingServerAddress = bankBbrokerAddress,
+                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+        )
         // create test certificates
         bankBConfig.configureWithDevSSLCertificate()
 

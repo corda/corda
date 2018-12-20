@@ -2,6 +2,7 @@ package com.r3.corda.enterprise.perftestcordapp.flows
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.StateRef
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
@@ -42,14 +43,14 @@ class CheckAllTheTestFlows {
                 isDebug = driverParameters.isDebug,
                 startNodesInProcess = driverParameters.startNodesInProcess,
                 waitForAllNodesToFinish = driverParameters.waitForAllNodesToFinish,
+                extraCordappPackagesToScan = driverParameters.extraCordappPackagesToScan,
                 notarySpecs = driverParameters.notarySpecs,
                 jmxPolicy = driverParameters.jmxPolicy,
                 compatibilityZone = null,
                 networkParameters = driverParameters.networkParameters,
                 notaryCustomOverrides = driverParameters.notaryCustomOverrides,
                 inMemoryDB = driverParameters.inMemoryDB,
-                cordappsForAllNodes = DriverDSLImpl.cordappsInCurrentAndAdditionalPackages(driverParameters.extraCordappPackagesToScan),
-                signCordapps = false,
+                cordappsForAllNodes = uncheckedCast(driverParameters.cordappsForAllNodes),
                 enableSNI = driverParameters.enableSNI
         )
 

@@ -18,10 +18,12 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.GBP
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.flows.*
+import net.corda.finance.flows.AbstractCashFlow
+import net.corda.finance.flows.CashExitFlow
 import net.corda.finance.flows.CashExitFlow.ExitRequest
+import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
-import net.corda.finance.schemas.CashSchemaV1
+import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.internal.CashConfigDataFlow
 import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.sample.businessnetwork.iou.IOUFlow
@@ -31,20 +33,13 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.FINANCE_CORDAPP
 import net.corda.testing.node.internal.BUSINESS_NETWORK_CORDAPP
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.FINANCE_WORKFLOWS_CORDAPP
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.KClass
 
 class ExplorerSimulation(private val options: OptionSet) {
-
-    private companion object {
-        fun packagesOfClasses(vararg classes: KClass<*>): List<String> = classes.map { it.java.`package`.name }
-    }
-
     private val user = User("user1", "test", permissions = setOf(
             startFlow<CashPaymentFlow>(),
             startFlow<CashConfigDataFlow>(),

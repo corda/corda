@@ -34,8 +34,8 @@ import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.FINANCE_CORDAPP
-import net.corda.testing.node.internal.TestCordappDirectories
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.TestCordappInternal
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -79,7 +79,6 @@ class FlowWorkerStartStopTest {
     private val notaryKeyPair = generateKeyPair()
     private val notary = Party(DUMMY_NOTARY_NAME, notaryKeyPair.public)
     private val notaryPartyAndCertificate = getTestPartyAndCertificate(notary)
-    private val cordappDirectories = listOf(TestCordappDirectories.getJarDirectory(FINANCE_CORDAPP))
 
     @Test
     fun startStop() {
@@ -130,9 +129,13 @@ class FlowWorkerStartStopTest {
         nodeDirectory.createDirectories()
         val brokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        val config = genericConfig().copy(myLegalName = legalName, baseDirectory = nodeDirectory,
-                messagingServerAddress = brokerAddress, dataSourceProperties = MockServices.makeTestDataSourceProperties(),
-                cordappDirectories = cordappDirectories)
+        TestCordappInternal.installCordapps(nodeDirectory, FINANCE_CORDAPPS)
+        val config = genericConfig().copy(
+                myLegalName = legalName,
+                baseDirectory = nodeDirectory,
+                messagingServerAddress = brokerAddress,
+                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+        )
         // create test certificates
         config.configureWithDevSSLCertificate()
 
