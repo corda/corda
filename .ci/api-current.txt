@@ -4410,7 +4410,7 @@ public class net.corda.core.schemas.MappedSchema extends java.lang.Object
 ##
 @MappedSuperclass
 @CordaSerializable
-public class net.corda.core.schemas.PersistentState extends java.lang.Object implements net.corda.core.schemas.StatePersistable
+public class net.corda.core.schemas.PersistentState extends java.lang.Object implements net.corda.core.schemas.DirectStatePersistable
   public <init>()
   public <init>(net.corda.core.schemas.PersistentStateRef)
   @Nullable
