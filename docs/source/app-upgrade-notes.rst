@@ -78,16 +78,18 @@ a good idea because some features and improvements are only available to apps th
 The minimum platform version is just the (major) version number of the node that you require, so if you
 start using new APIs and features in Corda 4, you should set this to 4. Unfortunately Corda 3 and below
 do not know about this metadata and don't check it, so your app will still be loaded in such nodes and
-then crash at runtime. However it's good to get in the habit of setting this properly for future releases.
+may exhibit undefined behaviour at runtime. However it's good to get in the habit of setting this
+properly for future releases.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
 It is used to block state downgrades: when a state constraint can be satisfied
 by multiple attachments, the version is tracked in the ledger and cannot decrement. This ensures security
 fixes in CorDapps stick and can't be reversed by downgrading states to an earlier version. See
 ":ref:`contract_non-downgrade_rule_ref`" for more information. In future, the version attached to the
-workflow JAR will also be used to help implement smoother upgrade and migration features. If the "normal"
-version number of your app as defined in your Gradle file follows the convention of always being a whole
-number starting from 1, you can just refer to that variable directly to set the version id.
+workflow JAR will also be used to help implement smoother upgrade and migration features. You may directly
+reference the gradle version number of your app when setting the cordapp specific versionId identifiers
+if this follows the convention of always being a whole number starting from 1, you can just refer to that
+variable directly to set the version id.
 
 The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
