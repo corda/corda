@@ -37,7 +37,7 @@ A reference input state is a ``ContractState`` which can be referred to in a tra
 of input and output states but, significantly, whose contract is not executed as part of the transaction
 verification process and is not consumed when the transaction is committed to the ledger. Rather, it is checked
 for "current-ness". In other words, the contract logic isn't run for the referencing transaction only.
-Since they're normal states, if they occur in the input or output positions, they can evolve on the ledger,
+Since they're normal states, if they do occur in the input or output positions, they can evolve on the ledger,
 modeling reference data in the real world.
 
 Signature constraints
