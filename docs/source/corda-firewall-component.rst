@@ -114,8 +114,8 @@ The complete sequence is therefore:
      .. Note::   That the message reply path is not via the inbound path, but instead is via a separately validated route
         from the local bridge to the original node's float and then on to the original node via Artemis.
 
-Operating modes of the Bridge and Float
----------------------------------------
+Operating modes of the Bridge and Float with a single node
+----------------------------------------------------------
 
 Embedded Developer Node (node + artemis + internal bridge, no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -186,6 +186,21 @@ pool of DMZ float processes.:
 .. image:: resources/bridge/ha_bridge_float.png
      :scale: 100%
      :align: center
+
+
+Operating modes of shared Bridge and Float
+------------------------------------------
+
+Multiple nodes + Bridge (no float, no DMZ)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is possible to allow two or more Corda nodes (HA and/or non-HA) handle outgoing and incoming P2P communication through a shared bridge. This is possible by configuring the nodes to use
+and external Artemis messaging broker which can be easily configured using the ha-tool. For more information, please see :doc:`HA Utilities <ha-utilities>`. While this example is the simplest deployment
+possible with a shared bridge, any other configuration previously presented can be created.
+
+.. image:: resources/bridge/shared_bridge_simple.png
+    :scale: 100%
+    :align: center
 
 Apache ZooKeeper
 ----------------
