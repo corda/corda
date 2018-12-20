@@ -6,6 +6,8 @@ import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
+import net.corda.core.internal.div
+import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
@@ -19,7 +21,10 @@ import net.corda.testing.driver.internal.internalServices
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.*
+import net.corda.testing.node.internal.DriverDSLImpl
+import net.corda.testing.node.internal.genericDriver
+import net.corda.testing.node.internal.getTimestampAsDirectoryName
+import net.corda.testing.node.internal.newContext
 import rx.Observable
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -136,7 +141,8 @@ constructor(
         val startJmxHttpServer: Boolean = false,
         val jmxHttpServerPortAllocation: PortAllocation = incrementalPortAllocation(7005)
 ) {
-    @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified if you wish to not have monitoring turned on.")
+    @Deprecated("The default constructor does not turn on monitoring. Simply leave the jmxPolicy parameter unspecified if you wish to not " +
+            "have monitoring turned on.")
     constructor() : this(false)
 
     /** Create a [JmxPolicy] that turns on monitoring using the given [PortAllocation]. */
@@ -178,14 +184,14 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
                     isDebug = defaultParameters.isDebug,
                     startNodesInProcess = defaultParameters.startNodesInProcess,
                     waitForAllNodesToFinish = defaultParameters.waitForAllNodesToFinish,
+                    extraCordappPackagesToScan = defaultParameters.extraCordappPackagesToScan,
                     notarySpecs = defaultParameters.notarySpecs,
                     jmxPolicy = defaultParameters.jmxPolicy,
                     compatibilityZone = null,
                     networkParameters = defaultParameters.networkParameters,
                     notaryCustomOverrides = defaultParameters.notaryCustomOverrides,
                     inMemoryDB = defaultParameters.inMemoryDB,
-                    cordappsForAllNodes = defaultParameters.cordappsForAllNodes(),
-                    signCordapps = false,
+                    cordappsForAllNodes = uncheckedCast(defaultParameters.cordappsForAllNodes),
                     enableSNI = defaultParameters.enableSNI
             ),
             coerce = { it },
@@ -213,7 +219,8 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
  *     available from [DriverDSL.notaryHandles], and will be added automatically to the network parameters.
  *     Defaults to a simple validating notary.
  * @property extraCordappPackagesToScan A [List] of additional cordapp packages to scan for any cordapp code, e.g.
- *     contract verification code, flows and services. The calling package is automatically added.
+ *     contract verification code, flows and services. The calling package is automatically included in this list. If this is not desirable
+ *     then use [cordappsForAllNodes] instead.
  * @property jmxPolicy Used to specify whether to expose JMX metrics via Jolokia HHTP/JSON.
  * @property networkParameters The network parameters to be used by all the nodes. [NetworkParameters.notaries] must be
  *     empty as notaries are defined by [notarySpecs].
@@ -226,7 +233,7 @@ fun <A> driver(defaultParameters: DriverParameters = DriverParameters(), dsl: Dr
 @Suppress("unused")
 data class DriverParameters(
         val isDebug: Boolean = false,
-        val driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+        val driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
         val portAllocation: PortAllocation = incrementalPortAllocation(10000),
         val debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
         val systemProperties: Map<String, String> = emptyMap(),
@@ -234,6 +241,8 @@ data class DriverParameters(
         val startNodesInProcess: Boolean = false,
         val waitForAllNodesToFinish: Boolean = false,
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
+        @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
+                "misleading results in tests. Use cordappsForAllNodes instead.")
         val extraCordappPackagesToScan: List<String> = emptyList(),
         @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
@@ -244,7 +253,7 @@ data class DriverParameters(
     ) {
     constructor(
             isDebug: Boolean = false,
-            driverDirectory: Path = Paths.get("build", getTimestampAsDirectoryName()),
+            driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
             portAllocation: PortAllocation = incrementalPortAllocation(10000),
             debugPortAllocation: PortAllocation = incrementalPortAllocation(5005),
             systemProperties: Map<String, String> = emptyMap(),

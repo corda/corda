@@ -39,6 +39,8 @@
       <module name="contracts-states_integrationTest" target="1.8" />
       <module name="contracts-states_main" target="1.8" />
       <module name="contracts-states_test" target="1.8" />
+      <module name="contracts_main" target="1.8" />
+      <module name="contracts_test" target="1.8" />
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
@@ -260,6 +262,9 @@
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />
+      <module name="workflows_integrationTest" target="1.8" />
+      <module name="workflows_main" target="1.8" />
+      <module name="workflows_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

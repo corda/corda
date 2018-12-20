@@ -20,8 +20,6 @@ import net.corda.testing.node.User
  * @property maximumHeapSize The maximum JVM heap size to use for the node. Defaults to 512 MB.
  * @property additionalCordapps Additional [TestCordapp]s that this node will have available, in addition to the ones common to all nodes
  * managed by the [DriverDSL].
- * @property regenerateCordappsOnStart Whether existing [TestCordapp]s unique to this node will be re-generated on start. Useful when stopping
- * and restarting the same node.
  */
 @Suppress("unused")
 data class NodeParameters(
@@ -32,7 +30,6 @@ data class NodeParameters(
         val startInSameProcess: Boolean? = null,
         val maximumHeapSize: String = "512m",
         val additionalCordapps: Collection<TestCordapp> = emptySet(),
-        val regenerateCordappsOnStart: Boolean = false,
         val flowOverrides: Map<out Class<out FlowLogic<*>>, Class<out FlowLogic<*>>> = emptyMap()
 ) {
     /**
@@ -48,7 +45,6 @@ data class NodeParameters(
     fun withStartInSameProcess(startInSameProcess: Boolean?): NodeParameters = copy(startInSameProcess = startInSameProcess)
     fun withMaximumHeapSize(maximumHeapSize: String): NodeParameters = copy(maximumHeapSize = maximumHeapSize)
     fun withAdditionalCordapps(additionalCordapps: Set<TestCordapp>): NodeParameters = copy(additionalCordapps = additionalCordapps)
-    fun withRegenerateCordappsOnStart(regenerateCordappsOnStart: Boolean): NodeParameters = copy(regenerateCordappsOnStart = regenerateCordappsOnStart)
     fun withFlowOverrides(flowOverrides: Map<Class<out FlowLogic<*>>, Class<out FlowLogic<*>>>): NodeParameters = copy(flowOverrides = flowOverrides)
 
     constructor(

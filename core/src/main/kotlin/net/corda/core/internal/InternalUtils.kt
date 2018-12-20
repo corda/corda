@@ -387,7 +387,7 @@ val Class<*>.location: URL get() = protectionDomain.codeSource.location
 
 /** Convenience method to get the package name of a class literal. */
 val KClass<*>.packageName: String get() = java.packageName
-val Class<*>.packageName: String get() = `package`.name
+val Class<*>.packageName: String get() = requireNotNull(`package`?.name) { "$this not defined inside a package" }
 
 inline val Class<*>.isAbstractClass: Boolean get() = Modifier.isAbstract(modifiers)
 
