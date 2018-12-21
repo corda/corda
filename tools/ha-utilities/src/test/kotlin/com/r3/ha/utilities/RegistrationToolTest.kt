@@ -10,12 +10,12 @@ import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import picocli.CommandLine
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RegistrationToolTest {
@@ -36,32 +36,29 @@ class RegistrationToolTest {
             setCertificate(X509Utilities.CORDA_ROOT_CA, DEV_ROOT_CA.certificate)
         }
 
-        javaClass.classLoader.getResourceAsStream("nodeA.conf").copyTo(workingDirectory / "nodeA.conf")
-        javaClass.classLoader.getResourceAsStream("nodeB.conf").copyTo(workingDirectory / "nodeB.conf")
-        javaClass.classLoader.getResourceAsStream("nodeC.conf").copyTo(workingDirectory / "nodeC.conf")
+        listOf("nodeA.conf", "nodeB.conf", "nodeC.conf", "nodeD.conf").forEach {
+            javaClass.classLoader.getResourceAsStream(it).copyTo(workingDirectory / it)
+        }
 
         val runResult = RegistrationServer(NetworkHostAndPort("localhost", 10000)).use {
             it.start()
             CommandLine.populateCommand(registrationTool, BASE_DIR, workingDirectory.toString(),
                     "--network-root-truststore", trustStorePath.toString(),
                     "--network-root-truststore-password", "password",
-                    "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(), (workingDirectory / "nodeC.conf").toString())
+                    "--config-files", (workingDirectory / "nodeA.conf").toString(), (workingDirectory / "nodeB.conf").toString(),
+                    (workingDirectory / "nodeC.conf").toString(), (workingDirectory / "nodeD.conf").toString())
             registrationTool.runProgram()
         }
 
-        assertEquals(ExitCodes.SUCCESS, runResult)
+        assertEquals(ExitCodes.FAILURE, runResult)
 
-        assertTrue((workingDirectory / "PartyA" / "certificates" / "sslkeystore.jks").exists())
-        assertTrue((workingDirectory / "PartyB" / "certificates" / "sslkeystore.jks").exists())
-        assertTrue((workingDirectory / "PartyC" / "certificates" / "sslkeystore.jks").exists())
+        assertFalse((workingDirectory / "PartyD" / "certificates" / "sslkeystore.jks").exists())
 
-        assertTrue((workingDirectory / "PartyA" / "certificates" / "truststore.jks").exists())
-        assertTrue((workingDirectory / "PartyB" / "certificates" / "truststore.jks").exists())
-        assertTrue((workingDirectory / "PartyC" / "certificates" / "truststore.jks").exists())
-
-        assertTrue((workingDirectory / "PartyA" / "certificates" / "nodekeystore.jks").exists())
-        assertTrue((workingDirectory / "PartyB" / "certificates" / "nodekeystore.jks").exists())
-        assertTrue((workingDirectory / "PartyC" / "certificates" / "nodekeystore.jks").exists())
+        listOf("PartyA", "PartyB", "PartyC").forEach {
+            assertTrue(it) {(workingDirectory / it / "certificates" / "sslkeystore.jks").exists()}
+            assertTrue(it) {(workingDirectory / it / "certificates" / "truststore.jks").exists()}
+            assertTrue(it) {(workingDirectory / it / "certificates" / "nodekeystore.jks").exists()}
+        }
 
         assertTrue((workingDirectory / NETWORK_PARAMS_FILE_NAME).exists())
     }
