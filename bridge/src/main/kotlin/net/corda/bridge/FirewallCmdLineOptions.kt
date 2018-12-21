@@ -14,7 +14,7 @@ import java.nio.file.Paths
 class FirewallCmdLineOptions {
 
     companion object {
-        val logger = contextLogger()
+        val logger by lazy { contextLogger() }
 
         private fun Path.defaultConfigFile(): Path {
             val newStyleConfig = (this / "firewall.conf")

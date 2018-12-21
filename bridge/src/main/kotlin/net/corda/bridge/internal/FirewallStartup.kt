@@ -38,8 +38,6 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
         // doesn't mess with the running firewall's logs.
         enforceSingleBridgeIsRunning(cmdLineOptions.baseDirectory)
 
-        initLogging()
-
         val versionInfo = getVersionInfo()
 
         val conf = try {
@@ -157,10 +155,7 @@ class FirewallStartup: CordaCliWrapper("corda-firewall", "The Corda Firewall app
     }
 
     override fun initLogging() {
-        System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
-        if (verbose) {
-            System.setProperty("consoleLogLevel", specifiedLogLevel)
-        }
+        super.initLogging()
         System.setProperty("log-path", (cmdLineOptions.baseDirectory / LOGS_DIRECTORY_NAME).toString())
         SLF4JBridgeHandler.removeHandlersForRootLogger() // The default j.u.l config adds a ConsoleHandler.
         SLF4JBridgeHandler.install()
