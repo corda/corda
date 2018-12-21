@@ -82,7 +82,7 @@ open class MappedSchema(schemaFamily: Class<*>,
 @KeepForDJVM
 @MappedSuperclass
 @CordaSerializable
-class PersistentState(@EmbeddedId var stateRef: PersistentStateRef? = null) : StatePersistable
+class PersistentState(@EmbeddedId override var stateRef: PersistentStateRef? = null) : DirectStatePersistable
 
 /**
  * Embedded [StateRef] representation used in state mapping.
@@ -105,6 +105,21 @@ data class PersistentStateRef(
  */
 @KeepForDJVM
 interface StatePersistable
+
+/**
+ * Marker interface to denote a persistable Corda state entity that exposes the transaction id and index as composite key called [stateRef].
+ */
+interface DirectStatePersistable : StatePersistable {
+    val stateRef: PersistentStateRef?
+}
+
+/**
+ * Marker interface to denote a persistable Corda state entity that exposes the transaction id and index as a nested composite key called [compositeKey]
+ * that is itself a [DirectStatePersistable].  i.e. exposes a [stateRef].
+ */
+interface IndirectStatePersistable<T : DirectStatePersistable> : StatePersistable {
+    val compositeKey: T
+}
 
 object MappedSchemaValidator {
     fun fieldsFromOtherMappedSchema(schema: MappedSchema) : List<SchemaCrossReferenceReport> =

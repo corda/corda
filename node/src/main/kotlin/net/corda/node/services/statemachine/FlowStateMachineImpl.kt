@@ -18,6 +18,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.debug
 import net.corda.core.utilities.trace
+import net.corda.node.internal.cordapp.CordappProviderImpl
 import net.corda.node.services.api.FlowAppAuditEvent
 import net.corda.node.services.api.FlowPermissionAuditEvent
 import net.corda.node.services.api.ServiceHubInternal
@@ -223,6 +224,11 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         logger.debug { "Calling flow: $logic" }
         val startTime = System.nanoTime()
         val resultOrError = try {
+
+            // This sets the Cordapp classloader on the contextClassLoader of the current thread.
+            // Needed because in previous versions of the finance app we used Thread.contextClassLoader to resolve services defined in cordapps.
+            Thread.currentThread().contextClassLoader = (serviceHub.cordappProvider as CordappProviderImpl).cordappLoader.appClassLoader
+
             val result = logic.call()
             suspend(FlowIORequest.WaitForSessionConfirmations, maySkipCheckpoint = true)
             Try.Success(result)

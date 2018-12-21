@@ -13,7 +13,7 @@ To run from the command line in Unix:
 2. Run ``./gradlew samples:irs-demo:web:deployWebapps`` to install configs and tools for running webservers
 3. Move to the ``samples/irs-demo/`` directory
 4. Run ``./cordapp/build/nodes/runnodes`` to open up three new terminals with the three nodes (you may have to install xterm)
-5. On Linux, run ``./web/build/webapps/runwebapps`` to open three more terminals for associated webservers. On macOS,
+5. On Linux, run ``./web/build/webapps/runwebapps.sh`` to open three more terminals for associated webservers. On macOS,
    use the following command instead: ``osascript ./web/build/webapps/runwebapps.scpt``
 
 To run from the command line in Windows:

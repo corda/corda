@@ -28,6 +28,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -153,8 +154,8 @@ class NodeVaultService(
                 val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
                 // Save a row for each party in the state_party table.
                 // TODO: Perhaps these can be stored in a batch?
-                stateOnly.participants.forEach { participant ->
-                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participant)
+                stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
+                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
                     session.save(persistentParty)
                 }
                 val stateToAdd = VaultSchemaV1.VaultStates(
@@ -605,14 +606,37 @@ class NodeVaultService(
         }
     }
 
+    /**
+     * Returns a [DataFeed] containing the results of the provided query, along with the associated observable, containing any subsequent updates.
+     *
+     * Note that this method can be invoked concurrently with [NodeVaultService.notifyAll], which means there could be race conditions between reads
+     * performed here and writes performed there. These are prevented, using the following approach:
+     * - Observable updates emitted by [NodeVaultService.notifyAll] are buffered until the transaction's commit point
+     *   This means that it's as if publication is performed, after the transaction is committed.
+     * - Observable updates tracked by [NodeVaultService._trackBy] are buffered before the transaction (for the provided query) is open
+     *   and until the client's subscription. So, it's as if the customer is subscribed to the observable before the read's transaction is open.
+     *
+     * The combination of the 2 conditions described above guarantee that there can be no possible interleaving, where some states are not observed in the query
+     * (i.e. because read transaction opens, before write transaction is closed) and at the same time not included in the observable (i.e. because subscription
+     * is done before the publication of updates). However, this guarantee cannot be provided, in cases where the client invokes [VaultService.trackBy] with an open
+     * transaction.
+     */
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _trackBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>> {
         return concurrentBox.exclusive {
+            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed())
+            if (contextTransactionOrNull != null) {
+                log.warn("trackBy is called with an already existing, open DB transaction. As a result, there might be states missing from both the snapshot and observable, included in the returned data feed, because of race conditions.")
+            }
             val snapshotResults = _queryBy(criteria, paging, sorting, contractStateType)
-            val updates: Observable<Vault.Update<T>> = uncheckedCast(_updatesPublisher.bufferUntilSubscribed()
-                    .filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
-                    .map { filterContractStates(it, contractStateType) })
-            DataFeed(snapshotResults, updates)
+            val snapshotStatesRefs = snapshotResults.statesMetadata.map { it.ref }.toSet()
+            val snapshotConsumedStatesRefs = snapshotResults.statesMetadata.filter { it.consumedTime != null }
+                    .map { it.ref }.toSet()
+            val filteredUpdates = updates.filter { it.containsType(contractStateType, snapshotResults.stateTypes) }
+                    .map { filterContractStates(it, contractStateType) }
+                    .filter { !hasBeenSeen(it, snapshotStatesRefs, snapshotConsumedStatesRefs) }
+
+            DataFeed(snapshotResults, filteredUpdates)
         }
     }
 
@@ -622,6 +646,25 @@ class NodeVaultService(
 
     private fun <T : ContractState> filterByContractState(contractStateType: Class<out T>, stateAndRefs: Set<StateAndRef<T>>) =
             stateAndRefs.filter { contractStateType.isAssignableFrom(it.state.data.javaClass) }.toSet()
+
+    /**
+     * Filters out updates that have been seen, aka being reflected in the query's result snapshot.
+     *
+     * An update is reflected in the snapshot, if both of the following conditions hold:
+     * - all the states produced by the update are included in the snapshot (regardless of whether they are consumed).
+     * - all the states consumed by the update are included in the snapshot, AND they are consumed.
+     *
+     * Note: An update can contain multiple transactions (with netting performed on them). As a result, some of these transactions
+     *       can be included in the snapshot result, while some are not. In this case, since we are not capable of reverting the netting and doing
+     *       partial exclusion, we decide to return some more updates, instead of losing them completely (not returning them either in
+     *       the snapshot or in the observable).
+     */
+    private fun <T: ContractState> hasBeenSeen(update: Vault.Update<T>, snapshotStatesRefs: Set<StateRef>, snapshotConsumedStatesRefs: Set<StateRef>): Boolean {
+        val updateProducedStatesRefs = update.produced.map { it.ref }.toSet()
+        val updateConsumedStatesRefs = update.consumed.map { it.ref }.toSet()
+
+        return snapshotStatesRefs.containsAll(updateProducedStatesRefs) && snapshotConsumedStatesRefs.containsAll(updateConsumedStatesRefs)
+    }
 
     private fun getSession() = database.currentOrNew().session
     /**
