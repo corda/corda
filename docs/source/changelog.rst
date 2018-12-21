@@ -6,6 +6,8 @@ release, see :doc:`upgrade-notes`.
 
 Unreleased
 ----------
+* Fixed race condition between ``NodeVaultService.trackBy`` and ``NodeVaultService.notifyAll``, where there could be states that were not reflected
+  in the data feed returned from ``trackBy`` (either in the query's result snapshot or the observable).
 
 * TimedFlows (only used by the notary client flow) will never give up trying to reach the notary, as this would leave the states
   in the notarisation request in an undefined state (unknown whether the spend has been notarised, i.e. has happened, or not). Also,

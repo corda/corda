@@ -5,6 +5,7 @@ import net.corda.core.crypto.SecureHash
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
+import rx.subjects.PublishSubject
 import java.util.*
 import java.util.stream.IntStream
 import java.util.stream.Stream
@@ -99,6 +100,23 @@ open class InternalUtilsTest {
         assertThat(ProtectedObject::class.java.kotlinObjectInstance).isSameAs(ProtectedObject)
         assertThat(TimeWindow::class.java.kotlinObjectInstance).isNull()
         assertThat(PrivateClass::class.java.kotlinObjectInstance).isNull()
+    }
+
+    @Test
+    fun `bufferUntilSubscribed delays emission until the first subscription`() {
+        val sourceSubject: PublishSubject<Int> = PublishSubject.create<Int>()
+        val bufferedObservable: rx.Observable<Int> = uncheckedCast(sourceSubject.bufferUntilSubscribed())
+
+        sourceSubject.onNext(1)
+
+        var itemsFromBufferedObservable = mutableSetOf<Int>()
+        bufferedObservable.subscribe{itemsFromBufferedObservable.add(it)}
+
+        var itemsFromNonBufferedObservable = mutableSetOf<Int>()
+        sourceSubject.subscribe{itemsFromNonBufferedObservable.add(it)}
+
+        assertThat(itemsFromBufferedObservable.contains(1))
+        assertThat(itemsFromNonBufferedObservable).doesNotContain(1)
     }
 
     @Test
