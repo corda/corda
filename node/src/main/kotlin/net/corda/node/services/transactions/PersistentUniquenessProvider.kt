@@ -14,11 +14,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.elapsedTime
-import net.corda.core.internal.notary.NotaryInternalException
-import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.internal.notary.isConsumedByTheSameTx
-import net.corda.core.internal.notary.validateTimeWindow
+import net.corda.core.internal.notary.*
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -32,18 +28,12 @@ import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.util.LinkedHashMap
+import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.GeneratedValue
-import javax.persistence.Id
-import javax.persistence.Lob
-import javax.persistence.MappedSuperclass
+import javax.persistence.*
 import kotlin.concurrent.thread
 
 /** A RDBMS backed Uniqueness provider */
@@ -174,7 +164,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
                 )
     }
 
-
     /**
      * Generates and adds a [CommitRequest] to the request queue. If the request queue is full, this method will block
      * until space is available.
@@ -255,7 +244,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
-        val session = currentDBSession()
         if (!previouslyCommitted(txId)) {
             val conflictError = NotaryError.Conflict(txId, conflictingStates)
             log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
@@ -276,6 +264,11 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
     }
 
     private fun handleNoConflicts(timeWindow: TimeWindow?, states: List<StateRef>, txId: SecureHash, commitLog: AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>) {
+        // Skip if this is a re-notarisation of a reference-only transaction
+        if (states.isEmpty() && previouslyCommitted(txId)) {
+            return
+        }
+
         val outsideTimeWindowError = validateTimeWindow(clock.instant(), timeWindow)
         if (outsideTimeWindowError == null) {
             states.forEach { stateRef ->
@@ -285,9 +278,6 @@ class PersistentUniquenessProvider(val clock: Clock, val database: CordaPersiste
             session.persist(CommittedTransaction(txId.toString()))
             log.debug { "Successfully committed all input states: $states" }
         } else {
-            if (states.isEmpty() && previouslyCommitted(txId)) {
-                return
-            }
             throw NotaryInternalException(outsideTimeWindowError)
         }
     }
