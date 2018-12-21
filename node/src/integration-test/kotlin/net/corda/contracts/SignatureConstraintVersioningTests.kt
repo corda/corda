@@ -6,6 +6,8 @@ import net.corda.core.contracts.*
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
+import net.corda.core.internal.deleteRecursively
+import net.corda.core.internal.div
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
@@ -26,7 +28,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.cordappForPackages
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
@@ -45,9 +47,9 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
                 DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
     }
 
-    private val base = cordappForPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
-    private val oldCordapp = base.withVersion("2")
-    private val newCordapp = base.withVersion("3")
+    private val base = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName).signed()
+    private val oldCordapp = base.copy(versionId = 2)
+    private val newCordapp = base.copy(versionId = 3)
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
     private val message = Message("Hello world!")
     private val transformetMessage = Message(message.value + "A")
@@ -56,11 +58,13 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
     fun `can evolve from lower contract class version to higher one`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
-        val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
+        val stateAndRef: StateAndRef<MessageState>? = internalDriver(
+                inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
-            var nodeName = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true)).getOrThrow()
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)
+        ) {
+            val nodeName = {
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp))).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -68,8 +72,9 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
                 nodeHandle.stop()
                 nodeName
             }()
-            var result = {
-                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true)).getOrThrow()
+            val result = {
+                (baseDirectory(nodeName) / "cordapps").deleteRecursively()
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp))).getOrThrow()
                 var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     val page = it.proxy.vaultQuery(MessageState::class.java)
                     page.states.singleOrNull()
@@ -99,9 +104,9 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4), signCordapps = true) {
-            var nodeName = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp), regenerateCordappsOnStart = true),
+                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
+            val nodeName = {
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp)),
                         customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
@@ -110,8 +115,9 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
                 nodeHandle.stop()
                 nodeName
             }()
-            var result = {
-                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true),
+            val result = {
+                (baseDirectory(nodeName) / "cordapps").deleteRecursively()
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp)),
                         customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
 
                 //set the attachment with newer version (3) as untrusted one so the node can use only the older attachment with version 2

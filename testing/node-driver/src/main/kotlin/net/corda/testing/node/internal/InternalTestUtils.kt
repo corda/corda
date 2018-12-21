@@ -39,12 +39,15 @@ import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
+import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 
 private val log = LoggerFactory.getLogger("net.corda.testing.internal.InternalTestUtils")
 
@@ -256,4 +259,15 @@ private class DriverSerializationEnvironment : SerializationEnvironment by creat
         _driverSerializationEnv.set(null)
         inVMExecutors.remove(this)
     }
+}
+
+/** Add a new entry using the entire remaining bytes of [input] for the entry content. [input] will be closed at the end. */
+fun JarOutputStream.addEntry(entry: ZipEntry, input: InputStream) {
+    addEntry(entry) { input.use { it.copyTo(this) } }
+}
+
+inline fun JarOutputStream.addEntry(entry: ZipEntry, write: () -> Unit) {
+    putNextEntry(entry)
+    write()
+    closeEntry()
 }

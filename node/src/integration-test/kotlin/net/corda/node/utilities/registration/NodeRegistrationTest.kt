@@ -22,7 +22,7 @@ import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.DriverDSLImpl.Companion.cordappsInCurrentAndAdditionalPackages
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
@@ -91,7 +91,7 @@ class NodeRegistrationTest : IntegrationTest() {
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                cordappsForAllNodes = cordappsInCurrentAndAdditionalPackages("net.corda.finance"),
+                cordappsForAllNodes = FINANCE_CORDAPPS,
                 notaryCustomOverrides = mapOf("devMode" to false)
         ) {
           val (alice, genevieve) = listOf(

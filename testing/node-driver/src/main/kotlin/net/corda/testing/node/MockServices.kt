@@ -33,7 +33,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
@@ -76,10 +75,8 @@ open class MockServices private constructor(
 ) : ServiceHub {
 
     companion object {
-
         private fun cordappLoaderForPackages(packages: Iterable<String>, versionInfo: VersionInfo = VersionInfo.UNKNOWN): CordappLoader {
-            val cordappPaths = cordappsForPackages(packages).map { TestCordappDirectories.getJarDirectory(it) }
-            return JarScanningCordappLoader.fromDirectories(cordappPaths, versionInfo)
+            return JarScanningCordappLoader.fromJarUrls(cordappsForPackages(packages).map { it.jarFile.toUri().toURL() }, versionInfo)
         }
 
         /**

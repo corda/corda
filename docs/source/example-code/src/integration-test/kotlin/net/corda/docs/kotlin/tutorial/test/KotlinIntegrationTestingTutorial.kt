@@ -24,6 +24,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -40,7 +41,7 @@ class KotlinIntegrationTestingTutorial : IntegrationTest() {
     @Test
     fun `alice bob cash exchange example`() {
         // START 1
-        driver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val aliceUser = User("aliceUser", "testPassword1", permissions = setOf(
                     startFlow<CashIssueAndPaymentFlow>(),
                     invokeRpc("vaultTrackBy")

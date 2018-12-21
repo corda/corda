@@ -5,8 +5,7 @@ import net.corda.core.flows.*
 import net.corda.core.internal.packageName
 import net.corda.node.VersionInfo
 import net.corda.nodeapi.internal.DEV_PUB_KEY_HASHES
-import net.corda.testing.node.internal.TestCordappDirectories
-import net.corda.testing.node.internal.cordappForPackages
+import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.nio.file.Paths
@@ -68,8 +67,8 @@ class JarScanningCordappLoaderTest {
 
     @Test
     fun `flows are loaded by loader`() {
-        val dir = TestCordappDirectories.getJarDirectory(cordappForPackages(javaClass.packageName))
-        val loader = JarScanningCordappLoader.fromDirectories(listOf(dir))
+        val jarFile = cordappWithPackages(javaClass.packageName).jarFile
+        val loader = JarScanningCordappLoader.fromJarUrls(listOf(jarFile.toUri().toURL()))
 
         // One cordapp from this source tree. In gradle it will also pick up the node jar.
         assertThat(loader.cordapps).isNotEmpty
