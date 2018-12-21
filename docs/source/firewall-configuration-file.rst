@@ -250,8 +250,8 @@ This is also the recommended full enterprise deployment pattern, although there 
 Conceptually deployment will be done as follows:
 
 .. image:: resources/ha/deployment_concept.png
-     :scale: 100%
-     :align: center
+   :scale: 100%
+   :align: center
 
 In this example it is assumed that a large organisation is running two nodes that represent two distinct legal entities. Each node/entity has its own set of CorDapps installed
 and its own transaction storage (vault). These two nodes are running within a Green/Trusted Zone and can be interacted with via RPC calls from clients (either standalone or embedded in other applications).
@@ -260,8 +260,8 @@ In order to be able to communicate outside of the organisation, special provisio
 The following diagram illustrates physical deployment of the example setup discussed above:
 
 .. image:: resources/ha/physical_deployment.png
-     :scale: 100%
-     :align: center
+   :scale: 100%
+   :align: center
 
 .. note:: The arrows on the diagram show in which direction connection is initiated. The actual data exchange may then be happening in both directions.
 
