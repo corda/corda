@@ -119,7 +119,7 @@ class CordappConstraintsTests {
             if (allStates[0].state.constraint is HashAttachmentConstraint)
                 assertThat(allStates[1].state.constraint).isInstanceOf(SignatureAttachmentConstraint::class.java)
             else
-            assertThat(allStates[1].state.constraint).isInstanceOf(HashAttachmentConstraint::class.java)
+                assertThat(allStates[1].state.constraint).isInstanceOf(HashAttachmentConstraint::class.java)
         }
     }
 
