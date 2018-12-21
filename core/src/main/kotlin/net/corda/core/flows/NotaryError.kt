@@ -4,6 +4,7 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import java.time.Instant
 
 /**
@@ -63,28 +64,27 @@ sealed class NotaryError {
     }
 }
 
-/** Contains information about the consuming transaction for a particular state. */
+/**
+ * Contains information about the consuming transaction for a particular state.
+ *
+ * @property hashOfTransactionId Hash of the consuming transaction id.
+ *
+ *
+ * Note that this is NOT the transaction id itself – revealing it could lead to privacy leaks.
+ *
+ * @property type The type of consumed state: either a reference input state or a regular input state.
+ */
 // TODO: include notary timestamp?
 @CordaSerializable
-data class StateConsumptionDetails @JvmOverloads constructor(
-        /**
-         * Hash of the consuming transaction id.
-         *
-         * Note that this is NOT the transaction id itself – revealing it could lead to privacy leaks.
-         */
+    data class StateConsumptionDetails(
         val hashOfTransactionId: SecureHash,
-
-        /**
-         * The type of consumed state: Either a reference input state or a regular input state.
-         */
-        val type: ConsumedStateType = ConsumedStateType.INPUT_STATE
+        val type: ConsumedStateType
 ) {
+    @DeprecatedConstructorForDeserialization(1)
+    constructor(hashOfTransactionId: SecureHash) : this(hashOfTransactionId, ConsumedStateType.INPUT_STATE)
 
     @CordaSerializable
     enum class ConsumedStateType { INPUT_STATE, REFERENCE_INPUT_STATE }
 
-    fun copy(hashOfTransactionId: SecureHash): StateConsumptionDetails {
-        return StateConsumptionDetails(hashOfTransactionId, type)
-    }
+    fun copy(hashOfTransactionId: SecureHash): StateConsumptionDetails = StateConsumptionDetails(hashOfTransactionId, type)
 }
-
