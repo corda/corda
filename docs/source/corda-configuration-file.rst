@@ -302,6 +302,8 @@ The available config fields are listed below.
 
 :enterpriseConfiguration: Allows fine-grained controls of various features only available in the enterprise version of Corda.
 
+.. _enterprise_config_tuning:
+
     :tuning: Performance tuning parameters for Corda Enterprise
 
         :flowThreadPoolSize: The number of threads available to handle flows in parallel. This is the number of flows
@@ -335,6 +337,13 @@ The available config fields are listed below.
             If there are idling flow threads while rpc calls are queued, it might be worthwhile increasing this number slightly.
             Valid values for this property are between 4 (that is the number used for the single threaded state machine in
             open source) and the number of flow threads.
+
+        .. note:: The following parameters are currently for R3 internal use only. Advice for changing these settings will be
+                  subject of a future update.
+
+        :maximumMessagingBatchSize: R3 internal only
+        :p2pConfirmationWindowSize: R3 internal only
+        :brokerConnectionTtlCheckIntervalMs: R3 internal only
 
 .. _corda_configuration_file_signer_blacklist:
 
