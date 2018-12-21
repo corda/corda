@@ -58,6 +58,7 @@ class BridgeAMQPListenerServiceImpl(val conf: FirewallConfiguration,
             override val trace: Boolean = conf.enableAMQPPacketTrace
             override val enableSNI: Boolean = conf.bridgeInnerConfig?.enableSNI ?: true
             override val healthCheckPhrase = conf.healthCheckPhrase
+            override val silencedIPs: Set<String> = conf.silencedIPs
         }
         val server = AMQPServer(bindAddress.host,
                 bindAddress.port,

@@ -79,15 +79,24 @@ class LoggingFirewallAuditService(val conf: FirewallConfiguration,
         timedExecutor.shutdown()
     }
 
+    private fun logWithSuppression(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection, defaultLogger: (String) -> Unit) {
+        val logStr = "direction: $direction sourceIP: $address certificateSubject: $certificateSubject - $msg"
+        if (address.hostString in conf.silencedIPs) {
+            log.trace(logStr)
+        } else {
+            defaultLogger(logStr)
+        }
+    }
+
     override fun successfulConnectionEvent(address: InetSocketAddress, certificateSubject: String, msg: String, direction: RoutingDirection) {
-        log.info(msg)
+        logWithSuppression(address, certificateSubject, msg, direction) { log.warn(it) }
         withDirectionalStatsOf(direction) {
             successfulConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
         }
     }
 
     override fun failedConnectionEvent(address: InetSocketAddress, certificateSubject: String?, msg: String, direction: RoutingDirection) {
-        log.warn(msg)
+        logWithSuppression(address, certificateSubject, msg, direction) { log.info(it) }
         withDirectionalStatsOf(direction) {
             failedConnectionCount.getOrPut(address, ::AtomicLong).incrementAndGet()
         }

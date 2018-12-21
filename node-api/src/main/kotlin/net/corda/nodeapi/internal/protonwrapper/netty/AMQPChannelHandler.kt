@@ -13,6 +13,7 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent
 import io.netty.util.ReferenceCountUtil
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.trace
 import net.corda.nodeapi.internal.crypto.x509
 import net.corda.nodeapi.internal.protonwrapper.engine.EventProcessor
 import net.corda.nodeapi.internal.protonwrapper.messages.ReceivedMessage
@@ -41,6 +42,7 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
                                   private val userName: String?,
                                   private val password: String?,
                                   private val trace: Boolean,
+                                  private val suppressLogs: Boolean,
                                   private val onOpen: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onClose: (SocketChannel, ConnectionChange) -> Unit,
                                   private val onReceive: (ReceivedMessage) -> Unit) : ChannelDuplexHandler() {
@@ -72,17 +74,20 @@ internal class AMQPChannelHandler(private val serverMode: Boolean,
     }
 
     private fun logDebugWithMDC(msg: () -> String) {
-        if (log.isDebugEnabled) {
-            withMDC { log.debug(msg()) }
+        if (!suppressLogs) {
+            if (log.isDebugEnabled) {
+                withMDC { log.debug(msg()) }
+            }
+        } else {
+            withMDC { log.trace { msg() } }
         }
     }
 
-    private fun logInfoWithMDC(msg: String) = withMDC { log.info(msg) }
+    private fun logInfoWithMDC(msg: String) = withMDC { if (!suppressLogs) log.info(msg) else log.trace { msg } }
 
-    private fun logWarnWithMDC(msg: String) = withMDC { log.warn(msg) }
+    private fun logWarnWithMDC(msg: String) = withMDC { if (!suppressLogs) log.warn(msg) else log.trace { msg } }
 
-    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { log.error(msg, ex) }
-
+    private fun logErrorWithMDC(msg: String, ex: Throwable? = null) = withMDC { if (!suppressLogs) log.error(msg, ex) else log.trace(msg, ex) }
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val ch = ctx.channel()
