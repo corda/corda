@@ -12,8 +12,8 @@ import java.util.*;
 
 public class CordaCaplet extends Capsule {
 
-    protected Config nodeConfig = null;
-    protected String baseDir = null;
+    private Config nodeConfig = null;
+    private String baseDir = null;
 
     protected CordaCaplet(Capsule pred) {
         super(pred);
@@ -156,7 +156,7 @@ public class CordaCaplet extends Capsule {
         } else return super.attribute(attr);
     }
 
-    protected void augmentClasspath(List<Path> classpath, File dir) {
+    private void augmentClasspath(List<Path> classpath, File dir) {
         try {
             if (dir.exists()) {
                 // The following might return null if the directory is not there (we check this already) or if an I/O error occurs.
@@ -179,7 +179,7 @@ public class CordaCaplet extends Capsule {
         }
     }
 
-    protected Boolean checkIfCordappDirExists(File dir) {
+    private Boolean checkIfCordappDirExists(File dir) {
         try {
             if (!dir.mkdir() && !dir.exists()) { // It is unlikely to enter this if-branch, but just in case.
                 logOnFailedCordappDir();
