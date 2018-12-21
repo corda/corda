@@ -14,7 +14,8 @@
             <Script language="nashorn"><![CDATA[
                 var System = Java.type('java.lang.System');
                 var level = System.getProperty("consoleLogLevel");
-                level == "debug" || level == "trace" ? "Console-Debug-Appender" : "Console-Appender";
+                var enabled = System.getProperty("consoleLoggingEnabled");
+                enabled == "true" && (level == "debug" || level == "trace") ? "Console-Debug-Appender" : "Console-Appender";
             ]]></Script>
             <AppenderSet>
 
