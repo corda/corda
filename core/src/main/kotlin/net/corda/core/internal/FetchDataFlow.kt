@@ -195,31 +195,22 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
 }
 
 /**
- * Wrapper around [SignedDataWithCert<NetworkParameters>] that implements [NamedByHash] interface
- */
-class SignedParametersByHash(val signedParameters: SignedDataWithCert<NetworkParameters>) : NamedByHash {
-    override val id: SecureHash = signedParameters.raw.hash
-}
-
-/**
  * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
  * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion is >= 4.
  * Nodes on lower versions won't understand this flow.
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
-                                 otherSide: FlowSession) : FetchDataFlow<SignedParametersByHash, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
-    override fun load(txid: SecureHash): SignedParametersByHash? {
-        return (serviceHub.networkParametersStorage as NetworkParametersStorageInternal).lookupSigned(txid)?.let { SignedParametersByHash(it) }
+                                 otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
+    override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
+        return (serviceHub.networkParametersStorage as NetworkParametersStorageInternal).lookupSigned(txid)
     }
 
-    override fun convert(wire: SignedDataWithCert<NetworkParameters>): SignedParametersByHash = SignedParametersByHash(wire)
-
-    override fun maybeWriteToDisk(downloaded: List<SignedParametersByHash>) {
+    override fun maybeWriteToDisk(downloaded: List<SignedDataWithCert<NetworkParameters>>) {
         for (parameters in downloaded) {
             with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
                 if (!hasParameters(parameters.id)) {
                     // This will perform the signature check too and throws with SignatureVerificationException
-                    saveParameters(parameters.signedParameters)
+                    saveParameters(parameters)
                 } else {
                     logger.debug { "Network parameters ${parameters.id} already exists in storage, skipping." }
                 }
