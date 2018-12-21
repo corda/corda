@@ -9,8 +9,9 @@ The Corda Firewall (bridge/float) component is designed for enterprise deploymen
 firewall and protocol break on all internet facing endpoints. The ``corda-firewall.jar`` encapsulates the peer
 network functionality of the basic Corda Enterprise node, so that this can be operated separately from the security sensitive
 JVM runtime of the node. This gives separation of functionality and ensures that the legal identity keys are not
-used in the same process as the internet TLS connections. Also, it adds support for enterprise deployment requirements,
-such as High Availability (HA) and SOCKS proxy support. The firewall can also serve two or more nodes, thus reducing
+used in the same process as the internet TLS connections. Only the bridge component is initiating connections to the
+float further increasing the isolation of the node's internet access point. Also, it adds support for enterprise deployment
+requirements, such as High Availability (HA) and SOCKS proxy support. The firewall can also serve two or more nodes, thus reducing
 the deployment complexity of multiple nodes in the same network.
 
 This document is intended to provide an overview of the architecture and options available.
