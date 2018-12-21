@@ -14,6 +14,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.Builder
@@ -149,7 +150,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             checkConstraintValidity(state)
         }
 
-        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+        val wireTx = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             WireTransaction(
                     createComponentGroups(
                             inputStates(),
@@ -163,6 +164,24 @@ open class TransactionBuilder @JvmOverloads constructor(
                     privacySalt
             )
         }
+
+        // blah blah to be removed , workaround, bad, slow, etc
+        try {
+            wireTx.toLedgerTransaction(services).verify()
+        } catch (e: NoClassDefFoundError) {
+            val clazz = e.message
+            val attachment = services.attachments.privilegedFindTrustedAttachmentForClass(clazz!!)
+            log.warnOnce("""
+                The transaction currently built is missing an attachment for class: $clazz.
+                Automatically attaching dependency with attachmentId=$attachment.
+                It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
+            """.trimIndent())
+            // todo caching
+            addAttachment(attachment!!)
+            return toWireTransactionWithContext(services, serializationContext)
+        }
+
+        return wireTx
     }
 
     /**

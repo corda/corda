@@ -127,4 +127,8 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
         return queryAttachments(attachmentQueryCriteria).toSet()
     }
+
+    override fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId? {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 }

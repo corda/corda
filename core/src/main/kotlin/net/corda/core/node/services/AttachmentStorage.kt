@@ -94,5 +94,10 @@ interface AttachmentStorage {
      * @return the [AttachmentId]s of the contract attachments, or an empty set if none meet the criteria.
      */
     fun getContractAttachments(contractClassName: String): Set<AttachmentId>
+
+    /**
+     * Scans all trusted attachments to find one that contains the [className].
+     */
+    fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId?
 }
 

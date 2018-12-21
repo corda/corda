@@ -200,8 +200,15 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @DeleteForDJVM
     private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
-        // TODO: allow non-blocking verification.
-        services.transactionVerifierService.verify(ltx).getOrThrow()
+        try {
+            // TODO: allow non-blocking verification.
+            services.transactionVerifierService.verify(ltx).getOrThrow()
+        } catch (e: NoClassDefFoundError) {
+            // todo
+            val clazz = e.message
+            val attachment = services.attachments.privilegedFindTrustedAttachmentForClass(clazz!!)
+            services.transactionVerifierService.verify(ltx, listOf(services.attachments.openAttachment(attachment!!)!!)).getOrThrow()
+        }
     }
 
     /**

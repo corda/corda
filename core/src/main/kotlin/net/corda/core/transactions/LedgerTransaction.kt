@@ -14,6 +14,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -135,6 +136,28 @@ private constructor(
         val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
 
         AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
+
+            val internalTx = createLtxForVerification()
+
+            validateContractVersions(contractAttachmentsByContract)
+            validatePackageOwnership(contractAttachmentsByContract)
+            validateStatesAgainstContract(internalTx)
+            val hashToSignatureConstrainedContracts = verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
+            verifyConstraints(internalTx, contractAttachmentsByContract, hashToSignatureConstrainedContracts)
+            verifyContracts(internalTx)
+        }
+    }
+
+    @Throws(TransactionVerificationException::class)
+    fun verify(extraAttachments: List<Attachment>) {
+        if (networkParameters == null) {
+            // For backwards compatibility only.
+            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
+                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
+        }
+        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
+
+        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
 
             val internalTx = createLtxForVerification()
 

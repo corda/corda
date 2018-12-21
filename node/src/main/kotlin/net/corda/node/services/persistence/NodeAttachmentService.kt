@@ -303,6 +303,22 @@ class NodeAttachmentService(
         }
     }
 
+    override fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId? {
+        val allTrusted = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.equal(DEPLOYED_CORDAPP_UPLOADER)))
+        return allTrusted.find { attId ->
+            hasFile(openAttachment(attId)!!.openAsJAR(), "$className.class")
+        }
+    }
+
+    private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
+        while (true) {
+            val e = jarStream.nextJarEntry ?: return false
+            if (e.name == className) {
+                return true
+            }
+        }
+    }
+
     override fun hasAttachment(attachmentId: AttachmentId): Boolean = database.transaction {
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
@@ -311,7 +327,7 @@ class NodeAttachmentService(
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
-                require(inputStream !is JarInputStream){"Input stream must not be a JarInputStream"}
+                require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
 
                 // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
                 // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
@@ -361,16 +377,16 @@ class NodeAttachmentService(
     }
 
     private fun getSigners(attachmentBytes: ByteArray) =
-        JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+            JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
 
     private fun getVersion(attachmentBytes: ByteArray) =
-        JarInputStream(attachmentBytes.inputStream()).use {
-            try {
-                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
-            } catch (e: NumberFormatException) {
-                DEFAULT_CORDAPP_VERSION
+            JarInputStream(attachmentBytes.inputStream()).use {
+                try {
+                    it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
+                } catch (e: NumberFormatException) {
+                    DEFAULT_CORDAPP_VERSION
+                }
             }
-        }
 
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
@@ -411,8 +427,8 @@ class NodeAttachmentService(
         }
 
         fun toList(): List<AttachmentId> =
-                if(signed != null) {
-                    if(unsigned != null) {
+                if (signed != null) {
+                    if (unsigned != null) {
                         listOf(signed, unsigned)
                     } else listOf(signed)
                 } else listOf(unsigned!!)
@@ -466,5 +482,4 @@ class NodeAttachmentService(
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toList() }.toSet()
     }
-
 }
