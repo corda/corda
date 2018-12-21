@@ -11,7 +11,6 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet

@@ -3,10 +3,9 @@ package net.corda.testing.node.internal
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.notary.HistoricNetworkParameterStorage
+import net.corda.core.internal.NetworkParametersStorageInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.serialize
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.network.verifiedNetworkMapCert
@@ -15,7 +14,7 @@ import net.corda.testing.internal.withTestSerializationEnvIfNotSet
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-class MockNetworkParametersStorage(private var currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorageInternal, HistoricNetworkParameterStorage {
+class MockNetworkParametersStorage(private var currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorageInternal {
     private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
     private val hashToSignedParametersMap: HashMap<SecureHash, SignedNetworkParameters> = HashMap()
     init {

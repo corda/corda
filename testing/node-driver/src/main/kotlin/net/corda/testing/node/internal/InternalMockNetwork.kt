@@ -22,7 +22,6 @@ import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger

@@ -1,8 +1,9 @@
-package net.corda.core.node.services.internal
+package net.corda.core.internal
 
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.SignedDataWithCert
+import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkParametersStorage
 import java.security.cert.X509Certificate
 
@@ -20,6 +21,9 @@ interface NetworkParametersStorageInternal : NetworkParametersStorage {
      */
     fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>)
 
+    /**
+     * Set information that given parameters are current parameters for the network.
+     */
     fun setCurrentParameters(currentSignedParameters: SignedDataWithCert<NetworkParameters>, trustRoot: X509Certificate)
 
     /**
@@ -32,4 +36,9 @@ interface NetworkParametersStorageInternal : NetworkParametersStorage {
      * Checks if parameters with given hash are in the storage.
      */
     fun hasParameters(hash: SecureHash): Boolean
+
+    /**
+     * Returns the [NotaryInfo] for a notary [party] in the current or any historic network parameter whitelist, or null if not found.
+     */
+    fun getHistoricNotary(party: Party): NotaryInfo?
 }

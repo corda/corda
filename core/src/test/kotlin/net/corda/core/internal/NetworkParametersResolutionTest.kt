@@ -8,7 +8,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction

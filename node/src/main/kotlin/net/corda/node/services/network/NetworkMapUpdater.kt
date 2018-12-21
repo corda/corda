@@ -10,7 +10,6 @@ import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.AutoAcceptable
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
