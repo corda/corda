@@ -4,8 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.RetrieveAnyTransactionPayload
 import net.corda.core.internal.readFully
-import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
@@ -115,11 +115,3 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
         }
     }
 }
-
-/**
- * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to its vault.
- *
- * TODO Fails with a serialization exception if it is not a list. Why?
- */
-@CordaSerializable
-object RetrieveAnyTransactionPayload : ArrayList<Any>()
