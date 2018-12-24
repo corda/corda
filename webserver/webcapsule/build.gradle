@@ -38,8 +38,8 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
     applicationSource = files(
         project(':webserver').configurations.runtimeClasspath,
         project(':webserver').tasks.jar,
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet.class',
-        project(':node').sourceSets.main.java.outputDir.toString() + '/CordaCaplet$1.class',
+        project(':webserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet.class',
+        project(':webserver').sourceSets.main.java.outputDir.toString() + '/CordaWebserverCaplet$1.class',
         project(':node').buildDir.toString() + '/resources/main/reference.conf',
         "$rootDir/config/dev/log4j2.xml",
         project(':node:capsule').projectDir.toString() + '/NOTICE' // Copy CDDL notice
@@ -52,7 +52,7 @@ task buildWebserverJar(type: FatCapsule, dependsOn: project(':node').tasks.jar) 
         systemProperties['visualvm.display.name'] = 'Corda Webserver'
         minJavaVersion = '1.8.0'
         minUpdateVersion['1.8'] = java8_minUpdateVersion
-        caplets = ['CordaCaplet']
+        caplets = ['CordaWebserverCaplet']
 
         // JVM configuration:
         // - Constrain to small heap sizes to ease development on low end devices.
