@@ -63,7 +63,7 @@ private constructor(
     private var componentGroups: List<ComponentGroup>? = null
     private var serializedInputs: List<SerializedStateAndRef>? = null
     private var serializedReferences: List<SerializedStateAndRef>? = null
-    private var networkParametersForInputs: Map<StateRef,NetworkParameters?>? = null
+    private val networkParametersForInputs: HashMap<StateRef,NetworkParameters?> = HashMap()
 
     init {
         checkBaseInvariants()
@@ -92,13 +92,13 @@ private constructor(
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
                 inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>,
-                resolveNetworkParametersForInputs: Map<StateRef, NetworkParameters?>? = null
+                resolveNetworkParametersForInputs: Map<StateRef, NetworkParameters?> = emptyMap()
         ): LedgerTransaction {
             return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
-                this.networkParametersForInputs = resolveNetworkParametersForInputs
+                this.networkParametersForInputs.putAll(resolveNetworkParametersForInputs)
             }
         }
     }
@@ -170,7 +170,7 @@ private constructor(
 
     private fun verifyNetworkParameters() {
         if (networkParameters != null) {
-            networkParametersForInputs?.forEach { inputStateRef, inputNetworkParameters ->
+            networkParametersForInputs.forEach { inputStateRef, inputNetworkParameters ->
                 if (inputNetworkParameters == null) {
                     logger.debug { "Skipping verification check as txn with stateRef $inputStateRef has no tagged network parameters." }
                 }

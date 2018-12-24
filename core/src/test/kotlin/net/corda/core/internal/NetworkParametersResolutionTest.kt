@@ -31,7 +31,7 @@ import kotlin.test.assertEquals
 
 class NetworkParametersResolutionTest {
     // FetchParametersFlow is enabled if minimumPlatformVersion is >= 4
-    private var params1: NetworkParameters = testNetworkParameters(epoch = 1, minimumPlatformVersion = 4)
+    private lateinit var params1: NetworkParameters
     private lateinit var params2: NetworkParameters
     private var params3: NetworkParameters = testNetworkParameters(epoch = 3, minimumPlatformVersion = 4)
     private lateinit var params4: NetworkParameters
@@ -56,6 +56,7 @@ class NetworkParametersResolutionTest {
         megaCorp = megaCorpNode.info.singleIdentity()
         miniCorp = miniCorpNode.info.singleIdentity()
 
+        params1 = testNetworkParameters(epoch = 1, minimumPlatformVersion = 4, notaries = listOf((NotaryInfo(notary, true))))
         params2 = testNetworkParameters(epoch = 2, minimumPlatformVersion = 4, notaries = listOf((NotaryInfo(notary, true))))
         params4 = testNetworkParameters(epoch = 4, minimumPlatformVersion = 4, notaries = listOf((NotaryInfo(notary, true))))
     }

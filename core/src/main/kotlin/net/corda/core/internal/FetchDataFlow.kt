@@ -49,7 +49,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
-    class MissingNetworkParameters(val requested: SecureHash) : FlowException()
+    class MissingNetworkParameters(val requested: SecureHash) : FlowException("Failed to fetch network parameters with hash: $requested")
 
     class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
 
@@ -68,7 +68,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
     }
 
     @Suspendable
-    @Throws(HashNotFound::class)
+    @Throws(HashNotFound::class, MissingNetworkParameters::class)
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()
@@ -209,7 +209,7 @@ class FetchNetworkParametersFlow(requests: Set<SecureHash>,
         for (parameters in downloaded) {
             with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
                 if (!hasParameters(parameters.id)) {
-                    // This will perform the signature check too and throws with SignatureVerificationException
+                    // This will perform the signature check too and throws SignatureVerificationException
                     saveParameters(parameters)
                 } else {
                     logger.debug { "Network parameters ${parameters.id} already exists in storage, skipping." }
