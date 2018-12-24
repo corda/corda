@@ -3,13 +3,16 @@ package net.corda.core.contracts
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
+import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SecureHash.Companion.allOnesHash
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
-import net.corda.core.crypto.*
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.AttachmentWithContext
+import net.corda.core.internal.canBeTransitionedFrom
 import net.corda.core.internal.inputStream
 import net.corda.core.internal.toPath
 import net.corda.core.node.NotaryInfo
@@ -21,9 +24,12 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.Cash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.core.*
-import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.internal.ContractJarTestUtils
+import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.internal.rigorousMock
@@ -31,8 +37,6 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
-import org.junit.Rule
-import org.junit.Test
 import java.util.jar.Attributes
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -52,8 +56,8 @@ class ConstraintsPropagationTests {
         val BOB = TestIdentity(CordaX500Name("BOB", "London", "GB"))
         val BOB_PARTY get() = BOB.party
         val BOB_PUBKEY get() = BOB.publicKey
-        val noPropagationContractClassName = "net.corda.core.contracts.NoPropagationContract"
-        val propagatingContractClassName = "net.corda.core.contracts.PropagationContract"
+        const val noPropagationContractClassName = "net.corda.core.contracts.NoPropagationContract"
+        const val propagatingContractClassName = "net.corda.core.contracts.PropagationContract"
 
         private lateinit var keyStoreDir: SelfCleaningDir
         private lateinit var hashToSignatureConstraintsKey: PublicKey

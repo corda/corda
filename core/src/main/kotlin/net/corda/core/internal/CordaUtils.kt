@@ -5,9 +5,11 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -61,15 +63,25 @@ internal fun SignedTransaction.pushToLoggingContext() {
     MDC.put("tx_id", id.toString())
 }
 
-/**
- * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
- * Size is very cheap as it doesn't call [transform].
- */
-class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
-    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
-
-    override val size = originalList.size
-
-    override fun get(index: Int) = partialResolvedList[index]
-            ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+private fun isPackageValid(packageName: String): Boolean {
+    return packageName.isNotEmpty() &&
+            !packageName.endsWith(".") &&
+            packageName.split(".").all { token ->
+                Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
+            }
 }
+
+/**
+ * Check if a string is a legal Java package name.
+ */
+fun requirePackageValid(name: String) {
+    require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
+}
+
+/**
+ * This is a wildcard payload to be used by the invoker of the [DataVendingFlow] to allow unlimited access to its vault.
+ *
+ * TODO Fails with a serialization exception if it is not a list. Why?
+ */
+@CordaSerializable
+object RetrieveAnyTransactionPayload : ArrayList<Any>()
