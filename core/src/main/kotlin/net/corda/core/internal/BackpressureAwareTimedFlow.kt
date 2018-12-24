@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaInternal
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.flows.WaitTimeUpdate
@@ -17,17 +18,18 @@ const val MIN_PLATFORM_VERSION_FOR_BACKPRESSURE_MESSAGE = 4
  * to this use case at the moment, this implementation is internal and not for general use.
  */
 abstract class BackpressureAwareTimedFlow<ResultType> : FlowLogic<ResultType>(), TimedFlow {
+    @CordaInternal
     @Suspendable
     inline fun <reified ReceiveType> receiveResultOrTiming(session: FlowSession): UntrustworthyData<ReceiveType> {
         while (true) {
             val wrappedResult = session.receive<Any>()
             val unwrapped = wrappedResult.fromUntrustedWorld
-            when {
-                unwrapped is WaitTimeUpdate -> {
+            when (unwrapped) {
+                is WaitTimeUpdate -> {
                     logger.info("Counterparty [${session.counterparty}] is busy - TimedFlow $runId has been asked to wait for an additional ${unwrapped.waitTime} seconds for completion.")
                     stateMachine.updateTimedFlowTimeout(unwrapped.waitTime.seconds)
                 }
-                unwrapped is ReceiveType -> @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
+                is ReceiveType -> @Suppress("UNCHECKED_CAST") // The compiler doesn't understand it's checked in the line above
                 return wrappedResult as UntrustworthyData<ReceiveType>
                 else -> throw throw IllegalArgumentException("We were expecting a ${ReceiveType::class.java.name} or WaitTimeUpdate but we instead got a ${unwrapped.javaClass.name} ($unwrapped)")
             }
