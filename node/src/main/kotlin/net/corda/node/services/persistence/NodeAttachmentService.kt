@@ -303,11 +303,18 @@ class NodeAttachmentService(
         }
     }
 
-    override fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId? {
-        val allTrusted = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.equal(DEPLOYED_CORDAPP_UPLOADER)))
-        return allTrusted.find { attId ->
-            hasFile(openAttachment(attId)!!.openAsJAR(), "$className.class")
+    override fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment? {
+        val allTrusted = queryAttachments(
+                AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+
+        // TODO - add caching if performance is affected.
+        for (attId in allTrusted) {
+            val attch = openAttachment(attId)!!
+            if (attch is ContractAttachment && hasFile(attch.openAsJAR(), "$className.class")) return attch
         }
+
+        return null
     }
 
     private fun hasFile(jarStream: JarInputStream, className: String): Boolean {

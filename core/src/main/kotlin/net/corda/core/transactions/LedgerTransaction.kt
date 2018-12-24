@@ -14,7 +14,6 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VER
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
@@ -127,27 +126,13 @@ private constructor(
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() {
-        if (networkParameters == null) {
-            // For backwards compatibility only.
-            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
-                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
-        }
-        val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract(allStates.map { it.contract }.toSet())
+    fun verify() = verify(emptyList())
 
-        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
-
-            val internalTx = createLtxForVerification()
-
-            validateContractVersions(contractAttachmentsByContract)
-            validatePackageOwnership(contractAttachmentsByContract)
-            validateStatesAgainstContract(internalTx)
-            val hashToSignatureConstrainedContracts = verifyConstraintsValidity(internalTx, contractAttachmentsByContract, transactionClassLoader)
-            verifyConstraints(internalTx, contractAttachmentsByContract, hashToSignatureConstrainedContracts)
-            verifyContracts(internalTx)
-        }
-    }
-
+    /**
+     * Verifies the transaction but takes a list of [extraAttachments] which are used to form the classpath.
+     * Used to work around a Corda 3 bug as there might be transactions out there that don't contain all the necessary dependencies in the attachments list.
+     */
+    @CordaInternal
     @Throws(TransactionVerificationException::class)
     fun verify(extraAttachments: List<Attachment>) {
         if (networkParameters == null) {

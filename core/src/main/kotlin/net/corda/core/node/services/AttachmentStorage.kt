@@ -1,7 +1,9 @@
 package net.corda.core.node.services
 
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
@@ -96,8 +98,15 @@ interface AttachmentStorage {
     fun getContractAttachments(contractClassName: String): Set<AttachmentId>
 
     /**
-     * Scans all trusted attachments to find one that contains the [className].
+     * Scans trusted (installed locally) contract attachments to find all that contain the [className].
+     * This is required as a workaround until explicit cordapp dependencies are implemented.
+     * DO NOT USE IN CLIENT code.
+     *
+     * @return the contract attachments with the highest version.
+     *
+     * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
      */
-    fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId?
+    @CordaInternal
+    fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment?
 }
 

@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -70,7 +71,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val networkParameters = testNetworkParameters()
 
-    private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
+    private val networkParametersStorage get() = mock<NetworkParametersStorage>().also {
         doReturn(networkParameters.serialize().hash).whenever(it).currentHash
     }
 

@@ -14,10 +14,7 @@ import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -165,28 +162,45 @@ open class TransactionBuilder @JvmOverloads constructor(
             )
         }
 
-        // blah blah to be removed , workaround, bad, slow, etc
+        // Check the transaction for missing dependencies, and attempt to add them.
+        // This is a workaround as the current version of Corda does not support cordapp dependencies.
+        // It works by running transaction validation and then scan the attachment storage for missing classes.
+        // TODO - remove once proper support for cordapp dependencies is added.
+        val addedDependency = addMissingDependency(services, wireTx)
+
+        return if (addedDependency)
+            toWireTransactionWithContext(services, serializationContext)
+        else
+            wireTx
+    }
+
+    /**
+     * @return true if a new dependency was successfully added.
+     */
+    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
         try {
             wireTx.toLedgerTransaction(services).verify()
         } catch (e: NoClassDefFoundError) {
-            val clazz = e.message
-            val attachment = services.attachments.privilegedFindTrustedAttachmentForClass(clazz!!)
-            log.warnOnce("""
-                The transaction currently built is missing an attachment for class: $clazz.
-                Automatically attaching dependency with attachmentId=$attachment.
-                It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
-            """.trimIndent())
-            // todo caching
-            addAttachment(attachment!!)
-            return toWireTransactionWithContext(services, serializationContext)
-        } catch (tve: TransactionVerificationException){
-        } catch (tre: TransactionResolutionException){
-        } catch (ise: IllegalStateException){
-        } catch (ise: IllegalArgumentException){
-            // ignoring this as it breaks unit tests
-        }
+            val missingClass = e.message
+            requireNotNull(missingClass) { "Transaction is incorrectly formed." }
 
-        return wireTx
+            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
+                    ?: throw IllegalArgumentException("Attempted to find dependent attachment for class $missingClass, but could not find a suitable candidate.")
+
+            log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
+                    Automatically attaching contract dependency $attachment.
+                    It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
+                """.trimIndent())
+
+            addAttachment(attachment.id)
+            return true
+        // Ignore these exceptions as they will break unit tests.
+        } catch (tve: TransactionVerificationException) {
+        } catch (tre: TransactionResolutionException) {
+        } catch (ise: IllegalStateException) {
+        } catch (ise: IllegalArgumentException) {
+        }
+        return false
     }
 
     /**
@@ -212,7 +226,8 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
 
-        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map {it.state}.groupBy { it.contract }
+        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map { it.state }
+                .groupBy { it.contract }
         val outputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = outputs.groupBy { it.contract }
 
         val allContracts: Set<ContractClassName> = inputContractGroups.keys + outputContractGroups.keys
@@ -226,7 +241,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                     selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services)
                 }
 
-        val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
+        val contractClassNameToInputStateRef: Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract, it.ref) }
+                .groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?>> = allContracts.toSet()
@@ -282,20 +298,21 @@ open class TransactionBuilder @JvmOverloads constructor(
         if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
             val attachmentIds = services.attachments.getContractAttachments(contractClassName)
             // only switchover if we have both signed and unsigned attachments for the given contract class name
-            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2)  {
+            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
                 val attachmentsToUse = attachmentIds.map {
                     services.attachments.openAttachment(it)?.let { it as ContractAttachment }
                             ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
                 }
-                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull() ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
+                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
+                        ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
                 val outputConstraints =
-                    if (outputHashConstraints.isNotEmpty()) {
-                        log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
-                        val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
-                        outputs.addAll(outputsSignatureConstraints)
-                        outputs.removeAll(outputHashConstraints)
-                        outputsSignatureConstraints
-                    } else outputSignatureConstraints
+                        if (outputHashConstraints.isNotEmpty()) {
+                            log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
+                            val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+                            outputs.addAll(outputsSignatureConstraints)
+                            outputs.removeAll(outputHashConstraints)
+                            outputsSignatureConstraints
+                        } else outputSignatureConstraints
                 return Pair(attachmentIds.toSet(), outputConstraints)
             }
         }
@@ -455,7 +472,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max() ?: DEFAULT_CORDAPP_VERSION
+        val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max()
+                ?: DEFAULT_CORDAPP_VERSION
         return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }

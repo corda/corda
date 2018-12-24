@@ -128,7 +128,26 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         return queryAttachments(attachmentQueryCriteria).toSet()
     }
 
-    override fun privilegedFindTrustedAttachmentForClass(className: String): AttachmentId? {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment? {
+        val allTrusted = queryAttachments(
+                AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+
+        // TODO - add caching if performance is affected.
+        for (attId in allTrusted) {
+            val attch = openAttachment(attId)!!
+            if (attch is ContractAttachment && hasFile(attch.openAsJAR(), "$className.class")) return attch
+        }
+
+        return null
+    }
+
+    private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
+        while (true) {
+            val e = jarStream.nextJarEntry ?: return false
+            if (e.name == className) {
+                return true
+            }
+        }
     }
 }
