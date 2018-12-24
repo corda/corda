@@ -122,8 +122,12 @@ class CordappConstraintsTests : IntegrationTest() {
             printVault(restartedNode, allStates)
 
             assertThat(allStates).hasSize(2)
-            assertThat(allStates[0].state.constraint).isInstanceOf(HashAttachmentConstraint::class.java)
-            assertThat(allStates[1].state.constraint).isInstanceOf(SignatureAttachmentConstraint::class.java)
+            // cannot guarantee database results ordering so check for one or the other.
+            assertThat(allStates[0].state.constraint).isInstanceOfAny(HashAttachmentConstraint::class.java, SignatureAttachmentConstraint::class.java)
+            if (allStates[0].state.constraint is HashAttachmentConstraint)
+                assertThat(allStates[1].state.constraint).isInstanceOf(SignatureAttachmentConstraint::class.java)
+            else
+                assertThat(allStates[1].state.constraint).isInstanceOf(HashAttachmentConstraint::class.java)
         }
     }
 
