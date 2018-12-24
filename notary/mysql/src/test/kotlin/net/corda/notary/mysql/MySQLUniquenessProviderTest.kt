@@ -11,7 +11,6 @@ import net.corda.core.flows.NotarisationRequestSignature
 import net.corda.core.internal.notary.UniquenessProvider
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
-import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.hamcrest.CoreMatchers.instanceOf
 import org.junit.After
@@ -21,18 +20,14 @@ import org.junit.Test
 import java.time.Clock
 import java.util.*
 
-class MySQLUniquenessProviderTest : IntegrationTest() {
-
-    val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
+class MySQLUniquenessProviderTest {
+    private val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
         setProperty("autoCommit", "false")
     }
-
-    val config = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
-    val clock = Clock.systemUTC()
-
-    val party = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public).party
-
-    val uniquenessProvider = MySQLUniquenessProvider(MetricRegistry(), clock, config)
+    private val config = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
+    private val clock = Clock.systemUTC()!!
+    private val party = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public).party
+    private val uniquenessProvider = MySQLUniquenessProvider(MetricRegistry(), clock, config)
 
     @Before
     fun before() {

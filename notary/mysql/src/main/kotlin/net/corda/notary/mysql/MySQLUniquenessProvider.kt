@@ -125,9 +125,9 @@ class MySQLUniquenessProvider(
     /** Track the measured ETA. **/
     private val requestProcessingETA = metrics.histogram("$metricPrefix.requestProcessingETASeconds")
     /** Track the number of requests in the queue at insert. **/
-    private val requestQueueSize  = metrics.histogram("$metricPrefix.requestQueue.size")
+    private val requestQueueSize = metrics.histogram("$metricPrefix.requestQueue.size")
     /** Track the number of states in the queue at insert. **/
-    private val requestQueueStateCount  = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
+    private val requestQueueStateCount = metrics.histogram("$metricPrefix.requestQueue.queuedStates")
 
     private val dataSource = HikariDataSource(HikariConfig(config.dataSource))
     private val connectionRetries = config.connectionRetries
@@ -318,7 +318,7 @@ class MySQLUniquenessProvider(
             requestFutures[requestId]?.let {
                 it.set(result)
                 requestFutures.remove(requestId)
-                if (result is Result.Failure && result.error is NotaryError.Conflict){
+                if (result is Result.Failure && result.error is NotaryError.Conflict) {
                     conflictCounter.inc()
                 }
             }
@@ -373,40 +373,65 @@ class MySQLUniquenessProvider(
             val toCommit = mutableListOf<CommitRequest>()
 
             requests.forEach { request ->
-                val referenceStateConflicts = allConflicts.keys.intersect(request.references.toSet()).map { it to allConflicts[it]!! }.toMap()
+                val referenceStateConflicts = allConflicts.keys.intersect(request.references.toSet()).map { it to allConflicts[it]!! }
+                        .toMap()
                 val inputStateConflicts = allConflicts.keys.intersect(request.states.toSet()).map { it to allConflicts[it]!! }.toMap()
                 val conflicts = referenceStateConflicts + inputStateConflicts
 
                 results[request.id] = if (conflicts.isNotEmpty()) {
-                    if (request.states.isEmpty() && referenceStateConflicts.isNotEmpty()) {
-                        if (isPreviouslySigned(connection, request.txId)) {
-                            Result.Success
-                        } else {
-                            Result.Failure(NotaryError.Conflict(request.txId, conflicts))
-                        }
-                    } else if (inputStateConflicts.isNotEmpty() && isConsumedByTheSameTx(request.txId.sha256(), inputStateConflicts)) {
-                        Result.Success
-                    } else {
-                        Result.Failure(NotaryError.Conflict(request.txId, conflicts))
-                    }
-                } else {
-                    val outsideTimeWindowError = validateTimeWindow(clock.instant(), request.timeWindow)
-                    val preSigned = outsideTimeWindowError != null && request.states.isEmpty() && isPreviouslySigned(connection, request.txId)
-                    if (outsideTimeWindowError == null || preSigned) {
-                        if (!preSigned) {
-                            toCommit.add(request)
-                        }
-                        // Mark states as consumed to capture conflicting transactions in the same batch
-                        request.states.forEach {
-                            allConflicts[it] = StateConsumptionDetails(request.txId.sha256())
-                        }
-                        Result.Success
-                    } else {
-                        Result.Failure(outsideTimeWindowError)
-                    }
-                }
+                    if (inputStateConflicts.isEmpty()) {
+                        handleReferenceConflicts(connection, request, conflicts)
+                    } else handleConflicts(inputStateConflicts, request, conflicts)
+                } else handleNoConflicts(request, connection, toCommit, allConflicts)
             }
 
+            recordConsumedStates(connection, toCommit)
+            recordTransactions(connection, toCommit)
+
+            connection.commit()
+            return results
+        }
+
+        private fun handleReferenceConflicts(connection: Connection, request: CommitRequest, conflicts: Map<StateRef, StateConsumptionDetails>): Result {
+            return if (isPreviouslySigned(connection, request.txId)) {
+                Result.Success
+            } else {
+                Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+            }
+        }
+
+        private fun handleConflicts(inputStateConflicts: Map<StateRef, StateConsumptionDetails>, request: CommitRequest, conflicts: Map<StateRef, StateConsumptionDetails>): Result {
+            return if (isConsumedByTheSameTx(request.txId.sha256(), inputStateConflicts)) {
+                Result.Success
+            } else {
+                Result.Failure(NotaryError.Conflict(request.txId, conflicts))
+            }
+        }
+
+        private fun handleNoConflicts(
+                request: CommitRequest,
+                connection: Connection,
+                toCommit: MutableList<CommitRequest>,
+                allConflicts: MutableMap<StateRef, StateConsumptionDetails>
+        ): Result {
+            return if (request.states.isEmpty() && isPreviouslySigned(connection, request.txId)) {
+                Result.Success // Return success if this is a re-notarisation of a reference-only transaction
+            } else {
+                val outsideTimeWindowError = validateTimeWindow(clock.instant(), request.timeWindow)
+                if (outsideTimeWindowError == null) {
+                    toCommit.add(request)
+                    // Mark states as consumed to capture conflicting transactions in the same batch
+                    request.states.forEach {
+                        allConflicts[it] = StateConsumptionDetails(request.txId.sha256())
+                    }
+                    Result.Success
+                } else {
+                    Result.Failure(outsideTimeWindowError)
+                }
+            }
+        }
+
+        private fun recordConsumedStates(connection: Connection, toCommit: MutableList<CommitRequest>) {
             connection.prepareStatement(insertStateStatement).apply {
                 toCommit.forEach { (states, txId, _, _) ->
                     states.forEach { stateRef ->
@@ -422,7 +447,9 @@ class MySQLUniquenessProvider(
                 executeBatch()
                 close()
             }
+        }
 
+        private fun recordTransactions(connection: Connection, toCommit: MutableList<CommitRequest>) {
             connection.prepareStatement(insertCommittedTransactionStatement).apply {
                 toCommit.forEach { (_, txId, _, _) ->
                     setBytes(1, txId.bytes)
@@ -432,8 +459,6 @@ class MySQLUniquenessProvider(
                 executeBatch()
                 close()
             }
-            connection.commit()
-            return results
         }
 
         private fun isPreviouslySigned(connection: Connection, txId: SecureHash): Boolean {

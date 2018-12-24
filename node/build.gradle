@@ -232,6 +232,9 @@ dependencies {
     compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
     testCompile(project(':test-cli'))
+
+    testCompile(project(':notary:mysql'))
+    testCompile(project(':notary:jpa'))
 }
 
 tasks.withType(JavaCompile) {

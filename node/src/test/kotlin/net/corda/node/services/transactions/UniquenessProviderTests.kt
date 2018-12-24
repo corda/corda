@@ -1,5 +1,7 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.MetricRegistry
+import com.typesafe.config.ConfigFactory
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
@@ -14,14 +16,20 @@ import net.corda.core.utilities.minutes
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.jpa.JPANotaryConfiguration
+import net.corda.notary.jpa.JPANotarySchemaV1
+import net.corda.notary.jpa.JPAUniquenessProvider
+import net.corda.notary.mysql.MySQLNotaryConfiguration
+import net.corda.notary.mysql.MySQLUniquenessProvider
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
+import net.corda.testing.node.MockServices
 import net.corda.testing.node.TestClock
+import net.corda.testing.node.internal.makeInternalTestDataSourceProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -39,7 +47,9 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun data(): Collection<UniquenessProviderFactory> = listOf(
-                PersistentUniquenessProviderFactory()
+                PersistentUniquenessProviderFactory(),
+                MySQLUniquenessProviderFactory(),
+                JPAUniquenessProviderFactory()
         )
     }
 
@@ -381,8 +391,33 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
 
     override fun create(clock: Clock): UniquenessProvider {
         database?.close()
-        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
+        database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(NodeNotarySchemaV1)))
         return PersistentUniquenessProvider(clock, database!!, TestingNamedCacheFactory())
+    }
+
+    override fun cleanUp() {
+        database?.close()
+    }
+}
+
+class MySQLUniquenessProviderFactory : UniquenessProviderFactory {
+    private val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
+        setProperty("autoCommit", "false")
+    }
+    private val config = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
+
+    override fun create(clock: Clock): UniquenessProvider {
+        return MySQLUniquenessProvider(MetricRegistry(), clock, config).apply { createTable() }
+    }
+}
+
+class JPAUniquenessProviderFactory : UniquenessProviderFactory {
+    private var database: CordaPersistence? = null
+    private val notaryConfig = JPANotaryConfiguration(maxInputStates = 10)
+    override fun create(clock: Clock): UniquenessProvider {
+        database?.close()
+        database = configureDatabase(MockServices.makeTestDataSourceProperties(), DatabaseConfig(runMigration = true), { null }, { null }, NodeSchemaService(extraSchemas = setOf(JPANotarySchemaV1)))
+        return JPAUniquenessProvider(clock, database!!, notaryConfig)
     }
 
     override fun cleanUp() {
