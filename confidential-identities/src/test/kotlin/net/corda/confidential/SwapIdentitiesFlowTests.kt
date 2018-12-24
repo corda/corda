@@ -23,10 +23,10 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.AfterClass
 import org.junit.Test
 import java.security.PublicKey
-import kotlin.test.assertFailsWith
 
 class SwapIdentitiesFlowTests {
     companion object {
@@ -77,10 +77,9 @@ class SwapIdentitiesFlowTests {
     fun `verifies identity name`() {
         val notBob = charlieNode.issueFreshKeyAndCert()
         val signature = charlieNode.signSwapIdentitiesFlowData(notBob, notBob.owningKey)
-        assertFailsWith<SwapIdentitiesException>(
-            "Certificate subject must match counterparty's well known identity.") {
-            aliceNode.validateSwapIdentitiesFlow(bob, notBob, signature)
-        }
+        assertThatThrownBy { aliceNode.validateSwapIdentitiesFlow(bob, notBob, signature) }
+                .isInstanceOf(SwapIdentitiesException::class.java)
+                .hasMessage("Certificate subject must match counterparty's well known identity.")
     }
 
     /**
@@ -93,10 +92,9 @@ class SwapIdentitiesFlowTests {
         val anonymousEvilBob = evilBobNode.issueFreshKeyAndCert()
         val signature = evilBobNode.signSwapIdentitiesFlowData(evilBob, anonymousEvilBob.owningKey)
 
-        assertFailsWith<SwapIdentitiesException>(
-                "Signature does not match the given identity and nonce") {
-            aliceNode.validateSwapIdentitiesFlow(bob, anonymousEvilBob, signature)
-        }
+        assertThatThrownBy { aliceNode.validateSwapIdentitiesFlow(bob, anonymousEvilBob, signature) }
+                .isInstanceOf(SwapIdentitiesException::class.java)
+                .hasMessage("Signature does not match the expected identity ownership assertion.")
     }
 
     @Test
@@ -105,10 +103,9 @@ class SwapIdentitiesFlowTests {
         val anonymousBob = bobNode.issueFreshKeyAndCert()
         val signature = bobNode.signSwapIdentitiesFlowData(anonymousAlice, anonymousBob.owningKey)
 
-        assertFailsWith<SwapIdentitiesException>(
-                "Signature does not match the given identity and nonce.") {
-                aliceNode.validateSwapIdentitiesFlow(bob, anonymousBob, signature)
-        }
+        assertThatThrownBy { aliceNode.validateSwapIdentitiesFlow(bob, anonymousBob, signature) }
+                .isInstanceOf(SwapIdentitiesException::class.java)
+                .hasMessage("Signature does not match the expected identity ownership assertion.")
     }
 
     //region Operations

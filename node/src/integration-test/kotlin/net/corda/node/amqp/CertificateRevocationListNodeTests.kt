@@ -29,6 +29,7 @@ import net.corda.testing.internal.DEV_INTERMEDIATE_CA
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
+import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.jcajce.JcaX509CRLConverter
@@ -62,7 +63,6 @@ import javax.ws.rs.Path
 import javax.ws.rs.Produces
 import javax.ws.rs.core.Response
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 
 class CertificateRevocationListNodeTests {
     @Rule
@@ -577,14 +577,15 @@ class CertificateRevocationListNodeTests {
         crl.verify(ROOT_CA.keyPair.public)
 
         // Try changing the algorithm to EC will fail.
-        assertFailsWith<IllegalArgumentException>("Unknown signature type requested: EC") {
+        assertThatIllegalArgumentException().isThrownBy {
             createRevocationList(
-                server,
-                EC_ALGORITHM,
-                ROOT_CA.certificate,
-                ROOT_CA.keyPair.private,
-                EMPTY_CRL,
-                true)
-        }
+                    server,
+                    EC_ALGORITHM,
+                    ROOT_CA.certificate,
+                    ROOT_CA.keyPair.private,
+                    EMPTY_CRL,
+                    true
+            )
+        }.withMessage("Unknown signature type requested: EC")
     }
 }

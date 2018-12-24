@@ -29,6 +29,12 @@ We look forward to seeing what you can do with Corda!
 .. _`download the PDF`: _static/corda-developer-site.pdf
 
 .. toctree::
+   :maxdepth: 1
+
+   release-notes
+   app-upgrade-notes
+
+.. toctree::
    :caption: Development
    :maxdepth: 1
 
@@ -93,7 +99,6 @@ We look forward to seeing what you can do with Corda!
    contributing-index.rst
    corda-repo-layout.rst
    deterministic-modules.rst
-   release-notes
    changelog
 
 .. conditional-toctree::

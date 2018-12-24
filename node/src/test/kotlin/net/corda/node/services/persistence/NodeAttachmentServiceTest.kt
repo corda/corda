@@ -368,9 +368,9 @@ class NodeAttachmentServiceTest {
         val path = fs.getPath("notajar")
         path.writeLines(listOf("Hey", "there!"))
         path.read {
-            assertFailsWith<IllegalArgumentException>("either empty or not a JAR") {
+            assertThatIllegalArgumentException().isThrownBy {
                 storage.importAttachment(it, "test", null)
-            }
+            }.withMessageContaining("either empty or not a JAR")
         }
     }
 
