@@ -4,7 +4,6 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.contracts.ContractAttachment.Companion.getContractVersion
 import net.corda.core.crypto.CompositeKey
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.SignableData
@@ -19,8 +18,6 @@ import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.KeyManagementService
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
-import net.corda.core.node.services.vault.Builder
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
@@ -30,6 +27,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.ArrayDeque
 import java.util.UUID
+import kotlin.collections.ArrayList
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -435,7 +433,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        val minimumRequiredContractClassVersion = stateRefs?.map { getContractVersion(services.loadContractAttachment(it)) }?.max() ?: DEFAULT_CORDAPP_VERSION
+        val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
         return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }

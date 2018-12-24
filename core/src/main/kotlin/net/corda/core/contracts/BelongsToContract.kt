@@ -19,18 +19,3 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class BelongsToContract(val value: KClass<out Contract>)
-
-/**
- * Obtain the typename of the required [ContractClass] associated with the target [ContractState], using the
- * [BelongsToContract] annotation by default, but falling through to checking the state's enclosing class if there is
- * one and it inherits from [Contract].
- */
-val ContractState.requiredContractClassName: String? get() {
-    val annotation = javaClass.getAnnotation(BelongsToContract::class.java)
-    if (annotation != null) {
-        return annotation.value.java.typeName
-    }
-
-    val enclosingClass = javaClass.enclosingClass ?: return null
-    return if (Contract::class.java.isAssignableFrom(enclosingClass)) enclosingClass.typeName else null
-}

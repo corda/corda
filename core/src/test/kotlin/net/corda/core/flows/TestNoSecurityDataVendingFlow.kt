@@ -2,6 +2,7 @@ package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.RetrieveAnyTransactionPayload
 import net.corda.core.utilities.UntrustworthyData
 
 // Flow to start data vending without sending transaction. For testing only.
