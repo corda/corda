@@ -1,6 +1,7 @@
 package net.corda.irs.contract
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
@@ -234,7 +235,7 @@ class IRSTests {
     private val ledgerServices = MockServices(
             emptyList(),
             megaCorp,
-            rigorousMock<IdentityServiceInternal>().also {
+            mock<IdentityServiceInternal>().also {
                 doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
                 doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
             },
@@ -336,7 +337,7 @@ class IRSTests {
     @Test
     fun generateIRSandFixSome() {
         val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name,
-                rigorousMock<IdentityServiceInternal>().also {
+                mock<IdentityServiceInternal>().also {
                     listOf(MEGA_CORP, MINI_CORP).forEach { party ->
                         doReturn(party).whenever(it).partyFromKey(party.owningKey)
                     }

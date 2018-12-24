@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
@@ -56,7 +57,7 @@ class TransactionEncumbranceTests {
         val ledgerServices = MockServices(
                 listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
                 MEGA_CORP.name,
-                rigorousMock<IdentityServiceInternal>().also {
+                mock<IdentityServiceInternal>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))

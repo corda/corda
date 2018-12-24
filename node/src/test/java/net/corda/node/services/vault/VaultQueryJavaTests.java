@@ -40,6 +40,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -89,7 +90,7 @@ public class VaultQueryJavaTests {
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, rigorousMock(IdentityServiceInternal.class), BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, Mockito.mock(IdentityServiceInternal.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);

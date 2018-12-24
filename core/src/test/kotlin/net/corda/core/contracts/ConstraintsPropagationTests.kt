@@ -79,7 +79,7 @@ class ConstraintsPropagationTests {
         ledgerServices = object : MockServices(
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
-                identityService = rigorousMock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityServiceInternal>().also {
                     doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                     doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
                 },

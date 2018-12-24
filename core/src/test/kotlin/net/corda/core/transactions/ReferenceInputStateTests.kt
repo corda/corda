@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.contracts.Requirements.using
@@ -46,7 +47,7 @@ class ReferenceStateTests {
     private val ledgerServices = MockServices(
             cordappPackages = listOf("net.corda.core.transactions", "net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
-            identityService = rigorousMock<IdentityServiceInternal>().also {
+            identityService = mock<IdentityServiceInternal>().also {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },

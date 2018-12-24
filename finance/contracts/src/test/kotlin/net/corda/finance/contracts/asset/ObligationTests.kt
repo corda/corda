@@ -1,6 +1,7 @@
 package net.corda.finance.contracts.asset
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys.NULL_PARTY
@@ -86,7 +87,7 @@ class ObligationTests {
     }
 
     private val notaryServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock(), dummyNotary.keyPair)
-    private val identityService = rigorousMock<IdentityServiceInternal>().also {
+    private val identityService = mock<IdentityServiceInternal>().also {
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(BOB_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(CHARLIE.owningKey)

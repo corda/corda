@@ -11,6 +11,7 @@ import net.corda.testing.core.TestIdentity;
 import net.corda.testing.node.MockServices;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static java.util.Collections.emptyList;
 import static net.corda.finance.Currencies.DOLLARS;
@@ -35,7 +36,7 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
-        IdentityServiceInternal identityService = rigorousMock(IdentityServiceInternal.class);
+        IdentityServiceInternal identityService = Mockito.mock(IdentityServiceInternal.class);
         doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPublicKey());
         transaction(new MockServices(emptyList(), MEGA_CORP.getName(), identityService), DUMMY_NOTARY, tx -> {

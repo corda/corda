@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.LinearState
@@ -27,7 +28,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.common.internal.addNotary
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
@@ -88,8 +88,8 @@ class VaultWithCashTest {
         vaultFiller = VaultFiller(services, dummyNotary)
 
 
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock(), networkParameters, MEGA_CORP_KEY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), networkParameters)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, mock(), networkParameters, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, mock(), networkParameters)
         notary = notaryServices.myInfo.legalIdentitiesAndCerts.single().party
     }
 
@@ -119,7 +119,7 @@ class VaultWithCashTest {
 
     @Test
     fun `issue and spend total correctly and irrelevant ignored`() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, mock(), MEGA_CORP_KEY)
         val freshKey = services.keyManagementService.freshKey()
 
         val usefulTX =

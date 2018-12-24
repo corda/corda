@@ -1,6 +1,7 @@
 package net.corda.finance.contracts.universal
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.CordaX500Name
 import net.corda.finance.contracts.BusinessCalendar
@@ -26,7 +27,7 @@ import java.time.LocalDate
 internal val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
 fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
     MockServices(listOf("net.corda.finance.contracts.universal"), CordaX500Name("MegaCorp", "London", "GB"),
-            rigorousMock<IdentityServiceInternal>().also {
+            mock<IdentityServiceInternal>().also {
                 listOf(acmeCorp, highStreetBank, momAndPop).forEach { party ->
                     doReturn(null).whenever(it).partyFromKey(party.owningKey)
                 }

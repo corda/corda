@@ -21,7 +21,7 @@ interface TransactionVerifierService {
 
     /**
      * Verifies the [transaction] but adds some [extraAttachments] to the classpath.
-     * Required for transactions build with Corda 3.x that might miss some dependencies.
+     * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
      */
     fun verify(transaction: LedgerTransaction, extraAttachments: List<Attachment> ): CordaFuture<*>
 }
