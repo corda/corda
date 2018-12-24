@@ -93,7 +93,8 @@ data class InternalMockNodeParameters(
         val configOverrides: MockNodeConfigOverrides? = null,
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordappInternal> = emptyList(),
-        val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
+        val flowManager: MockNodeFlowManager = MockNodeFlowManager(),
+        val installCorDapps: Boolean = true) {
     constructor(mockNodeParameters: MockNodeParameters) : this(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
@@ -473,7 +474,9 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             parameters.configOverrides?.applyMockNodeOverrides(it)
         }
 
-        TestCordappInternal.installCordapps(baseDirectory, parameters.additionalCordapps.toSet(), combinedCordappsForAllNodes)
+        if(parameters.installCorDapps) {
+            TestCordappInternal.installCordapps(baseDirectory, parameters.additionalCordapps.toSet(), combinedCordappsForAllNodes)
+        }
 
         val node = nodeFactory(MockNodeArgs(config, this, id, parameters.entropyRoot, parameters.version, flowManager = parameters.flowManager))
         _nodes += node
@@ -486,8 +489,12 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
     fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
         node.internals.disableDBCloseOnStop()
         node.dispose()
+        // NB: Since CorDapps directory is shared for all nodes - there is no need to re-install CorDapps upon
+        // node's restart.
+        // Moreover, on some OSes (Windows) this will fail as we will be trying to replace a file that is open for
+        // reading by different node class loader.
         return createNode(
-                InternalMockNodeParameters(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id),
+                InternalMockNodeParameters(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id, installCorDapps = false),
                 nodeFactory
         )
     }

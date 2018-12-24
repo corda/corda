@@ -268,7 +268,11 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.
-            bobNode = mockNet.createNode(InternalMockNodeParameters(bobAddr.id, BOB_NAME))
+            // NB: Since CorDapps directory is shared for all nodes - there is no need to re-install CorDapps upon
+            // Bob's restart.
+            // Moreover, on some OSes (Windows) this will fail as we will be trying to replace a file that is open for
+            // reading by Alice's class loader.
+            bobNode = mockNet.createNode(InternalMockNodeParameters(bobAddr.id, BOB_NAME, installCorDapps = false))
             // Find the future representing the result of this state machine again.
             val bobFuture = bobNode.smm.findStateMachines(BuyerAcceptor::class.java).single().second
 
