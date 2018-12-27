@@ -50,6 +50,7 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.collections.AbstractList
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -518,13 +519,15 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
 
 fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
 
-private fun isPackageValid(packageName: String): Boolean = packageName.isNotEmpty() && !packageName.endsWith(".") && packageName.split(".").all { token ->
-    Character.isJavaIdentifierStart(token[0]) && token.toCharArray().drop(1).all { Character.isJavaIdentifierPart(it) }
-}
-
 /**
- * Check if a string is a legal Java package name.
+ * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
+ * Size is very cheap as it doesn't call [transform].
  */
-fun requirePackageValid(name: String) {
-    require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
+class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
+    private val partialResolvedList = MutableList<U?>(originalList.size) { null }
+    override val size get() = originalList.size
+    override fun get(index: Int): U {
+        return partialResolvedList[index]
+                ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+    }
 }

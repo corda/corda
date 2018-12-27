@@ -2,9 +2,7 @@ package net.corda.node.internal.cordapp
 
 import io.github.classgraph.ClassGraph
 import io.github.classgraph.ScanResult
-import net.corda.core.contracts.warnContractWithoutConstraintPropagation
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappInvalidVersionException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.*
@@ -358,6 +356,11 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
  * Thrown when scanning CorDapps.
  */
 class MultipleCordappsForFlowException(message: String) : Exception(message)
+
+/**
+ * Thrown if an exception occurs whilst parsing version identifiers within cordapp configuration
+ */
+class CordappInvalidVersionException(msg: String) : Exception(msg)
 
 abstract class CordappLoaderTemplate : CordappLoader {
     override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {

@@ -20,6 +20,8 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
+import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.*
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertFailsWith
@@ -199,9 +201,8 @@ class ReferenceStateTests {
     fun `state ref cannot be a reference input and regular input in the same transaction`() {
         val state = ExampleState(ALICE_PARTY, "HELLO CORDA")
         val stateAndRef = StateAndRef(TransactionState(state, CONTRACT_ID, DUMMY_NOTARY, constraint = AlwaysAcceptAttachmentConstraint), StateRef(SecureHash.zeroHash, 0))
-        assertFailsWith(IllegalArgumentException::class, "A StateRef cannot be both an input and a reference input in the same transaction.") {
-            @Suppress("DEPRECATION") // To be removed when feature is finalised.
+        assertThatIllegalArgumentException().isThrownBy {
             TransactionBuilder(notary = DUMMY_NOTARY).addInputState(stateAndRef).addReferenceState(stateAndRef.referenced())
-        }
+        }.withMessage("A StateRef cannot be both an input and a reference input in the same transaction.")
     }
 }

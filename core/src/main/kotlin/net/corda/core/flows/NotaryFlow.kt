@@ -1,6 +1,7 @@
 package net.corda.core.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -49,6 +50,7 @@ class NotaryFlow {
         }
 
         override val isTimeoutEnabled: Boolean
+            @CordaInternal
             get() {
                 val notaryParty = stx.notary ?: throw IllegalStateException("Transaction does not specify a Notary")
                 return serviceHub.networkMapCache.getNodesByLegalIdentityKey(notaryParty.owningKey).size > 1
