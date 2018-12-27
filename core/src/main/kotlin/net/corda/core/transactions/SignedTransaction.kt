@@ -7,6 +7,8 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.AttachmentStorageInternal
+import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -210,19 +212,20 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             // This code attempts to find the missing dependency in the attachment storage among the trusted contract attachments.
             // When it finds one, it instructs the verifier to use it to create the transaction classloader.
             // TODO - add check that transaction was created before Corda 4.
-            val missingClass = e.message
-            // TODO - should this be a [TransactionVerificationException]?
-            requireNotNull(missingClass) { "Transaction $ltx is incorrectly formed." }
 
-            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
-            requireNotNull(attachment) { "Transaction $ltx is incorrectly formed. Could not find local dependency for class: $missingClass." }
+            // TODO - should this be a [TransactionVerificationException]?
+            val missingClass = requireNotNull(e.message) { "Transaction $ltx is incorrectly formed." }
+
+            val attachment = requireNotNull((services.attachments as AttachmentStorageInternal).internalFindTrustedAttachmentForClass(missingClass)) {
+                "Transaction $ltx is incorrectly formed. Could not find local dependency for class: $missingClass."
+            }
 
             log.warn("""Detected that transaction ${this.id} does not contain all cordapp dependencies.
                 |This may be the result of a bug in a previous version of Corda.
                 |Attempting to verify using the additional dependency: $attachment.
                 |Please check with the originator that this is a valid transaction.""".trimMargin())
 
-            services.transactionVerifierService.verify(ltx, listOf(attachment!!)).getOrThrow()
+            (services.transactionVerifierService as TransactionVerifierServiceInternal).verify(ltx, listOf(attachment)).getOrThrow()
         }
     }
 
@@ -240,7 +243,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             else -> throw IllegalStateException("Unknown transaction type ${coreTransaction::class.qualifiedName}")
         }
     }
-
 
     /**
      * Resolves the underlying transaction with signatures and then returns it, handling any special case transactions
@@ -294,6 +296,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                     "keys: ${missing.joinToString { it.toStringShort() }}, " +
                     "by signers: ${descriptions.joinToString()} "
         }
+
         private val log = contextLogger()
     }
 

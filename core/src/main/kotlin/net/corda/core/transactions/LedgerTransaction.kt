@@ -124,7 +124,7 @@ private constructor(
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() = verify(emptyList())
+    fun verify() = verifyInternal(emptyList())
 
     /**
      * Verifies the transaction but takes a list of [extraAttachments] which are used to form the classpath.
@@ -132,7 +132,7 @@ private constructor(
      */
     @CordaInternal
     @Throws(TransactionVerificationException::class)
-    fun verify(extraAttachments: List<Attachment>) {
+    internal fun verifyInternal(extraAttachments: List<Attachment>) {
         if (networkParameters == null) {
             // For backwards compatibility only.
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +

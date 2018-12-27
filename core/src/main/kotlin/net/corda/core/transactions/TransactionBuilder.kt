@@ -184,7 +184,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             val missingClass = e.message
             requireNotNull(missingClass) { "Transaction is incorrectly formed." }
 
-            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
+            val attachment = (services.attachments as AttachmentStorageInternal).internalFindTrustedAttachmentForClass(missingClass!!)
                     ?: throw IllegalArgumentException("Attempted to find dependent attachment for class $missingClass, but could not find a suitable candidate.")
 
             log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.

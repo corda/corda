@@ -52,7 +52,7 @@ class NodeAttachmentService(
         metrics: MetricRegistry,
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence
-) : AttachmentStorageInternal, SingletonSerializeAsToken() {
+) : AttachmentStorageInternal, net.corda.core.internal.AttachmentStorageInternal, SingletonSerializeAsToken() {
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 

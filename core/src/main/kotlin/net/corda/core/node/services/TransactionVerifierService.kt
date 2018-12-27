@@ -18,10 +18,4 @@ interface TransactionVerifierService {
      * @return A future that completes successfully if the transaction verified, or sets an exception the verifier threw.
      */
     fun verify(transaction: LedgerTransaction): CordaFuture<*>
-
-    /**
-     * Verifies the [transaction] but adds some [extraAttachments] to the classpath.
-     * Required for transactions built with Corda 3.x that might miss some dependencies due to a bug in that version.
-     */
-    fun verify(transaction: LedgerTransaction, extraAttachments: List<Attachment> ): CordaFuture<*>
 }
