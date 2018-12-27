@@ -149,7 +149,7 @@ class WithReferencedStatesFlowTests {
         val updatedRefState = updatedRefTx.tx.outRefsOfType<RefState.State>().single()
 
         // 4. Try to use the old reference state. This will throw a NotaryException.
-        val useRefTx = nodes[1].services.startFlow(WithReferencedStatesFlow(UseRefState(newRefState.state.data.linearId))).resultFuture
+        val useRefTx = nodes[1].services.startFlow(WithReferencedStatesFlow { UseRefState(newRefState.state.data.linearId) }).resultFuture
 
         // 5. Share the update reference state.
         nodes[0].services.startFlow(ShareRefState.Initiator(updatedRefState)).resultFuture.getOrThrow()
