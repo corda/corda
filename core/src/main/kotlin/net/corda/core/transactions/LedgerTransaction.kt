@@ -17,7 +17,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
-import net.corda.core.utilities.warnOnce
 import java.util.*
 import java.util.function.Predicate
 import kotlin.collections.HashSet
