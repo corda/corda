@@ -7198,7 +7198,7 @@ public final class net.corda.testing.http.HttpUtils extends java.lang.Object
   public final void putJson(java.net.URL, String)
   public static final net.corda.testing.http.HttpUtils INSTANCE
 ##
-public final class net.corda.testing.services.MockAttachmentStorage extends net.corda.core.serialization.SingletonSerializeAsToken implements net.corda.core.node.services.AttachmentStorage
+public final class net.corda.testing.services.MockAttachmentStorage extends net.corda.core.serialization.SingletonSerializeAsToken implements net.corda.core.node.services.AttachmentStorage, net.corda.core.internal.AttachmentStorageInternal
   public <init>()
   @NotNull
   public final kotlin.Pair<net.corda.core.crypto.SecureHash, byte[]> getAttachmentIdAndBytes(java.io.InputStream)
