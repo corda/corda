@@ -759,8 +759,7 @@ class CashTests {
     @Test
     fun generateSpendInsufficientBalance() {
         database.transaction {
-
-            val e: InsufficientBalanceException = assertFailsWith("balance") {
+            val e = assertFailsWith<InsufficientBalanceException> {
                 makeSpend(ourServices, 1000.DOLLARS, miniCorpAnonymised)
             }
             assertEquals((1000 - 580).DOLLARS, e.amountMissing)
