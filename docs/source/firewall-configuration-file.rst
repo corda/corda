@@ -320,7 +320,7 @@ The tool should be used as follows:
 
     java -jar |ha_util_jar_name| generate-internal-artemis-ssl-keystores -p artemisStorePass -t artemisTrustpass
 
-This should produce files: ```artemis/artemis-truststore.jks``, ``artemis/artemis.jks`` which will be used later on.
+This should produce files: ``artemis/artemis-truststore.jks``, ``artemis/artemis.jks`` which will be used later on.
 
 Node VMs setup
 --------------
@@ -328,11 +328,50 @@ Node VMs setup
 As shown on the Physical deployment diagram above there will be two separate machines in two distinct data centres hosting Corda Nodes for Legal Entity A and Legal Entity B.
 For this setup, each machine is powerful enough to host nodes for both entities with all the CorDapps and two datacentres are used for High Availability purposes.
 
+Prerequisites
+^^^^^^^^^^^^^
+
+Corda Network connectivity
+""""""""""""""""""""""""""
+
 Before nodes can be configured, Corda Network administrator will need to provide:
 
-1. Network root trust store file: ``network-root-truststore.jks``;
+1. Network root trust store file: ``network-root-truststore.jks`` and password for it;
 2. Corda Network URL for Doorman e.g.: ``http://r3-doorman:10001``;
-3. Corda Network URL for NetworkMap e.g.: ``http://r3-netman:10001``.
+3. Corda Network URL for NetworkMap e.g.: ``http://r3-netman:10001``
+
+Nodes inbound connectivity provisions
+"""""""""""""""""""""""""""""""""""""
+
+In order for the nodes for both legal entities ``Entity A`` and ``Entity B`` to be reached from the outside of the organisation by other nodes, a **single** TCP endpoint
+address is being exposed.
+
+.. note::
+
+    This is not a HTTP address! This endpoint address is what is known to be peer-to-peer (P2P) connectivity address for binary, non-human readable inbound data communication.
+    Therefore, there is little point pasting this address into any web-browser.
+
+In this example this address will be ``banka.com:10005``.
+
+From infrastructure point of view this can be address of a load balancer which will be routing network traffic to ``vmFloat1`` and ``vmFloat2`` hosts in the DMZ.
+
+Out of ``vmFloat1`` and ``vmFloat2`` there will be at most one active host which will be accepting incoming communication. Therefore, load balancer will route inbound traffic to ``vmFloat1`` or ``vmFloat2``.
+
+Databases setup
+"""""""""""""""
+
+Each legal entity is supposed to have it is own database(DB) schema in order to store Corda transaction data. Therefore ``Entity A`` and ``Entity B``
+should have different DB connectivity URLs.
+
+For nodes' High Availability(HA) functionality to work properly, databases the nodes connect to should be remote databases with transactional guarantees.
+Please see :doc:`Hot-cold high availability deployment <hot-cold-deployment>`. I.e. HA nodes cannot be using local H2 database.
+
+In the example below we will be using Azure SQL DB, however it can be any database Corda Enterprise supports.
+
+Two empty schemas should be created for ``Entity A`` and ``Entity B`` and upon first startup of the node the necessary tables will be created automatically.
+
+Base directory setup
+""""""""""""""""""""
 
 Initially, the nodes configuration is performed on ``vmNodesPrimary`` host and then there is a special paragraph that details ``vmNodesSecondary`` setup.
 
@@ -431,8 +470,8 @@ For "sibling" node serving ``Entity B`` on ``vmNodesPrimary`` would be a ``entit
     trustStorePassword = "entityBTrustPass"
     // RPC settings
     rpcSettings {
-        address = "0.0.0.0:10006"
-        adminAddress = "0.0.0.0:10026"
+        address = "0.0.0.0:10106"
+        adminAddress = "0.0.0.0:10126"
     }
     dataSourceProperties { // Point at clustered Azure SQL Server
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
@@ -516,6 +555,23 @@ Also, file called ``network-parameters`` will be produced which represents globa
 
         -Dcapsule.jvm.args="-Dhttp.proxyHost=10.0.0.100 -Dhttp.proxyPort=8800 -Dhttps.proxyHost=10.0.0.100 -Dhttps.proxyPort=8800"
 
+Copy file ``network-parameters`` and directories ``certificates`` into ``entityA`` and ``entityB`` sub-directories so that they will look as follows:
+
+.. parsed-literal::
+
+    .
+    ├── artemis
+    │   ├── artemis.jks
+    │   └── artemis-truststore.jks
+    ├── certificates
+    │   ├── nodekeystore.jks
+    │   ├── sslkeystore.jks
+    │   └── truststore.jks
+    ├── corda.jar
+    ├── network-parameters
+    └── node.conf
+
+
 Keystore aggregation for the Bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -524,7 +580,7 @@ In order to produce such aggregated keystore, the following command should be us
 
 .. parsed-literal::
 
-    java -jar |ha_util_jar_name| import-ssl-key --bridge-keystore-password=bridgeKeyStorePassword --bridge-keystore=./nodesCertificates/nodesUnitedSslKeystore.jks --node-keystores=./Entity_A/certificates/sslkeystore.jks --node-keystore-passwords=entityAStorePass --node-keystores=./Entity_B/certificates/sslkeystore.jks --node-keystore-passwords=entityBStorePass
+    java -jar |ha_util_jar_name| import-ssl-key --bridge-keystore-password=bridgeKeyStorePassword --bridge-keystore=./nodesCertificates/nodesUnitedSslKeystore.jks --node-keystores=./entityA/certificates/sslkeystore.jks --node-keystore-passwords=entityAStorePass --node-keystores=./entityB/certificates/sslkeystore.jks --node-keystore-passwords=entityBStorePass
 
 As a result ``./nodesCertificates/nodesUnitedSslKeystore.jks`` file will be produced containing 2 entries.
 
@@ -755,7 +811,7 @@ Please see ``SWAP2``, ``SWAP3`` and ``SWAP4`` comments in the configuration file
 making same DataCentre connection a priority. This applies to Artemis connection, Float connection and Zookeeper connection.
 
 Starting all up
-^^^^^^^^^^^^^^^
+---------------
 
 Please see `Http Proxy Setup`_ note above on connectivity through the proxy.
 
