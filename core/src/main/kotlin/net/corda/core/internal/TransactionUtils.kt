@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.lazyMapped
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
