@@ -192,11 +192,11 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
 
 
     /**
-     * If the network parameters associated with an input state in a transaction are more recent than the network parameters of the new transaction itself.
+     * If the network parameters associated with an input or reference state in a transaction are more recent than the network parameters of the new transaction itself.
      */
     @KeepForDJVM
     class TransactionNetworkParameterOrderingException(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
-        : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch} with this transaction " +
+        : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
             "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
 
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */

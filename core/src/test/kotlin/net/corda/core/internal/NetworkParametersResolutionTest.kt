@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
@@ -22,8 +23,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
 import org.assertj.core.api.Assertions
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -142,10 +142,10 @@ class NetworkParametersResolutionTest {
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
         mockNet.runNetwork()
-        Assertions.assertThatIllegalArgumentException().isThrownBy {
+        assertThatExceptionOfType(TransactionVerificationException.TransactionNetworkParameterOrderingException::class.java).isThrownBy {
             future.getOrThrow()
-        }.withMessageContaining("Network parameters are not ordered in the transaction graph for dependency transaction:" +
-                " ${stx1.id} and parent parameters hash: $hash1")
+        }.withMessageContaining("The network parameters epoch (${params1.epoch}) of this transaction " +
+                "is older than the epoch (${params2.epoch}) of input state: ${stx2.inputs.first()}")
         miniCorpNode.transaction {
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx1.id)).isNull()
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx2.id)).isNull()
@@ -163,13 +163,13 @@ class NetworkParametersResolutionTest {
         val (stx1, stx2) = makeTransactions(params4, null)
         assertThat(stx2.networkParametersHash).isNull()
         assertThat(stx1.networkParametersHash).isEqualTo(hash7)
-        val p = ResolveTransactionsFlowTest.TestFlow(stx2, megaCorp)
+        val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
         mockNet.runNetwork()
-        Assertions.assertThatIllegalArgumentException().isThrownBy {
+        assertThatExceptionOfType(TransactionVerificationException.TransactionNetworkParameterOrderingException::class.java).isThrownBy {
             future.getOrThrow()
-        }.withMessageContaining("Network parameters are not ordered in the transaction graph for dependency transaction:" +
-                " ${stx1.id} and parent parameters hash: $defaultHash")
+        }.withMessageContaining("The network parameters epoch (${params3.epoch}) of this transaction " +
+                "is older than the epoch (${params4.epoch}) of input state: ${stx2.inputs.first()}")
         miniCorpNode.transaction {
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx1.id)).isNull()
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx2.id)).isNull()
@@ -178,23 +178,8 @@ class NetworkParametersResolutionTest {
     }
 
     @Test
-    fun `resolve with current`() {
-        // Epoch 2 and 4 but current is 3
-        val currentHash = megaCorpNode.services.networkParametersStorage.currentHash
-        val (stx1, stx2) = makeTransactions(params2, params4)
-        // This version of flow will use current parameters for the network in root node.
-        val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx1.id, stx2.id), megaCorp)
-        val future = miniCorpNode.startFlow(p)
-        mockNet.runNetwork()
-        assertThatIllegalArgumentException().isThrownBy {
-            future.getOrThrow()
-        }.withMessageContaining("Network parameters are not ordered in the transaction graph for dependency transaction:" +
-                " ${stx2.id} and parent parameters hash: $currentHash")
-    }
-
-    @Test
     fun `incorrect triangle of transactions`() {
-        // stx1 with epoch 2, stx2 with epoch 2, stx3 with epoch 3
+        // stx1 with epoch 2, stx2 with epoch 1, stx3 with epoch 3
         // stx1 -> stx2, stx1 -> stx3, stx2 -> stx3
         val stx1 = makeTransactions(params2, null).first
 
@@ -217,9 +202,9 @@ class NetworkParametersResolutionTest {
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx3.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
         mockNet.runNetwork()
-        Assertions.assertThatIllegalArgumentException().isThrownBy {
+        assertThatExceptionOfType(TransactionVerificationException.TransactionNetworkParameterOrderingException::class.java).isThrownBy {
             future.getOrThrow()
-        }.withMessageContaining("Network parameters are not ordered in the transaction graph for dependency transaction:" +
-                " ${stx1.id} and parent parameters hash: ${stx2.networkParametersHash}")
+        }.withMessageContaining("The network parameters epoch (${params1.epoch}) of this transaction " +
+                "is older than the epoch (${params2.epoch}) of input state: ${stx2.inputs.first()}")
     }
 }

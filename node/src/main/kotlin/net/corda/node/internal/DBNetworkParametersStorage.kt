@@ -77,7 +77,6 @@ class DBNetworkParametersStorage(
         return database.transaction { hashToParameters[hash] }
     }
     override fun hasParameters(hash: SecureHash): Boolean = hash in hashToParameters
-    override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
 
     override fun saveParameters(signedNetworkParameters: SignedNetworkParameters) {
         log.trace { "Saving new network parameters to network parameters storage." }

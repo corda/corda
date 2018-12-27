@@ -4,9 +4,9 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.FetchDataFlow
+import net.corda.core.internal.NetworkParametersStorageInternal
 import net.corda.core.internal.RetrieveAnyTransactionPayload
 import net.corda.core.internal.readFully
-import net.corda.core.node.services.internal.NetworkParametersStorageInternal
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.unwrap
 
