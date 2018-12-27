@@ -19,6 +19,8 @@ import org.eclipse.jetty.servlet.DefaultServlet
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 import org.eclipse.jetty.util.ssl.SslContextFactory
+import org.eclipse.jetty.websocket.jsr356.server.ServerContainer
+import org.eclipse.jetty.websocket.jsr356.server.deploy.WebSocketServerContainerInitializer
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.server.ServerProperties
 import org.glassfish.jersey.servlet.ServletContainer
@@ -30,6 +32,8 @@ import java.net.BindException
 import java.nio.file.NoSuchFileException
 import java.util.*
 import javax.servlet.http.HttpServletRequest
+import javax.websocket.server.ServerEndpoint
+import javax.websocket.server.ServerEndpointConfig
 
 class NodeWebServer(val config: WebServerConfig) {
     private companion object {
@@ -57,7 +61,8 @@ class NodeWebServer(val config: WebServerConfig) {
         val handlerCollection = HandlerCollection()
 
         // API, data upload and download to services (attachments, rates oracles etc)
-        handlerCollection.addHandler(buildServletContextHandler(localRpc))
+        val servletContextHandler = buildServletContextHandler(localRpc)
+        handlerCollection.addHandler(servletContextHandler)
 
         val server = Server()
 
@@ -88,6 +93,10 @@ class NodeWebServer(val config: WebServerConfig) {
         server.connectors = arrayOf<Connector>(connector)
 
         server.handler = handlerCollection
+
+        // WebSockets
+        buildWebSocketServerContainer(servletContextHandler, localRpc)
+
         try {
             server.start()
         } catch (e: IOException) {
@@ -99,6 +108,43 @@ class NodeWebServer(val config: WebServerConfig) {
         }
         log.info("Starting webserver on address $address")
         return server
+    }
+
+    private fun buildWebSocketServerContainer(contextHandler: ServletContextHandler, localRpc: CordaRPCOps): ServerContainer {
+        // Initialize javax.websocket layer
+        val wsContainer = WebSocketServerContainerInitializer.configureContext(contextHandler)
+        //wsContainer.policy.idleTimeout = 300 * 1000 //default is 300 sec
+
+        // add all registered endpoints
+        val wsEndpointsOnClasspath = pluginRegistries.flatMap { x -> x.wsEndpoints }
+        for (wsEndpoint in wsEndpointsOnClasspath) {
+            log.info("Add plugin WebSocket from attachment ${wsEndpoint.canonicalName}")
+            val endpoint = try {
+                wsEndpoint.getConstructor(CordaRPCOps::class.java).newInstance(localRpc)
+            } catch (ex: NoSuchMethodException) {
+                wsEndpoint.newInstance()
+            }
+
+            val serverEndpointAnno = endpoint.javaClass.getAnnotation(ServerEndpoint::class.java)
+            val serverEndpointConfig = ServerEndpointConfig.Builder
+                    .create(wsEndpoint, serverEndpointAnno.value)
+                    .decoders(serverEndpointAnno.decoders.map { it.java })
+                    .encoders(serverEndpointAnno.encoders.map { it.java })
+                    .subprotocols(serverEndpointAnno.subprotocols.asList())
+                    .configurator(
+                            object : ServerEndpointConfig.Configurator() {
+                                override fun <T> getEndpointInstance(endpointClass: Class<T>): T {
+                                    return endpoint as T
+                                }
+                            }
+                    )
+                    .build()
+            log.info("Add WebSocket endpoint at path: ${serverEndpointConfig.path}")
+            // Add WebSocket endpoint to javax.websocket layer
+            wsContainer.addEndpoint(serverEndpointConfig)
+        }
+
+        return wsContainer
     }
 
     private fun buildServletContextHandler(localRpc: CordaRPCOps): ServletContextHandler {

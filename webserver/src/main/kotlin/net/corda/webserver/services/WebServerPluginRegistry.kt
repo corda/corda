@@ -16,6 +16,12 @@ interface WebServerPluginRegistry {
     val webApis: List<Function<CordaRPCOps, out Any>> get() = emptyList()
 
     /**
+     * List of lambdas returning WebSockets ServerEndpoint objects. They may only depend on the RPC interface, as the webserver lives
+     * in a process separate from the node itself.
+     */
+    val wsEndpoints: List<Class<*>> get() = emptyList()
+
+    /**
      * Map of static serving endpoints to the matching resource directory. All endpoints will be prefixed with "/web" and postfixed with "\*.
      * Resource directories can be either on disk directories (especially when debugging) in the form "a/b/c". Serving from a JAR can
      *  be specified with: javaClass.getResource("<folder-in-jar>").toExternalForm()
