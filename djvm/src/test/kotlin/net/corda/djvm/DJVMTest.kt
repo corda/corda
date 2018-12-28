@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.*
 import org.junit.Assert.*
 import org.junit.Test
 import sandbox.java.lang.sandbox
-import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 
 class DJVMTest : TestBase() {
