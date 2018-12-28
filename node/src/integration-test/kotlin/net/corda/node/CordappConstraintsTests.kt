@@ -37,7 +37,7 @@ class CordappConstraintsTests {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
-        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
+        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance", "migration", "META-INF.services")
         val SIGNED_FINANCE_CORDAPP = UNSIGNED_FINANCE_CORDAPP.signed()
     }
 

@@ -42,7 +42,7 @@ class DistributedServiceTests {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.finance", "net.corda.notary.raft"),
+                extraCordappPackagesToScan = listOf("net.corda.finance", "net.corda.notary.raft", "migration", "META-INF.services"),
                 notarySpecs = listOf(NotarySpec(
                         DUMMY_NOTARY_NAME,
                         rpcUsers = listOf(testUser),
