@@ -352,6 +352,7 @@ class NodeAttachmentService(
                         attachmentCache.invalidate(id)
                         attachmentContentCache.invalidate(id)
                     }
+                    return@withContractsInJar id
                 }
                 throw DuplicateAttachmentException(id.toString())
             }
