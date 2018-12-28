@@ -10,7 +10,7 @@ import java.time.Duration
  * When passing one of these to [createNode] or [createUnstartedNode] functions, the bits that are
  * set will be injected into the node configuration for the node to be created.
  */
-data class MockNodeConfigOverrides(
+class MockNodeConfigOverrides(
         val extraDataSourceProperties: Map<String, String>? = null,
         val notary: MockNetNotaryConfig? = null,
         val flowTimeout: MockNetFlowTimeOut? = null)
@@ -19,7 +19,7 @@ data class MockNodeConfigOverrides(
  * MockNetNotaryConfig can be used to configure a node to be a notary via the mock network API. Internally
  * this will be translated into a NotaryConfiguration and passed to the respective node.
  */
-data class MockNetNotaryConfig(
+class MockNetNotaryConfig(
         val validating: Boolean,
         val extraConfig: Config? = null,
         val className: String? = null,
@@ -28,7 +28,7 @@ data class MockNetNotaryConfig(
 /**
  * MockNetFlowTimeOut can be used to configure flow time out settings for a node via the mock network API.
  */
-data class MockNetFlowTimeOut(
+class MockNetFlowTimeOut(
         val timeout: Duration,
         val maxRestartCount: Int,
         val backoffBase: Double)
