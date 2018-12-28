@@ -533,6 +533,9 @@ Given two configuration files above, in order to produce node keystores the foll
 
     java -jar |ha_util_jar_name| node-registration --config-files=./entityA/node.conf --config-files=./entityB/node.conf --network-root-truststore=network-root-truststore.jks --network-root-truststore-password=trustpass
 
+This call will process ``node.conf`` files and for each legal name performs Doorman registration. Depending on Corda Network configuration this process may require manual approval
+and the program will poll for for Certification Signing Request(CSR) completion. For more information see :doc:`joining-a-compatibility-zone`.
+
 After successful execution this will produce two directories ``Entity_A/certificates`` and ``Entity_B/certificates`` containing the following files:
 
 1. ``truststore.jks``, the network/zone operator's root certificate in keystore with a locally configurable password as protection against certain attacks;
@@ -571,6 +574,11 @@ Copy file ``network-parameters`` and directories ``certificates`` into ``entityA
     ├── network-parameters
     └── node.conf
 
+CorDapps installation
+^^^^^^^^^^^^^^^^^^^^^
+
+In the node's base directory create ``cordapps`` sub-directory and install all the required CorDapps you intend to work with.
+In this example we are going to use Finance CorDapp which is supplied as part of Corda Enterprise distribution.
 
 Keystore aggregation for the Bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -638,6 +646,18 @@ Files ``tunnel/float.jks`` and ``tunnel/tunnel-truststore.jks`` should be copied
 
 ``corda-firewall.jar`` is included into Corda Enterprise distribution and should be copied into base directory on ``vmFloat1`` and ``vmFloat2`` hosts.
 
+For reference, base directory for ``vmFloat1`` and ``vmFloat2`` should look as follows:
+
+.. parsed-literal::
+
+    .
+    ├── corda-firewall.jar
+    ├── firewall.conf
+    ├── network-parameters
+    └── tunnel
+        ├── float.jks
+        └── tunnel-truststore.jks
+
 Infra VMs setup
 ---------------
 
@@ -655,7 +675,7 @@ Apache ZooKeeper setup
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Apache ZooKeeper(ZK) is needed to facilitate leader election among two hot-warm Bridge Instances.
-We require using version ``3.5.3-beta`` and have 3 cluster participants which will be hosted on ``vmInfra1``, ``vmInfra2`` and ``vmZkWitness``.
+We require using version `3.5.3-beta <https://apache.org/dist/zookeeper/zookeeper-3.5.3-beta/zookeeper-3.5.3-beta.tar.gz>`_ and have 3 cluster participants which will be hosted on ``vmInfra1``, ``vmInfra2`` and ``vmZkWitness``.
 
 Assuming ``/opt/corda`` is the base directory for ZK instance on ``vmInfra1`` the following files needs to be created:
 
@@ -758,6 +778,23 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
     }
     networkParametersPath = network-parameters // The network-parameters file is expected to be copied from the node registration phase and here is expected in the workspace folder.
 
+For reference, base directory for the Bridge instance should look as follows:
+
+.. parsed-literal::
+
+    .
+    ├── artemis
+    │   ├── artemis.jks
+    │   └── artemis-truststore.jks
+    ├── corda-firewall.jar
+    ├── firewall.conf
+    ├── network-parameters
+    ├── nodesCertificates
+    │   └── nodesUnitedSslKeystore.jks
+    └── tunnel
+        ├── bridge.jks
+        └── tunnel-truststore.jks
+
 Artemis cluster participant
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -769,6 +806,10 @@ to use the ``ha-utilities`` to install and configure 2 Artemis instances in HA m
 `Artemis HA Documentation <https://activemq.apache.org/artemis/docs/latest/ha.html>`_
 
 Apache Artemis distribution can be downloaded from `here <https://activemq.apache.org/artemis/download.html>`_.
+
+File copy from previous stages:
+
+- Files ``artemis/artemis.jks`` and ``artemis/artemis-truststore.jks`` should be copied from `Artemis keystore generation`_ stage.
 
 ``vmInfra1`` box will host Artemis ``master`` instance. To generate application distribution with the config files, please run:
 
