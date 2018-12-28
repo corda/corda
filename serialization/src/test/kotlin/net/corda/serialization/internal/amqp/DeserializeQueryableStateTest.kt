@@ -24,9 +24,9 @@ data class TestState(override val participants: List<AbstractParty>): QueryableS
 /**
  * A class loader that excludes [TestState].
  */
-class ClassLoaderWithoutTestState(classLoader: ClassLoader): ClassLoader(classLoader) {
+class ClassLoaderWithoutTestState(classLoader: ClassLoader) : ClassLoader(classLoader) {
     override fun loadClass(name: String?, resolve: Boolean): Class<*> {
-        if(name != null && name.contains("TestState")) {
+        if (name != null && name.contains("TestState")) {
             throw ClassNotFoundException()
         }
         return super.loadClass(name, resolve)
