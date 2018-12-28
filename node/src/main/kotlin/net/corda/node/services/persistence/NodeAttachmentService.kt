@@ -354,8 +354,9 @@ class NodeAttachmentService(
                             attachmentContentCache.put(id, Optional.of(attachmentAndContent))
                             attachmentCache.put(id, Optional.of(attachmentAndContent.first))
                         }
+                        return@withContractsInJar id
                     }
-                    return@withContractsInJar id
+                    // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
                 }
                 throw DuplicateAttachmentException(id.toString())
             }
