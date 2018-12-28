@@ -25,7 +25,7 @@ import java.util.jar.JarInputStream
 /**
  * A mock implementation of [AttachmentStorage] for use within tests
  */
-class MockAttachmentStorage : AttachmentStorage, AttachmentStorageInternal, SingletonSerializeAsToken() {
+class MockAttachmentStorage : AttachmentStorage, DependencyAttachmentStorageInternal, SingletonSerializeAsToken() {
     private data class ContractAttachmentMetadata(val name: ContractClassName, val version: Int, val isSigned: Boolean)
 
     private val _files = HashMap<SecureHash, Pair<Attachment, ByteArray>>()
@@ -130,12 +130,10 @@ class MockAttachmentStorage : AttachmentStorage, AttachmentStorageInternal, Sing
                 AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
                 AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
 
-        // TODO - add caching if performance is affected.
         for (attId in allTrusted) {
             val attch = openAttachment(attId)!!
-            if (attch is ContractAttachment && hasFile(attch.openAsJAR(), "$className.class")) return attch
+            if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
         }
-
         return null
     }
 

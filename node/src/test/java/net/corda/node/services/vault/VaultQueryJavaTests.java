@@ -65,6 +65,7 @@ import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 public class VaultQueryJavaTests {
     private static final TestIdentity BOC = new TestIdentity(BOC_NAME);
@@ -90,7 +91,7 @@ public class VaultQueryJavaTests {
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, Mockito.mock(IdentityServiceInternal.class), BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, mock(IdentityServiceInternal.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);

@@ -52,7 +52,7 @@ class NodeAttachmentService(
         metrics: MetricRegistry,
         cacheFactory: NamedCacheFactory,
         private val database: CordaPersistence
-) : AttachmentStorageInternal, net.corda.core.internal.AttachmentStorageInternal, SingletonSerializeAsToken() {
+) : AttachmentStorageInternal, DependencyAttachmentStorageInternal, SingletonSerializeAsToken() {
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 
@@ -309,9 +309,8 @@ class NodeAttachmentService(
         // TODO - add caching if performance is affected.
         for (attId in allTrusted) {
             val attch = openAttachment(attId)!!
-            if (attch is ContractAttachment && hasFile(attch.openAsJAR(), "$className.class")) return attch
+            if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
         }
-
         return null
     }
 

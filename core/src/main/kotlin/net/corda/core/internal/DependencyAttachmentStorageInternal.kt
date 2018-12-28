@@ -4,7 +4,7 @@ import net.corda.core.CordaInternal
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.node.services.AttachmentStorage
 
-interface AttachmentStorageInternal : AttachmentStorage {
+interface DependencyAttachmentStorageInternal : AttachmentStorage {
 
     /**
      * Scans trusted (installed locally) contract attachments to find all that contain the [className].

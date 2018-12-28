@@ -20,6 +20,7 @@ import static net.corda.testing.node.NodeTestUtils.transaction;
 import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /**
  * This is an incomplete Java replica of CashTests.kt to show how to use the Java test DSL
@@ -36,7 +37,7 @@ public class CashTestsJava {
 
     @Test
     public void trivial() {
-        IdentityServiceInternal identityService = Mockito.mock(IdentityServiceInternal.class);
+        IdentityServiceInternal identityService = mock(IdentityServiceInternal.class);
         doReturn(MEGA_CORP.getParty()).when(identityService).partyFromKey(MEGA_CORP.getPublicKey());
         doReturn(MINI_CORP.getParty()).when(identityService).partyFromKey(MINI_CORP.getPublicKey());
         transaction(new MockServices(emptyList(), MEGA_CORP.getName(), identityService), DUMMY_NOTARY, tx -> {
