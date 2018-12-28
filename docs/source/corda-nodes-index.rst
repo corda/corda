@@ -5,13 +5,14 @@ Nodes
    :maxdepth: 1
 
    node-structure
-   generating-a-node
-   docker-image
-   running-a-node
-   deploying-a-node
+   node-naming
    corda-configuration-file
-   clientrpc
-   shell
+   node-administration
+   deploying-a-node
+   docker-image
    node-database
    node-database-access-h2
-   node-administration
+   shell
+   clientrpc
+   generating-a-node
+   running-a-node

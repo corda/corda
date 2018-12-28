@@ -62,7 +62,7 @@ As the node within the container starts up, it will place it's own nodeInfo into
 
 
 Generating Configs and Certificates
-===================================
+-----------------------------------
 
 It is possible to utilize the image to automatically generate a sensible minimal configuration for joining an existing Corda network.
 

@@ -3,20 +3,6 @@ Configuring a node
 
 .. contents::
 
-File location
--------------
-When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in
-the directory from which the command to launch Corda is executed. There are two command-line options to override this
-behaviour:
-
-* The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
-  different file location. Paths are relative to the current working directory
-
-* The ``--base-directory`` command line option allows you to specify the node's workspace location. A ``node.conf``
-  configuration file is then expected in the root of this workspace
-
-If you specify both command line arguments at the same time, the node will fail to start.
-
 Format
 ------
 The Corda configuration file uses the HOCON format which is a superset of JSON. Please visit
@@ -34,45 +20,43 @@ would be not overwritten by the property `dataSourceProperties.dataSourceClassNa
 By default the node will fail to start in presence of unknown property keys. To alter this behaviour, program line argument
 ``on-unknown-config-keys`` can be set to ``IGNORE``. Default is ``FAIL`` if unspecified.
 
-Defaults
---------
-A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
-This file can be found in the ``:node`` gradle module of the `Corda repository <https://github.com/corda/corda>`_. Any
-options you do not specify in your own ``node.conf`` file will use these defaults.
-
-Here are the contents of the ``reference.conf`` file:
-
-.. literalinclude:: ../../node/src/main/resources/reference.conf
-    :language: javascript
-
 Fields
 ------
 
 .. note:: All fields can be used with placeholders for environment variables. For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``. See: `Hiding Sensitive Data`_
 
-The available config fields are listed below.
+The available config fields are listed below in alphabetic order.
 
-:myLegalName: The legal identity of the node. This acts as a human-readable alias to the node's public key and can be used with
-    the network map to look up the node's info. This is the name that is used in the node's certificates (either when requesting them
-    from the doorman, or when auto-generating them in dev mode). At runtime, Corda checks whether this name matches the
-    name in the node's certificates.
+:additionalP2PAddresses: An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
+    Nodes can use this configuration option to advertise HA endpoints and aliases to external parties. If not specified the default value is an empty list.
 
-:keyStorePassword: The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
-    node certificate and private key.
+:attachmentContentCacheSizeMegaBytes: Optionally specify how much memory should be used to cache attachment contents in memory.
+            Otherwise defaults to 10MB
 
-    .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
-        Longer term these keys will be managed in secure hardware devices.
+:attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
+            metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.
 
-:trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
-    the Corda network root certificate. This is the non-secret value for the development certificates automatically
-    generated during the first node run.
+:compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
+    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
+    set at the same time as the ``networkServices`` option.
 
-    .. note:: Longer term these keys will be managed in secure hardware devices.
+.. _corda_configuration_file_signer_blacklist:
+
+:cordappSignerKeyFingerprintBlacklist: List of public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
+                                       Node will not load Cordapps signed by those keys.
+                                       The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367",
+                                       "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
 
 :crlCheckSoftFail: This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
                   The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
                   If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the
                   certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
+
+:custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
+
+        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified from ``corda.jar``, but can be
+                  overriden from the command line. See :ref:`setting_jvm_args` for examples and details on the precedence of the different
+                  approaches to settings arguments.
 
 .. _databaseConfiguration:
 
@@ -95,27 +79,36 @@ The available config fields are listed below.
     Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the first example. This is currently
     the only configuration that has been tested, although in the future full support for other storage layers will be validated.
 
-:h2Port: Deprecated. Use ``h2Settings`` instead.
+:detectPublicIp: This flag toggles the auto IP detection behaviour, it is disabled by default. If enabled, on startup the node will
+    attempt to discover its externally visible IP address first by looking for any public addresses on its network
+    interfaces, and then by sending an IP discovery request to the network map service. Set to ``true`` to enable.
 
-:h2Settings:  Sets the H2 JDBC server host and port. See :doc:`node-database-access-h2`. For non-localhost address the database passowrd needs to be set in ``dataSourceProperties``.
+:devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
+    does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
+    and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
+    bugs in the checkpointing process.
+    Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
+    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema,
+    failing on node start if the schema is either not present or not compatible.
+    If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
+    This value can be overridden from the command line using the ``--dev-mode`` option.
 
-:messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
+:devModeOptions: Allows modification of certain ``devMode`` features
 
-:messagingServerExternal: If ``messagingServerAddress`` is specified the default assumption is that the artemis broker is running externally.
-     Setting this to ``false`` overrides this behaviour and runs the artemis internally to the node, but bound to the address specified in ``messagingServerAddress``.
-     This allows the address and port advertised in ``p2pAddress`` to differ from the local binding,
-     especially if there is external remapping by firewalls, load balancers , or routing rules. Note that ``detectPublicIp`` should be set to ``false`` to ensure
-     that no translation of the ``p2pAddress`` occurs before it is sent to the network map.
+    :allowCompatibilityZone: Allows a node configured to operate in development mode to connect to a compatibility zone.
 
-:p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
+        .. note:: This is an unsupported configuration.
 
-    .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
-        note that the host is the included as the advertised entry in the network map. As a result the value listed
-        here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
-        the node will try to auto-discover its public one.
-        
-:additionalP2PAddresses: An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
-    Nodes can use this configuration option to advertise HA endpoints and aliases to external parties. If not specified the default value is an empty list.
+:emailAddress: email address responsible for node administration, used by Compatibility Zone administrator.
+
+:extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
+            these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
+
+            .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
+
+:flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
+
+:flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
 
 :flowTimeout: When a flow implementing the ``TimedFlow`` interface and setting the ``isTimeoutEnabled`` flag does not complete within a
     defined elapsed time, it is restarted from the initial checkpoint. Currently only used for notarisation requests with clustered
@@ -127,6 +120,83 @@ The available config fields are listed below.
         :maxRestartCount: The number of retries the back-off time keeps growing for. For subsequent retries, the timeout value will remain
                  constant.
         :backoffBase: The base of the exponential backoff, `t_{wait} = timeout * backoffBase^{retryCount}`.
+
+:h2Port: Deprecated. Use ``h2Settings`` instead.
+
+:h2Settings:  Sets the H2 JDBC server host and port. See :doc:`node-database-access-h2`. For non-localhost address the database passowrd needs to be set in ``dataSourceProperties``.
+
+:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
+    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
+    for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]`` (Note that you have to use the ``baseDirectory``
+    substitution value when pointing to a relative path)
+
+:jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
+    Default Jolokia access url is http://127.0.0.1:port/jolokia/
+
+:jmxReporterType:  Provides an option for registering an alternative JMX reporter. Available options are ``JOLOKIA`` and ``NEW_RELIC``. If no value is provided, ``JOLOKIA`` will be used.
+
+                    .. note:: The Jolokia configuration is provided by default.  The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution. See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
+
+                        .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
+                        .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
+
+:keyStorePassword: The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the
+    node certificate and private key.
+
+    .. note:: This is the non-secret value for the development certificates automatically generated during the first node run.
+        Longer term these keys will be managed in secure hardware devices.
+
+:lazyBridgeStart: PLACEHOLDER
+
+:messagingServerAddress: The address of the ArtemisMQ broker instance. If not provided the node will run one locally.
+
+:messagingServerExternal: If ``messagingServerAddress`` is specified the default assumption is that the artemis broker is running externally.
+     Setting this to ``false`` overrides this behaviour and runs the artemis internally to the node, but bound to the address specified in ``messagingServerAddress``.
+     This allows the address and port advertised in ``p2pAddress`` to differ from the local binding,
+     especially if there is external remapping by firewalls, load balancers , or routing rules. Note that ``detectPublicIp`` should be set to ``false`` to ensure
+     that no translation of the ``p2pAddress`` occurs before it is sent to the network map.
+
+:myLegalName: The legal identity of the node. This acts as a human-readable alias to the node's public key and can be used with
+    the network map to look up the node's info. This is the name that is used in the node's certificates (either when requesting them
+    from the doorman, or when auto-generating them in dev mode). At runtime, Corda checks whether this name matches the
+    name in the node's certificates.
+
+:notary: Optional configuration object which if present configures the node to run as a notary.
+
+    :validating: Boolean to determine whether the notary is a validating or non-validating one.
+
+    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
+        checks whether this name matches the name of the certificate of the notary cluster.
+
+    :className: The fully qualified class name of the notary service to run. The class is expected to be loaded from
+        a notary CorDapp. Defaults to run the ``SimpleNotaryService``, which is built in.
+
+    :extraConfig: an optional configuration block for providing notary implementation-specific values.
+
+:networkParameterAcceptanceSettings: Optional settings for managing the network parameter auto-acceptance behaviour. If not provided then the defined defaults below are used.
+
+    :autoAcceptEnabled: This flag toggles auto accepting of network parameter changes. If a network operator issues a network parameter change which modifies only
+                        auto-acceptable options and this behaviour is enabled then the changes will be accepted without any manual intervention from the node operator. See
+                        :doc:`network-map` for more information on the update process and current auto-acceptable parameters. Set to ``false`` to disable. Defaults to true.
+
+    :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
+                                       more granular level. Defaults to an empty list.
+
+:networkServices: If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
+    and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
+
+    :doormanURL: Root address of the network registration service.
+    :networkMapURL: Root address of the network map service.
+    :pnm: Optional UUID of the private network operating within the compatibility zone this node should be joinging.
+
+        .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
+
+:p2pAddress: The host and port on which the node is available for protocol operations over ArtemisMQ.
+
+    .. note:: In practice the ArtemisMQ messaging services bind to all local addresses on the specified port. However,
+        note that the host is the included as the advertised entry in the network map. As a result the value listed
+        here must be externally accessible when running nodes across a cluster of machines. If the provided host is unreachable,
+        the node will try to auto-discover its public one.
 
 :rpcAddress: (Deprecated) The address of the RPC system on which RPC requests can be made to the node. If not provided then the node will run without RPC. This is now deprecated in favour of the ``rpcSettings`` block.
 
@@ -148,21 +218,6 @@ The available config fields are listed below.
             and truststore that can be used to secure the RPC connection. You can use this if you have no special requirements.
 
 
-:security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
-    :doc:`clientrpc` for details.
-
-:notary: Optional configuration object which if present configures the node to run as a notary.
-
-    :validating: Boolean to determine whether the notary is a validating or non-validating one.
-
-    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
-        checks whether this name matches the name of the certificate of the notary cluster.
-
-    :className: The fully qualified class name of the notary service to run. The class is expected to be loaded from
-        a notary CorDapp. Defaults to run the ``SimpleNotaryService``, which is built in.
-
-    :extraConfig: an optional configuration block for providing notary implementation-specific values.
-
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
 
@@ -173,67 +228,18 @@ The available config fields are listed below.
         contains the string ``ALL``, the user can start any flow via RPC. This value is intended for administrator
         users and for development.
 
-:devMode: This flag sets the node to run in development mode. On startup, if the keystore ``<workspace>/certificates/sslkeystore.jks``
-    does not exist, a developer keystore will be used if ``devMode`` is true. The node will exit if ``devMode`` is false
-    and the keystore does not exist. ``devMode`` also turns on background checking of flow checkpoints to shake out any
-    bugs in the checkpointing process.
-    Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda
-    or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema,
-    failing on node start if the schema is either not present or not compatible.
-    If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
-    This value can be overridden from the command line using the ``--dev-mode`` option.
-
-:detectPublicIp: This flag toggles the auto IP detection behaviour, it is disabled by default. If enabled, on startup the node will
-    attempt to discover its externally visible IP address first by looking for any public addresses on its network
-    interfaces, and then by sending an IP discovery request to the network map service. Set to ``true`` to enable.
-
-:compatibilityZoneURL: The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and
-    obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information. Cannot be
-    set at the same time as the ``networkServices`` option.
-
-:networkServices: If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
-    and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
-
-    :doormanURL: Root address of the network registration service.
-    :networkMapURL: Root address of the network map service.
-    :pnm: Optional UUID of the private network operating within the compatibility zone this node should be joinging.
-
-        .. note:: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
-
-:devModeOptions: Allows modification of certain ``devMode`` features
-
-    :allowCompatibilityZone: Allows a node configured to operate in development mode to connect to a compatibility zone.
-
-        .. note:: This is an unsupported configuration.
-
-:systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
-    of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
-
-:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
-    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
-    for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]`` (Note that you have to use the ``baseDirectory``
-    substitution value when pointing to a relative path)
+:security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
+    :doc:`clientrpc` for details.
 
 :sshd: If provided, node will start internal SSH server which will provide a management shell. It uses the same credentials and permissions as RPC subsystem. It has one required parameter.
 
     :port: The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
-:jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
-    Default Jolokia access url is http://127.0.0.1:port/jolokia/
+:systemProperties: An optional map of additional system properties to be set when launching via ``corda.jar`` only.  Keys and values
+    of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
 
 :transactionCacheSizeMegaBytes: Optionally specify how much memory should be used for caching of ledger transactions in memory.
             Otherwise defaults to 8MB plus 5% of all heap memory above 300MB.
-
-:attachmentContentCacheSizeMegaBytes: Optionally specify how much memory should be used to cache attachment contents in memory.
-            Otherwise defaults to 10MB
-
-:attachmentCacheBound: Optionally specify how many attachments should be cached locally. Note that this includes only the key and
-            metadata, the content is cached separately and can be loaded lazily. Defaults to 1024.
-
-:extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
-            these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
-
-            .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
 :tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
 
@@ -244,38 +250,26 @@ The available config fields are listed below.
 
                    .. note:: If this parameter is set then `tlsCertCrlDistPoint` needs to be set as well.
 
-:flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
+:trustStorePassword: The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing
+    the Corda network root certificate. This is the non-secret value for the development certificates automatically
+    generated during the first node run.
 
-:flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
+    .. note:: Longer term these keys will be managed in secure hardware devices.
 
-:jmxReporterType:  Provides an option for registering an alternative JMX reporter. Available options are ``JOLOKIA`` and ``NEW_RELIC``. If no value is provided, ``JOLOKIA`` will be used.
+:useTestClock: PLACEHOLDER
 
-                    .. note:: The Jolokia configuration is provided by default.  The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution. See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
+:verfierType: PLACEHOLDER
 
-                        .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
-                        .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
+Defaults
+--------
+A set of default configuration options are loaded from the built-in resource file ``/node/src/main/resources/reference.conf``.
+This file can be found in the ``:node`` gradle module of the `Corda repository <https://github.com/corda/corda>`_. Any
+options you do not specify in your own ``node.conf`` file will use these defaults.
 
-.. _corda_configuration_file_signer_blacklist:
+Here are the contents of the ``reference.conf`` file:
 
-:cordappSignerKeyFingerprintBlacklist: List of public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
-                                       Node will not load Cordapps signed by those keys.
-                                       The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367",
-                                       "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
-
-:networkParameterAcceptanceSettings: Optional settings for managing the network parameter auto-acceptance behaviour. If not provided then the defined defaults below are used.
-
-    :autoAcceptEnabled: This flag toggles auto accepting of network parameter changes. If a network operator issues a network parameter change which modifies only
-                        auto-acceptable options and this behaviour is enabled then the changes will be accepted without any manual intervention from the node operator. See
-                        :doc:`network-map` for more information on the update process and current auto-acceptable parameters. Set to ``false`` to disable. Defaults to true.
-
-    :excludedAutoAcceptableParameters: List of auto-acceptable parameter names to explicitly exclude from auto-accepting. Allows a node operator to control the behaviour at a
-                                       more granular level. Defaults to an empty list.
-
-:custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
-
-        :jvmArgs: A list of JVM arguments to apply to the node process. This removes any defaults specified from ``corda.jar``, but can be
-                  overriden from the command line. See :ref:`setting_jvm_args` for examples and details on the precedence of the different
-                  approaches to settings arguments.
+.. literalinclude:: ../../node/src/main/resources/reference.conf
+    :language: javascript
 
 Examples
 --------
@@ -307,6 +301,20 @@ Simple notary configuration file:
 Configuring a node where the Corda Compatibility Zone's registration and Network Map services exist on different URLs
 
 .. literalinclude:: example-code/src/main/resources/example-node-with-networkservices.conf
+
+File location
+-------------
+When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in
+the directory from which the command to launch Corda is executed. There are two command-line options to override this
+behaviour:
+
+* The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at
+  different file location. Paths are relative to the current working directory
+
+* The ``--base-directory`` command line option allows you to specify the node's workspace location. A ``node.conf``
+  configuration file is then expected in the root of this workspace
+
+If you specify both command line arguments at the same time, the node will fail to start.
 
 Fields override
 ---------------
