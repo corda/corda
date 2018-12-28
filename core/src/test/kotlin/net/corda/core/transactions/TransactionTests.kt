@@ -170,6 +170,7 @@ class TransactionTests {
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
+
         fun buildTransaction() = LedgerTransaction.create(
                 inputs,
                 outputs,
@@ -184,7 +185,7 @@ class TransactionTests {
                 inputStatesContractClassNameToMaxVersion = emptyMap()
         )
 
-        assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction() }
+        assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }
     }
 
     @Test

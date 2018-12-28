@@ -20,12 +20,9 @@ import kotlin.math.min
 /**
  * Resolves transactions for the specified [txHashes] along with their full history (dependency graph) from [otherSide].
  * Each retrieved transaction is validated and inserted into the local transaction storage.
- *
- * @return a list of verified [SignedTransaction] objects, in a depth-first order.
  */
 @DeleteForDJVM
-class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
-                              private val otherSide: FlowSession) : FlowLogic<Unit>() {
+class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>, private val otherSide: FlowSession) : FlowLogic<Unit>() {
 
     // Need it ordered in terms of iteration. Needs to be a variable for the check-pointing logic to work.
     private val txHashes = txHashesArg.toList()

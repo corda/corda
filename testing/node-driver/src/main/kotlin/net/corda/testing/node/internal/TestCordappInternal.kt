@@ -21,7 +21,9 @@ interface TestCordappInternal : TestCordapp {
     fun withOnlyJarContents(): TestCordappInternal
 
     companion object {
-        fun installCordapps(baseDirectory: Path, nodeSpecificCordapps: Set<TestCordappInternal>, generalCordapps: Set<TestCordappInternal>) {
+        fun installCordapps(baseDirectory: Path,
+                            nodeSpecificCordapps: Set<TestCordappInternal>,
+                            generalCordapps: Set<TestCordappInternal> = emptySet()) {
             val nodeSpecificCordappsWithoutMeta = checkNoConflicts(nodeSpecificCordapps)
             checkNoConflicts(generalCordapps)
 
