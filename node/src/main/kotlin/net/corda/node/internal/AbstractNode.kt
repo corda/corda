@@ -971,7 +971,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                                         services: ServicesForResolution,
                                         database: CordaPersistence,
                                         cordappLoader: CordappLoader): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader)
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
     /** Load configured JVM agents */

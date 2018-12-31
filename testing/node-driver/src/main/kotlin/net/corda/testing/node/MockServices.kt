@@ -66,7 +66,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentitySer
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
 open class MockServices private constructor(
-        val cordappLoader: CordappLoader,
+        private val cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         private val initialNetworkParameters: NetworkParameters,
@@ -314,7 +314,7 @@ open class MockServices private constructor(
         }
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader).apply { start() }
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API
@@ -349,6 +349,8 @@ open class MockServices private constructor(
 
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = dummyAttachment
+
+    fun getCordappClassloader(): ClassLoader = cordappLoader.appClassLoader
 }
 
 /**

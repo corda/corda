@@ -59,7 +59,7 @@ class NodeVaultService(
         private val servicesForResolution: ServicesForResolution,
         private val database: CordaPersistence,
         private val schemaService: SchemaService,
-        private val cordappLoader: CordappLoader
+        private val appClassloader: ClassLoader
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -639,7 +639,7 @@ class NodeVaultService(
         val unknownTypes = mutableSetOf<String>()
         distinctTypes.forEach { type ->
             val concreteType: Class<ContractState>? = try {
-                uncheckedCast(Class.forName(type, true, cordappLoader.appClassLoader))
+                uncheckedCast(Class.forName(type, true, appClassloader))
             } catch (e: ClassNotFoundException) {
                 unknownTypes += type
                 null
