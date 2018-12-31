@@ -518,6 +518,8 @@ private constructor(
         private val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract()
 
         fun verify() {
+            // checkNoNotaryChange and checkEncumbrancesValid are called here, and not in the c'tor, as they need access to the "outputs"
+            // list, the contents of which need to be deserialized under the correct classloader.
             checkNoNotaryChange()
             checkEncumbrancesValid()
             validateContractVersions()
