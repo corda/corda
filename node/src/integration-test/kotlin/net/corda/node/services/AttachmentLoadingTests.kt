@@ -57,6 +57,8 @@ class AttachmentLoadingTests {
 
             val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
 
+            // The exception that we actually want is MissingAttachmentsException, but this is thrown in a responder flow on Bob. To work
+            // around that it's re-thrown as a FlowException so that it can be propagated to Alice where we pick it here.
             assertThatThrownBy {
                 alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
             }.hasMessage("Attempting to load Contract Attachments downloaded from the network")
