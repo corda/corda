@@ -6397,6 +6397,8 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public net.corda.core.crypto.TransactionSignature createSignature(net.corda.core.transactions.SignedTransaction, java.security.PublicKey)
   @NotNull
+  public final net.corda.node.cordapp.CordappLoader getCordappLoader()
+  @NotNull
   public final net.corda.testing.services.MockAttachmentStorage getAttachments()
   @NotNull
   public net.corda.testing.node.TestClock getClock()
