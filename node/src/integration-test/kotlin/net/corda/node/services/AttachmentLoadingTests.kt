@@ -1,117 +1,123 @@
 package net.corda.node.services
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
-import net.corda.core.CordaRuntimeException
-import net.corda.core.contracts.*
-import net.corda.core.cordapp.CordappProvider
-import net.corda.core.flows.FlowLogic
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.ContractState
+import net.corda.core.contracts.StateRef
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.toLedgerTransaction
-import net.corda.core.node.NetworkParameters
-import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkParametersStorage
-import net.corda.core.serialization.SerializationFactory
-import net.corda.core.serialization.serialize
+import net.corda.core.internal.*
+import net.corda.core.internal.concurrent.transpose
+import net.corda.core.messaging.startFlow
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
-import net.corda.node.VersionInfo
-import net.corda.node.internal.cordapp.CordappProviderImpl
-import net.corda.node.internal.cordapp.JarScanningCordappLoader
-import net.corda.testing.common.internal.testNetworkParameters
-import net.corda.testing.common.internal.addNotary
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.TestIdentity
+import net.corda.core.utilities.unwrap
+import net.corda.testing.common.internal.checkNotOnClasspath
+import net.corda.testing.core.*
+import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.MockCordappConfigProvider
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.withoutTestSerialization
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.services.MockAttachmentStorage
-import org.junit.Assert.assertEquals
-import org.junit.Rule
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
+import java.net.URL
 import java.net.URLClassLoader
-import kotlin.test.assertFailsWith
 
 class AttachmentLoadingTests {
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
-    private val attachments = MockAttachmentStorage()
-    private val provider = CordappProviderImpl(JarScanningCordappLoader.fromJarUrls(listOf(isolatedJAR), VersionInfo.UNKNOWN), MockCordappConfigProvider(), attachments).apply {
-        start(testNetworkParameters().whitelistedContractImplementations)
-    }
-    private val cordapp get() = provider.cordapps.first()
-    private val attachmentId get() = provider.getCordappAttachmentId(cordapp)!!
-    private val appContext get() = provider.getAppContext(cordapp)
-
     private companion object {
-        val isolatedJAR = AttachmentLoadingTests::class.java.getResource("isolated.jar")!!
-        const val ISOLATED_CONTRACT_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        val isolatedJar: URL = AttachmentLoadingTests::class.java.getResource("/isolated.jar")
+        val isolatedClassLoader = URLClassLoader(arrayOf(isolatedJar))
+        val issuanceFlowClass: Class<FlowLogic<StateRef>> = uncheckedCast(loadFromIsolated("net.corda.isolated.workflows.IsolatedIssuanceFlow"))
 
-        val bankAName = CordaX500Name("BankA", "Zurich", "CH")
-        val bankBName = CordaX500Name("BankB", "Zurich", "CH")
-        val flowInitiatorClass: Class<out FlowLogic<*>> =
-                Class.forName("net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator", true, URLClassLoader(arrayOf(isolatedJAR)))
-                        .asSubclass(FlowLogic::class.java)
-        val DUMMY_BANK_A = TestIdentity(DUMMY_BANK_A_NAME, 40).party
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-    }
-
-    private val services = object : ServicesForResolution {
-        private val testNetworkParameters = testNetworkParameters().addNotary(DUMMY_NOTARY)
-        override fun loadState(stateRef: StateRef): TransactionState<*> = throw NotImplementedError()
-        override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> = throw NotImplementedError()
-        override fun loadContractAttachment(stateRef: StateRef, interestedContractClassName : ContractClassName?): Attachment = throw NotImplementedError()
-        override val identityService = rigorousMock<IdentityService>().apply {
-            doReturn(null).whenever(this).partyFromKey(DUMMY_BANK_A.owningKey)
-        }
-        override val attachments: AttachmentStorage get() = this@AttachmentLoadingTests.attachments
-        override val cordappProvider: CordappProvider get() = this@AttachmentLoadingTests.provider
-        override val networkParameters: NetworkParameters = testNetworkParameters
-        override val networkParametersStorage: NetworkParametersStorage get() = rigorousMock<NetworkParametersStorage>().apply {
-            doReturn(testNetworkParameters.serialize().hash).whenever(this).currentHash
-            doReturn(testNetworkParameters).whenever(this).lookup(any())
-        }
-    }
-
-    @Test
-    fun `test a wire transaction has loaded the correct attachment`() {
-        val appClassLoader = appContext.classLoader
-        val contractClass = appClassLoader.loadClass(ISOLATED_CONTRACT_ID).asSubclass(Contract::class.java)
-        val generateInitialMethod = contractClass.getDeclaredMethod("generateInitial", PartyAndReference::class.java, Integer.TYPE, Party::class.java)
-        val contract = contractClass.newInstance()
-        val txBuilder = generateInitialMethod.invoke(contract, DUMMY_BANK_A.ref(1), 1, DUMMY_NOTARY) as TransactionBuilder
-        val context = SerializationFactory.defaultFactory.defaultContext.withClassLoader(appClassLoader)
-        val ledgerTx = txBuilder.toLedgerTransaction(services, context)
-        contract.verify(ledgerTx)
-
-        val actual = ledgerTx.attachments.first()
-        val expected = attachments.openAttachment(attachmentId)!!
-        assertEquals(expected, actual)
-    }
-
-    @Test
-    fun `test that attachments retrieved over the network are not used for code`() {
-        withoutTestSerialization {
-            driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), cordappsForAllNodes = emptySet())) {
-                val additionalCordapps = cordappsForPackages("net.corda.finance.contracts.isolated")
-                val bankA = startNode(NodeParameters(providedName = bankAName, additionalCordapps = additionalCordapps)).getOrThrow()
-                val bankB = startNode(NodeParameters(providedName = bankBName, additionalCordapps = additionalCordapps)).getOrThrow()
-                assertFailsWith<CordaRuntimeException>("Party C=CH,L=Zurich,O=BankB rejected session request: Don't know net.corda.finance.contracts.isolated.IsolatedDummyFlow\$Initiator") {
-                    bankA.rpc.startFlowDynamic(flowInitiatorClass, bankB.nodeInfo.legalIdentities.first()).returnValue.getOrThrow()
-                }
+        init {
+            checkNotOnClasspath("net.corda.isolated.contracts.AnotherDummyContract") {
+                "isolated module cannot be on the classpath as otherwise it will be pulled into the nodes the driver creates and " +
+                        "contaminate the tests. This is a known issue with the driver and we must work around it until it's fixed."
             }
-            Unit
+        }
+
+        fun loadFromIsolated(className: String): Class<*> = Class.forName(className, false, isolatedClassLoader)
+    }
+
+    @Test
+    fun `contracts downloaded from the network are not executed without the DJVM`() {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+        )) {
+            installIsolatedCordapp(ALICE_NAME)
+
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME)
+            ).transpose().getOrThrow()
+
+            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
+
+            // The exception that we actually want is MissingAttachmentsException, but this is thrown in a responder flow on Bob. To work
+            // around that it's re-thrown as a FlowException so that it can be propagated to Alice where we pick it here.
+            assertThatThrownBy {
+                alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
+            }.hasMessage("Attempting to load Contract Attachments downloaded from the network")
+        }
+    }
+
+    @Test
+    fun `contract is executed if installed locally`() {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+        )) {
+            installIsolatedCordapp(ALICE_NAME)
+            installIsolatedCordapp(BOB_NAME)
+
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME),
+                    startNode(providedName = BOB_NAME)
+            ).transpose().getOrThrow()
+
+            val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
+            alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
+        }
+    }
+
+    private fun DriverDSL.installIsolatedCordapp(name: CordaX500Name) {
+        val cordappsDir = (baseDirectory(name) / "cordapps").createDirectories()
+        isolatedJar.toPath().copyToDirectory(cordappsDir)
+    }
+
+    @InitiatingFlow
+    @StartableByRPC
+    class ConsumeAndBroadcastFlow(private val stateRef: StateRef, private val otherSide: Party) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val notary = serviceHub.networkMapCache.notaryIdentities[0]
+            val stateAndRef = serviceHub.toStateAndRef<ContractState>(stateRef)
+            val stx = serviceHub.signInitialTransaction(
+                    TransactionBuilder(notary).addInputState(stateAndRef).addCommand(dummyCommand(ourIdentity.owningKey))
+            )
+            stx.verify(serviceHub, checkSufficientSignatures = false)
+            val session = initiateFlow(otherSide)
+            subFlow(FinalityFlow(stx, session))
+            // It's important we wait on this dummy receive, as otherwise it's possible we miss any errors the other side throws
+            session.receive<String>().unwrap { require(it == "OK") { "Not OK: $it"} }
+        }
+    }
+
+    @InitiatedBy(ConsumeAndBroadcastFlow::class)
+    class ConsumeAndBroadcastResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            try {
+                subFlow(ReceiveFinalityFlow(otherSide))
+            } catch (e: MissingAttachmentsException) {
+                throw FlowException(e.message)
+            }
+            otherSide.send("OK")
         }
     }
 }
