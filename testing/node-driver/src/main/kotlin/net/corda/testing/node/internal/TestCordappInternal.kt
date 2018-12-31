@@ -14,11 +14,11 @@ import java.nio.file.StandardCopyOption.REPLACE_EXISTING
  *
  * @property jarFile The jar file this CorDapp represents. Different CorDapps may point to the same file.
  */
-interface TestCordappInternal : TestCordapp {
-    val jarFile: Path
+abstract class TestCordappInternal : TestCordapp() {
+    abstract val jarFile: Path
 
     /** Return a copy of this TestCordappInternal but without any metadata, such as configs and signing information. */
-    fun withOnlyJarContents(): TestCordappInternal
+    abstract fun withOnlyJarContents(): TestCordappInternal
 
     companion object {
         fun installCordapps(baseDirectory: Path,

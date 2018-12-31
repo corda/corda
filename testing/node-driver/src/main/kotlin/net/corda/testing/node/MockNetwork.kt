@@ -61,8 +61,7 @@ data class MockNodeParameters(
 }
 
 /**
- * Immutable builder for configuring a [MockNetwork]. Kotlin users can also use named parameters to the constructor
- * of [MockNetwork], which is more convenient.
+ * Immutable builder for configuring a [MockNetwork].
  *
  * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
@@ -95,6 +94,8 @@ data class MockNetworkParameters(
                 networkParameters: NetworkParameters
     ) : this(networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters, emptyList())
 
+    constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(threadPerNode = false, cordappsForAllNodes = cordappsForAllNodes)
+
     fun withNetworkParameters(networkParameters: NetworkParameters): MockNetworkParameters = copy(networkParameters = networkParameters)
     fun withNetworkSendManuallyPumped(networkSendManuallyPumped: Boolean): MockNetworkParameters = copy(networkSendManuallyPumped = networkSendManuallyPumped)
     fun withThreadPerNode(threadPerNode: Boolean): MockNetworkParameters = copy(threadPerNode = threadPerNode)
@@ -108,7 +109,8 @@ data class MockNetworkParameters(
              threadPerNode: Boolean,
              servicePeerAllocationStrategy: InMemoryMessagingNetwork.ServicePeerAllocationStrategy,
              notarySpecs: List<MockNetworkNotarySpec>,
-             networkParameters: NetworkParameters): MockNetworkParameters {
+             networkParameters: NetworkParameters
+    ): MockNetworkParameters {
         return MockNetworkParameters(networkSendManuallyPumped, threadPerNode, servicePeerAllocationStrategy, notarySpecs, networkParameters, emptyList())
     }
 }
@@ -243,9 +245,9 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  *
+ * @property defaultParameters The default parameters for the network. If any of the remaining constructor parameters are specified then
+ * their values are taken instead of the corresponding value in [defaultParameters].
  * @property cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
- * @property defaultParameters A [MockNetworkParameters] object which contains the same parameters as the constructor, provided
- * as a convenience for Java users.
  * @property networkSendManuallyPumped If false then messages will not be routed from sender to receiver until you use
  * the [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can examine the
  * state of the mock network before and after a message is sent, without races and without the receiving node immediately
@@ -279,8 +281,7 @@ open class MockNetwork(
             cordappPackages, defaultParameters = parameters
     )
 
-    @JvmOverloads
-    constructor(parameters: MockNetworkParameters = MockNetworkParameters()) : this(emptyList(), parameters)
+    constructor(parameters: MockNetworkParameters) : this(emptyList(), defaultParameters = parameters)
 
     private val internalMockNetwork = InternalMockNetwork(
             cordappPackages,
@@ -317,7 +318,7 @@ open class MockNetwork(
     fun createPartyNode(legalName: CordaX500Name? = null): StartedMockNode = StartedMockNode.create(internalMockNetwork.createPartyNode(legalName))
 
     /** Create a started node with the given parameters. **/
-    fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode {
+    fun createNode(parameters: MockNodeParameters): StartedMockNode {
         return StartedMockNode.create(internalMockNetwork.createNode(InternalMockNodeParameters(parameters)))
     }
 

@@ -22,108 +22,20 @@ A ``MockNetwork`` is created as follows:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/MockNetworkTestsTutorial.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
-        class FlowTests {
-            private lateinit var mockNet: MockNetwork
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/MockNetworkTestsTutorial.java
+        :language: java
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
-            @Before
-            fun setup() {
-                network = MockNetwork(listOf("my.cordapp.package", "my.other.cordapp.package"))
-            }
-        }
+The ``MockNetwork`` requires at a minimum a list of CorDapps to be installed on each ``StartedMockNode``. The CorDapps are looked up on the
+classpath by package name, using ``TestCordapp.findCordapp``.
 
-
-   .. sourcecode:: java
-
-        public class IOUFlowTests {
-            private MockNetwork network;
-
-            @Before
-            public void setup() {
-                network = new MockNetwork(ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"));
-            }
-        }
-
-The ``MockNetwork`` requires at a minimum a list of packages. Each package is packaged into a CorDapp JAR and installed
-as a CorDapp on each ``StartedMockNode``.
-
-Configuring the ``MockNetwork``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``MockNetwork`` is configured automatically. You can tweak its configuration using a ``MockNetworkParameters``
-object, or by using named parameters in Kotlin:
-
-.. container:: codeset
-
-   .. sourcecode:: kotlin
-
-        val network = MockNetwork(
-                // A list of packages to scan. Any contracts, flows and Corda services within these
-                // packages will be automatically available to any nodes within the mock network
-                cordappPackages = listOf("my.cordapp.package", "my.other.cordapp.package"),
-                // If true then each node will be run in its own thread. This can result in race conditions in your
-                // code if not carefully written, but is more realistic and may help if you have flows in your app that
-                // do long blocking operations.
-                threadPerNode = false,
-                // The notaries to use on the mock network. By default you get one mock notary and that is usually
-                // sufficient.
-                notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
-                // If true then messages will not be routed from sender to receiver until you use the
-                // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can
-                // examine the state of the mock network before and after a message is sent, without races and without
-                // the receiving node immediately sending a response.
-                networkSendManuallyPumped = false,
-                // How traffic is allocated in the case where multiple nodes share a single identity, which happens for
-                // notaries in a cluster. You don't normally ever need to change this: it is mostly useful for testing
-                // notary implementations.
-                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
-
-        val network2 = MockNetwork(
-                // A list of packages to scan. Any contracts, flows and Corda services within these
-                // packages will be automatically available to any nodes within the mock network
-                listOf("my.cordapp.package", "my.other.cordapp.package"), MockNetworkParameters(
-                // If true then each node will be run in its own thread. This can result in race conditions in your
-                // code if not carefully written, but is more realistic and may help if you have flows in your app that
-                // do long blocking operations.
-                threadPerNode = false,
-                // The notaries to use on the mock network. By default you get one mock notary and that is usually
-                // sufficient.
-                notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)),
-                // If true then messages will not be routed from sender to receiver until you use the
-                // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code that can
-                // examine the state of the mock network before and after a message is sent, without races and without
-                // the receiving node immediately sending a response.
-                networkSendManuallyPumped = false,
-                // How traffic is allocated in the case where multiple nodes share a single identity, which happens for
-                // notaries in a cluster. You don't normally ever need to change this: it is mostly useful for testing
-                // notary implementations.
-                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random())
-        )
-
-   .. sourcecode:: java
-
-        MockNetwork network = MockNetwork(
-                // A list of packages to scan. Any contracts, flows and Corda services within these
-                // packages will be automatically available to any nodes within the mock network
-                ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"),
-                new MockNetworkParameters()
-                        // If true then each node will be run in its own thread. This can result in race conditions in
-                        // your code if not carefully written, but is more realistic and may help if you have flows in
-                        // your app that do long blocking operations.
-                        .setThreadPerNode(false)
-                        // The notaries to use on the mock network. By default you get one mock notary and that is
-                        // usually sufficient.
-                        .setNotarySpecs(ImmutableList.of(new MockNetworkNotarySpec(DUMMY_NOTARY_NAME)))
-                        // If true then messages will not be routed from sender to receiver until you use the
-                        // [MockNetwork.runNetwork] method. This is useful for writing single-threaded unit test code
-                        // that can examine the state of the mock network before and after a message is sent, without
-                        // races and without the receiving node immediately sending a response.
-                        .setNetworkSendManuallyPumped(false)
-                        // How traffic is allocated in the case where multiple nodes share a single identity, which
-                        // happens for notaries in a cluster. You don't normally ever need to change this: it is mostly
-                        // useful for testing notary implementations.
-                        .setServicePeerAllocationStrategy(new InMemoryMessagingNetwork.ServicePeerAllocationStrategy.Random()));
+``MockNetworkParameters`` provides other properties for the network which can be tweaked. They default to sensible values if not specified.
 
 Adding nodes to the network
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -132,73 +44,21 @@ Nodes are created on the ``MockNetwork`` using:
 
 .. container:: codeset
 
-   .. sourcecode:: kotlin
+    .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/MockNetworkTestsTutorial.kt
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
 
-        class FlowTests {
-            private lateinit var mockNet: MockNetwork
-            lateinit var nodeA: StartedMockNode
-            lateinit var nodeB: StartedMockNode
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/MockNetworkTestsTutorial.java
+        :language: java
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
 
-            @Before
-            fun setup() {
-                network = MockNetwork(listOf("my.cordapp.package", "my.other.cordapp.package"))
-                nodeA = network.createPartyNode()
-                // We can optionally give the node a name.
-                nodeB = network.createPartyNode(CordaX500Name("Bank B", "London", "GB"))
-            }
-        }
-
-
-   .. sourcecode:: java
-
-        public class IOUFlowTests {
-            private MockNetwork network;
-            private StartedMockNode a;
-            private StartedMockNode b;
-
-            @Before
-            public void setup() {
-                network = new MockNetwork(ImmutableList.of("my.cordapp.package", "my.other.cordapp.package"));
-                nodeA = network.createPartyNode(null);
-                // We can optionally give the node a name.
-                nodeB = network.createPartyNode(new CordaX500Name("Bank B", "London", "GB"));
-            }
-        }
-
-Nodes added using ``createPartyNode`` are provided a default set of node parameters. However, it is also possible to
-provide different parameters to each node using the following methods on ``MockNetwork``:
-
-.. container:: codeset
-
-    .. sourcecode:: kotlin
-
-        /**
-         * Create a started node with the given parameters.
-         *
-         * @param legalName The node's legal name.
-         * @param forcedID A unique identifier for the node.
-         * @param entropyRoot The initial entropy value to use when generating keys. Defaults to an (insecure) random value,
-         * but can be overridden to cause nodes to have stable or colliding identity/service keys.
-         * @param configOverrides Add/override the default configuration/behaviour of the node
-         * @param extraCordappPackages Extra CorDapp packages to add for this node.
-         */
-        @JvmOverloads
-        fun createNode(legalName: CordaX500Name? = null,
-                       forcedID: Int? = null,
-                       entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-                       configOverrides: MockNodeConfigOverrides? = null,
-                       extraCordappPackages: List<String> = emptyList()
-        ): StartedMockNode
-
-        /** Create a started node with the given parameters. **/
-        fun createNode(parameters: MockNodeParameters = MockNodeParameters()): StartedMockNode
-
-As you can see above, parameters can be added individually or encapsulated within a ``MockNodeParameters`` object. Of
-particular interest are ``configOverrides`` which allow you to override some of the default node
-configuration options. Please refer to the ``MockNodeConfigOverrides`` class for details what can currently be overridden.
-Also, the ``extraCordappPackages`` parameter allows you to add extra CorDapps to a
-specific node. This is useful when you wish for all nodes to load a common CorDapp but for a subset of nodes to load
-CorDapps specific to their role in the network.
+Nodes added using ``createNode`` are provided a default set of node parameters. However, it is also possible to
+provide different parameters to each node using ``MockNodeParameters``. Of particular interest are ``configOverrides`` which allow you to
+override some of the default node configuration options. Please refer to the ``MockNodeConfigOverrides`` class for details what can currently
+be overridden. Also, the ``additionalCordapps`` parameter allows you to add extra CorDapps to a specific node. This is useful when you wish
+for all nodes to load a common CorDapp but for a subset of nodes to load CorDapps specific to their role in the network.
 
 Running the network
 ^^^^^^^^^^^^^^^^^^^
