@@ -28,7 +28,7 @@ class AdditionP2PAddressModeTest {
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = true, extraCordappPackagesToScan = listOf("net.corda.finance", "migration", "META-INF.services"))) {
             val mainAddress = portAllocation.nextHostAndPort().toString()
             val altAddress = portAllocation.nextHostAndPort().toString()
             val haConfig = mutableMapOf<String, Any?>()

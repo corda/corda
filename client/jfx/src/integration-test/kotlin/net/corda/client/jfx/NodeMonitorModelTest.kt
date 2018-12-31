@@ -49,7 +49,7 @@ class NodeMonitorModelTest {
     private lateinit var newNode: (CordaX500Name) -> NodeInfo
 
     private fun setup(runTest: () -> Unit) {
-        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance", "migration", "META-INF.services"))) {
             val cashUser = User("user1", "test", permissions = setOf(all()))
             val aliceNodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo
