@@ -1,12 +1,10 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
-import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.Attachment
 import net.corda.core.transactions.LedgerTransaction
 
-@DoNotImplement
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
     /**

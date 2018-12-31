@@ -1,6 +1,5 @@
 package net.corda.core.internal
 
-import net.corda.core.CordaInternal
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.node.services.AttachmentStorage
 
@@ -15,6 +14,5 @@ interface DependencyAttachmentStorageInternal : AttachmentStorage {
      *
      * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
      */
-    @CordaInternal
     fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment?
 }
