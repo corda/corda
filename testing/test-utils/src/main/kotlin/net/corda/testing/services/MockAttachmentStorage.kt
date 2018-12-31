@@ -124,25 +124,4 @@ class MockAttachmentStorage : AttachmentStorage, DependencyAttachmentStorageInte
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
         return queryAttachments(attachmentQueryCriteria).toSet()
     }
-
-    override fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment? {
-        val allTrusted = queryAttachments(
-                AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
-                AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
-
-        for (attId in allTrusted) {
-            val attch = openAttachment(attId)!!
-            if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
-        }
-        return null
-    }
-
-    private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
-        while (true) {
-            val e = jarStream.nextJarEntry ?: return false
-            if (e.name == className) {
-                return true
-            }
-        }
-    }
 }

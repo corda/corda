@@ -131,7 +131,6 @@ private constructor(
      * Used to work around a Corda 3 bug as there might be transactions out there that don't contain all the necessary dependencies in the attachments list.
      */
     @CordaInternal
-    @Throws(TransactionVerificationException::class)
     internal fun verifyInternal(extraAttachments: List<Attachment>) {
         if (networkParameters == null) {
             // For backwards compatibility only.

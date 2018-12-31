@@ -2,6 +2,11 @@ package net.corda.core.internal
 
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
+import java.util.jar.JarInputStream
 
 interface DependencyAttachmentStorageInternal : AttachmentStorage {
 
@@ -14,5 +19,26 @@ interface DependencyAttachmentStorageInternal : AttachmentStorage {
      *
      * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
      */
-    fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment?
+    fun internalFindTrustedAttachmentForClass(className: String): ContractAttachment?{
+        val allTrusted = queryAttachments(
+                AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+                AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+
+        // TODO - add caching if performance is affected.
+        for (attId in allTrusted) {
+            val attch = openAttachment(attId)!!
+            if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
+        }
+        return null
+    }
+
+    private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
+        while (true) {
+            val e = jarStream.nextJarEntry ?: return false
+            if (e.name == className) {
+                return true
+            }
+        }
+    }
+
 }
