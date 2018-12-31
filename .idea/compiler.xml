@@ -41,6 +41,8 @@
       <module name="client_test" target="1.8" />
       <module name="cliutils_main" target="1.8" />
       <module name="cliutils_test" target="1.8" />
+      <module name="com.r3.corda-isolated_main" target="1.8" />
+      <module name="com.r3.corda-isolated_test" target="1.8" />
       <module name="com.r3.corda_buildSrc_main" target="1.8" />
       <module name="com.r3.corda_buildSrc_test" target="1.8" />
       <module name="com.r3.corda_canonicalizer_main" target="1.8" />
