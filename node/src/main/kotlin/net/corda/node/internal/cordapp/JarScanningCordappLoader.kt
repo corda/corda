@@ -43,13 +43,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                                                    private val versionInfo: VersionInfo = VersionInfo.UNKNOWN,
                                                    extraCordapps: List<CordappImpl>,
                                                    private val signerKeyFingerprintBlacklist: List<SecureHash.SHA256> = emptyList()) : CordappLoaderTemplate() {
-
-    override val cordapps: List<CordappImpl> by lazy {
-        loadCordapps() + extraCordapps
-    }
-
-    override val appClassLoader: ClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
-
     init {
         if (cordappJarPaths.isEmpty()) {
             logger.info("No CorDapp paths provided")
@@ -57,6 +50,12 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
             logger.info("Loading CorDapps from ${cordappJarPaths.joinToString()}")
         }
     }
+
+    override val cordapps: List<CordappImpl> by lazy { loadCordapps() + extraCordapps }
+
+    override val appClassLoader: URLClassLoader = URLClassLoader(cordappJarPaths.stream().map { it.url }.toTypedArray(), javaClass.classLoader)
+
+    override fun close() = appClassLoader.close()
 
     companion object {
         private val logger = contextLogger()
@@ -260,7 +259,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
-        return ServiceLoader.load(SerializationWhitelist::class.java, URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader)).toList().filter {
+        val whitelists = URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader).use {
+            ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
+        }
+        return whitelists.filter {
             it.javaClass.location == cordappJarPath.url && it.javaClass.name.startsWith(cordappJarPath.qualifiedNamePrefix)
         } + DefaultWhitelist // Always add the DefaultWhitelist to the whitelist for an app.
     }
@@ -377,9 +379,5 @@ abstract class CordappLoaderTemplate : CordappLoader {
 
     override val cordappSchemas: Set<MappedSchema> by lazy {
         cordapps.flatMap { it.customSchemas }.toSet()
-    }
-
-    override val appClassLoader: ClassLoader by lazy {
-        URLClassLoader(cordapps.stream().map { it.jarPath }.toTypedArray(), javaClass.classLoader)
     }
 }
