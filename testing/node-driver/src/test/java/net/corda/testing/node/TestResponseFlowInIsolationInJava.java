@@ -12,7 +12,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.concurrent.Future;
 
-import static java.util.Collections.singletonList;
+import static net.corda.testing.node.internal.TestCordappsUtilsKt.cordappsForPackages;
 import static org.hamcrest.Matchers.instanceOf;
 
 /**
@@ -24,7 +24,7 @@ import static org.hamcrest.Matchers.instanceOf;
  */
 public class TestResponseFlowInIsolationInJava {
 
-    private final MockNetwork network = new MockNetwork(singletonList("com.template"));
+    private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages("com.template")));
     private final StartedMockNode a = network.createNode();
     private final StartedMockNode b = network.createNode();
 

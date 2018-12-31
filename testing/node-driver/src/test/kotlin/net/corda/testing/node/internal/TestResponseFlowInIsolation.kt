@@ -6,6 +6,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.unwrap
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.registerResponderFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
@@ -22,7 +23,7 @@ import kotlin.test.assertFailsWith
  */
 class TestResponseFlowInIsolation {
 
-    private val network: MockNetwork = MockNetwork(listOf("com.template"))
+    private val network: MockNetwork = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages("com.template")))
     private val a = network.createNode()
     private val b = network.createNode()
 

@@ -13,7 +13,7 @@ import org.junit.After
 import org.junit.Test
 
 class CashConfigDataFlowTest {
-    private val mockNet = MockNetwork(emptyList(), MockNetworkParameters(threadPerNode = true))
+    private val mockNet = MockNetwork(MockNetworkParameters(threadPerNode = true))
 
     @After
     fun cleanUp() = mockNet.stopNodes()
