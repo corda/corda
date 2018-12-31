@@ -49,7 +49,9 @@ data class CustomCordapp(
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
-        val scanResult = ClassGraph()
+        val classGraph = ClassGraph()
+        classes.forEach { classGraph.addClassLoader(it.classLoader) }
+        val scanResult = classGraph
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
                 .scan()

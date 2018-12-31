@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.isolated
+package net.corda.isolated.contracts
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
@@ -6,8 +6,6 @@ import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.nodeapi.DummyContractBackdoor
-
-const val ANOTHER_DUMMY_PROGRAM_ID = "net.corda.finance.contracts.isolated.AnotherDummyContract"
 
 @Suppress("UNUSED")
 class AnotherDummyContract : Contract, DummyContractBackdoor {
@@ -32,4 +30,8 @@ class AnotherDummyContract : Contract, DummyContractBackdoor {
     }
 
     override fun inspectState(state: ContractState): Int = (state as State).magicNumber
+
+    companion object {
+        const val ANOTHER_DUMMY_PROGRAM_ID = "net.corda.isolated.contracts.AnotherDummyContract"
+    }
 }

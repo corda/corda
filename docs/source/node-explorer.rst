@@ -13,6 +13,48 @@ The tool is distributed in the form of runnable JAR file: "|jar_name|".
 
 Running the UI
 --------------
+**Windows**::
+
+    gradlew.bat tools:explorer:run
+
+**Other**::
+
+    ./gradlew tools:explorer:run
+
+.. note:: In order to connect to a given node, the node explorer must have access to all CorDapps loaded on that particular node.
+          By default, it only has access to the finance CorDapp.
+          All other CorDapps present on the node must be copied to a ``cordapps`` directory located within the directory from which the node explorer is run.
+
+Running demo nodes
+------------------
+
+A demonstration Corda network topology is configured with 5 nodes playing the following roles:
+
+1. Notary
+2. Issuer nodes, representing two fictional central banks (UK Bank Plc issuer of GBP and USA Bank Corp issuer of USD)
+3. Participant nodes, representing two users (Alice and Bob)
+
+When connected to an *Issuer* node, a user can execute cash transaction commands to issue and move cash to itself or other
+parties on the network or to exit cash (for itself only).
+
+When connected to a *Participant* node a user can only execute cash transaction commands to move cash to other parties on the network.
+
+The Demo Nodes can be started in one of two modes:
+
+1. Normal
+
+   Fresh clean environment empty of transactions.
+   Firstly, launch an Explorer instance to login to one of the Issuer nodes and issue some cash to the other participants (Bob and Alice).
+   Then launch another Explorer instance to login to a participant node and start making payments (eg. move cash).
+   You will only be able to exit (eg. redeem from the ledger) cash as an issuer node.
+
+**Windows**::
+
+    gradlew.bat tools:explorer:runDemoNodes
+
+**Other**::
+
+    ./gradlew tools:explorer:runDemoNodes
 
 .. parsed-literal::
 

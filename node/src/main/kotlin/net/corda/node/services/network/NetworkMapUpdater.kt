@@ -7,6 +7,7 @@ import net.corda.core.crypto.SignedData
 import net.corda.core.internal.*
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
+import net.corda.core.node.AutoAcceptable
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
@@ -21,6 +22,7 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
+import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
@@ -28,6 +30,10 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.jvm.javaGetter
 import kotlin.system.exitProcess
 
 class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
@@ -78,7 +84,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         this.autoAcceptNetworkParameters = networkParameterAcceptanceSettings.autoAcceptEnabled
         this.excludedAutoAcceptNetworkParameters = networkParameterAcceptanceSettings.excludedAutoAcceptableParameters
 
-        val autoAcceptNetworkParametersNames = NetworkParameters.autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
+        val autoAcceptNetworkParametersNames = autoAcceptablePropertyNames - excludedAutoAcceptNetworkParameters
         if (autoAcceptNetworkParameters && autoAcceptNetworkParametersNames.isNotEmpty()) {
             logger.info("Auto-accept enabled for network parameter changes which modify only: $autoAcceptNetworkParametersNames")
         }
@@ -249,4 +255,28 @@ The node will shutdown now.""")
             throw OutdatedNetworkParameterHashException(parametersHash, newParametersHash)
         }
     }
+}
+
+private val memberPropertyPartition = NetworkParameters::class.declaredMemberProperties.partition { it.isAutoAcceptable() }
+private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({ it.name }, { it.javaGetter })
+@VisibleForTesting
+internal val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
+private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
+
+/**
+ * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
+ * included in the [excludedParameterNames]
+ */
+@VisibleForTesting
+internal fun NetworkParameters.canAutoAccept(newNetworkParameters: NetworkParameters, excludedParameterNames: Set<String>): Boolean {
+    return nonAutoAcceptableGetters.none { valueChanged(newNetworkParameters, it) } &&
+            autoAcceptableNamesAndGetters.none { it.key in excludedParameterNames && valueChanged(newNetworkParameters, it.value) }
+}
+
+private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean = findAnnotation<AutoAcceptable>() != null
+
+private fun NetworkParameters.valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
+    val propertyValue = getter?.invoke(this)
+    val newPropertyValue = getter?.invoke(newNetworkParameters)
+    return propertyValue != newPropertyValue
 }

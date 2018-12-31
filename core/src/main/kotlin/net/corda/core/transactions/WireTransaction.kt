@@ -18,7 +18,6 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.lazyMapped
 import java.security.PublicKey
 import java.security.SignatureException
 import java.util.function.Predicate

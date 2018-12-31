@@ -217,6 +217,8 @@
       <module name="net.corda-blobinspector_test" target="1.8" />
       <module name="net.corda-finance-contracts-states_main" target="1.8" />
       <module name="net.corda-finance-contracts-states_test" target="1.8" />
+      <module name="net.corda-isolated_main" target="1.8" />
+      <module name="net.corda-isolated_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />
       <module name="net.corda-verifier_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />
