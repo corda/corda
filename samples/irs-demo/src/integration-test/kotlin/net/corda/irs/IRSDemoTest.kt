@@ -33,6 +33,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.time.Duration
@@ -48,6 +49,8 @@ class IRSDemoTest {
     private val futureDate: LocalDate = currentDate.plusMonths(6)
     private val maxWaitTime: Duration = 60.seconds
 
+    // Enable after the fix in: https://github.com/corda/corda/pull/4456 is merged.
+    @Ignore
     @Test
     fun `runs IRS demo`() {
         springDriver(DriverParameters(
