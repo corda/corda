@@ -296,6 +296,73 @@ To delete existing data from the database, run the following SQL:
     DROP TABLE [USER].NODE_RAFT_COMMITTED_STATES CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_NOTARY_COMMITTED_STATES CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_NOTARY_REQUEST_LOG CASCADE CONSTRAINTS;
+
+Connecting to Oracle using Oracle Wallet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You can also connect to an Oracle database using credentials stored in an Oracle Wallet, with the following changes.
+
+Assuming you have an Oracle Wallet set up in ``~/wallet``, create an entry for the database in your ``tnsnames.ora``, with the
+relevant ``<host-address>``, ``<host-port>`` and ``<service-name>``, e.g.:
+
+.. sourcecode:: none
+
+    my_database =
+      (DESCRIPTION =
+        (ADDRESS = (PROTOCOL = TCP)(HOST = <host-address>)(PORT = <host-port>))
+        (CONNECT_DATA =
+          (SERVER = DEDICATED)
+          (SERVICE_NAME = <service-name>)
+        )
+      )
+
+Create a ``sqlnet.ora`` in the same directory with the configuration for the wallet, e.g.:
+
+.. sourcecode:: none
+
+    WALLET_LOCATION =
+       (SOURCE =
+         (METHOD = FILE)
+         (METHOD_DATA =
+           (DIRECTORY = ~/wallet)
+         )
+       )
+
+    SQLNET.WALLET_OVERRIDE = TRUE
+    SSL_CLIENT_AUTHENTICATION = FALSE
+    SSL_VERSION = 0
+
+Then, add the database credentials to your wallet using the following command (see `here <https://docs.oracle.com/middleware/1212/wls/JDBCA/oraclewallet.htm>`_ for more information on setting up Oracle Wallet):
+
+.. sourcecode:: bash
+
+    mkstore -wrl ~/wallet -createCredential my_database <db-username> <db-password>
+
+You will be prompted for the wallet password in order to be able to update the wallet.
+
+Then modify the connection string in your ``node.conf`` to reference your TNS name, and set the username and password to ``null`` (they are
+required fields).
+
+.. sourcecode:: none
+
+    dataSourceProperties = {
+        dataSourceClassName = "oracle.jdbc.pool.OracleDataSource"
+        dataSource.url = "jdbc:oracle:thin:/@my_database"
+        dataSource.user = null
+        dataSource.password = null
+    }
+    database = {
+        transactionIsolationLevel = READ_COMMITTED
+        schema = [SCHEMA]
+        runMigration = [true|false]
+    }
+
+Finally, start up the node with the following system properties set to the location of your wallet and the location of your ``tnsnames.ora``:
+
+.. sourcecode:: bash
+
+    java -Doracle.net.wallet_location=~/wallet -Doracle.net.tns_admin=<path-to-tnsnames> -jar corda.jar
+
 .. _postgres_ref:
 
 PostgreSQL
