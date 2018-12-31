@@ -132,7 +132,7 @@ private constructor(
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
 
-        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
+        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
             Verifier(createLtxForVerification(), transactionClassLoader).verify()
         }
     }
