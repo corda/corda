@@ -5,7 +5,6 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.crypto.keys
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.utilities.loggerFor
-import net.corda.core.utilities.warnOnce
 
 /**
  * Contract version and flow versions are integers.

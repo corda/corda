@@ -5,7 +5,7 @@ include 'confidential-identities'
 include 'finance'   // maintained for backwards compatibility only
 include 'finance:contracts'
 include 'finance:workflows'
-include 'finance:isolated'
+include 'isolated'
 include 'core'
 include 'docs'
 include 'node-api'

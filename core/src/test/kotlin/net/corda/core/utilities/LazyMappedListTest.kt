@@ -1,5 +1,6 @@
 package net.corda.core.utilities
 
+import net.corda.core.internal.lazyMapped
 import org.junit.Test
 import kotlin.test.assertEquals
 

@@ -1,10 +1,14 @@
 package net.corda.core.internal
 
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.times
+import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
+import org.slf4j.Logger
 import rx.subjects.PublishSubject
 import java.util.*
 import java.util.stream.IntStream
@@ -109,10 +113,10 @@ open class InternalUtilsTest {
 
         sourceSubject.onNext(1)
 
-        var itemsFromBufferedObservable = mutableSetOf<Int>()
+        val itemsFromBufferedObservable = mutableSetOf<Int>()
         bufferedObservable.subscribe{itemsFromBufferedObservable.add(it)}
 
-        var itemsFromNonBufferedObservable = mutableSetOf<Int>()
+        val itemsFromNonBufferedObservable = mutableSetOf<Int>()
         sourceSubject.subscribe{itemsFromNonBufferedObservable.add(it)}
 
         assertThat(itemsFromBufferedObservable.contains(1))
@@ -124,6 +128,26 @@ open class InternalUtilsTest {
         val contents = arrayOfJunk(DEFAULT_BUFFER_SIZE * 2 + DEFAULT_BUFFER_SIZE / 2)
         assertThat(contents.inputStream().hash())
             .isEqualTo(SecureHash.parse("A4759E7AA20338328866A2EA17EAF8C7FE4EC6BBE3BB71CEE7DF7C0461B3C22F"))
+    }
+
+    @Test
+    fun `warnOnce works, but the backing cache grows only to a maximum size`() {
+        val MAX_SIZE = 100
+
+        val logger = mock<Logger>()
+        logger.warnOnce("a")
+        logger.warnOnce("b")
+        logger.warnOnce("b")
+
+        // This should cause the eviction of "a".
+        (1..MAX_SIZE).forEach { logger.warnOnce("$it") }
+        logger.warnOnce("a")
+
+        // "a" should be logged twice because it was evicted.
+        verify(logger, times(2)).warn("a")
+
+        // "b" should be logged only once because there was no eviction.
+        verify(logger, times(1)).warn("b")
     }
 
     private fun arrayOfJunk(size: Int) = ByteArray(size).apply {

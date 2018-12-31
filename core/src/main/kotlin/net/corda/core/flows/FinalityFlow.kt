@@ -211,9 +211,9 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
  * [SignTransactionFlow]. Setting it to null disables the expected transaction ID check.
  * @param statesToRecord Which transactions to commit to the vault. Defaults to [StatesToRecord.ONLY_RELEVANT].
  */
-class ReceiveFinalityFlow @JvmOverloads constructor(val otherSideSession: FlowSession,
-                                                    val expectedTxId: SecureHash? = null,
-                                                    val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
+class ReceiveFinalityFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
+                                                    private val expectedTxId: SecureHash? = null,
+                                                    private val statesToRecord: StatesToRecord = ONLY_RELEVANT) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {
         return subFlow(object : ReceiveTransactionFlow(otherSideSession, checkSufficientSignatures = true, statesToRecord = statesToRecord) {

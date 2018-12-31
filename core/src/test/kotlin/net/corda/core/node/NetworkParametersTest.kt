@@ -1,7 +1,7 @@
 package net.corda.core.node
 
 import net.corda.core.crypto.generateKeyPair
-import net.corda.core.node.services.AttachmentId
+import net.corda.core.internal.getPackageOwnerOf
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
@@ -32,7 +32,8 @@ import kotlin.test.assertFails
 class NetworkParametersTest {
     private val mockNet = InternalMockNetwork(
             defaultParameters = MockNetworkParameters(networkSendManuallyPumped = true),
-            notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME)))
+            notarySpecs = listOf(MockNetworkNotarySpec(DUMMY_NOTARY_NAME))
+    )
 
     @After
     fun tearDown() {
@@ -127,42 +128,6 @@ class NetworkParametersTest {
         assertEquals(params.getPackageOwnerOf("com.examplesomething.MyClass"), null)
         assertEquals(params.getPackageOwnerOf("com.examplestuff.something.MyClass"), key2)
         assertEquals(params.getPackageOwnerOf("com.exam.something.MyClass"), null)
-    }
-
-    @Test
-    fun `auto acceptance checks are correct`() {
-        val packageOwnership = mapOf(
-                "com.example1" to generateKeyPair().public,
-                "com.example2" to generateKeyPair().public)
-        val whitelistedContractImplementations = mapOf(
-                "example1" to listOf(AttachmentId.randomSHA256()),
-                "example2" to listOf(AttachmentId.randomSHA256()))
-
-        val netParams = testNetworkParameters()
-        val netParamsAutoAcceptable = netParams.copy(
-                packageOwnership = packageOwnership,
-                whitelistedContractImplementations = whitelistedContractImplementations)
-        val netParamsNotAutoAcceptable = netParamsAutoAcceptable.copy(
-                maxMessageSize = netParams.maxMessageSize + 1)
-
-        assert(netParams.canAutoAccept(netParams, emptySet())) {
-            "auto-acceptable if identical"
-        }
-        assert(netParams.canAutoAccept(netParams, NetworkParameters.autoAcceptablePropertyNames)) {
-            "auto acceptable if identical regardless of exclusions"
-        }
-        assert(netParams.canAutoAccept(netParamsAutoAcceptable, emptySet())) {
-            "auto-acceptable if only AutoAcceptable params have changed"
-        }
-        assert(netParams.canAutoAccept(netParamsAutoAcceptable, setOf("modifiedTime"))) {
-            "auto-acceptable if only AutoAcceptable params have changed and excluded param has not changed"
-        }
-        assert(!netParams.canAutoAccept(netParamsNotAutoAcceptable, emptySet())) {
-            "not auto-acceptable if non-AutoAcceptable param has changed"
-        }
-        assert(!netParams.canAutoAccept(netParamsAutoAcceptable, setOf("whitelistedContractImplementations"))) {
-            "not auto-acceptable if only AutoAcceptable params have changed but one has been added to the exclusion set"
-        }
     }
 
     // Helpers

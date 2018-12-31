@@ -146,7 +146,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
+    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -545,7 +545,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
         val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.mapNotNull {
+        else configuration.cordappSignerKeyFingerprintBlacklist.map {
             try {
                 SecureHash.parse(it)
             } catch (e: IllegalArgumentException) {

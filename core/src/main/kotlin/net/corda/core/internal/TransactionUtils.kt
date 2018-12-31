@@ -10,7 +10,6 @@ import net.corda.core.identity.Party
 import net.corda.core.serialization.*
 import net.corda.core.transactions.*
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.core.utilities.lazyMapped
 import java.io.ByteArrayOutputStream
 import java.security.PublicKey
 import kotlin.reflect.KClass
@@ -71,7 +70,7 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
     // If the componentGroup is a [LazyMappedList] it means that the original deserialized version is already available.
     val components = group.components
     if (!forceDeserialize && components is LazyMappedList<*, OpaqueBytes>) {
-        return components.originalList as List<T>
+        return uncheckedCast(components.originalList)
     }
 
     return components.lazyMapped { component, internalIndex ->
