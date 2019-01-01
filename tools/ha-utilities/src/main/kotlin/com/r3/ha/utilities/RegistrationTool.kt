@@ -31,6 +31,8 @@ import picocli.CommandLine.Option
 import java.lang.IllegalStateException
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.concurrent.thread
 
 class RegistrationTool : CordaCliWrapper("node-registration", "Corda registration tool for registering 1 or more node with the Corda Network, using provided node configuration(s)." +
         " For convenience the tool is also downloading network parameters.") {
@@ -69,31 +71,38 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
 
     override fun runProgram(): Int {
         return try {
-            // It is possible to use parallel processing, and complete operation faster, but NodeRegistrationHelper logs to
-            // stdout and when done from multiple threads this becomes messy.
-            // For now keep processing serial/single-threaded for the sake of clarity.
-            val nodeConfigurations = configFiles/*.parallelStream()*/.map {
+            // Parallel processing is beneficial as it is possible to submit multiple CSR in close succession
+            // If manual interaction will be needed - it would be possible to sign them all off at once on Doorman side.
+            val nodeConfigurations = ConcurrentLinkedQueue<Pair<CordaX500Name, Try<NodeConfiguration>>>()
+            val startedThreads = configFiles.map {
                 val legalName = ConfigHelper.loadConfig(it.parent, it).parseAsNodeConfiguration().value().myLegalName
-                Pair(legalName, Try.on {
-                    try {
-                        logger.info("Processing registration for: $legalName")
-                        // Load the config again with modified base directory.
-                        val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
-                        val baseDir = baseDirectory / folderName.toFileName()
-                        val parsedConfig = ConfigHelper.loadConfig(it.parent, it)
-                                .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString())).parseAsNodeConfiguration()
-                                .value()
-                        with(parsedConfig) {
-                            NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO), NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword)).generateKeysAndRegister()
+                thread(name = legalName.toString(), start = true) {
+                    nodeConfigurations.add(Pair(legalName, Try.on {
+                        try {
+                            logger.info("Processing registration for: $legalName")
+                            // Load the config again with modified base directory.
+                            val folderName = if (legalName.commonName == null) legalName.organisation else "${legalName.commonName},${legalName.organisation}"
+                            val baseDir = baseDirectory / folderName.toFileName()
+                            val parsedConfig = ConfigHelper.loadConfig(it.parent, it)
+                                    .withValue("baseDirectory", ConfigValueFactory.fromAnyRef(baseDir.toString()))
+                                    .parseAsNodeConfiguration()
+                                    .value()
+                            with(parsedConfig) {
+                                NodeRegistrationHelper(this, HTTPNetworkRegistrationService(networkServices!!, VERSION_INFO),
+                                        NodeRegistrationOption(networkRootTrustStorePath, networkRootTrustStorePassword),
+                                        logProgress = logger::info, logError = logger::error).generateKeysAndRegister()
+                            }
+                            parsedConfig
+                        } catch (ex: Exception) {
+                            logger.error("Failed to process $legalName", ex)
+                            throw ex
                         }
-                        parsedConfig
-                    }
-                    catch(ex: Exception) {
-                        logger.error("Failed to process $legalName", ex)
-                        throw ex
-                    }
-                })
-            }.toList()
+                    }))
+                }
+            }
+
+            // Wait for all to complete successfully or not.
+            startedThreads.forEach { it.join() }
 
             val (success, fail) = nodeConfigurations.partition { it.second.isSuccess }
 
