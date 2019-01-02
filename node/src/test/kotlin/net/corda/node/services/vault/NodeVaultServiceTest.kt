@@ -861,4 +861,39 @@ class NodeVaultServiceTest {
             vaultService.queryBy<DummyDealContract.State>().states.size
         })
     }
+
+    @Test
+    fun `trackByCriteria filters updates and snapshots`() {
+        fun addCashToVault() {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
+            }
+        }
+
+        fun addDummyToVault() {
+            database.transaction {
+                vaultFiller.fillWithDummyState()
+            }
+        }
+        addCashToVault()
+        addDummyToVault()
+        val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java))
+        val data = vaultService.trackBy<ContractState>(criteria)
+        for (state in data.snapshot.states) {
+            assertEquals("net.corda.finance.contracts.asset.Cash", state.state.contract)
+        }
+
+        val allCash = data.updates.all {
+            it.produced.all {
+                it.state.contract == "net.corda.finance.contracts.asset.Cash"
+            }
+        }
+
+        addCashToVault()
+        addDummyToVault()
+        addCashToVault()
+        allCash.subscribe {
+            assertTrue(it)
+        }
+    }
 }
