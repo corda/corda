@@ -7,9 +7,9 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.DependencyAttachmentStorageInternal
 import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.internalFindTrustedAttachmentForClass
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
@@ -215,7 +215,7 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             // TODO - should this be a [TransactionVerificationException]?
             val missingClass = requireNotNull(e.message) { "Transaction $ltx is incorrectly formed." }
 
-            val attachment = requireNotNull((services.attachments as DependencyAttachmentStorageInternal).internalFindTrustedAttachmentForClass(missingClass)) {
+            val attachment = requireNotNull(services.attachments.internalFindTrustedAttachmentForClass(missingClass)) {
                 "Transaction $ltx is incorrectly formed. Could not find local dependency for class: $missingClass."
             }
 
