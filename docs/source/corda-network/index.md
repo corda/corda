@@ -3,16 +3,16 @@ Corda Network
 
 Introduction to Corda Network
 -----------------------------
-[Corda Network](https://corda.network/) is an publicly-available internet of Corda nodes operated by network participants. Each 
-node is identified by a certificate issued by the network's identity service, and will also be identifiable on a network map. 
+[Corda Network](https://corda.network/) is a publicly-available internet of Corda nodes operated by network participants. Each 
+node is identified by a certificate issued by the network's identity service, and will also be discoverable on a network map. 
 
 Corda Network enables interoperability – the exchange of data or assets via a secure, efficient internet layer – in a way 
 that isn't possible with separate, isolated Corda networks. A common trust root surrounds all transactions, and a consistent set of 
 network parameters ensures all participants may transact with each other.
 
 The network went live in December 2018, and is currently governed by R3. An independent, not-for-profit foundation has been 
-set-up to govern the network, and a transitional board of participants will be elected in Spring 2019, which will oversee the foundation 
-until democratic elections are held a year later. See the [governance model](https://corda.network/governance/governance-guidelines.html) 
+set up to govern the network, and a transitional board will be selected from initial participants in Spring 2019, which will oversee 
+the foundation until democratic elections are held a year later. See the [governance model](https://corda.network/governance/governance-guidelines.html) 
 for more detail.
 
 The network will support many sub-groups of participants running particular CorDapps (sometimes referred to as 'business networks'), 
@@ -24,6 +24,8 @@ The main benefit of Corda Network for participants is being able to move cash, d
 or line of business to another. Business network operators also benefit by being able to access network-wide services, and reuse the 
 [trust root](https://corda.network/trust-root/index.html) and network services, instead of building and managing their own.
 
+The Corda Network website has a [high level overview](https://corda.network/participation/implementation-steps.html) of the joining process.
+
 Key services 
 ============
 
@@ -33,9 +35,9 @@ The Identity Service controls admissions of participants into Corda Network. The
 signing requests (CSRs) from prospective network participants (sometimes via a business network operator) and reviews the 
 information submitted. A digitally signed participation certificate is returned if:
 
-* The participant meets the requirements specified in the bylaws and policies of the foundation (broadly speaking, limited to 
-sanction screening only);
-* The participant agrees to Corda Network participant terms of use.
+* The participant meets the requirements specified in the [bylaws and policies](https://corda.network/policy/admission-criteria.html) 
+of the foundation (broadly speaking, limited to sanction screening only);
+* The participant agrees to Corda Network participant [terms of use](https://corda.network/participation/terms-of-use.html).
 
 The Corda Network node can then use the participation certificate to register itself with the Network Map Service.
 
@@ -47,7 +49,7 @@ Corda Network nodes.
 
 Notary Service
 --------------
-Corda design separates correctness consensus from uniqueness consensus, and the latter is provided by one or more Notary 
+The Corda design separates correctness consensus from uniqueness consensus, and the latter is provided by one or more Notary 
 Services. The Notary will digitally sign a transaction presented to it, provided no transaction referring to 
 any of the same inputs has been previously signed by the Notary, and the transaction timestamp is within bounds. 
 
