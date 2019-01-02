@@ -130,18 +130,37 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
      */
     @Deprecated("Use toLedgerTransaction(ServicesForTransaction) instead")
     @Throws(AttachmentResolutionException::class, TransactionResolutionException::class)
-    @JvmOverloads
     fun toLedgerTransaction(
             resolveIdentity: (PublicKey) -> Party?,
             resolveAttachment: (SecureHash) -> Attachment?,
             resolveStateRef: (StateRef) -> TransactionState<*>?,
-            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?,
-            resolveParameters: (SecureHash?) -> NetworkParameters? = { null } // TODO This { null } is left here only because of API stability. It doesn't make much sense anymore as it will fail on transaction verification.
+            @Suppress("UNUSED_PARAMETER") resolveContractAttachment: (TransactionState<ContractState>) -> AttachmentId?
     ): LedgerTransaction {
         // This reverts to serializing the resolved transaction state.
-        return toLedgerTransactionInternal(resolveIdentity, resolveAttachment, { stateRef -> resolveStateRef(stateRef)?.serialize() }, resolveParameters,
+        return toLedgerTransactionInternal(
+                resolveIdentity,
+                resolveAttachment,
+                { stateRef -> resolveStateRef(stateRef)?.serialize() },
+                { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { it -> resolveAttachment(it.txhash) ?: missingAttachment })
+                { it -> resolveAttachment(it.txhash) ?: missingAttachment }
+        )
+    }
+
+    // Especially crafted for TransactionVerificationRequest
+    @CordaInternal
+    internal fun toLtxDjvmInternalBridge(
+            resolveAttachment: (SecureHash) -> Attachment?,
+            resolveStateRef: (StateRef) -> TransactionState<*>?,
+            resolveParameters: (SecureHash?) -> NetworkParameters?
+    ): LedgerTransaction {
+        return toLedgerTransactionInternal(
+                { null },
+                resolveAttachment,
+                { stateRef -> resolveStateRef(stateRef)?.serialize() },
+                resolveParameters,
+                { it -> resolveAttachment(it.txhash) ?: missingAttachment }
+        )
     }
 
     private fun toLedgerTransactionInternal(
