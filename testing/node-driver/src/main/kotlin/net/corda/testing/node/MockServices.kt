@@ -282,6 +282,12 @@ open class MockServices private constructor(
      */
     constructor() : this(listOf(getCallerPackage(MockServices::class)!!), CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
+    /**
+     * Returns the classloader containing all jar deployed in the 'cordapps' folder.
+     */
+    val cordappClassloader: ClassLoader
+        get() = cordappLoader.appClassLoader
+
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
@@ -349,8 +355,6 @@ open class MockServices private constructor(
 
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
     override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = dummyAttachment
-
-    fun getCordappClassloader(): ClassLoader = cordappLoader.appClassLoader
 }
 
 /**
