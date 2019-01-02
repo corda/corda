@@ -23,7 +23,7 @@ abstract class ANSIProgressRenderer {
 
     protected var usingANSI = false
     protected var checkEmoji = false
-    protected var usingUnicode = !SystemUtils.IS_OS_WINDOWS
+    private val usingUnicode = !SystemUtils.IS_OS_WINDOWS
 
     protected var treeIndex: Int = 0
     protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
@@ -117,8 +117,8 @@ abstract class ANSIProgressRenderer {
             var newLinesDrawn = 1 + renderLevel(ansi, error != null)
 
             if (error != null) {
-                var errorIcon = if (usingUnicode) Emoji.skullAndCrossbones else "ERROR: "
-                ansi.a("${errorIcon} ${error.message}")
+                val errorIcon = if (usingUnicode) Emoji.skullAndCrossbones else "ERROR: "
+                ansi.a("$errorIcon ${error.message}")
                 ansi.eraseLine(Ansi.Erase.FORWARD)
                 ansi.newline()
                 newLinesDrawn++
