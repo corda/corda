@@ -244,7 +244,6 @@ class CordappConstraintsTests {
         }
     }
 
-    @Ignore
     @Test
     fun `issue cash and transfer using hash to signature constraints migration`() {
         // signing key setup
