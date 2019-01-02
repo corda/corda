@@ -20,6 +20,7 @@ import net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitiesSer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -43,12 +44,13 @@ class SimmValuationTest {
         System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
     }
 
+    @Ignore("Fixed after https://github.com/corda/corda/pull/4456 is merged")
     @Test
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"),
+                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers", "net.corda.finance", "migration"),
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
