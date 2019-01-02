@@ -335,7 +335,7 @@ class NodeAttachmentService(
                     )
                     session.save(attachment)
                     attachmentCount.inc()
-                    log.info("Stored new attachment $id")
+                    log.info("Stored new attachment: id=$id uploader=$uploader filename=$filename")
                     contractClassNames.forEach { contractsCache.invalidate(it) }
                     return@withContractsInJar id
                 }

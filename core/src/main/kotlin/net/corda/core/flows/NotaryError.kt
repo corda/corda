@@ -76,7 +76,7 @@ sealed class NotaryError {
  */
 // TODO: include notary timestamp?
 @CordaSerializable
-    data class StateConsumptionDetails(
+data class StateConsumptionDetails(
         val hashOfTransactionId: SecureHash,
         val type: ConsumedStateType
 ) {

@@ -26,7 +26,7 @@ class FlowRegistrationTest {
     @Before
     fun setup() {
         // no cordapps scanned so it can be tested in isolation
-        mockNetwork = MockNetwork(emptyList())
+        mockNetwork = MockNetwork()
         initiator = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("initiator", "Reading", "GB")))
         responder = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("responder", "Reading", "GB")))
         mockNetwork.runNetwork()
