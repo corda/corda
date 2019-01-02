@@ -348,7 +348,6 @@ class NodeAttachmentService(
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
-
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
                             // TODO: this is racey. ENT-2870
                             attachmentContentCache.put(id, Optional.of(attachmentAndContent))
@@ -428,6 +427,7 @@ class NodeAttachmentService(
      */
     private val contractsCache = InfrequentlyMutatedCache<ContractClassName, NavigableMap<Version, AttachmentIds>>("NodeAttachmentService_contractAttachmentVersions", cacheFactory)
 
+    // TODO sollecitom here the issue is that, for the same contractClassName, there might be 2 contract attachments. I thought we were guarding against this possibility, so the check it's either wrong or it's only done at startup (or at another time that does not catch this)
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))

@@ -155,7 +155,6 @@ class NodeAttachmentServiceTest {
             assertThat((storage.openAttachment(expectedAttachmentId) as ContractAttachment).uploader).isEqualTo(trustedUploader)
 
             val untrustedUploader = "test"
-
             assertThatThrownBy { attachment.read { storage.privilegedImportAttachment(it, untrustedUploader, null) } }.isInstanceOf(DuplicateAttachmentException::class.java)
         }
     }
