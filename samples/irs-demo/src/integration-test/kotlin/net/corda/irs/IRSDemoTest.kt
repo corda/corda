@@ -49,8 +49,6 @@ class IRSDemoTest {
     private val futureDate: LocalDate = currentDate.plusMonths(6)
     private val maxWaitTime: Duration = 60.seconds
 
-    // Enable after the fix in: https://github.com/corda/corda/pull/4456 is merged.
-    @Ignore
     @Test
     fun `runs IRS demo`() {
         springDriver(DriverParameters(

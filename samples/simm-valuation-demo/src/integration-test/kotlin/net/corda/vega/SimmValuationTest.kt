@@ -44,7 +44,6 @@ class SimmValuationTest {
         System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
     }
 
-    @Ignore("Fixed after https://github.com/corda/corda/pull/4456 is merged")
     @Test
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
