@@ -32,7 +32,7 @@ data class TestState(override val participants: List<AbstractParty>): QueryableS
  */
 class ClassLoaderWithoutTestState(classLoader: ClassLoader) : ClassLoader(classLoader) {
     override fun loadClass(name: String?, resolve: Boolean): Class<*> {
-        if (name != null && name.contains("TestState")) {
+        if (name != null && name == TestState::class.java.name) {
             throw ClassNotFoundException()
         }
         return super.loadClass(name, resolve)
