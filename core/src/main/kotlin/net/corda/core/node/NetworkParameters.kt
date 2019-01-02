@@ -2,23 +2,17 @@ package net.corda.core.node
 
 import net.corda.core.CordaRuntimeException
 import net.corda.core.KeepForDJVM
-import net.corda.core.contracts.ContractClassName
 import net.corda.core.crypto.toStringShort
 import net.corda.core.identity.Party
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.noPackageOverlap
 import net.corda.core.internal.requirePackageValid
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.utilities.days
-import java.lang.reflect.Method
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.declaredMemberProperties
-import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.jvm.javaGetter
 
 // DOCSTART 1
 /**
@@ -54,13 +48,13 @@ data class NetworkParameters(
 ) {
     // DOCEND 1
     @DeprecatedConstructorForDeserialization(1)
-    constructor (minimumPlatformVersion: Int,
-                 notaries: List<NotaryInfo>,
-                 maxMessageSize: Int,
-                 maxTransactionSize: Int,
-                 modifiedTime: Instant,
-                 epoch: Int,
-                 whitelistedContractImplementations: Map<String, List<AttachmentId>>
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>
     ) : this(minimumPlatformVersion,
             notaries,
             maxMessageSize,
@@ -73,14 +67,14 @@ data class NetworkParameters(
     )
 
     @DeprecatedConstructorForDeserialization(2)
-    constructor (minimumPlatformVersion: Int,
-                 notaries: List<NotaryInfo>,
-                 maxMessageSize: Int,
-                 maxTransactionSize: Int,
-                 modifiedTime: Instant,
-                 epoch: Int,
-                 whitelistedContractImplementations: Map<String, List<AttachmentId>>,
-                 eventHorizon: Duration
+    constructor(minimumPlatformVersion: Int,
+                notaries: List<NotaryInfo>,
+                maxMessageSize: Int,
+                maxTransactionSize: Int,
+                modifiedTime: Instant,
+                epoch: Int,
+                whitelistedContractImplementations: Map<String, List<AttachmentId>>,
+                eventHorizon: Duration
     ) : this(minimumPlatformVersion,
             notaries,
             maxMessageSize,
@@ -92,32 +86,6 @@ data class NetworkParameters(
             emptyMap()
     )
 
-    companion object {
-        private val memberPropertyPartition = NetworkParameters::class.declaredMemberProperties.asSequence()
-                .partition { it.isAutoAcceptable() }
-        private val autoAcceptableNamesAndGetters = memberPropertyPartition.first.associateBy({ it.name }, { it.javaGetter })
-        private val nonAutoAcceptableGetters = memberPropertyPartition.second.map { it.javaGetter }
-        val autoAcceptablePropertyNames = autoAcceptableNamesAndGetters.keys
-
-        /**
-         * Returns true if the [fullClassName] is in a subpackage of [packageName].
-         * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
-         *
-         * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
-         * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
-         */
-        private fun owns(packageName: String, fullClassName: String) = fullClassName.startsWith("$packageName.", ignoreCase = true)
-
-        // Make sure that packages don't overlap so that ownership is clear.
-        fun noOverlap(packages: Collection<String>) = packages.all { currentPackage ->
-            packages.none { otherPackage -> otherPackage != currentPackage && otherPackage.startsWith("$currentPackage.") }
-        }
-
-        private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
-            return this.findAnnotation<AutoAcceptable>() != null
-        }
-    }
-
     init {
         require(minimumPlatformVersion > 0) { "Minimum platform level must be at least 1" }
         require(notaries.distinctBy { it.identity } == notaries) { "Duplicate notary identities" }
@@ -126,7 +94,7 @@ data class NetworkParameters(
         require(maxTransactionSize > 0) { "Maximum transaction size must be at least 1" }
         require(!eventHorizon.isNegative) { "Event Horizon must be a positive value" }
         packageOwnership.keys.forEach(::requirePackageValid)
-        require(noOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
+        require(noPackageOverlap(packageOwnership.keys)) { "Multiple packages added to the packageOwnership overlap." }
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -137,14 +105,16 @@ data class NetworkParameters(
              epoch: Int,
              whitelistedContractImplementations: Map<String, List<AttachmentId>>
     ): NetworkParameters {
-        return copy(minimumPlatformVersion = minimumPlatformVersion,
+        return copy(
+                minimumPlatformVersion = minimumPlatformVersion,
                 notaries = notaries,
                 maxMessageSize = maxMessageSize,
                 maxTransactionSize = maxTransactionSize,
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon)
+                eventHorizon = eventHorizon
+        )
     }
 
     fun copy(minimumPlatformVersion: Int,
@@ -156,14 +126,16 @@ data class NetworkParameters(
              whitelistedContractImplementations: Map<String, List<AttachmentId>>,
              eventHorizon: Duration
     ): NetworkParameters {
-        return copy(minimumPlatformVersion = minimumPlatformVersion,
+        return copy(
+                minimumPlatformVersion = minimumPlatformVersion,
                 notaries = notaries,
                 maxMessageSize = maxMessageSize,
                 maxTransactionSize = maxTransactionSize,
                 modifiedTime = modifiedTime,
                 epoch = epoch,
                 whitelistedContractImplementations = whitelistedContractImplementations,
-                eventHorizon = eventHorizon)
+                eventHorizon = eventHorizon
+        )
     }
 
     override fun toString(): String {
@@ -176,42 +148,12 @@ data class NetworkParameters(
         ${whitelistedContractImplementations.entries.joinToString("\n    ")}
       }
       eventHorizon=$eventHorizon
-      modifiedTime=$modifiedTime
-      epoch=$epoch,
-      packageOwnership= {
+      packageOwnership {
         ${packageOwnership.entries.joinToString("\n    ") { "$it.key -> ${it.value.toStringShort()}" }}
       }
+      modifiedTime=$modifiedTime
+      epoch=$epoch
   }"""
-    }
-
-    /**
-     * Returns the public key of the package owner of the [contractClassName], or null if not owned.
-     */
-    @VisibleForTesting
-    internal fun getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? = this.packageOwnership.filterKeys { packageName -> owns(packageName, contractClassName) }.values.singleOrNull()
-
-    /**
-     * Returns the public key of the package owner if any of [contractClassName] match, or null if not owned.
-     */
-    @VisibleForTesting
-    internal fun getPackageOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
-        val ownerKeys = contractClassNames.map { getPackageOwnerOf(it) }
-        return ownerKeys.find { it != null }
-    }
-
-    /**
-     * Returns true if the only properties changed in [newNetworkParameters] are [AutoAcceptable] and not
-     * included in the [excludedParameterNames]
-     */
-    fun canAutoAccept(newNetworkParameters: NetworkParameters, excludedParameterNames: Set<String>): Boolean {
-        return nonAutoAcceptableGetters.none { valueChanged(newNetworkParameters, it) } &&
-                autoAcceptableNamesAndGetters.none { excludedParameterNames.contains(it.key) && valueChanged(newNetworkParameters, it.value) }
-    }
-
-    private fun valueChanged(newNetworkParameters: NetworkParameters, getter: Method?): Boolean {
-        val propertyValue = getter?.invoke(this)
-        val newPropertyValue = getter?.invoke(newNetworkParameters)
-        return propertyValue != newPropertyValue
     }
 }
 
@@ -229,7 +171,3 @@ data class NotaryInfo(val identity: Party, val validating: Boolean)
  * version.
  */
 class ZoneVersionTooLowException(message: String) : CordaRuntimeException(message)
-
-private fun KProperty1<out NetworkParameters, Any?>.isAutoAcceptable(): Boolean {
-    return this.findAnnotation<AutoAcceptable>() != null
-}

@@ -20,6 +20,9 @@ Running the UI
 
 ..
 
+.. note:: In order to connect to a given node, the node explorer must have access to all CorDapps loaded on that particular node.
+          By default, it only has access to the finance CorDapp.
+          All other CorDapps present on the node must be copied to a ``cordapps`` directory located within the directory from which the node explorer is run.
 
 Interface
 ---------

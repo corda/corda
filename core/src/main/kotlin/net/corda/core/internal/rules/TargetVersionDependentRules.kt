@@ -2,7 +2,7 @@ package net.corda.core.internal.rules
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.internal.cordapp.targetPlatformVersion
-import net.corda.core.utilities.warnOnce
+import net.corda.core.internal.warnOnce
 import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap

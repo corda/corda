@@ -1,13 +1,8 @@
 package net.corda.core
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.times
-import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.warnOnce
 import org.assertj.core.api.Assertions.*
 import org.junit.Test
-import org.slf4j.Logger
 import rx.subjects.PublishSubject
 import java.util.*
 import java.util.concurrent.CancellationException
@@ -62,25 +57,5 @@ class UtilsTest {
         assertThatExceptionOfType(CancellationException::class.java).isThrownBy {
             future.get()
         }
-    }
-
-    @Test
-    fun `warnOnce works, but the backing cache grows only to a maximum size`() {
-        val MAX_SIZE = 100
-
-        val logger = mock<Logger>()
-        logger.warnOnce("a")
-        logger.warnOnce("b")
-        logger.warnOnce("b")
-
-        // This should cause the eviction of "a".
-        (1..MAX_SIZE).forEach { logger.warnOnce("$it") }
-        logger.warnOnce("a")
-
-        // "a" should be logged twice because it was evicted.
-        verify(logger, times(2)).warn("a")
-
-        // "b" should be logged only once because there was no eviction.
-        verify(logger, times(1)).warn("b")
     }
 }

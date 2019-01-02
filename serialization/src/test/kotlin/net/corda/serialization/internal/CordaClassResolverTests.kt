@@ -114,11 +114,12 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("isolated.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("/isolated.jar")
     }
 
     private val emptyWhitelistContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, null)
     private val allButBlacklistedContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, AllButBlacklisted, emptyMap(), true, null)
+
     @Test
     fun `Annotation on enum works for specialised entries`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
@@ -211,7 +212,7 @@ class CordaClassResolverTests {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
@@ -220,7 +221,7 @@ class CordaClassResolverTests {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
