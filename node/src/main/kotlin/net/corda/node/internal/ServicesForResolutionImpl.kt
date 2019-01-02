@@ -6,8 +6,8 @@ import net.corda.core.internal.SerializedStateAndRef
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.node.services.IdentityService
+import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.NotaryChangeWireTransaction
@@ -18,10 +18,10 @@ data class ServicesForResolutionImpl(
         override val identityService: IdentityService,
         override val attachments: AttachmentStorage,
         override val cordappProvider: CordappProvider,
-        override val networkParametersStorage: NetworkParametersStorage,
+        override val networkParametersService: NetworkParametersService,
         private val validatedTransactions: TransactionStorage
 ) : ServicesForResolution {
-    override val networkParameters: NetworkParameters get() = networkParametersStorage.lookup(networkParametersStorage.currentHash) ?:
+    override val networkParameters: NetworkParameters get() = networkParametersService.lookup(networkParametersService.currentHash) ?:
             throw IllegalArgumentException("No current parameters in network parameters storage")
 
     @Throws(TransactionResolutionException::class)
