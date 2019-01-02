@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
@@ -39,7 +40,7 @@ class TransactionBuilderTest {
     private val services = rigorousMock<ServicesForResolution>()
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
-    private val networkParametersStorage = rigorousMock<NetworkParametersStorage>()
+    private val networkParametersStorage = mock<NetworkParametersStorage>()
 
     @Before
     fun setup() {
@@ -109,6 +110,7 @@ class TransactionBuilderTest {
                 .hasMessageContaining("Reference states")
 
         doReturn(testNetworkParameters(minimumPlatformVersion = 4)).whenever(services).networkParameters
+        doReturn(referenceState).whenever(services).loadState(referenceStateRef)
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.references).containsOnly(referenceStateRef)
     }

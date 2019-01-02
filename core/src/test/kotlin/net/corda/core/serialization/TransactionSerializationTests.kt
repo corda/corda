@@ -1,5 +1,6 @@
 package net.corda.core.serialization
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
@@ -69,7 +70,7 @@ class TransactionSerializationTests {
     val outputState = TransactionState(TestCash.State(depositRef, 600.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
     val changeState = TransactionState(TestCash.State(depositRef, 400.POUNDS, MEGA_CORP), TEST_CASH_PROGRAM_ID, DUMMY_NOTARY)
 
-    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, rigorousMock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
+    val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, mock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
         //override mock implementation with a real one
         override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment = servicesForResolution.loadContractAttachment(stateRef, forContractClassName)
     }

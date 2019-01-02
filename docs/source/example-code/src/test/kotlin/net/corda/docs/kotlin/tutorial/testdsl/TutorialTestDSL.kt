@@ -3,6 +3,7 @@
 package net.corda.docs.kotlin.tutorial.testdsl
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.identity.CordaX500Name
@@ -47,7 +48,7 @@ class TutorialTestDSL {
             // You can also use the alternative parameter initialIdentityName which accepts a
             // [CordaX500Name]
             megaCorp,
-            rigorousMock<IdentityService>().also {
+            mock<IdentityService>().also {
         doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
         doReturn(null).whenever(it).partyFromKey(bigCorp.publicKey)
         doReturn(null).whenever(it).partyFromKey(alice.publicKey)
