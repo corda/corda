@@ -23,7 +23,7 @@ abstract class ANSIProgressRenderer {
 
     protected var usingANSI = false
     protected var checkEmoji = false
-    protected var usingUnicode = false
+    protected var usingUnicode = !SystemUtils.IS_OS_WINDOWS
 
     protected var treeIndex: Int = 0
     protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
@@ -229,7 +229,6 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
 
     override fun setup() {
         AnsiConsole.systemInstall()
-        usingUnicode = !SystemUtils.IS_OS_WINDOWS
         checkEmoji = true
 
         // This line looks weird as hell because the magic code to decide if we really have a TTY or not isn't

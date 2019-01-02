@@ -30,7 +30,7 @@ class ANSIProgressRendererTest {
         private const val STEP_3_LABEL = "Running step 3"
 
         private val STEP_1_SUCCESS_OUTPUT = if (SystemUtils.IS_OS_WINDOWS) """DONE: $STEP_1_LABEL""" else """✓ $STEP_1_LABEL"""
-        private val STEP_2_SKIPPED_OUTPUT = if (SystemUtils.IS_OS_WINDOWS) """  $INTENSITY_FAINT_ON_ASCII$STEP_2_LABEL$INTENSITY_OFF_ASCII""" else """  $INTENSITY_FAINT_ON_ASCII$STEP_2_LABEL$INTENSITY_OFF_ASCII"""
+        private const val STEP_2_SKIPPED_OUTPUT = """  $INTENSITY_FAINT_ON_ASCII$STEP_2_LABEL$INTENSITY_OFF_ASCII"""
         private val STEP_3_ACTIVE_OUTPUT  = if (SystemUtils.IS_OS_WINDOWS) """CURRENT: $INTENSITY_BOLD_ON_ASCII$STEP_3_LABEL$INTENSITY_OFF_ASCII""" else """"▶ $INTENSITY_BOLD_ON_ASCII$STEP_3_LABEL$INTENSITY_OFF_ASCII"""
     }
 
