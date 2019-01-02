@@ -280,7 +280,7 @@ class CordaRPCOpsImplTest {
     }
 
     @Test
-    fun `can't upload the same attachment`() {
+    fun `cannot upload the same attachment`() {
         withPermissions(invokeRpc(CordaRPCOps::uploadAttachment), invokeRpc(CordaRPCOps::attachmentExists)) {
             val inputJar1 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
             val inputJar2 = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)

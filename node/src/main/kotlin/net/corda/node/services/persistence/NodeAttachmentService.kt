@@ -342,16 +342,20 @@ class NodeAttachmentService(
                 if (isUploaderTrusted(uploader)) {
                     val session = currentDBSession()
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-                    // update the `upLoader` field (as the existing attachment may have been resolved from a peer)
+                    // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
                         attachment.uploader = uploader
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
-                        // TODO: this is racey. ENT-2870
-                        attachmentCache.invalidate(id)
-                        attachmentContentCache.invalidate(id)
+                        loadAttachmentContent(id)?.let { attachmentAndContent ->
+                            // TODO: this is racey. ENT-2870
+                            attachmentContentCache.put(id, Optional.of(attachmentAndContent))
+                            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
+                        }
+                        return@withContractsInJar id
                     }
+                    // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
                 }
                 throw DuplicateAttachmentException(id.toString())
             }
