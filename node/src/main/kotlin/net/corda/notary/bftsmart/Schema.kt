@@ -2,17 +2,16 @@ package net.corda.notary.bftsmart
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.transactions.PersistentUniquenessProvider
-import net.corda.notary.bftsmart.BftSmartNotaryService
 
-object BftSmartNotarySchema
+object BFTSmartNotarySchema
 
-object BftSmartNotarySchemaV1 : MappedSchema(
-        schemaFamily = BftSmartNotarySchema.javaClass,
+object BFTSmartNotarySchemaV1 : MappedSchema(
+        schemaFamily = BFTSmartNotarySchema.javaClass,
         version = 1,
         mappedTypes = listOf(
                 PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
-                BftSmartNotaryService.CommittedState::class.java
+                BFTSmartNotaryService.CommittedState::class.java
         )
 ) {
     override val migrationResource: String?

@@ -20,7 +20,7 @@ class RaftNotaryService(
 
     override val uniquenessProvider = with(services) {
         val raftConfig = try {
-            notaryConfig.extraConfig!!.parseAs<RaftConfig>()
+            notaryConfig.raft!!.parseAs<RaftConfig>()
         } catch (e: Exception) {
             throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: raft configuration not present")
         }

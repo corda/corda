@@ -165,12 +165,14 @@ internal object FlowTimeoutConfigurationSpec : Configuration.Specification<FlowT
 internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("NotaryConfig") {
     private val validating by boolean()
     private val serviceLegalName by string().mapValid(::toCordaX500Name).optional()
-    private val className by string().optional().withDefaultValue("net.corda.node.services.transactions.SimpleNotaryService")
+    private val className by string().optional()
     private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
+    private val raft by nestedObject().map(ConfigObject::toConfig).optional()
+    private val bftSMaRt by nestedObject().map(ConfigObject::toConfig).optional()
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {
-        return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig]))
+        return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig], configuration[raft], configuration[bftSMaRt]))
     }
 }
 

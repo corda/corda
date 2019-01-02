@@ -37,8 +37,8 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.notary.bftsmart.BFTSMaRt.Client
-import net.corda.notary.bftsmart.BFTSMaRt.Replica
+import net.corda.notary.bftsmart.BFTSmart.Client
+import net.corda.notary.bftsmart.BFTSmart.Replica
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.*
@@ -55,7 +55,7 @@ import java.util.*
 //       perhaps a design doc. In general, it seems possible to use the state machine to reconfigure the cluster (reaching
 //       consensus about  membership changes). Nodes that join the cluster for the first time or re-join can go through
 //       a "recovering" state and request missing data from their peers.
-object BFTSMaRt {
+object BFTSmart {
     /** Sent from [Client] to [Replica]. */
     @CordaSerializable
     data class CommitRequest(val payload: NotarisationPayload, val callerIdentity: Party)
@@ -79,7 +79,7 @@ object BFTSMaRt {
         fun waitUntilAllReplicasHaveInitialized()
     }
 
-    class Client(config: BFTSMaRtConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BftSmartNotaryService) : SingletonSerializeAsToken() {
+    class Client(config: BFTSmartConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTSmartNotaryService) : SingletonSerializeAsToken() {
         companion object {
             private val log = contextLogger()
         }
@@ -176,10 +176,10 @@ object BFTSMaRt {
      *
      * The validation logic can be specified by implementing the [executeCommand] method.
      */
-    abstract class Replica(config: BFTSMaRtConfig,
+    abstract class Replica(config: BFTSmartConfig,
                            replicaId: Int,
                            createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash,
-                                   BftSmartNotaryService.CommittedState, PersistentStateRef>,
+                                   BFTSmartNotaryService.CommittedState, PersistentStateRef>,
                            protected val services: ServiceHubInternal,
                            protected val notaryIdentityKey: PublicKey) : DefaultRecoverable() {
         companion object {

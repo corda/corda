@@ -141,7 +141,7 @@ data class NotaryConfig(
         /** The legal name of cluster in case of a distributed notary service. */
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
-        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+        val className: String? = null,
         /**
          * If the wait time estimate on the internal queue exceeds this value, the notary may send
          * a wait time update to the client (implementation specific and dependent on the counter
@@ -149,7 +149,9 @@ data class NotaryConfig(
          */
         val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt(),
         /** Notary implementation-specific configuration parameters. */
-        val extraConfig: Config? = null
+        val extraConfig: Config? = null,
+        val raft: Config? = null,
+        val bftSMaRt: Config? = null
 )
 
 /**

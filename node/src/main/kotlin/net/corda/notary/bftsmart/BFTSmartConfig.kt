@@ -13,7 +13,7 @@ import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-data class BFTSMaRtConfiguration(
+data class BFTSmartConfiguration(
         /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
         val replicaId: Int,
         /**
@@ -32,11 +32,11 @@ data class BFTSMaRtConfiguration(
 }
 
 /**
- * BFT SMaRt can only be configured via files in a configHome directory.
+ * BFT Smart can only be configured via files in a configHome directory.
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSMaRtConfig>(Files.createTempDirectory("bft-smart-config")) {
+class BFTSmartConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSmartConfig>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         private val log = contextLogger()
         internal const val portIsClaimedFormat = "Port %s is claimed by another replica: %s"
@@ -81,7 +81,7 @@ class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, deb
         val peerId = contextReplicaId - 1
         if (peerId < 0) return
         // The printStackTrace we want to avoid is in replica-replica communication code:
-        val address = BFTSMaRtPort.FOR_REPLICAS.ofReplica(replicaAddresses[peerId])
+        val address = BFTSmartPort.FOR_REPLICAS.ofReplica(replicaAddresses[peerId])
         log.debug { "Waiting for replica $peerId to start listening on: $address" }
         while (!address.isListening()) MILLISECONDS.sleep(200)
         log.debug { "Replica $peerId is ready for P2P." }
@@ -89,11 +89,11 @@ class BFTSMaRtConfig(private val replicaAddresses: List<NetworkHostAndPort>, deb
 
     private fun replicaPorts(replicaId: Int): List<NetworkHostAndPort> {
         val base = replicaAddresses[replicaId]
-        return BFTSMaRtPort.values().map { it.ofReplica(base) }
+        return BFTSmartPort.values().map { it.ofReplica(base) }
     }
 }
 
-private enum class BFTSMaRtPort(private val off: Int) {
+private enum class BFTSmartPort(private val off: Int) {
     FOR_CLIENTS(0),
     FOR_REPLICAS(1);
 

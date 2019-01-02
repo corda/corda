@@ -34,7 +34,7 @@ import kotlin.concurrent.thread
  *
  * A transaction is notarised when the consensus is reached by the cluster on its uniqueness, and time-window validity.
  */
-class BftSmartNotaryService(
+class BFTSmartNotaryService(
         override val services: ServiceHubInternal,
         override val notaryIdentityKey: PublicKey
 ) : NotaryService() {
@@ -54,29 +54,28 @@ class BftSmartNotaryService(
     }
 
     private val notaryConfig = services.configuration.notary
-            ?: throw IllegalArgumentException("Failed to register ${BftSmartNotaryService::class.java}: notary configuration not present")
+            ?: throw IllegalArgumentException("Failed to register ${BFTSmartNotaryService::class.java}: notary configuration not present")
 
     private val bftSMaRtConfig = try {
-        notaryConfig.extraConfig!!.parseAs<BFTSMaRtConfiguration>()
+        notaryConfig.bftSMaRt!!.parseAs<BFTSmartConfiguration>()
     } catch (e: Exception) {
-        throw IllegalArgumentException("Failed to register ${BftSmartNotaryService::class.java}: BFT-Smart configuration not present")
+        throw IllegalArgumentException("Failed to register ${BFTSmartNotaryService::class.java}: BFT-Smart configuration not present")
     }
+    private val cluster: BFTSmart.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
 
-    private val cluster: BFTSMaRt.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
-
-    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSMaRtConfiguration): BFTSMaRt.Cluster {
-        return object : BFTSMaRt.Cluster {
+    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSmartConfiguration): BFTSmart.Cluster {
+        return object : BFTSmart.Cluster {
             override fun waitUntilAllReplicasHaveInitialized() {
                 log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
             }
         }
     }
 
-    private val client: BFTSMaRt.Client
+    private val client: BFTSmart.Client
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        client = BFTSMaRtConfig(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
+        client = BFTSmartConfig(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
             val replicaId = bftSMaRtConfig.replicaId
             val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
@@ -87,7 +86,7 @@ class BftSmartNotaryService(
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSMaRt.Client(it, replicaId, cluster, this)
+            BFTSmart.Client(it, replicaId, cluster, this)
         }
     }
 
@@ -100,7 +99,7 @@ class BftSmartNotaryService(
 
     override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = ServiceFlow(otherPartySession, this)
 
-    private class ServiceFlow(val otherSideSession: FlowSession, val service: BftSmartNotaryService) : FlowLogic<Void?>() {
+    private class ServiceFlow(val otherSideSession: FlowSession, val service: BFTSmartNotaryService) : FlowLogic<Void?>() {
         @Suspendable
         override fun call(): Void? {
             val payload = otherSideSession.receive<NotarisationPayload>().unwrap { it }
@@ -112,12 +111,12 @@ class BftSmartNotaryService(
         private fun commit(payload: NotarisationPayload): NotarisationResponse {
             val response = service.commitTransaction(payload, otherSideSession.counterparty)
             when (response) {
-                is BFTSMaRt.ClusterResponse.Error -> {
+                is BFTSmart.ClusterResponse.Error -> {
                     // TODO: here we assume that all error will be the same, but there might be invalid onces from mailicious nodes
                     val responseError = response.errors.first().verified()
                     throw NotaryException(responseError, payload.coreTransaction.id)
                 }
-                is BFTSMaRt.ClusterResponse.Signatures -> {
+                is BFTSmart.ClusterResponse.Signatures -> {
                     log.debug("All input states of transaction ${payload.coreTransaction.id} have been committed")
                     return NotarisationResponse(response.txSignatures)
                 }
@@ -153,20 +152,20 @@ class BftSmartNotaryService(
         )
     }
 
-    private class Replica(config: BFTSMaRtConfig,
+    private class Replica(config: BFTSmartConfig,
                           replicaId: Int,
                           createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,
-                          notaryIdentityKey: PublicKey) : BFTSMaRt.Replica(config, replicaId, createMap, services, notaryIdentityKey) {
+                          notaryIdentityKey: PublicKey) : BFTSmart.Replica(config, replicaId, createMap, services, notaryIdentityKey) {
 
         override fun executeCommand(command: ByteArray): ByteArray {
-            val commitRequest = command.deserialize<BFTSMaRt.CommitRequest>()
+            val commitRequest = command.deserialize<BFTSmart.CommitRequest>()
             verifyRequest(commitRequest)
             val response = verifyAndCommitTx(commitRequest.payload.coreTransaction, commitRequest.callerIdentity, commitRequest.payload.requestSignature)
             return response.serialize().bytes
         }
 
-        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party, requestSignature: NotarisationRequestSignature): BFTSMaRt.ReplicaResponse {
+        private fun verifyAndCommitTx(transaction: CoreTransaction, callerIdentity: Party, requestSignature: NotarisationRequestSignature): BFTSmart.ReplicaResponse {
             return try {
                 val id = transaction.id
                 val inputs = transaction.inputs
@@ -176,17 +175,17 @@ class BftSmartNotaryService(
                 if (notary !in services.myInfo.legalIdentities) throw NotaryInternalException(NotaryError.WrongNotary)
                 commitInputStates(inputs, id, callerIdentity.name, requestSignature, timeWindow, references)
                 log.debug { "Inputs committed successfully, signing $id" }
-                BFTSMaRt.ReplicaResponse.Signature(sign(id))
+                BFTSmart.ReplicaResponse.Signature(sign(id))
             } catch (e: NotaryInternalException) {
                 log.debug { "Error processing transaction: ${e.error}" }
                 val serializedError = e.error.serialize()
                 val errorSignature = sign(serializedError.bytes)
                 val signedError = SignedData(serializedError, errorSignature)
-                BFTSMaRt.ReplicaResponse.Error(signedError)
+                BFTSmart.ReplicaResponse.Error(signedError)
             }
         }
 
-        private fun verifyRequest(commitRequest: BFTSMaRt.CommitRequest) {
+        private fun verifyRequest(commitRequest: BFTSmart.CommitRequest) {
             val transaction = commitRequest.payload.coreTransaction
             val notarisationRequest = NotarisationRequest(transaction.inputs, transaction.id)
             notarisationRequest.verifySignature(commitRequest.payload.requestSignature, commitRequest.callerIdentity)

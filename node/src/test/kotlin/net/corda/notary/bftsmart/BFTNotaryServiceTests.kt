@@ -82,8 +82,7 @@ class BFTNotaryServiceTests {
             val nodes = replicaIds.map { replicaId ->
                 mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(
                             validating = false,
-                            extraConfig = BFTSMaRtConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
-                            className = "net.corda.notary.bftsmart.BftSmartNotaryService",
+                            extraConfig = BFTSmartConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
                             serviceLegalName = serviceLegalName
                 ))))
             } + mockNet.createUnstartedNode()
