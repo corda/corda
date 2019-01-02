@@ -118,14 +118,21 @@ private constructor(
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() {
+    fun verify() = verifyInternal(emptyList())
+
+    /**
+     * Verifies the transaction but takes a list of [extraAttachments] which are used to form the classpath.
+     * Used to work around a Corda 3 bug as there might be transactions out there that don't contain all the necessary dependencies in the attachments list.
+     */
+    @CordaInternal
+    internal fun verifyInternal(extraAttachments: List<Attachment>) {
         if (networkParameters == null) {
             // For backwards compatibility only.
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
 
-        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments) { transactionClassLoader ->
+        AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
             Verifier(createLtxForVerification(), transactionClassLoader).verify()
         }
     }

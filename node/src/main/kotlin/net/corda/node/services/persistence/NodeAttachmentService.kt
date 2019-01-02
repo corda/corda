@@ -309,7 +309,7 @@ class NodeAttachmentService(
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
-                require(inputStream !is JarInputStream){"Input stream must not be a JarInputStream"}
+                require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
 
                 // Read the file into RAM and then calculate its hash. The attachment must fit into memory.
                 // TODO: Switch to a two-phase insert so we can handle attachments larger than RAM.
@@ -359,16 +359,16 @@ class NodeAttachmentService(
     }
 
     private fun getSigners(attachmentBytes: ByteArray) =
-        JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
+            JarSignatureCollector.collectSigners(JarInputStream(attachmentBytes.inputStream()))
 
     private fun getVersion(attachmentBytes: ByteArray) =
-        JarInputStream(attachmentBytes.inputStream()).use {
-            try {
-                it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
-            } catch (e: NumberFormatException) {
-                DEFAULT_CORDAPP_VERSION
+            JarInputStream(attachmentBytes.inputStream()).use {
+                try {
+                    it.manifest?.mainAttributes?.getValue(CORDAPP_CONTRACT_VERSION)?.toInt() ?: DEFAULT_CORDAPP_VERSION
+                } catch (e: NumberFormatException) {
+                    DEFAULT_CORDAPP_VERSION
+                }
             }
-        }
 
     @Suppress("OverridingDeprecatedMember")
     override fun importOrGetAttachment(jar: InputStream): AttachmentId {
@@ -409,8 +409,8 @@ class NodeAttachmentService(
         }
 
         fun toList(): List<AttachmentId> =
-                if(signed != null) {
-                    if(unsigned != null) {
+                if (signed != null) {
+                    if (unsigned != null) {
                         listOf(signed, unsigned)
                     } else listOf(signed)
                 } else listOf(unsigned!!)
@@ -464,5 +464,4 @@ class NodeAttachmentService(
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toList() }.toSet()
     }
-
 }
