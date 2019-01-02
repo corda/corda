@@ -142,9 +142,10 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
             rename(shadowJar.archivePath.name, "config-exporter.jar")
         }
 
-        def alpineZuluDockerFile = combineDockerFiles(Paths.get("src/docker/BaseAlpineZulu"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileAlpineZulu")
-        def corretttoDockerFile = combineDockerFiles(Paths.get("src/docker/BaseAmazonLinuxCorretto"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileCorretto")
-        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get("src/docker/BaseUbuntuZulu"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileUbuntuZulu")
+        def commonDockerFile = Paths.get(project.projectDir.absolutePath, "src/docker/CommonDockerFile")
+        def alpineZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAlpineZulu"), commonDockerFile, outputDir.toPath(), "DockerfileAlpineZulu")
+        def corretttoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAmazonLinuxCorretto"), commonDockerFile, outputDir.toPath(), "DockerfileCorretto")
+        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseUbuntuZulu"), commonDockerFile, outputDir.toPath(), "DockerfileUbuntuZulu")
     }
 }
 
