@@ -82,7 +82,7 @@ object JarSignatureTestUtils {
                 manifest.mainAttributes[attributeName] = value
             }
             val output = JarOutputStream(FileOutputStream((this / fileName).toFile()), manifest)
-            var entry= input.nextEntry
+            var entry = input.nextEntry
             val buffer = ByteArray(1 shl 14)
             while (true) {
                 output.putNextEntry(entry)

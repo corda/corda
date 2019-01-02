@@ -67,6 +67,22 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName)
     }
 
+    @JvmOverloads
+    fun makeTestContractJar(workingDir: Path, contractNames: List<String>, signed: Boolean = false, version: Int = 1, generateManifest: Boolean = true): Path {
+        contractNames.forEach {
+            val packages = it.split(".")
+            val className = packages.last()
+            createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
+        }
+
+        val packages = contractNames.first().split(".")
+        val jarName = "attachment-${packages.last()}-$version${(if (signed) "-signed" else "")}.jar"
+        workingDir.createJar(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray() )
+        if (generateManifest)
+            workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
+        return workingDir.resolve(jarName)
+    }
+
     private fun createTestClass(workingDir: Path, className: String, packages: List<String>): Path {
         val newClass = """package ${packages.joinToString(".")};
                 import net.corda.core.contracts.*;

@@ -33,6 +33,7 @@ import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.*
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -268,10 +269,18 @@ class NodeAttachmentServiceTest {
                     storage.queryAttachments(AttachmentsQueryCriteria(signersCondition = Builder.equal(listOf(publicKey)))).size
             )
 
-            assertEquals(
-                    3,
-                    storage.queryAttachments(AttachmentsQueryCriteria(isSignedCondition = Builder.equal(true))).size
-            )
+            val allAttachments = storage.queryAttachments(AttachmentsQueryCriteria())
+            assertEquals(6, allAttachments.size)
+
+            val signedAttachments = storage.queryAttachments(AttachmentsQueryCriteria(isSignedCondition = Builder.equal(true)))
+            assertEquals(3, signedAttachments.size)
+
+            val unsignedAttachments = storage.queryAttachments(AttachmentsQueryCriteria(isSignedCondition = Builder.equal(false)))
+            assertEquals(3, unsignedAttachments.size)
+
+            assertNotEquals(signedAttachments.toSet(), unsignedAttachments.toSet())
+
+            assertEquals(signedAttachments.toSet() + unsignedAttachments.toSet(), allAttachments.toSet())
 
             assertEquals(
                     1,
@@ -312,6 +321,24 @@ class NodeAttachmentServiceTest {
                     isSignedCondition = Builder.equal(true)),
                     AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION)))).size
             )
+        }
+    }
+
+    @Test
+    fun `contract class, version and signers may be not unique`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
+            contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
+            anotherContractJar.read { storage.importAttachment(it, "uploaderA", "another-sample.jar") }
+
+            val res = storage.queryAttachments(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract"))))
+            assertEquals(2, res.size)
+            res.forEach {
+                val att = storage.openAttachment(it)
+                assertTrue(att is ContractAttachment)
+                assertTrue("com.example.MyContract" in (att as ContractAttachment).allContracts)
+            }
         }
     }
 
