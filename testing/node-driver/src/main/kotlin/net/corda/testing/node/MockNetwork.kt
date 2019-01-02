@@ -282,10 +282,6 @@ inline fun <reified F : FlowLogic<*>> StartedMockNode.registerResponderFlow(
  * method. If you want messages to flow automatically, use automatic pumping with a thread per node but watch out
  * for code running parallel to your unit tests: you will need to use futures correctly to ensure race-free results.
  *
- * You can get a printout of every message sent by using code like:
- *
- *    LogHelper.setLevel("+messages")
- *
  * By default a single notary node is automatically started, which forms part of the network parameters for all the nodes.
  * This node is available by calling [defaultNotaryNode].
  *
@@ -321,7 +317,9 @@ open class MockNetwork(
     @Deprecated("cordappPackages does not preserve the original CorDapp's versioning and metadata, which may lead to " +
             "misleading results in tests. Use MockNetworkParameters.cordappsForAllNodes instead.")
     @JvmOverloads
-    constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(cordappPackages, defaultParameters = parameters)
+    constructor(cordappPackages: List<String>, parameters: MockNetworkParameters = MockNetworkParameters()) : this(
+            cordappPackages, defaultParameters = parameters
+    )
 
     @JvmOverloads
     constructor(parameters: MockNetworkParameters = MockNetworkParameters()) : this(emptyList(), parameters)
