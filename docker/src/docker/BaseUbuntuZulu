@@ -1,0 +1,8 @@
+FROM azul/zulu-openjdk:8u192
+
+RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install bash
+
+# Create corda user
+RUN addgroup corda && \
+    useradd corda -g corda -m -d /opt/corda
+

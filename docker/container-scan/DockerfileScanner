@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:18.04 as build_system
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \
@@ -20,6 +20,8 @@ ENV GOPATH /gopath
 ENV GOROOT /goroot
 ENV PATH $GOROOT/bin:$GOPATH/bin:$PATH
 RUN git clone https://github.com/arminc/clair-scanner.git /gopath/src/clair-scanner
-RUN cd /gopath/src/clair-scanner && make && make ensure && make build && mv clair-scanner $GOROOT/bin/
-RUN mkdir /output/
-VOLUME ["/output"]
+RUN cd /gopath/src/clair-scanner && make && make ensure && make build && cp clair-scanner $GOROOT/bin/
+
+FROM ubuntu:18.04 as run_system
+COPY --from=build_system /gopath/src/clair-scanner/clair-scanner /usr/bin/clair-scanner
+RUN chmod +x /usr/bin/clair-scanner

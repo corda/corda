@@ -10,11 +10,10 @@ buildscript {
 
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.ProgressHandler
-import com.spotify.docker.client.exceptions.DockerException
-import com.spotify.docker.client.messages.ProgressMessage
+import com.spotify.docker.client.LoggingBuildHandler
 import com.spotify.docker.client.messages.RegistryAuth
 
+import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.stream.Collectors
@@ -40,33 +39,17 @@ shadowJar {
     zip64 true
 }
 
-task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar", ":bridge:bridgecapsule:buildFirewallJar"]) {
-    doLast {
-        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
-        def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
-        def firewall = project(":bridge:bridgecapsule").buildFirewallJar.archivePath
-        project.copy {
-            into new File(project.buildDir, "docker-temp")
-            from "src/bash/run-corda.sh"
-            from "src/bash/run-firewall.sh"
-            from "src/bash/db-migrate-create-jars.sh"
-            from "src/bash/db-migrate-execute-migration.sh"
-            from cordaJar
-            from shadowJar.archivePath
-            from dbmigrator
-            from firewall
-            from "src/config/starting-node.conf"
-            from "src/bash/generate-config.sh"
-            from "src/docker/DockerfileCorretto"
-            from "src/docker/DockerfileUbuntuZulu"
-            from "src/docker/DockerfileAlpineZulu"
-            from "src/docker/FirewallDockerfileCorretto"
-            rename(cordaJar.name, "corda.jar")
-            rename(dbmigrator.name, "database-manager.jar")
-            rename(firewall.name, "corda-firewall.jar")
-            rename(shadowJar.archivePath.name, "config-exporter.jar")
-        }
+static java.nio.file.Path combineDockerFiles(java.nio.file.Path base, java.nio.file.Path common, java.nio.file.Path outputDir, String outputName) {
+    final File outputFile = new File(outputDir.toFile(), outputName)
+    println("Combining ${base.toFile().absolutePath} and ${common.toFile().absolutePath} into Dockerfile at: ${outputFile.absolutePath}")
+    outputFile.withWriter { outputStream ->
+        outputStream.println("##START OF BASE##\n")
+        outputStream.write(base.text)
+        outputStream.println("\n##END OF BASE##\n")
+        outputStream.write(common.text)
     }
+    return outputFile.toPath()
+
 }
 
 final String runTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
@@ -74,10 +57,11 @@ final String suffix = project.version.toString().toLowerCase().contains("snapsho
 
 final String nodeImageBase = "entdocker.corda.r3cev.com/corda-enterprise"
 final String firewallImageBase = "entdocker.corda.r3cev.com/corda-firewall"
+final String utilsImage = "entdocker.corda.r3cev.com/corda-utils"
 
 enum BASE {
     ALPINE_ZULU("alpine-zulu"),
-    UBUNTU_ZULU("ubunut-zulu"),
+    UBUNTU_ZULU("ubuntu-zulu"),
     AL_CORRETTO("corretto"),
     OFFICIAL("")
     private String knownAs
@@ -103,7 +87,7 @@ static List<String> buildImages(String baseTag, String suffix, String version, M
         java.nio.file.Path buildDir = filePair.first
         String dockerFile = filePair.second
         String imageName = base.versionString(baseTag, version)
-                Iterable<String> tags = buildTags(imageName, suffix)
+        Iterable<String> tags = buildTags(imageName, suffix)
         buildImage(buildDir, dockerFile, tags)
         tagsToScan.addAll(tags)
     })
@@ -114,18 +98,7 @@ static List<String> buildImages(String baseTag, String suffix, String version, M
 static buildImage(java.nio.file.Path dir, String dockerFile, Iterable<CharSequence> tags) {
     println("Building image from ${dir.toAbsolutePath().toString()} using Dockerfile: ${dockerFile}")
     final DockerClient docker = DefaultDockerClient.fromEnv().build()
-    def builtImageId = docker.build(dir, null, dockerFile, new ProgressHandler() {
-        @Override
-        void progress(ProgressMessage message) throws DockerException {
-            if (message.error() != null) {
-                throw new RuntimeException(message.error())
-            } else if (message.stream() != null) {
-                print(message.stream())
-            } else if (message.progress() != null) {
-                print(message.progress())
-            }
-        }
-    })
+    def builtImageId = docker.build(dir, null, dockerFile, new LoggingBuildHandler())
     for (String tag : tags) {
         println("Tagging ${builtImageId} as: ${tag}")
         docker.tag(builtImageId, tag)
@@ -143,6 +116,38 @@ static pushImages(Iterable<CharSequence> tags) {
 def dockerTempDir = new File(project.buildDir, "docker-temp")
 final List<String> tagsBuilt = new ArrayList<String>()
 
+task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":tools:dbmigration:shadowJar", ":bridge:bridgecapsule:buildFirewallJar"]) {
+    doLast {
+        def outputDir = new File(project.buildDir, "docker-temp")
+        def cordaJar = project(":node:capsule").buildCordaJAR.archivePath
+        def dbmigrator = project(":tools:dbmigration").shadowJar.archivePath
+        def firewall = project(":bridge:bridgecapsule").buildFirewallJar.archivePath
+        project.copy {
+            into outputDir
+            from "src/bash/run-corda.sh"
+            from "src/bash/run-firewall.sh"
+            from "src/bash/db-migrate-create-jars.sh"
+            from "src/bash/db-migrate-execute-migration.sh"
+            from cordaJar
+            from shadowJar.archivePath
+            from dbmigrator
+            from firewall
+            from "src/config/starting-node.conf"
+            from "src/bash/generate-config.sh"
+            from "src/docker/FirewallDockerfileCorretto"
+            from "src/docker/UtilsDockerfile"
+            rename(cordaJar.name, "corda.jar")
+            rename(dbmigrator.name, "database-manager.jar")
+            rename(firewall.name, "corda-firewall.jar")
+            rename(shadowJar.archivePath.name, "config-exporter.jar")
+        }
+
+        def alpineZuluDockerFile = combineDockerFiles(Paths.get("src/docker/BaseAlpineZulu"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileAlpineZulu")
+        def corretttoDockerFile = combineDockerFiles(Paths.get("src/docker/BaseAmazonLinuxCorretto"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileCorretto")
+        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get("src/docker/BaseUbuntuZulu"), Paths.get("src/docker/CommonDockerFile"), outputDir.toPath(), "DockerfileUbuntuZulu")
+    }
+}
+
 task buildAllImages(dependsOn: [buildDockerFolder]) {
     doLast {
         def dockerDirectory = dockerTempDir.toPath()
@@ -152,21 +157,13 @@ task buildAllImages(dependsOn: [buildDockerFolder]) {
                 (BASE.AL_CORRETTO): new Tuple2<>(dockerDirectory, "DockerfileCorretto"),
                 (BASE.OFFICIAL)   : new Tuple2<>(dockerDirectory, "DockerfileCorretto")
         ]
-
-        Map<BASE, Tuple2<java.nio.file.Path, String>> firewallTaskMap = [
-                (BASE.AL_CORRETTO): new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto"),
-                (BASE.OFFICIAL)   : new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto")
-        ]
-
         tagsBuilt.addAll(buildImages(nodeImageBase, suffix, project.version.toString().toLowerCase(), nodeTaskMap))
-        tagsBuilt.addAll(buildImages(firewallImageBase, suffix, project.version.toString().toLowerCase(), firewallTaskMap))
-
-    }
-}
-
-task scanAllImages(dependsOn: [buildAllImages]) {
-    doLast {
-
+        tagsBuilt.addAll(buildImages(firewallImageBase, suffix, project.version.toString().toLowerCase(), [
+                (BASE.OFFICIAL): new Tuple2<>(dockerDirectory, "FirewallDockerfileCorretto")
+        ]))
+        tagsBuilt.addAll(buildImages(utilsImage, suffix, project.version.toString().toLowerCase(), [
+                (BASE.OFFICIAL): new Tuple2<>(dockerTempDir.toPath(), "UtilsDockerfile")
+        ]))
     }
 }
 
@@ -176,12 +173,14 @@ task pushAllImages(dependsOn: [buildAllImages]) {
     }
 }
 
-task pushOfficialImages(dependsOn: [buildOfficialZuluDockerImage, buildOfficialCorrettoDockerImage, buildOfficialAplineZuluDockerImage]){
+task scanAllBuiltTags(dependsOn: [buildAllImages]) {
     doLast{
-        pushImages(zuluBuildTags)
-        pushImages(alpineZuluBuildTags)
-        pushImages(correttoBuildTags)
+        exec {
+            workingDir project.buildDir
+            executable "../container-scan/docker_up.sh"
+            args tagsBuilt
+        }
     }
 }
 
-task pushOfficialImages(dependsOn: [buildOfficialZuluDockerImage, buildOfficialCorrettoDockerImage])
+task buildAndPushImages(dependsOn: [buildAllImages, pushAllImages, scanAllBuiltTags])

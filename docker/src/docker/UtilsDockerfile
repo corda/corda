@@ -1,8 +1,11 @@
-FROM azul/zulu-openjdk:8u192
+FROM azul/zulu-openjdk-alpine:8u192
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install bash curl unzip
+RUN apk update && apk upgrade && apk add bash curl unzip
 
-# Create dirs
+# Create corda user
+RUN addgroup corda && \
+    adduser corda -G corda -D -s bash -h /opt/corda
+
 RUN mkdir -p /opt/corda/cordapps && \
     mkdir -p /opt/corda/persistence && \
     mkdir -p /opt/corda/certificates && \
@@ -11,10 +14,6 @@ RUN mkdir -p /opt/corda/cordapps && \
     mkdir -p /opt/corda/bin && \
     mkdir -p /opt/corda/additional-node-infos && \
     mkdir -p /etc/corda
-
-# Create corda user
-RUN addgroup corda && \
-    useradd corda -g corda -m -d /opt/corda
 
 WORKDIR /opt/corda
 
@@ -47,16 +46,13 @@ VOLUME ["/opt/corda/additional-node-infos"]
 ##CONFIG LOCATION
 VOLUME ["/etc/corda"]
 
-##CORDA JAR
-ADD --chown=corda:corda corda.jar /opt/corda/bin/corda.jar
+
 ##DB MIGRATION JAR
 ADD --chown=corda:corda database-manager.jar /opt/corda/bin/database-manager.jar
 ##CONFIG MANIPULATOR JAR
 ADD --chown=corda:corda config-exporter.jar /opt/corda/config-exporter.jar
 ##CONFIG GENERATOR SHELL SCRIPT
 ADD --chown=corda:corda generate-config.sh /opt/corda/bin/config-generator
-##CORDA RUN SCRIPT
-ADD --chown=corda:corda run-corda.sh /opt/corda/bin/run-corda
 ##DB MIGRATOR RUN SCRIPT
 ADD --chown=corda:corda db-migrate-create-jars.sh /opt/corda/bin/db-migrate-create-jars
 ##DB MIGRATOR RUN SCRIPT
@@ -64,12 +60,9 @@ ADD --chown=corda:corda db-migrate-execute-migration.sh /opt/corda/bin/db-migrat
 ##BASE CONFIG FOR GENERATOR
 ADD --chown=corda:corda starting-node.conf /opt/corda/starting-node.conf
 ##SET EXECUTABLE PERMISSIONS
-RUN chmod +x /opt/corda/bin/config-generator /opt/corda/bin/run-corda /opt/corda/bin/db-migrate-create-jars /opt/corda/bin/db-migrate-execute-migration
+RUN chmod +x /opt/corda/bin/config-generator /opt/corda/bin/db-migrate-create-jars /opt/corda/bin/db-migrate-execute-migration
 
 ENV PATH=$PATH:/opt/corda/bin
 
-EXPOSE $MY_P2P_PORT
-EXPOSE $MY_RPC_PORT
-
 USER "corda"
-CMD ["run-corda"]
+CMD ["config-generator"]
