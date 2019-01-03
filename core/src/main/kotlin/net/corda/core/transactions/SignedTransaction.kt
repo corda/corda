@@ -7,13 +7,16 @@ import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.Party
+import net.corda.core.internal.TransactionVerifierServiceInternal
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.internalFindTrustedAttachmentForClass
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
+import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import java.security.KeyPair
 import java.security.PublicKey
@@ -200,8 +203,29 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @DeleteForDJVM
     private fun verifyRegularTransaction(services: ServiceHub, checkSufficientSignatures: Boolean) {
         val ltx = toLedgerTransaction(services, checkSufficientSignatures)
-        // TODO: allow non-blocking verification.
-        services.transactionVerifierService.verify(ltx).getOrThrow()
+        try {
+            // TODO: allow non-blocking verification.
+            services.transactionVerifierService.verify(ltx).getOrThrow()
+        } catch (e: NoClassDefFoundError) {
+            // Transactions created before Corda 4 can be missing dependencies on other cordapps.
+            // This code attempts to find the missing dependency in the attachment storage among the trusted contract attachments.
+            // When it finds one, it instructs the verifier to use it to create the transaction classloader.
+            // TODO - add check that transaction was created before Corda 4.
+
+            // TODO - should this be a [TransactionVerificationException]?
+            val missingClass = requireNotNull(e.message) { "Transaction $ltx is incorrectly formed." }
+
+            val attachment = requireNotNull(services.attachments.internalFindTrustedAttachmentForClass(missingClass)) {
+                "Transaction $ltx is incorrectly formed. Could not find local dependency for class: $missingClass."
+            }
+
+            log.warn("""Detected that transaction ${this.id} does not contain all cordapp dependencies.
+                |This may be the result of a bug in a previous version of Corda.
+                |Attempting to verify using the additional dependency: $attachment.
+                |Please check with the originator that this is a valid transaction.""".trimMargin())
+
+            (services.transactionVerifierService as TransactionVerifierServiceInternal).verify(ltx, listOf(attachment)).getOrThrow()
+        }
     }
 
     /**
@@ -218,7 +242,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             else -> throw IllegalStateException("Unknown transaction type ${coreTransaction::class.qualifiedName}")
         }
     }
-
 
     /**
      * Resolves the underlying transaction with signatures and then returns it, handling any special case transactions
@@ -272,6 +295,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
                     "keys: ${missing.joinToString { it.toStringShort() }}, " +
                     "by signers: ${descriptions.joinToString()} "
         }
+
+        private val log = contextLogger()
     }
 
     @KeepForDJVM

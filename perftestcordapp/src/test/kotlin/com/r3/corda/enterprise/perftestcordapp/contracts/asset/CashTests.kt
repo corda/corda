@@ -1,10 +1,7 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts.asset
 
 
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import com.r3.corda.enterprise.perftestcordapp.*
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCash
 import com.r3.corda.enterprise.perftestcordapp.utils.sumCashBy
@@ -138,8 +135,8 @@ class CashTests {
     @Before
     fun setUp() {
         LogHelper.setLevel(NodeVaultService::class)
-        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
-        miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MINI_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+        megaCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, mock(), MEGA_CORP_KEY)
+        miniCorpServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MINI_CORP.name, mock<IdentityServiceInternal>().also {
             doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MINI_CORP.name }, any())
         }, MINI_CORP_KEY)
         val notaryServices = MockServices(listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
@@ -186,7 +183,7 @@ class CashTests {
     }
 
     private fun transaction(script: TransactionDSL<TransactionDSLInterpreter>.() -> EnforceVerifyOrFail) = run {
-        MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+        MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
             doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
             doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
@@ -857,7 +854,7 @@ class CashTests {
     @Test
     fun chainCashDoubleSpendFailsWith() {
         val mockService = MockServices(
-                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+                listOf("com.r3.corda.enterprise.perftestcordapp.contracts.asset", "com.r3.corda.enterprise.perftestcordapp.schemas"), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
             doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         }, MEGA_CORP_KEY)
         mockService.ledger(DUMMY_NOTARY) {

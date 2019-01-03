@@ -16,7 +16,7 @@ class MockNetworkTest {
 
     @Before
     fun setup() {
-        mockNetwork = MockNetwork(cordappPackages = emptyList())
+        mockNetwork = MockNetwork()
     }
 
     @After

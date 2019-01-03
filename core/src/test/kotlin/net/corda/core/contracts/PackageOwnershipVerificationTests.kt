@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -40,7 +41,7 @@ class PackageOwnershipVerificationTests {
     private val ledgerServices = MockServices(
             cordappPackages = listOf("net.corda.finance.contracts.asset"),
             initialIdentity = ALICE,
-            identityService = rigorousMock<IdentityServiceInternal>().also {
+            identityService = mock<IdentityServiceInternal>().also {
                 doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },

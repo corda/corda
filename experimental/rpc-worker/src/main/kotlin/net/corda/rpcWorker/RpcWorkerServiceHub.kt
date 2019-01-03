@@ -108,8 +108,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
     @Suppress("LeakingThis")
     override val keyManagementService = PersistentKeyManagementService(cacheFactory, identityService, database)
-    override val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
+    override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory)
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
@@ -125,7 +125,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
             networkMapClient,
             configuration.baseDirectory,
             configuration.extraNetworkMapKeys,
-            networkParametersStorage
+            networkParametersService
     ).closeOnStop()
 
     override val networkParameters = signedNetworkParameters.networkParameters
@@ -236,7 +236,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
 
         networkMapClient?.start(trustRoot)
 
-        networkParametersStorage.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
+        networkParametersService.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
 
         val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys

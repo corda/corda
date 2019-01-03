@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
@@ -11,7 +12,7 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.LedgerTransaction
@@ -70,7 +71,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val networkParameters = testNetworkParameters()
 
-    private val networkParametersStorage get() = rigorousMock<NetworkParametersStorage>().also {
+    private val networkParametersService get() = mock<NetworkParametersService>().also {
         doReturn(networkParameters.serialize().hash).whenever(it).currentHash
     }
 
@@ -78,7 +79,7 @@ class AttachmentsClassLoaderStaticContractTests {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
         cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
-        doReturn(networkParametersStorage).whenever(it).networkParametersStorage
+        doReturn(networkParametersService).whenever(it).networkParametersService
         doReturn(networkParameters).whenever(it).networkParameters
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(it).attachments

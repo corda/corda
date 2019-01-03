@@ -1,6 +1,7 @@
 package net.corda.core.contracts
 
 import kotlin.reflect.KClass
+import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 
 /**
  * This annotation is required by any [ContractState] which needs to ensure that it is only ever processed as part of a
@@ -12,7 +13,8 @@ import kotlin.reflect.KClass
  * checked to ensure that their [ContractState]s match with their [Contract]s as specified either by this annotation, or
  * by their inner/outer class relationship.
  *
- * The transaction will fail with a [TransactionContractConflictException] if any mismatch is detected.
+ * The transaction will write a warning to the log (for corDapps with a target version less than 4) or
+ * fail with a [TransactionContractConflictException] if any mismatch is detected.
  *
  * @param value The class of the [Contract] to which states of the annotated [ContractState] belong.
  */

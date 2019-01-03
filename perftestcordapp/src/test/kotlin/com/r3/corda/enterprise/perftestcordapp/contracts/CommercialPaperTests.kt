@@ -1,6 +1,7 @@
 package com.r3.corda.enterprise.perftestcordapp.contracts
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import com.r3.corda.enterprise.perftestcordapp.DOLLARS
 import com.r3.corda.enterprise.perftestcordapp.`issued by`
@@ -97,7 +98,7 @@ class CommercialPaperTestsGeneric {
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
     val issuer = MEGA_CORP.ref(123)
-    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(MINI_CORP).whenever(it).partyFromKey(MINI_CORP_PUBKEY)
         doReturn(null).whenever(it).partyFromKey(ALICE_PUBKEY)
