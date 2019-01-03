@@ -28,6 +28,7 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Ignore
 import org.junit.Test
 
 class CordappConstraintsTests {
@@ -37,7 +38,7 @@ class CordappConstraintsTests {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
-        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
+        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance", "migration", "META-INF.services")
         val SIGNED_FINANCE_CORDAPP = UNSIGNED_FINANCE_CORDAPP.signed()
     }
 
