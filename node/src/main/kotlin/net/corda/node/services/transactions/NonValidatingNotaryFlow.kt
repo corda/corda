@@ -72,13 +72,13 @@ class NonValidatingNotaryFlow(otherSideSession: FlowSession, service: SinglePart
             if (attachedParameterHash == null) {
                 throw IllegalArgumentException("Transaction must contain network parameters.")
             }
-            val attachedParameters = serviceHub.networkParametersStorage.lookup(attachedParameterHash)
+            val attachedParameters = serviceHub.networkParametersService.lookup(attachedParameterHash)
                     ?: throw IllegalStateException("Unable to resolve network parameters from hash: $attachedParameterHash")
 
             checkInWhitelist(attachedParameters, notary)
         } else {
             // Using current network parameters for platform versions 3 or earlier.
-            val defaultParams = with(serviceHub.networkParametersStorage) {
+            val defaultParams = with(serviceHub.networkParametersService) {
                 lookup(currentHash)
                         ?: throw IllegalStateException("Unable to verify whether the notary $notary is whitelisted: current network parameters not set.")
             }
