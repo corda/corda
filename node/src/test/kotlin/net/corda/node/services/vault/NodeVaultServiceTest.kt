@@ -877,12 +877,12 @@ class NodeVaultServiceTest {
         val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java))
         val data = vaultService.trackBy<ContractState>(criteria)
         for (state in data.snapshot.states) {
-            assertEquals("net.corda.finance.contracts.asset.Cash", state.state.contract)
+            assertEquals(Cash.PROGRAM_ID, state.state.contract)
         }
 
         val allCash = data.updates.all {
             it.produced.all {
-                it.state.contract == "net.corda.finance.contracts.asset.Cash"
+                it.state.contract == Cash.PROGRAM_ID
             }
         }
 

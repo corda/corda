@@ -392,9 +392,9 @@ interface VaultService {
      *
      * Notes:
      *    - The snapshot part of the query adheres to the same behaviour as the [queryBy] function.
-     *    - The update part of the query currently does not respect the [QueryCriteria], and so updates
-     *      involving any states of type T will be returned. CORDA-2389 tracks adding the functionality to
-     *      respect this filter.
+     *    - The update part of the query currently only supports query criteria filtering by contract
+     *      type(s) and state status(es). CID-731 <https://r3-cev.atlassian.net/browse/CID-731> proposes
+     *      adding the complete set of [QueryCriteria] filtering.
      */
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _trackBy(criteria: QueryCriteria,
