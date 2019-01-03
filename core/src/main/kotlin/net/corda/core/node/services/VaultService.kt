@@ -393,7 +393,7 @@ interface VaultService {
      * Notes:
      *    - The snapshot part of the query adheres to the same behaviour as the [queryBy] function.
      *    - The update part of the query currently does not respect the [QueryCriteria], and so updates
-     *      involving states of type T will be returned. CORDA-2389 tracks adding the functionality to
+     *      involving any states of type T will be returned. CORDA-2389 tracks adding the functionality to
      *      respect this filter.
      */
     @Throws(VaultQueryException::class)
