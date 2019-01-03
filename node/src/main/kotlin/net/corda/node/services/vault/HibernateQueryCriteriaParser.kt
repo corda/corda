@@ -235,10 +235,11 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
                 val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
                 predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNotNull))
             } else {
-                val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers", JoinType.LEFT)
-                predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNull))
+                //val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers", JoinType.LEFT)
+                //predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNull))
                 // TODO Something like the line below would be better solution than left join:
-                // predicateSet.add(criteriaBuilder.isEmpty(root.get<List<PublicKey>?>("signers")))
+                 //predicateSet.add(criteriaBuilder.isEmpty(root.get<List<PublicKey>?>("signers")))
+                predicateSet.add(criteriaBuilder.equal(criteriaBuilder.size(root.get<List<PublicKey>?>("signers")),0))
             }
         }
 

@@ -29,6 +29,7 @@ import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
+import net.corda.nodeapi.exceptions.DuplicateContractClass
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -324,6 +325,17 @@ class NodeAttachmentService(
                     val jarSigners = getSigners(bytes)
                     val contractVersion = getVersion(bytes)
                     val session = currentDBSession()
+
+                    contractClassNames.forEach {
+                        val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                                contractClassNamesCondition = Builder.equal(listOf(it)),
+                                versionCondition = Builder.equal(contractVersion),
+                                isSignedCondition = Builder.equal(jarSigners.isNotEmpty()))
+                        )
+                        if (existingContractsImplementations.isNotEmpty())
+                            throw DuplicateContractClass(id.toString(), existingContractsImplementations.first().toString(), it, contractVersion, jarSigners.isNotEmpty())
+                    }
+
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
                             content = bytes,
