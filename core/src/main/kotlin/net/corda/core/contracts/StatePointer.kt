@@ -49,7 +49,7 @@ sealed class StatePointer<T : ContractState> {
  * - The [ContractState] may not be known by the node performing the look-up in which case the [resolve] method will
  *   throw a [TransactionResolutionException]
  */
-class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
+data class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
@@ -79,7 +79,7 @@ class StaticPointer<T : ContractState>(override val pointer: StateRef, override 
  *   then the transaction with such a reference state cannot be committed to the ledger until the most up-to-date version
  *   of the [LinearState] is available. See reference states documentation on docs.corda.net for more info.
  */
-class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
+data class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
