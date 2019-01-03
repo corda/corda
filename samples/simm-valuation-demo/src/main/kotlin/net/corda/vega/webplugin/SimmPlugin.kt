@@ -1,4 +1,4 @@
-package net.corda.vega.plugin
+package net.corda.vega.webplugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.serialization.SerializationWhitelist

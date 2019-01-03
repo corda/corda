@@ -12,6 +12,8 @@ import net.corda.testing.core.DUMMY_BANK_B_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
@@ -48,8 +50,8 @@ class SimmValuationTest {
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers", "net.corda.finance", "migration"),
+        driver(DriverParameters(isDebug = true,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
