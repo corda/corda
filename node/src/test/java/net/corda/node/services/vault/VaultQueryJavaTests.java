@@ -23,7 +23,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQue
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.finance.schemas.test.SampleCashSchemaV2;
+import net.corda.finance.test.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
