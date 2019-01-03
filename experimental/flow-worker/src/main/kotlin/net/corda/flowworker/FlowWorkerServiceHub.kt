@@ -149,8 +149,8 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     override val monitoringService = MonitoringService(metricRegistry).tokenize()
 
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    override val networkParametersStorage = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
+    override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
     override val networkMapUpdater= NetworkMapUpdater(
@@ -164,7 +164,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
             networkMapClient,
             configuration.baseDirectory,
             configuration.extraNetworkMapKeys,
-            networkParametersStorage
+            networkParametersService
     ).closeOnStop()
 
     private val transactionVerifierWorkerCount = 4
@@ -404,7 +404,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
         database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
-        networkParametersStorage.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
+        networkParametersService.setCurrentParameters(signedNetworkParameters.signed, trustRoot)
         database.transaction {
             networkMapCache.start(networkParameters.notaries)
         }
