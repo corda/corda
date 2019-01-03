@@ -203,6 +203,16 @@ possible with a shared bridge, any other configuration previously presented can 
     :scale: 100%
     :align: center
 
+
+Adding new nodes to existing shared Bridge
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Most of the HA components are agnostic to the node, with exception of the bridge which need to have access to the node's SSL key in order to establish TLS connection to the counterparty nodes.
+
+The bridge's SSL keystore will need to be updated when adding new node to the shared HA infrastructure. This can be done by using any keytool or by using :doc:`HA Utilities <ha-utilities>`,
+the `SSL key copier` is tailored to import multiple node's SSL keys into the bridge's keystore. For more information, please see :doc:`Cookbook <corda-firewall-cookbook>`.
+
+
 Apache ZooKeeper
 ----------------
 Apache ZooKeeper is used in Corda firewall to manage the hot/warm bridge clusters, because hot/hot is not supported, ZooKeeper is used to ensure only 1 instance of the bridge is active at all time.

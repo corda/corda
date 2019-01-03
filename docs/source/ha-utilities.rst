@@ -76,8 +76,8 @@ Command-line options
 Self signed internal Artemis SSL keystore
 -----------------------------------------
 
-TLS is used to ensure communications between various components connected to standalone Artemis. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
-Please note that for Artemis to work correctly with keystores, the password for the store and the password for the private will be set to the same value.
+TLS is used to ensure communications between HA components and standalone Artemis are secured. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+Please note that for Artemis to work correctly, the password for the store and the password for the private key will need to be set to the same value.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
@@ -99,7 +99,7 @@ Command-line options
 Self signed internal Tunnel SSL keystore
 -----------------------------------------
 
-TLS is used to for communications between Bridge and Float components. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
+TLS is used for communications between Bridge and Float components. This tool can be used to generate the required keystores if TLS cert signing infrastructure is not available within your organisation.
 
 Command-line options
 ~~~~~~~~~~~~~~~~~~~~
