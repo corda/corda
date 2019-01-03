@@ -17,6 +17,7 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
@@ -30,7 +31,7 @@ import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
-import org.assertj.core.api.Assertions.assertThatIllegalArgumentException
+import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Ignore
@@ -118,6 +119,43 @@ class NodeAttachmentServiceTest {
         storage.openAttachment(id)!!.openAsJAR().use {
             it.nextJarEntry
             it.readBytes()
+        }
+    }
+
+    @Test
+    fun `attachment can be overridden by trusted uploader`() {
+        SelfCleaningDir().use { file ->
+            val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
+            val attachment = file.path.resolve(contractJarName)
+            val expectedAttachmentId = attachment.readAll().sha256()
+
+            val initialUploader = "test"
+            val attachmentId = attachment.read { storage.privilegedImportAttachment(it, initialUploader, null) }
+            assertThat(attachmentId).isEqualTo(expectedAttachmentId)
+            assertThat((storage.openAttachment(expectedAttachmentId) as ContractAttachment).uploader).isEqualTo(initialUploader)
+
+            val trustedUploader = TRUSTED_UPLOADERS.randomOrNull()!!
+
+            val overriddenAttachmentId = attachment.read { storage.privilegedImportAttachment(it, trustedUploader, null) }
+            assertThat(overriddenAttachmentId).isEqualTo(expectedAttachmentId)
+            assertThat((storage.openAttachment(expectedAttachmentId) as ContractAttachment).uploader).isEqualTo(trustedUploader)
+        }
+    }
+
+    @Test
+    fun `attachment cannot be overridden by untrusted uploader`() {
+        SelfCleaningDir().use { file ->
+            val contractJarName = makeTestContractJar(file.path, "com.example.MyContract")
+            val attachment = file.path.resolve(contractJarName)
+            val expectedAttachmentId = attachment.readAll().sha256()
+
+            val trustedUploader = TRUSTED_UPLOADERS.randomOrNull()!!
+            val attachmentId = attachment.read { storage.privilegedImportAttachment(it, trustedUploader, null) }
+            assertThat(attachmentId).isEqualTo(expectedAttachmentId)
+            assertThat((storage.openAttachment(expectedAttachmentId) as ContractAttachment).uploader).isEqualTo(trustedUploader)
+
+            val untrustedUploader = "test"
+            assertThatThrownBy { attachment.read { storage.privilegedImportAttachment(it, untrustedUploader, null) } }.isInstanceOf(DuplicateAttachmentException::class.java)
         }
     }
 

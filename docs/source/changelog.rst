@@ -145,7 +145,8 @@ Version 4.0
 
 * Removed experimental feature ``CordformDefinition``
 
-* Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
+* Added new overload of ``StartedMockNode.registerInitiatedFlow`` which allows registering custom initiating-responder flow pairs, which
+  can be useful for testing error cases.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.

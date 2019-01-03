@@ -39,12 +39,19 @@ task testJar(type: Jar) {
 
 jar {
     baseName 'corda-finance-contracts'
+    manifest {
+        attributes('Corda-Revision': 'n/a')
+        attributes('Corda-Vendor': 'Corda Open Source')
+    }
 }
 
 artifacts {
     testArtifacts testJar
 }
 cordapp {
+    signing {
+        enabled false
+    }
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     contract {

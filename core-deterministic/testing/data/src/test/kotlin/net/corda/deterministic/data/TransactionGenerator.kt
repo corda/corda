@@ -1,6 +1,7 @@
 package net.corda.deterministic.data
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AnonymousParty
@@ -39,7 +40,7 @@ object TransactionGenerator {
     private val MEGA_CORP_PUBKEY: PublicKey = megaCorp.keyPair.public
     private val MINI_CORP_PUBKEY: PublicKey = TestIdentity(CordaX500Name("MiniCorp", "London", "GB")).keyPair.public
 
-    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+    private val ledgerServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
         doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
         doReturn(DUMMY_CASH_ISSUER.party).whenever(it).partyFromKey(DUMMY_CASH_ISSUER_KEY.public)
     })

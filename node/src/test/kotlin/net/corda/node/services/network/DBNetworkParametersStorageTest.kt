@@ -8,7 +8,7 @@ import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.SignedDataWithCert
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.NetworkParametersService
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
@@ -35,7 +35,7 @@ class DBNetworkParametersStorageTest {
     val testSerialization = SerializationEnvironmentRule(true)
 
     private lateinit var networkMapClient: NetworkMapClient
-    private lateinit var nodeParametersStorage: NetworkParametersStorage
+    private lateinit var networkParametersService: NetworkParametersService
     private lateinit var database: CordaPersistence
 
     private val certKeyPair: CertificateAndKeyPair = createDevNetworkMapCa()
@@ -61,7 +61,7 @@ class DBNetworkParametersStorageTest {
                 { null }
         )
         networkMapClient = createMockNetworkMapClient()
-        nodeParametersStorage = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
+        networkParametersService = DBNetworkParametersStorage(TestingNamedCacheFactory(), database, networkMapClient).apply {
             database.transaction {
                 setCurrentParameters(netParams1, DEV_ROOT_CA.certificate)
             }
@@ -75,21 +75,21 @@ class DBNetworkParametersStorageTest {
 
     @Test
     fun `set current parameters`() {
-        assertThat(nodeParametersStorage.currentHash).isEqualTo(hash1)
-        assertThat(nodeParametersStorage.lookup(hash1)).isEqualTo(netParams1.verified())
+        assertThat(networkParametersService.currentHash).isEqualTo(hash1)
+        assertThat(networkParametersService.lookup(hash1)).isEqualTo(netParams1.verified())
     }
 
     @Test
     fun `get default parameters`() {
         // TODO After implementing default endpoint on network map check it is correct, for now we set it to current.
-        assertThat(nodeParametersStorage.defaultHash).isEqualTo(hash1)
+        assertThat(networkParametersService.defaultHash).isEqualTo(hash1)
     }
 
     @Test
     fun `download parameters from network map server`() {
         database.transaction {
-            val netParams = nodeParametersStorage.lookup(hash2)
-            assertThat(nodeParametersStorage.lookup(hash2)).isEqualTo(netParams)
+            val netParams = networkParametersService.lookup(hash2)
+            assertThat(networkParametersService.lookup(hash2)).isEqualTo(netParams)
             verify(networkMapClient, times(1)).getNetworkParameters(hash2)
 
         }
@@ -99,7 +99,7 @@ class DBNetworkParametersStorageTest {
     fun `try save parameters with incorrect signature`() {
         database.transaction {
             val consoleOutput = interceptConsoleOutput {
-                nodeParametersStorage.lookup(hash3)
+                networkParametersService.lookup(hash3)
             }
             assertThat(consoleOutput).anySatisfy {
                 it.contains("Caused by: java.security.cert.CertPathValidatorException: subject/issuer name chaining check failed")
@@ -119,7 +119,7 @@ class DBNetworkParametersStorageTest {
     private fun createMockNetworkMapClient(): NetworkMapClient {
         return mock {
             on { getNetworkParameters(any()) }.then {
-                val hash = it.getArguments()[0]
+                val hash = it.arguments[0]
                 when (hash) {
                     hash1 -> netParams1
                     hash2 -> netParams2

@@ -255,6 +255,11 @@ Note that:
 * The ``database.schema`` property is optional
 * The minimum transaction isolation level ``database.transactionIsolationLevel`` is `READ_COMMITTED`
 * Ensure that the Oracle JDBC driver JAR is copied to the ``./drivers`` subdirectory or if applicable specify path in the ``jarDirs`` property
+* Database schema name can be set in JDBC URL string e.g. currentSchema=myschema
+* Database schema name must either match the ``dataSource.user`` value to end up
+  on the standard schema search path according to the
+  `PostgreSQL documentation <https://www.postgresql.org/docs/9.3/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_, or
+  the schema search path must be set explicitly for the user.
 
 To delete existing data from the database, run the following SQL:
 

@@ -1,5 +1,6 @@
 package net.corda.node.services.vault
 
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.*
 import net.corda.core.crypto.*
 import net.corda.core.identity.AbstractParty
@@ -141,7 +142,7 @@ open class VaultQueryTestRule : ExternalResource(), VaultQueryParties {
         services = databaseAndServices.second
         vaultFiller = VaultFiller(services, dummyNotary)
         vaultFillerCashNotary = VaultFiller(services, dummyNotary, CASH_NOTARY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, mock(), dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
         identitySvc = services.identityService
         // Register all of the identities we're going to use
         (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
@@ -1907,15 +1908,15 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
     fun `unconsumed fungible assets for selected issuer parties`() {
         // GBP issuer
         val gbpCashIssuerName = CordaX500Name(organisation = "British Pounds Cash Issuer", locality = "London", country = "GB")
-        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, rigorousMock(), generateKeyPair())
+        val gbpCashIssuerServices = MockServices(cordappPackages, gbpCashIssuerName, mock(), generateKeyPair())
         val gbpCashIssuer = gbpCashIssuerServices.myInfo.singleIdentityAndCert()
         // USD issuer
         val usdCashIssuerName = CordaX500Name(organisation = "US Dollars Cash Issuer", locality = "New York", country = "US")
-        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, rigorousMock(), generateKeyPair())
+        val usdCashIssuerServices = MockServices(cordappPackages, usdCashIssuerName, mock(), generateKeyPair())
         val usdCashIssuer = usdCashIssuerServices.myInfo.singleIdentityAndCert()
         // CHF issuer
         val chfCashIssuerName = CordaX500Name(organisation = "Swiss Francs Cash Issuer", locality = "Zurich", country = "CH")
-        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, rigorousMock(), generateKeyPair())
+        val chfCashIssuerServices = MockServices(cordappPackages, chfCashIssuerName, mock(), generateKeyPair())
         val chfCashIssuer = chfCashIssuerServices.myInfo.singleIdentityAndCert()
         listOf(gbpCashIssuer, usdCashIssuer, chfCashIssuer).forEach { identity ->
             services.identityService.verifyAndRegisterIdentity(identity)
