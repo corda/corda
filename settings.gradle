@@ -5,6 +5,7 @@ include 'confidential-identities'
 include 'finance'   // maintained for backwards compatibility only
 include 'finance:contracts'
 include 'finance:workflows'
+include 'finance:test-contracts'
 include 'isolated'
 include 'core'
 include 'docs'

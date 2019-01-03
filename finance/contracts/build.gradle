@@ -15,6 +15,7 @@ dependencies {
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
     cordaCompile project(':core')
+    cordaCompile project(':core')
     compile project(':confidential-identities')
 
     // For JSON
@@ -32,11 +33,6 @@ configurations {
     testArtifacts.extendsFrom testRuntime
 }
 
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
 jar {
     baseName 'corda-finance-contracts'
     manifest {
@@ -45,9 +41,6 @@ jar {
     }
 }
 
-artifacts {
-    testArtifacts testJar
-}
 cordapp {
     signing {
         enabled false
