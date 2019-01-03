@@ -3,7 +3,6 @@ package net.corda.core.node.services
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.concurrent.CordaFuture
-import net.corda.core.contracts.Attachment
 import net.corda.core.transactions.LedgerTransaction
 
 /**
