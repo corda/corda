@@ -185,6 +185,7 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     testCompile(project(':test-cli'))
+    testCompile(project(':finance:test-contracts'))
 }
 
 tasks.withType(JavaCompile) {
