@@ -2,6 +2,7 @@ package net.corda.tools.shell.utlities
 
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.FlowProgressHandle
+import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LogEvent
 import org.apache.logging.log4j.core.LoggerContext
@@ -22,6 +23,7 @@ abstract class ANSIProgressRenderer {
 
     protected var usingANSI = false
     protected var checkEmoji = false
+    private val usingUnicode = !SystemUtils.IS_OS_WINDOWS
 
     protected var treeIndex: Int = 0
     protected var treeIndexProcessed: MutableSet<Int> = mutableSetOf()
@@ -115,7 +117,8 @@ abstract class ANSIProgressRenderer {
             var newLinesDrawn = 1 + renderLevel(ansi, error != null)
 
             if (error != null) {
-                ansi.a("${Emoji.skullAndCrossbones} ${error.message}")
+                val errorIcon = if (usingUnicode) Emoji.skullAndCrossbones else "ERROR: "
+                ansi.a("$errorIcon ${error.message}")
                 ansi.eraseLine(Ansi.Erase.FORWARD)
                 ansi.newline()
                 newLinesDrawn++
@@ -152,10 +155,10 @@ abstract class ANSIProgressRenderer {
                 val activeStep = index == treeIndex
 
                 val marker = when {
-                    processedStep -> " ${Emoji.greenTick} "
+                    activeStep -> if (usingUnicode) "${Emoji.rightArrow} " else "CURRENT: "
+                    processedStep -> if (usingUnicode) " ${Emoji.greenTick} " else "DONE: "
                     skippedStep -> "      "
-                    activeStep -> "${Emoji.rightArrow} "
-                    error -> "${Emoji.noEntry} "
+                    error -> if (usingUnicode) "${Emoji.noEntry} " else "ERROR: "
                     else -> "    "   // Not reached yet.
                 }
                 a("    ".repeat(step.first))
@@ -226,7 +229,6 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
 
     override fun setup() {
         AnsiConsole.systemInstall()
-
         checkEmoji = true
 
         // This line looks weird as hell because the magic code to decide if we really have a TTY or not isn't
