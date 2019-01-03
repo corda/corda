@@ -75,7 +75,7 @@ interface IdentityServiceInternal : IdentityService {
         if (wellKnownCert != identity.certificate) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
+            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath), isNewRandomIdentity)
         }
         return registerIdentity(identity, isNewRandomIdentity)
     }

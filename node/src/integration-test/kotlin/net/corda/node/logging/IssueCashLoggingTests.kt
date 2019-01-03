@@ -39,14 +39,10 @@ class IssueCashLoggingTests {
             val ref = OpaqueBytes.of(0)
             val recipient = nodeB.nodeInfo.legalIdentities[0]
 
-            val futures = mutableListOf<CordaFuture<*>>()
+            nodeA.rpc.startFlow(::CashIssueAndPaymentFlow, amount, ref, recipient, false, defaultNotaryIdentity).returnValue.getOrThrow()
 
-            futures += nodeA.rpc.startFlow(::CashIssueAndPaymentFlow, amount, ref, recipient, false, defaultNotaryIdentity).returnValue
-
-            allOf(*futures.map(CordaFuture<*>::toCompletableFuture).toTypedArray()).getOrThrow()
-
-            val linesWithDuplicateInsertionWarningsInA = nodeA.logFile().useLines { lines -> lines.filter { line -> line.contains("Double insert") }.filter { line -> line.contains("not inserting the second time") }.toList() }
-            val linesWithDuplicateInsertionWarningsInB = nodeB.logFile().useLines { lines -> lines.filter { line -> line.contains("Double insert") }.filter { line -> line.contains("not inserting the second time") }.toList() }
+            val linesWithDuplicateInsertionWarningsInA = nodeA.logFile().useLines { lines -> lines.filter(String::containsDuplicateInsertWarning).toList() }
+            val linesWithDuplicateInsertionWarningsInB = nodeB.logFile().useLines { lines -> lines.filter(String::containsDuplicateInsertWarning).toList() }
 
             assertThat(linesWithDuplicateInsertionWarningsInA).isEmpty()
             assertThat(linesWithDuplicateInsertionWarningsInB).isEmpty()
@@ -79,3 +75,5 @@ class IssueCashLoggingTests {
         class IssueAndPaymentRequest(amount: Amount<Currency>, val issueRef: OpaqueBytes, val recipient: Party, val notary: Party, val anonymous: Boolean) : AbstractRequest(amount)
     }
 }
+
+private fun String.containsDuplicateInsertWarning(): Boolean = contains("Double insert") && contains("not inserting the second time")
