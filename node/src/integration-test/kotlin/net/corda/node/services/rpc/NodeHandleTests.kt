@@ -9,7 +9,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThatCode
 import org.junit.ClassRule
 import org.junit.Test
@@ -18,8 +17,7 @@ class NodeHandleTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Test

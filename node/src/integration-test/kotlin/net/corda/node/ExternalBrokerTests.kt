@@ -29,7 +29,6 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import org.junit.ClassRule
@@ -47,7 +46,7 @@ class ExternalBrokertests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Rule

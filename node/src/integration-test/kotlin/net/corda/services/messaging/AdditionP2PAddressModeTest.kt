@@ -18,7 +18,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test
@@ -28,8 +27,7 @@ class AdditionP2PAddressModeTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
     private val portAllocation = incrementalPortAllocation(27182)

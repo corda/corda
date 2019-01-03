@@ -10,10 +10,9 @@ import net.corda.finance.flows.CashIssueFlow;
 import net.corda.finance.flows.CashPaymentFlow;
 import net.corda.finance.schemas.CashSchemaV1;
 import net.corda.node.internal.NodeWithInfo;
+import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.internal.InternalTestUtilsKt;
 import net.corda.testing.node.User;
-import net.corda.testing.internal.IntegrationTestKt;
-import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.internal.NodeBasedTest;
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +39,7 @@ public class CordaRPCJavaClientTest extends NodeBasedTest {
     }
 
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+    public static final IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME);
 
     private List<String> perms = Arrays.asList(
             startFlow(CashPaymentFlow.class),

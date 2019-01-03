@@ -52,8 +52,7 @@ class BFTNotaryServiceTests {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2", "node_3", "node_4", "node_5",
-                "node_6", "node_7", "node_8", "node_9")
+        val databaseSchemas = IntegrationTestSchemas((0..9).map { "node_$it" })
 
         private lateinit var mockNet: InternalMockNetwork
         private lateinit var notary: Party

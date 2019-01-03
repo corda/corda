@@ -18,12 +18,12 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.core.*
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.hibernate.exception.ConstraintViolationException
@@ -36,12 +36,11 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-
 class FlowRetryTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Before

@@ -1,7 +1,6 @@
 package net.corda.client.rpc
 
 import co.paralleluniverse.fibers.Suspendable
-import com.esotericsoftware.kryo.KryoException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.messaging.startFlow
@@ -13,7 +12,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.ClassRule
 import org.junit.Test
@@ -24,7 +22,7 @@ class BlacklistKotlinClosureTest : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
     }
 
     @StartableByRPC

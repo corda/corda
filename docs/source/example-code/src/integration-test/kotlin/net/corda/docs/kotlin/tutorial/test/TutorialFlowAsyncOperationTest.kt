@@ -6,13 +6,11 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.docs.kotlin.tutorial.flowstatemachines.ExampleSummingFlow
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test
@@ -22,7 +20,7 @@ class TutorialFlowAsyncOperationTest  : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
     }
 
     // DOCSTART summingWorks

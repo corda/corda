@@ -21,10 +21,9 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
-import org.junit.ClassRule
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import org.junit.ClassRule
 import org.junit.Test
 import rx.Observable
 import java.util.*
@@ -34,8 +33,7 @@ class KotlinIntegrationTestingTutorial : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Test

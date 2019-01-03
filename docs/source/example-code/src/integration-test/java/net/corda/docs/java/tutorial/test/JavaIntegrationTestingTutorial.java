@@ -15,7 +15,6 @@ import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
 import net.corda.testing.driver.NodeParameters;
 import net.corda.testing.internal.IntegrationTest;
-import net.corda.testing.internal.IntegrationTestKt;
 import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.User;
 import org.junit.ClassRule;
@@ -33,18 +32,14 @@ import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.core.ExpectKt.expect;
 import static net.corda.testing.core.ExpectKt.expectEvents;
-import static net.corda.testing.core.TestConstants.ALICE_NAME;
-import static net.corda.testing.core.TestConstants.BOB_NAME;
-import static net.corda.testing.core.TestConstants.DUMMY_NOTARY_NAME;
+import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.driver.Driver.driver;
 import static net.corda.testing.node.internal.TestCordappsUtilsKt.FINANCE_CORDAPPS;
 import static org.junit.Assert.assertEquals;
 
 public class JavaIntegrationTestingTutorial extends IntegrationTest {
-
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(BOB_NAME),
-            IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+    public static final IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME);
 
     @Test
     public void aliceBobCashExchangeExample() {

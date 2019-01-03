@@ -16,7 +16,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
@@ -40,12 +39,12 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
     @StartableByRPC
     @InitiatingFlow
-    class Ping(val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
+    class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val pongSession = initiateFlow(pongParty)
@@ -60,7 +59,7 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
     }
 
     @InitiatedBy(Ping::class)
-    class Pong(val pingSession: FlowSession) : FlowLogic<Unit>() {
+    class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
             val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }

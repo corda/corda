@@ -16,7 +16,6 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import org.assertj.core.api.Assertions
 import org.junit.ClassRule
 import org.junit.Test
@@ -25,7 +24,7 @@ class VaultRestartTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Test

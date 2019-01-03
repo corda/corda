@@ -55,13 +55,13 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
     val hsmSimulator = HsmSimulator(portAllocation)
 
     companion object {
-        @ClassRule
-        @JvmField
-        val databaseSchemas = IntegrationTestSchemas("NotaryService", "Alice", "Genevieve")
-
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
         private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
+
+        @ClassRule
+        @JvmField
+        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName, genevieveName)
     }
 
     @Test

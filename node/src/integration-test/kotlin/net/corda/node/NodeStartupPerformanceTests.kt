@@ -8,7 +8,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import org.junit.ClassRule
 import org.junit.Ignore
 import org.junit.Test
@@ -20,9 +19,9 @@ class NodeStartupPerformanceTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
+
     // Measure the startup time of nodes. Note that this includes an RPC roundtrip, which causes e.g. Kryo initialisation.
     @Test
     fun `single node startup time`() {

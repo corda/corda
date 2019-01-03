@@ -24,9 +24,8 @@ import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.common.internal.checkNotOnClasspath
 import net.corda.testing.core.*
-import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.ProcessUtilities
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -54,7 +53,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, DUMMY_NOTARY_NAME)
     }
 
     private lateinit var node: NodeWithInfo

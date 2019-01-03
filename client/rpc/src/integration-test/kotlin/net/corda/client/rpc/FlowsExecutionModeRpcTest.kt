@@ -17,7 +17,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
@@ -32,8 +31,7 @@ class FlowsExecutionModeRpcTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Test
@@ -64,7 +62,7 @@ class FlowsExecutionModeTests : NodeBasedTest(listOf("net.corda.finance.contract
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME)
     }
 
     private val rpcUser = User("user1", "test", permissions = setOf(Permissions.all()))

@@ -1,8 +1,6 @@
 package net.corda.notary.mysql
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.whenever
 import com.typesafe.config.ConfigFactory
 import net.corda.client.mock.Generator
 import net.corda.core.concurrent.CordaFuture
@@ -23,7 +21,6 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -53,9 +50,10 @@ class MySQLNotaryServiceTests : IntegrationTest() {
     companion object {
         val notaryName = CordaX500Name("MySQL Notary Service", "Zurich", "CH")
         val notaryNodeName = CordaX500Name("Notary Replica 1", "Zurich", "CH")
+
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas("node_0", "node_1", "node_2")
+        val databaseSchemas = IntegrationTestSchemas(listOf("node_0", "node_1", "node_2"))
     }
 
     private lateinit var mockNet: InternalMockNetwork

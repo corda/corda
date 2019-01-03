@@ -15,7 +15,6 @@ import net.corda.node.services.Permissions
 import net.corda.node.services.config.PasswordEncryption
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.NodeBasedTest
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.apache.shiro.authc.credential.DefaultPasswordService
@@ -43,7 +42,7 @@ class AuthDBTests : NodeBasedTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME)
 
         private const val cacheExpireAfterSecs: Long = 1
 

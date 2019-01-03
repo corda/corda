@@ -36,8 +36,13 @@ class P2PMessagingTest : IntegrationTest() {
     private companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_BANK_A_NAME.toDatabaseSchemaName(), "DistributedService_0", "DistributedService_1")
+        val databaseSchemas = IntegrationTestSchemas(listOf(
+                ALICE_NAME.toDatabaseSchemaName(),
+                BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName(),
+                "DistributedService_0",
+                "DistributedService_1"
+        ))
 
         val DISTRIBUTED_SERVICE_NAME = CordaX500Name("DistributedService", "London", "GB")
     }

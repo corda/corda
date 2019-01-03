@@ -15,7 +15,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
@@ -39,8 +38,7 @@ class SimmValuationTest : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
     @Before

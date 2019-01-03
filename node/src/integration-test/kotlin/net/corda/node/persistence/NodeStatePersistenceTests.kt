@@ -21,14 +21,12 @@ import net.corda.testMessage.MESSAGE_CONTRACT_PROGRAM_ID
 import net.corda.testMessage.Message
 import net.corda.testMessage.MessageContract
 import net.corda.testMessage.MessageState
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.node.User
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import org.junit.Assume.assumeFalse
 import org.junit.ClassRule
 import org.junit.Test
@@ -40,9 +38,9 @@ class NodeStatePersistenceTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*listOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
-                .map { it.toDatabaseSchemaName() }.toTypedArray())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
+
     @Test
     fun `persistent state survives node restart`() {
         val user = User("mark", "dadada", setOf(startFlow<SendMessageFlow>(), invokeRpc("vaultQuery")))

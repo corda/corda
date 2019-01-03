@@ -22,7 +22,7 @@ class PersistentNetworkMapCacheTest : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(CHARLIE_NAME)
     }
 
     @Rule

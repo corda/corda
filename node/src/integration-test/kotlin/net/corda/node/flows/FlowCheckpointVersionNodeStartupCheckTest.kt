@@ -9,14 +9,10 @@ import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
 import net.corda.node.internal.NodeStartup
-import net.corda.node.services.Permissions.Companion.invokeRpc
-import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageState
-import net.corda.testing.core.*
 import net.corda.testMessage.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
@@ -24,15 +20,14 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.ListenProcessDeathException
 import net.corda.testing.node.internal.cordappForClasses
 import net.test.cordapp.v1.Record
 import net.test.cordapp.v1.SendMessageFlow
-import org.junit.ClassRule
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -46,7 +41,7 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
 
         val message = Message("Hello world!")
         val defaultCordapp = cordappForClasses(

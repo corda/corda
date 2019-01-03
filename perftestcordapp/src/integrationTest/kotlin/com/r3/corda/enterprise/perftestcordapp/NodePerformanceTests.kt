@@ -41,8 +41,7 @@ class NodePerformanceTests : IntegrationTest() {
         val ALICE = TestIdentity(ALICE_NAME, 70).party
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
-                DUMMY_BANK_A_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2") + DUMMY_BANK_A_NAME.toDatabaseSchemaName())
     }
 
     private data class FlowMeasurementResult(

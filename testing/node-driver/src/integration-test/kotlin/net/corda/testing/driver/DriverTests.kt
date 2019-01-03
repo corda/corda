@@ -2,10 +2,13 @@ package net.corda.testing.driver
 
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.*
+import net.corda.core.internal.CertRole
 import net.corda.core.internal.concurrent.fork
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
+import net.corda.core.internal.list
+import net.corda.core.internal.readLines
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.NodeStartup
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
@@ -50,8 +53,14 @@ class DriverTests : IntegrationTest() {
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
-                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(), DUMMY_BANK_B_NAME.toDatabaseSchemaName(), "R3CEV")
+        val databaseSchemas = IntegrationTestSchemas(listOf(
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName(),
+                DUMMY_NOTARY_NAME.toDatabaseSchemaName(),
+                DUMMY_REGULATOR_NAME.toDatabaseSchemaName(),
+                BOB_NAME.toDatabaseSchemaName(),
+                DUMMY_BANK_B_NAME.toDatabaseSchemaName(),
+                "R3CEV"
+        ))
     }
 
     @Test

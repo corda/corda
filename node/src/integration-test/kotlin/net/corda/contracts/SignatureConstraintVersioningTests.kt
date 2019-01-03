@@ -26,7 +26,6 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.internalDriver
@@ -43,8 +42,7 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_BANK_A_NAME.toDatabaseSchemaName(), DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME)
     }
 
     private val base = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName).signed()

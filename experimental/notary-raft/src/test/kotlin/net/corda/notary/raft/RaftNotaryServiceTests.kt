@@ -33,9 +33,14 @@ class RaftNotaryServiceTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas("RAFTNotaryService_0", "RAFTNotaryService_1", "RAFTNotaryService_2",
-                DUMMY_BANK_A_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(listOf(
+                "RAFTNotaryService_0",
+                "RAFTNotaryService_1",
+                "RAFTNotaryService_2",
+                DUMMY_BANK_A_NAME.toDatabaseSchemaName()
+        ))
     }
+
     private val notaryName = CordaX500Name("RAFT Notary Service", "London", "GB")
 
     @Test

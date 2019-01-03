@@ -18,7 +18,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.User
 import org.junit.ClassRule
 import org.junit.Test
@@ -29,13 +28,12 @@ import kotlin.test.assertEquals
  * transaction size limit (which should only consider the hashes).
  */
 class LargeTransactionsTest : IntegrationTest() {
-    companion object {
+    private companion object {
         val BOB = TestIdentity(BOB_NAME, 80).party
-        val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
+
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName(),
-                DUMMY_NOTARY_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
     }
 
     @StartableByRPC

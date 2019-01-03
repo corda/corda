@@ -45,7 +45,7 @@ abstract class IntegrationTest {
     companion object {
         private val dbProvider = System.getProperty(DATABASE_PROVIDER, "")
         private val testDbScriptDir = System.getProperty(TEST_DB_SCRIPT_DIR, "database-scripts")
-        var databaseSchemas = mutableListOf<String>()
+        val databaseSchemas = mutableListOf<String>()
 
         @BeforeClass
         @JvmStatic
@@ -82,11 +82,13 @@ abstract class IntegrationTest {
     }
 }
 
-class IntegrationTestSchemas(vararg var list : String) : ExternalResource() {
+class IntegrationTestSchemas(private val schemas : Collection<String>) : ExternalResource() {
+    constructor(vararg names: CordaX500Name) : this(names.map { it.toDatabaseSchemaName() })
 
     override fun before() {
-        IntegrationTest.databaseSchemas.addAll(list)
+        IntegrationTest.databaseSchemas.addAll(schemas)
     }
+
     override fun after() {
         IntegrationTest.databaseSchemas.clear()
     }

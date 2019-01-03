@@ -43,8 +43,7 @@ class DistributedServiceTests : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(*DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2").toTypedArray(),
-                ALICE_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(DUMMY_NOTARY_NAME.toDatabaseSchemaNames("_0", "_1", "_2") + ALICE_NAME.toDatabaseSchemaName())
     }
     private fun setup(compositeIdentity: Boolean = false, testBlock: () -> Unit) {
         val testUser = User("test", "test", permissions = setOf(

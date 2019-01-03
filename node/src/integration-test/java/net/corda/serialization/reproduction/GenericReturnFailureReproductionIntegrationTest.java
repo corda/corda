@@ -11,7 +11,6 @@ import net.corda.testing.driver.DriverParameters;
 import net.corda.testing.driver.NodeHandle;
 import net.corda.testing.driver.NodeParameters;
 import net.corda.testing.internal.IntegrationTest;
-import net.corda.testing.internal.IntegrationTestKt;
 import net.corda.testing.internal.IntegrationTestSchemas;
 import net.corda.testing.node.User;
 import org.junit.ClassRule;
@@ -26,10 +25,8 @@ import java.util.stream.IntStream;
 import static net.corda.testing.core.TestConstants.*;
 
 public class GenericReturnFailureReproductionIntegrationTest extends IntegrationTest {
-
     @ClassRule
-    public static IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(IntegrationTestKt.toDatabaseSchemaName(ALICE_NAME), IntegrationTestKt.toDatabaseSchemaName(BOB_NAME),
-            IntegrationTestKt.toDatabaseSchemaName(DUMMY_BANK_A_NAME), IntegrationTestKt.toDatabaseSchemaName(DUMMY_NOTARY_NAME));
+    public static final IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME);
 
 
     @Test()

@@ -21,11 +21,10 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NOTIFICATI
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.User
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.configureTestSSL
-import net.corda.testing.internal.toDatabaseSchemaName
+import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.apache.activemq.artemis.api.core.ActiveMQNonExistentQueueException
@@ -46,7 +45,7 @@ abstract class MQSecurityTest : NodeBasedTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME)
     }
 
     private val rpcUser = User("user1", "pass", permissions = emptySet())

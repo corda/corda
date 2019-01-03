@@ -12,7 +12,6 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.internal.toDatabaseSchemaName
 import net.corda.testing.node.internal.NodeBasedTest
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -23,7 +22,7 @@ class FlowVersioningTest : NodeBasedTest() {
     companion object {
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME.toDatabaseSchemaName(), BOB_NAME.toDatabaseSchemaName())
+        val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME)
     }
 
     @Test
