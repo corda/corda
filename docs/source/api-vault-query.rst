@@ -64,7 +64,8 @@ filter criteria:
 - Use ``queryBy`` to obtain a current snapshot of data (for a given ``QueryCriteria``)
 - Use ``trackBy`` to obtain both a current snapshot and a future stream of updates (for a given ``QueryCriteria``)
   
-.. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL)
+.. note:: Streaming updates are only filtered based on contract type and state status (UNCONSUMED, CONSUMED, ALL).
+          They will not respect any other criteria that the initial query has been filtered by.
 
 Simple pagination (page number and size) and sorting (directional ordering using standard or custom property
 attributes) is also specifiable. Defaults are defined for paging (pageNumber = 1, pageSize = 200) and sorting

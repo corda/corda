@@ -41,10 +41,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.util.*
@@ -863,7 +860,11 @@ class NodeVaultServiceTest {
     }
 
     @Test
+    @Ignore
     fun `trackByCriteria filters updates and snapshots`() {
+        /*
+         * This test is ignored as the functionality it tests is not yet implemented - see CORDA-2389
+         */
         fun addCashToVault() {
             database.transaction {
                 vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
