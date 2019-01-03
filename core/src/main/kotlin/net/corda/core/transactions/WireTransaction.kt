@@ -105,8 +105,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment = { services.attachments.openAttachment(it) },
                 resolveStateRefAsSerialized = { resolveStateRefBinaryComponent(it, services) },
                 resolveParameters = {
-                    val hashToResolve = it ?: services.networkParametersStorage.defaultHash
-                    services.networkParametersStorage.lookup(hashToResolve)
+                    val hashToResolve = it ?: services.networkParametersService.defaultHash
+                    services.networkParametersService.lookup(hashToResolve)
                 },
                 resolveContractAttachment = { services.loadContractAttachment(it) }
         )

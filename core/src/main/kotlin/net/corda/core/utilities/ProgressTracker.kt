@@ -287,13 +287,6 @@ class ProgressTracker(vararg inputSteps: Step) {
 
     /** Returns true if the progress tracker has ended, either by reaching the [DONE] step or prematurely with an error */
     val hasEnded: Boolean get() = _changes.hasCompleted() || _changes.hasThrowable()
-
-    companion object {
-        val DEFAULT_TRACKER = { ProgressTracker() }
-    }
 }
 // TODO: Expose the concept of errors.
 // TODO: It'd be helpful if this class was at least partly thread safe.
-
-
-

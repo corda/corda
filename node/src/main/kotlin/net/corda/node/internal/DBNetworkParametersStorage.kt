@@ -5,10 +5,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.SignedDataWithCert
-import net.corda.core.internal.notary.HistoricNetworkParameterStorage
+import net.corda.core.internal.NetworkParametersServiceInternal
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.core.node.services.NetworkParametersStorage
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.deserialize
@@ -27,7 +26,7 @@ import org.apache.commons.lang.ArrayUtils
 import java.security.cert.X509Certificate
 import javax.persistence.*
 
-interface NetworkParametersStorageInternal : NetworkParametersStorage {
+interface NetworkParametersStorage : NetworkParametersServiceInternal {
     /**
      * Return parameters epoch for the given parameters hash. Null if there are no parameters for this hash in the storage and we are unable to
      * get them from network map.
@@ -50,7 +49,7 @@ class DBNetworkParametersStorage(
         // TODO It's very inefficient solution (at least at the beginning when node joins without historical data)
         // We could have historic parameters endpoint or always add parameters as an attachment to the transaction.
         private val networkMapClient: NetworkMapClient?
-) : NetworkParametersStorageInternal, HistoricNetworkParameterStorage, SingletonSerializeAsToken() {
+) : NetworkParametersStorage, SingletonSerializeAsToken() {
     private lateinit var trustRoot: X509Certificate
 
     companion object {
