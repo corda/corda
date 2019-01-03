@@ -23,14 +23,14 @@ fun ServiceHub.ledger(
         notary: Party = TestIdentity.fresh("ledger notary").party,
         script: LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter>.() -> Unit
 ): LedgerDSL<TestTransactionDSLInterpreter, TestLedgerDSLInterpreter> {
-    val currentParameters = networkParametersStorage.run {
+    val currentParameters = networkParametersService.run {
         lookup(currentHash) ?: throw IllegalStateException("Current network parameters not found, $currentHash")
 
     }
     if (currentParameters.notaries.none { it.identity == notary }) {
         // Add the notary to the whitelist. Otherwise no constructed transactions will verify.
         val newParameters = currentParameters.addNotary(notary)
-        (networkParametersStorage as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
+        (networkParametersService as MockNetworkParametersStorage).setCurrentParametersUnverified(newParameters)
     }
 
     return withTestSerializationEnvIfNotSet {

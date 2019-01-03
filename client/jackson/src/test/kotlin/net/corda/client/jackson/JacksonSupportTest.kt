@@ -25,7 +25,7 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -96,10 +96,10 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         services = rigorousMock()
         cordappProvider = rigorousMock()
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-        val networkParametersStorage = rigorousMock<NetworkParametersStorage>().also {
+        val networkParametersService = rigorousMock<NetworkParametersService>().also {
             doReturn(networkParameters.serialize().hash).whenever(it).currentHash
         }
-        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
+        doReturn(networkParametersService).whenever(services).networkParametersService
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(networkParameters).whenever(services).networkParameters
         doReturn(attachments).whenever(services).attachments

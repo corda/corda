@@ -34,7 +34,7 @@ class NotaryChangeFlow<out T : ContractState>(
                 inputs.map { it.ref },
                 originalState.state.notary,
                 modification,
-                serviceHub.networkParametersStorage.currentHash
+                serviceHub.networkParametersService.currentHash
         ).build()
 
         val participantKeys = inputs.flatMap { it.state.data.participants }.map { it.owningKey }.toSet()

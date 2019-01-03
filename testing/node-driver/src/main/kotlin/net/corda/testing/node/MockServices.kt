@@ -118,7 +118,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val networkParametersStorage: NetworkParametersStorage = MockNetworkParametersStorage(networkParameters)
+                    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                     override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -295,7 +295,7 @@ open class MockServices private constructor(
     }
 
     override val networkParameters: NetworkParameters
-        get() = networkParametersStorage.run { lookup(currentHash)!! }
+        get() = networkParametersService.run { lookup(currentHash)!! }
 
     final override val attachments = MockAttachmentStorage()
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys) }
@@ -312,12 +312,10 @@ open class MockServices private constructor(
         it.start(initialNetworkParameters.whitelistedContractImplementations)
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
-    override val networkParametersStorage: NetworkParametersStorage = MockNetworkParametersStorage(initialNetworkParameters)
+    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
-        get() {
-            return ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
-        }
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
 
     internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
         return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }

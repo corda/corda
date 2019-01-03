@@ -10,12 +10,11 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.Party
 import net.corda.core.internal.AbstractAttachment
 import net.corda.core.internal.PLATFORM_VERSION
-import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.serialization.serialize
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -40,14 +39,14 @@ class TransactionBuilderTest {
     private val services = rigorousMock<ServicesForResolution>()
     private val contractAttachmentId = SecureHash.randomSHA256()
     private val attachments = rigorousMock<AttachmentStorage>()
-    private val networkParametersStorage = mock<NetworkParametersStorage>()
+    private val networkParametersService = mock<NetworkParametersService>()
 
     @Before
     fun setup() {
         val cordappProvider = rigorousMock<CordappProvider>()
         val networkParameters = testNetworkParameters(minimumPlatformVersion = PLATFORM_VERSION)
-        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
-        doReturn(networkParameters.serialize().hash).whenever(networkParametersStorage).currentHash
+        doReturn(networkParametersService).whenever(services).networkParametersService
+        doReturn(networkParameters.serialize().hash).whenever(networkParametersService).currentHash
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(contractAttachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         doReturn(networkParameters).whenever(services).networkParameters
@@ -78,7 +77,7 @@ class TransactionBuilderTest {
         val wtx = builder.toWireTransaction(services)
         assertThat(wtx.outputs).containsOnly(outputState)
         assertThat(wtx.commands).containsOnly(Command(DummyCommandData, notary.owningKey))
-        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersStorage.currentHash)
+        assertThat(wtx.networkParametersHash).isEqualTo(networkParametersService.currentHash)
     }
 
     @Test

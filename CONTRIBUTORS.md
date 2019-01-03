@@ -212,6 +212,7 @@ see changes to this list.
 * verymahler
 * Viktor Kolomeyko (R3)
 * Vipin Bharathan
+* Vitalij Reicherdt (Commerzbank AG)
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)

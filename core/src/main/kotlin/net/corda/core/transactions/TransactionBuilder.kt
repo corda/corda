@@ -156,7 +156,7 @@ open class TransactionBuilder @JvmOverloads constructor(
                             notary,
                             window,
                             referenceStates,
-                            services.networkParametersStorage.currentHash),
+                            services.networkParametersService.currentHash),
                     privacySalt
             )
         }
