@@ -72,10 +72,10 @@ interface IdentityServiceInternal : IdentityService {
         }
         // Ensure we record the first identity of the same name, first
         val wellKnownCert = identityCertChain.single { CertRole.extract(it)?.isWellKnown ?: false }
-        if (wellKnownCert != identity.certificate) {
+        if (wellKnownCert != identity.certificate && !isNewRandomIdentity) {
             val idx = identityCertChain.lastIndexOf(wellKnownCert)
             val firstPath = X509Utilities.buildCertPath(identityCertChain.slice(idx until identityCertChain.size))
-            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath), isNewRandomIdentity)
+            verifyAndRegisterIdentity(trustAnchor, PartyAndCertificate(firstPath))
         }
         return registerIdentity(identity, isNewRandomIdentity)
     }
