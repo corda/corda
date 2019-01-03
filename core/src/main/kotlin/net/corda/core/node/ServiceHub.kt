@@ -359,7 +359,7 @@ interface ServiceHub : ServicesForResolution {
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
      * @throws IllegalStateException if called outside of a transaction.
-     * @return A new [Connection]
+     * @return A [Connection]
      */
     fun jdbcSession(): Connection
 
