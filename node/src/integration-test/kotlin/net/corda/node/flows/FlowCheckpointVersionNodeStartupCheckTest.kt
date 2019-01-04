@@ -90,18 +90,33 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
-            val uniqueName = "different-jar-hash-test-${UUID.randomUUID()}"
-            val cordapp = defaultCordapp.copy(name = uniqueName)
+            val uniqueWorkflowJarName = "different-jar-hash-test-${UUID.randomUUID()}"
+            val uniqueContractJarName = "contract-$uniqueWorkflowJarName"
+            val defaultWorkflowJar = cordappForClasses(
+                    SendMessageFlow::class.java
+            )
+            val defaultContractJar = cordappForClasses(
+                    MessageState::class.java,
+                    MessageContract::class.java,
+                    MessageSchema::class.java,
+                    MessageSchemaV1::class.java,
+                    Record::class.java
+            )
 
-            val bobBaseDir = createSuspendedFlowInBob(setOf(cordapp))
+            val contractJar = defaultContractJar.copy(name = uniqueContractJarName)
+            val workflowJar = defaultWorkflowJar.copy(name = uniqueWorkflowJarName)
+
+            val bobBaseDir = createSuspendedFlowInBob(setOf(workflowJar, contractJar))
 
             val cordappsDir = bobBaseDir / "cordapps"
-            val cordappJar = cordappsDir.list().single { it.toString().endsWith(".jar") }
+            val cordappJar = cordappsDir.list().single {
+               ! it.toString().contains(uniqueContractJarName) && it.toString().endsWith(".jar")
+            }
             // Make sure we're dealing with right jar
-            assertThat(cordappJar.fileName.toString()).contains(uniqueName)
+            assertThat(cordappJar.fileName.toString()).contains(uniqueWorkflowJarName)
 
             // The name is part of the MANIFEST so changing it is sufficient to change the jar hash
-            val modifiedCordapp = cordapp.copy(name = "${cordapp.name}-modified")
+            val modifiedCordapp = workflowJar.copy(name = "${workflowJar.name}-modified")
             val modifiedCordappJar = CustomCordapp.getJarFile(modifiedCordapp)
             modifiedCordappJar.moveTo(cordappJar, REPLACE_EXISTING)
 
