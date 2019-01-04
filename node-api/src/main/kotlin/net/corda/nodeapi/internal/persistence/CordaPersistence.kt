@@ -64,6 +64,18 @@ private val _contextDatabase = InheritableThreadLocal<CordaPersistence>()
 var contextDatabase: CordaPersistence
     get() = _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
     set(database) = _contextDatabase.set(database)
+
+private val _removeDatabaseAccess = ThreadLocal.withInitial { false }
+fun <T> withoutDatabaseAccess(block: () -> T): T {
+    _removeDatabaseAccess.set(true)
+    try {
+        val result = block()
+        return result
+    } finally {
+        _removeDatabaseAccess.set(false)
+    }
+}
+
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
@@ -115,6 +127,9 @@ class CordaPersistence(
     private val liveTransactions = ConcurrentHashMap<UUID, DatabaseTransaction>()
 
     fun newTransaction(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        if(_removeDatabaseAccess.get()){
+           throw IllegalAccessException("Database access is not allowed in the current context.")
+        }
         val outerTransaction = contextTransactionOrNull
         return DatabaseTransaction(isolation.jdbcValue, contextTransactionOrNull, this).also {
             contextTransactionOrNull = it
