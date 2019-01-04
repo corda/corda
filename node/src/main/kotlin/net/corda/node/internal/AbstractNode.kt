@@ -144,7 +144,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private val notaryLoader = configuration.notary?.let {
-        NotaryLoader(it, configuration.devMode, versionInfo)
+        NotaryLoader(it, versionInfo)
     }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()

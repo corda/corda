@@ -17,7 +17,6 @@ import java.security.PublicKey
 
 class NotaryLoader(
         private val config: NotaryConfig,
-        private val devMode: Boolean,
         versionInfo: VersionInfo
 ) {
     companion object {
@@ -86,13 +85,7 @@ class NotaryLoader(
             val filter = serviceClass
                     .getDeclaredMethod("getSerializationFilter")
                     .invoke(null) as ((Class<*>) -> Boolean)
-            if (devMode) {
-                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. " +
-                        "Note this is only supported in dev mode – a production node will fail to start if serialization filters are used.")
-                SerialFilter.install(filter)
-            } else {
-                throw UnsupportedOperationException("Unable to install a custom Java serialization filter, not in dev mode.")
-            }
+            SerialFilter.install(filter)
         } catch (e: NoSuchMethodException) {
             // No custom serialization filter declared
         }
