@@ -62,32 +62,32 @@ class ANSIProgressRendererTest {
     @Test
     fun `test that steps are rendered appropriately depending on their status`() {
         progressRenderer.render(flowProgressHandle)
+        feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(0, STEP_2_LABEL), Pair(0, STEP_3_LABEL)))
         // The flow is currently at step 3, while step 1 has been completed and step 2 has been skipped.
         indexSubject.onNext(2)
-        feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(0, STEP_2_LABEL), Pair(0, STEP_3_LABEL)))
 
         val captor = argumentCaptor<Ansi>()
-        verify(printWriter).print(captor.capture())
-        assertThat(captor.firstValue.toString()).containsSequence(stepSuccess(STEP_1_LABEL), stepSkipped(STEP_2_LABEL), stepActive(STEP_3_LABEL))
-        verify(printWriter).flush()
+        verify(printWriter, times(2)).print(captor.capture())
+        assertThat(captor.secondValue.toString()).containsSequence(stepSuccess(STEP_1_LABEL), stepSkipped(STEP_2_LABEL), stepActive(STEP_3_LABEL))
+        verify(printWriter, times(2)).flush()
     }
 
     @Test
     fun `changing tree causes correct steps to be marked as done`() {
         progressRenderer.render(flowProgressHandle)
+        feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(1, STEP_2_LABEL), Pair(1, STEP_3_LABEL), Pair(0, STEP_4_LABEL), Pair(0, STEP_5_LABEL)))
         indexSubject.onNext(1)
         indexSubject.onNext(2)
-        feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(1, STEP_2_LABEL), Pair(1, STEP_3_LABEL), Pair(0, STEP_4_LABEL), Pair(0, STEP_5_LABEL)))
 
         val captor = argumentCaptor<Ansi>()
-        verify(printWriter).print(captor.capture())
-        assertThat(captor.firstValue.toString()).containsSequence(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL))
-        verify(printWriter).flush()
+        verify(printWriter, times(3)).print(captor.capture())
+        assertThat(captor.lastValue.toString()).containsSequence(stepSuccess(STEP_1_LABEL), stepSuccess(STEP_2_LABEL), stepActive(STEP_3_LABEL))
+        verify(printWriter, times(3)).flush()
 
         feedSubject.onNext(listOf(Pair(0, STEP_1_LABEL), Pair(0, STEP_4_LABEL), Pair(0, STEP_5_LABEL)))
-        verify(printWriter, times(2)).print(captor.capture())
-        assertThat(captor.thirdValue.toString()).containsSequence(stepSuccess(STEP_1_LABEL))
-        assertThat(captor.thirdValue.toString()).doesNotContain(stepActive(STEP_5_LABEL))
-        verify(printWriter, times(2)).flush()
+        verify(printWriter, times(4)).print(captor.capture())
+        assertThat(captor.lastValue.toString()).containsSequence(stepActive(STEP_1_LABEL))
+        assertThat(captor.lastValue.toString()).doesNotContain(stepActive(STEP_5_LABEL))
+        verify(printWriter, times(4)).flush()
     }
 }
