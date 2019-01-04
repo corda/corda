@@ -1,5 +1,7 @@
 package net.corda.notary.bftsmart
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
@@ -19,6 +21,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.Try
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -26,8 +29,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetNotaryConfig
-import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.internal.*
 import org.hamcrest.Matchers.instanceOf
@@ -80,11 +81,15 @@ class BFTNotaryServiceTests {
             val clusterAddresses = replicaIds.map { NetworkHostAndPort("localhost", 11000 + it * 10) }
 
             val nodes = replicaIds.map { replicaId ->
-                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(
+                mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
+                    val notary = NotaryConfig(
                             validating = false,
-                            extraConfig = BFTSmartConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
+                            bftSMaRt = BFTSmartConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
                             serviceLegalName = serviceLegalName
-                ))))
+                    )
+                    doReturn(notary).whenever(it).notary
+                }))
+
             } + mockNet.createUnstartedNode()
 
             // MockNetwork doesn't support BFT clusters, so we create all the nodes we need unstarted, and then install the
