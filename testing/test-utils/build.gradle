@@ -26,6 +26,7 @@ dependencies {
 
     // OkHTTP: Simple HTTP library.
     compile "com.squareup.okhttp3:okhttp:$okhttp_version"
+    compile project(':confidential-identities') 
 }
 
 jar {
