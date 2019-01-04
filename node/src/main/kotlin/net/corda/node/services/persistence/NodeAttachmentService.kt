@@ -18,6 +18,7 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VE
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
+import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
@@ -29,7 +30,7 @@ import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.NonInvalidatingWeightBasedCache
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
-import net.corda.nodeapi.exceptions.DuplicateContractClass
+import net.corda.nodeapi.exceptions.DuplicateContractClassException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
@@ -333,7 +334,7 @@ class NodeAttachmentService(
                                 isSignedCondition = Builder.equal(jarSigners.isNotEmpty()))
                         )
                         if (existingContractsImplementations.isNotEmpty())
-                            throw DuplicateContractClass(id.toString(), existingContractsImplementations.first().toString(), it, contractVersion, jarSigners.isNotEmpty())
+                            throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
                     }
 
                     val attachment = NodeAttachmentService.DBAttachment(
@@ -459,15 +460,19 @@ class NodeAttachmentService(
             val query = session.createQuery(criteriaQuery)
 
             // execution
-            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it) }.toMap())
+            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap())
         }
     }
 
-    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Version, AttachmentIds> {
-        check(it.value.size <= 2)
-        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }.singleOrNull()
-        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }.singleOrNull()
-        return it.key to AttachmentIds(signed, unsigned)
+    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
+        val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
+        if (signed.size > 1)
+            throw DuplicateContractClassIllegalState(contractClassName, it.key, signed.map { it.toString() })
+        val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
+        if (unsigned.size > 1)
+            throw DuplicateContractClassIllegalState(contractClassName, it.key, unsigned.map { it.toString() })
+
+        return it.key to AttachmentIds(signed.singleOrNull(), unsigned.singleOrNull())
     }
 
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
@@ -481,3 +486,9 @@ class NodeAttachmentService(
         return versions.values.flatMap { it.toList() }.toSet()
     }
 }
+
+/**
+ * Thrown to indicate that a contract class name of the same version if found in the [AttachmentStorage].
+ */
+class DuplicateContractClassIllegalState(contractClassName: String, version: Int, attachmentHashes: List<String>) :
+        Exception("Contract $contractClassName version '$version' is duplicated in attachments $attachmentHashes")

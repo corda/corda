@@ -12,10 +12,10 @@ import net.corda.core.serialization.CordaSerializable
 class DuplicateAttachmentException(attachmentHash: String) : java.nio.file.FileAlreadyExistsException(attachmentHash), ClientRelevantError
 
 /**
- * Thrown to indicate that an contract class name of the same version was already uploaded to a Corda node.
+ * Thrown to indicate that a contract class name of the same version was already uploaded to a Corda node.
  */
-class DuplicateContractClass(attachmentHash: String, otherAttachmentHash: String, contractClassName: String, version: Int, isSigned: Boolean) : java.nio.file.FileAlreadyExistsException(
-        attachmentHash, otherAttachmentHash, "Contract $contractClassName version '$version' of ${if (isSigned) "signed" else "unsigned"} JAR is already present in the attachment $otherAttachmentHash"), ClientRelevantError
+class DuplicateContractClassException(contractClassName: String, version: Int, attachmentHashes: List<String>) :
+        Exception("Contract $contractClassName version '$version' already present in the attachments $attachmentHashes"), ClientRelevantError
 
 /**
  * Thrown to indicate that a flow was not designed for RPC and should be started from an RPC client.

@@ -18,7 +18,7 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
-import net.corda.nodeapi.exceptions.DuplicateContractClass
+import net.corda.nodeapi.exceptions.DuplicateContractClassException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
@@ -332,7 +332,7 @@ class NodeAttachmentServiceTest {
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
 
-            assertThatExceptionOfType(DuplicateContractClass::class.java).isThrownBy {
+            assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
                 anotherContractJar.read { storage.importAttachment(it, "uploaderA", "another-sample.jar") }
             }
         }
@@ -345,7 +345,7 @@ class NodeAttachmentServiceTest {
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
 
-            assertThatExceptionOfType(DuplicateContractClass::class.java).isThrownBy {
+            assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
                 anotherContractJar.read { storage.importAttachment(it, "uploaderB", "another-sample.jar") }
             }
         }
