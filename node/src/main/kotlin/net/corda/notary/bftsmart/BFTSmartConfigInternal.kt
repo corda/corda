@@ -13,7 +13,7 @@ import java.net.SocketException
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-data class BFTSmartConfiguration(
+data class BFTSmartConfig(
         /** The zero-based index of the current replica. All replicas must specify a unique replica id. */
         val replicaId: Int,
         /**
@@ -36,7 +36,7 @@ data class BFTSmartConfiguration(
  * Each instance of this class creates such a configHome, accessible via [path].
  * The files are deleted on [close] typically via [use], see [PathManager] for details.
  */
-class BFTSmartConfig(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSmartConfig>(Files.createTempDirectory("bft-smart-config")) {
+class BFTSmartConfigInternal(private val replicaAddresses: List<NetworkHostAndPort>, debug: Boolean, val exposeRaces: Boolean) : PathManager<BFTSmartConfigInternal>(Files.createTempDirectory("bft-smart-config")) {
     companion object {
         private val log = contextLogger()
         internal const val portIsClaimedFormat = "Port %s is claimed by another replica: %s"

@@ -1,7 +1,7 @@
 package net.corda.notary.bftsmart
 
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.notary.bftsmart.BFTSmartConfig.Companion.portIsClaimedFormat
+import net.corda.notary.bftsmart.BFTSmartConfigInternal.Companion.portIsClaimedFormat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -28,7 +28,7 @@ class BFTSmartConfigTests {
 
     @Test
     fun `overlapping port ranges are rejected`() {
-        fun config(vararg ports: Int) = BFTSmartConfig(ports.map { NetworkHostAndPort("localhost", it) }, false, false)
+        fun config(vararg ports: Int) = BFTSmartConfigInternal(ports.map { NetworkHostAndPort("localhost", it) }, false, false)
         assertThatThrownBy { config(11000, 11001).use {} }
                 .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage(portIsClaimedFormat.format("localhost:11001", setOf("localhost:11000", "localhost:11001")))

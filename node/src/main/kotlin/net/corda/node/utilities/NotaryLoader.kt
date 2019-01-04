@@ -35,7 +35,7 @@ class NotaryLoader(
             // Using a built-in notary
             when {
                 config.bftSMaRt != null -> {
-                    builtInNotary = VirtualCordapp.generateSimpleNotary(versionInfo)
+                    builtInNotary = VirtualCordapp.generateBFTSmartNotary(versionInfo)
                     BFTSmartNotaryService::class.java
                 }
                 config.raft != null -> {
@@ -43,7 +43,7 @@ class NotaryLoader(
                     RaftNotaryService::class.java
                 }
                 else -> {
-                    builtInNotary = VirtualCordapp.generateBFTSmartNotary(versionInfo)
+                    builtInNotary = VirtualCordapp.generateSimpleNotary(versionInfo)
                     SimpleNotaryService::class.java
                 }
             }

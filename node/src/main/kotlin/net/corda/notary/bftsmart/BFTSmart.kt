@@ -79,7 +79,7 @@ object BFTSmart {
         fun waitUntilAllReplicasHaveInitialized()
     }
 
-    class Client(config: BFTSmartConfig, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTSmartNotaryService) : SingletonSerializeAsToken() {
+    class Client(config: BFTSmartConfigInternal, private val clientId: Int, private val cluster: Cluster, private val notaryService: BFTSmartNotaryService) : SingletonSerializeAsToken() {
         companion object {
             private val log = contextLogger()
         }
@@ -176,7 +176,7 @@ object BFTSmart {
      *
      * The validation logic can be specified by implementing the [executeCommand] method.
      */
-    abstract class Replica(config: BFTSmartConfig,
+    abstract class Replica(config: BFTSmartConfigInternal,
                            replicaId: Int,
                            createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash,
                                    BFTSmartNotaryService.CommittedState, PersistentStateRef>,

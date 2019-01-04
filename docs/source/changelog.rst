@@ -104,33 +104,7 @@ Version 4.0
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
-* BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
-  their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
-
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
-
-* UPGRADE REQUIRED: changes have been made to how notary implementations are configured and loaded.
-  No upgrade steps are required for the single-node notary (both validating and non-validating variants).
-  Other notary implementations have been moved out of the Corda node into individual Cordapps, and require configuration
-  file updates.
-
-  To run a notary you will now need to include the appropriate notary CorDapp in the ``cordapps/`` directory:
-
-    * ``corda-notary-raft`` for the Raft notary.
-    * ``corda-notary-bft-smart`` for the BFT-Smart notary.
-
-  It is now required to specify the fully qualified notary service class name, ``className``, and the legal name of
-  the notary service in case of distributed notaries: ``serviceLegalName``.
-
-  Implementation-specific configuration values have been moved to the ``extraConfig`` configuration block.
-
-  Example configuration changes for the Raft notary:
-
-  .. image:: resources/notary-config-update.png
-
-  Example configuration changes for the BFT-Smart notary:
-
-  .. image:: resources/notary-config-update-bft.png
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 

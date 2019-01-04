@@ -22,7 +22,6 @@ import net.corda.core.utilities.unwrap
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
-import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
 import javax.persistence.Entity
@@ -56,14 +55,12 @@ class BFTSmartNotaryService(
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${BFTSmartNotaryService::class.java}: notary configuration not present")
 
-    private val bftSMaRtConfig = try {
-        notaryConfig.bftSMaRt!!.parseAs<BFTSmartConfiguration>()
-    } catch (e: Exception) {
-        throw IllegalArgumentException("Failed to register ${BFTSmartNotaryService::class.java}: BFT-Smart configuration not present")
-    }
+    private val bftSMaRtConfig = notaryConfig.bftSMaRt
+            ?: throw IllegalArgumentException("Failed to register ${BFTSmartNotaryService::class.java}: BFT-Smart configuration not present")
+
     private val cluster: BFTSmart.Cluster = makeBFTCluster(notaryIdentityKey, bftSMaRtConfig)
 
-    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSmartConfiguration): BFTSmart.Cluster {
+    protected open fun makeBFTCluster(notaryKey: PublicKey, bftSMaRtConfig: BFTSmartConfig): BFTSmart.Cluster {
         return object : BFTSmart.Cluster {
             override fun waitUntilAllReplicasHaveInitialized() {
                 log.warn("A BFT replica may still be initializing, in which case the upcoming consensus change may cause it to spin.")
@@ -75,7 +72,7 @@ class BFTSmartNotaryService(
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        client = BFTSmartConfig(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
+        client = BFTSmartConfigInternal(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
             val replicaId = bftSMaRtConfig.replicaId
             val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
@@ -152,7 +149,7 @@ class BFTSmartNotaryService(
         )
     }
 
-    private class Replica(config: BFTSmartConfig,
+    private class Replica(config: BFTSmartConfigInternal,
                           replicaId: Int,
                           createMap: () -> AppendOnlyPersistentMap<StateRef, SecureHash, CommittedState, PersistentStateRef>,
                           services: ServiceHubInternal,

@@ -1,13 +1,12 @@
 package net.corda.notary.raft
 
 import net.corda.core.flows.FlowSession
-import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.internal.notary.NotaryServiceFlow
+import net.corda.core.internal.notary.SinglePartyNotaryService
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
-import net.corda.nodeapi.internal.config.parseAs
 import java.security.PublicKey
 
 /** A highly available notary service using the Raft algorithm to achieve consensus. */
@@ -19,11 +18,9 @@ class RaftNotaryService(
             ?: throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: notary configuration not present")
 
     override val uniquenessProvider = with(services) {
-        val raftConfig = try {
-            notaryConfig.raft!!.parseAs<RaftConfig>()
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: raft configuration not present")
-        }
+        val raftConfig = notaryConfig.raft
+                ?: throw IllegalArgumentException("Failed to register ${RaftNotaryService::class.java}: raft configuration not present")
+
         RaftUniquenessProvider(
                 configuration.baseDirectory,
                 configuration.p2pSslOptions,

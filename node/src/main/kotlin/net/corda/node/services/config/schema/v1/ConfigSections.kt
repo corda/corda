@@ -43,6 +43,8 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.nodeapi.internal.persistence.SchemaInitializationType
+import net.corda.notary.bftsmart.BFTSmartConfig
+import net.corda.notary.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {
@@ -168,13 +170,34 @@ internal object NotaryConfigSpec : Configuration.Specification<NotaryConfig>("No
     private val className by string().optional()
     private val etaMessageThresholdSeconds by int().optional().withDefaultValue(NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt())
     private val extraConfig by nestedObject().map(ConfigObject::toConfig).optional()
-    private val raft by nestedObject().map(ConfigObject::toConfig).optional()
-    private val bftSMaRt by nestedObject().map(ConfigObject::toConfig).optional()
+    private val raft by nested(RaftConfigSpec).optional()
+    private val bftSMaRt by nested(BFTSmartConfigSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<NotaryConfig> {
         return valid(NotaryConfig(configuration[validating], configuration[serviceLegalName], configuration[className], configuration[etaMessageThresholdSeconds], configuration[extraConfig], configuration[raft], configuration[bftSMaRt]))
     }
 }
+
+internal object RaftConfigSpec : Configuration.Specification<RaftConfig>("RaftConfig") {
+    private val nodeAddress by string().mapValid(::toNetworkHostAndPort)
+    private val clusterAddresses by string().mapValid(::toNetworkHostAndPort).listOrEmpty()
+
+    override fun parseValid(configuration: Config): Valid<RaftConfig> {
+        return valid(RaftConfig(configuration[nodeAddress], configuration[clusterAddresses]))
+    }
+}
+
+internal object BFTSmartConfigSpec : Configuration.Specification<BFTSmartConfig>("BFTSmartConfig") {
+    private val replicaId by int()
+    private val clusterAddresses by string().mapValid(::toNetworkHostAndPort).listOrEmpty()
+    private val debug by boolean().optional().withDefaultValue(false)
+    private val exposeRaces by boolean().optional().withDefaultValue(false)
+
+    override fun parseValid(configuration: Config): Valid<BFTSmartConfig> {
+        return valid(BFTSmartConfig(configuration[replicaId], configuration[clusterAddresses], configuration[debug], configuration[exposeRaces]))
+    }
+}
+
 
 internal object NodeRpcSettingsSpec : Configuration.Specification<NodeRpcSettings>("NodeRpcSettings") {
     internal object BrokerRpcSslOptionsSpec : Configuration.Specification<BrokerRpcSslOptions>("BrokerRpcSslOptions") {

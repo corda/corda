@@ -23,7 +23,6 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
-import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -55,7 +54,7 @@ class BFTNotaryServiceTests {
         @BeforeClass
         @JvmStatic
         fun before() {
-            mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.notary.bftsmart"))
+            mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"))
             val clusterSize = minClusterSize(1)
             val started = startBftClusterAndNode(clusterSize, mockNet)
             notary = started.first
@@ -84,7 +83,7 @@ class BFTNotaryServiceTests {
                 mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
                     val notary = NotaryConfig(
                             validating = false,
-                            bftSMaRt = BFTSmartConfiguration(replicaId, clusterAddresses, exposeRaces = exposeRaces).toConfig(),
+                            bftSMaRt = BFTSmartConfig(replicaId, clusterAddresses, exposeRaces = exposeRaces),
                             serviceLegalName = serviceLegalName
                     )
                     doReturn(notary).whenever(it).notary
