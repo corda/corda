@@ -4,6 +4,7 @@ import co.paralleluniverse.strands.Strand
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import org.hibernate.tool.schema.spi.SchemaManagementException
 import rx.Observable
 import rx.Subscriber
 import rx.subjects.UnicastSubject
@@ -81,7 +82,14 @@ class CordaPersistence(
     private val defaultIsolationLevel = databaseConfig.transactionIsolationLevel
     val hibernateConfig: HibernateConfiguration by lazy {
         transaction {
-            HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+            try {
+                HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
+            } catch (e: Exception) {
+                when (e) {
+                    is SchemaManagementException -> throw DatabaseIncompatibleException(e.message!!)
+                    else -> throw e
+                }
+            }
         }
     }
 
