@@ -28,6 +28,7 @@ dependencies {
     deterministicLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
+    deterministicLibraries "io.netty:netty-common:$netty_version"
 }
 
 jar {
