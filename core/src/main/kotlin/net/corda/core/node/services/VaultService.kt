@@ -390,8 +390,11 @@ interface VaultService {
      *
      * @throws VaultQueryException if the query cannot be executed for any reason.
      *
-     * Notes: the snapshot part of the query adheres to the same behaviour as the [queryBy] function.
-     *        the [QueryCriteria] applies to both snapshot and deltas (streaming updates).
+     * Notes:
+     *    - The snapshot part of the query adheres to the same behaviour as the [queryBy] function.
+     *    - The update part of the query currently only supports query criteria filtering by contract
+     *      type(s) and state status(es). CID-731 <https://r3-cev.atlassian.net/browse/CID-731> proposes
+     *      adding the complete set of [QueryCriteria] filtering.
      */
     @Throws(VaultQueryException::class)
     fun <T : ContractState> _trackBy(criteria: QueryCriteria,

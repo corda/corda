@@ -37,10 +37,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.util.*
@@ -856,5 +853,44 @@ class NodeVaultServiceTest {
         assertEquals(1, database.transaction {
             vaultService.queryBy<DummyDealContract.State>().states.size
         })
+    }
+
+    @Test
+    @Ignore
+    fun `trackByCriteria filters updates and snapshots`() {
+        /*
+         * This test is ignored as the functionality it tests is not yet implemented - see CORDA-2389
+         */
+        fun addCashToVault() {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
+            }
+        }
+
+        fun addDummyToVault() {
+            database.transaction {
+                vaultFiller.fillWithDummyState()
+            }
+        }
+        addCashToVault()
+        addDummyToVault()
+        val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java))
+        val data = vaultService.trackBy<ContractState>(criteria)
+        for (state in data.snapshot.states) {
+            assertEquals(Cash.PROGRAM_ID, state.state.contract)
+        }
+
+        val allCash = data.updates.all {
+            it.produced.all {
+                it.state.contract == Cash.PROGRAM_ID
+            }
+        }
+
+        addCashToVault()
+        addDummyToVault()
+        addCashToVault()
+        allCash.subscribe {
+            assertTrue(it)
+        }
     }
 }
