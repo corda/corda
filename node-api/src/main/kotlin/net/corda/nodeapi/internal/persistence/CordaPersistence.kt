@@ -86,8 +86,8 @@ class CordaPersistence(
                 HibernateConfiguration(schemas, databaseConfig, attributeConverters, jdbcUrl, cacheFactory, customClassLoader)
             } catch (e: Exception) {
                 when (e) {
-                    is SchemaManagementException -> throw DatabaseIncompatibleException(e.message!!)
-                    else -> throw e
+                    is SchemaManagementException -> throw HibernateSchemaChangeException("Incompatible schema change detected. Please run the node with database.initialiseSchema=true. Reason: ${e.message}", e)
+                    else -> throw HibernateConfigException("Could not create Hibernate configuration: ${e.message}", e)
                 }
             }
         }
@@ -324,3 +324,7 @@ private fun Throwable.hasSQLExceptionCause(): Boolean =
         }
 
 class CouldNotCreateDataSourceException(override val message: String?, override val cause: Throwable? = null) : Exception()
+
+class HibernateSchemaChangeException(override val message: String?, override val cause: Throwable? = null): Exception()
+
+class HibernateConfigException(override val message: String?, override val cause: Throwable? = null): Exception()
