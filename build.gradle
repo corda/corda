@@ -366,7 +366,6 @@ bintrayConfig {
             'corda-finance',    // maintained for backwards compatibility only
             'corda-finance-workflows',
             'corda-finance-contracts',
-            'corda-finance-test-contracts',
             'corda-node',
             'corda-node-api',
             'corda-test-common',
