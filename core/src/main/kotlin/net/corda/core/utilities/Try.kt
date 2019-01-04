@@ -3,6 +3,7 @@ package net.corda.core.utilities
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
+import java.util.function.Consumer
 
 /**
  * Representation of an operation that has either succeeded with a result (represented by [Success]) or failed with an
@@ -12,15 +13,16 @@ import net.corda.core.serialization.CordaSerializable
 sealed class Try<out A> {
     companion object {
         /**
-         * Executes the given block of code and returns a [Success] capturing the result, or a [Failure] if an exception
-         * is thrown.
+         * Executes the given block of code and returns a [Success] capturing the result, or a [Failure] if a [Throwable] is thrown.
+         *
+         * It is recommended this be chained with [throwError] to ensure critial [Error]s are thrown and not captured.
          */
         @JvmStatic
         inline fun <T> on(body: () -> T): Try<T> {
             return try {
                 Success(body())
-            } catch (e: Exception) {
-                Failure(e)
+            } catch (t: Throwable) {
+                Failure(t)
             }
         }
     }
@@ -33,6 +35,15 @@ sealed class Try<out A> {
 
     /** Returns the value if a [Success] otherwise throws the exception if a [Failure]. */
     abstract fun getOrThrow(): A
+
+    /** If this is a [Failure] wrapping an [Error] then throw it, otherwise return `this` for chaining. */
+    fun throwError(): Try<A> {
+        if (this is Failure && exception is Error) {
+            throw exception
+        } else {
+            return this
+        }
+    }
 
     /** Maps the given function to the value from this [Success], or returns `this` if this is a [Failure]. */
     inline fun <B> map(function: (A) -> B): Try<B> = when (this) {
@@ -59,32 +70,19 @@ sealed class Try<out A> {
     }
 
     /** Applies the given action to the value if [Success], or does nothing if [Failure]. Returns `this` for chaining. */
-    fun doOnSuccess(action: (A) -> Unit): Try<A> {
-        when (this) {
-            is Success -> action.invoke(value)
-            is Failure -> {}
+    fun doOnSuccess(action: Consumer<in A>): Try<A> {
+        if (this is Success) {
+            action.accept(value)
         }
         return this
     }
 
     /** Applies the given action to the error if [Failure], or does nothing if [Success]. Returns `this` for chaining. */
-    fun doOnFailure(action: (Throwable) -> Unit): Try<A> {
-        when (this) {
-            is Success -> {}
-            is Failure -> action.invoke(exception)
+    fun doOnFailure(action: Consumer<Throwable>): Try<A> {
+        if (this is Failure) {
+            action.accept(exception)
         }
         return this
-    }
-
-    /** Applies the given action to the exception if [Failure], rethrowing [Error]s. Does nothing if [Success]. Returns `this` for chaining. */
-    fun doOnException(action: (Exception) -> Unit): Try<A> {
-        return doOnFailure { error ->
-            if (error is Exception) {
-                action.invoke(error)
-            } else {
-                throw error
-            }
-        }
     }
 
     @KeepForDJVM

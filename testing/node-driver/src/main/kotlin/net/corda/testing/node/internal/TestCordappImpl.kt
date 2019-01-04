@@ -13,12 +13,12 @@ import kotlin.streams.toList
 /**
  * Implementation of the public [TestCordapp] API.
  *
- * As described in [TestCordapp.Factory.findCordapp], this represents a single CorDapp jar on the current classpath. The [scanPackage] may
+ * As described in [TestCordapp.findCordapp], this represents a single CorDapp jar on the current classpath. The [scanPackage] may
  * be for an external dependency to the project that's using this API, in which case that dependency jar is referenced as is. On the other hand,
  * the [scanPackage] may reference a gradle CorDapp project on the local system. In this scenerio the project's "jar" task is executed to
  * build the CorDapp jar. This allows us to inherit the CorDapp's MANIFEST information without having to do any extra processing.
  */
-data class TestCordappImpl(override val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal {
+data class TestCordappImpl(override val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal() {
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
     override fun withOnlyJarContents(): TestCordappImpl = copy(config = emptyMap())
@@ -27,9 +27,11 @@ data class TestCordappImpl(override val scanPackage: String, override val config
         get() {
             val jars = TestCordappImpl.findJars(scanPackage)
             when (jars.size) {
-                0 -> throw IllegalArgumentException("Package $scanPackage does not exist")
+                0 -> throw IllegalArgumentException("There are no CorDapps containing the package $scanPackage on the classpath. Make sure " +
+                        "the package name is correct and that the CorDapp is added as a gradle dependency.")
                 1 -> return jars.first()
-                else -> throw IllegalArgumentException("More than one jar found containing package $scanPackage: $jars")
+                else -> throw IllegalArgumentException("There is more than one CorDapp containing the package $scanPackage on the classpath " +
+                        "$jars. Specify a package name which is unique to the CorDapp.")
             }
         }
 

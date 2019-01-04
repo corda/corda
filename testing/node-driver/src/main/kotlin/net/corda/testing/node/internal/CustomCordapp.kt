@@ -32,7 +32,7 @@ data class CustomCordapp(
         val classes: Set<Class<*>> = emptySet(),
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
-) : TestCordappInternal {
+) : TestCordappInternal() {
     init {
         require(packages.isNotEmpty() || classes.isNotEmpty()) { "At least one package or class must be specified" }
     }

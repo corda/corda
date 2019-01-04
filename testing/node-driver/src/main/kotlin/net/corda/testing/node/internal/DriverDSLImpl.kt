@@ -52,6 +52,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -763,13 +764,21 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
+            // This excludes the samples and the finance module from the system classpath of the out of process nodes
+            // as they will be added to the cordapps folder.
+            val exclude = listOf("samples", "finance")
+            val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
+                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token${File.separatorChar}") }
+            }
+
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments,
                     workingDirectory = config.corda.baseDirectory,
-                    maximumHeapSize = maximumHeapSize
+                    maximumHeapSize = maximumHeapSize,
+                    classPath = cp
             )
         }
 

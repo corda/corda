@@ -16,6 +16,7 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.transactions.*
 import net.corda.core.utilities.*
+import net.corda.node.cordapp.CordappLoader
 import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
@@ -57,7 +58,8 @@ class NodeVaultService(
         private val keyManagementService: KeyManagementService,
         private val servicesForResolution: ServicesForResolution,
         private val database: CordaPersistence,
-        private val schemaService: SchemaService
+        private val schemaService: SchemaService,
+        private val appClassloader: ClassLoader
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
     private companion object {
         private val log = contextLogger()
@@ -637,7 +639,7 @@ class NodeVaultService(
         val unknownTypes = mutableSetOf<String>()
         distinctTypes.forEach { type ->
             val concreteType: Class<ContractState>? = try {
-                uncheckedCast(Class.forName(type))
+                uncheckedCast(Class.forName(type, true, appClassloader))
             } catch (e: ClassNotFoundException) {
                 unknownTypes += type
                 null
