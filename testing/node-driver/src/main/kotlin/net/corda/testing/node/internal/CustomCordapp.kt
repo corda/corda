@@ -1,12 +1,16 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
+import io.github.classgraph.ClassInfo
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
-import net.corda.core.flows.FlowLogic
+import net.corda.core.contracts.UpgradedContract
+import net.corda.core.contracts.UpgradedContractWithLegacyConstraint
+import net.corda.core.flows.*
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.node.services.CordaService
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -63,26 +67,36 @@ data class CustomCordapp(
                 .disableJarScanning()
                 .overrideClasspath(classPath)
                 .ignoreParentClassLoaders()
+                .enableAllInfo()
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
                 .scan()
 
         scanResult.use {
+            val relevantClasses = listOf(
+                    scanResult.getClassesWithAnnotation(CordaService::class.java.name),
+                    scanResult.getClassesWithAnnotation(InitiatedBy::class.java.name),
+                    scanResult.getClassesWithAnnotation(InitiatingFlow::class.java.name),
+                    scanResult.getClassesWithAnnotation(StartableByRPC::class.java.name),
+                    scanResult.getClassesWithAnnotation(StartableByService::class.java.name),
+                    scanResult.getClassesWithAnnotation(SchedulableFlow::class.java.name),
+                    scanResult.getClassesImplementing(Contract::class.java.name),
+                    scanResult.getClassesImplementing(UpgradedContract::class.java.name),
+                    scanResult.getClassesImplementing(UpgradedContractWithLegacyConstraint::class.java.name),
+                    scanResult.getClassesImplementing(ContractState::class.java.name),
+                    scanResult.getSubclasses(MappedSchema::class.java.name)
+            ).flatten()
+            val relevantPaths = relevantClasses.map { it.name.replace(".", "/") + ".class" }.toSet()
+
             JarOutputStream(file.outputStream()).use { jos ->
                 jos.addEntry(testEntry(JarFile.MANIFEST_NAME)) {
                     createTestManifest(name, versionId, targetPlatformVersion).write(jos)
                 }
 
-                val relevantClasses = scanResult.getSubclasses(FlowLogic::class.java.name).toMutableList()
-                relevantClasses.addAll(scanResult.getSubclasses(Contract::class.java.name))
-                relevantClasses.addAll(scanResult.getSubclasses(ContractState::class.java.name))
-                relevantClasses.addAll(scanResult.getSubclasses(MappedSchema::class.java.name))
-
-                val relevantPaths = relevantClasses.map { it.name.replace(".", "/") + ".class" }
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
                 // pick the first one found.
                 scanResult.allResources.asMap().forEach { path, resourceList ->
-                    if(path in relevantPaths){
+                    if (path in relevantPaths) {
                         jos.addEntry(testEntry(path), resourceList[0].open())
                     }
                 }
@@ -117,9 +131,9 @@ data class CustomCordapp(
         // Mandatory manifest attribute. If not present, all other entries are silently skipped.
         manifest[Attributes.Name.MANIFEST_VERSION] = "1.0"
 
-        manifest[CordappImpl.CORDAPP_CONTRACT_NAME]  = name
+        manifest[CordappImpl.CORDAPP_CONTRACT_NAME] = name
         manifest[CordappImpl.CORDAPP_CONTRACT_VERSION] = versionId.toString()
-        manifest[CordappImpl.CORDAPP_WORKFLOW_NAME]  = name
+        manifest[CordappImpl.CORDAPP_WORKFLOW_NAME] = name
         manifest[CordappImpl.CORDAPP_WORKFLOW_VERSION] = versionId.toString()
         manifest[CordappImpl.TARGET_PLATFORM_VERSION] = targetPlatformVersion.toString()
 
