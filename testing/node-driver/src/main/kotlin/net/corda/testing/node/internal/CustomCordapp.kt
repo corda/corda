@@ -1,13 +1,18 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
+import net.corda.core.contracts.Contract
+import net.corda.core.contracts.ContractState
+import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.cordapp.set
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.JarSignatureTestUtils.signJar
+import java.net.URLClassLoader
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.FileTime
@@ -51,7 +56,13 @@ data class CustomCordapp(
     internal fun packageAsJar(file: Path) {
         val classGraph = ClassGraph()
         classes.forEach { classGraph.addClassLoader(it.classLoader) }
+        val classLoader = (this::class.java.classLoader as URLClassLoader)
+        val classPath = classLoader.urLs.filterNot { it.toExternalForm().contains("production") }
+                .filterNot { it.toExternalForm().endsWith(".jar") }.map { it.toPath() }
         val scanResult = classGraph
+                .disableJarScanning()
+                .overrideClasspath(classPath)
+                .ignoreParentClassLoaders()
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
                 .scan()
@@ -62,10 +73,18 @@ data class CustomCordapp(
                     createTestManifest(name, versionId, targetPlatformVersion).write(jos)
                 }
 
+                val relevantClasses = scanResult.getSubclasses(FlowLogic::class.java.name).toMutableList()
+                relevantClasses.addAll(scanResult.getSubclasses(Contract::class.java.name))
+                relevantClasses.addAll(scanResult.getSubclasses(ContractState::class.java.name))
+                relevantClasses.addAll(scanResult.getSubclasses(MappedSchema::class.java.name))
+
+                val relevantPaths = relevantClasses.map { it.name.replace(".", "/") + ".class" }
                 // The same resource may be found in different locations (this will happen when running from gradle) so just
                 // pick the first one found.
                 scanResult.allResources.asMap().forEach { path, resourceList ->
-                    jos.addEntry(testEntry(path), resourceList[0].open())
+                    if(path in relevantPaths){
+                        jos.addEntry(testEntry(path), resourceList[0].open())
+                    }
                 }
             }
         }
