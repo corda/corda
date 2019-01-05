@@ -61,14 +61,14 @@ data class CustomCordapp(
         val classGraph = ClassGraph()
         classes.forEach { classGraph.addClassLoader(it.classLoader) }
         val classLoader = (this::class.java.classLoader as URLClassLoader)
-        val classPath = classLoader.urLs.filterNot { it.toExternalForm().contains("production") }
+        val classPath = classLoader.urLs.filterNot { it.toExternalForm().contains("production") && !it.toExternalForm().contains("finance") }
                 .filterNot { it.toExternalForm().endsWith(".jar") }.map { it.toPath() }
         val scanResult = classGraph
                 .disableJarScanning()
                 .overrideClasspath(classPath)
                 .ignoreParentClassLoaders()
                 .enableAllInfo()
-                .whitelistPackages(*packages.toTypedArray())
+                .whitelistPackages(*packages.map { "${it}.*" }.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
                 .scan()
 
