@@ -1,4 +1,4 @@
-package net.corda.notary.raft
+package net.corda.notary.experimental.raft
 
 import io.atomix.catalyst.transport.Address
 import io.atomix.copycat.client.ConnectionStrategies
@@ -17,6 +17,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.experimental.raft.RaftNotarySchemaV1
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.driver.internal.incrementalPortAllocation

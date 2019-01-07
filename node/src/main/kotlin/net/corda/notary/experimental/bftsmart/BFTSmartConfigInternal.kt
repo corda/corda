@@ -1,4 +1,4 @@
-package net.corda.notary.bftsmart
+package net.corda.notary.experimental.bftsmart
 
 import net.corda.core.internal.div
 import net.corda.core.internal.writer

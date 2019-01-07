@@ -1,4 +1,4 @@
-package net.corda.notary.bftsmart
+package net.corda.notary.experimental.bftsmart
 
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
@@ -24,6 +24,9 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.notary.experimental.bftsmart.BFTSmartConfig
+import net.corda.notary.experimental.bftsmart.minClusterSize
+import net.corda.notary.experimental.bftsmart.minCorrectReplicas
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand

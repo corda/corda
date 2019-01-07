@@ -1,4 +1,4 @@
-package net.corda.notary.raft
+package net.corda.notary.experimental.raft
 
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.notary.NotaryServiceFlow

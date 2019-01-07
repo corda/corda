@@ -1,4 +1,4 @@
-package net.corda.notary.bftsmart
+package net.corda.notary.experimental.bftsmart
 
 import bftsmart.communication.ServerCommunicationSystem
 import bftsmart.communication.client.netty.NettyClientServerCommunicationSystemClientSide
@@ -37,8 +37,8 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.notary.bftsmart.BFTSmart.Client
-import net.corda.notary.bftsmart.BFTSmart.Replica
+import net.corda.notary.experimental.bftsmart.BFTSmart.Client
+import net.corda.notary.experimental.bftsmart.BFTSmart.Replica
 import java.nio.file.Path
 import java.security.PublicKey
 import java.util.*
@@ -203,7 +203,7 @@ object BFTSmart {
         private val replica = run {
             config.waitUntilReplicaWillNotPrintStackTrace(replicaId)
             @Suppress("LeakingThis")
-            CordaServiceReplica(replicaId, config.path, this)
+            (CordaServiceReplica(replicaId, config.path, this))
         }
 
         fun dispose() {

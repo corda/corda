@@ -1,4 +1,4 @@
-package net.corda.notary.raft
+package net.corda.notary.experimental.raft
 
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef

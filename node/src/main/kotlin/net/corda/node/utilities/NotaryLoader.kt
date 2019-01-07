@@ -11,8 +11,8 @@ import net.corda.node.internal.cordapp.VirtualCordapp
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.notary.bftsmart.BFTSmartNotaryService
-import net.corda.notary.raft.RaftNotaryService
+import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
+import net.corda.notary.experimental.raft.RaftNotaryService
 import java.security.PublicKey
 
 class NotaryLoader(

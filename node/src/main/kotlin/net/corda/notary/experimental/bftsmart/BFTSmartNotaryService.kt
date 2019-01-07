@@ -1,4 +1,4 @@
-package net.corda.notary.bftsmart
+package net.corda.notary.experimental.bftsmart
 
 import co.paralleluniverse.fibers.Suspendable
 import com.google.common.util.concurrent.SettableFuture
@@ -72,7 +72,8 @@ class BFTSmartNotaryService(
     private val replicaHolder = SettableFuture.create<Replica>()
 
     init {
-        client = BFTSmartConfigInternal(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces).use {
+        client = BFTSmartConfigInternal(bftSMaRtConfig.clusterAddresses, bftSMaRtConfig.debug, bftSMaRtConfig.exposeRaces)
+                .use {
             val replicaId = bftSMaRtConfig.replicaId
             val configHandle = it.handle()
             // Replica startup must be in parallel with other replicas, otherwise the constructor may not return:
@@ -83,7 +84,7 @@ class BFTSmartNotaryService(
                     log.info("BFT SMaRt replica $replicaId is running.")
                 }
             }
-            BFTSmart.Client(it, replicaId, cluster, this)
+                    BFTSmart.Client(it, replicaId, cluster, this)
         }
     }
 

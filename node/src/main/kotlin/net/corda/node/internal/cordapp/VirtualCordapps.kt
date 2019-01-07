@@ -8,10 +8,10 @@ import net.corda.core.internal.location
 import net.corda.node.VersionInfo
 import net.corda.node.services.transactions.NodeNotarySchemaV1
 import net.corda.node.services.transactions.SimpleNotaryService
-import net.corda.notary.bftsmart.BFTSmartNotarySchemaV1
-import net.corda.notary.bftsmart.BFTSmartNotaryService
-import net.corda.notary.raft.RaftNotarySchemaV1
-import net.corda.notary.raft.RaftNotaryService
+import net.corda.notary.experimental.bftsmart.BFTSmartNotarySchemaV1
+import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
+import net.corda.notary.experimental.raft.RaftNotarySchemaV1
+import net.corda.notary.experimental.raft.RaftNotaryService
 
 internal object VirtualCordapp {
     /** A list of the core RPC flows present in Corda */

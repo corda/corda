@@ -43,8 +43,8 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.nodeapi.internal.persistence.SchemaInitializationType
-import net.corda.notary.bftsmart.BFTSmartConfig
-import net.corda.notary.raft.RaftConfig
+import net.corda.notary.experimental.bftsmart.BFTSmartConfig
+import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
 
 internal object UserSpec : Configuration.Specification<User>("User") {

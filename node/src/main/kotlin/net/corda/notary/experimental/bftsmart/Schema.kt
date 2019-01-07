@@ -1,19 +1,19 @@
-package net.corda.notary.raft
+package net.corda.notary.experimental.bftsmart
 
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.transactions.PersistentUniquenessProvider
 
-object RaftNotarySchema
+object BFTSmartNotarySchema
 
-object RaftNotarySchemaV1 : MappedSchema(
-        schemaFamily = RaftNotarySchema.javaClass,
+object BFTSmartNotarySchemaV1 : MappedSchema(
+        schemaFamily = BFTSmartNotarySchema.javaClass,
         version = 1,
         mappedTypes = listOf(
                 PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
-                RaftUniquenessProvider.CommittedState::class.java
+                BFTSmartNotaryService.CommittedState::class.java
         )
 ) {
     override val migrationResource: String?
-        get() = "notary-raft.changelog-master"
+        get() = "notary-bft-smart.changelog-master"
 }

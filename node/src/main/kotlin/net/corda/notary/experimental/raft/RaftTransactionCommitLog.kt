@@ -1,4 +1,4 @@
-package net.corda.notary.raft
+package net.corda.notary.experimental.raft
 
 import io.atomix.catalyst.buffer.BufferInput
 import io.atomix.catalyst.buffer.BufferOutput
