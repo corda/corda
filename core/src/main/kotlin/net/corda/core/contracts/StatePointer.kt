@@ -49,7 +49,7 @@ sealed class StatePointer<T : ContractState> {
  * - The [ContractState] may not be known by the node performing the look-up in which case the [resolve] method will
  *   throw a [TransactionResolutionException]
  */
-data class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
+class StaticPointer<T : ContractState>(override val pointer: StateRef, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [StaticPointer] to a [StateAndRef] via a [StateRef] look-up.
      */
@@ -65,6 +65,19 @@ data class StaticPointer<T : ContractState>(override val pointer: StateRef, over
     override fun resolve(ltx: LedgerTransaction): StateAndRef<T> {
         return ltx.referenceInputRefsOfType(type).single { pointer == it.ref }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StaticPointer<*>) return false
+
+        if (pointer != other.pointer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return pointer.hashCode()
+    }
 }
 
 /**
@@ -79,7 +92,7 @@ data class StaticPointer<T : ContractState>(override val pointer: StateRef, over
  *   then the transaction with such a reference state cannot be committed to the ledger until the most up-to-date version
  *   of the [LinearState] is available. See reference states documentation on docs.corda.net for more info.
  */
-data class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
+class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, override val type: Class<T>) : StatePointer<T>() {
     /**
      * Resolves a [LinearPointer] using the [UniqueIdentifier] contained in the [pointer] property. Returns a
      * [StateAndRef] containing the latest version of the [LinearState] that the node calling [resolve] is aware of.
@@ -117,5 +130,18 @@ data class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier
 
     override fun resolve(ltx: LedgerTransaction): StateAndRef<T> {
         return ltx.referenceInputRefsOfType(type).single { pointer == it.state.data.linearId }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is LinearPointer<*>) return false
+
+        if (pointer != other.pointer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return pointer.hashCode()
     }
 }
