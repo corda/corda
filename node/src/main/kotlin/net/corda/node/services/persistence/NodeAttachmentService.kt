@@ -333,8 +333,12 @@ class NodeAttachmentService(
                                 versionCondition = Builder.equal(contractVersion),
                                 isSignedCondition = Builder.equal(jarSigners.isNotEmpty()))
                         )
-                        if (existingContractsImplementations.isNotEmpty())
-                            throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
+                        if (existingContractsImplementations.isNotEmpty()) {
+                            if (jarSigners.isNotEmpty())
+                                throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
+                            else
+                                log.warn("Importing contract $it version '$contractVersion' from unsigned attachment which is already present in unsigned attachment(s) $existingContractsImplementations")
+                        }
                     }
 
                     val attachment = NodeAttachmentService.DBAttachment(
@@ -443,7 +447,8 @@ class NodeAttachmentService(
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC)))
         database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
@@ -470,9 +475,8 @@ class NodeAttachmentService(
             throw DuplicateContractClassIllegalState(contractClassName, it.key, signed.map { it.toString() })
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
         if (unsigned.size > 1)
-            throw DuplicateContractClassIllegalState(contractClassName, it.key, unsigned.map { it.toString() })
-
-        return it.key to AttachmentIds(signed.singleOrNull(), unsigned.singleOrNull())
+            log.warn("Selecting the most recent contract $contractClassName version '${it.key}' from duplicated, unsigned attachments ${unsigned.map { it.toString() }}")
+        return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
     }
 
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
