@@ -163,6 +163,7 @@ class BridgeArtemisConnectionServiceImpl(val conf: FirewallConfiguration,
                 stateHelper.active = false
                 log.info("Session closed")
             } catch (ex: Exception) {
+                log.warn("Exception in re-connect loop: " + ex.message)
                 log.trace("Caught exception", ex)
             }
 

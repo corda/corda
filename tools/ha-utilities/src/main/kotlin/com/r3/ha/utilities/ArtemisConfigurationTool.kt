@@ -58,7 +58,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
     @Option(names = ["--connectors"], converter = [NetworkHostAndPortConverter::class], split = ",", description = ["A list of network hosts and ports separated by commas representing the artemis connectors used for the Artemis HA cluster. The first entry in the list will be used by the instance configured by this tool."])
     private var connectors: List<NetworkHostAndPort> = mutableListOf()
 
-    @Option(names = ["--user"], description = ["The X500 name of connecting users (clients). Example value: \"O=Client, L=London, C=GB\""], required = true)
+    @Option(names = ["--user"], description = ["The X500 name of connecting users (clients). Example value: \"CN=artemis, O=Corda, L=London, C=GB\""], required = true)
     private lateinit var userX500Name: String
 
     override fun runProgram(): Int {
@@ -88,13 +88,17 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         javaClass.classLoader.getResourceAsStream("login.config").copyTo(workingDir / "login.config", StandardCopyOption.REPLACE_EXISTING)
 
         // Generate artemis-users.properties
-        (workingDir / "artemis-users.properties").deleteIfExists()
-        javaClass.classLoader.getResourceAsStream("artemis-users.properties").copyTo(workingDir / "artemis-users.properties", StandardCopyOption.REPLACE_EXISTING)
+        "artemis-users.properties".let {
+            val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name)
+            (workingDir / it).deleteIfExists()
+            (workingDir / it).write(templateResolved.toByteArray(), StandardOpenOption.CREATE)
+        }
 
         // Generate artemis-roles.properties
-        val rolesProps= javaClass.classLoader.getResourceAsStream("artemis-roles.properties").reader().readText().replace(USER_ID, userX500Name)
-        (workingDir / "artemis-roles.properties").deleteIfExists()
-        (workingDir / "artemis-roles.properties").write(rolesProps.toByteArray(), StandardOpenOption.CREATE)
+        "artemis-roles.properties".let {
+            (workingDir / it).deleteIfExists()
+            javaClass.classLoader.getResourceAsStream(it).copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
+        }
 
         generateBrokerXml()
 
@@ -130,7 +134,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         journalBufferTimeoutElement.textContent = journalBufferTimeoutValue
 
         // Configure acceptor.
-        doc.getElementsByTagName("acceptor").item(0).let {
+        doc.getElementsByTagName("acceptor").item(0)?.let {
             it.textContent = String.format(ACCEPTOR_STRING, acceptorHostAndPort, keyStore, keyStorePass, trustStore, trustStorePass)
         }
 
@@ -146,8 +150,8 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         val transformer = transformerFactory.newTransformer()
         val source = DOMSource(doc)
         val result = StreamResult((workingDir / "broker.xml").toFile())
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes")
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
         transformer.transform(source, result)
     }
 

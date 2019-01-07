@@ -138,7 +138,7 @@ Command-line options
 * ``--install``: Install an Artemis instance at the specified path.
 * ``--distribution``: The path to the Artemis distribution used to install an instance.
 * ``--path``: The path where the generated configuration files will be installed. Used as the new instance location when using the --install option.
-* ``--user``: The X500 name of connecting users (clients). Example value: "O=Client, L=London, C=GB"
+* ``--user``: The X500 name of connecting users (clients). Example value: "CN=artemis, O=Corda, L=London, C=GB"
 * ``--acceptor-address``: The broker instance acceptor network address for incoming connections.
 * ``--keystore``: The SSL keystore path.
 * ``--keystore-password``: The SSL keystore password.
