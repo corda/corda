@@ -9,7 +9,9 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.hash
 import net.corda.core.internal.toX500Name
 import net.corda.nodeapi.internal.config.CertificateStore
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import org.bouncycastle.asn1.x509.GeneralName
 import org.bouncycastle.asn1.x509.GeneralSubtree
 import org.bouncycastle.asn1.x509.NameConstraints
@@ -102,7 +104,12 @@ const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
 const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 const val DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS: String = "trustpasskeypass"
 
-val DEV_PUB_KEY_HASHES: List<SecureHash.SHA256> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate).map { it.publicKey.hash.sha256() }
+// A code signing policy is currently under discussion (https://r3-cev.atlassian.net/wiki/spaces/SEC/pages/859996195/Code+Signing+Certificates+-+options+for+discussion)
+// The following interim key represents a self-signed certificate produced using the Java keytool and located in the gradle cordapp plugins resources key store:
+// https://github.com/corda/corda-gradle-plugins/blob/master/cordapp/src/main/resources/certificates/cordadevcodesign.jks
+const val DEV_CORDAPP_CODE_SIGNING_STR = "AA59D829F2CA8FDDF5ABEA40D815F937E3E54E572B65B93B5C216AE6594E7D6B"
+
+val DEV_PUB_KEY_HASHES: List<SecureHash.SHA256> get() = listOf(DEV_INTERMEDIATE_CA.certificate, DEV_ROOT_CA.certificate).map { it.publicKey.hash.sha256() } + SecureHash.parse(DEV_CORDAPP_CODE_SIGNING_STR).sha256()
 
 // We need a class so that we can get hold of the class loader
 internal object DevCaHelper {
