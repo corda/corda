@@ -333,7 +333,9 @@ class DriverDSLImpl(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
 
-        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + getCallerPackage())
+        val callerPackage = getCallerPackage().toMutableList()
+        if(callerPackage.firstOrNull()?.startsWith("net.corda.node") == true) callerPackage.add("net.corda.testing")
+        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + callerPackage)
 
         val notaryInfosFuture = if (compatibilityZone == null) {
             // If no CZ is specified then the driver does the generation of the network parameters and the copying of the
