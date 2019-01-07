@@ -14,8 +14,8 @@ dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
-    cordaCompile project(':core')
-    compile project(':confidential-identities')
+    cordapp project(':core')
+    cordapp project(':confidential-identities')
 
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
@@ -32,11 +32,6 @@ configurations {
     testArtifacts.extendsFrom testRuntime
 }
 
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
 jar {
     baseName 'corda-finance-contracts'
     manifest {
@@ -45,9 +40,6 @@ jar {
     }
 }
 
-artifacts {
-    testArtifacts testJar
-}
 cordapp {
     signing {
         enabled false
