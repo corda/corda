@@ -8,8 +8,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.contextTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import java.lang.ref.WeakReference
-import java.util.HashSet
-import java.util.NoSuchElementException
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -141,13 +140,15 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
      * Allow checking the cache content without falling back to database if there's a miss.
      *
      * @param key The cache key
-     * @return The value in the cache, or null if not present.
+     * @return An Optional.of(value) in the cache, Optional.empty() if there is no value, or null if not cached.
      */
-    fun getIfCached(key: K): V? {
+    fun getIfCached(key: K): Optional<V>? {
         val transactional = cache.getIfPresent(key!!)
-        return if (transactional?.isPresent ?: false) {
-            transactional?.value
-        } else null
+        return if (transactional == null) {
+            null
+        } else if (transactional.isPresent) {
+            Optional.of(transactional.value)
+        } else Optional.empty()
     }
 
     /**

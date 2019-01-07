@@ -9,12 +9,11 @@ import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import javax.persistence.Column
 import javax.persistence.Entity
@@ -27,7 +26,7 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
         private val scenarios = arrayOf<Scenario>(
                 Scenario(false, ReadOrWrite.Read, ReadOrWrite.Read, Outcome.Fail, Outcome.Fail, isCached = false),
                 Scenario(false, ReadOrWrite.Write, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success, null),
-                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Fail, Outcome.Success, isCached = false),
+                Scenario(false, ReadOrWrite.Read, ReadOrWrite.Write, Outcome.Fail, Outcome.Success, isCached = true),
                 Scenario(false, ReadOrWrite.Write, ReadOrWrite.Write, Outcome.Success, Outcome.SuccessButErrorOnCommit, isCached = null),
                 Scenario(false, ReadOrWrite.WriteDuplicateAllowed, ReadOrWrite.Read, Outcome.Success, Outcome.Fail, Outcome.Success, null),
                 Scenario(false, ReadOrWrite.Read, ReadOrWrite.WriteDuplicateAllowed, Outcome.Fail, Outcome.Success, isCached = true),
@@ -89,8 +88,8 @@ class AppendOnlyPersistentMapTest(var scenario: Scenario) {
             val expectedValue = if (scenario.isCached!!) {
                 when (scenario.b) {
                     ReadOrWrite.Read -> throw IllegalStateException("Do nothing and isCached = true is not a valid combination.")
-                    ReadOrWrite.Write -> "X"
-                    ReadOrWrite.WriteDuplicateAllowed -> "Y"
+                    ReadOrWrite.Write -> if (scenario.prePopulated) Optional.of("X") else Optional.empty()
+                    ReadOrWrite.WriteDuplicateAllowed -> Optional.of("Y")
                 }
             } else null
             assertEquals(expectedValue, cachedValue)
