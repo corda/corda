@@ -11,7 +11,8 @@ object RaftNotarySchemaV1 : MappedSchema(
         mappedTypes = listOf(
                 PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
-                RaftUniquenessProvider.CommittedState::class.java
+                RaftUniquenessProvider.CommittedState::class.java,
+                RaftUniquenessProvider.CommittedTransaction::class.java
         )
 ) {
     override val migrationResource: String?

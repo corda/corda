@@ -36,10 +36,7 @@ import java.nio.file.Path
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import javax.annotation.concurrent.ThreadSafe
-import javax.persistence.Column
-import javax.persistence.EmbeddedId
-import javax.persistence.Entity
-import javax.persistence.Table
+import javax.persistence.*
 
 /**
  * A uniqueness provider that records committed input states in a distributed collection replicated and
@@ -51,7 +48,8 @@ import javax.persistence.Table
  */
 @ThreadSafe
 class RaftUniquenessProvider(
-        private val storagePath: Path,
+        /** If *null* the Raft log will be stored in memory. */
+        private val storagePath: Path? = null,
         private val transportConfiguration: MutualSslConfiguration,
         private val db: CordaPersistence,
         private val clock: Clock,
@@ -99,6 +97,14 @@ class RaftUniquenessProvider(
             var index: Long = 0
     )
 
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_txs")
+    class CommittedTransaction(
+            @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
+            val transactionId: String
+    )
+
     private lateinit var _clientFuture: CompletableFuture<CopycatClient>
     private lateinit var server: CopycatServer
 
@@ -110,9 +116,9 @@ class RaftUniquenessProvider(
         get() = _clientFuture.get()
 
     fun start() {
-        log.info("Creating Copycat server, log stored in: ${storagePath.toAbsolutePath()}")
+        log.info("Creating Copycat server, log stored in: ${storagePath?.toAbsolutePath() ?: " memory"}")
         val stateMachineFactory = {
-            RaftTransactionCommitLog(db, clock, { createMap(cacheFactory) })
+            RaftTransactionCommitLog(db, clock) { createMap(cacheFactory) }
         }
         val address = raftConfig.nodeAddress.let { Address(it.host, it.port) }
         val storage = buildStorage(storagePath)
@@ -149,11 +155,14 @@ class RaftUniquenessProvider(
         server.shutdown()
     }
 
-    private fun buildStorage(storagePath: Path): Storage? {
-        return Storage.builder()
-                .withDirectory(storagePath.toFile())
-                .withStorageLevel(StorageLevel.DISK)
-                .build()
+    private fun buildStorage(storagePath: Path?): Storage? {
+        val builder = Storage.builder()
+        if (storagePath != null) {
+            builder.withDirectory(storagePath.toFile()).withStorageLevel(StorageLevel.DISK)
+        } else {
+            builder.withStorageLevel(StorageLevel.MEMORY)
+        }
+        return builder.build()
     }
 
     private fun buildTransport(config: MutualSslConfiguration): Transport? {

@@ -20,10 +20,11 @@ import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.notary.isConsumedByTheSameTx
 import net.corda.core.internal.notary.validateTimeWindow
-import net.corda.core.serialization.*
+import net.corda.core.serialization.SerializationDefaults
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.CheckpointSerializationDefaults
-
 import net.corda.core.serialization.internal.checkpointSerialize
+import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -90,26 +91,62 @@ class RaftTransactionCommitLog<E, EK>(
                 log.debug("State machine commit: attempting to store entries with keys (${commitCommand.states.joinToString()})")
                 checkConflict(commitCommand.states, StateConsumptionDetails.ConsumedStateType.INPUT_STATE)
                 checkConflict(commitCommand.references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
+
                 if (conflictingStates.isNotEmpty()) {
-                    if (isConsumedByTheSameTx(commitCommand.txId.sha256(), conflictingStates)) {
-                        null
+                    if (commitCommand.states.isEmpty()) {
+                        handleReferenceConflicts(txId, conflictingStates)
                     } else {
-                        log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
-                        NotaryError.Conflict(txId, conflictingStates)
+                        handleConflicts(txId, conflictingStates)
                     }
                 } else {
-                    val outsideTimeWindowError = validateTimeWindow(clock.instant(), commitCommand.timeWindow)
-                    if (outsideTimeWindowError == null) {
-                        val entries = commitCommand.states.map { it to Pair(index, txId) }.toMap()
-                        map.putAll(entries)
-                        log.debug { "Successfully committed all input states: ${commitCommand.states}" }
-                        null
-                    } else {
-                        outsideTimeWindowError
-                    }
+                    handleNoConflicts(commitCommand.timeWindow, commitCommand.states, txId, index)
                 }
             }
         }
+    }
+
+    private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>): NotaryError? {
+        if (!previouslyCommitted(txId)) {
+            val conflictError = NotaryError.Conflict(txId, conflictingStates)
+            log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            return conflictError
+        }
+        log.debug { "Transaction $txId already notarised" }
+        return null
+    }
+
+    private fun handleConflicts(txId: SecureHash, conflictingStates: java.util.LinkedHashMap<StateRef, StateConsumptionDetails>): NotaryError? {
+        return if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+            log.debug { "Transaction $txId already notarised" }
+            null
+        } else {
+            log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+            NotaryError.Conflict(txId, conflictingStates)
+        }
+    }
+
+    private fun handleNoConflicts(timeWindow: TimeWindow?, states: List<StateRef>, txId: SecureHash, index: Long): NotaryError? {
+        // Skip if this is a re-notarisation of a reference-only transaction
+        if (states.isEmpty() && previouslyCommitted(txId)) {
+            return null
+        }
+
+        val outsideTimeWindowError = validateTimeWindow(clock.instant(), timeWindow)
+        return if (outsideTimeWindowError == null) {
+            val entries = states.map { it to Pair(index, txId) }.toMap()
+            map.putAll(entries)
+            val session = currentDBSession()
+            session.persist(RaftUniquenessProvider.CommittedTransaction(txId.toString()))
+            log.debug { "Successfully committed all input states: $states" }
+            null
+        } else {
+            outsideTimeWindowError
+        }
+    }
+
+    private fun previouslyCommitted(txId: SecureHash): Boolean {
+        val session = currentDBSession()
+        return session.find(RaftUniquenessProvider.CommittedTransaction::class.java, txId.toString()) != null
     }
 
     private fun logRequest(commitCommand: Commands.CommitTransaction) {
