@@ -3,7 +3,7 @@ package net.corda.testing.node.internal
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 
-class TestCordappsUtilsTest {
+class InternalTestUtilsTest {
     @Test
     fun `test simplifyScanPackages`() {
         assertThat(simplifyScanPackages(emptyList())).isEmpty()
