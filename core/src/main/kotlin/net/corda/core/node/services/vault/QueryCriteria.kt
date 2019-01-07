@@ -273,9 +273,21 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     data class VaultCustomQueryCriteria<L : StatePersistable> @JvmOverloads constructor(
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val contractStateTypes: Set<Class<out ContractState>>? = null
     ) : CommonQueryCriteria() {
+        // These extra field is handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
+        constructor(
+                expression: CriteriaExpression<L, Boolean>,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        ) : this(expression, status, contractStateTypes) {
+            this.relevancyStatus = relevancyStatus
+        }
+
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            private set
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -284,12 +296,14 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun copy(
                 expression: CriteriaExpression<L, Boolean> = this.expression,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): VaultCustomQueryCriteria<L> {
             return VaultCustomQueryCriteria(
                     expression,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }
