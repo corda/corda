@@ -766,9 +766,9 @@ class DriverDSLImpl(
 
             // This excludes the samples and the finance module from the system classpath of the out of process nodes
             // as they will be added to the cordapps folder.
-            val exclude = listOf("samples", "finance", "integrationTest", "test")
+            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock")
             val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
-                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token${File.separatorChar}") }
+                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
             }
 
             return ProcessUtilities.startJavaProcess(
