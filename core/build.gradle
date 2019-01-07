@@ -111,6 +111,8 @@ dependencies {
 
     // required to use @Type annotation
     compile "org.hibernate:hibernate-core:$hibernate_version"
+
+    compile project(":common-classloading")
 }
 
 // TODO Consider moving it to quasar-utils in the future (introduced with PR-1388)

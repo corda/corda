@@ -68,6 +68,9 @@ project(":common-validation").projectDir = new File("$settingsDir/common/validat
 
 include 'common-configuration-parsing'
 project(":common-configuration-parsing").projectDir = new File("$settingsDir/common/configuration-parsing")
+
+include 'common-classloading'
+project(":common-classloading").projectDir = new File("$settingsDir/common/classloading")
 // Common libraries - end
 
 apply from: 'buildCacheSettings.gradle'

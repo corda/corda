@@ -73,6 +73,7 @@ processSmokeTestResources {
 dependencies {
     compile project(':core')
     compile project(':node-api')
+    compile project(':common-classloading')
 
     // For caches rather than guava
     compile "com.github.ben-manes.caffeine:caffeine:$caffeine_version"

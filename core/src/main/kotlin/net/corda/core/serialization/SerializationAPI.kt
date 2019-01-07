@@ -1,6 +1,7 @@
 @file:KeepForDJVM
 package net.corda.core.serialization
 
+import co.paralleluniverse.io.serialization.Serialization
 import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
@@ -160,6 +161,10 @@ interface SerializationContext {
      * The use case we are serializing or deserializing for.  See [UseCase].
      */
     val useCase: UseCase
+    /**
+     * Additional custom serializers that will be made available during (de)serialization.
+     */
+    val customSerializers: Set<SerializationCustomSerializer<*, *>>
 
     /**
      * Helper method to return a new context based on this context with the property added.
@@ -199,6 +204,23 @@ interface SerializationContext {
      * Helper method to return a new context based on this context with the given class specifically whitelisted.
      */
     fun withWhitelisted(clazz: Class<*>): SerializationContext
+
+    /**
+     * Helper method to return a new context based on this context with the given list of classes specifically whitelisted.
+     */
+    fun withWhitelist(classes: List<Class<*>>): SerializationContext {
+        var currentContext = this
+        classes.forEach {
+            clazz -> currentContext = currentContext.withWhitelisted(clazz)
+        }
+
+        return currentContext
+    }
+
+    /**
+     * Helper method to return a new context based on this context with the given serializers added.
+     */
+    fun withCustomSerializers(serializers: Set<SerializationCustomSerializer<*, *>>): SerializationContext
 
     /**
      * Helper method to return a new context based on this context but with serialization using the format this header sequence represents.

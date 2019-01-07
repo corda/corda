@@ -22,7 +22,10 @@ import java.util.*
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
 
-data class SerializationFactoryCacheKey(val classWhitelist: ClassWhitelist, val deserializationClassLoader: ClassLoader, val preventDataLoss: Boolean)
+data class SerializationFactoryCacheKey(val classWhitelist: ClassWhitelist,
+                                        val deserializationClassLoader: ClassLoader,
+                                        val preventDataLoss: Boolean,
+                                        val customSerializers: Set<SerializationCustomSerializer<*, *>>)
 
 fun SerializerFactory.addToWhitelist(vararg types: Class<*>) {
     require(types.toSet().size == types.size) {
@@ -43,11 +46,12 @@ interface SerializerFactoryFactory {
 @KeepForDJVM
 abstract class AbstractAMQPSerializationScheme(
         private val cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
+        private val cordappSerializationWhitelists: Set<SerializationWhitelist>,
         maybeNotConcurrentSerializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory>,
         val sff: SerializerFactoryFactory = createSerializerFactoryFactory()
 ) : SerializationScheme {
     @DeleteForDJVM
-    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
+    constructor(cordapps: List<Cordapp>) : this(cordapps.customSerializers, cordapps.serializationWhitelists, AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>(128).toSynchronised())
 
     // This is a bit gross but a broader check for ConcurrentMap is not allowed inside DJVM.
     private val serializerFactoriesForContexts: MutableMap<SerializationFactoryCacheKey, SerializerFactory> = if (maybeNotConcurrentSerializerFactoriesForContexts is AccessOrderLinkedHashMap<*, *>) {
@@ -98,9 +102,12 @@ abstract class AbstractAMQPSerializationScheme(
         @DeleteForDJVM
         val List<Cordapp>.customSerializers
             get() = flatMap { it.serializationCustomSerializers }.toSet()
+
+        @DeleteForDJVM
+        val List<Cordapp>.serializationWhitelists
+            get() = flatMap { it.serializationWhitelists }.toSet()
     }
 
-    // Parameter "context" is unused directly but passed in by reflection. Removing it will cause failures.
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
@@ -135,9 +142,6 @@ abstract class AbstractAMQPSerializationScheme(
             register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
             registerNonDeterministicSerializers(factory)
         }
-        for (whitelistProvider in serializationWhitelists) {
-            factory.addToWhitelist(*whitelistProvider.whitelist.toTypedArray())
-        }
 
         // If we're passed in an external list we trust that, otherwise revert to looking at the scan of the
         // classpath to find custom serializers.
@@ -146,6 +150,15 @@ abstract class AbstractAMQPSerializationScheme(
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
             }
         } else {
+            // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during transaction verification).
+            // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason is the following:
+            // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is registered dominates).
+            // As a result, when inside a context with attachments class loader, we prioritize serializers loaded on-demand from attachments to serializers that had been
+            // loaded during node initialisation, by scanning the cordapps folder.
+            context.customSerializers.forEach { customSerializer ->
+                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
+            }
+
             logger.debug("Custom Serializer list loaded - not scanning classpath")
             cordappCustomSerializers.forEach { customSerializer ->
                 factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
@@ -155,6 +168,17 @@ abstract class AbstractAMQPSerializationScheme(
         context.properties[ContextPropertyKeys.SERIALIZERS]?.apply {
             uncheckedCast<Any, List<CustomSerializer<out Any>>>(this).forEach {
                 factory.register(it)
+            }
+        }
+    }
+
+    private fun registerCustomWhitelists(factory: SerializerFactory) {
+        serializationWhitelists.forEach {
+            factory.addToWhitelist(*it.whitelist.toTypedArray())
+        }
+        cordappSerializationWhitelists.forEach {
+            it.whitelist.forEach {
+                clazz -> factory.addToWhitelist(clazz)
             }
         }
     }
@@ -176,7 +200,7 @@ abstract class AbstractAMQPSerializationScheme(
     open val publicKeySerializer: CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
 
     fun getSerializerFactory(context: SerializationContext): SerializerFactory {
-        val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss)
+        val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss, context.customSerializers)
         // ConcurrentHashMap.get() is lock free, but computeIfAbsent is not, even if the key is in the map already.
         return serializerFactoriesForContexts[key] ?: serializerFactoriesForContexts.computeIfAbsent(key) {
             when (context.useCase) {
@@ -187,6 +211,7 @@ abstract class AbstractAMQPSerializationScheme(
                 else -> sff.make(context)
             }.also {
                 registerCustomSerializers(context, it)
+                registerCustomWhitelists(it)
             }
         }
     }

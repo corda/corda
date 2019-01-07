@@ -2,6 +2,7 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.CordaException
 import net.corda.core.KeepForDJVM
+import net.corda.common.classloading.loadClassesImplementing
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
@@ -10,7 +11,9 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -18,6 +21,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
+import java.util.*
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -192,12 +196,20 @@ internal object AttachmentsClassLoaderBuilder {
     }
 
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
-
         // Create classloader from the attachments.
         val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
 
+        val serializers = loadClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+        val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
+                .flatMap { it.whitelist }
+                .toList()
+
         // Create a new serializationContext for the current Transaction.
-        val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
+        val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext
+                .withPreventDataLoss()
+                .withClassLoader(transactionClassLoader)
+                .withWhitelist(whitelistedClasses)
+                .withCustomSerializers(serializers)
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(transactionSerializationContext) {
