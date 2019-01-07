@@ -53,6 +53,10 @@ Changelog entries in this unreleased section refer to Enterprise-only changes.
 
 * Implemented alternative to Zookeeper for bridge leader elections(bully algorithm).
 
+* The default database connection pool size has been increased to correctly account for the maximum number of simultaneous database connections.
+  The number of required connections has been increased by 2 + the number of RPC worker threads (typically the number of CPU cores, unless
+  configured otherwise).  The total is now 3 + the number of flow worker threads + the number of RPC worker threads.
+
 .. _changelog_v3.1:
 
 Version 3.1

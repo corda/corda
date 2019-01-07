@@ -178,14 +178,14 @@ data class NodeConfigurationImpl(
             dataSourceProperties[CordaPersistence.DataSourceConfigTag.DATA_SOURCE_URL] = "$dataSourceUrl;sendStringParametersAsUnicode=false"
         }
 
-        // Adjust connection pool size depending on N=flow thread pool size.
+        // Adjust connection pool size depending on N=flow thread pool size + rpc thread pool size + scheduler thread + network map updater thread.
         // If there is no configured pool size set it to N + 1, otherwise check that it's greater than N.
-        val flowThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize
+        val requiredThreadPoolSize = enterpriseConfiguration.tuning.flowThreadPoolSize + enterpriseConfiguration.tuning.rpcThreadPoolSize + 2
         val maxConnectionPoolSize = dataSourceProperties.getProperty("maximumPoolSize")
         if (maxConnectionPoolSize == null) {
-            dataSourceProperties.setProperty("maximumPoolSize", (flowThreadPoolSize + 1).toString())
+            dataSourceProperties.setProperty("maximumPoolSize", (requiredThreadPoolSize + 1).toString())
         } else {
-            require(maxConnectionPoolSize.toInt() > flowThreadPoolSize)
+            require(maxConnectionPoolSize.toInt() > requiredThreadPoolSize)
         }
 
         @Suppress("DEPRECATION")
