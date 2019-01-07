@@ -328,8 +328,8 @@ class NodeAttachmentServiceTest {
     @Test
     fun `cannot import jar with duplicated contract class, version and signers`() {
         SelfCleaningDir().use { file ->
-            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
-            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
+            val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
 
             assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
@@ -341,8 +341,8 @@ class NodeAttachmentServiceTest {
     @Test
     fun `cannot import jar with duplicated contract class, version and signers - uploader doesnt matter`() {
         SelfCleaningDir().use { file ->
-            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
-            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
+            val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
 
             assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
@@ -354,8 +354,8 @@ class NodeAttachmentServiceTest {
     @Test
     fun `can import duplicated contract class and signers if versions differ`() {
         SelfCleaningDir().use { file ->
-            val contractJar = makeTestContractJar(file.path, "com.example.MyContract", version = 2)
-            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
+            val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract",  2)
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             anotherContractJar.read { storage.importAttachment(it, "uploaderA", "another-sample.jar") }
 
@@ -368,10 +368,46 @@ class NodeAttachmentServiceTest {
     }
 
     @Test
-    fun `can import duplicated contract class and version if signers differ`() {
+    fun `can import duplicated contract class and version from unsiged attachment if a signed attachment already exists`() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
-            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false)
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
+            contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
+            anotherContractJar.read { storage.importAttachment(it, "uploaderB", "another-sample.jar") }
+
+            val attachments = storage.queryAttachments(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract"))))
+            assertEquals(2, attachments.size)
+            attachments.forEach {
+                val att = storage.openAttachment(it)
+                assertTrue(att is ContractAttachment)
+                assertTrue("com.example.MyContract" in (att as ContractAttachment).allContracts)
+            }
+        }
+    }
+
+    @Test
+    fun `can import duplicated contract class and version from siged attachment if an unsigned attachment already exists`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
+            contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
+            anotherContractJar.read { storage.importAttachment(it, "uploaderB", "another-sample.jar") }
+
+            val attachments = storage.queryAttachments(AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract"))))
+            assertEquals(2, attachments.size)
+            attachments.forEach {
+                val att = storage.openAttachment(it)
+                assertTrue(att is ContractAttachment)
+                assertTrue("com.example.MyContract" in (att as ContractAttachment).allContracts)
+            }
+        }
+    }
+
+    @Test
+    fun `can import duplicated contract class and version for unsigned attachments`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), generateManifest = false, jarFileName = "another-sample.jar")
             contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
             anotherContractJar.read { storage.importAttachment(it, "uploaderB", "another-sample.jar") }
 
