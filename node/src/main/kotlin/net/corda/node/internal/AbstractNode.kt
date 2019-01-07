@@ -63,7 +63,6 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
-import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -507,11 +506,12 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         } else {
             1.days
         }
+        val privateNetworkUUID = configuration.networkServices?.pnm
         val executor = Executors.newSingleThreadScheduledExecutor(NamedThreadFactory("Network Map Updater"))
         executor.submit(object : Runnable {
             override fun run() {
                 val republishInterval = try {
-                    networkMapClient.publish(signedNodeInfo)
+                    networkMapClient.publish(signedNodeInfo, privateNetworkUUID)
                     heartbeatInterval
                 } catch (e: Exception) {
                     log.warn("Error encountered while publishing node info, will retry again", e)
