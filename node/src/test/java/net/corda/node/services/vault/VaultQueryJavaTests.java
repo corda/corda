@@ -23,7 +23,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQue
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.finance.schemas.test.SampleCashSchemaV2;
+import net.corda.finance.test.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
@@ -84,7 +84,7 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() {
-        List<String> cordappPackages = asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        List<String> cordappPackages = asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName(), SampleCashSchemaV2.class.getPackage().getName());
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
