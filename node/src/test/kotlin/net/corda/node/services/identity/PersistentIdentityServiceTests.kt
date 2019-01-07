@@ -96,14 +96,14 @@ class PersistentIdentityServiceTests {
     }
 
     @Test
-    fun `stripping others when none registered does not strip`() {
-        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+    fun `stripping others when none registered strips`() {
+        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
     @Test
-    fun `stripping others when only us registered does not strip`() {
+    fun `stripping others when only us registered strips`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
     @Test
