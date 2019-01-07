@@ -251,19 +251,58 @@ object BFTSmart {
                 checkConflict(conflictingStates, references, StateConsumptionDetails.ConsumedStateType.REFERENCE_INPUT_STATE)
 
                 if (conflictingStates.isNotEmpty()) {
-                    if (!isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
-                        log.debug { "Failure, input states or references already committed: ${conflictingStates.keys}" }
-                        throw NotaryInternalException(NotaryError.Conflict(txId, conflictingStates))
+                    if (states.isEmpty()) {
+                        handleReferenceConflicts(txId, conflictingStates)
+                    } else {
+                        handleConflicts(txId, conflictingStates)
                     }
                 } else {
-                    val outsideTimeWindowError = validateTimeWindow(services.clock.instant(), timeWindow)
-                    if (outsideTimeWindowError == null) {
-                        states.forEach { commitLog[it] = txId }
-                        log.debug { "Successfully committed all input states: $states" }
-                    } else {
-                        throw NotaryInternalException(outsideTimeWindowError)
-                    }
+                    handleNoConflicts(timeWindow, states, txId)
                 }
+            }
+        }
+
+        private fun previouslyCommitted(txId: SecureHash): Boolean {
+            val session = currentDBSession()
+            return session.find(BFTSmartNotaryService.CommittedTransaction::class.java, txId.toString()) != null
+        }
+
+        private fun handleReferenceConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+            if (!previouslyCommitted(txId)) {
+                val conflictError = NotaryError.Conflict(txId, conflictingStates)
+                log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                throw NotaryInternalException(conflictError)
+            }
+            log.debug { "Transaction $txId already notarised" }
+        }
+
+        private fun handleConflicts(txId: SecureHash, conflictingStates: LinkedHashMap<StateRef, StateConsumptionDetails>) {
+            if (isConsumedByTheSameTx(txId.sha256(), conflictingStates)) {
+                log.debug { "Transaction $txId already notarised" }
+                return
+            } else {
+                log.debug { "Failure, input states already committed: ${conflictingStates.keys}" }
+                val conflictError = NotaryError.Conflict(txId, conflictingStates)
+                throw NotaryInternalException(conflictError)
+            }
+        }
+
+        private fun handleNoConflicts(timeWindow: TimeWindow?, states: List<StateRef>, txId: SecureHash) {
+            // Skip if this is a re-notarisation of a reference-only transaction
+            if (states.isEmpty() && previouslyCommitted(txId)) {
+                return
+            }
+
+            val outsideTimeWindowError = validateTimeWindow(services.clock.instant(), timeWindow)
+            if (outsideTimeWindowError == null) {
+                states.forEach { stateRef ->
+                    commitLog[stateRef] = txId
+                }
+                val session = currentDBSession()
+                session.persist(BFTSmartNotaryService.CommittedTransaction(txId.toString()))
+                log.debug { "Successfully committed all input states: $states" }
+            } else {
+                throw NotaryInternalException(outsideTimeWindowError)
             }
         }
 

@@ -11,7 +11,8 @@ object BFTSmartNotarySchemaV1 : MappedSchema(
         mappedTypes = listOf(
                 PersistentUniquenessProvider.BaseComittedState::class.java,
                 PersistentUniquenessProvider.Request::class.java,
-                BFTSmartNotaryService.CommittedState::class.java
+                BFTSmartNotaryService.CommittedState::class.java,
+                BFTSmartNotaryService.CommittedTransaction::class.java
         )
 ) {
     override val migrationResource: String?

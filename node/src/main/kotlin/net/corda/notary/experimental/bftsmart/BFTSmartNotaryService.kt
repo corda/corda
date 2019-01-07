@@ -24,7 +24,9 @@ import net.corda.node.services.transactions.PersistentUniquenessProvider
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import java.security.PublicKey
+import javax.persistence.Column
 import javax.persistence.Entity
+import javax.persistence.Id
 import javax.persistence.Table
 import kotlin.concurrent.thread
 
@@ -121,6 +123,14 @@ class BFTSmartNotaryService(
             }
         }
     }
+
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_txs")
+    class CommittedTransaction(
+            @Id
+            @Column(name = "transaction_id", nullable = false, length = 64)
+            val transactionId: String
+    )
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}bft_committed_states")
