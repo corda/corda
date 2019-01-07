@@ -11,12 +11,14 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
+import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
