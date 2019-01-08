@@ -79,6 +79,7 @@ see changes to this list.
 * Emanuel Russo (NTT DATA Italy)
 * Farzad Pezeshkpour (RBS)
 * fracting
+* Francisco Spadafora (NTT DATA Italy)
 * Frederic Dalibard (Natixis)
 * Garrett Macey (Wells Fargo)
 * gary-rowe
