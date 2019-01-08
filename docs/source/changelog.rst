@@ -341,6 +341,9 @@ Version 4.0
 * Finance CorDapp is now build as a sealed and signed JAR file.
   Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
 
+* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``,
+  ``corda-finance`` is kept for backward compatibility, it is recommended to use separated jars.
+
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 
 * The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
