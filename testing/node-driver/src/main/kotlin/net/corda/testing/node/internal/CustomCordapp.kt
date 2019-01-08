@@ -39,8 +39,6 @@ data class CustomCordapp(
 
     override val jarFile: Path get() = getJarFile(this)
 
-    override val scanPackage: String get() = throw UnsupportedOperationException()
-
     override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
 
     override fun withOnlyJarContents(): CustomCordapp = CustomCordapp(packages = packages, classes = classes)
