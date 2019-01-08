@@ -469,11 +469,14 @@ open class TransactionBuilder @JvmOverloads constructor(
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
         val constraints = states.map { it.constraint }
-        require(constraints.none { it in automaticConstraints })
-        require(isReference || constraints.none { it is HashAttachmentConstraint })
+        require(constraints.isNotEmpty()) { "This function requires a non-empty list of constraints." }
+        require(constraints.none { it in automaticConstraints }) { "This function requires a non-empty list of non-automatic constraints." }
+        require(isReference || constraints.none { it is HashAttachmentConstraint }) { "This function only works with upgradeable constraints." }
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max()
                 ?: DEFAULT_CORDAPP_VERSION
+
+        // TODO - if the constraint is the Signature constraint, query by the signer. If it is the whitelist constraint query by the
         return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }
