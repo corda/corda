@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import static net.corda.testing.core.TestUtils.singleIdentity;
-import static net.corda.testing.node.internal.TestCordappsUtilsKt.cordappsForPackages;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappsForPackages;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
