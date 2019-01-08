@@ -337,13 +337,23 @@ open class TransactionBuilder @JvmOverloads constructor(
         // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.
         val forcedAttachmentId = explicitContractAttachment ?: hashAttachments.singleOrNull()?.id
 
-        // States that have an explicit constraint
+        // States that have an explicit constraint.
         val explicitConstraintStates = inputsAndOutputs.filterNot { it.constraint in automaticConstraints }
 
         // This will contain the hash of the JAR that will be used by this Transaction.
         val selectedAttachmentId = when {
-            forcedAttachmentId != null -> forcedAttachmentId // The attachments was pinned down.
-            explicitConstraintStates.isEmpty() -> services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
+
+            // The attachments was pinned down.
+            forcedAttachmentId != null -> forcedAttachmentId
+
+            // This is a transaction that creates a state. Use the attachment from the cordapps folder.
+            explicitConstraintStates.isEmpty() -> {
+                val attachment = services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
+                log.warn("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp: $attachment")
+                attachment
+            }
+
+            // If there are constraints set, then select an attachment that satisfies them.
             else -> selectAttachmentThatSatisfiesConstraints(false, contractClassName, explicitConstraintStates, inputStateRefs, services) // Select an attachment that satisfies the constraints.
         }
 
@@ -468,17 +478,31 @@ open class TransactionBuilder @JvmOverloads constructor(
      * This method should only be called for upgradeable contracts.
      */
     private fun selectAttachmentThatSatisfiesConstraints(isReference: Boolean, contractClassName: String, states: List<TransactionState<ContractState>>, stateRefs: Set<StateRef>?, services: ServicesForResolution): AttachmentId {
-        val constraints = states.map { it.constraint }
+        val constraints = states.map { it.constraint }.toSet()
         require(constraints.isNotEmpty()) { "This function requires a non-empty list of constraints." }
         require(constraints.none { it in automaticConstraints }) { "This function requires a non-empty list of non-automatic constraints." }
         require(isReference || constraints.none { it is HashAttachmentConstraint }) { "This function only works with upgradeable constraints." }
 
+        require(constraints.filter { it is SignatureAttachmentConstraint }.size <= 1) { "Third party signers are not supported in the current version of Corda." }
+
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max()
                 ?: DEFAULT_CORDAPP_VERSION
 
-        // TODO - if the constraint is the Signature constraint, query by the signer. If it is the whitelist constraint query by the
-        return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
+        // TODO - If the constraint is the Signature constraint, query by the signer.
+        // TODO - If it is the whitelist constraint query by the
+        val attachmentId =  services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
+
+        val attachment = services.attachments.openAttachment(attachmentId) as ContractAttachment
+
+        constraints.forEach { constraint ->
+            when (constraint){
+                is SignatureAttachmentConstraint -> require(attachment.isSigned && constraint.key in attachment.signerKeys) { "The selected attachment: $attachment is incompatible with the constraint: $constraint. Please select the attachment manually." }
+                is WhitelistedByZoneAttachmentConstraint -> require(attachmentId in services.networkParameters.whitelistedContractImplementations[contractClassName]!!) { "The selected attachment: $attachment is not whitelisted. Please select the attachment manually." }
+            }
+        }
+
+        return attachmentId
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
