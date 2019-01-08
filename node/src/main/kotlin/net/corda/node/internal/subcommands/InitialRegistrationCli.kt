@@ -16,6 +16,7 @@ import picocli.CommandLine.Mixin
 import picocli.CommandLine.Option
 import java.io.File
 import java.nio.file.Path
+import java.util.function.Consumer
 
 class InitialRegistrationCli(val startup: NodeStartup): CliWrapperBase("initial-registration", "Start initial node registration with Corda network to obtain certificate from the permissioning server.") {
     @Option(names = ["-t", "--network-root-truststore"], description = ["Network root trust store obtained from network operator."])
@@ -83,7 +84,7 @@ class InitialRegistration(val baseDirectory: Path, private val networkRootTrustS
 
     private fun initialRegistration(config: NodeConfiguration) {
         // Null checks for [compatibilityZoneURL], [rootTruststorePath] and [rootTruststorePassword] has been done in [CmdLineOptions.loadConfig]
-        attempt { registerWithNetwork(config) }.doOnException(this::handleRegistrationError) as Try.Success
+        attempt { registerWithNetwork(config) }.doOnFailure(Consumer(this::handleRegistrationError)) as Try.Success
         // At this point the node registration was successful. We can delete the marker file.
         deleteNodeRegistrationMarker(baseDirectory)
     }

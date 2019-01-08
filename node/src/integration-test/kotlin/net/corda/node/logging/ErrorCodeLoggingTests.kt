@@ -56,5 +56,3 @@ private fun FlowHandle<*>.waitForCompletion() {
         // This is expected to throw an exception, using getOrThrow() just to wait until done.
     }
 }
-
-private fun NodeHandle.logFile(): File = (baseDirectory / "logs").toFile().walk().filter { it.name.startsWith("node-") && it.extension == "log" }.single()

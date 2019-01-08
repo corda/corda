@@ -250,7 +250,7 @@ data class DriverParameters(
         val inMemoryDB: Boolean = true,
         val cordappsForAllNodes: Collection<TestCordapp>? = null,
         val enableSNI: Boolean = true
-    ) {
+    ) {constructor(cordappsForAllNodes: Collection<TestCordapp>) : this(isDebug = false, cordappsForAllNodes = cordappsForAllNodes)
     constructor(
             isDebug: Boolean = false,
             driverDirectory: Path = Paths.get("build") / "node-driver" /  getTimestampAsDirectoryName(),
@@ -328,38 +328,6 @@ data class DriverParameters(
             extraCordappPackagesToScan: List<String>,
             jmxPolicy: JmxPolicy,
             networkParameters: NetworkParameters,
-            cordappsForAllNodes: Collection<TestCordapp>? = null
-    ) : this(
-            isDebug,
-            driverDirectory,
-            portAllocation,
-            debugPortAllocation,
-            systemProperties,
-            useTestClock,
-            startNodesInProcess,
-            waitForAllNodesToFinish,
-            notarySpecs,
-            extraCordappPackagesToScan,
-            jmxPolicy,
-            networkParameters,
-            emptyMap(),
-            true,
-            cordappsForAllNodes
-    )
-
-    constructor(
-            isDebug: Boolean,
-            driverDirectory: Path,
-            portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
-            systemProperties: Map<String, String>,
-            useTestClock: Boolean,
-            startNodesInProcess: Boolean,
-            waitForAllNodesToFinish: Boolean,
-            notarySpecs: List<NotarySpec>,
-            extraCordappPackagesToScan: List<String>,
-            jmxPolicy: JmxPolicy,
-            networkParameters: NetworkParameters,
             inMemoryDB: Boolean
     ) : this(
             isDebug,
@@ -379,39 +347,6 @@ data class DriverParameters(
             cordappsForAllNodes = null
     )
 
-    constructor(
-            isDebug: Boolean,
-            driverDirectory: Path,
-            portAllocation: PortAllocation,
-            debugPortAllocation: PortAllocation,
-            systemProperties: Map<String, String>,
-            useTestClock: Boolean,
-            startNodesInProcess: Boolean,
-            waitForAllNodesToFinish: Boolean,
-            notarySpecs: List<NotarySpec>,
-            extraCordappPackagesToScan: List<String>,
-            jmxPolicy: JmxPolicy,
-            networkParameters: NetworkParameters,
-            inMemoryDB: Boolean,
-            cordappsForAllNodes: Set<TestCordapp>? = null
-    ) : this(
-            isDebug,
-            driverDirectory,
-            portAllocation,
-            debugPortAllocation,
-            systemProperties,
-            useTestClock,
-            startNodesInProcess,
-            waitForAllNodesToFinish,
-            notarySpecs,
-            extraCordappPackagesToScan,
-            jmxPolicy,
-            networkParameters,
-            emptyMap(),
-            inMemoryDB,
-            cordappsForAllNodes
-    )
-
     fun withIsDebug(isDebug: Boolean): DriverParameters = copy(isDebug = isDebug)
     fun withDriverDirectory(driverDirectory: Path): DriverParameters = copy(driverDirectory = driverDirectory)
     fun withPortAllocation(portAllocation: PortAllocation): DriverParameters = copy(portAllocation = portAllocation)
@@ -421,6 +356,8 @@ data class DriverParameters(
     fun withStartNodesInProcess(startNodesInProcess: Boolean): DriverParameters = copy(startNodesInProcess = startNodesInProcess)
     fun withWaitForAllNodesToFinish(waitForAllNodesToFinish: Boolean): DriverParameters = copy(waitForAllNodesToFinish = waitForAllNodesToFinish)
     fun withNotarySpecs(notarySpecs: List<NotarySpec>): DriverParameters = copy(notarySpecs = notarySpecs)
+    @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
+            "misleading results in tests. Use withCordappsForAllNodes instead.")
     fun withExtraCordappPackagesToScan(extraCordappPackagesToScan: List<String>): DriverParameters = copy(extraCordappPackagesToScan = extraCordappPackagesToScan)
     fun withJmxPolicy(jmxPolicy: JmxPolicy): DriverParameters = copy(jmxPolicy = jmxPolicy)
     fun withNetworkParameters(networkParameters: NetworkParameters): DriverParameters = copy(networkParameters = networkParameters)
