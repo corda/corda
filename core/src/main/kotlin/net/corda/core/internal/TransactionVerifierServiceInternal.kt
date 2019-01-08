@@ -22,7 +22,7 @@ interface TransactionVerifierServiceInternal {
 /**
  * Defined here for visibility reasons.
  */
-fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.prepareVerify(extraAttachments)
+fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.internalPrepareVerify(extraAttachments)
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the

@@ -3,14 +3,9 @@ package net.corda.core.transactions
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.*
-import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
-import net.corda.core.contracts.TransactionVerificationException.TransactionRequiredContractUnspecifiedException
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
-import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.CordaSerializable
@@ -19,7 +14,6 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
 import java.util.*
 import java.util.function.Predicate
-import kotlin.collections.HashSet
 
 /**
  * A LedgerTransaction is derived from a [WireTransaction]. It is the result of doing the following operations:
@@ -124,7 +118,7 @@ private constructor(
             logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
                     "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
         }
-        val verifier = prepareVerify(emptyList())
+        val verifier = internalPrepareVerify(emptyList())
         verifier.verify()
     }
 
@@ -132,7 +126,7 @@ private constructor(
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun prepareVerify(extraAttachments: List<Attachment>) = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
+    internal fun internalPrepareVerify(extraAttachments: List<Attachment>) = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
         Verifier(createLtxForVerification(), transactionClassLoader, inputStatesContractClassNameToMaxVersion)
     }
 
