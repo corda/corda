@@ -111,7 +111,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient)
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory)
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory, cordappLoader.appClassLoader)
     override val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     override val monitoringService = MonitoringService(metricRegistry)
     override val networkMapUpdater = NetworkMapUpdater(
