@@ -23,8 +23,8 @@ import net.corda.finance.contracts.asset.AbstractCashSelection
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.schemas.CashSchemaV1.PersistentCashState
 import net.corda.finance.schemas.CommercialPaperSchemaV1
-import net.corda.finance.schemas.test.SampleCashSchemaV2
-import net.corda.finance.schemas.test.SampleCashSchemaV3
+import net.corda.finance.test.SampleCashSchemaV2
+import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction

@@ -37,6 +37,7 @@ import net.corda.testing.node.User
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.time.Duration
@@ -66,9 +67,9 @@ class IRSDemoTest : IntegrationTest() {
         springDriver(DriverParameters(
                 useTestClock = true,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, rpcUsers = rpcUsers)),
-                extraCordappPackagesToScan = listOf("net.corda.irs")
+                extraCordappPackagesToScan = listOf("net.corda.irs", "net.corda.finance", "migration")
         )) {
-            val (controller, nodeA, nodeB) = listOf(
+            val (notary, nodeA, nodeB, controller) = listOf(
                     defaultNotaryNode,
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = rpcUsers),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = rpcUsers),

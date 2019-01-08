@@ -49,6 +49,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -347,7 +348,9 @@ class DriverDSLImpl(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
 
-        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + getCallerPackage())
+        val callerPackage = getCallerPackage().toMutableList()
+        if(callerPackage.firstOrNull()?.startsWith("net.corda.node") == true) callerPackage.add("net.corda.testing")
+        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + callerPackage)
 
         val notaryInfosFuture = if (compatibilityZone == null) {
             // If no CZ is specified then the driver does the generation of the network parameters and the copying of the
@@ -797,13 +800,21 @@ class DriverDSLImpl(
                         else emptyList()
             }.invoke()
 
+            // This excludes the samples and the finance module from the system classpath of the out of process nodes
+            // as they will be added to the cordapps folder.
+            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock")
+            val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
+                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
+            }
+
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments + bytemanJvmArgs,
                     workingDirectory = config.corda.baseDirectory,
-                    maximumHeapSize = maximumHeapSize
+                    maximumHeapSize = maximumHeapSize,
+                    classPath = cp
             )
         }
 

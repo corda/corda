@@ -20,6 +20,7 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import org.junit.ClassRule
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.Test
 import java.util.*
 
@@ -34,7 +35,7 @@ class AdditionP2PAddressModeTest : IntegrationTest() {
     @Test
     fun `runs nodes with one configured to use additionalP2PAddresses`() {
         val testUser = User("test", "test", setOf(all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val mainAddress = portAllocation.nextHostAndPort().toString()
             val altAddress = portAllocation.nextHostAndPort().toString()
             val haConfig = mutableMapOf<String, Any?>()

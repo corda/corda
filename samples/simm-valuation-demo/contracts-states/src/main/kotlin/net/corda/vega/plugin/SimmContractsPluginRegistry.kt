@@ -14,7 +14,6 @@ import com.opengamma.strata.market.param.ParameterMetadata
 import net.corda.core.serialization.SerializationWhitelist
 import net.corda.vega.analytics.CordaMarketData
 import net.corda.vega.analytics.InitialMarginTriple
-import net.corda.webserver.services.WebServerPluginRegistry
 
 /**
  * [SimmService] is the object that makes available the flows and services for the Simm agreement / evaluation flow.
@@ -22,7 +21,7 @@ import net.corda.webserver.services.WebServerPluginRegistry
  * It is also the object that enables a human usable web service for demo purpose
  * It is loaded via discovery see [WebServerPluginRegistry].
  */
-class SimmPluginRegistry : SerializationWhitelist {
+class SimmContractsPluginRegistry : SerializationWhitelist {
     override val whitelist = listOf(
             MultiCurrencyAmount::class.java,
             Ordering.natural<Comparable<Any>>().javaClass,

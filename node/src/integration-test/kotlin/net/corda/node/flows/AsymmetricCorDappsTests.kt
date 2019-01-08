@@ -59,11 +59,11 @@ class AsymmetricCorDappsTests : IntegrationTest() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptySet())) {
             val nodeA = startNode(NodeParameters(
                     providedName = ALICE_NAME,
-                    additionalCordapps = setOf(cordappForClasses(Ping::class.java))
+                    additionalCordapps = setOf(cordappForClasses(Ping::class.java, AsymmetricCorDappsTests::class.java))
             )).getOrThrow()
             val nodeB = startNode(NodeParameters(
                     providedName = BOB_NAME,
-                    additionalCordapps = setOf(cordappForClasses(Ping::class.java, Pong::class.java))
+                    additionalCordapps = setOf(cordappForClasses(Ping::class.java, Pong::class.java, AsymmetricCorDappsTests::class.java))
             )).getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
         }
@@ -71,8 +71,8 @@ class AsymmetricCorDappsTests : IntegrationTest() {
 
     @Test
     fun `shared cordapps with asymmetric specific classes`() {
-        val sharedCordapp = cordappForClasses(Ping::class.java)
-        val cordappForNodeB = cordappForClasses(Pong::class.java)
+        val sharedCordapp = cordappForClasses(Ping::class.java, AsymmetricCorDappsTests::class.java)
+        val cordappForNodeB = cordappForClasses(Pong::class.java, AsymmetricCorDappsTests::class.java)
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = setOf(sharedCordapp))) {
             val (nodeA, nodeB) = listOf(
                     startNode(NodeParameters(providedName = ALICE_NAME)),
@@ -84,8 +84,8 @@ class AsymmetricCorDappsTests : IntegrationTest() {
 
     @Test
     fun `shared cordapps with asymmetric specific classes in process`() {
-        val sharedCordapp = cordappForClasses(Ping::class.java)
-        val cordappForNodeB = cordappForClasses(Pong::class.java)
+        val sharedCordapp = cordappForClasses(Ping::class.java, AsymmetricCorDappsTests::class.java)
+        val cordappForNodeB = cordappForClasses(Pong::class.java, AsymmetricCorDappsTests::class.java)
         driver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = setOf(sharedCordapp))) {
             val (nodeA, nodeB) = listOf(
                     startNode(NodeParameters(providedName = ALICE_NAME)),
