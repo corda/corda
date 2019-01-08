@@ -46,6 +46,7 @@ class CordappConstraintsTests {
     fun `issue cash using signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                cordappsForAllNodes = emptyList(),
                 inMemoryDB = false
         )) {
             val alice = startNode(NodeParameters(
@@ -72,6 +73,7 @@ class CordappConstraintsTests {
     fun `issue cash using hash and signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                cordappsForAllNodes = emptyList(),
                 inMemoryDB = false
         )) {
             println("Starting the node using unsigned contract jar ...")

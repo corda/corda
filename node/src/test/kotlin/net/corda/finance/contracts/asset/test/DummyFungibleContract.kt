@@ -9,9 +9,9 @@ import net.corda.core.schemas.PersistentState
 import net.corda.core.schemas.QueryableState
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.finance.contracts.asset.OnLedgerAsset
-import net.corda.finance.schemas.test.SampleCashSchemaV1
-import net.corda.finance.schemas.test.SampleCashSchemaV2
-import net.corda.finance.schemas.test.SampleCashSchemaV3
+import net.corda.finance.test.SampleCashSchemaV1
+import net.corda.finance.test.SampleCashSchemaV2
+import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.finance.utils.sumCashOrNull
 import net.corda.finance.utils.sumCashOrZero
