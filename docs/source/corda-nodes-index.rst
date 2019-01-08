@@ -9,6 +9,7 @@ Nodes
    corda-configuration-file
    node-administration
    deploying-a-node
+   node-commandline
    docker-image
    node-database
    node-database-access-h2
