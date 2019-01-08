@@ -137,21 +137,6 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
     operator fun contains(key: K) = get(key) != null
 
     /**
-     * Allow checking the cache content without falling back to database if there's a miss.
-     *
-     * @param key The cache key
-     * @return An Optional.of(value) in the cache, Optional.empty() if there is no value, or null if not cached.
-     */
-    fun getIfCached(key: K): Optional<V>? {
-        val transactional = cache.getIfPresent(key!!)
-        return if (transactional == null) {
-            null
-        } else if (transactional.isPresent) {
-            Optional.of(transactional.value)
-        } else Optional.empty()
-    }
-
-    /**
      * Removes all of the mappings from this map and underlying storage. The map will be empty after this call returns.
      * WARNING!! The method is not thread safe.
      */
