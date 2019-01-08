@@ -3,20 +3,20 @@ Node configuration
 
 .. contents::
 
-Config file location
+Configuration file location
 --------------------
 When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in the directory from which the command to launch Corda is executed.
 There are two command-line options to override this behaviour:
 
-* The ``--config-file`` command line option allows you to specify a configuration file with a different name, or at different file location.
+* The ``--config-file`` command line option allows you to specify a configuration file with a different name, or in a different file location.
   Paths are relative to the current working directory
 
 * The ``--base-directory`` command line option allows you to specify the node's workspace location.
-  A ``node.conf`` configuration file is then expected in the root of this workspace
+  A ``node.conf`` configuration file is then expected in the root of this workspace.
 
 If you specify both command line arguments at the same time, the node will fail to start.
 
-Config file format
+Configuration file format
 ------------------
 The Corda configuration file uses the HOCON format which is a superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
@@ -46,7 +46,7 @@ JVM options
 
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
 
-Config file fields
+Configuration file fields
 ------------------
 
 .. note :: The available config fields are listed below in alphabetic order.
@@ -489,8 +489,6 @@ tlsCertCrlIssuer
 trustStorePassword
   The password to unlock the Trust store file (``<workspace>/certificates/truststore.jks``) containing the Corda network root certificate.
   This is the non-secret value for the development certificates automatically generated during the first node run.
-
-  *Important:* Longer term these keys will be managed in secure hardware devices. ??? (Is it for OS?)
 
   *Default:* trustpass
 
