@@ -13,7 +13,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.concurrent.Future;
 
-import static net.corda.testing.node.internal.TestCordappsUtilsKt.cordappsForPackages;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappsForPackages;
 import static org.hamcrest.Matchers.instanceOf;
 
 /**
