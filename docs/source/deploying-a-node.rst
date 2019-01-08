@@ -14,7 +14,7 @@ handling, and ensures the Corda service is run at boot.
 
 **Prerequisites**:
 
-   * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
+   * Supported Java 8. The supported versions are listed in :doc:`getting-set-up`
 
 1. As root/sys admin user - add a system user which will be used to run Corda:
 
@@ -66,13 +66,8 @@ handling, and ensures the Corda service is run at boot.
    *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below).
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
       only visible to the permissioning service.
-   *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
-      change as it should represent the legal identity of your node.
-
-      * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
-      * Location (``L=``) is your nearest city
-      * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password.
+   *  Enter your node's desired legal name (see :ref:`node-naming` for more details).
+   *  Setup RPC users (*optional*).
 
 .. note:: Ubuntu 16.04 and most current Linux distributions use SystemD, so if you are running one of these
           distributions follow the steps marked **SystemD**. 
@@ -190,7 +185,7 @@ at boot, and means the Corda service stays running with no users connected to th
 
 **Prerequisites**:
 
-   * Oracle Java 8. The supported versions are listed in :doc:`getting-set-up`
+   * Supported Java 8. The supported versions are listed in :doc:`getting-set-up`
 
 1. Create a Corda directory and download the Corda jar. Replace ``VERSION_NUMBER`` with the desired version. Here's an
    example using PowerShell::
@@ -214,16 +209,13 @@ at boot, and means the Corda service stays running with no users connected to th
         keyStorePassword = "cordacadevpass"
         trustStorePassword = "trustpass"
         devMode = false
-        rpcUsers = [
-            {
-                user=corda
-                password=portal_password
-                permissions=[
-                    ALL
-                ]
-            }
-        ]
-        custom { jvmArgs = [ '-Xmx2048m', '-XX:+UseG1GC' ] }
+        rpcSettings {
+           useSsl = false
+           standAloneBroker = false
+           address = "example.com:10003"
+           adminAddress = "example.com:10004"
+       }
+       custom { jvmArgs = [ '-Xmx2048m', '-XX:+UseG1GC' ] }
 
 4. Make the following changes to ``C:\Corda\node.conf``:
 
@@ -233,13 +225,8 @@ at boot, and means the Corda service stays running with no users connected to th
    *  Change the ports if necessary, for example if you are running multiple nodes on one server (see below).
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
       only visible to the permissioning service.
-   *  Enter your node's desired legal name. This will be used during the issuance of your certificate and should rarely
-      change as it should represent the legal identity of your node.
-
-      * Organization (``O=``) should be a unique and meaningful identifier (e.g. Bank of Breakfast Tea)
-      * Location (``L=``) is your nearest city
-      * Country (``C=``) is the `ISO 3166-1 alpha-2 code <https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2>`_
-   *  Change the RPC username and password.
+   *  Enter your node's desired legal name (see :ref:`node-naming` for more details).
+   *  Setup RPC users (*optional*).
 
 5. Copy the required Java keystores to the node. See :doc:`permissioning`
 
@@ -253,7 +240,6 @@ at boot, and means the Corda service stays running with no users connected to th
 
       nssm install cordanode1 C:\ProgramData\Oracle\Java\javapath\java.exe
       nssm set cordanode1 AppDirectory C:\Corda
-      nssm set cordanode1 AppParameters "-Xmx2048m -jar corda.jar --config-file=C:\corda\node.conf"
       nssm set cordanode1 AppStdout C:\Corda\service.log
       nssm set cordanode1 AppStderr C:\Corda\service.log
       nssm set cordanode1 Description Corda Node - Bank of Breakfast Tea
@@ -263,7 +249,6 @@ at boot, and means the Corda service stays running with no users connected to th
 9. Modify the batch file:
 
     * If you are installing multiple nodes, use a different service name (``cordanode1``) for each node
-    * Set the amount of Java heap memory available to this node by modifying the -Xmx argument
     * Set an informative description
 
 10. Provision the required certificates to your node. Contact the network permissioning service or see
