@@ -1,5 +1,5 @@
-Deploying a node
-================
+Node deployment to server
+=========================
 
 .. contents::
 
@@ -36,18 +36,18 @@ handling, and ensures the Corda service is run at boot.
 
 6. Save the below as ``/opt/corda/node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
-      p2pAddress : "example.com:10002"
+      p2pAddress = "example.com:10002"
       rpcSettings {
           address: "example.com:10003"
           adminAddress: "example.com:10004"
       }
-      h2port : 11000
-      emailAddress : "you@example.com"
-      myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
-      keyStorePassword : "cordacadevpass"
-      trustStorePassword : "trustpass"
-      devMode : false
-      rpcUsers=[
+      h2port = 11000
+      emailAddress = "you@example.com"
+      myLegalName = "O=Bank of Breakfast Tea, L=London, C=GB"
+      keyStorePassword = "cordacadevpass"
+      trustStorePassword = "trustpass"
+      devMode = false
+      rpcUsers= [
           {
               user=corda
               password=portal_password
@@ -116,8 +116,6 @@ handling, and ensures the Corda service is run at boot.
     * Make sure the service description is informative - particularly if you plan to run multiple nodes.
     * Change the username to the user account you want to use to run Corda. **We recommend that this user account is
       not root**
-    * Set the maximum amount of memory available to the Corda process by changing the ``-Xmx2048m`` parameter in
-      the config file
     * **SystemD**: Make sure the ``corda.service`` file is owned by root with the correct permissions:
 
         * ``sudo chown root:root /etc/systemd/system/corda.service``
@@ -205,18 +203,18 @@ at boot, and means the Corda service stays running with no users connected to th
 
 3. Save the below as ``C:\Corda\node.conf``. See :doc:`corda-configuration-file` for a description of these options::
 
-        p2pAddress : "example.com:10002"
+        p2pAddress = "example.com:10002"
         rpcSettings {
-            address: "example.com:10003"
-            adminAddress: "example.com:10004"
+            address = "example.com:10003"
+            adminAddress = "example.com:10004"
         }
-        h2port : 11000
-        emailAddress: "you@example.com"
-        myLegalName : "O=Bank of Breakfast Tea, L=London, C=GB"
-        keyStorePassword : "cordacadevpass"
-        trustStorePassword : "trustpass"
-        devMode : false
-        rpcUsers=[
+        h2port = 11000
+        emailAddress = "you@example.com"
+        myLegalName = "O=Bank of Breakfast Tea, L=London, C=GB"
+        keyStorePassword = "cordacadevpass"
+        trustStorePassword = "trustpass"
+        devMode = false
+        rpcUsers = [
             {
                 user=corda
                 password=portal_password
@@ -225,6 +223,7 @@ at boot, and means the Corda service stays running with no users connected to th
                 ]
             }
         ]
+        custom { jvmArgs = [ '-Xmx2048m', '-XX:+UseG1GC' ] }
 
 4. Make the following changes to ``C:\Corda\node.conf``:
 

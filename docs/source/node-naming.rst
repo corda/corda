@@ -1,3 +1,5 @@
+.. _node-naming:
+
 Node naming
 ===========
 A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations

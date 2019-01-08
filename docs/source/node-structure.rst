@@ -1,7 +1,5 @@
 Node folder structure
-==============
-
-.. contents::
+=====================
 
 A folder with Corda node files has the following structure:
 
