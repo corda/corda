@@ -55,6 +55,7 @@ We look forward to seeing what you can do with Corda!
 
    corda-nodes-index.rst
    corda-networks-index.rst
+   docker.rst
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
@@ -95,7 +96,7 @@ We look forward to seeing what you can do with Corda!
    :caption: Participate
    :maxdepth: 2
    :if_tag: htmlmode
-   
+
    contributing-index.rst
    corda-repo-layout.rst
    deterministic-modules.rst

@@ -10,7 +10,6 @@ Nodes
    node-commandline
    node-administration
    deploying-a-node
-   docker-image
    node-database
    node-database-access-h2
    shell
