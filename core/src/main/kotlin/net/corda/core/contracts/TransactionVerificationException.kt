@@ -243,4 +243,12 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class TransactionVerificationVersionException(txId: SecureHash, contractClassName: ContractClassName, inputVersion: String, outputVersion: String)
         : TransactionVerificationException(txId, " No-Downgrade Rule has been breached for contract class $contractClassName. " +
             "The output state contract version '$outputVersion' is lower that the version of the input state '$inputVersion'.", null)
+
+    /**
+     * Thrown when a cordapp has been released with a target version below the expected one.
+     */
+    @KeepForDJVM
+    class IllegalTargetVersionException(txId: SecureHash, val contractClass: String, val targetVersion: Int, val shouldTarget: Int)
+        : TransactionVerificationException(txId, "Found cordapp for $contractClass that targets: $targetVersion, but the minumum required is $shouldTarget.", null)
+
 }

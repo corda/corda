@@ -18,13 +18,17 @@ import java.util.jar.JarInputStream
  *
  * This rule is consulted during validation by [LedgerTransaction].
  */
-object StateContractValidationEnforcementRule {
+object CordappVersionUtils {
 
-    private val logger = LoggerFactory.getLogger(StateContractValidationEnforcementRule::class.java)
+    private val logger = LoggerFactory.getLogger(CordappVersionUtils::class.java)
+
+    private const val NO_TARGET = -1
 
     private val targetVersionCache = ConcurrentHashMap<URL, Int>()
 
-    fun shouldEnforce(state: ContractState): Boolean {
+    fun shouldEnforce(state: ContractState): Boolean = getTargetVersion(state).let { it == NO_TARGET || it >= 4 }
+
+    fun getTargetVersion(state: ContractState): Int {
         val jarLocation = state::class.java.protectionDomain.codeSource.location
 
         if (jarLocation == null) {
@@ -35,15 +39,13 @@ object StateContractValidationEnforcementRule {
 
                 For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent().replace("\n", " "))
-            return true
+            return NO_TARGET
         }
 
-        val targetVersion = targetVersionCache.computeIfAbsent(jarLocation) {
+        return targetVersionCache.computeIfAbsent(jarLocation) {
             jarLocation.openStream().use { inputStream ->
                 JarInputStream(inputStream).manifest?.targetPlatformVersion ?: 1
             }
         }
-
-        return targetVersion >= 4
     }
 }

@@ -6,7 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.rules.StateContractValidationEnforcementRule
+import net.corda.core.internal.rules.CordappVersionUtils
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
 
@@ -40,6 +40,8 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
     fun verify() {
         // checkNoNotaryChange and checkEncumbrancesValid are called here, and not in the c'tor, as they need access to the "outputs"
         // list, the contents of which need to be deserialized under the correct classloader.
+        checkTargetVersion()
+        // TODO - check that if target >=4 then cordapp needs a version.
         checkNoNotaryChange()
         checkEncumbrancesValid()
         validateContractVersions()
@@ -207,6 +209,18 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
     }
 
     /**
+     * Verifies that any cordapp that will use the Signature Constraint is actually targeting Corda 4 and thus obeying all security rules.
+     */
+    private fun checkTargetVersion() {
+        allStates.forEach { state ->
+            val targetVersion = CordappVersionUtils.getTargetVersion(state.data)
+            if (state.constraint is SignatureAttachmentConstraint && (targetVersion < 4)) {
+                throw TransactionVerificationException.IllegalTargetVersionException(ltx.id, state.contract, targetVersion, 4)
+            }
+        }
+    }
+
+    /**
      * Verify that contract class versions of output states are not lower that versions of relevant input states.
      */
     private fun validateContractVersions() {
@@ -250,7 +264,7 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
     private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
 
     private fun validateStateAgainstContract(state: TransactionState<ContractState>) {
-        val shouldEnforce = StateContractValidationEnforcementRule.shouldEnforce(state.data)
+        val shouldEnforce = CordappVersionUtils.shouldEnforce(state.data)
 
         val requiredContractClassName = state.data.requiredContractClassName
                 ?: if (shouldEnforce) throw TransactionVerificationException.TransactionRequiredContractUnspecifiedException(ltx.id, state) else return
