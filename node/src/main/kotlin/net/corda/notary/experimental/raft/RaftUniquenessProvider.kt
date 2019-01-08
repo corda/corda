@@ -22,8 +22,9 @@ import net.corda.core.identity.Party
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.notary.UniquenessProvider
-import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -59,24 +60,26 @@ class RaftUniquenessProvider(
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = contextLogger()
-        fun createMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, PersistentStateRef> =
+        fun createMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<StateRef, Pair<Long, SecureHash>, CommittedState, String> =
                 AppendOnlyPersistentMap(
                         cacheFactory = cacheFactory,
                         name = "RaftUniquenessProvider_transactions",
-                        toPersistentEntityKey = { PersistentStateRef(it) },
+                        toPersistentEntityKey = { it.encoded() },
                         fromPersistentEntity = {
-                            val txId = it.id.txId
-                            val index = it.id.index
                             Pair(
-                                    StateRef(txhash = SecureHash.parse(txId), index = index),
-                                    Pair(it.index, SecureHash.parse(it.value) as SecureHash))
-
+                                    it.key.parseStateRef(),
+                                    Pair(
+                                            it.index,
+                                            it.value.deserialize<SecureHash>(context = SerializationDefaults.STORAGE_CONTEXT)
+                                    )
+                            )
                         },
                         toPersistentEntity = { k: StateRef, (first, second) ->
-                            CommittedState(
-                                    PersistentStateRef(k),
-                                    second.toString(),
-                                    first)
+                            CommittedState().apply {
+                                key = k.encoded()
+                                value = second.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                                index = first
+                            }
 
                         },
                         persistentEntityClass = CommittedState::class.java
@@ -89,11 +92,15 @@ class RaftUniquenessProvider(
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}raft_committed_states")
     class CommittedState(
-            @EmbeddedId
-            val id: PersistentStateRef,
-            @Column(name = "consuming_transaction_id", nullable = true)
-            var value: String? = "",
-            @Column(name = "raft_log_index", nullable = false)
+            @Id
+            @Column(name = "id", nullable = false)
+            var key: String = "",
+
+            @Lob
+            @Column(name = "state_value", nullable = false)
+            var value: ByteArray = ByteArray(0),
+
+            @Column(name = "state_index")
             var index: Long = 0
     )
 

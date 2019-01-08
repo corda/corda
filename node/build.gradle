@@ -173,9 +173,9 @@ dependencies {
     compile 'com.github.bft-smart:library:master-v1.1-beta-g6215ec8-87'
 
     // Java Atomix: RAFT library
-    compile 'io.atomix.copycat:copycat-client:1.2.8'
-    compile 'io.atomix.copycat:copycat-server:1.2.8'
-    compile 'io.atomix.catalyst:catalyst-netty:1.2.1'
+    compile 'io.atomix.copycat:copycat-client:1.2.3'
+    compile 'io.atomix.copycat:copycat-server:1.2.3'
+    compile 'io.atomix.catalyst:catalyst-netty:1.1.2'
 
     // Jetty dependencies for NetworkMapClient test.
     // Web stuff: for HTTP[S] servlets

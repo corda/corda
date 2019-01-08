@@ -6,14 +6,11 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
     <changeSet author="R3.Corda" id="1511451595465-18">
         <createTable tableName="node_raft_committed_states">
-            <column name="transaction_id" type="NVARCHAR(64)">
+            <column name="id" type="NVARCHAR(128)">
                 <constraints nullable="false"/>
             </column>
-            <column name="output_index" type="INT">
-                <constraints nullable="false"/>
-            </column>
-            <column name="raft_log_index" type="BIGINT"/>
-            <column name="consuming_transaction_id" type="NVARCHAR(64)"/>
+            <column name="state_index" type="BIGINT"/>
+            <column name="state_value" type="BLOB"/>
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1521131680317-17">
@@ -36,7 +33,7 @@
         </createTable>
     </changeSet>
     <changeSet author="R3.Corda" id="1511451595465-43">
-        <addPrimaryKey columnNames="output_index, transaction_id" constraintName="node_raft_state_pkey"
+        <addPrimaryKey columnNames="id" constraintName="node_raft_state_pkey"
                        tableName="node_raft_committed_states"/>
     </changeSet>
     <changeSet author="R3.Corda" id="1521131680317-48">
