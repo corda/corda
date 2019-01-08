@@ -55,7 +55,7 @@ class AddressBindingFailureTests {
 
         ServerSocket(0).use { socket ->
 
-            val address = InetSocketAddress(socket.localPort).toNetworkHostAndPort()
+            val address = InetSocketAddress("localhost", socket.localPort).toNetworkHostAndPort()
             driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList(), inMemoryDB = false, portAllocation = portAllocation)) {
 
                 assertThatThrownBy { startNode(customOverrides = overrides(address)).getOrThrow() }.isInstanceOfSatisfying(AddressBindingException::class.java) { exception ->

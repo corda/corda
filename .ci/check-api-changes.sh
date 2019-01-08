@@ -44,10 +44,12 @@ $newAbstracts
 EOF
 `
 
-#Get a list of any methods that expose classes in .internal. namespaces, and any classes which extend/implement
-#an internal class
+# Get a list of any methods that expose internal classes, which includes:
+# - classes in .internal. namespaces (excluding the kotlin.jvm.internal namespace)
+# - classes which extend/implement an internal class (see above)
+# - classes in the net.corda.node. namespace
 #TODO: check that only classes in a whitelist are part of the API rather than look for specific invalid cases going forward
-newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "\.internal\." )
+newInternalExposures=$(echo "$userDiffContents" | grep "^+" | grep "(?<!kotlin\.jvm)\.internal\." )
 newNodeExposures=$(echo "$userDiffContents" | grep "^+" | grep "net\.corda\.node\.")
 
 internalCount=`grep -v "^$" <<EOF | wc -l
