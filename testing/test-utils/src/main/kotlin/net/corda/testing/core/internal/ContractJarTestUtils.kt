@@ -44,7 +44,7 @@ object ContractJarTestUtils {
         }
     }
 
-    private fun Path.singWithDummyKey(jarName: Path): PublicKey{
+    private fun Path.signWithDummyKey(jarName: Path): PublicKey{
         val alias = "testAlias"
         val pwd = "testPassword"
         this.generateKey(alias, pwd, ALICE_NAME.toString())
@@ -57,7 +57,7 @@ object ContractJarTestUtils {
     @JvmOverloads
     fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1): Pair<Path, PublicKey> {
         val jarName = makeTestContractJar(workingDir, contractName, true, version)
-        val signer = workingDir.singWithDummyKey(jarName)
+        val signer = workingDir.signWithDummyKey(jarName)
         return workingDir.resolve(jarName) to signer
     }
 
@@ -85,7 +85,7 @@ object ContractJarTestUtils {
         if (generateManifest)
             workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
         if (signed)
-            workingDir.singWithDummyKey(workingDir.resolve(jarName))
+            workingDir.signWithDummyKey(workingDir.resolve(jarName))
         return workingDir.resolve(jarName)
     }
 
