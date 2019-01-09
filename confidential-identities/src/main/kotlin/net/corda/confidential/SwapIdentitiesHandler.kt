@@ -3,6 +3,7 @@ package net.corda.confidential
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.deserialize
@@ -10,6 +11,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
+@InitiatedBy(SwapIdentitiesFlow::class)
 class SwapIdentitiesHandler(val otherSideSession: FlowSession, val revocationEnabled: Boolean) : FlowLogic<Unit>() {
     constructor(otherSideSession: FlowSession) : this(otherSideSession, false)
 
