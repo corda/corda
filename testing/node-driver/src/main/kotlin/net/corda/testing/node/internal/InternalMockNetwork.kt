@@ -35,10 +35,7 @@ import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.api.StartedNodeServices
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.NetworkParameterAcceptanceSettings
-import net.corda.node.services.config.NodeConfiguration
-import net.corda.node.services.config.VerifierType
+import net.corda.node.services.config.*
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.node.services.keys.KeyManagementServiceInternal
@@ -90,7 +87,7 @@ data class InternalMockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
         val entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
-        val configOverrides: MockNodeConfigOverrides? = null,
+        val configOverrides: (NodeConfiguration) -> Any? = {},
         val version: VersionInfo = MOCK_VERSION_INFO,
         val additionalCordapps: Collection<TestCordappInternal> = emptyList(),
         val flowManager: MockNodeFlowManager = MockNodeFlowManager()) {
@@ -98,7 +95,7 @@ data class InternalMockNodeParameters(
             mockNodeParameters.forcedID,
             mockNodeParameters.legalName,
             mockNodeParameters.entropyRoot,
-            mockNodeParameters.configOverrides,
+            { mockNodeParameters.configOverrides?.applyMockNodeOverrides(it) },
             MOCK_VERSION_INFO,
             uncheckedCast(mockNodeParameters.additionalCordapps)
     )
@@ -260,7 +257,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         return notarySpecs.map { (name, validating) ->
             createNode(InternalMockNodeParameters(
                     legalName = name,
-                    configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating))
+                    configOverrides = { doReturn(NotaryConfig(validating)).whenever(it).notary }
             ))
         }
     }
@@ -468,7 +465,7 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
             doReturn(makeTestDataSourceProperties("node_${id}_net_$networkId")).whenever(it).dataSourceProperties
             doReturn(emptyList<SecureHash>()).whenever(it).extraNetworkMapKeys
             doReturn(listOf(baseDirectory / "cordapps")).whenever(it).cordappDirectories
-            parameters.configOverrides?.applyMockNodeOverrides(it)
+            parameters.configOverrides(it)
         }
 
         TestCordappInternal.installCordapps(baseDirectory, parameters.additionalCordapps.toSet(), combinedCordappsForAllNodes)

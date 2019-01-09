@@ -163,7 +163,7 @@ internal constructor(private val initSerEnv: Boolean,
     private fun isBFTNotary(config: Config): Boolean {
         // TODO: pass a commandline parameter to the bootstrapper instead. Better yet, a notary config map
         //       specifying the notary identities and the type (single-node, CFT, BFT) of each notary to set up.
-        return config.getString("notary.className").contains("BFT", true)
+        return config.hasPath("notary.bftSMaRt")
     }
 
     private fun generateServiceIdentitiesForNotaryClusters(configs: Map<Path, Config>) {
