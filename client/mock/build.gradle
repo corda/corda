@@ -11,7 +11,9 @@ description 'Corda client mock modules'
 dependencies {
     compile project(":core")
     compile project(':finance:workflows')
-    compile project(':finance:contracts')
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
 
     // Unit testing helpers.
     testCompile "junit:junit:$junit_version"

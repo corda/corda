@@ -28,9 +28,11 @@ dependencies {
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
     cordaCompile project(':core')
-    compile project(':confidential-identities')
+    cordaCompile project(':confidential-identities')
 
-    cordapp project(':finance:contracts')
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

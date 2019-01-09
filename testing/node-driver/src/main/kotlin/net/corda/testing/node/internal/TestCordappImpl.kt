@@ -31,7 +31,7 @@ data class TestCordappImpl(override val scanPackage: String, override val config
                         "the package name is correct and that the CorDapp is added as a gradle dependency.")
                 1 -> return jars.first()
                 else -> throw IllegalArgumentException("There is more than one CorDapp containing the package $scanPackage on the classpath " +
-                        "$jars. Specify a package name which is unique to the CorDapp.")
+                        "${jars.map { it.toFile().absolutePath }}. Specify a package name which is unique to the CorDapp.")
             }
         }
 

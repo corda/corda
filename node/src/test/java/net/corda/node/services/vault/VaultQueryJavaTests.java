@@ -150,9 +150,7 @@ public class VaultQueryJavaTests {
             // DOCSTART VaultJavaQueryExample0
             Vault.Page<LinearState> results = vaultService.queryBy(LinearState.class);
             // DOCEND VaultJavaQueryExample0
-
             assertThat(results.getStates()).hasSize(3);
-
             return tx;
         });
     }

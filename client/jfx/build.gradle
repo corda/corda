@@ -26,7 +26,9 @@ sourceSets {
 
 dependencies {
     compile project(':core')
-    compile project(':finance:contracts')
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     compile project(':finance:workflows')
     compile project(':client:rpc')
 

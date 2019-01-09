@@ -21,8 +21,8 @@ evaluationDependsOn(':webserver:webcapsule')
 
 mainClassName = 'net.corda.demobench.DemoBench'
 applicationDefaultJvmArgs = [
-    '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
-    '-Dorg.jboss.logging.provider=slf4j'
+        '-Djava.util.logging.config.class=net.corda.demobench.config.LoggingConfig',
+        '-Dorg.jboss.logging.provider=slf4j'
 ]
 
 repositories {
@@ -33,6 +33,7 @@ repositories {
     maven {
         url 'http://www.sparetimelabs.com/maven2'
     }
+    mavenLocal()
 }
 
 configurations {
@@ -40,6 +41,7 @@ configurations {
         // We don't need Hibernate just for its @Type annotation.
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }
+    bundle.extendsFrom compile
 }
 
 dependencies {
@@ -50,7 +52,8 @@ dependencies {
     compile "org.controlsfx:controlsfx:$controlsfx_version"
 
     compile project(':client:rpc')
-    compile project(':finance:contracts')
+
+    compile "net.corda:corda-finance-contracts:$os_corda_release_version"
     compile project(':finance:workflows')
 
     compile "com.h2database:h2:$h2_version"
@@ -76,6 +79,9 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
+
+    bundle "net.corda:corda-finance-contracts:$os_corda_release_version"
+    bundle project(':finance:workflows')
 }
 
 tasks.withType(JavaCompile) {
@@ -83,11 +89,13 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-proc:none'
 }
 
+
+
 jar {
     manifest {
         attributes(
-            'Main-Class': mainClassName,
-            'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
+                'Main-Class': mainClassName,
+                'Class-Path': configurations.runtimeClasspath.collect { it.name }.join(' '),
         )
     }
 }
@@ -127,13 +135,7 @@ distributions {
                 into 'corda'
                 fileMode = 0444
             }
-            from(project(':finance:contracts').tasks.jar) {
-                rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
-                into 'cordapps'
-                fileMode = 0444
-            }
-            from(project(':finance:workflows').tasks.jar) {
-                rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
+            from(configurations.bundle) {
                 into 'cordapps'
                 fileMode = 0444
             }
@@ -180,14 +182,14 @@ task javapackage(dependsOn: distZip) {
             }
             filter { line ->
                 line.replaceAll('@pkg_version@', pkg_version)
-                    .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
+                        .replaceAll('@signingKeyUserName@', pkg_macosxKeyUserName)
             }
             into "$pkg_source/package"
         }
 
         ant.taskdef(
-            resource: 'com/sun/javafx/tools/ant/antlib.xml',
-            classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
+                resource: 'com/sun/javafx/tools/ant/antlib.xml',
+                classpath: "$pkg_source:$java_home/../lib/ant-javafx.jar"
         )
 
         ant.deploy(nativeBundles: packageType, outdir: pkg_outDir, outfile: 'DemoBench', verbose: 'true') {

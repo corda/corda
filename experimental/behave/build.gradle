@@ -75,7 +75,9 @@ dependencies {
     compile "com.spotify:docker-client:$docker_client_version"
     compile "io.reactivex:rxjava:$rxjava_version"
 
-    compile project(':finance:contracts')
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     compile project(':finance:workflows')
     compile project(':node-api')
     compile project(':client:rpc')

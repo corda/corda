@@ -25,7 +25,9 @@ configurations {
 
 dependencies {
     // The irs demo CorDapp depends upon Cash CorDapp features
-    cordapp project(':finance:contracts')
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     cordapp project(':finance:workflows')
 
     // Corda integration dependencies

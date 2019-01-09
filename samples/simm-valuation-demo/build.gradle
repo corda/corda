@@ -42,7 +42,9 @@ dependencies {
     cordaCompile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The SIMM demo CorDapp depends upon Cash CorDapp features
-    cordapp project(':finance:contracts')
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     cordapp project(':finance:workflows')
     cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
     cordapp project(':samples:simm-valuation-demo:flows')
@@ -81,7 +83,7 @@ def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes")
     nodeDefaults {
-        cordapp project(':finance:contracts')
+        cordapp "net.corda:corda-finance-contracts:$os_corda_release_version"
         cordapp project(':finance:workflows')
         cordapp project(':samples:simm-valuation-demo:contracts-states')
         cordapp project(':samples:simm-valuation-demo:flows')

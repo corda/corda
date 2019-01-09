@@ -24,6 +24,9 @@ dependencies {
 
     // AssertJ: for fluent assertions for testing
     testCompile "org.assertj:assertj-core:$assertj_version"
+    testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
 }
 
 jar {

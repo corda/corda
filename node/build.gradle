@@ -134,11 +134,8 @@ dependencies {
     testCompile 'com.github.stefanbirkner:system-rules:1.16.0'
     testCompile project(':test-utils')
     testCompile project(':client:jfx')
-    testCompile project(':finance:contracts')
+    testCompile project(':node-driver')
     testCompile project(':finance:workflows')
-
-    // sample test schemas
-    testCompile project(path: ':finance:contracts', configuration: 'testArtifacts')
 
     // For H2 database support in persistence
     compile "com.h2database:h2:$h2_version"
@@ -233,9 +230,16 @@ dependencies {
 
     testCompile(project(':test-cli'))
     testCompile(project(':test-utils'))
+    testCompile(project(':node-driver'))
 
     testCompile(project(':notary:mysql'))
     testCompile(project(':notary:jpa'))
+    testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+            transitive = false
+    }
+    testCompile project(':core').sourceSets.test.output
+    testCompile project(':core')
+    testCompile project(':test-utils')
 }
 
 tasks.withType(JavaCompile) {

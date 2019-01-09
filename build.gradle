@@ -6,6 +6,9 @@ buildscript {
     // Our version: bump this on release.
     ext.corda_release_version = "4.0-SNAPSHOT"
     ext.corda_release_distribution = "com.r3.corda"
+    
+    //OS version for shared dependencies
+    ext.os_corda_release_version = "4.0-SNAPSHOT"
 
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
@@ -258,6 +261,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
+        maven { url "http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev" } //access to OS snapshots
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
         maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
@@ -336,7 +340,9 @@ dependencies {
     runtime project(':core')
     runtime project(':confidential-identities')
     runtime project(':finance:workflows')
-    runtime project(':finance:contracts')
+    runtime ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     runtime project(':webserver')
     testCompile project(':test-utils')
 }
@@ -398,7 +404,6 @@ bintrayConfig {
             'corda',
             'corda-finance',    // maintained for backwards compatibility only
             'corda-finance-workflows',
-            'corda-finance-contracts',
             'corda-node',
             'corda-node-api',
             'corda-test-common',
@@ -445,19 +450,6 @@ bintrayConfig {
         name = 'R3'
         email = 'dev@corda.net'
     }
-}
-
-// Build a ZIP of all JARs required to compile the Cordapp template
-// Note: corda.jar is used at runtime so no runtime ZIP is necessary.
-// Resulting ZIP can be found in "build/distributions"
-task buildCordappDependenciesZip(type: Zip) {
-    baseName 'corda-deps'
-    from configurations.runtime
-    from configurations.compile
-    from configurations.testCompile
-    from buildscript.configurations.classpath
-    from 'node/capsule/NOTICE' // CDDL notice
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 artifactory {

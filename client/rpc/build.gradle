@@ -52,6 +52,11 @@ sourceSets {
     }
 }
 
+def findJar(prefix) {
+    configurations.smokeTestCompile.filter { it.name.startsWith(prefix) }
+}
+
+
 processSmokeTestResources {
     from(project(':node:capsule').tasks['buildCordaJAR']) {
         rename 'corda-(.*)', 'corda.jar'
@@ -59,7 +64,7 @@ processSmokeTestResources {
     from(project(':finance:workflows').tasks['jar']) {
         rename 'finance-workflows-(.*)', 'finance-workflows.jar'
     }
-    from(project(':finance:contracts').tasks['jar']) {
+    from(findJar('finance-contracts')) {
         rename 'finance-contracts-(.*)', 'finance-contracts.jar'
     }
 }
@@ -85,7 +90,9 @@ dependencies {
 
     // Smoke tests do NOT have any Node code on the classpath!
     smokeTestCompile project(':smoke-test-utils')
-    smokeTestCompile project(':finance:contracts')
+    smokeTestCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     smokeTestCompile project(':finance:workflows')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"

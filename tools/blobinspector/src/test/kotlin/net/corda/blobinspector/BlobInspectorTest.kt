@@ -62,6 +62,6 @@ class BlobInspectorTest {
     }
 
     private fun checkNotOnClassPath(className: String) {
-        checkNotOnClasspath(className) { "The Blob Inspector does not have this as a dependency." }
+        checkNotOnClasspath(className) { "$className should not be on classpath - please check your dependencies" }
     }
 }
