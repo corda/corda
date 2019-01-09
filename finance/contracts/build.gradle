@@ -15,7 +15,6 @@ dependencies {
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
     cordapp project(':core')
-    cordapp project(':confidential-identities')
 
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"

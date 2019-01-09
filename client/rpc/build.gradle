@@ -62,9 +62,6 @@ processSmokeTestResources {
     from(project(':finance:contracts').tasks['jar']) {
         rename '.*finance-contracts-.*', 'cordapp-finance-contracts.jar'
     }
-    from(project(':confidential-identities').tasks['jar']) {
-        rename '.*confidential-identities-.*', 'cordapp-confidential-identities.jar'
-    }
 }
 
 // To find potential version conflicts, run "gradle htmlDependencyReport" and then look in
