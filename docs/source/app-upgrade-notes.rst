@@ -215,13 +215,14 @@ finalised transaction. If the initiator is written in a backwards compatible way
 The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
 This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
 
+.. _update_swap_ident_ref:
+
 Step 4. Security: Upgrade your use of SwapIdentitiesFlow
 --------------------------------------------------------
 
 The :ref:`confidential_identities_ref` API is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
 has been adjusted in the same way as ``FinalityFlow`` above, to close problems with confidential identities being injectable into a node
-outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
-the ``SwapIdentitiesFlow``.
+outside of other flow context. It is recommended to adjust your call sites so a session is passed into the ``SwapIdentitiesFlow``.
 
 Step 5. Possibly, adjust test code
 ----------------------------------
@@ -310,7 +311,6 @@ The zone operator can then add your signing key to the network parameters, and p
 Whilst this feature is optional and not strictly required, it may be helpful to block attacks at the boundaries of a Corda based application
 where type names may be taken "as read". You can learn more about this feature and the motivation for it by reading
 ":doc:`design/data-model-upgrades/package-namespace-ownership`".
-
 
 Step 9. Consider adding extension points to your flows
 ------------------------------------------------------

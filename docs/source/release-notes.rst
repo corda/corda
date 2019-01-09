@@ -287,6 +287,20 @@ The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the li
 as it is a legacy cipher family not supported by all native SSL/TLS implementations. We anticipate that this
 will have no impact on any deployed configurations.
 
+Confidential identities
++++++++++++++++++++++++
+
+If any of your CorDapps are using the experimental confidential-identities module and have not been updated to use the new API
+(see :ref:`the upgrade notes<update_swap_ident_ref>`) then you will also need to load a patched V3 confidential-identities CorDapp jar.
+Failing this, the flows in those CorDapps may fail with the error::
+
+  java.lang.NoClassDefFoundError: net/corda/confidential/SwapIdentitiesFlow
+
+If this is the case please contact R3 Support.
+
+If on the other hand your CorDapps have been updated to use the new API then you will need to load the V4 confidential-identities CorDapp jar
+instead.
+
 Miscelleneous changes
 ~~~~~~~~~~~~~~~~~~~~~
 
