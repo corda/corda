@@ -28,7 +28,6 @@ public class GenericReturnFailureReproductionIntegrationTest extends Integration
     @ClassRule
     public static final IntegrationTestSchemas databaseSchemas = new IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME, DUMMY_NOTARY_NAME);
 
-
     @Test()
     public void flowShouldReturnGenericList() {
         User user = new User("yes", "yes", Collections.singleton(Permissions.startFlow(SuperSimpleGenericFlow.class)));
@@ -44,33 +43,7 @@ public class GenericReturnFailureReproductionIntegrationTest extends Integration
 
     }
 
-    @StartableByRPC
-    public static class SuperSimpleGenericFlow extends FlowLogic<GenericHolder<String>> {
-        public SuperSimpleGenericFlow() {
-        }
-
-        @Override
-        public GenericHolder<String> call() {
-            return new GenericHolder<>(IntStream.of(100).mapToObj((i) -> "" + i).collect(Collectors.toList()));
-        }
-    }
-
-    @CordaSerializable
-    public static class GenericHolder<S> {
-        private final List<S> items;
-
-        public GenericHolder(List<S> items) {
-            this.items = items;
-        }
-
-        public List<S> getItems() {
-            return items;
-        }
-    }
-
-
     private static <Y> Y getOrThrow(CordaFuture<Y> future) {
-
         try {
             return future.get();
         } catch (InterruptedException | ExecutionException e) {

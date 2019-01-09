@@ -28,32 +28,6 @@ class AsymmetricCorDappsTests : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
     }
 
-    @StartableByRPC
-    @InitiatingFlow
-    class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val pongSession = initiateFlow(pongParty)
-            pongSession.sendAndReceive<Unit>(times)
-            for (i in 1..times) {
-                val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
-                assertEquals(i, j)
-            }
-        }
-    }
-
-    @InitiatedBy(Ping::class)
-    class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
-            for (i in 1..times) {
-                val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
-                assertEquals(i, j)
-            }
-        }
-    }
-
     @Test
     fun `no shared cordapps with asymmetric specific classes`() {
         driver(DriverParameters(startNodesInProcess = false, cordappsForAllNodes = emptySet())) {
@@ -92,6 +66,32 @@ class AsymmetricCorDappsTests : IntegrationTest() {
                     startNode(NodeParameters(providedName = BOB_NAME, additionalCordapps = setOf(cordappForNodeB)))
             ).transpose().getOrThrow()
             nodeA.rpc.startFlow(::Ping, nodeB.nodeInfo.singleIdentity(), 1).returnValue.getOrThrow()
+        }
+    }
+}
+
+@StartableByRPC
+@InitiatingFlow
+class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val pongSession = initiateFlow(pongParty)
+        pongSession.sendAndReceive<Unit>(times)
+        for (i in 1..times) {
+            val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
+            assertEquals(i, j)
+        }
+    }
+}
+
+@InitiatedBy(Ping::class)
+class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
+        for (i in 1..times) {
+            val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
+            assertEquals(i, j)
         }
     }
 }
