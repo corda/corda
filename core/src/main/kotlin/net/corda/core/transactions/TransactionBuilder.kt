@@ -472,7 +472,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        if (constraints.all { it is WhitelistedByZoneAttachmentConstraint }) {
+        if (constraints.isNotEmpty() && constraints.all { it is WhitelistedByZoneAttachmentConstraint }) {
             val whitelistedAttachments = services.networkParameters.whitelistedContractImplementations[contractClassName]
             val availableAttachments = services.attachments.getContractAttachmentsWithUnsigedDuplicates(contractClassName)
             val selectedAttachments = whitelistedAttachments?.intersect(availableAttachments) ?: emptyList<AttachmentId>()
