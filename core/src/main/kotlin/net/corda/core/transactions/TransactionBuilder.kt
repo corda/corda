@@ -474,7 +474,7 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         if (constraints.isNotEmpty() && constraints.all { it is WhitelistedByZoneAttachmentConstraint }) {
             val whitelistedAttachments = services.networkParameters.whitelistedContractImplementations[contractClassName]
-            val availableAttachments = services.attachments.getContractAttachmentsWithUnsigedDuplicates(contractClassName)
+            val availableAttachments = services.attachments.getContractAttachmentsWithUnsignedDuplicates(contractClassName)
             val selectedAttachments = whitelistedAttachments?.intersect(availableAttachments) ?: emptyList<AttachmentId>()
             return selectedAttachments.last()
         }

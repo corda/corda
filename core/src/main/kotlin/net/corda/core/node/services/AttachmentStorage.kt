@@ -97,7 +97,14 @@ interface AttachmentStorage {
      */
     fun getContractAttachments(contractClassName: String): Set<AttachmentId>
 
-    fun getContractAttachmentsWithUnsigedDuplicates(contractClassName: String): Set<AttachmentId>
+    /**
+     * Find the Attachment Ids of the contract attachments for a given contract class name
+     * from trusted upload sources, returns all Attachments Ids of unsigned Attachments.
+     *
+     * @param contractClassName The fully qualified name of the contract class.
+     * @return the [AttachmentId]s of the contract attachments, or an empty set if none meet the criteria.
+     */
+    fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId>
 
     }
 

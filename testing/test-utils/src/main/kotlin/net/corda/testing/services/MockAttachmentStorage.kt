@@ -125,7 +125,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         return queryAttachments(attachmentQueryCriteria).toSet()
     }
 
-    override fun getContractAttachmentsWithUnsigedDuplicates(contractClassName: String): Set<AttachmentId> {
+    override fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
         return getContractAttachments(contractClassName)
     }
 }

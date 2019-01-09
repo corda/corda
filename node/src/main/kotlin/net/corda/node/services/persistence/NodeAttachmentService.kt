@@ -440,7 +440,7 @@ class NodeAttachmentService(
                     } else listOf(signed)
                 } else listOf(unsigned!!.first()!!)
 
-        fun toListWithUnsigedDuplicates(): List<AttachmentId> =
+        fun toListWithUnsignedDuplicates(): List<AttachmentId> =
                 if (signed != null) {
                     if (unsigned != null && unsigned.isNotEmpty()) {
                         listOf(signed) + unsigned
@@ -498,8 +498,8 @@ class NodeAttachmentService(
         return versions.values.flatMap { it.toList() }.toSet()
     }
 
-    override fun getContractAttachmentsWithUnsigedDuplicates(contractClassName: String): Set<AttachmentId> {
+    override fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        return versions.values.flatMap { it.toListWithUnsigedDuplicates() }.toSet()
+        return versions.values.flatMap { it.toListWithUnsignedDuplicates() }.toSet()
     }
 }
