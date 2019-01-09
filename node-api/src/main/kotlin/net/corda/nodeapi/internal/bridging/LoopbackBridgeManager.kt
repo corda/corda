@@ -7,6 +7,7 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.ArtemisMessagingComponent
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.NODE_P2P_USER
+import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateInboxAddressToLocalQueue
 import net.corda.nodeapi.internal.ArtemisMessagingComponent.RemoteInboxAddress.Companion.translateLocalQueueToInboxAddress
 import net.corda.nodeapi.internal.ArtemisSessionProvider
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
@@ -174,7 +175,8 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
      */
     fun inboxesAdded(inboxes: List<String>) {
         for (inbox in inboxes) {
-            super.destroyAllBridges(inbox).forEach { source, bridgeEntry ->
+            super.destroyAllBridges(translateInboxAddressToLocalQueue(inbox)).forEach { source, bridgeEntry ->
+                log.info("Destroyed AMQP Bridge '${bridgeEntry.queueName}', creating Loopback bridge for local inbox.")
                 deployBridge(source, bridgeEntry.queueName, bridgeEntry.targets, bridgeEntry.legalNames.toSet())
             }
         }

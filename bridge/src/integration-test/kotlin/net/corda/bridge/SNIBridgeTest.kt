@@ -25,6 +25,8 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.testing.core.*
+import net.corda.testing.driver.PortAllocation
+import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.rigorousMock
@@ -51,6 +53,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.KeyStore
 import javax.security.auth.login.AppConfigurationEntry
+import kotlin.concurrent.thread
 import kotlin.test.assertEquals
 
 class SNIBridgeTest : IntegrationTest() {
@@ -98,7 +101,7 @@ class SNIBridgeTest : IntegrationTest() {
     @Test
     fun `Nodes behind all in one bridge can communicate with external node`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<BridgeRestartTest.Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), portAllocation = incrementalPortAllocation(20000)) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
             // We create a config for ALICE_NAME so we can use the dir lookup from the Driver when starting the bridge
@@ -126,9 +129,9 @@ class SNIBridgeTest : IntegrationTest() {
                             "enterpriseConfiguration" to mapOf(
                                     "externalBridge" to true,
                                     "messagingServerSslConfiguration" to mapOf(
-                                            "sslKeystore" to "${bankAPath}/certificates/sslkeystore.jks",
+                                            "sslKeystore" to "$bankAPath/certificates/sslkeystore.jks",
                                             "keyStorePassword" to "cordacadevpass",
-                                            "trustStoreFile" to "${bankAPath}/certificates/truststore.jks",
+                                            "trustStoreFile" to "$bankAPath/certificates/truststore.jks",
                                             "trustStorePassword" to "trustpass"
                                     ))
                     )
@@ -147,9 +150,9 @@ class SNIBridgeTest : IntegrationTest() {
                             "enterpriseConfiguration" to mapOf(
                                     "externalBridge" to true,
                                     "messagingServerSslConfiguration" to mapOf(
-                                            "sslKeystore" to "${bankBPath}/certificates/sslkeystore.jks",
+                                            "sslKeystore" to "$bankBPath/certificates/sslkeystore.jks",
                                             "keyStorePassword" to "cordacadevpass",
-                                            "trustStoreFile" to "${bankBPath}/certificates/truststore.jks",
+                                            "trustStoreFile" to "$bankBPath/certificates/truststore.jks",
                                             "trustStorePassword" to "trustpass"
                                     )
                             )
@@ -163,30 +166,104 @@ class SNIBridgeTest : IntegrationTest() {
             // Start a node on the other side of the bridge
             val c = startNode(providedName = DUMMY_BANK_C_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:${portAllocation.nextPort()}")).getOrThrow()
 
-
             // BANK_C initiates flows with BANK_A and BANK_B
             CordaRPCClient(c.rpcAddress).use(demoUser.username, demoUser.password) {
-                var handle = it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5)
-                handle.returnValue.getOrThrow()
-
-                handle = it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 5)
-                handle.returnValue.getOrThrow()
-            }
-
-
-            CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
-                val handle = it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5)
-                handle.returnValue.getOrThrow()
-                // Loopback flow test.
+                it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
                 it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
 
-            CordaRPCClient(b.rpcAddress).use(demoUser.username, demoUser.password) {
-                val handle = it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5)
-                handle.returnValue.getOrThrow()
-                // Loopback flow test.
-                it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
+            CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
+                it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
             }
+
+            CordaRPCClient(b.rpcAddress).use(demoUser.username, demoUser.password) {
+                it.proxy.startFlow(::Ping, c.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
+            }
+        }
+    }
+
+    // This test will hang if AMQP bridge is being use instead of Loopback bridge.
+    @Test(timeout = 600000)
+    fun `Nodes behind one bridge can communicate with each other using loopback bridge`() {
+        val demoUser = User("demo", "demo", setOf(Permissions.startFlow<BridgeRestartTest.Ping>(), Permissions.all()))
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge")) {
+            val artemisPort = portAllocation.nextPort()
+            val advertisedP2PPort = portAllocation.nextPort()
+            // We create a config for ALICE_NAME so we can use the dir lookup from the Driver when starting the bridge
+            val nodeConfigs = createNodesConfigs(listOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, ALICE_NAME))
+            // Remove the created trust and key stores
+            val bridgePath = temporaryFolder.root.path / ALICE_NAME.organisation
+            Files.delete(bridgePath / "node/certificates/truststore.jks")
+            Files.delete(bridgePath / "node/certificates/sslkeystore.jks")
+            // TODO: change bridge driver to use any provided base dir, not just look for one based on identity
+            createAggregateStores(nodeConfigs.minus(ALICE_NAME).values.toList(), baseDirectory(ALICE_NAME))
+
+            val bankAPath = temporaryFolder.root.path / DUMMY_BANK_A_NAME.organisation / "node"
+            val bankBPath = temporaryFolder.root.path / DUMMY_BANK_B_NAME.organisation / "node"
+            // Start broker
+            val broker = createArtemisTextCertsLogin(artemisPort, nodeConfigs[DUMMY_BANK_B_NAME]!!.p2pSslOptions)
+            broker.start()
+
+            // The nodes are configured with a wrong P2P address, to ensure AMQP bridge won't work.
+            val aFuture = startNode(
+                    providedName = DUMMY_BANK_A_NAME,
+                    rpcUsers = listOf(demoUser),
+                    customOverrides = mapOf(
+                            "baseDirectory" to "$bankAPath",
+                            "p2pAddress" to "localhost:0",
+                            "messagingServerAddress" to "0.0.0.0:$artemisPort",
+                            "messagingServerExternal" to true,
+                            "enterpriseConfiguration" to mapOf(
+                                    "externalBridge" to true,
+                                    "messagingServerSslConfiguration" to mapOf(
+                                            "sslKeystore" to "$bankAPath/certificates/sslkeystore.jks",
+                                            "keyStorePassword" to "cordacadevpass",
+                                            "trustStoreFile" to "$bankAPath/certificates/truststore.jks",
+                                            "trustStorePassword" to "trustpass"
+                                    ))
+                    )
+            )
+
+            val a = aFuture.getOrThrow()
+
+            val bFuture = startNode(
+                    providedName = DUMMY_BANK_B_NAME,
+                    rpcUsers = listOf(demoUser),
+                    customOverrides = mapOf(
+                            "baseDirectory" to "$bankBPath",
+                            "p2pAddress" to "localhost:0",
+                            "messagingServerAddress" to "0.0.0.0:$artemisPort",
+                            "messagingServerExternal" to true,
+                            "enterpriseConfiguration" to mapOf(
+                                    "externalBridge" to true,
+                                    "messagingServerSslConfiguration" to mapOf(
+                                            "sslKeystore" to "$bankBPath/certificates/sslkeystore.jks",
+                                            "keyStorePassword" to "cordacadevpass",
+                                            "trustStoreFile" to "$bankBPath/certificates/truststore.jks",
+                                            "trustStorePassword" to "trustpass"
+                                    )
+                            )
+                    )
+            )
+
+            val b = bFuture.getOrThrow()
+
+            val testThread = thread {
+                CordaRPCClient(a.rpcAddress).use(demoUser.username, demoUser.password) {
+                    // Loopback flow test.
+                    it.proxy.startFlow(::Ping, b.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
+                }
+
+                CordaRPCClient(b.rpcAddress).use(demoUser.username, demoUser.password) {
+                    // Loopback flow test.
+                    it.proxy.startFlow(::Ping, a.nodeInfo.singleIdentity(), 5).returnValue.getOrThrow()
+                }
+            }
+
+            // Starting the bridge at the end, to test the NodeToBridgeSnapshot message's AMQP bridge convert to Loopback bridge code path.
+            startBridge(ALICE_NAME, advertisedP2PPort, artemisPort, emptyMap()).getOrThrow()
+
+            testThread.join()
         }
     }
 
@@ -205,7 +282,8 @@ class SNIBridgeTest : IntegrationTest() {
                 doReturn(pspSslConfigurations[name]).whenever(it).p2pSslOptions
                 doReturn(true).whenever(it).crlCheckSoftFail
                 doReturn(true).whenever(it).messagingServerExternal
-                doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it).enterpriseConfiguration
+                doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000), externalBridge = true)).whenever(it)
+                        .enterpriseConfiguration
             }
             serverConfig.configureWithDevSSLCertificate()
             name to serverConfig
@@ -227,7 +305,6 @@ class SNIBridgeTest : IntegrationTest() {
         newKeyStore.store(FileOutputStream(File("$bridgeDirPath/certificates/sslkeystore.jks")), "cordacadevpass".toCharArray())
     }
 
-
     private fun mergeKeyStores(newKeyStore: KeyStore, oldKeyStore: CertificateStore, newAlias: String) {
         val keyStore = oldKeyStore.value.internal
         keyStore.aliases().toList().forEach {
@@ -236,7 +313,6 @@ class SNIBridgeTest : IntegrationTest() {
             newKeyStore.setKeyEntry(newAlias, key, oldKeyStore.password.toCharArray(), certs)
         }
     }
-
 
     private fun ConfigurationImpl.configureAddressSecurity(): Configuration {
         val nodeInternalRole = Role("Node", true, true, true, true, true, true, true, true, true, true)

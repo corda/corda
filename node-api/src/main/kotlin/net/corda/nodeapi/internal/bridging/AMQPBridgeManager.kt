@@ -236,7 +236,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 // Attempting to send a message while the AMQP client is disconnected may cause message loss.
                 // The failed message is rolled back after committing acknowledged messages.
                 lock.withLock {
-                    ex.message?.let { logInfoWithMDC(it)}
+                    ex.message?.let { logInfoWithMDC(it) }
                     logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                     session?.commit()
                     session?.rollback(false)
@@ -280,11 +280,14 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
     }
 
     fun destroyAllBridges(queueName: String): Map<String, BridgeEntry> {
-        val bridges = queueNamesToBridgesMap[queueName]
-        destroyBridge(queueName, queueNamesToBridgesMap[queueName]?.flatMap { it.targets } ?: emptyList())
-        return bridges?.map {
-            it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.legalNames.toList(), serviceAddress = false)
-        }?.toMap() ?: emptyMap()
+        return lock.withLock {
+            // queueNamesToBridgesMap returns a mutable list, .toList converts it to a immutable list so it won't be changed by the [destroyBridge] method.
+            val bridges = queueNamesToBridgesMap[queueName]?.toList()
+            destroyBridge(queueName, bridges?.flatMap { it.targets } ?: emptyList())
+            bridges?.map {
+                it.sourceX500Name to BridgeEntry(it.queueName, it.targets, it.legalNames.toList(), serviceAddress = false)
+            }?.toMap() ?: emptyMap()
+        }
     }
 
     override fun start() {

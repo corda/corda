@@ -171,11 +171,12 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                     log.error("Invalid queue names in control message $controlMessage")
                     return
                 }
+
+                val wasActive = active
+                validInboundQueues.addAll(controlMessage.inboxQueues)
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(controlMessage.nodeIdentity, outQueue.queueName, outQueue.targets, outQueue.legalNames.toSet())
                 }
-                val wasActive = active
-                validInboundQueues.addAll(controlMessage.inboxQueues)
                 log.info("Added inbox: ${controlMessage.inboxQueues}")
                 if (bridgeManager is LoopbackBridgeManager) {
                     // Notify loopback bridge manager inboxes has changed.
