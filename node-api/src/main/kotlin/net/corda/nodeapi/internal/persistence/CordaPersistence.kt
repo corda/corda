@@ -71,6 +71,7 @@ private val _prohibitDatabaseAccess = ThreadLocal.withInitial { false }
  * The logic in the [block] will be prevented from opening a database transaction.
  */
 fun <T> withoutDatabaseAccess(block: () -> T): T {
+    require(contextTransactionOrNull == null) { "Database access is disabled in this context." }
     val oldValue = _prohibitDatabaseAccess.get()
     _prohibitDatabaseAccess.set(true)
     try {
