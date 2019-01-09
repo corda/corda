@@ -1,14 +1,22 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
 import net.corda.core.cordapp.CordappContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.FlowLogic
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.transactions.LedgerTransaction
@@ -16,6 +24,8 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import org.slf4j.MDC
+import java.security.PublicKey
+import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
@@ -71,9 +81,7 @@ private fun isPackageValid(packageName: String): Boolean {
             }
 }
 
-/**
- * Check if a string is a legal Java package name.
- */
+/** Check if a string is a legal Java package name. */
 fun requirePackageValid(name: String) {
     require(isPackageValid(name)) { "Invalid Java package name: `$name`." }
 }
@@ -85,3 +93,64 @@ fun requirePackageValid(name: String) {
  */
 @CordaSerializable
 object RetrieveAnyTransactionPayload : ArrayList<Any>()
+
+/**
+ * Returns true if the [fullClassName] is in a subpackage of [packageName].
+ * E.g.: "com.megacorp" owns "com.megacorp.tokens.MegaToken"
+ *
+ * Note: The ownership check is ignoring case to prevent people from just releasing a jar with: "com.megaCorp.megatoken" and pretend they are MegaCorp.
+ * By making the check case insensitive, the node will require that the jar is signed by MegaCorp, so the attack fails.
+ */
+private fun owns(packageName: String, fullClassName: String): Boolean = fullClassName.startsWith("$packageName.", ignoreCase = true)
+
+/** Returns the public key of the package owner of the [contractClassName], or null if not owned. */
+internal fun NetworkParameters.getPackageOwnerOf(contractClassName: ContractClassName): PublicKey? {
+    return packageOwnership.entries.singleOrNull { owns(it.key, contractClassName) }?.value
+}
+
+/**
+ * Returns the public key of the package owner if any of [contractClassNames] match, or null if not owned.
+ */
+internal fun NetworkParameters.getPackageOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
+    for (contractClassName in contractClassNames) {
+        val owner = getPackageOwnerOf(contractClassName)
+        if (owner != null) return owner
+    }
+    return null
+}
+
+// Make sure that packages don't overlap so that ownership is clear.
+fun noPackageOverlap(packages: Collection<String>): Boolean {
+    return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
+}
+
+/**
+ * Scans trusted (installed locally) contract attachments to find all that contain the [className].
+ * This is required as a workaround until explicit cordapp dependencies are implemented.
+ * DO NOT USE IN CLIENT code.
+ *
+ * @return the contract attachments with the highest version.
+ *
+ * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
+ */
+fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): ContractAttachment?{
+    val allTrusted = queryAttachments(
+            AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+            AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+
+    // TODO - add caching if performance is affected.
+    for (attId in allTrusted) {
+        val attch = openAttachment(attId)!!
+        if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
+    }
+    return null
+}
+
+private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
+    while (true) {
+        val e = jarStream.nextJarEntry ?: return false
+        if (e.name == className) {
+            return true
+        }
+    }
+}

@@ -20,8 +20,8 @@ class VaultRestartTest {
 
     @Test
     fun `restart and query vault after adding some cash states`() {
-        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false,
-                                extraCordappPackagesToScan = listOf("net.corda.finance.contracts", "net.corda.finance.schemas"))) {
+        driver(DriverParameters(inMemoryDB = false, startNodesInProcess = false, isDebug = true,
+                                extraCordappPackagesToScan = listOf("net.corda.finance", "migration"))) {
             val node = startNode(providedName = DUMMY_BANK_A_NAME, customOverrides = mapOf("p2pAddress" to "localhost:30000")).getOrThrow()
 
             val expected = 500.DOLLARS

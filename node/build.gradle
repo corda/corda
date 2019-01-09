@@ -130,7 +130,6 @@ dependencies {
     testCompile project(':client:jfx')
     testCompile project(':finance:contracts')
     testCompile project(':finance:workflows')
-    testCompile project(':finance:isolated')
 
     // sample test schemas
     testCompile project(path: ':finance:contracts', configuration: 'testArtifacts')
@@ -186,6 +185,7 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     testCompile(project(':test-cli'))
+    testCompile(project(':test-utils'))
 }
 
 tasks.withType(JavaCompile) {

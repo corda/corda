@@ -34,6 +34,7 @@ interface NodeConfiguration {
     val security: SecurityConfiguration?
     val devMode: Boolean
     val devModeOptions: DevModeOptions?
+    @Deprecated(message = "Use of single compatibility zone URL is deprecated", replaceWith = ReplaceWith("networkServices.networkMapURL"))
     val compatibilityZoneURL: URL?
     val networkServices: NetworkServicesConfig?
     @Suppress("DEPRECATION")

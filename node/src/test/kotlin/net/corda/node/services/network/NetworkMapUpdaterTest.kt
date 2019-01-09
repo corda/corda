@@ -5,6 +5,7 @@ import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.generateKeyPair
 import net.corda.core.crypto.sign
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -13,17 +14,20 @@ import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.VersionInfo
+import net.corda.node.internal.NetworkParametersStorage
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
-import net.corda.core.internal.NODE_INFO_DIRECTORY
-import net.corda.node.internal.NetworkParametersStorageInternal
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.*
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_UPDATE_FILE_NAME
+import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.network.verifiedNetworkParametersCert
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.internal.DEV_ROOT_CA
@@ -48,6 +52,8 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class NetworkMapUpdaterTest {
     @Rule
@@ -65,10 +71,10 @@ class NetworkMapUpdaterTest {
     private val networkMapCache = createMockNetworkMapCache()
     private lateinit var ourKeyPair: KeyPair
     private lateinit var ourNodeInfo: SignedNodeInfo
-    private val networkParametersStorage: NetworkParametersStorageInternal = mock()
+    private val networkParametersStorage: NetworkParametersStorage = mock()
     private lateinit var server: NetworkMapServer
     private lateinit var networkMapClient: NetworkMapClient
-    private lateinit var updater: NetworkMapUpdater
+    private var updater: NetworkMapUpdater? = null
 
     @Before
     fun setUp() {
@@ -82,7 +88,7 @@ class NetworkMapUpdaterTest {
 
     @After
     fun cleanUp() {
-        updater.close()
+        updater?.close()
         fs.close()
         server.close()
     }
@@ -95,7 +101,7 @@ class NetworkMapUpdaterTest {
                              networkParameters: NetworkParameters = server.networkParameters,
                              autoAcceptNetworkParameters: Boolean = true,
                              excludedAutoAcceptNetworkParameters: Set<String> = emptySet()) {
-        updater.start(DEV_ROOT_CA.certificate,
+        updater!!.start(DEV_ROOT_CA.certificate,
                       server.networkParameters.serialize().hash,
                       ourNodeInfo,
                       networkParameters,
@@ -206,7 +212,7 @@ class NetworkMapUpdaterTest {
     @Test
     fun `emit new parameters update info on parameters update from network map`() {
         setUpdater()
-        val paramsFeed = updater.trackParametersUpdate()
+        val paramsFeed = updater!!.trackParametersUpdate()
         val snapshot = paramsFeed.snapshot
         val updates = paramsFeed.updates.bufferUntilSubscribed()
         assertEquals(null, snapshot)
@@ -237,7 +243,7 @@ class NetworkMapUpdaterTest {
         val newHash = newParameters.serialize().hash
         val updateFile = baseDir / NETWORK_PARAMS_UPDATE_FILE_NAME
         assert(!updateFile.exists()) { "network parameters should not be auto accepted" }
-        updater.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
+        updater!!.acceptNewNetworkParameters(newHash) { it.serialize().sign(ourKeyPair) }
         verify(networkParametersStorage, times(1)).saveParameters(any())
         val signedNetworkParams = updateFile.readObject<SignedNetworkParameters>()
         val paramsFromFile = signedNetworkParams.verifiedNetworkParametersCert(DEV_ROOT_CA.certificate)
@@ -409,6 +415,32 @@ class NetworkMapUpdaterTest {
         verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
 
         assert(networkMapCache.allNodeHashes.size == 1)
+    }
+
+    @Test
+    fun `auto acceptance checks are correct`() {
+        val packageOwnership = mapOf(
+                "com.example1" to generateKeyPair().public,
+                "com.example2" to generateKeyPair().public
+        )
+        val whitelistedContractImplementations = mapOf(
+                "example1" to listOf(AttachmentId.randomSHA256()),
+                "example2" to listOf(AttachmentId.randomSHA256())
+        )
+
+        val netParams = testNetworkParameters()
+        val netParamsAutoAcceptable = netParams.copy(
+                packageOwnership = packageOwnership,
+                whitelistedContractImplementations = whitelistedContractImplementations
+        )
+        val netParamsNotAutoAcceptable = netParamsAutoAcceptable.copy(maxMessageSize = netParams.maxMessageSize + 1)
+
+        assertTrue(netParams.canAutoAccept(netParams, emptySet()), "auto-acceptable if identical")
+        assertTrue(netParams.canAutoAccept(netParams, autoAcceptablePropertyNames), "auto acceptable if identical regardless of exclusions")
+        assertTrue(netParams.canAutoAccept(netParamsAutoAcceptable, emptySet()), "auto-acceptable if only AutoAcceptable params have changed")
+        assertTrue(netParams.canAutoAccept(netParamsAutoAcceptable, setOf("modifiedTime")), "auto-acceptable if only AutoAcceptable params have changed and excluded param has not changed")
+        assertFalse(netParams.canAutoAccept(netParamsNotAutoAcceptable, emptySet()), "not auto-acceptable if non-AutoAcceptable param has changed")
+        assertFalse(netParams.canAutoAccept(netParamsAutoAcceptable, setOf("whitelistedContractImplementations")), "not auto-acceptable if only AutoAcceptable params have changed but one has been added to the exclusion set")
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {

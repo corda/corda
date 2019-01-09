@@ -63,6 +63,7 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
+import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -145,7 +146,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
-    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo)
+    val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
     val database: CordaPersistence = createCordaPersistence(
@@ -170,7 +171,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
     val cryptoService = configuration.makeCryptoService()
     @Suppress("LeakingThis")
-    val networkParametersStorage = makeParametersStorage()
+    val networkParametersStorage = makeNetworkParametersStorage()
     val cordappProvider = CordappProviderImpl(cordappLoader, CordappConfigFileProvider(configuration.cordappDirectories), attachments).tokenize()
     @Suppress("LeakingThis")
     val keyManagementService = makeKeyManagementService(identityService).tokenize()
@@ -178,7 +179,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         attachments.servicesForResolution = it
     }
     @Suppress("LeakingThis")
-    val vaultService = makeVaultService(keyManagementService, servicesForResolution, database).tokenize()
+    val vaultService = makeVaultService(keyManagementService, servicesForResolution, database, cordappLoader).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
     val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
@@ -544,7 +545,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
         }
         val blacklistedKeys = if (configuration.devMode) emptyList()
-        else configuration.cordappSignerKeyFingerprintBlacklist.mapNotNull {
+        else configuration.cordappSignerKeyFingerprintBlacklist.map {
             try {
                 SecureHash.parse(it)
             } catch (e: IllegalArgumentException) {
@@ -711,7 +712,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         return DBTransactionStorage(database, cacheFactory)
     }
 
-    protected open fun makeParametersStorage(): NetworkParametersStorageInternal {
+    protected open fun makeNetworkParametersStorage(): NetworkParametersStorage {
         return DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
     }
 
@@ -969,8 +970,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     protected open fun makeVaultService(keyManagementService: KeyManagementService,
                                         services: ServicesForResolution,
-                                        database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService)
+                                        database: CordaPersistence,
+                                        cordappLoader: CordappLoader): VaultServiceInternal {
+        return NodeVaultService(platformClock, keyManagementService, services, database, schemaService, cordappLoader.appClassLoader)
     }
 
     /** Load configured JVM agents */
@@ -1011,7 +1013,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override val configuration: NodeConfiguration get() = this@AbstractNode.configuration
         override val networkMapUpdater: NetworkMapUpdater get() = this@AbstractNode.networkMapUpdater
         override val cacheFactory: NamedCacheFactory get() = this@AbstractNode.cacheFactory
-        override val networkParametersStorage: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
+        override val networkParametersService: NetworkParametersStorage get() = this@AbstractNode.networkParametersStorage
 
         private lateinit var _myInfo: NodeInfo
         override val myInfo: NodeInfo get() = _myInfo

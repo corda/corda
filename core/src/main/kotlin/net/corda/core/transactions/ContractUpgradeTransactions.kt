@@ -111,8 +111,8 @@ data class ContractUpgradeWireTransaction(
                 ?: throw AttachmentResolutionException(legacyContractAttachmentId)
         val upgradedContractAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw AttachmentResolutionException(upgradedContractAttachmentId)
-        val hashToResolve = networkParametersHash ?: services.networkParametersStorage.defaultHash
-        val resolvedNetworkParameters = services.networkParametersStorage.lookup(hashToResolve) ?: throw TransactionResolutionException(id)
+        val hashToResolve = networkParametersHash ?: services.networkParametersService.defaultHash
+        val resolvedNetworkParameters = services.networkParametersService.lookup(hashToResolve) ?: throw TransactionResolutionException(id)
         return ContractUpgradeLedgerTransaction(
                 resolvedInputs,
                 notary,

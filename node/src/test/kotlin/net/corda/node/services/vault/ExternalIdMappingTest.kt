@@ -1,6 +1,7 @@
 package net.corda.node.services.vault
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
@@ -46,7 +47,7 @@ class ExternalIdMappingTest {
     fun setUp() {
         val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
                 cordappPackages = cordapps,
-                identityService = rigorousMock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityServiceInternal>().also {
                     doReturn(notary.party).whenever(it).partyFromKey(notary.publicKey)
                     doReturn(notary.party).whenever(it).wellKnownPartyFromAnonymous(notary.party)
                     doReturn(notary.party).whenever(it).wellKnownPartyFromX500Name(notary.name)

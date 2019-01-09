@@ -32,14 +32,12 @@ data class CustomCordapp(
         val classes: Set<Class<*>> = emptySet(),
         val signingInfo: SigningInfo? = null,
         override val config: Map<String, Any> = emptyMap()
-) : TestCordappInternal {
+) : TestCordappInternal() {
     init {
         require(packages.isNotEmpty() || classes.isNotEmpty()) { "At least one package or class must be specified" }
     }
 
     override val jarFile: Path get() = getJarFile(this)
-
-    override val scanPackage: String get() = throw UnsupportedOperationException()
 
     override fun withConfig(config: Map<String, Any>): CustomCordapp = copy(config = config)
 
@@ -49,7 +47,9 @@ data class CustomCordapp(
 
     @VisibleForTesting
     internal fun packageAsJar(file: Path) {
-        val scanResult = ClassGraph()
+        val classGraph = ClassGraph()
+        classes.forEach { classGraph.addClassLoader(it.classLoader) }
+        val scanResult = classGraph
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
                 .scan()

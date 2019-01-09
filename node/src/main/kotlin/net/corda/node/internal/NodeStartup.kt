@@ -1,7 +1,10 @@
 package net.corda.node.internal
 
 import io.netty.channel.unix.Errors
-import net.corda.cliutils.*
+import net.corda.cliutils.CliWrapperBase
+import net.corda.cliutils.CordaCliWrapper
+import net.corda.cliutils.CordaVersionProvider
+import net.corda.cliutils.ExitCodes
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -26,7 +29,7 @@ import net.corda.nodeapi.internal.persistence.DatabaseIncompatibleException
 import net.corda.tools.shell.InteractiveShell
 import org.fusesource.jansi.Ansi
 import org.slf4j.bridge.SLF4JBridgeHandler
-import picocli.CommandLine.*
+import picocli.CommandLine.Mixin
 import sun.misc.VMSupport
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -35,6 +38,7 @@ import java.net.InetAddress
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
+import java.util.function.Consumer
 
 /** An interface that can be implemented to tell the node what to do once it's intitiated. */
 interface RunAfterNodeInitialisation {
@@ -143,10 +147,10 @@ open class NodeStartup : NodeStartupLogging {
         val configuration = cmdLineOptions.parseConfiguration(rawConfig).doIfValid { logRawConfig(rawConfig) }.doOnErrors(::logConfigurationErrors).optional ?: return ExitCodes.FAILURE
 
         // Step 6. Configuring special serialisation requirements, i.e., bft-smart relies on Java serialization.
-        if (attempt { banJavaSerialisation(configuration) }.doOnException { error -> error.logAsUnexpected("Exception while configuring serialisation") } !is Try.Success) return ExitCodes.FAILURE
+        if (attempt { banJavaSerialisation(configuration) }.doOnFailure(Consumer { error -> error.logAsUnexpected("Exception while configuring serialisation") }) !is Try.Success) return ExitCodes.FAILURE
 
         // Step 7. Any actions required before starting up the Corda network layer.
-        if (attempt { preNetworkRegistration(configuration) }.doOnException(::handleRegistrationError) !is Try.Success) return ExitCodes.FAILURE
+        if (attempt { preNetworkRegistration(configuration) }.doOnFailure(Consumer(::handleRegistrationError)) !is Try.Success) return ExitCodes.FAILURE
 
         // Step 8. Log startup info.
         logStartupInfo(versionInfo, configuration)
@@ -155,7 +159,7 @@ open class NodeStartup : NodeStartupLogging {
         if (attempt {
                     cmdLineOptions.baseDirectory.createDirectories()
                     afterNodeInitialisation.run(createNode(configuration, versionInfo))
-                }.doOnException(::handleStartError) !is Try.Success) return ExitCodes.FAILURE
+                }.doOnFailure(Consumer(::handleStartError)) !is Try.Success) return ExitCodes.FAILURE
 
         return ExitCodes.SUCCESS
     }
@@ -395,24 +399,26 @@ interface NodeStartupLogging {
         val startupErrors = setOf(MultipleCordappsForFlowException::class, CheckpointIncompatibleException::class, AddressBindingException::class, NetworkParametersReader::class, DatabaseIncompatibleException::class)
     }
 
-    fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action)
+    fun <RESULT> attempt(action: () -> RESULT): Try<RESULT> = Try.on(action).throwError()
 
-    fun Exception.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
+    fun Throwable.logAsExpected(message: String? = this.message, print: (String?) -> Unit = logger::error) = print(message)
 
-    fun Exception.logAsUnexpected(message: String? = this.message, error: Exception = this, print: (String?, Throwable) -> Unit = logger::error) = print("$message${this.message?.let { ": $it" } ?: ""}", error)
+    fun Throwable.logAsUnexpected(message: String? = this.message, error: Throwable = this, print: (String?, Throwable) -> Unit = logger::error) {
+        print("$message${this.message?.let { ": $it" } ?: ""}", error)
+    }
 
-    fun handleRegistrationError(error: Exception) {
+    fun handleRegistrationError(error: Throwable) {
         when (error) {
             is NodeRegistrationException -> error.logAsExpected("Issue with Node registration: ${error.message}")
             else -> error.logAsUnexpected("Exception during node registration")
         }
     }
 
-    fun Exception.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
+    fun Throwable.isOpenJdkKnownIssue() = message?.startsWith("Unknown named curve:") == true
 
-    fun Exception.isExpectedWhenStartingNode() = startupErrors.any { error -> error.isInstance(this) }
+    fun Throwable.isExpectedWhenStartingNode() = startupErrors.any { error -> error.isInstance(this) }
 
-    fun handleStartError(error: Exception) {
+    fun handleStartError(error: Throwable) {
         when {
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()

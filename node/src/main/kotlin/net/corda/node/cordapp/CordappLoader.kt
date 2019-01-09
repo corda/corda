@@ -8,7 +8,7 @@ import net.corda.core.schemas.MappedSchema
 /**
  * Handles loading [Cordapp]s.
  */
-interface CordappLoader {
+interface CordappLoader : AutoCloseable {
 
     /**
      * Returns all [Cordapp]s found.

@@ -22,7 +22,6 @@ import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertFailsWith
 
@@ -89,7 +88,7 @@ class NotaryServiceTests {
 
         private fun generateTransaction(node: TestStartedNode,
                                         party: Party, notary: Party,
-                                        paramsHash: SecureHash? = node.services.networkParametersStorage.currentHash,
+                                        paramsHash: SecureHash? = node.services.networkParametersService.currentHash,
                                         numberOfInputs: Int = 10_005): SignedTransaction {
             val txHash = SecureHash.randomSHA256()
             val inputs = (1..numberOfInputs).map { StateRef(txHash, it) }

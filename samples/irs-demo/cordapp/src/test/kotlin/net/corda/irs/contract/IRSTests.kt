@@ -1,6 +1,7 @@
 package net.corda.irs.contract
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.UniqueIdentifier
@@ -20,7 +21,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.dsl.*
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import net.corda.testing.node.transaction
@@ -228,13 +228,13 @@ class IRSTests {
     val testSerialization = SerializationEnvironmentRule()
     private val cordappPackages = listOf("net.corda.irs.contract")
     private val networkParameters = testNetworkParameters().addNotary(dummyNotary.party)
-    private val megaCorpServices = MockServices(cordappPackages, megaCorp, rigorousMock(), networkParameters, megaCorp.keyPair)
-    private val miniCorpServices = MockServices(cordappPackages, miniCorp, rigorousMock(), networkParameters,  miniCorp.keyPair)
-    private val notaryServices = MockServices(cordappPackages, dummyNotary, rigorousMock(), networkParameters, dummyNotary.keyPair)
+    private val megaCorpServices = MockServices(cordappPackages, megaCorp, mock(), networkParameters, megaCorp.keyPair)
+    private val miniCorpServices = MockServices(cordappPackages, miniCorp, mock(), networkParameters,  miniCorp.keyPair)
+    private val notaryServices = MockServices(cordappPackages, dummyNotary, mock(), networkParameters, dummyNotary.keyPair)
     private val ledgerServices = MockServices(
             emptyList(),
             megaCorp,
-            rigorousMock<IdentityServiceInternal>().also {
+            mock<IdentityServiceInternal>().also {
                 doReturn(megaCorp.party).whenever(it).partyFromKey(megaCorp.publicKey)
                 doReturn(null).whenever(it).partyFromKey(ORACLE_PUBKEY)
             },
@@ -336,7 +336,7 @@ class IRSTests {
     @Test
     fun generateIRSandFixSome() {
         val services = MockServices(listOf("net.corda.irs.contract"), MEGA_CORP.name,
-                rigorousMock<IdentityServiceInternal>().also {
+                mock<IdentityServiceInternal>().also {
                     listOf(MEGA_CORP, MINI_CORP).forEach { party ->
                         doReturn(party).whenever(it).partyFromKey(party.owningKey)
                     }

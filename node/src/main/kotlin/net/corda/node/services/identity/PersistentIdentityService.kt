@@ -188,12 +188,10 @@ class PersistentIdentityService(cacheFactory: NamedCacheFactory) : SingletonSeri
 
     lateinit var ourNames: Set<CordaX500Name>
 
-    // Allows us to cheaply eliminate keys we know belong to others by using the cache contents without triggering loading.
-    fun stripCachedPeerKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
-        return keys.filter {
-            val party = keyToParties.getIfCached(mapToKey(it))?.party?.name
-            party == null || party in ourNames
-        }
+    // Allows us to eliminate keys we know belong to others by using the cache contents that might have been seen during other identity activity.
+    // Concentrating activity on the identity cache works better than spreading checking across identity and key management, because we cache misses too.
+    fun stripNotOurKeys(keys: Iterable<PublicKey>): Iterable<PublicKey> {
+        return keys.filter { certificateFromKey(it)?.name in ourNames }
     }
 
 }

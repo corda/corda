@@ -145,7 +145,8 @@ Version 4.0
 
 * Removed experimental feature ``CordformDefinition``
 
-* Added ``registerResponderFlow`` method to ``StartedMockNode``, to support isolated testing of responder flow behaviour.
+* Added new overload of ``StartedMockNode.registerInitiatedFlow`` which allows registering custom initiating-responder flow pairs, which
+  can be useful for testing error cases.
 
 * "app", "rpc", "p2p" and "unknown" are no longer allowed as uploader values when importing attachments. These are used
   internally in security sensitive code.
@@ -339,6 +340,9 @@ Version 4.0
 
 * Finance CorDapp is now build as a sealed and signed JAR file.
   Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
+
+* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``,
+  ``corda-finance`` is kept for backward compatibility, it is recommended to use separated jars.
 
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 
