@@ -343,10 +343,10 @@ open class TransactionBuilder @JvmOverloads constructor(
         // This will contain the hash of the JAR that will be used by this Transaction.
         val selectedAttachmentId = when {
 
-            // The attachments was pinned down.
+            // The attachment was pinned down either by manually setting it or by the HashConstraint.
             forcedAttachmentId != null -> forcedAttachmentId
 
-            // This is a transaction that creates a state. Use the attachment from the cordapps folder.
+            // This is a transaction that creates a state, and the state has no constraint. Use the attachment from the cordapps folder.
             explicitConstraintStates.isEmpty() -> {
                 val attachment = services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
                 log.warn("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp: $attachment")
@@ -483,19 +483,20 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints }) { "This function requires a non-empty list of non-automatic constraints." }
         require(isReference || constraints.none { it is HashAttachmentConstraint }) { "This function only works with upgradeable constraints." }
 
-        require(constraints.filter { it is SignatureAttachmentConstraint }.size <= 1) { "Third party signers are not supported in the current version of Corda." }
+        // There are multiple states with SignatureConstraints with different signers.
+        require(constraints.filter { it is SignatureAttachmentConstraint }.toSet().size <= 1) { "Third party signers are not supported in the current version of Corda." }
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max()
                 ?: DEFAULT_CORDAPP_VERSION
 
-        // TODO - If the constraint is the Signature constraint, query by the signer.
-        // TODO - If it is the whitelist constraint query by the
+        // TODO - If the constraint is the Signature constraint, query the vault by the signer.
+        // TODO - If it is the whitelist constraint query by the hash from the whitelist.
         val attachmentId =  services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
 
         val attachment = services.attachments.openAttachment(attachmentId) as ContractAttachment
 
-        require(isUploaderTrusted(attachment.uploader)) { "Attachments $attachment, selected for transaction is not trusted. Please review the selection." }
+        require(isUploaderTrusted(attachment.uploader)) { "Attachment $attachment, selected for transaction is not trusted. Please review the selection." }
 
         constraints.forEach { constraint ->
             when (constraint){
