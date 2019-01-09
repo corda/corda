@@ -160,7 +160,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Ignore
     @Test
     fun `ssh runs flows via standalone shell`() {
-        val user = User("u", "p", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
+        val user = User("u", "p", setOf(Permissions.startFlow<FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)))
         driver(DriverParameters(notarySpecs = emptyList())) {
@@ -203,7 +203,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
     @Ignore
     @Test
     fun `ssh run flows via standalone shell over ssl to node`() {
-        val user = User("mark", "dadada", setOf(Permissions.startFlow<SSHServerTest.FlowICanRun>(),
+        val user = User("mark", "dadada", setOf(Permissions.startFlow<FlowICanRun>(),
                 Permissions.invokeRpc(CordaRPCOps::registeredFlows),
                 Permissions.invokeRpc(CordaRPCOps::nodeInfo)/*all()*/))
 
@@ -257,33 +257,6 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
         }
     }
 
-    @Suppress("UNUSED")
-    @StartableByRPC
-    class NoOpFlow : FlowLogic<Unit>() {
-        override val progressTracker = ProgressTracker()
-        override fun call() {
-            println("NO OP!")
-        }
-    }
-
-    @Suppress("UNUSED")
-    @StartableByRPC
-    class NoOpFlowA : FlowLogic<Unit>() {
-        override val progressTracker = ProgressTracker()
-        override fun call() {
-            println("NO OP! (A)")
-        }
-    }
-
-    @Suppress("UNUSED")
-    @StartableByRPC
-    class BurbleFlow : FlowLogic<Unit>() {
-        override val progressTracker = ProgressTracker()
-        override fun call() {
-            println("NO OP! (Burble)")
-        }
-    }
-
     @Test
     fun `shell should start flow with fully qualified class name`() {
         val user = User("u", "p", setOf(all()))
@@ -310,7 +283,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                 on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
-                    InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlow",
+                    "NoOpFlow",
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
@@ -342,7 +315,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                 on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
-                    "InteractiveShellIntegrationTest\$NoOpFlowA",
+                    "NoOpFlowA",
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
@@ -374,7 +347,7 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                 on { render(any(), any()) }  doAnswer { InteractiveShell.latch.countDown() }
             }
             InteractiveShell.runFlowByNameFragment(
-                    InteractiveShellIntegrationTest::class.qualifiedName + "\$NoOpFlo",
+                    "NoOpFlo",
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
@@ -410,5 +383,32 @@ class InteractiveShellIntegrationTest : IntegrationTest() {
                     "", output, node.rpc, ansiProgressRenderer)
         }
         assertThat(successful).isTrue()
+    }
+}
+
+@Suppress("UNUSED")
+@StartableByRPC
+class NoOpFlow : FlowLogic<Unit>() {
+    override val progressTracker = ProgressTracker()
+    override fun call() {
+        println("NO OP!")
+    }
+}
+
+@Suppress("UNUSED")
+@StartableByRPC
+class NoOpFlowA : FlowLogic<Unit>() {
+    override val progressTracker = ProgressTracker()
+    override fun call() {
+        println("NO OP! (A)")
+    }
+}
+
+@Suppress("UNUSED")
+@StartableByRPC
+class BurbleFlow : FlowLogic<Unit>() {
+    override val progressTracker = ProgressTracker()
+    override fun call() {
+        println("NO OP! (Burble)")
     }
 }
