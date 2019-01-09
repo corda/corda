@@ -104,7 +104,7 @@ const val DEV_CA_TRUST_STORE_FILE: String = "cordatruststore.jks"
 const val DEV_CA_TRUST_STORE_PASS: String = "trustpass"
 const val DEV_CA_TRUST_STORE_PRIVATE_KEY_PASS: String = "trustpasskeypass"
 
-// A code signing policy is currently under discussion (https://r3-cev.atlassian.net/wiki/spaces/SEC/pages/859996195/Code+Signing+Certificates+-+options+for+discussion)
+// A code signing policy is currently under design.
 // The following interim key represents a self-signed certificate produced using the Java keytool and located in the gradle cordapp plugins resources key store:
 // https://github.com/corda/corda-gradle-plugins/blob/master/cordapp/src/main/resources/certificates/cordadevcodesign.jks
 const val DEV_CORDAPP_CODE_SIGNING_STR = "AA59D829F2CA8FDDF5ABEA40D815F937E3E54E572B65B93B5C216AE6594E7D6B"
