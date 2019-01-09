@@ -7,6 +7,7 @@ import net.corda.core.contracts.ContractState
 // so we must provide deterministic alternatives here.
 
 @Suppress("unused")
-object StateContractValidationEnforcementRule {
+object CordappVersionUtils {
     fun shouldEnforce(state: ContractState): Boolean = true
+    fun getTargetVersion(state: ContractState): Int = 1
 }
