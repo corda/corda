@@ -495,6 +495,8 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val attachment = services.attachments.openAttachment(attachmentId) as ContractAttachment
 
+        require(isUploaderTrusted(attachment.uploader)) { "Attachments $attachment, selected for transaction is not trusted. Please review the selection." }
+
         constraints.forEach { constraint ->
             when (constraint){
                 is SignatureAttachmentConstraint -> require(attachment.isSigned && constraint.key in attachment.signerKeys) { "The selected attachment: $attachment is incompatible with the constraint: $constraint. Please select the attachment manually." }
