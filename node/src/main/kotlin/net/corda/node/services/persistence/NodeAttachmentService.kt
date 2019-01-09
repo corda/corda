@@ -18,7 +18,6 @@ import net.corda.core.internal.cordapp.CordappImpl.Companion.CORDAPP_CONTRACT_VE
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentId
-import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
@@ -307,6 +306,22 @@ class NodeAttachmentService(
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
 
+    private fun verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?){
+        if (signers != null && signers.isNotEmpty()) {
+            contractClassNames.forEach {
+                val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
+                        contractClassNamesCondition = Builder.equal(listOf(it)),
+                        versionCondition = Builder.equal(contractVersion),
+                        uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS),
+                        isSignedCondition = Builder.equal(true))
+                )
+                if (existingContractsImplementations.isNotEmpty()) {
+                    throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
+                }
+            }
+        }
+    }
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
@@ -327,19 +342,7 @@ class NodeAttachmentService(
                     val contractVersion = getVersion(bytes)
                     val session = currentDBSession()
 
-                    contractClassNames.forEach {
-                        val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
-                                contractClassNamesCondition = Builder.equal(listOf(it)),
-                                versionCondition = Builder.equal(contractVersion),
-                                isSignedCondition = Builder.equal(jarSigners.isNotEmpty()))
-                        )
-                        if (existingContractsImplementations.isNotEmpty()) {
-                            if (jarSigners.isNotEmpty())
-                                throw DuplicateContractClassException(it, contractVersion, existingContractsImplementations.map { it.toString() })
-                            else
-                                log.warn("Importing contract $it version '$contractVersion' from unsigned attachment which is already present in unsigned attachment(s) $existingContractsImplementations")
-                        }
-                    }
+                    verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames, contractVersion, jarSigners)
 
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
@@ -361,6 +364,7 @@ class NodeAttachmentService(
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
+                        verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
@@ -447,8 +451,7 @@ class NodeAttachmentService(
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
-                AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC)))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
         database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder
@@ -471,11 +474,10 @@ class NodeAttachmentService(
 
     private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
-        if (signed.size > 1)
-            throw DuplicateContractClassIllegalState(contractClassName, it.key, signed.map { it.toString() })
+        check (signed.size <= 1) //sanity check
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
-        if (unsigned.size > 1)
-            log.warn("Selecting the most recent contract $contractClassName version '${it.key}' from duplicated, unsigned attachments ${unsigned.map { it.toString() }}")
+        if (unsigned.size > 1) //TODO cater better for whiltelisted JARs - CORDA-2405
+            log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
     }
 
@@ -490,9 +492,3 @@ class NodeAttachmentService(
         return versions.values.flatMap { it.toList() }.toSet()
     }
 }
-
-/**
- * Thrown to indicate that a contract class name of the same version if found in the [AttachmentStorage].
- */
-class DuplicateContractClassIllegalState(contractClassName: String, version: Int, attachmentHashes: List<String>) :
-        Exception("Contract $contractClassName version '$version' is duplicated in attachments $attachmentHashes")
