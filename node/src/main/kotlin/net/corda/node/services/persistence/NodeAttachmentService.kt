@@ -306,7 +306,7 @@ class NodeAttachmentService(
         currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, attachmentId.toString()) != null
     }
 
-    private fun verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?){
+    private fun verifyVersionUniquenessForSignedAttachments(contractClassNames: List<ContractClassName>, contractVersion: Int, signers: List<PublicKey>?){
         if (signers != null && signers.isNotEmpty()) {
             contractClassNames.forEach {
                 val existingContractsImplementations = queryAttachments(AttachmentQueryCriteria.AttachmentsQueryCriteria(
@@ -342,7 +342,7 @@ class NodeAttachmentService(
                     val contractVersion = getVersion(bytes)
                     val session = currentDBSession()
 
-                    verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames, contractVersion, jarSigners)
+                    verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
 
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
@@ -364,7 +364,7 @@ class NodeAttachmentService(
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
-                        verifyContractVersionNotDuplicatedInTrustedAttachments(contractClassNames, attachment.version, attachment.signers)
+                        verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
                         session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
@@ -451,7 +451,8 @@ class NodeAttachmentService(
     private fun getContractAttachmentVersions(contractClassName: String): NavigableMap<Version, AttachmentIds> = contractsCache.get(contractClassName) { name ->
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(name)),
                 versionCondition = Builder.greaterThanOrEqual(0), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
-        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
+        val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC),
+                AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.INSERTION_DATE, Sort.Direction.DESC)))
         database.transaction {
             val session = currentDBSession()
             val criteriaBuilder = session.criteriaBuilder

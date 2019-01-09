@@ -234,13 +234,15 @@ from 1. This information should be set using the Gradle cordapp plugin, or manua
 Uniqueness requirement Contract and Version for Signature Constraint
 --------------------------------------------------------------------
 
-From Corda 4 a node ensures a given contract class and version can be sourced from a single signed Contract JAR (attachment) only.
-When building a transaction with a signature constraints the node can can safely select this unique, signed and versioned attachment.
-Prior to Corda 4 all attachments were unsigned, un-versioned and explicitly stored by hash in the attachment store.
-However it is a good practice to add version to Contract JAR. The node will logs warning if the version or duplicated attachment is found.
+CorDapps in Corda 4 may be signed (to use new signature constraints functionality) or unsigned, and versioned.
+The following controls are enforced for these different types of jars within the attachment store of a node:
 
-At runtime an attempt to load a signed Contract JAR with a contract class and version which is already present in the attachment store
-will raise ``DuplicateContractClassException`` exception.
+- Signed contract JARs must be uniquely versioned per contract class (or group of).
+  At runtime the node will throw a `DuplicateContractClassException`` exception if this condition is violated.
+
+- Unsigned contract JARs: there may exist multiple instances of the same contract jar.
+  At run-time the node will warn of duplicates encountered.
+  The most recent version given by insertionDate into the attachment storage will be used upon transaction building/resolution.
 
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------

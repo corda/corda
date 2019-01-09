@@ -354,8 +354,8 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val attachmentId = contractJar.read { storage.importAttachment(it, "uploaderA", "sample.jar") }
-            val reimporteddAttachmentId = contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
-            assertEquals(attachmentId, reimporteddAttachmentId)
+            val reimportedAttachmentId = contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
+            assertEquals(attachmentId, reimportedAttachmentId)
         }
     }
 
@@ -368,14 +368,14 @@ class NodeAttachmentServiceTest {
             anotherContractJar.read { storage.privilegedImportAttachment(it, "app", "another-sample.jar") }
 
             assertThatExceptionOfType(DuplicateContractClassException::class.java).isThrownBy {
-                val reimporteddAttachmentId = contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
+                contractJar.read { storage.privilegedImportAttachment(it, "app", "sample.jar") }
             }
 
         }
     }
 
     @Test
-    fun `cannot  promote to trusted uploder the same jar if other trusted uplodaer `() {
+    fun `cannot promote to trusted uploder the same jar if other trusted uplodaer `() {
         SelfCleaningDir().use { file ->
             val (contractJar, _) = makeTestSignedContractJar(file.path, "com.example.MyContract")
             val anotherContractJar = makeTestContractJar(file.path, listOf( "com.example.MyContract", "com.example.AnotherContract"), true, generateManifest = false, jarFileName = "another-sample.jar")
