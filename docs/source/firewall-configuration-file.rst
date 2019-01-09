@@ -123,6 +123,8 @@ absolute path to the firewall's base directory.
 
         :crlCheckSoftFail: If true (recommended setting) allows certificate checks to pass if the CRL(certificate revocation list) provider is unavailable.
 
+.. _proxyConfig :
+
    :proxyConfig:  This section is optionally present if outgoing peer connections should go via a SOCKS4, SOCKS5, or HTTP CONNECT tunnelling proxy:
 
         :version: Either SOCKS4, SOCKS5, or HTTP to define the protocol version used in connecting to the SOCKS proxy.
@@ -276,6 +278,10 @@ Each of the ``vmInfra1`` and ``vmInfra2`` computers host: ZooKeeper cluster part
 
 To facilitate High Availability requirement deployment is split onto two data centers.
 
+.. note:: This document does not describe how to perform SOCKS5 setup. It is assumed that this type of proxy is correctly configured as part
+    of organisation's IT infrastructure according to best practices/policies for outbound Internet connectivity. Other types of proxies are also supported
+    as well as no proxy at all. For more information please see `proxyConfig`_ parameter above.
+
 Keystores generation
 --------------------
 
@@ -336,7 +342,7 @@ Corda Network connectivity
 
 Before nodes can be configured, Corda Network administrator will need to provide:
 
-1. Network root trust store file: ``network-root-truststore.jks`` and password for it;
+1. Network root trust store file: ``network-root-truststore.jks`` and password for it in this example assumed to be ``trustpass``;
 2. Corda Network URL for Doorman e.g.: ``http://r3-doorman:10001``;
 3. Corda Network URL for NetworkMap e.g.: ``http://r3-netman:10001``
 
@@ -455,7 +461,9 @@ Suggested configuration for node serving ``Entity A`` on ``vmNodesPrimary`` woul
     }
     devMode = false // Turn off things like key autogeneration and require proper doorman registration.
     detectPublicIp = false // Do not perform any public IP lookup on the host.
-
+    sshd {
+        port = 2222
+    }
 
 For "sibling" node serving ``Entity B`` on ``vmNodesPrimary`` would be a ``entityB/node.conf`` file containing:
 
@@ -523,6 +531,9 @@ For "sibling" node serving ``Entity B`` on ``vmNodesPrimary`` would be a ``entit
     }
     devMode = false // Turn off things like key autogeneration and require proper doorman registration.
     detectPublicIp = false // Do not perform any public IP lookup on the host.
+    sshd {
+        port = 2223
+    }
 
 Nodes keystores generation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -579,6 +590,14 @@ CorDapps installation
 
 In the node's base directory create ``cordapps`` sub-directory and install all the required CorDapps you intend to work with.
 In this example we are going to use Finance CorDapp which is supplied as part of Corda Enterprise distribution.
+
+DB drivers installation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+As discussed above each of the nodes will be using database to store node's data. Corda Enterprise supports a number of databases, however in order
+for a Corda Node to store its data in the DB, a JDBC driver needs to be installed into ``drivers`` sub-directory.
+
+In this example we are using MSSql Server DB, therefore ``mssql-jdbc-6.2.1.jre8.jar`` will be installed.
 
 Keystore aggregation for the Bridge
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -727,6 +746,8 @@ File copy from previous stages:
 
 - File ``nodesCertificates/nodesUnitedSslKeystore.jks`` should be copied from `Keystore aggregation for the Bridge`_ stage.
 
+- File ``network-root-truststore.jks``  along with the password to read this keystore provided by the CN owner.
+
 - File ``network-parameters`` should be copied from `Nodes keystores generation`_ stage.
 
 ``corda-firewall.jar`` is included into Corda Enterprise distribution and should be copied into Bridge base directory on ``vmInfra1`` and ``vmInfra2`` hosts.
@@ -735,13 +756,13 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
 
 ..  code-block:: javascript
 
-    bridgeMode = BridgeInner
+    firewallMode = BridgeInner
 
     // Public SSL settings
     keyStorePassword = "bridgeKeyStorePassword"
     sslKeystore = "nodesCertificates/nodesUnitedSslKeystore.jks"
-    trustStorePassword = "nodeKeyStoreTrustPass"
-    trustStoreFile = "nodesCertificates/nodesTrustStore.jks"
+    trustStorePassword = "trustpass"
+    trustStoreFile = "nodesCertificates/network-root-truststore.jks"
 
     outboundConfig {
         artemisBrokerAddress = "vmInfra1:11005" // NB: for vmInfra2 swap artemisBrokerAddress and alternateArtemisBrokerAddresses. Note: SWAP2
@@ -790,7 +811,8 @@ For reference, base directory for the Bridge instance should look as follows:
     ├── firewall.conf
     ├── network-parameters
     ├── nodesCertificates
-    │   └── nodesUnitedSslKeystore.jks
+    │   ├── nodesUnitedSslKeystore.jks
+    │   └── network-root-truststore.jks
     └── tunnel
         ├── bridge.jks
         └── tunnel-truststore.jks
@@ -865,12 +887,37 @@ In order to run each of the Float processes on ``vmFloat1`` and ``vmFloat2``, in
 
 ..  code-block:: bash
 
-    java –jar corda-firewall.jar corda-firewall
+    nohup java –jar corda-firewall.jar &
 
 .. note:: When Float is started, since there is no Bridge connected to it yet, the Java process will be running but the Float will not be active yet and therefore
           will not be accepting inbound connections.
 
-.. todo:: Reference specific phrase from the logs.
+When Float instance is successfully started for the first time, the ``logs`` directory will be created in the base directory and the following line will show up in the log file:
+
+.. parsed-literal::
+
+    [main] internal.FirewallStartup.startFirewall - Firewall started up and registered in 2.86 sec
+
+In addition, traffic stats are logged every minute, like so:
+
+.. parsed-literal::
+
+    Load average: 5%
+    Memory:
+            Free: 75 MB
+            Total: 200 MB
+            Max: 200 MB
+    Traffic totals:
+            Successful connection count: 1(inbound), 0(outgoing)
+            Failed connection count: 1(inbound), 0(outgoing)
+            Packets accepted count: 0(inbound), 0(outgoing)
+            Bytes transmitted: 0(inbound), 0(outgoing)
+            Packets dropped count: 0(inbound), 0(outgoing)
+    Traffic breakdown:
+            Successful connections in:
+                    /13.80.124.64:57196 -> 1
+            Failed connections in:
+                    /81.148.212.130:6546 -> 1
 
 Starting Apache ZooKeeper processes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -895,7 +942,37 @@ On ``vmZkWitness`` host:
 
     ./zookeeper/bin/zkServer.sh --config /opt/corda/config/zoo3 start
 
-.. todo:: Reference specific phrase from the logs, confirming master election.
+Every ``zkServer.sh`` start should report back to console with:
+
+.. parsed-literal::
+
+    Starting zookeeper ... STARTED
+
+After all ZooKeeper clusters have been successfully started on every host, execute:
+
+.. parsed-literal::
+
+    ./zookeeper/bin/zkServer.sh --config /opt/corda/config/zooX status
+
+Where ``zooX`` is ``zoo1`` on ``vmInfra1``, ``zoo2`` on ``vmInfra2`` and ``zoo3`` on ``vmZkWitness``
+
+Messages similar to the ones below should appear on two of the hosts indicating the ``follower`` status:
+
+.. parsed-literal::
+
+    Using config: ./config/zoo3/zoo.cfg
+    Client port not found in static config file. Looking in dynamic config file.
+    Client port found: 11105. Client address: 10.155.0.8.
+    Mode: follower
+
+Whereas on the remaining host, the ``leader`` status is indicated by:
+
+.. parsed-literal::
+
+    Using config: ./config/zoo2/zoo.cfg
+    Client port not found in static config file. Looking in dynamic config file.
+    Client port found: 11105. Client address: 10.155.0.4.
+    Mode: leader
 
 Starting Artemis cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -903,14 +980,30 @@ Starting Artemis cluster
 In order to start Artemis, the following command should be issued for ``master`` on ``vmInfra1``:
 
 .. parsed-literal::
-    ${WORKING_DIR}/artemis-master/bin/artemis run
+
+    nohup ${WORKING_DIR}/artemis-master/bin/artemis run &
+
+To confirm ``master`` has been successfully started, ``nohup.out`` file should contain:
+
+.. parsed-literal::
+
+    AMQ221007: Server is now live
+    AMQ221001: Apache ActiveMQ Artemis Message Broker version 2.6.3 [0.0.0.0, nodeID=5df84d6f-0ea4-11e9-bdbf-000d3aba482b]
 
 In order to start Artemis, the following command should be issued for ``slave`` on ``vmInfra2``:
 
 .. parsed-literal::
-    ${WORKING_DIR}/artemis-slave/bin/artemis run
 
-.. todo:: Reference specific phrase from the logs, confirming successful start-up.
+    nohup ${WORKING_DIR}/artemis-slave/bin/artemis run &
+
+To confirm ``slave`` has been successfully started, ``nohup.out`` file should contain:
+
+.. parsed-literal::
+
+    AMQ221024: Backup server ActiveMQServerImpl::serverUUID=5df84d6f-0ea4-11e9-bdbf-000d3aba482b is synchronized with live-server.
+    AMQ221031: backup announced
+
+In this example, ``5df84d6f-0ea4-11e9-bdbf-000d3aba482b`` is the cluster ID of the Artemis ``master`` instance.
 
 Starting Bridge processes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -924,9 +1017,39 @@ In order to run each of the Bridge processes the following command should be exe
 
 ..  code-block:: bash
 
-    java –jar corda-firewall.jar corda-firewall
+    nohup java –jar corda-firewall.jar &
 
-.. todo:: Reference specific phrase from the logs, confirming successful start-up.
+Checking any file in the logs folder should ideally reveal no ``ERROR`` nor ``WARN`` messages.
+If bridge start-up sequence has been successful the following ``INFO`` level log messages should be observed for both Bridge instances:
+
+.. parsed-literal::
+
+    artemis.BridgeArtemisConnectionServiceImpl.artemisReconnectionLoop - Session created
+
+One of the Bridges will become a leader and should have the following in its log:
+
+.. parsed-literal::
+
+    setting leadership to true; old value was false
+    ...
+    Waiting for activation by at least one bridge control inbox registration
+
+Domino effect
+^^^^^^^^^^^^^
+
+There is a concept of chained activation of the services which is often internally called the Domino effect.
+When services are not activated they run as Java operating system processes, however they are dormant from data processing point of view.
+E.g. Float service when not activated does not even have the port for inbound communication open. This makes perfect sense as underlying backend infrastructure
+may not be running at all and if a message was received from the outside, it will not be able to route it correctly for processing.
+
+Given ZK, Artemis, Bridge and Float running, but without any nodes started, the environment is largely in the dormant state.
+
+When node starts the following happens:
+
+1. Node creates queues on the Artemis side;
+2. Using Artemis communication mechanism, the node sends a special activation message to the Bridge. In response to this message, the Bridge activates;
+3. Bridge then sends a special activation message to a Float via the tunnel communication channel;
+4. Float starts to listen for inbound communication (port 10005 in the example above) and this will make it available for processing traffic from the Internet facing loadbalancer.
 
 Starting node processes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -934,7 +1057,7 @@ Starting node processes
 Each of the boxes ``vmNodesPrimary`` and ``vmNodesSecondary`` is capable of hosting both nodes for ``Entity A`` and ``Entity B`` at the same time.
 
 ``vmNodesPrimary`` and ``vmNodesSecondary`` are meant to be located in different datacentres and in case when one of the datacentres is unavailable, the whole application plant will be running
-on the other datacentre hardware.
+on the other datacentre's hardware.
 
 In this setup Corda Nodes for each of the entities work in Hot-Cold mode. Which means that if the node is running on ``vmNodesPrimary``, the node for the same identity on ``vmNodesSecondary`` cannot even be started.
 For more information, please see :doc:`Hot-cold high availability deployment <hot-cold-deployment>`.
@@ -946,11 +1069,56 @@ be used from the base directory:
 
 ..  code-block:: bash
 
-    java –jar corda.jar
+    nohup bash -c 'while true; do java -jar corda.jar; done' &
 
-.. todo:: Reference specific phrase from the logs, confirming successful start-up.
+Upon successful startup of primary nodes there should be no ``ERROR`` level lines in node logs. Once node's startup sequence completes, the following line will be
+printed in the logs:
+
+.. parsed-literal::
+
+    Node for "Entity A" started up and registered in 35.58 sec
+
+If the primary node is already running, secondary nodes will gracefully shutdown with the following lines in the logs:
+
+.. parsed-literal::
+
+    [ERROR] PID: 7256 failed to become the master node. Check if /opt/corda/entityA/vmNodesPrimary, PID: 7593 is still running. Try again in PT40S
+    [INFO ] Will sleep for MutualExclusionConfiguration(on=true, machineName=vmNodesSecondary, updateInterval=20000, waitInterval=40000).waitInterval seconds till lease expires then shutting down this process.
 
 Performing basic health checks
 ------------------------------
 
-.. todo:: Mention use of ``healthCheckPhrase`` for Float
+Checking Float port is open
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the Domino effect happened successfully and all the services activated, one of the the Floats should be listening on port ``10005``.
+To check this is indeed the case, logon to ``vmFloat1`` or ``vmFloat2`` host and check that the port is bound:
+
+.. parsed-literal::
+
+    lsof | grep 10005
+
+This should produce a non-empty list of processes that are listening to this port.
+
+
+Checking Float is reachable from the outside
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Using a computer that is capable to perform external communication to the environment, run:
+
+.. parsed-literal::
+
+    telnet banka.com 10005
+
+Type ``healthCheckPhrase`` which is in our example - ``HelloCorda``. Initially, no characters will be echoed back, however once you finish the phrase, it will be
+echoed back in full to the terminal as well as any subsequent symbols that you type.
+
+This will ensure that the Float can be contacted from the outside and is performing normally.
+
+Running some flows
+^^^^^^^^^^^^^^^^^^
+
+The ultimate test is of course running some flows.
+it would make sense to check that ``EntityA`` can successfully talk to ``Entity B``, as well as have some external node sending flows to ``EntityA`` and ``Entity B``.
+
+Desired effect is dependent on the CorDapps installed, however the Bridge and the Float will log some stats every minute detailing the number of messages relayed in every direction.
