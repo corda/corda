@@ -427,18 +427,25 @@ class NodeAttachmentService(
     }
 
     // Holds onto a signed and/or unsigned attachment (at least one or the other).
-    private data class AttachmentIds(val signed: AttachmentId?, val unsigned: AttachmentId?) {
+    private data class AttachmentIds(val signed: AttachmentId?, val unsigned: List<AttachmentId>?) {
         init {
             // One of them at least must exist.
-            check(signed != null || unsigned != null)
+            check(signed != null || (unsigned != null && unsigned.isNotEmpty()) )
         }
 
         fun toList(): List<AttachmentId> =
                 if (signed != null) {
-                    if (unsigned != null) {
-                        listOf(signed, unsigned)
+                    if (unsigned != null && unsigned.isNotEmpty()) {
+                        listOf(signed, unsigned.first())
                     } else listOf(signed)
-                } else listOf(unsigned!!)
+                } else listOf(unsigned!!.first()!!)
+
+        fun toListWithUnsigedDuplicates(): List<AttachmentId> =
+                if (signed != null) {
+                    if (unsigned != null && unsigned.isNotEmpty()) {
+                        listOf(signed) + unsigned
+                    } else listOf(signed)
+                } else unsigned!!
     }
 
     /**
@@ -469,17 +476,15 @@ class NodeAttachmentService(
             val query = session.createQuery(criteriaQuery)
 
             // execution
-            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it, name) }.toMap())
+            TreeMap(query.resultList.groupBy { it.version }.map { makeAttachmentIds(it) }.toMap())
         }
     }
 
-    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
+    private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>): Pair<Version, AttachmentIds> {
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
-        check (signed.size <= 1) //sanity check
+        check (signed.size <= 1)
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
-        if (unsigned.size > 1) //TODO cater better for whiltelisted JARs - CORDA-2405
-            log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
-        return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
+        return it.key to AttachmentIds(signed.singleOrNull(), unsigned)
     }
 
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
@@ -491,5 +496,10 @@ class NodeAttachmentService(
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toList() }.toSet()
+    }
+
+    override fun getContractAttachmentsWithUnsigedDuplicates(contractClassName: String): Set<AttachmentId> {
+        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
+        return versions.values.flatMap { it.toListWithUnsigedDuplicates() }.toSet()
     }
 }

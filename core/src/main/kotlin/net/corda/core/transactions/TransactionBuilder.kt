@@ -472,6 +472,13 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
+        if (constraints.all { it is WhitelistedByZoneAttachmentConstraint }) {
+            val whitelistedAttachments = services.networkParameters.whitelistedContractImplementations[contractClassName]
+            val availableAttachments = services.attachments.getContractAttachmentsWithUnsigedDuplicates(contractClassName)
+            val selectedAttachments = whitelistedAttachments?.intersect(availableAttachments) ?: emptyList<AttachmentId>()
+            return selectedAttachments.last()
+        }
+
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
         return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)

@@ -18,7 +18,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
-import java.util.HashMap
+import java.util.*
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
@@ -123,5 +123,9 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
         return queryAttachments(attachmentQueryCriteria).toSet()
+    }
+
+    override fun getContractAttachmentsWithUnsigedDuplicates(contractClassName: String): Set<AttachmentId> {
+        return getContractAttachments(contractClassName)
     }
 }
