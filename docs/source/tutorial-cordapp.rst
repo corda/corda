@@ -257,27 +257,35 @@ Interacting with the example CorDapp
 
 Via HTTP
 ~~~~~~~~
+<<<<<<< HEAD
 The nodes' webservers are run via separate, client-side Java Springboot servers that connect to the node via a proxy RPC connection object. The code for these exists within the clients module
+=======
+The nodes' webservers are run via separate, client-side Java Spring Boot servers that connect to the node via RPC. The code for these exists within the clients module in the demo app. When run locally, the webservers expose the following ports:
+>>>>>>> docs-cordapp-example-spring-server-eric
 
 * PartyA: ``localhost:8080``
 * PartyB: ``localhost:8081``
 * PartyC: ``localhost:8082``
 
+<<<<<<< HEAD
 These ports are defined in each nodes runPartyServer gradle task in ``clients/build.gradle``. Each node corresponding server can be started by running ``./gradlew runPartyAServer``, ``./gradlew runPartyBServer`` and ``./gradlew runPartyCServer`` in separate terminal windows within the clients directory.
+=======
+These ports are specified in each nodes ``runPartyServer`` gradle task in ``clients/build.gradle``. Each server can be launched by running ``./gradlew runPartyAServer``, ``./gradlew runPartyBServer`` and ``./gradlew runPartyCServer`` in separate terminal windows within the clients directory.
+>>>>>>> docs-cordapp-example-spring-server-eric
 
 
 Each node webserver exposes the following endpoints:
 
-* ``/spring/api/me``
-* ``/spring/api/peers``
-* ``/spring/api/ious``
-* ``/spring/api/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
+* ``/api/example/me``
+* ``/api/example/peers``
+* ``/api/example/ious``
+* ``/api/example/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
 
-There is also a web front-end served from each nodes own Spring server at ``localhost:<server-port>`` .
+There is also a web front-end served from each nodes own Spring server. You can interact with this by navigating to ``localhost:<server-port>`` in your browser.
 
 Creating an IOU via the endpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-An IOU can be created by sending a POST request to the ``spring/api/create-iou`` endpoint directly, or by using the
+An IOU can be created by sending a POST request to the ``/api/example/create-iou`` endpoint directly, or by using the
 the web form served by each node from ``localhost:<server-port>``.
 
 To create an IOU between PartyA and PartyB, run the following command from the command line:
@@ -308,8 +316,8 @@ Assuming all went well, you can view the newly-created IOU by accessing the vaul
 
 *Via the HTTP API:*
 
-* PartyA's vault: Navigate to http://localhost:8080/spring/api/ious
-* PartyB's vault: Navigate to http://localhost:8081/spring/api/ious
+* PartyA's vault: Navigate to http://localhost:8080/api/example/ious
+* PartyB's vault: Navigate to http://localhost:8081/api/example/ious
 
 *Via web client application:*
 
