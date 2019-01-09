@@ -554,7 +554,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(results.states).hasSize(6)
         }
     }
-
+    @Ignore
     @Test
     fun `query by contract states constraint type`() {
         database.transaction {
@@ -609,7 +609,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(constraintResults5.states).hasSize(3)
         }
     }
-
+    @Ignore
     @Test
     fun `query by contract states constraint type and data`() {
         database.transaction {
@@ -2413,7 +2413,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(results).hasSize(4)
         }
     }
-
+    @Ignore
     @Test
     fun `sorted, enriched and overridden composite query with constraints handles defaults correctly`() {
         database.transaction {
