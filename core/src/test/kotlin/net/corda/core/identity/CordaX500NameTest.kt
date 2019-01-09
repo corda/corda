@@ -171,7 +171,7 @@ class CordaX500NameTest {
     @Test
     fun `validate special format for quoted , `() {
         val cordaX500Name = CordaX500Name.parse("O=\"Sue, Grabbit and Runn\", L=VALID, C=CH")
-        assertSame(cordaX500Name.organisation, "Sue\\, Grabbit and Runn", "Quoted string with , replaced with quoted \\,")
+        assertEquals(cordaX500Name.organisation, "Sue\\, Grabbit and Runn", "Quoted string with , replaced with quoted \\,")
     }
 
 
