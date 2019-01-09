@@ -1,31 +1,30 @@
-package net.corda.finance.schemas
+package net.corda.finance.test
 
+import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentState
-import net.corda.core.serialization.CordaSerializable
-import net.corda.core.utilities.MAX_HASH_HEX_SIZE
-import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import org.hibernate.annotations.Type
-import javax.persistence.*
-
-/**
- * An object used to fully qualify the [CashSchema] family name (i.e. independent of version).
- */
-object CashSchema
+import javax.persistence.Column
+import javax.persistence.ElementCollection
+import javax.persistence.Entity
+import javax.persistence.Table
 
 /**
  * First version of a cash contract ORM schema that maps all fields of the [Cash] contract state as it stood
  * at the time of writing.
  */
-@CordaSerializable
-object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
-
-    override val migrationResource = "cash.changelog-master"
-
+object SampleCashSchemaV3 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 3,
+        mappedTypes = listOf(PersistentCashState::class.java)) {
     @Entity
-    @Table(name = "contract_cash_states", indexes = [Index(name = "ccy_code_idx", columnList = "ccy_code"), Index(name = "pennies_idx", columnList = "pennies")])
+    @Table(name = "cash_states_v3")
     class PersistentCashState(
+            /** [ContractState] attributes */
+
+            /** X500Name of participant parties **/
+            @ElementCollection
+            var participants: MutableSet<AbstractParty?>? = null,
+
             /** X500Name of owner party **/
             @Column(name = "owner_name", nullable = true)
             var owner: AbstractParty?,
@@ -36,8 +35,9 @@ object CashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version 
             @Column(name = "ccy_code", length = 3, nullable = false)
             var currency: String,
 
-            @Column(name = "issuer_key_hash", length = MAX_HASH_HEX_SIZE, nullable = false)
-            var issuerPartyHash: String,
+            /** X500Name of issuer party **/
+            @Column(name = "issuer_name", nullable = true)
+            var issuer: AbstractParty?,
 
             @Column(name = "issuer_ref", length = MAX_ISSUER_REF_SIZE, nullable = false)
             @Type(type = "corda-wrapper-binary")

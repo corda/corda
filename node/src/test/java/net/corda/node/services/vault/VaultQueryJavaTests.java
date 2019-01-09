@@ -23,7 +23,7 @@ import net.corda.core.node.services.vault.QueryCriteria.VaultQueryCriteria;
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.finance.schemas.test.SampleCashSchemaV2;
+import net.corda.finance.test.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
@@ -89,7 +89,8 @@ public class VaultQueryJavaTests {
                 "net.corda.testing.internal.vault",
                 "net.corda.finance.contracts.asset",
                 CashSchemaV1.class.getPackage().getName(),
-                DummyLinearStateSchemaV1.class.getPackage().getName()
+                DummyLinearStateSchemaV1.class.getPackage().getName(),
+                SampleCashSchemaV2.class.getPackage().getName()
         );
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
@@ -149,9 +150,7 @@ public class VaultQueryJavaTests {
             // DOCSTART VaultJavaQueryExample0
             Vault.Page<LinearState> results = vaultService.queryBy(LinearState.class);
             // DOCEND VaultJavaQueryExample0
-
             assertThat(results.getStates()).hasSize(3);
-
             return tx;
         });
     }

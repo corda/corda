@@ -63,7 +63,9 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile project(':test-utils')
-    testCompile project(':finance:contracts')
+    testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     testCompile project(':finance:workflows')
 
     // Jsh: Testing SSH server.

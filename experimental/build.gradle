@@ -12,7 +12,9 @@ compileTestKotlin {
 
 dependencies {
     compile project(':core')
-    compile project(':finance:contracts')
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     compile project(':finance:workflows')
 
     // ObjectWeb Asm: a library for synthesising and working with JVM bytecode.

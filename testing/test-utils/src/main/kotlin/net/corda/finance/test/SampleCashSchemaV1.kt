@@ -1,4 +1,4 @@
-package net.corda.finance.schemas.test
+package net.corda.finance.test
 
 import net.corda.core.contracts.MAX_ISSUER_REF_SIZE
 import net.corda.core.schemas.MappedSchema
@@ -20,9 +20,6 @@ object CashSchema
  * at the time of writing.
  */
 object SampleCashSchemaV1 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 1, mappedTypes = listOf(PersistentCashState::class.java)) {
-
-    override val migrationResource = "sample-cash-v1.changelog-init"
-
     @Entity
     @Table(name = "contract_cash_states_v1", indexes = [Index(name = "ccy_code_idx1", columnList = "ccy_code"), Index(name = "pennies_idx1", columnList = "pennies")])
     class PersistentCashState(

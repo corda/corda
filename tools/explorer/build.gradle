@@ -24,7 +24,9 @@ dependencies {
     compile project(':client:jfx')
     compile project(':client:mock')
     compile project(':node-driver')
-    compile project(':finance:contracts')
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
     compile project(':finance:workflows')
 
     // Additional CorDapps that will be displayed in the GUI.

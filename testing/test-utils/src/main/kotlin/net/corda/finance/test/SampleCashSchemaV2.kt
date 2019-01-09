@@ -1,4 +1,4 @@
-package net.corda.finance.schemas.test
+package net.corda.finance.test
 
 import net.corda.core.identity.AbstractParty
 import net.corda.core.schemas.CommonSchemaV1
@@ -11,9 +11,6 @@ import javax.persistence.*
  */
 object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 2,
         mappedTypes = listOf(PersistentCashState::class.java)) {
-
-    override val migrationResource = "sample-cash-v2.changelog-init"
-
     @Entity
     @Table(name = "cash_states_v2", indexes = [Index(name = "ccy_code_idx2", columnList = "ccy_code")])
     class PersistentCashState(

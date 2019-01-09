@@ -22,7 +22,13 @@ description 'Corda finance modules'
  *          cordapp project(':finance:contracts')
  */
 
-def mainProjects = [':finance:contracts',':finance:workflows', ':confidential-identities']
+def mainProjects = [':finance:workflows', ':confidential-identities']
+
+dependencies{
+    compile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
+        transitive = false
+    }
+}
 
 jar.dependsOn mainProjects.collect{ it+":compileJava"}
 jar {

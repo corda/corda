@@ -34,7 +34,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile "junit:junit:$junit_version"
 
-    compile project(':finance')
+    compile project(':finance:workflows')
     compileOnly project(':node-api')
     rpcProxyCompile project(':core')
     rpcProxyCompile project(':client:rpc')

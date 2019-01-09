@@ -12,7 +12,8 @@ dependencies {
 
     testCompile(project(':test-utils')) {
         exclude module: 'node-api'
-        exclude module: 'contracts'
+        exclude group: 'net.corda', module: 'corda-finance-contracts'
+        exclude group: 'net.corda', module: 'corda-finance-workflows'
     }
 }
 

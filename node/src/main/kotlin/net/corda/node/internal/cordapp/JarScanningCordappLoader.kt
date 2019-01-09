@@ -25,12 +25,14 @@ import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
 import java.lang.reflect.Modifier
+import java.math.BigInteger
 import java.net.URL
 import java.net.URLClassLoader
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
+import java.util.zip.ZipInputStream
 import kotlin.reflect.KClass
 import kotlin.streams.toList
 
@@ -285,8 +287,6 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
     }
 
-
-
     private fun <T : Any> loadClass(className: String, type: KClass<T>): Class<out T>? {
         return try {
             appClassLoader.loadClass(className).asSubclass(type.java)
@@ -365,13 +365,31 @@ class MultipleCordappsForFlowException(message: String) : Exception(message)
 class CordappInvalidVersionException(msg: String) : Exception(msg)
 
 abstract class CordappLoaderTemplate : CordappLoader {
+
+    companion object {
+
+        private val logger = contextLogger()
+    }
+
     override val flowCordappMap: Map<Class<out FlowLogic<*>>, Cordapp> by lazy {
         cordapps.flatMap { corDapp -> corDapp.allFlows.map { flow -> flow to corDapp } }
                 .groupBy { it.first }
                 .mapValues { entry ->
                     if (entry.value.size > 1) {
+                        logger.error("There are multiple CorDapp JARs on the classpath for flow " +
+                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
+                        entry.value.forEach { (_, cordapp) ->
+                            val zip = ZipInputStream(cordapp.jarPath.openStream())
+                            val ident = BigInteger(64, Random()).toString(36)
+                            logger.error("Contents of: ${cordapp.jarPath} will be prefaced with: ${ident}")
+                            var e = zip.nextEntry
+                            while (e != null) {
+                                logger.error("$ident\t ${e.name}")
+                                e = zip.nextEntry
+                            }
+                        }
                         throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow " +
-                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.name }} ].")
+                                "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
                     }
                     entry.value.single().second
                 }
