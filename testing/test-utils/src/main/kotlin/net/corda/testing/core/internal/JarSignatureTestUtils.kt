@@ -67,10 +67,12 @@ object JarSignatureTestUtils {
         return ks.getCertificate(alias).publicKey
     }
 
-    fun Path.getPublicKey(alias: String, storePassword: String) : PublicKey {
-        val ks = loadKeyStore(this.resolve("_teststore"), storePassword)
+    fun Path.getPublicKey(alias: String, storeName: String, storePassword: String) : PublicKey {
+        val ks = loadKeyStore(this.resolve(storeName), storePassword)
         return ks.getCertificate(alias).publicKey
     }
+
+    fun Path.getPublicKey(alias: String, storePassword: String) = getPublicKey(alias, "_teststore", storePassword)
 
     fun Path.getJarSigners(fileName: String) =
             JarInputStream(FileInputStream((this / fileName).toFile())).use(JarSignatureCollector::collectSigners)

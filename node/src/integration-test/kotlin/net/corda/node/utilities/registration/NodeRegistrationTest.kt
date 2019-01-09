@@ -100,17 +100,6 @@ class NodeRegistrationTest {
                     aliceName.organisation,
                     genevieveName.organisation,
                     notaryName.organisation)
-
-            // Check the nodes can communicate among themselves (and the notary).
-            val anonymous = false
-            genevieve.rpc.startFlow(
-                    ::CashIssueAndPaymentFlow,
-                    1000.DOLLARS,
-                    OpaqueBytes.of(12),
-                    alice.nodeInfo.singleIdentity(),
-                    anonymous,
-                    defaultNotaryIdentity
-            ).returnValue.getOrThrow()
         }
     }
 }
