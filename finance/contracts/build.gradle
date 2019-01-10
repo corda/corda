@@ -40,9 +40,6 @@ jar {
 }
 
 cordapp {
-    signing {
-        enabled false
-    }
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     contract {
