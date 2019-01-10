@@ -496,7 +496,7 @@ Should the node operator deem the attachment trustworthy, they may then issue th
 
 and subsequently retry the failed flow (currently this requires a node re-start).
 
-.. warning:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
+.. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
    Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
 
 
