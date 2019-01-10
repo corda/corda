@@ -6,7 +6,6 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.AbstractParty
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.notaryhealthcheck.contract.SchedulingContract
 import net.corda.notaryhealthcheck.utils.Monitorable
 import java.time.Instant
 
@@ -26,7 +25,7 @@ class InstallCheckScheduleStateFlow(
         private val newId: UniqueIdentifier) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val state = ScheduledCheckState(participants, newId, idsToCheck, target, startTime, lastSuccessTime, waitTimeSeconds, waitForOutstandingFlowsSeconds)
+        val state = SchedulingContract.ScheduledCheckState(participants, newId, idsToCheck, target, startTime, lastSuccessTime, waitTimeSeconds, waitForOutstandingFlowsSeconds)
         val builder = TransactionBuilder(target.notary)
                 .addOutputState(state, SchedulingContract.PROGRAM_ID)
                 .addCommand(SchedulingContract.emptyCommand(ourIdentity.owningKey))

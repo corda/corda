@@ -11,7 +11,7 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
-import net.corda.notaryhealthcheck.contract.SchedulingContract
+import net.corda.node.services.api.ServiceHubInternal
 import net.corda.notaryhealthcheck.utils.Monitorable
 import java.time.Instant
 
@@ -39,6 +39,10 @@ class StartCheckScheduleFlow(
                 waitTimeSeconds,
                 waitForOutstandingFlowsSeconds,
                 UniqueIdentifier(null)))
+        // Initialise the meters to zero so that they are always visible
+        val prefix = target.party.metricPrefix()
+        (serviceHub as ServiceHubInternal).monitoringService.metrics.meter(Metrics.success(prefix)).mark(0)
+        (serviceHub as ServiceHubInternal).monitoringService.metrics.meter(Metrics.fail(prefix)).mark(0)
     }
 }
 
@@ -56,7 +60,8 @@ class StopCheckScheduleFlow(private val target: Monitorable) : FlowLogic<Unit>()
     @Suspendable
     override fun call() {
         val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
-        val states = serviceHub.vaultService.queryBy<ScheduledCheckState>(queryCriteria).states.filter { it.state.data.target.party == target.party }
+        val states = serviceHub.vaultService.queryBy<SchedulingContract.ScheduledCheckState>(queryCriteria)
+                .states.filter { it.state.data.target.party == target.party }
         if (!states.isEmpty()) {
             val builder = TransactionBuilder(target.notary)
                     .addCommand(SchedulingContract.emptyCommand(ourIdentity.owningKey))
@@ -87,7 +92,7 @@ class StartAllChecksFlow(private val waitTimeSeconds: Int, private val waitForOu
             val notaryClusterMembers = networkMap.allNodes.mapNotNull {
                 val party = it.legalIdentities.first()
                 if (party !in notaries) {
-                    val notary = it.legalIdentities.firstOrNull { it in notaries }
+                    val notary = it.legalIdentities.firstOrNull { id -> id in notaries }
                     if (notary != null) {
                         Monitorable(notary, party)
                     } else {
@@ -118,10 +123,10 @@ class StartAllChecksFlow(private val waitTimeSeconds: Int, private val waitForOu
 class StopAllChecksFlow : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val states = serviceHub.vaultService.queryBy<ScheduledCheckState>()
+        val states = serviceHub.vaultService.queryBy<SchedulingContract.ScheduledCheckState>()
         states.states.groupBy { it.state.notary }.forEach {
             val builder = TransactionBuilder(it.key)
-            it.value.forEach { builder.addInputState(it) }
+            it.value.forEach { stateAndRef -> builder.addInputState(stateAndRef) }
             builder.addCommand(SchedulingContract.emptyCommand(ourIdentity.owningKey))
             val tx = serviceHub.signInitialTransaction(builder)
             serviceHub.recordTransactions(tx)

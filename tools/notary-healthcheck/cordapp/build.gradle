@@ -34,6 +34,16 @@ cordapp {
     }
 }
 
+cordapp {
+    info {
+        name "net/corda/notary-healthcheck/cordapp"
+        vendor "R3"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
+
+
 publish {
     name "corda-notary-healthcheck-cordapp"
 }

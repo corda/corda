@@ -88,7 +88,7 @@ class HealthCheckFlow(monitorable: Monitorable) : FlowLogic<List<TransactionSign
         }
 
         private fun setWaitTimeGauge(value: Long) {
-            val name = MetricRegistry.name(ScheduledCheckFlow.cleanX500forMetrics(party.name), "reportedWaitTimeSeconds")
+            val name = MetricRegistry.name(Metrics.reportedWaitTimeSeconds(party.metricPrefix()))
             val gauge = (serviceHub as ServiceHubInternal).monitoringService.metrics.gauge(name, { WaitTimeLatchedGauge(AtomicLong(value)) })
             (gauge as WaitTimeLatchedGauge).currentWaitTime.set(value)
         }

@@ -180,7 +180,7 @@ class BackpressureHandlingTest {
                 resultFuture.get(10, TimeUnit.SECONDS)
                 progressTrackerDone.get()
 
-                val metricName = MetricRegistry.name(ScheduledCheckFlow.cleanX500forMetrics(notary.name), "reportedWaitTimeSeconds")
+                val metricName = MetricRegistry.name(Metrics.reportedWaitTimeSeconds(notary.metricPrefix()))
                 val metricsRegistry = (flow.serviceHub as ServiceHubInternal).monitoringService.metrics
                 val gauge = metricsRegistry.gauges[metricName]
                 assertNotNull(gauge)
