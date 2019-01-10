@@ -14,8 +14,7 @@ dependencies {
     // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
-    cordapp project(':core')
-    cordapp project(':confidential-identities')
+    cordaCompile project(':core')
 
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
