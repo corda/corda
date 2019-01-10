@@ -231,11 +231,12 @@ class HibernateAttachmentQueryCriteriaParser(override val criteriaBuilder: Crite
         }
 
         criteria.isSignedCondition?.let { isSigned ->
-            val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
-            if (isSigned == Builder.equal(true))
+            if (isSigned == Builder.equal(true)) {
+                val joinDBAttachmentToSigners = root.joinList<NodeAttachmentService.DBAttachment, PublicKey>("signers")
                 predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNotNull))
-            else
-                predicateSet.add(criteriaBuilder.and(joinDBAttachmentToSigners.isNull))
+            } else {
+                predicateSet.add(criteriaBuilder.equal(criteriaBuilder.size(root.get<List<PublicKey>?>("signers")),0))
+            }
         }
 
         criteria.versionCondition?.let {
