@@ -74,7 +74,7 @@ compatibilityZoneURL
 
   *Important:*  old config value, please use networkServices
 
-  *Default:* not define
+  *Default:* not defined
 
 .. _corda_configuration_file_signer_blacklist:
 
@@ -83,7 +83,7 @@ cordappSignerKeyFingerprintBlacklist
   Node will not load Cordapps signed by those keys.
   The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367", "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
 
-  *Default:* not define
+  *Default:* not defined
 
 crlCheckSoftFail
   This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
@@ -99,7 +99,7 @@ custom
       A list of JVM arguments to apply to the node process. This removes any defaults specified from ``corda.jar``, but can be overridden from the command line.
       See :ref:`setting_jvm_args` for examples and details on the precedence of the different approaches to settings arguments.
 
-      *Default:* not define
+      *Default:* not defined
 
 .. _databaseConfiguration:
 
@@ -171,7 +171,7 @@ devModeOptions
   allowCompatibilityZone
     Allows a node configured to operate in development mode to connect to a compatibility zone.
 
-    *Default:* not define
+    *Default:* not defined
 
 
 emailAddress
@@ -185,7 +185,7 @@ extraNetworkMapKeys
 
   *Important:* This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
 
-  *Default:* not define
+  *Default:* not defined
 
 
 flowMonitorPeriodMillis
@@ -238,7 +238,7 @@ jarDirs
   This is useful for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]``.
   (Note that you have to use the ``baseDirectory`` substitution value when pointing to a relative path).
 
-  *Default:* not define
+  *Default:* not defined
 
 jmxMonitoringHttpPort
   If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
@@ -278,14 +278,14 @@ messagingServerAddress
   The address of the ArtemisMQ broker instance.
   If not provided the node will run one locally.
 
-  *Default:* not define
+  *Default:* not defined
 
 messagingServerExternal
   If ``messagingServerAddress`` is specified the default assumption is that the artemis broker is running externally.
   Setting this to ``false`` overrides this behaviour and runs the artemis internally to the node, but bound to the address specified in ``messagingServerAddress``.
   This allows the address and port advertised in ``p2pAddress`` to differ from the local binding, especially if there is external remapping by firewalls, load balancers , or routing rules. Note that ``detectPublicIp`` should be set to ``false`` to ensure that no translation of the ``p2pAddress`` occurs before it is sent to the network map.
 
-  *Default:* not define
+  *Default:* not defined
 
 myLegalName
   The legal identity of the node.
@@ -294,7 +294,7 @@ myLegalName
   At runtime, Corda checks whether this name matches the name in the node's certificates.
   For more details please read :ref:`node-naming` chapter.
 
-  *Default:* not define
+  *Default:* not defined
 
 notary
   Optional configuration object which if present configures the node to run as a notary.
@@ -308,7 +308,7 @@ notary
     If the node is part of a distributed cluster, specify the legal name of the cluster.
     At runtime, Corda checks whether this name matches the name of the certificate of the notary cluster.
 
-    *Default:* not define
+    *Default:* not defined
 
   className
     The fully qualified class name of the notary service to run.
