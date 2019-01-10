@@ -54,6 +54,8 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
     @Deprecated("Required only in some unit-tests and for backwards compatibility purposes.",
             ReplaceWith("WireTransaction(val componentGroups: List<ComponentGroup>, override val privacySalt: PrivacySalt)"), DeprecationLevel.WARNING)
+    // TODO sollecitom default constructor used to be `public <init>(java.util.List, net.corda.core.contracts.PrivacySalt, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
+    // TODO sollecitom hopefully not a problem because CorDapps are supposed to be using TransactionBuilder.
     @DeleteForDJVM
     @JvmOverloads
     constructor(

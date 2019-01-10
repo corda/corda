@@ -17,6 +17,7 @@ import net.corda.core.crypto.SecureHash
  * @property config Configuration for this CorDapp
  */
 @DeleteForDJVM
+// TODO sollecitom used to be public `constructor(val cordapp: Cordapp, val attachmentId: SecureHash?, val classLoader: ClassLoader)`. Unlikely CorDapps construct this manually.
 class CordappContext internal constructor(
         val cordapp: Cordapp,
         val attachmentId: SecureHash?,

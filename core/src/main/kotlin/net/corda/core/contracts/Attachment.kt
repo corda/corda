@@ -67,6 +67,7 @@ interface Attachment : NamedByHash {
      * The keys that have correctly signed the whole attachment.
      * Can be empty, for example non-contract attachments won't be necessarily be signed.
      */
+    // TODO sollecitom this would break any type implementing Attachment. @DoNotImplement was added as part of 4, and it wasn't there in 3.3. Probably unlikely CorDapps implement Attachment.
     val signerKeys: List<PublicKey>
 
     /**

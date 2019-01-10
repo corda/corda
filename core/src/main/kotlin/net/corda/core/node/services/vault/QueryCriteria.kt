@@ -162,6 +162,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
+    // TODO sollecitom used to be `public <init>(java.util.List, java.util.List, java.util.List, net.corda.core.node.services.Vault$StateStatus, java.util.Set, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
+    // TODO sollecitom this needs fixing.
     data class LinearStateQueryCriteria @JvmOverloads constructor(
             override val participants: List<AbstractParty>? = null,
             val uuid: List<UUID>? = null,
@@ -226,6 +228,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
+    // TODO sollecitom used to be `public <init>(java.util.List, java.util.List, java.util.List, net.corda.core.node.services.Vault$StateStatus, java.util.Set, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
+    // TODO sollecitom this needs fixing.
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
             override val participants: List<AbstractParty>? = null,
             val owner: List<AbstractParty>? = null,
@@ -326,6 +330,8 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
     /**
      * AttachmentsQueryCriteria:
      */
+    // TODO sollecitom used to be `public <init>(net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, net.corda.core.node.services.vault.ColumnPredicate, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
+    // TODO sollecitom this needs fixing.
     data class AttachmentsQueryCriteria @JvmOverloads constructor(val uploaderCondition: ColumnPredicate<String>? = null,
                                                                   val filenameCondition: ColumnPredicate<String>? = null,
                                                                   val uploadDateCondition: ColumnPredicate<Instant>? = null,

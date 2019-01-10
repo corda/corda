@@ -14,6 +14,7 @@ import java.security.PublicKey
  */
 @KeepForDJVM
 @CordaSerializable
+// TODO sollecitom use to be `constructor(val attachment: Attachment, val contract: ContractClassName, val additionalContracts: Set<ContractClassName> = emptySet(), val uploader: String? = null)`, not ABI compatible, but I don't think CorDapps construct this manually.
 class ContractAttachment @JvmOverloads constructor(
         val attachment: Attachment,
         val contract: ContractClassName,
