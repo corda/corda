@@ -1,5 +1,5 @@
-Node deployment to server
-=========================
+Deploying a node to a server
+============================
 
 .. contents::
 
@@ -14,7 +14,7 @@ handling, and ensures the Corda service is run at boot.
 
 **Prerequisites**:
 
-   * Supported Java 8. The supported versions are listed in :doc:`getting-set-up`
+   * A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 
 1. As root/sys admin user - add a system user which will be used to run Corda:
 
@@ -67,7 +67,7 @@ handling, and ensures the Corda service is run at boot.
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
       only visible to the permissioning service.
    *  Enter your node's desired legal name (see :ref:`node-naming` for more details).
-   *  Setup RPC users (*optional*).
+   *  If required, add RPC users
 
 .. note:: Ubuntu 16.04 and most current Linux distributions use SystemD, so if you are running one of these
           distributions follow the steps marked **SystemD**. 
@@ -185,7 +185,7 @@ at boot, and means the Corda service stays running with no users connected to th
 
 **Prerequisites**:
 
-   * Supported Java 8. The supported versions are listed in :doc:`getting-set-up`
+   * A supported Java distribution. The supported versions are listed in :doc:`getting-set-up`
 
 1. Create a Corda directory and download the Corda jar. Replace ``VERSION_NUMBER`` with the desired version. Here's an
    example using PowerShell::
@@ -226,7 +226,7 @@ at boot, and means the Corda service stays running with no users connected to th
    *  Enter an email address which will be used as an administrative contact during the registration process. This is
       only visible to the permissioning service.
    *  Enter your node's desired legal name (see :ref:`node-naming` for more details).
-   *  Setup RPC users (*optional*).
+   *  If required, add RPC users
 
 5. Copy the required Java keystores to the node. See :doc:`permissioning`
 
