@@ -488,7 +488,7 @@ Contract attachments that are received from a peer over the p2p network are cons
 when processed by a listening flow. The flow will be aborted and sent to the nodes flow hospital for recovery and retry. The untrusted attachment
 JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for viewing using the following CRaSH shell command:
 
-``>>> run openAttachment id: <hash of untrusted attachment given by `MissingAttachmentsException` exception``
+``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
 
 Should the node operator deem the attachment trustworthy, they may then issue the following CRaSH shell command to reload it as trusted:
 
