@@ -259,7 +259,7 @@ class NodeAttachmentService(
         if (content.isPresent) {
             return content.get().first
         }
-        // if no attachement has been found, we don't want to cache that - it might arrive later
+        // if no attachment has been found, we don't want to cache that - it might arrive later
         attachmentContentCache.invalidate(key)
         return null
     }
@@ -426,20 +426,22 @@ class NodeAttachmentService(
         }
     }
 
-    // Holds onto a signed and/or unsigned attachment (at least one or the other).
+    // Holds onto a signed and/or unsigned attachment (at least one or the other), may contain may unsigned attachments
     private data class AttachmentIds(val signed: AttachmentId?, val unsigned: List<AttachmentId>?) {
         init {
             // One of them at least must exist.
-            check(signed != null || (unsigned != null && unsigned.isNotEmpty()) )
+            check(signed != null || (unsigned != null && unsigned.isNotEmpty()))
         }
 
+        // Return signed attachment if present and at most a single unsigned attachment, throws exception when several unsigned attachments are present
         fun toList(): List<AttachmentId> =
                 if (signed != null) {
                     if (unsigned != null && unsigned.isNotEmpty()) {
-                        listOf(signed, unsigned.first())
+                        listOf(signed, unsigned.single())
                     } else listOf(signed)
                 } else listOf(unsigned!!.single())
 
+        //Return signed attachment if present and all unsigned attachments
         fun toListWithUnsignedDuplicates(): List<AttachmentId> =
                 if (signed != null) {
                     if (unsigned != null && unsigned.isNotEmpty()) {
@@ -484,6 +486,7 @@ class NodeAttachmentService(
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
         check (signed.size <= 1)
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
+        // cardinality of unsigned attachments is checked later on depending on the context
         return it.key to AttachmentIds(signed.singleOrNull(), unsigned)
     }
 
@@ -496,7 +499,9 @@ class NodeAttachmentService(
 
             newestAttachmentIds?.unsigned?.size == 1 -> newestAttachmentIds.unsigned.first()
 
-            else -> { //recreate version of attachments based on position in the whitelist, find the highest version >= minContractVersion
+            else -> {  // whitelisted attachments will have no version in the storage so none (if requesting minContractVersion > 1)
+                // ... or too many (if requesting minContractVersion = 1) can be returned
+                // recreate version of attachments based on position in the whitelist, find the highest version >= minContractVersion
                 val availableAttachments = getContractAttachmentsWithUnsignedDuplicates(contractClassName)
                 val whitelistedAttachments = servicesForResolution.networkParameters.whitelistedContractImplementations[contractClassName]
                 whitelistedAttachments?.withIndex()?.findLast { it.value in availableAttachments && it.index > minContractVersion }?.value
@@ -504,11 +509,18 @@ class NodeAttachmentService(
        }
     }
 
+    /**
+     * Return signed attachment if present and at most a single unsigned attachment,
+     * throws [IllegalArgumentException] when several unsigned attachments are present.
+     */
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toList() }.toSet()
     }
 
+    /**
+     * Return signed Attachment if present and all unsigned Attachments.
+     */
     private fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toListWithUnsignedDuplicates() }.toSet()
