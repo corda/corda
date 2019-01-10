@@ -18,7 +18,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.nodeapi.internal.withContractsInJar
 import java.io.InputStream
 import java.security.PublicKey
-import java.util.*
+import java.util.HashMap
 import java.util.jar.Attributes
 import java.util.jar.JarInputStream
 
