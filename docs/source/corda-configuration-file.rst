@@ -4,7 +4,7 @@ Node configuration
 .. contents::
 
 Configuration file location
---------------------
+---------------------------
 When starting a node, the ``corda.jar`` file defaults to reading the node's configuration from a ``node.conf`` file in the directory from which the command to launch Corda is executed.
 There are two command-line options to override this behaviour:
 
@@ -17,7 +17,7 @@ There are two command-line options to override this behaviour:
 If you specify both command line arguments at the same time, the node will fail to start.
 
 Configuration file format
-------------------
+-------------------------
 The Corda configuration file uses the HOCON format which is a superset of JSON. Please visit
 `<https://github.com/typesafehub/config/blob/master/HOCON.md>`_ for further details.
 
@@ -47,7 +47,7 @@ JVM options
     java -Dcorda.rpcSettings.ssl.keyStorePassword=mypassword -jar node.jar
 
 Configuration file fields
-------------------
+-------------------------
 
 .. note :: The available config fields are listed below in alphabetic order.
 
@@ -244,7 +244,7 @@ jmxMonitoringHttpPort
   If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
   Default Jolokia access url is http://127.0.0.1:port/jolokia/
 
-  *Default:*  ???
+  *Default:*  not defined
 
 jmxReporterType
   Provides an option for registering an alternative JMX reporter.
@@ -319,7 +319,7 @@ notary
   extraConfig
     an optional configuration block for providing notary implementation-specific values.
 
-    *Default:* not define
+    *Default:* not defined
 
 networkParameterAcceptanceSettings
   Optional settings for managing the network parameter auto-acceptance behaviour.
@@ -348,17 +348,17 @@ networkServices
   doormanURL
     Root address of the network registration service.
 
-    *Default:* not define
+    *Default:* not defined
 
   networkMapURL
     Root address of the network map service.
 
-    *Default:* not define
+    *Default:* not defined
 
   pnm
     Optional UUID of the private network operating within the compatibility zone this node should be joining.
 
-    *Default:* not define
+    *Default:* not defined
 
 
 p2pAddress
@@ -369,7 +369,7 @@ p2pAddress
   As a result the value listed here must be **externally accessible when running nodes across a cluster of machines.**
   If the provided host is unreachable, the node will try to auto-discover its public one.
 
-  *Default:* not define
+  *Default:* not defined
 
 rpcAddress
   The address of the RPC system on which RPC requests can be made to the node.
@@ -377,7 +377,7 @@ rpcAddress
 
   *Important:* Deprecated. Use rpcSettings instead.
 
-  *Default:* not define
+  *Default:* not defined
 
 rpcSettings
   Options for the RPC server exposed by the Node.
@@ -391,12 +391,12 @@ rpcSettings
     address
       host and port for the RPC server binding.
 
-      *Default:* not define
+      *Default:* not defined
 
     adminAddress
       host and port for the RPC admin binding (this is the endpoint that the node process will connect to).
 
-      *Default:* not define
+      *Default:* not defined
 
     standAloneBroker
       boolean, indicates whether the node will connect to a standalone broker for RPC.
@@ -414,12 +414,12 @@ rpcSettings
       keyStorePath
         Absolute path to the key store containing the RPC SSL certificate.
 
-      *Default:* not define
+      *Default:* not defined
 
       keyStorePassword
         Password for the key store.
 
-        *Default:* not define
+        *Default:* not defined
 
 rpcUsers
   A list of users who are authorised to access the RPC system.
@@ -428,12 +428,12 @@ rpcUsers
   username
     Username consisting only of word characters (a-z, A-Z, 0-9 and _)
 
-    *Default:* not define
+    *Default:* not defined
 
   password
     The password
 
-    *Default:* not define
+    *Default:* not defined
 
   permissions
     A list of permissions for starting flows via RPC.
@@ -441,7 +441,7 @@ rpcUsers
     If the list contains the string ``ALL``, the user can start any flow via RPC.
     This value is intended for administrator users and for development.
 
-    *Default:* not define
+    *Default:* not defined
 
 security
   Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses.
@@ -455,13 +455,13 @@ sshd
   port
     The port to start SSH server on e.g. ``sshd { port = 2222 }``.
 
-    *Default:* not define
+    *Default:* not defined
 
 systemProperties
   An optional map of additional system properties to be set when launching via ``corda.jar`` only.
   Keys and values of the map should be strings. e.g. ``systemProperties = { visualvm.display.name = FooBar }``
 
-  *Default:* not define
+  *Default:* not defined
 
 transactionCacheSizeMegaBytes
   Optionally specify how much memory should be used for caching of ledger transactions in memory.
