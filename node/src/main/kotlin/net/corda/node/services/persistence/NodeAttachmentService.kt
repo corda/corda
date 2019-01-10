@@ -426,7 +426,7 @@ class NodeAttachmentService(
         }
     }
 
-    // Holds onto a signed and/or unsigned attachment (at least one or the other), may contain may unsigned attachments
+    // Holds onto a signed and/or unsigned attachment (at least one or the other), may contain many unsigned attachments
     private data class AttachmentIds(val signed: AttachmentId?, val unsigned: List<AttachmentId>?) {
         init {
             // One of them at least must exist.
