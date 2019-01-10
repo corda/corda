@@ -241,8 +241,6 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
-    // TODO sollecitom used to be `public <init>(java.util.List, java.util.List, java.util.List, net.corda.core.node.services.Vault$StateStatus, java.util.Set, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
-    // TODO sollecitom this needs fixing.
     data class FungibleAssetQueryCriteria @JvmOverloads constructor(
             override val participants: List<AbstractParty>? = null,
             val owner: List<AbstractParty>? = null,
@@ -250,9 +248,24 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuer: List<AbstractParty>? = null,
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val contractStateTypes: Set<Class<out ContractState>>? = null
     ) : CommonQueryCriteria() {
+        constructor(
+                participants: List<AbstractParty>? = null,
+                owner: List<AbstractParty>? = null,
+                quantity: ColumnPredicate<Long>? = null,
+                issuer: List<AbstractParty>? = null,
+                issuerRef: List<OpaqueBytes>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        ) : this(participants, owner, quantity, issuer, issuerRef, status, contractStateTypes) {
+            this.relevancyStatus = relevancyStatus
+        }
+
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            private set
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -265,7 +278,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 issuer: List<AbstractParty>? = this.issuer,
                 issuerRef: List<OpaqueBytes>? = this.issuerRef,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): FungibleAssetQueryCriteria {
             return FungibleAssetQueryCriteria(
                     participants,
@@ -274,7 +288,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     issuer,
                     issuerRef,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }
