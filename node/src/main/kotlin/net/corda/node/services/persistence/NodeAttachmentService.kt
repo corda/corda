@@ -322,6 +322,21 @@ class NodeAttachmentService(
         }
     }
 
+    private fun tryUpdateVersionNumber(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
+        if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
+            val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.map { it + 1 } // +1 as versions starts from 1 not 0
+            val max = versions.max()
+            if (max != null && max > contractVersionFromFile) {
+                val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
+                if (versions.toSet().size > 1)
+                    log.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                else
+                    log.debug(msg)
+                max
+            } else contractVersionFromFile
+        }
+        else contractVersionFromFile
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
@@ -339,7 +354,7 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
-                    val contractVersion = getVersion(bytes)
+                    val contractVersion = tryUpdateVersionNumber(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
 
                     verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
