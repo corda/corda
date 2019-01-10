@@ -72,7 +72,7 @@ compatibilityZoneURL
   The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
   Cannot be set at the same time as the ``networkServices`` option.
 
-  *Important:*  old config value, please use networkServices
+  **Important:  old config value, please use networkServices**
 
   *Default:* not defined
 
@@ -166,7 +166,7 @@ devMode
 devModeOptions
   Allows modification of certain ``devMode`` features
 
-  *Important:* This is an unsupported configuration.
+  **Important: This is an unsupported configuration.**
 
   allowCompatibilityZone
     Allows a node configured to operate in development mode to connect to a compatibility zone.
@@ -183,7 +183,7 @@ extraNetworkMapKeys
   An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on these keys.
   Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
 
-  *Important:* This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
+  **Important: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.**
 
   *Default:* not defined
 
@@ -222,7 +222,7 @@ flowTimeout
 h2Port
   Defines port for h2 DB.
 
-  *Important:* Deprecated please use h2Setting instead
+  **Important: Deprecated please use h2Setting instead**
 
 h2Settings
   Sets the H2 JDBC server host and port.
@@ -262,15 +262,15 @@ jmxReporterType
 keyStorePassword
   The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the node certificate and private key.
 
-  *Important:* This is the non-secret value for the development certificates automatically generated during the first node run.
-  Longer term these keys will be managed in secure hardware devices.
+  **Important: This is the non-secret value for the development certificates automatically generated during the first node run.
+  Longer term these keys will be managed in secure hardware devices.**
 
   *Default:* cordacadevpass
 
 lazyBridgeStart
   Internal option.
 
-  *Important:* Please do not change.
+  **Important: Please do not change.**
 
   *Default:* true
 
@@ -343,7 +343,7 @@ networkServices
   If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
   and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
 
-  *Important:* Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.
+  **Important: Only one of ``compatibilityZoneURL`` or ``networkServices`` should be used.**
 
   doormanURL
     Root address of the network registration service.
@@ -375,18 +375,18 @@ rpcAddress
   The address of the RPC system on which RPC requests can be made to the node.
   If not provided then the node will run without RPC.
 
-  *Important:* Deprecated. Use rpcSettings instead.
+  **Important: Deprecated. Use rpcSettings instead.**
 
   *Default:* not defined
 
 rpcSettings
   Options for the RPC server exposed by the Node.
 
-  *Important:* The RPC SSL certificate is used by RPC clients to authenticate the connection.
+  **Important: The RPC SSL certificate is used by RPC clients to authenticate the connection.
     The Node operator must provide RPC clients with a truststore containing the certificate they can trust.
     We advise Node operators to not use the P2P keystore for RPC.
     The node can be run with the "generate-rpc-ssl-settings" command, which generates a secure keystore and truststore that can be used to secure the RPC connection.
-    You can use this if you have no special requirements.
+    You can use this if you have no special requirements.**
 
     address
       host and port for the RPC server binding.
@@ -472,7 +472,7 @@ tlsCertCrlDistPoint
   CRL distribution point (i.e. URL) for the TLS certificate.
   Default value is NULL, which indicates no CRL availability for the TLS certificate.
 
-  *Important:* This needs to be set if crlCheckSoftFail is false (i.e. strict CRL checking is on).
+  **Important: This needs to be set if crlCheckSoftFail is false (i.e. strict CRL checking is on).**
 
   *Default:* NULL
 
@@ -481,7 +481,7 @@ tlsCertCrlIssuer
   CRL issuer (given in the X500 name format) for the TLS certificate.
   Default value is NULL, which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
 
-  *Important:* If this parameter is set then `tlsCertCrlDistPoint` needs to be set as well.
+  **Important: If this parameter is set then `tlsCertCrlDistPoint` needs to be set as well.**
 
   *Default:* NULL
 
@@ -496,7 +496,7 @@ trustStorePassword
 useTestClock
   Internal option.
 
-  *Important:* Please do not change.
+  **Important: Please do not change.**
 
   *Default:* false
 
@@ -504,7 +504,7 @@ useTestClock
 verfierType
   Internal option.
 
-  *Important:* Please do not change.
+  **Important: Please do not change.**
 
   *Default:* InMemory
 
