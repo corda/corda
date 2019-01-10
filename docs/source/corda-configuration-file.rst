@@ -382,11 +382,7 @@ rpcAddress
 rpcSettings
   Options for the RPC server exposed by the Node.
 
-  **Important: The RPC SSL certificate is used by RPC clients to authenticate the connection.
-    The Node operator must provide RPC clients with a truststore containing the certificate they can trust.
-    We advise Node operators to not use the P2P keystore for RPC.
-    The node can be run with the "generate-rpc-ssl-settings" command, which generates a secure keystore and truststore that can be used to secure the RPC connection.
-    You can use this if you have no special requirements.**
+  **Important: The RPC SSL certificate is used by RPC clients to authenticate the connection.  The Node operator must provide RPC clients with a truststore containing the certificate they can trust.  We advise Node operators to not use the P2P keystore for RPC.  The node can be run with the "generate-rpc-ssl-settings" command, which generates a secure keystore and truststore that can be used to secure the RPC connection. You can use this if you have no special requirements.**
 
     address
       host and port for the RPC server binding.
