@@ -162,16 +162,24 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
-    // TODO sollecitom used to be `public <init>(java.util.List, java.util.List, java.util.List, net.corda.core.node.services.Vault$StateStatus, java.util.Set, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
-    // TODO sollecitom this needs fixing.
     data class LinearStateQueryCriteria @JvmOverloads constructor(
             override val participants: List<AbstractParty>? = null,
             val uuid: List<UUID>? = null,
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val contractStateTypes: Set<Class<out ContractState>>? = null
     ) : CommonQueryCriteria() {
+        constructor(
+                participants: List<AbstractParty>? = null,
+                uuid: List<UUID>? = null,
+                externalId: List<String>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        ) : this(participants, uuid, externalId, status, contractStateTypes) {
+            this.relevancyStatus = relevancyStatus
+        }
+
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
@@ -187,6 +195,9 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 contractStateTypes: Set<Class<out ContractState>>? = null
         ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
 
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            private set
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -197,14 +208,16 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 uuid: List<UUID>? = this.uuid,
                 externalId: List<String>? = this.externalId,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): LinearStateQueryCriteria {
             return LinearStateQueryCriteria(
                     participants,
                     uuid,
                     externalId,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }
