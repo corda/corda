@@ -22,11 +22,11 @@ Build tools
 In the instructions that follow, we assume you are using Gradle and the ``cordformation`` plugin to build your
 CorDapp. You can find examples of building a CorDapp using these tools in the 
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
-`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
 
 To ensure you are using the correct version of Gradle, you should use the provided Gradle Wrapper by copying across
 the following folder and files from the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the 
-`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ to the root of your project:
+`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_ to the root of your project:
 
 * ``gradle/``
 * ``gradlew``
@@ -49,7 +49,7 @@ Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to defin
 versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version
 numbers used in the ``build.gradle`` file of the
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the
-`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
 
 For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and
 version 1.1.60 of Kotlin, you'd write:
@@ -99,9 +99,10 @@ Here is an overview of the various Corda dependencies:
   functionality. Include manually if the utilities are useful or you are writing a library for Corda
 * ``corda-core-deterministic`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
 * ``corda-djvm`` - Used by the Corda node for deterministic contracts. Not likely to be used externally
-* ``corda-finance`` - The Corda finance CorDapp. Only include as a ``cordaCompile`` dependency if using as a dependent
-  Cordapp or if you need access to the Corda finance types. Use as a ``cordapp`` dependency if using as a CorDapp
-  dependency (see below)
+* ``corda-finance-contracts``, ``corda-finance-workflows`` and deprecated ``corda-finance``. Corda finance CorDapp, use contracts and flows parts respectively.
+  ``corda-finance`` is left for backward compatibility purposes and should be replaced by former two where needed.
+  Only include as a ``cordaCompile`` dependency if using as a dependent Cordapp or if you need access to the Corda finance types.
+  Use as a ``cordapp`` dependency if using as a CorDapp dependency (see below)
 * ``corda-jackson`` - Corda Jackson support. Use if you plan to serialise Corda objects to and/or from JSON
 * ``corda-jfx`` - JavaFX utilities with some Corda-specific models and utilities. Only use with JavaFX apps
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
@@ -109,8 +110,6 @@ Here is an overview of the various Corda dependencies:
   frameworks
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
-* ``corda-notary-bft-smart`` - A Corda notary implementation
-* ``corda-notary-raft`` - A Corda notary implementation
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
 * ``corda-serialization`` - The Corda core serialization library. Automatically included by other dependencies
 * ``corda-serialization-deterministic`` - The Corda core serialization library. Automatically included by other
@@ -126,7 +125,7 @@ Here is an overview of the various Corda dependencies:
 
 Dependencies on other CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-You CorDapp may also depend on classes defined in another CorDapp, such as states, contracts and flows. There are two
+Your CorDapp may also depend on classes defined in another CorDapp, such as states, contracts and flows. There are two
 ways to add another CorDapp as a dependency in your CorDapp's ``build.gradle`` file:
 
 * ``cordapp project(":another-cordapp")`` (use this if the other CorDapp is defined in a module in the same project)
@@ -288,7 +287,7 @@ Example
 Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you
 should base yourself on the ``build.gradle`` file of the
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
-`Java CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_.
+`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
 
 .. container:: codeset
 
@@ -297,7 +296,8 @@ should base yourself on the ``build.gradle`` file of the
         dependencies {
             // Corda integration dependencies
             cordaCompile "net.corda:corda-core:$corda_release_version"
-            cordaCompile "net.corda:corda-finance:$corda_release_version"
+            cordaCompile "net.corda:corda-finance-contracts:$corda_release_version"
+            cordaCompile "net.corda:corda-finance-workflows:$corda_release_version"
             cordaCompile "net.corda:corda-jackson:$corda_release_version"
             cordaCompile "net.corda:corda-rpc:$corda_release_version"
             cordaCompile "net.corda:corda-node-api:$corda_release_version"

@@ -25,9 +25,9 @@ import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.test.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.schemas.test.SampleCashSchemaV1
-import net.corda.finance.schemas.test.SampleCashSchemaV2
-import net.corda.finance.schemas.test.SampleCashSchemaV3
+import net.corda.finance.test.SampleCashSchemaV1
+import net.corda.finance.test.SampleCashSchemaV2
+import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
@@ -121,7 +121,7 @@ class HibernateConfigurationTest {
             services = object : MockServices(cordappPackages, BOB_NAME, mock<IdentityServiceInternal>().also {
                 doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == BOB_NAME }, any())
             }, generateKeyPair(), dummyNotary.keyPair) {
-                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService).apply { start() }
+                override val vaultService = NodeVaultService(Clock.systemUTC(), keyManagementService, servicesForResolution, database, schemaService, cordappClassloader).apply { start() }
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
                         (validatedTransactions as WritableTransactionStorage).addTransaction(stx)

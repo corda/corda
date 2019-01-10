@@ -9,6 +9,9 @@ import net.corda.testing.node.internal.TestCordappImpl
  * Encapsulates a CorDapp that exists on the current classpath, which can be pulled in for testing. Use [TestCordapp.findCordapp]
  * to locate an existing CorDapp.
  *
+ * This is a replacement API to [DriverParameters.extraCordappPackagesToScan] and [MockNetwork.cordappPackages] as they create custom jars
+ * which do not preserve any CorDapp metadata.
+ *
  * @see DriverParameters.cordappsForAllNodes
  * @see NodeParameters.additionalCordapps
  * @see MockNetworkParameters.cordappsForAllNodes
@@ -16,9 +19,6 @@ import net.corda.testing.node.internal.TestCordappImpl
  */
 @DoNotImplement
 abstract class TestCordapp {
-    /** The package used to find the CorDapp. This may not be the root package of the CorDapp. */
-    abstract val scanPackage: String
-
     /** Returns the config for on this CorDapp, defaults to empty if not specified. */
     abstract val config: Map<String, Any>
 

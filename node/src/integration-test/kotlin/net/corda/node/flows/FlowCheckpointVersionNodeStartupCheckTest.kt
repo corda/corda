@@ -1,10 +1,7 @@
 package net.corda.node.flows
 
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
-import net.corda.core.internal.list
-import net.corda.core.internal.moveTo
-import net.corda.core.internal.readLines
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
@@ -18,9 +15,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.CustomCordapp
-import net.corda.testing.node.internal.ListenProcessDeathException
-import net.corda.testing.node.internal.cordappForClasses
+import net.corda.testing.node.internal.*
 import net.test.cordapp.v1.Record
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -36,13 +31,8 @@ import kotlin.test.assertNotNull
 class FlowCheckpointVersionNodeStartupCheckTest {
     companion object {
         val message = Message("Hello world!")
-        val defaultCordapp = cordappForClasses(
-                MessageState::class.java,
-                MessageContract::class.java,
-                SendMessageFlow::class.java,
-                MessageSchema::class.java,
-                MessageSchemaV1::class.java,
-                Record::class.java
+        val defaultCordapp = cordappWithPackages(
+                MessageState::class.packageName, SendMessageFlow::class.packageName
         )
     }
 
@@ -158,6 +148,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
 
     private fun parametersForRestartingNodes(): DriverParameters {
         return DriverParameters(
+                isDebug = true,
                 startNodesInProcess = false, // Start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList()

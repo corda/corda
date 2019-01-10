@@ -71,7 +71,7 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
     override val keys: Set<PublicKey> get() = database.transaction { keysMap.allPersisted().map { it.first }.toSet() }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripCachedPeerKeys(candidateKeys).filter { keysMap[it] != null } // TODO: bulk cache access.
+        identityService.stripNotOurKeys(candidateKeys)
     }
 
     override fun freshKey(): PublicKey {
