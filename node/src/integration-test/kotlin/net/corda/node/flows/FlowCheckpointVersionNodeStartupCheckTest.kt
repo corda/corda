@@ -82,17 +82,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
         driver(parametersForRestartingNodes()) {
             val uniqueWorkflowJarName = "different-jar-hash-test-${UUID.randomUUID()}"
             val uniqueContractJarName = "contract-$uniqueWorkflowJarName"
-            val defaultWorkflowJar = cordappForClasses(
-                    SendMessageFlow::class.java
-            )
-            val defaultContractJar = cordappForClasses(
-                    MessageState::class.java,
-                    MessageContract::class.java,
-                    MessageSchema::class.java,
-                    MessageSchemaV1::class.java,
-                    Record::class.java
-            )
-
+            val defaultWorkflowJar = cordappWithPackages(SendMessageFlow::class.packageName)
+            val defaultContractJar = cordappWithPackages(MessageState::class.packageName)
             val contractJar = defaultContractJar.copy(name = uniqueContractJarName)
             val workflowJar = defaultWorkflowJar.copy(name = uniqueWorkflowJarName)
 
@@ -140,8 +131,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             )).getOrThrow()
         }
 
-        val logDir = baseDirectory(BOB_NAME) / NodeStartup.LOGS_DIRECTORY_NAME
-        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
+        val logDir = baseDirectory(BOB_NAME)
+        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith("out.log") }.findAny().get() }
         val matchingLineCount = logFile.readLines { it.filter { line -> logMessage in line }.count() }
         assertEquals(1, matchingLineCount)
     }
