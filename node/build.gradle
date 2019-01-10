@@ -229,6 +229,7 @@ dependencies {
     compile "io.netty:netty-tcnative-boringssl-static:$tcnative_version"
 
     testCompile(project(':test-cli'))
+    testCompile(project(':test-utils'))
     testCompile(project(':node-driver'))
 
     testCompile(project(':notary:mysql'))

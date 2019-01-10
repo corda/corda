@@ -110,20 +110,6 @@ class InteractiveShellTest {
                 """.trimIndent()
     }
 
-    @Suppress("UNUSED")
-    class FlowA(val a: String) : FlowLogic<String>() {
-        constructor(b: Int?) : this(b.toString())
-        constructor(b: Int?, c: String) : this(b.toString() + c)
-        constructor(amount: Amount<Currency>) : this(amount.toString())
-        constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
-        constructor(party: Party) : this(party.name.toString())
-        constructor(b: Int?, amount: Amount<UserValue>) : this("${(b ?: 0) + amount.quantity} ${amount.token}")
-        constructor(b: Array<String>) : this(b.joinToString("+"))
-        constructor(amounts: Array<Amount<UserValue>>) : this(amounts.joinToString("++", transform = Amount<UserValue>::toString))
-
-        override val progressTracker = ProgressTracker()
-        override fun call() = a
-    }
 
     private val ids = InMemoryIdentityService(listOf(megaCorp.identity), DEV_ROOT_CA.certificate)
     @Suppress("DEPRECATION")
@@ -198,11 +184,11 @@ class InteractiveShellTest {
             check("", expected = "")
         }
         val correct = setOf(
-                "[amounts: Amount<InteractiveShellTest.UserValue>[]]: missing parameter amounts",
+                "[amounts: Amount<UserValue>[]]: missing parameter amounts",
                 "[amount: Amount<Currency>]: missing parameter amount",
                 "[pair: Pair<Amount<Currency>, SecureHash.SHA256>]: missing parameter pair",
                 "[party: Party]: missing parameter party",
-                "[b: Integer, amount: Amount<InteractiveShellTest.UserValue>]: missing parameter b",
+                "[b: Integer, amount: Amount<UserValue>]: missing parameter b",
                 "[b: String[]]: missing parameter b",
                 "[b: Integer, c: String]: missing parameter b",
                 "[a: String]: missing parameter a",
@@ -245,8 +231,24 @@ class InteractiveShellTest {
         verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
-    @ToStringSerialize
-    data class UserValue(@JsonProperty("label") val label: String) {
-        override fun toString() = label
-    }
+}
+
+@ToStringSerialize
+data class UserValue(@JsonProperty("label") val label: String) {
+    override fun toString() = label
+}
+
+@Suppress("UNUSED")
+class FlowA(val a: String) : FlowLogic<String>() {
+    constructor(b: Int?) : this(b.toString())
+    constructor(b: Int?, c: String) : this(b.toString() + c)
+    constructor(amount: Amount<Currency>) : this(amount.toString())
+    constructor(pair: Pair<Amount<Currency>, SecureHash.SHA256>) : this(pair.toString())
+    constructor(party: Party) : this(party.name.toString())
+    constructor(b: Int?, amount: Amount<UserValue>) : this("${(b ?: 0) + amount.quantity} ${amount.token}")
+    constructor(b: Array<String>) : this(b.joinToString("+"))
+    constructor(amounts: Array<Amount<UserValue>>) : this(amounts.joinToString("++", transform = Amount<UserValue>::toString))
+
+    override val progressTracker = ProgressTracker()
+    override fun call() = a
 }

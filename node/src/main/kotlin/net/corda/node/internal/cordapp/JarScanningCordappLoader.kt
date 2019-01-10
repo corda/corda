@@ -261,7 +261,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
-        val whitelists = URLClassLoader(arrayOf(cordappJarPath.url), appClassLoader).use {
+        val whitelists = URLClassLoader(arrayOf(cordappJarPath.url)).use {
             ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
         }
         return whitelists.filter {

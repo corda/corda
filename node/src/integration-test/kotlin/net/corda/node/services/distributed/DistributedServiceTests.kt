@@ -26,6 +26,7 @@ import net.corda.testing.internal.toDatabaseSchemaNames
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.DummyClusterSpec
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Assume
 import org.junit.Before
@@ -53,7 +54,8 @@ class DistributedServiceTests : IntegrationTest() {
                 invokeRpc(CordaRPCOps::stateMachinesFeed))
         )
         driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.finance", "net.corda.notary.raft"),
+                extraCordappPackagesToScan = listOf("net.corda.notary.raft"),
+                cordappsForAllNodes = FINANCE_CORDAPPS,
                 notarySpecs = listOf(NotarySpec(
                         DUMMY_NOTARY_NAME,
                         rpcUsers = listOf(testUser),

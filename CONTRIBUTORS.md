@@ -14,6 +14,7 @@ see changes to this list.
 * Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
 * amiracam
+* Amol Pednekar
 * Andras Slemmer (R3)
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)

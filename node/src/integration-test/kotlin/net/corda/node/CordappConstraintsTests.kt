@@ -31,6 +31,7 @@ import net.corda.testing.node.User
 import net.corda.testing.node.internal.cordappWithPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 
 class CordappConstraintsTests : IntegrationTest() {
@@ -44,7 +45,7 @@ class CordappConstraintsTests : IntegrationTest() {
                 invokeRpc(CordaRPCOps::wellKnownPartyFromX500Name),
                 invokeRpc(CordaRPCOps::notaryIdentities),
                 invokeRpc("vaultTrackByCriteria")))
-        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance")
+        val UNSIGNED_FINANCE_CORDAPP = cordappWithPackages("net.corda.finance", "migration", "META-INF.services")
         val SIGNED_FINANCE_CORDAPP = UNSIGNED_FINANCE_CORDAPP.signed()
     }
 
@@ -52,6 +53,7 @@ class CordappConstraintsTests : IntegrationTest() {
     fun `issue cash using signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                cordappsForAllNodes = emptyList(),
                 inMemoryDB = false
         )) {
             val alice = startNode(NodeParameters(
@@ -78,6 +80,7 @@ class CordappConstraintsTests : IntegrationTest() {
     fun `issue cash using hash and signature constraints`() {
         driver(DriverParameters(
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                cordappsForAllNodes = emptyList(),
                 inMemoryDB = false
         )) {
             println("Starting the node using unsigned contract jar ...")

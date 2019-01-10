@@ -1,6 +1,7 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -17,6 +18,8 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -39,7 +42,7 @@ class TraderDemoTest : IntegrationTest() {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, cordappsForAllNodes = FINANCE_CORDAPPS + cordappWithPackages(javaClass.packageName))) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
@@ -81,8 +84,8 @@ class TraderDemoTest : IntegrationTest() {
     }
 
     @Test
-    fun `Tudor test`() {
-        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+    fun `Test restart node during flow works properly`() {
+        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, cordappsForAllNodes = FINANCE_CORDAPPS + cordappWithPackages(javaClass.packageName))) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
             val (nodeA, nodeB, bankNode) = listOf(

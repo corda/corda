@@ -152,7 +152,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
     private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
     @Suppress("LeakingThis")
-    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory).tokenize()
+    override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory, cordappLoader.appClassLoader).tokenize()
     override val networkMapUpdater= NetworkMapUpdater(
             networkMapCache,
             NodeInfoWatcher(

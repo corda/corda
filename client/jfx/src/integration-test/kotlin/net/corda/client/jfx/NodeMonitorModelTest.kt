@@ -32,6 +32,7 @@ import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.node.User
 import org.junit.ClassRule
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.Test
 import rx.Observable
 
@@ -58,7 +59,7 @@ class NodeMonitorModelTest : IntegrationTest() {
     }
 
     private fun setup(runTest: () -> Unit) {
-        driver(DriverParameters(extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val cashUser = User("user1", "test", permissions = setOf(all()))
             val aliceNodeHandle = startNode(providedName = ALICE_NAME, rpcUsers = listOf(cashUser)).getOrThrow()
             aliceNode = aliceNodeHandle.nodeInfo
