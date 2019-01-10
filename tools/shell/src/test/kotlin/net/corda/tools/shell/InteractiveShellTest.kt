@@ -184,11 +184,11 @@ class InteractiveShellTest {
             check("", expected = "")
         }
         val correct = setOf(
-                "[amounts: Amount<InteractiveShellTest.UserValue>[]]: missing parameter amounts",
+                "[amounts: Amount<UserValue>[]]: missing parameter amounts",
                 "[amount: Amount<Currency>]: missing parameter amount",
                 "[pair: Pair<Amount<Currency>, SecureHash.SHA256>]: missing parameter pair",
                 "[party: Party]: missing parameter party",
-                "[b: Integer, amount: Amount<InteractiveShellTest.UserValue>]: missing parameter b",
+                "[b: Integer, amount: Amount<UserValue>]: missing parameter b",
                 "[b: String[]]: missing parameter b",
                 "[b: Integer, c: String]: missing parameter b",
                 "[a: String]: missing parameter a",
