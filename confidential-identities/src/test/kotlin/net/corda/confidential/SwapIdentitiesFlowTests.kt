@@ -171,10 +171,7 @@ class SwapIdentitiesFlowTests {
 @InitiatingFlow
 private class SwapIdentitiesInitiator(private val otherSide: Party) : FlowLogic<Map<Party, AnonymousParty>>() {
     @Suspendable
-    override fun call(): Map<Party, AnonymousParty> {
-        val (anonymousUs, anonymousThem) = subFlow(SwapIdentitiesFlow(initiateFlow(otherSide)))
-        return mapOf(ourIdentity to anonymousUs, otherSide to anonymousThem)
-    }
+    override fun call(): Map<Party, AnonymousParty> = subFlow(SwapIdentitiesFlow(initiateFlow(otherSide)))
 }
 
 @InitiatedBy(SwapIdentitiesInitiator::class)

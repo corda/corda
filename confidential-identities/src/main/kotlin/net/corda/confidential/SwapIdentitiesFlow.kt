@@ -4,9 +4,7 @@ import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.CordaInternal
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.verify
-import net.corda.core.flows.FlowException
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
+import net.corda.core.flows.*
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
@@ -14,19 +12,39 @@ import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 import java.security.PublicKey
 import java.security.SignatureException
+import java.util.*
 
 /**
  * Very basic flow which generates new confidential identities for parties in a transaction and exchanges the transaction
  * key and certificate paths between the parties. This is intended for use as a sub-flow of another flow which builds a
  * transaction. The flow running on the other side must also call this flow at the correct location.
+ *
+ * NOTE: This is an inlined flow but for backwards compatibility is annotated with [InitiatingFlow].
  */
-class SwapIdentitiesFlow @JvmOverloads constructor(private val otherSideSession: FlowSession,
-                                                   override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SwapIdentitiesFlow.AnonymousResult>() {
+@InitiatingFlow
+class SwapIdentitiesFlow
+private constructor(private val otherSideSession: FlowSession?,
+                    private val otherParty: Party?,
+                    override val progressTracker: ProgressTracker) : FlowLogic<LinkedHashMap<Party, AnonymousParty>>() {
+
+    @JvmOverloads
+    constructor(otherSideSession: FlowSession, progressTracker: ProgressTracker = tracker()) : this(otherSideSession, null, progressTracker)
+
+    @Deprecated("It is unsafe to use this constructor as it requires nodes to automatically vend anonymous identities without first " +
+            "checking if they should. Instead, use the constructor that takes in an existing FlowSession.")
+    constructor(otherParty: Party, revocationEnabled: Boolean, progressTracker: ProgressTracker) : this(null, otherParty, progressTracker)
+
+    @Deprecated("It is unsafe to use this constructor as it requires nodes to automatically vend anonymous identities without first " +
+            "checking if they should. Instead, use the constructor that takes in an existing FlowSession.")
+    constructor(otherParty: Party) : this(null, otherParty, tracker())
+
     companion object {
         object GENERATING_IDENTITY : ProgressTracker.Step("Generating our anonymous identity")
         object SIGNING_IDENTITY : ProgressTracker.Step("Signing our anonymous identity")
@@ -69,38 +87,49 @@ class SwapIdentitiesFlow @JvmOverloads constructor(private val otherSideSession:
     }
 
     @Suspendable
-    override fun call(): AnonymousResult {
+    override fun call(): LinkedHashMap<Party, AnonymousParty> {
+        val session = otherSideSession ?: run {
+            logger.warn("The current usage of SwapIdentitiesFlow is unsafe. Please consider upgrading your CorDapp to use " +
+                    "SwapIdentitiesFlow with FlowSessions.")
+            initiateFlow(otherParty!!)
+        }
         progressTracker.currentStep = GENERATING_IDENTITY
         val ourAnonymousIdentity = serviceHub.keyManagementService.freshKeyAndCert(ourIdentityAndCert, false)
         val data = buildDataToSign(ourAnonymousIdentity)
         progressTracker.currentStep = SIGNING_IDENTITY
         val signature = serviceHub.keyManagementService.sign(data, ourAnonymousIdentity.owningKey).withoutKey()
-        val ourIdentWithSig = IdentityWithSignature(ourAnonymousIdentity, signature)
+        val ourIdentWithSig = IdentityWithSignature(ourAnonymousIdentity.serialize(), signature)
         progressTracker.currentStep = AWAITING_IDENTITY
-        val theirAnonymousIdentity = otherSideSession.sendAndReceive<IdentityWithSignature>(ourIdentWithSig).unwrap { theirIdentWithSig ->
+        val theirAnonymousIdentity = session.sendAndReceive<IdentityWithSignature>(ourIdentWithSig).unwrap { theirIdentWithSig ->
             progressTracker.currentStep = VERIFYING_IDENTITY
-            validateAndRegisterIdentity(serviceHub, otherSideSession.counterparty, theirIdentWithSig.identity, theirIdentWithSig.signature)
+            validateAndRegisterIdentity(serviceHub, session.counterparty, theirIdentWithSig.identity.deserialize(), theirIdentWithSig.signature)
         }
-        return AnonymousResult(ourAnonymousIdentity.party.anonymise(), theirAnonymousIdentity.party.anonymise())
+
+        val identities = LinkedHashMap<Party, AnonymousParty>()
+        identities[ourIdentity] = ourAnonymousIdentity.party.anonymise()
+        identities[session.counterparty] = theirAnonymousIdentity.party.anonymise()
+        return identities
     }
 
-    /**
-     * Result class containing the caller's anonymous identity ([ourIdentity]) and the counterparty's ([theirIdentity]).
-     */
     @CordaSerializable
-    data class AnonymousResult(val ourIdentity: AnonymousParty, val theirIdentity: AnonymousParty)
-
-    @CordaSerializable
-    private data class IdentityWithSignature(val identity: PartyAndCertificate, val signature: DigitalSignature)
-
-    /**
-     * Data class used only in the context of asserting that the owner of the private key for the listed key wants to use it
-     * to represent the named entity. This is paired with an X.509 certificate (which asserts the signing identity says
-     * the key represents the named entity) and protects against a malicious party incorrectly claiming others'
-     * keys.
-     */
-    @CordaSerializable
-    private data class CertificateOwnershipAssertion(val name: CordaX500Name, val owningKey: PublicKey)
+    internal data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
 }
 
+// Data class used only in the context of asserting that the owner of the private key for the listed key wants to use it
+// to represent the named entity. This is paired with an X.509 certificate (which asserts the signing identity says
+// the key represents the named entity) and protects against a malicious party incorrectly claiming others'
+// keys.
+@CordaSerializable
+internal data class CertificateOwnershipAssertion(val x500Name: CordaX500Name, val publicKey: PublicKey)
+
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null) : FlowException(message, cause)
+
+// This only exists for backwards compatibility
+@InitiatedBy(SwapIdentitiesFlow::class)
+private class SwapIdentitiesHandler(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val result = subFlow(SwapIdentitiesFlow(otherSide))
+        logger.warn("Swapped anonymous identities with ${otherSide.counterparty} using insecure API: $result")
+    }
+}
