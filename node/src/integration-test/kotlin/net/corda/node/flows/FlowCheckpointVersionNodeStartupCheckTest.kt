@@ -5,7 +5,6 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
-import net.corda.node.internal.NodeStartup
 import net.corda.testMessage.*
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -16,7 +15,6 @@ import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.internal.*
-import net.test.cordapp.v1.Record
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
