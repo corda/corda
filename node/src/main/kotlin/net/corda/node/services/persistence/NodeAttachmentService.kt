@@ -438,7 +438,7 @@ class NodeAttachmentService(
                     if (unsigned != null && unsigned.isNotEmpty()) {
                         listOf(signed, unsigned.first())
                     } else listOf(signed)
-                } else listOf(unsigned!!.first()!!)
+                } else listOf(unsigned!!.single())
 
         fun toListWithUnsignedDuplicates(): List<AttachmentId> =
                 if (signed != null) {
@@ -490,7 +490,18 @@ class NodeAttachmentService(
     override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
-        return newestAttachmentIds?.toList()?.first()
+
+        return when {
+            newestAttachmentIds?.signed != null -> newestAttachmentIds.signed
+
+            newestAttachmentIds?.unsigned?.size == 1 -> newestAttachmentIds.unsigned.first()
+
+            else -> { //recreate version of attachments based on position in the whitelist, find the highest version >= minContractVersion
+                val availableAttachments = getContractAttachmentsWithUnsignedDuplicates(contractClassName)
+                val whitelistedAttachments = servicesForResolution.networkParameters.whitelistedContractImplementations[contractClassName]
+                whitelistedAttachments?.withIndex()?.findLast { it.value in availableAttachments && it.index > minContractVersion }?.value
+            }
+       }
     }
 
     override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
@@ -498,7 +509,7 @@ class NodeAttachmentService(
         return versions.values.flatMap { it.toList() }.toSet()
     }
 
-    override fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
+    private fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
         return versions.values.flatMap { it.toListWithUnsignedDuplicates() }.toSet()
     }

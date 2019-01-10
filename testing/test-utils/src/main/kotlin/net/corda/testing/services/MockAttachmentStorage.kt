@@ -124,8 +124,4 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
         return queryAttachments(attachmentQueryCriteria).toSet()
     }
-
-    override fun getContractAttachmentsWithUnsignedDuplicates(contractClassName: String): Set<AttachmentId> {
-        return getContractAttachments(contractClassName)
-    }
 }
