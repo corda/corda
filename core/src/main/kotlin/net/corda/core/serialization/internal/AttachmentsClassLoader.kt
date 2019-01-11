@@ -1,16 +1,15 @@
 package net.corda.core.serialization.internal
 
+import net.corda.core.CordaException
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
-import net.corda.core.internal.createSimpleCache
-import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.internal.toSynchronised
-import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
@@ -19,8 +18,6 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
-import java.lang.reflect.AccessibleObject.setAccessible
-import java.net.URLStreamHandlerFactory
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -34,7 +31,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     init {
         val untrusted = attachments.mapNotNull { it as? ContractAttachment }.filterNot { isUploaderTrusted(it.uploader) }.map(ContractAttachment::id)
         if(untrusted.isNotEmpty()) {
-            throw MissingAttachmentsException(untrusted, "Attempting to load Contract Attachments downloaded from the network")
+            throw UntrustedAttachmentsException(untrusted)
         }
         requireNoDuplicates(attachments)
     }
@@ -248,3 +245,11 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
     }
 }
 
+/** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
+@KeepForDJVM
+@CordaSerializable
+class UntrustedAttachmentsException(val ids: List<SecureHash>) :
+        CordaException("Attempting to load untrusted Contract Attachments: $ids" +
+                "These may have been received over the p2p network from a remote node." +
+                "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to continue."
+        )
