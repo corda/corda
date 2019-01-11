@@ -33,16 +33,21 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
             } else {
                 logger.debug("Attachments with version '1': $availableAttachments")
             }
-            networkParameters?.whitelistedContractImplementations?.forEach { contract, attachments ->
-                logger.debug("$contract $attachments")
-                attachments.forEachIndexed { index, secureHash ->
-                    if (availableAttachments.contains(secureHash.toString())) {
-                        val newVersion = index + 1
-                        logger.debug("Updating attachment $secureHash to version '$newVersion'.")
-                        updateVersion(connection, secureHash, newVersion)
-                    }
+
+            availableAttachments.forEach { attachmentId ->
+                val versions = networkParameters?.whitelistedContractImplementations?.values.mapNotNull { it.indexOfFirst { it.toString() == attachmentId} }
+                val maxPosition = versions.max() ?: 0
+                if (maxPosition > 0) {
+                    val version = maxPosition + 1
+                    val msg = "Updating version of attachment $attachmentId to '$version'"
+                    if (versions.toSet().size > 1)
+                        logger.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                    else
+                        logger.debug(msg)
+                    updateVersion(connection, attachmentId, version)
                 }
             }
+
             logger.debug("Done")
         } catch (e: Exception) {
             logger.error("Exception while retrieving network parameters ${e.message}", e)
@@ -87,10 +92,10 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 attachments
             }
 
-    private fun updateVersion(connection: JdbcConnection, attachmentId: AttachmentId, version: Int) {
+    private fun updateVersion(connection: JdbcConnection, attachmentId: String, version: Int) {
         connection.prepareStatement("UPDATE NODE_ATTACHMENTS SET VERSION = ? WHERE ATT_ID = ?").use {
             it.setInt(1, version)
-            it.setString(2, attachmentId.toString())
+            it.setString(2, attachmentId)
             it.executeUpdate()
         }
     }
