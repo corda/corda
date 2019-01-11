@@ -5,7 +5,7 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="update-version-of-whitelisted-jars">
-        <customChange class="net.corda.nodeapi.internal.persistence.AttachmentVersionMigration">
+        <customChange class="net.corda.nodeapi.internal.persistence.AttachmentVersionNumberMigration">
         </customChange>
     </changeSet>
 </databaseChangeLog>

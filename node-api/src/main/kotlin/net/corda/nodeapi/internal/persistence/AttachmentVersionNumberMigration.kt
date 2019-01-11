@@ -10,7 +10,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
 
-class AttachmentVersionMigration : CustomTaskChange {
+class AttachmentVersionNumberMigration : CustomTaskChange {
     companion object {
         private val logger = contextLogger()
     }
@@ -22,24 +22,25 @@ class AttachmentVersionMigration : CustomTaskChange {
             val networkParameters = getNetworkParameters(connection)
             if (networkParameters == null) {
                 logger.debug("Network parameters not found.")
+                return
             } else {
                 logger.debug("Network parameters epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
             }
             val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (availableAttachments.isEmpty()) {
                 logger.debug("Attachments not found.")
+                return
             } else {
                 logger.debug("Attachments with version '1': $availableAttachments")
             }
             networkParameters?.whitelistedContractImplementations?.forEach { contract, attachments ->
                 logger.debug("$contract $attachments")
-                var version = 1
-                attachments.forEach {
-                    if (availableAttachments.contains(it.toString())) {
-                        logger.debug("Updating attachment $it to version '$version'.")
-                        updateVersion(connection, it, version)
+                attachments.forEachIndexed { index, secureHash ->
+                    if (availableAttachments.contains(secureHash.toString())) {
+                        val newVersion = index + 1
+                        logger.debug("Updating attachment $secureHash to version '$newVersion'.")
+                        updateVersion(connection, secureHash, newVersion)
                     }
-                    version++
                 }
             }
             logger.debug("Done")

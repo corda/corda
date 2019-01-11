@@ -322,7 +322,7 @@ class NodeAttachmentService(
         }
     }
 
-    private fun tryUpdateVersionNumber(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
+    private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
         if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
             val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.map { it + 1 } // +1 as versions starts from 1 not 0
             val max = versions.max()
@@ -354,7 +354,7 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
-                    val contractVersion = tryUpdateVersionNumber(contractClassNames, getVersion(bytes), id)
+                    val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
 
                     verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
