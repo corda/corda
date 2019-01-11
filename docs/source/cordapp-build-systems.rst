@@ -1,3 +1,9 @@
+.. highlight:: groovy
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Building and installing a CorDapp
 =================================
 
@@ -110,8 +116,6 @@ Here is an overview of the various Corda dependencies:
   frameworks
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
-* ``corda-notary-bft-smart`` - A Corda notary implementation
-* ``corda-notary-raft`` - A Corda notary implementation
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
 * ``corda-serialization`` - The Corda core serialization library. Automatically included by other dependencies
 * ``corda-serialization-deterministic`` - The Corda core serialization library. Automatically included by other

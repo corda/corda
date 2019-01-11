@@ -1,0 +1,43 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+    <changeSet author="R3.Corda" id="1511451595465-18">
+        <createTable tableName="node_raft_committed_states">
+            <column name="id" type="NVARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state_index" type="BIGINT"/>
+            <column name="state_value" type="BLOB"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1521131680317-17">
+        <createTable tableName="node_notary_request_log">
+            <column name="id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requesting_party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_signature" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1511451595465-43">
+        <addPrimaryKey columnNames="id" constraintName="node_raft_state_pkey"
+                       tableName="node_raft_committed_states"/>
+    </changeSet>
+    <changeSet author="R3.Corda" id="1521131680317-48">
+        <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
+                       tableName="node_notary_request_log"/>
+    </changeSet>
+</databaseChangeLog>

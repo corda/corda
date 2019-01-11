@@ -110,18 +110,21 @@ public class FinalityFlowMigration {
         @Suspendable
         @Override
         public Void call() throws FlowException {
+
+            // DOCSTART ExistingResponderFlow
+            // First we have to run the SignTransactionFlow, which will return a SignedTransaction.
             SignedTransaction txWeJustSigned = subFlow(new SignTransactionFlow(otherSide) {
                 @Suspendable
                 @Override
                 protected void checkTransaction(@NotNull SignedTransaction stx) throws FlowException {
-                    // Do checks here
+                    // Implement responder flow transaction checks here
                 }
             });
-            // DOCSTART ExistingResponderFlow
+
             if (otherSide.getCounterpartyFlowInfo().getFlowVersion() >= 2) {
                 // The other side is not using the old CorDapp so call ReceiveFinalityFlow to record the finalised transaction.
                 // If SignTransactionFlow is used then we can verify the tranaction we receive for recording is the same one
-                // that was just signed.
+                // that was just signed by passing the transaction id to ReceiveFinalityFlow.
                 subFlow(new ReceiveFinalityFlow(otherSide, txWeJustSigned.getId()));
             } else {
                 // Otherwise the other side is running the old CorDapp and so we don't need to do anything further. The node

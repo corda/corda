@@ -33,7 +33,6 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
-import net.corda.node.SerialFilter
 import net.corda.node.VersionInfo
 import net.corda.node.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
@@ -63,7 +62,6 @@ import net.corda.node.services.network.NetworkMapUpdater
 import net.corda.node.services.network.NodeInfoWatcher
 import net.corda.node.services.network.PersistentNetworkMapCache
 import net.corda.node.services.persistence.*
-import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.statemachine.*
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
@@ -94,7 +92,6 @@ import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
-import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.sql.Connection
 import java.time.Clock
@@ -146,6 +143,9 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         }
     }
 
+    private val notaryLoader = configuration.notary?.let {
+        NotaryLoader(it, versionInfo)
+    }
     val cordappLoader: CordappLoader = makeCordappLoader(configuration, versionInfo).closeOnStop()
     val schemaService = NodeSchemaService(cordappLoader.cordappSchemas).tokenize()
     val identityService = PersistentIdentityService(cacheFactory).tokenize()
@@ -374,8 +374,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
             // the identity key. But the infrastructure to make that easy isn't here yet.
             keyManagementService.start(keyPairs)
-            val notaryService = makeNotaryService(myNotaryIdentity)
-            installCordaServices(myNotaryIdentity)
+            val notaryService = maybeStartNotaryService(myNotaryIdentity)
+            installCordaServices()
             contractUpgradeService.start()
             vaultService.start()
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
@@ -538,12 +538,11 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
-        val generatedCordapps = mutableListOf(VirtualCordapp.generateCoreCordapp(versionInfo))
-        if (isRunningSimpleNotaryService(configuration)) {
-            // For backwards compatibility purposes the single node notary implementation is built-in: a virtual
-            // CorDapp will be generated.
-            generatedCordapps += VirtualCordapp.generateSimpleNotaryCordapp(versionInfo)
+        val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
+        notaryLoader?.builtInNotary?.let { notaryImpl ->
+            generatedCordapps += notaryImpl
         }
+
         val blacklistedKeys = if (configuration.devMode) emptyList()
         else configuration.cordappSignerKeyFingerprintBlacklist.map {
             try {
@@ -567,7 +566,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
     private class ServiceInstantiationException(cause: Throwable?) : CordaException("Service Instantiation Error", cause)
 
-    private fun installCordaServices(myNotaryIdentity: PartyAndCertificate?) {
+    private fun installCordaServices() {
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
         loadedServices.forEach {
             try {
@@ -782,20 +781,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         logVendorString(database, log)
     }
 
-    private fun makeNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
-        return configuration.notary?.let { notaryConfig ->
-            val serviceClass = getNotaryServiceClass(notaryConfig.className)
-            log.info("Starting notary service: $serviceClass")
-
-            val notaryKey = myNotaryIdentity?.owningKey
-                    ?: throw IllegalArgumentException("Unable to start notary service $serviceClass: notary identity not found")
-
-            /** Some notary implementations only work with Java serialization. */
-            maybeInstallSerializationFilter(serviceClass)
-
-            val constructor = serviceClass.getDeclaredConstructor(ServiceHubInternal::class.java, PublicKey::class.java)
-                    .apply { isAccessible = true }
-            val service = constructor.newInstance(services, notaryKey) as NotaryService
+    /** Loads and starts a notary service if it is configured. */
+    private fun maybeStartNotaryService(myNotaryIdentity: PartyAndCertificate?): NotaryService? {
+        return notaryLoader?.let { loader ->
+            val service = loader.loadService(myNotaryIdentity, services, cordappLoader)
 
             service.run {
                 tokenize()
@@ -805,30 +794,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             }
             return service
         }
-    }
-
-    /** Installs a custom serialization filter defined by a notary service implementation. Only supported in dev mode. */
-    private fun maybeInstallSerializationFilter(serviceClass: Class<out NotaryService>) {
-        try {
-            @Suppress("UNCHECKED_CAST")
-            val filter = serviceClass.getDeclaredMethod("getSerializationFilter").invoke(null) as ((Class<*>) -> Boolean)
-            if (configuration.devMode) {
-                log.warn("Installing a custom Java serialization filter, required by ${serviceClass.name}. " +
-                        "Note this is only supported in dev mode – a production node will fail to start if serialization filters are used.")
-                SerialFilter.install(filter)
-            } else {
-                throw UnsupportedOperationException("Unable to install a custom Java serialization filter, not in dev mode.")
-            }
-        } catch (e: NoSuchMethodException) {
-            // No custom serialization filter declared
-        }
-    }
-
-    private fun getNotaryServiceClass(className: String): Class<out NotaryService> {
-        val loadedImplementations = cordappLoader.cordapps.mapNotNull { it.notaryService }
-        log.debug("Notary service implementations found: ${loadedImplementations.joinToString(", ")}")
-        return loadedImplementations.firstOrNull { it.name == className }
-                ?: throw IllegalArgumentException("The notary service implementation specified in the configuration: $className is not found. Available implementations: ${loadedImplementations.joinToString(", ")}}")
     }
 
     protected open fun makeKeyManagementService(identityService: PersistentIdentityService): KeyManagementServiceInternal {
