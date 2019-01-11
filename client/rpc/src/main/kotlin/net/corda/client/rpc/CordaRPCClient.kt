@@ -252,8 +252,8 @@ class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
-        private val haAddressPool: List<NetworkHostAndPort> = emptyList(),
-        private val classLoader: ClassLoader? = null
+        private val classLoader: ClassLoader? = null,
+        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
     @JvmOverloads
     constructor(hostAndPort: NetworkHostAndPort,
@@ -268,7 +268,7 @@ class CordaRPCClient private constructor(
      * @param configuration An optional configuration used to tweak client behaviour.
      */
     @JvmOverloads
-    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, haAddressPool)
+    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
 
     companion object {
         fun createWithSsl(

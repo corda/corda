@@ -186,46 +186,36 @@ internal object AttachmentsClassLoaderBuilder {
 
     private const val CACHE_SIZE = 1000
 
-    // This runs in the DJVM so it can't use caffeine.
-    private val classloaderCache: MutableMap<Set<SecureHash>, AttachmentsClassLoader> = createSimpleCache<Set<SecureHash>, AttachmentsClassLoader>(CACHE_SIZE)
-            .toSynchronised()
-    private val serializersCache: MutableMap<Set<SecureHash>, Set<SerializationCustomSerializer<*, *>>> = createSimpleCache<Set<SecureHash>, Set<SerializationCustomSerializer<*, *>>>(CACHE_SIZE)
-            .toSynchronised()
-    private val whitelistCache: MutableMap<Set<SecureHash>, List<Class<*>>> = createSimpleCache<Set<SecureHash>, List<Class<*>>>(CACHE_SIZE)
-            .toSynchronised()
+    private data class CacheValue(val classloader: AttachmentsClassLoader, val customSerializers: Set<SerializationCustomSerializer<*, *>>, val whitelistedClasses: List<Class<*>>)
 
-    private fun <V> createIfNotInCache(attachmentIds: Set<SecureHash>, cache: MutableMap<Set<SecureHash>, V>, factoryMethod: () -> V): V {
-        return cache.computeIfAbsent(attachmentIds) {
-            factoryMethod()
-        }
-    }
+    // This runs in the DJVM so it can't use caffeine.
+    private val cache: MutableMap<Set<SecureHash>, CacheValue> = createSimpleCache<Set<SecureHash>, CacheValue>(CACHE_SIZE)
 
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         // Create classloader and load serializers, whitelisted classes
-        val transactionClassLoader = createIfNotInCache(attachmentIds, classloaderCache) {
-            AttachmentsClassLoader(attachments)
-        }
-        val serializers = createIfNotInCache(attachmentIds, serializersCache) {
-            loadClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
-        }
-        val whitelistedClasses = createIfNotInCache(attachmentIds, whitelistCache) {
-            ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
+        val cacheValue = cache.computeIfAbsent(attachmentIds) {
+            val transactionClassLoader = AttachmentsClassLoader(attachments)
+            val serializers = loadClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+            val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
                     .toList()
+
+            CacheValue(transactionClassLoader, serializers, whitelistedClasses)
         }
+        val (classloader, serializers, whitelistedClasses) = Triple(cacheValue.classloader, cacheValue.customSerializers, cacheValue.whitelistedClasses)
 
         // Create a new serializationContext for the current Transaction.
         val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext
                 .withPreventDataLoss()
-                .withClassLoader(transactionClassLoader)
+                .withClassLoader(classloader)
                 .withWhitelist(whitelistedClasses)
                 .withCustomSerializers(serializers)
 
         // Deserialize all relevant classes in the transaction classloader.
         return SerializationFactory.defaultFactory.withCurrentContext(transactionSerializationContext) {
-            block(transactionClassLoader)
+            block(classloader)
         }
     }
 }

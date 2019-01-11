@@ -17,7 +17,6 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.utilities.contextLogger
-import java.io.NotSerializableException
 import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
@@ -338,15 +337,15 @@ open class TransactionBuilder @JvmOverloads constructor(
         // This will contain the hash of the JAR that *has* to be used by this Transaction, because it is explicit. Or null if none.
         val forcedAttachmentId = explicitContractAttachment ?: hashAttachments.singleOrNull()?.id
 
-        // States that have an explicit constraint
-        val explicitConstraintStates = inputsAndOutputs.filterNot { it.constraint in automaticConstraints }
+        fun selectAttachment() = selectAttachmentThatSatisfiesConstraints(
+                false,
+                contractClassName,
+                inputsAndOutputs.filterNot { it.constraint in automaticConstraints },
+                inputStateRefs,
+                services)
 
         // This will contain the hash of the JAR that will be used by this Transaction.
-        val selectedAttachmentId = when {
-            forcedAttachmentId != null -> forcedAttachmentId // The attachments was pinned down.
-            explicitConstraintStates.isEmpty() -> services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
-            else -> selectAttachmentThatSatisfiesConstraints(false, contractClassName, explicitConstraintStates, inputStateRefs, services) // Select an attachment that satisfies the constraints.
-        }
+        val selectedAttachmentId = forcedAttachmentId ?: selectAttachment()
 
         val attachmentToUse = services.attachments.openAttachment(selectedAttachmentId)?.let { it as ContractAttachment }
                 ?: throw IllegalArgumentException("Contract attachment $selectedAttachmentId for $contractClassName is missing.")
@@ -473,8 +472,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max()
-                ?: DEFAULT_CORDAPP_VERSION
+        val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
         return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }
