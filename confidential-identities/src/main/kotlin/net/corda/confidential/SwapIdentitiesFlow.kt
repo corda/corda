@@ -112,7 +112,7 @@ private constructor(private val otherSideSession: FlowSession?,
     }
 
     @CordaSerializable
-    internal data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
+    data class IdentityWithSignature(val identity: SerializedBytes<PartyAndCertificate>, val signature: DigitalSignature)
 }
 
 // Data class used only in the context of asserting that the owner of the private key for the listed key wants to use it
@@ -120,7 +120,7 @@ private constructor(private val otherSideSession: FlowSession?,
 // the key represents the named entity) and protects against a malicious party incorrectly claiming others'
 // keys.
 @CordaSerializable
-internal data class CertificateOwnershipAssertion(val x500Name: CordaX500Name, val publicKey: PublicKey)
+data class CertificateOwnershipAssertion(val x500Name: CordaX500Name, val publicKey: PublicKey)
 
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null) : FlowException(message, cause)
 
