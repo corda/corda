@@ -143,7 +143,7 @@ Signing Cordapp JARs
 The default behaviour of Cordform is to deploy CorDapp JARs "as built":
 
  - prior to Corda 4 all CorDapp JARs were unsigned.
- - as of Corda 4, CorDapp JARs are signed by a Corda development certificate by default.
+ - as of Corda 4, CorDapp JARs created by the Gradle *cordapp* plugin are signed by a Corda development certificate by default.
 
 The Cordform ``signing`` entry can be used to override and customise the signing of CorDapp JARs.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints :doc:`api-contract-constraints`.
