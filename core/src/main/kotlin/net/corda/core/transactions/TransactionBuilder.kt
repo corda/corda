@@ -142,7 +142,7 @@ open class TransactionBuilder @JvmOverloads constructor(
         val (allContractAttachments: Collection<SecureHash>, resolvedOutputs: List<TransactionState<ContractState>>) = selectContractAttachmentsAndOutputStateConstraints(services, serializationContext)
 
         // Final sanity check that all states have the correct constraints.
-        for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs)) {
+        for (state in (inputsWithTransactionState.map { it.state } + resolvedOutputs + referencesWithTransactionState)) {
             checkConstraintValidity(state)
         }
 
@@ -347,11 +347,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             forcedAttachmentId != null -> forcedAttachmentId
 
             // This is a transaction that creates a state, and the state has no constraint. Use the attachment from the cordapps folder.
-            explicitConstraintStates.isEmpty() -> {
-                val attachment = services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
-                log.warn("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp: $attachment")
-                attachment
-            }
+            explicitConstraintStates.isEmpty() -> services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
 
             // If there are constraints set, then select an attachment that satisfies them.
             else -> selectAttachmentThatSatisfiesConstraints(false, contractClassName, explicitConstraintStates, inputStateRefs, services) // Select an attachment that satisfies the constraints.
@@ -359,6 +355,11 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val attachmentToUse = services.attachments.openAttachment(selectedAttachmentId)?.let { it as ContractAttachment }
                 ?: throw IllegalArgumentException("Contract attachment $selectedAttachmentId for $contractClassName is missing.")
+
+        if(!attachmentToUse.isSigned && explicitConstraintStates.isEmpty()){
+            log.warn("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp which is not signed. " +
+                    "It will not use the SignatureConstraint, which is the recommended approach. See: https://docs.corda.net/head/api-contract-constraints.html")
+        }
 
         // For Exit transactions (no output states) there is no need to resolve the output constraints.
         if (outputStates == null) {
