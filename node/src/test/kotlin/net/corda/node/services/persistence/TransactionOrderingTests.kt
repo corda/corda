@@ -13,6 +13,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.getOrThrow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
@@ -46,6 +47,7 @@ class TransactionOrderingTests {
 
         val bob = mockNet.createPartyNode(BOB_NAME)
         val bobID = bob.info.identityFromX500Name(BOB_NAME)
+        bob.registerInitiatedFlow(ReceiveTx::class.java)
 
         val notary = mockNet.defaultNotaryNode
         val notaryID = mockNet.defaultNotaryIdentity
@@ -71,14 +73,23 @@ class TransactionOrderingTests {
         )
         val stx2 = signTx(tx2Builder)
 
-        alice.services.recordTransactions(listOf(stx1, stx2))
+        val state3 = MessageChainState(MessageData("AAA"), aliceID, state1.linearId, extraParty = bobID)
+        val tx3Builder = TransactionBuilder(notaryID).withItems(
+                StateAndContract(state3, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID),
+                command,
+                StateAndRef(stx2.coreTransaction.outputs[0], StateRef(stx2.coreTransaction.id, 0))
+        )
+        val stx3 = signTx(tx3Builder)
 
-        alice.services.startFlow(SendTx(bobID, stx2))
-        alice.services.startFlow(SendTx(bobID, stx1))
+        alice.services.recordTransactions(listOf(stx1, stx2, stx3))
+
+        alice.services.startFlow(SendTx(bobID, stx3)).resultFuture.getOrThrow()
+        alice.services.startFlow(SendTx(bobID, stx1)).resultFuture.getOrThrow()
+        alice.services.startFlow(SendTx(bobID, stx2)).resultFuture.getOrThrow()
 
         val queryCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
         val bobStates = bob.services.vaultService.queryBy(MessageChainState::class.java, queryCriteria)
-        assertEquals(2, bobStates.states.size)
+        assertEquals(3, bobStates.states.size)
     }
 }
 
