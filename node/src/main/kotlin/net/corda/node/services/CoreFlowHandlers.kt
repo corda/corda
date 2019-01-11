@@ -7,6 +7,7 @@ import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.ContractUpgradeUtils
+import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -14,8 +15,8 @@ import net.corda.core.transactions.SignedTransaction
 class FinalityHandler(val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val stx = subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
-        logger.warn("Finalised transaction from ${sender.counterparty} recorded using insecure API: ${stx.id}")
+        subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
+        logger.warnOnce("Finalised transaction from ${sender.counterparty} recorded using insecure API")
     }
 }
 

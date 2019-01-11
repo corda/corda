@@ -10,6 +10,8 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.cordapp.CordappResolver
+import net.corda.core.internal.warnOnce
 import net.corda.core.node.ServiceHub
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
@@ -89,8 +91,8 @@ private constructor(private val otherSideSession: FlowSession?,
     @Suspendable
     override fun call(): LinkedHashMap<Party, AnonymousParty> {
         val session = otherSideSession ?: run {
-            logger.warn("The current usage of SwapIdentitiesFlow is unsafe. Please consider upgrading your CorDapp to use " +
-                    "SwapIdentitiesFlow with FlowSessions.")
+            logger.warnOnce("The current usage of SwapIdentitiesFlow is unsafe. Please consider upgrading your CorDapp to use " +
+                    "SwapIdentitiesFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
             initiateFlow(otherParty!!)
         }
         progressTracker.currentStep = GENERATING_IDENTITY
@@ -129,7 +131,7 @@ open class SwapIdentitiesException @JvmOverloads constructor(message: String, ca
 private class SwapIdentitiesHandler(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
-        val result = subFlow(SwapIdentitiesFlow(otherSide))
-        logger.warn("Swapped anonymous identities with ${otherSide.counterparty} using insecure API: $result")
+        subFlow(SwapIdentitiesFlow(otherSide))
+        logger.warnOnce("Swapped anonymous identities with ${otherSide.counterparty} using insecure API")
     }
 }
