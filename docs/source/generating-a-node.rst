@@ -140,13 +140,18 @@ To copy the same file to all nodes `ext.drivers` can be defined in the top level
 
 Signing Cordapp JARs
 ^^^^^^^^^^^^^^^^^^^^
-Cordform entry ``signing`` configures the signing of CorDapp JARs.
+The default behaviour of Cordform is to deploy CorDapp JARs "as built":
+
+ - prior to Corda 4 all CorDapp JARs were unsigned.
+ - as of Corda 4, CorDapp JARs are signed by a Corda development certificate by default.
+
+The Cordform ``signing`` entry can be used to override and customise the signing of CorDapp JARs.
 Signing the CorDapp enables its contract classes to use signature constraints instead of other types of the constraints :doc:`api-contract-constraints`.
-By default all CorDapp JARs are signed by Corda development certificate.
+
 The sign task may use an external keystore, or create a new one.
 The ``signing`` entry may contain the following parameters:
 
-* ``enabled`` the control flag to enable signing process, by default is set to ``true``, set to ``false`` to disable signing
+* ``enabled`` the control flag to enable signing process, by default is set to ``false``, set to ``true`` to enable signing
 * ``all`` if set to ``true`` (by default) all CorDapps inside *cordapp* subdirectory will be signed, otherwise if ``false`` then only the generated Cordapp will be signed
 * ``options`` any relevant parameters of `SignJar ANT task <https://ant.apache.org/manual/Tasks/signjar.html>`_ and `GenKey ANT task <https://ant.apache.org/manual/Tasks/genkey.html>`_,
   by default the JAR file is signed by Corda development key, the external keystore can be specified,
