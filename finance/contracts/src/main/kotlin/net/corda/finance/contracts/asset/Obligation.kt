@@ -315,7 +315,7 @@ class Obligation<P : Any> : Contract {
         val outputAmount = outputs.sumObligations<P>()
         val issueCommands = tx.commands.select<Commands.Issue>()
         requireThat {
-            "output states are issued by a command signer" using (issuer.party in issueCommand.signingParties)
+            "output states are issued by a command signer" using (issuer.party.owningKey in issueCommand.signers)
             "output values sum to more than the inputs" using (outputAmount > inputAmount)
             "there is only a single issue command" using (issueCommands.count() == 1)
         }
