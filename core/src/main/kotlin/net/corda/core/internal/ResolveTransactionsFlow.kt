@@ -22,7 +22,9 @@ import kotlin.math.min
  * Each retrieved transaction is validated and inserted into the local transaction storage.
  */
 @DeleteForDJVM
-class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>, private val otherSide: FlowSession) : FlowLogic<Unit>() {
+class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
+                              private val otherSide: FlowSession,
+                              private val statesToRecord: StatesToRecord = StatesToRecord.NONE) : FlowLogic<Unit>() {
 
     // Need it ordered in terms of iteration. Needs to be a variable for the check-pointing logic to work.
     private val txHashes = txHashesArg.toList()
@@ -34,6 +36,10 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>, private val otherSid
      * @return a list of verified [SignedTransaction] objects, in a depth-first order.
      */
     constructor(signedTransaction: SignedTransaction, otherSide: FlowSession) : this(dependencyIDs(signedTransaction), otherSide) {
+        this.signedTransaction = signedTransaction
+    }
+
+    constructor(signedTransaction: SignedTransaction, otherSide: FlowSession, statesToRecord: StatesToRecord) : this(dependencyIDs(signedTransaction), otherSide, statesToRecord) {
         this.signedTransaction = signedTransaction
     }
 
@@ -90,7 +96,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>, private val otherSid
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
             it.verify(serviceHub)
-            serviceHub.recordTransactions(StatesToRecord.NONE, listOf(it))
+            serviceHub.recordTransactions(statesToRecord, listOf(it))
         }
     }
 
