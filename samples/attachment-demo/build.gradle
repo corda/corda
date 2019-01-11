@@ -4,47 +4,38 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-}
-
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
+description 'Corda attachment demo'
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    testCompile "junit:junit:$junit_version"
-
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':webserver')
     cordaCompile project(':node-driver')
+    // Attachment demo cordapp - contracts and workflows parts
+    cordapp project(':samples:attachment-demo:contracts')
+    cordapp project(':samples:attachment-demo:workflows')
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["StartFlow.net.corda.attachmentdemo.AttachmentDemoFlow",
-                                                                             "InvokeRpc.wellKnownPartyFromX500Name",
+                                                                             "InvokeRpc.partiesFromName",
                                                                              "InvokeRpc.attachmentExists",
                                                                              "InvokeRpc.openAttachment",
                                                                              "InvokeRpc.uploadAttachment",
-                                                                             "InvokeRpc.internalVerifiedTransactionsFeed"]]]
+                                                                             "InvokeRpc.internalVerifiedTransactionsFeed",
+                                                                             "InvokeRpc.startTrackedFlowDynamic"]]]
 
     directory "./build/nodes"
+    nodeDefaults {
+        cordapp project(':samples:attachment-demo:contracts')
+        cordapp project(':samples:attachment-demo:workflows')
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
-        notary = [validating : true]
+        notary = [validating: true]
         p2pPort 10002
         cordapps = []
         rpcUsers = ext.rpcUsers
@@ -52,7 +43,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             address "localhost:10003"
             adminAddress "localhost:10004"
         }
-        extraConfig = ['h2Settings.address' : 'localhost:10012']
+        extraConfig = ['h2Settings.address': 'localhost:10012']
     }
     node {
         name "O=Bank A,L=London,C=GB"
@@ -63,7 +54,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             address "localhost:10006"
             adminAddress "localhost:10007"
         }
-        extraConfig = ['h2Settings.address' : 'localhost:10013']
+        extraConfig = ['h2Settings.address': 'localhost:10013']
     }
     node {
         name "O=Bank B,L=New York,C=US"
@@ -75,51 +66,30 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         webPort 10010
         cordapps = []
         rpcUsers = ext.rpcUsers
-        extraConfig = ['h2Settings.address' : 'localhost:10014']
-    }
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
-}
-
-idea {
-    module {
-        downloadJavadoc = true // defaults to false
-        downloadSources = true
+        extraConfig = ['h2Settings.address': 'localhost:10014']
     }
 }
 
 task runSender(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    main = 'net.corda.attachmentdemo.workflows.AttachmentDemoKt'
     args '--role'
     args 'SENDER'
 }
 
 task runRecipient(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.attachmentdemo.AttachmentDemoKt'
+    main = 'net.corda.attachmentdemo.workflows.AttachmentDemoKt'
     args '--role'
     args 'RECIPIENT'
 }
 
-jar {
-    manifest {
-        attributes(
-                'Automatic-Module-Name': 'net.corda.samples.demos.attachment'
-        )
-    }
-}
-
+//TODO change contract + workflow
 cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion 1
-    workflow {
-        name "net/corda/samples/attachment-demo"
-        versionId 1
+    info {
+        name "CorDapp Attachment Demo"
         vendor "R3"
-        licence "Open Source (Apache 2)"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 4
     }
 }

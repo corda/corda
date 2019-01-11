@@ -141,7 +141,7 @@ cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     workflow {
-        name "net/corda/samples/trader-demo"
+        name "Trader Demo"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"

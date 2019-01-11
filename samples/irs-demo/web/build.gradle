@@ -70,10 +70,15 @@ dependencies {
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version")
     compile project(":client:rpc")
     compile project(":client:jackson")
-	compile project(":samples:irs-demo:cordapp")
+	compile project(":finance:workflows")
+	compile project(":samples:irs-demo:cordapp:workflows-irs")
 
     testCompile project(":test-utils")
-    testCompile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+//	testCompile project(":samples:irs-demo:cordapp:workflows-irs")
+	//TODO
+//    testCompile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+//    testCompile project(path: ":samples:irs-demo:cordapp:contracts-irs", configuration: "demoArtifacts")
+    testCompile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
 
 	// JOpt: for command line flags.
     compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"

@@ -23,22 +23,3 @@ class GetStringConfigFlow(private val configKey: String) : FlowLogic<String>() {
         return config.getString(configKey)
     }
 }
-
-
-
-@CordaSerializable
-data class GetStringTestState(val responses: List<String>, val issuer: AbstractParty) : ContractState {
-    override val participants: List<AbstractParty>
-        get() = listOf(issuer)
-
-}
-
-
-@CordaSerializable
-object GetStringTestCommand : CommandData
-
-
-class GetStringTestContract : Contract {
-    override fun verify(tx: LedgerTransaction) {
-    }
-}

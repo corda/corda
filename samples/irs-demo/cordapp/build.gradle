@@ -5,7 +5,7 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'application'
 
-mainClassName = 'net.corda.irs.IRSDemo'
+mainClassName = 'net.corda.irs.IRSDemo' //todo
 
 sourceSets {
     integrationTest {
@@ -17,29 +17,22 @@ sourceSets {
     }
 }
 
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-    demoArtifacts.extendsFrom integrationTestRuntime
-}
+//configurations {
+//    integrationTestCompile.extendsFrom testCompile
+//    integrationTestRuntime.extendsFrom testRuntime
+//    demoArtifacts.extendsFrom integrationTestRuntime
+//}
 
 dependencies {
-    // The irs demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaRuntime project(':node-api')
-
-    // Cordapp dependencies
-    // Specify your cordapp's dependencies below, including dependent cordapps
-    compile group: 'commons-io', name: 'commons-io', version: '2.5'
-
-    testCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:${assertj_version}"
+    // IRS demo cordapp - contracts and workflows parts
+    cordapp project(':samples:irs-demo:cordapp:contracts-irs')
+    cordapp project(':samples:irs-demo:cordapp:workflows-irs')
 }
 
 def rpcUsersList = [
@@ -58,7 +51,10 @@ def rpcUsersList = [
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
-
+    nodeDefaults{
+        cordapp project(':samples:irs-demo:cordapp:contracts-irs')
+        cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
@@ -113,7 +109,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
 }
 
 task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', nodeTask]) {
-
+    nodeDefaults{
+        cordapp project(':samples:irs-demo:cordapp:contracts-irs')
+        cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+    }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
@@ -164,34 +163,18 @@ idea {
     }
 }
 
-jar {
-    from sourceSets.main.output
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
-task testJar(type: Jar) {
-    classifier "test"
-    from sourceSets.main.output
-    from sourceSets.test.output
-}
-
-artifacts {
-    demoArtifacts testJar
-}
+// TODO change jar tasks etc
+//jar {
+//    from sourceSets.main.output
+//    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+//}
+//
 
 cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion 1
-    contract {
-        name "net/corda/irs-demo/contract"
-        versionId 1
+    info {
+        name "Corda IRS Demo"
         vendor "R3"
-        licence "Open Source (Apache 2)"
-    }
-    workflow {
-        name "net/corda/irs-demo/flows"
-        versionId 1
-        vendor "R3"
-        licence "Open Source (Apache 2)"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
     }
 }

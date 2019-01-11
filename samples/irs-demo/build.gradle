@@ -62,7 +62,8 @@ repositories {
 
 dependencies {
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
-    compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
+//    compile project(path: ":samples:irs-demo:cordapp:contracts-irs", configuration: "demoArtifacts")
+//    compile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
     compile project(":samples:irs-demo:web")
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude module: "spring-boot-starter-logging"
@@ -83,6 +84,7 @@ bootRepackage {
     enabled = false
 }
 
+//TODO test
 task integrationTest(type: Test, dependsOn: []) {
     testClassesDirs = sourceSets.integrationTest.output.classesDirs
     classpath = sourceSets.integrationTest.runtimeClasspath
@@ -91,6 +93,7 @@ task integrationTest(type: Test, dependsOn: []) {
 evaluationDependsOn("cordapp")
 evaluationDependsOn("web")
 
+// TODO test this
 task systemTest(type: Test, dependsOn: ["cordapp:prepareDockerNodes", "web:generateDockerCompose"]) {
     testClassesDirs = sourceSets.systemTest.output.classesDirs
     classpath = sourceSets.systemTest.runtimeClasspath
