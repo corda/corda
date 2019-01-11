@@ -492,7 +492,7 @@ class NodeAttachmentService(
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
         check (signed.size <= 1) //sanity check
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
-        if (unsigned.size > 1) //TODO cater better for whiltelisted JARs - CORDA-2405
+        if (unsigned.size > 1)
             log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
     }
