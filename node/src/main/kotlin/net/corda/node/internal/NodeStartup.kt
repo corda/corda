@@ -432,6 +432,7 @@ interface NodeStartupLogging {
 fun CliWrapperBase.initLogging(baseDirectory: Path) {
     System.setProperty("defaultLogLevel", specifiedLogLevel) // These properties are referenced from the XML config file.
     if (verbose) {
+        System.setProperty("consoleLoggingEnabled", "true")
         System.setProperty("consoleLogLevel", specifiedLogLevel)
         Node.renderBasicInfoToConsole = false
     }
