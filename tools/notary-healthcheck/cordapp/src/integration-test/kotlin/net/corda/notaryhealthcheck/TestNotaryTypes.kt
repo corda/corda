@@ -8,7 +8,9 @@ import net.corda.core.node.services.vault.Sort
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.node.services.Permissions
-import net.corda.notaryhealthcheck.cordapp.*
+import net.corda.notaryhealthcheck.cordapp.SchedulingContract.*
+import net.corda.notaryhealthcheck.cordapp.StartAllChecksFlow
+import net.corda.notaryhealthcheck.cordapp.StopAllChecksFlow
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
