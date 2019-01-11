@@ -60,10 +60,30 @@ enum class TransactionIsolationLevel {
     val jdbcValue: Int = java.sql.Connection::class.java.getField(jdbcString).get(null) as Int
 }
 
+internal val _prohibitDatabaseAccess = ThreadLocal.withInitial { false }
+
 private val _contextDatabase = InheritableThreadLocal<CordaPersistence>()
 var contextDatabase: CordaPersistence
-    get() = _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
+    get() {
+        require(_prohibitDatabaseAccess.get() != true) { "Database access is disabled in this context." }
+        return _contextDatabase.get() ?: error("Was expecting to find CordaPersistence set on current thread: ${Strand.currentStrand()}")
+    }
     set(database) = _contextDatabase.set(database)
+
+/**
+ * The logic in the [block] will be prevented from opening a database transaction.
+ * Also will not be able to access database resources ( Like the context transaction or the [contextDatabase] ).
+ */
+fun <T> withoutDatabaseAccess(block: () -> T): T {
+    val oldValue = _prohibitDatabaseAccess.get()
+    _prohibitDatabaseAccess.set(true)
+    try {
+        return block()
+    } finally {
+        _prohibitDatabaseAccess.set(oldValue)
+    }
+}
+
 val contextDatabaseOrNull: CordaPersistence? get() = _contextDatabase.get()
 
 class CordaPersistence(
@@ -115,6 +135,9 @@ class CordaPersistence(
     private val liveTransactions = ConcurrentHashMap<UUID, DatabaseTransaction>()
 
     fun newTransaction(isolation: TransactionIsolationLevel = defaultIsolationLevel): DatabaseTransaction {
+        if (_prohibitDatabaseAccess.get()) {
+            throw IllegalAccessException("Database access is not allowed in the current context.")
+        }
         val outerTransaction = contextTransactionOrNull
         return DatabaseTransaction(isolation.jdbcValue, contextTransactionOrNull, this).also {
             contextTransactionOrNull = it

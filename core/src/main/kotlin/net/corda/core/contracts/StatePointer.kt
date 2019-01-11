@@ -65,6 +65,19 @@ class StaticPointer<T : ContractState>(override val pointer: StateRef, override 
     override fun resolve(ltx: LedgerTransaction): StateAndRef<T> {
         return ltx.referenceInputRefsOfType(type).single { pointer == it.ref }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StaticPointer<*>) return false
+
+        if (pointer != other.pointer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return pointer.hashCode()
+    }
 }
 
 /**
@@ -117,5 +130,18 @@ class LinearPointer<T : LinearState>(override val pointer: UniqueIdentifier, ove
 
     override fun resolve(ltx: LedgerTransaction): StateAndRef<T> {
         return ltx.referenceInputRefsOfType(type).single { pointer == it.state.data.linearId }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is LinearPointer<*>) return false
+
+        if (pointer != other.pointer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return pointer.hashCode()
     }
 }

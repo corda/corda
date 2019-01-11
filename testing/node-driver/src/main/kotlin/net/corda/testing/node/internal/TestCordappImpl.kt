@@ -18,7 +18,7 @@ import kotlin.streams.toList
  * the [scanPackage] may reference a gradle CorDapp project on the local system. In this scenerio the project's "jar" task is executed to
  * build the CorDapp jar. This allows us to inherit the CorDapp's MANIFEST information without having to do any extra processing.
  */
-data class TestCordappImpl(override val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal() {
+data class TestCordappImpl(val scanPackage: String, override val config: Map<String, Any>) : TestCordappInternal() {
     override fun withConfig(config: Map<String, Any>): TestCordappImpl = copy(config = config)
 
     override fun withOnlyJarContents(): TestCordappImpl = copy(config = emptyMap())

@@ -17,12 +17,12 @@ class CustomCordappTest {
 
     @Test
     fun `packageAsJar writes out the CorDapp info into the manifest`() {
-        val cordapp = cordappWithPackages("net.corda.testing.node.internal").copy(targetPlatformVersion = 123, name = "TestCordappsUtilsTest")
+        val cordapp = cordappWithPackages("net.corda.testing.node.internal").copy(targetPlatformVersion = 123, name = "CustomCordappTest")
         val jarFile = packageAsJar(cordapp)
         JarInputStream(jarFile.inputStream()).use {
             assertThat(it.manifest[CordappImpl.TARGET_PLATFORM_VERSION]).isEqualTo("123")
-            assertThat(it.manifest[CordappImpl.CORDAPP_CONTRACT_NAME]).isEqualTo("TestCordappsUtilsTest")
-            assertThat(it.manifest[CordappImpl.CORDAPP_WORKFLOW_NAME]).isEqualTo("TestCordappsUtilsTest")
+            assertThat(it.manifest[CordappImpl.CORDAPP_CONTRACT_NAME]).isEqualTo("CustomCordappTest")
+            assertThat(it.manifest[CordappImpl.CORDAPP_WORKFLOW_NAME]).isEqualTo("CustomCordappTest")
         }
     }
 
@@ -31,7 +31,7 @@ class CustomCordappTest {
         val entries = packageAsJarThenReadBack(cordappWithPackages("net.corda.testing.node.internal"))
 
         assertThat(entries).contains(
-                "net/corda/testing/node/internal/TestCordappsUtilsTest.class",
+                "net/corda/testing/node/internal/CustomCordappTest.class",
                 "net/corda/testing/node/internal/resource.txt" // Make sure non-class resource files are also picked up
         ).doesNotContain(
                 "net/corda/testing/node/MockNetworkTest.class"
@@ -46,7 +46,7 @@ class CustomCordappTest {
         val entries = packageAsJarThenReadBack(cordappWithPackages("net.corda.testing.node"))
 
         assertThat(entries).contains(
-                "net/corda/testing/node/internal/TestCordappsUtilsTest.class",
+                "net/corda/testing/node/internal/CustomCordappTest.class",
                 "net/corda/testing/node/internal/resource.txt",
                 "net/corda/testing/node/MockNetworkTest.class"
         )

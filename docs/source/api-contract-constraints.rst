@@ -230,6 +230,20 @@ The contract attachment non-downgrade rule is enforced in two locations:
 A version number is stored in the manifest information of the enclosing JAR file. This version identifier should be a whole number starting
 from 1. This information should be set using the Gradle cordapp plugin, or manually, as described in :doc:`versioning`.
 
+
+Uniqueness requirement Contract and Version for Signature Constraint
+--------------------------------------------------------------------
+
+CorDapps in Corda 4 may be signed (to use new signature constraints functionality) or unsigned, and versioned.
+The following controls are enforced for these different types of jars within the attachment store of a node:
+
+- Signed contract JARs must be uniquely versioned per contract class (or group of).
+  At runtime the node will throw a `DuplicateContractClassException`` exception if this condition is violated.
+
+- Unsigned contract JARs: there may exist multiple instances of the same contract jar.
+  At run-time the node will warn of duplicates encountered.
+  The most recent version given by insertionDate into the attachment storage will be used upon transaction building/resolution.
+
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
 

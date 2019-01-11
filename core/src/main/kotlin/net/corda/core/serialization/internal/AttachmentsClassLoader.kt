@@ -1,16 +1,15 @@
 package net.corda.core.serialization.internal
 
+import net.corda.core.CordaException
+import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
-import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
-import net.corda.core.internal.createSimpleCache
-import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.internal.toSynchronised
-import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
@@ -32,7 +31,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
     init {
         val untrusted = attachments.mapNotNull { it as? ContractAttachment }.filterNot { isUploaderTrusted(it.uploader) }.map(ContractAttachment::id)
         if(untrusted.isNotEmpty()) {
-            throw MissingAttachmentsException(untrusted, "Attempting to load Contract Attachments downloaded from the network")
+            throw UntrustedAttachmentsException(untrusted)
         }
         requireNoDuplicates(attachments)
     }
@@ -41,9 +40,10 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         private val log = contextLogger()
 
         init {
-            // This is required to register the AttachmentURLStreamHandlerFactory.
-            URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
+            // Apply our own URLStreamHandlerFactory to resolve attachments
+            setOrDecorateURLStreamHandlerFactory()
         }
+
 
         // Jolokia and Json-simple are dependencies that were bundled by mistake within contract jars.
         // In the AttachmentsClassLoader we just ignore any class in those 2 packages.
@@ -113,6 +113,50 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
             ByteArrayOutputStream().use {
                 attachment.extractFile(filepath, it)
                 return it.toByteArray()
+            }
+        }
+
+        /**
+         * Apply our custom factory either directly, if `URL.setURLStreamHandlerFactory` has not been called yet,
+         * or use a decorator and reflection to bypass the single-call-per-JVM restriction otherwise.
+         */
+        private fun setOrDecorateURLStreamHandlerFactory() {
+            // Retrieve the `URL.factory` field
+            val factoryField = URL::class.java.getDeclaredField("factory")
+            // Make it accessible
+            factoryField.isAccessible = true
+
+            // Check for preset factory, set directly if missing
+            val existingFactory: URLStreamHandlerFactory? = factoryField.get(null) as URLStreamHandlerFactory?
+            if (existingFactory == null) {
+                URL.setURLStreamHandlerFactory(AttachmentURLStreamHandlerFactory)
+            }
+            // Otherwise, decorate the existing and replace via reflection
+            // as calling `URL.setURLStreamHandlerFactory` again will throw an error
+            else {
+                log.warn("The URLStreamHandlerFactory was already set in the JVM. Please be aware that this is not recommended.")
+                // Retrieve the field "streamHandlerLock" of the class URL that
+                // is the lock used to synchronize access to the protocol handlers
+                val lockField = URL::class.java.getDeclaredField("streamHandlerLock")
+                // It is a private field so we need to make it accessible
+                // Note: this will only work as-is in JDK8.
+                lockField.isAccessible = true
+                // Use the same lock to reset the factory
+                synchronized(lockField.get(null)) {
+                    // Reset the value to prevent Error due to a factory already defined
+                    factoryField.set(null, null)
+                    // Set our custom factory and wrap the current one into it
+                    URL.setURLStreamHandlerFactory(
+                            // Set the factory to a decorator
+                            object : URLStreamHandlerFactory {
+                                // route between our own and the pre-existing factory
+                                override fun createURLStreamHandler(protocol: String): URLStreamHandler? {
+                                    return AttachmentURLStreamHandlerFactory.createURLStreamHandler(protocol)
+                                            ?: existingFactory.createURLStreamHandler(protocol)
+                                }
+                            }
+                    )
+                }
             }
         }
     }
@@ -200,3 +244,12 @@ object AttachmentURLStreamHandlerFactory : URLStreamHandlerFactory {
         }
     }
 }
+
+/** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
+@KeepForDJVM
+@CordaSerializable
+class UntrustedAttachmentsException(val ids: List<SecureHash>) :
+        CordaException("Attempting to load untrusted Contract Attachments: $ids" +
+                "These may have been received over the p2p network from a remote node." +
+                "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to continue."
+        )

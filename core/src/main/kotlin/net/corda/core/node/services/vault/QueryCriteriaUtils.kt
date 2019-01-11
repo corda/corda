@@ -212,7 +212,7 @@ data class Sort(val columns: Collection<SortColumn>) : BaseSort() {
 data class AttachmentSort(val columns: Collection<AttachmentSortColumn>) : BaseSort() {
 
     enum class AttachmentSortAttribute(val columnName: String) {
-        INSERTION_DATE("insertion_date"),
+        INSERTION_DATE("insertionDate"),
         UPLOADER("uploader"),
         FILENAME("filename"),
         VERSION ("version")

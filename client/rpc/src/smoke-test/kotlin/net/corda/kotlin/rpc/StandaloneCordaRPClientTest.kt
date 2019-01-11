@@ -6,12 +6,15 @@ import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.*
+import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.*
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.*
+import net.corda.core.utilities.OpaqueBytes
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
@@ -21,6 +24,7 @@ import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.java.rpc.StandaloneCordaRPCJavaClientTest
 import net.corda.nodeapi.internal.config.User
 import net.corda.smoketesting.NodeConfig
 import net.corda.smoketesting.NodeProcess
@@ -31,11 +35,9 @@ import org.junit.Ignore
 import org.junit.Test
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.streams.toList
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
@@ -69,7 +71,7 @@ class StandaloneCordaRPClientTest {
     @Before
     fun setUp() {
         factory = NodeProcess.Factory()
-        copyFinanceCordapp()
+        StandaloneCordaRPCJavaClientTest.copyCordapps(factory, notaryConfig)
         notary = factory.create(notaryConfig)
         connection = notary.connect()
         rpcProxy = connection.proxy
@@ -84,15 +86,6 @@ class StandaloneCordaRPClientTest {
         } finally {
             notary.close()
         }
-    }
-
-    private fun copyFinanceCordapp() {
-        val cordappsDir = (factory.baseDirectory(notaryConfig) / NodeProcess.CORDAPPS_DIR_NAME).createDirectories()
-        // Find the finance jar file for the smoke tests of this module
-        val financeJars = Paths.get("build", "resources", "smokeTest").list {
-            it.filter { "corda-finance" in it.toString() }.toList()
-        }
-        financeJars.forEach { it.copyToDirectory(cordappsDir) }
     }
 
 
