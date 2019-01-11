@@ -359,8 +359,8 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
      * AttachmentsQueryCriteria:
      */
     data class AttachmentsQueryCriteria constructor(val uploaderCondition: ColumnPredicate<String>? = null,
-                                                                  val filenameCondition: ColumnPredicate<String>? = null,
-                                                                  val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+                                                    val filenameCondition: ColumnPredicate<String>? = null,
+                                                    val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
         constructor(uploaderCondition: ColumnPredicate<String>? = null,
                     filenameCondition: ColumnPredicate<String>? = null,
                     uploadDateCondition: ColumnPredicate<Instant>? = null,

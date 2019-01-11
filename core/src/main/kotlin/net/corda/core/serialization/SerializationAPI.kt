@@ -243,7 +243,6 @@ enum class ContextPropertyKeys {
  */
 @KeepForDJVM
 object SerializationDefaults {
-    // TODO sollecito val CHECKPOINT_CONTEXT: SerializationContext get() = ... is gone. Hope no CorDapp should ever deal with this object explicitly.
     val SERIALIZATION_FACTORY get() = effectiveSerializationEnv.serializationFactory
     val P2P_CONTEXT get() = effectiveSerializationEnv.p2pContext
     @DeleteForDJVM val RPC_SERVER_CONTEXT get() = effectiveSerializationEnv.rpcServerContext

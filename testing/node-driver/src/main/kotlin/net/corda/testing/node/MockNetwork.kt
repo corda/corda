@@ -37,9 +37,6 @@ import java.nio.file.Path
  * @property additionalCordapps [TestCordapp]s that will be added to this node in addition to the ones shared by all nodes, which get specified at [MockNetwork] level.
  */
 @Suppress("unused")
-// TODO sollecitom constructor `public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)` is gone.
-// TODO sollecitom constructor `public <init>(Integer, net.corda.core.identity.CordaX500Name, java.math.BigInteger, kotlin.jvm.functions.Function1, int, kotlin.jvm.internal.DefaultConstructorMarker)` is gone.
-// TODO sollecitom these are public API breaking changes.
 data class MockNodeParameters(
         val forcedID: Int? = null,
         val legalName: CordaX500Name? = null,
@@ -82,8 +79,6 @@ data class MockNodeParameters(
  * @property cordappsForAllNodes [TestCordapp]s added to all nodes.
  */
 @Suppress("unused")
-// TODO sollecitom constructor `public <init>(boolean, boolean, net.corda.testing.node.InMemoryMessagingNetwork$ServicePeerAllocationStrategy, java.util.List, net.corda.core.node.NetworkParameters, int, kotlin.jvm.internal.DefaultConstructorMarker)` is gone.
-// TODO sollecitom this is a public API breaking change.
 data class MockNetworkParameters(
         val networkSendManuallyPumped: Boolean = false,
         val threadPerNode: Boolean = false,
@@ -337,8 +332,6 @@ open class MockNetwork(
      * @param configOverrides Add/override the default configuration/behaviour of the node
      */
     @JvmOverloads
-    // TODO sollecitom used to be `net.corda.testing.node.StartedMockNode createNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)`.
-    // TODO sollecitom this is an API breaking change.
     fun createNode(legalName: CordaX500Name? = null,
                    forcedID: Int? = null,
                    entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),
@@ -361,8 +354,6 @@ open class MockNetwork(
      * @param configOverrides Add/override behaviour of the [NodeConfiguration] mock object.
      */
     @JvmOverloads
-    // TODO sollecitom used to be `public final net.corda.testing.node.UnstartedMockNode createUnstartedNode(net.corda.core.identity.CordaX500Name, Integer, java.math.BigInteger, kotlin.jvm.functions.Function1<? super net.corda.node.services.config.NodeConfiguration, ?>)`.
-    // TODO sollecitom this is an API breaking change.
     fun createUnstartedNode(legalName: CordaX500Name? = null,
                             forcedID: Int? = null,
                             entropyRoot: BigInteger = BigInteger.valueOf(random63BitValue()),

@@ -90,7 +90,6 @@ class PersistentState(@EmbeddedId override var stateRef: PersistentStateRef? = n
 @KeepForDJVM
 @Embeddable
 @Immutable
-// TODO sollecitom both `txId` and `index` used to be nullable, with `null` default value. Maybe unlikely created by CorDapps code?
 data class PersistentStateRef(
         @Column(name = "transaction_id", length = 64, nullable = false)
         var txId: String,
@@ -105,7 +104,6 @@ data class PersistentStateRef(
  * Marker interface to denote a persistable Corda state entity that will always have a transaction id and index
  */
 @KeepForDJVM
-// TODO sollecitom used to be @Serializable. Do we care?
 interface StatePersistable
 
 /**

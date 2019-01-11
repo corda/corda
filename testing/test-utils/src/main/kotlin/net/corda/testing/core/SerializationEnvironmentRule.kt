@@ -32,13 +32,9 @@ class SerializationEnvironmentRule(private val inheritable: Boolean = false) : T
                 }.whenever(it).execute(any())
             }
         }
-
-        // TODO sollecitom `public final T run(String, kotlin.jvm.functions.Function1<? super net.corda.core.serialization.internal.SerializationEnvironment, ? extends T>)` is gone. Do we care?
     }
 
     private lateinit var env: SerializationEnvironment
-
-    // TODO sollecitom `val checkpointContext: SerializationContext get() = ...`. Do we care?
 
     val serializationFactory: SerializationFactory get() = env.serializationFactory
 
