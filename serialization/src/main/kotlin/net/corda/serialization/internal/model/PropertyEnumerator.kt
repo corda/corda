@@ -7,9 +7,9 @@ data class PropertyEnumerator(private val readers: Map<String, PropertyReader>):
 
     companion object {
         fun forType(typeInformation: LocalTypeInformation) =
-                PropertyEnumerator(typeInformation.propertiesOrEmptyMap.mapValues { (_, property) ->
-                    PropertyReader.make(property)
-                })
+                PropertyEnumerator(typeInformation.propertiesOrEmptyMap.asSequence().mapNotNull { (name, property) ->
+                    if (property.isCalculated) null else name to PropertyReader.make(property)
+                }.toMap())
     }
 
     override fun invoke(value: Any): Sequence<Pair<String, Any?>> =
