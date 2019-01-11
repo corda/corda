@@ -21,6 +21,8 @@ you.
    `CordaRPCClient`_ class. You can find an example of how to do this using the popular Spring Boot server
    `here <https://github.com/corda/spring-webserver>`_.
 
+.. _clientrpc_connect_ref:
+
 Connecting to a node via RPC
 ----------------------------
 To use `CordaRPCClient`_, you must add ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
