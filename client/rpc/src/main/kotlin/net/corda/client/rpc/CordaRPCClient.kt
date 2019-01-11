@@ -251,8 +251,6 @@ class CordaRPCClient private constructor(
         private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
     @JvmOverloads
-    // TODO sollecitom default constructor used to be `public <init>(net.corda.core.utilities.NetworkHostAndPort, net.corda.client.rpc.CordaRPCClientConfiguration, net.corda.nodeapi.internal.config.SSLConfiguration, kotlin.jvm.internal.DefaultConstructorMarker)`.
-    // TODO sollecitom hopefully unlikely CorDapps are using CordaRPCClient from flows / contracts.
     constructor(hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT)
             : this(hostAndPort, configuration, null)
