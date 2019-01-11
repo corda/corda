@@ -52,6 +52,9 @@ Version 4.0
 
 * Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
 
+* The experimental confidential-identities is now a separate CorDapp and must now be loaded onto the node alongside any CorDapp that needs it.
+  This also means your gradle dependency for it should be ``cordapp`` and not ``cordaCompile``.
+
 * ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
   whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
   also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities
@@ -62,8 +65,6 @@ Version 4.0
 
   .. note:: V3 and V4 of confidential-identities are not compatible and confidential-identities V3 will not work with a V4 Corda node. CorDapps
      in such scenarios using confidential-identities must be updated.
-
-  The ``confidential-identities`` dependency in your CorDapp must now be ``compile`` and not ``cordaCompile``.
 
 * Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
