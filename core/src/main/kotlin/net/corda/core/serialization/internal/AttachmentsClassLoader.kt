@@ -18,7 +18,6 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
