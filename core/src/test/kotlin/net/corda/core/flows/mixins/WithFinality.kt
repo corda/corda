@@ -46,7 +46,8 @@ interface WithFinality : WithMockNet {
         @Suspendable
         override fun call(): SignedTransaction {
             val sessions = newRecipients.map(::initiateFlow)
-            return subFlow(FinalityFlow(transaction, sessions, FinalityFlow.tracker(), oldRecipients))
+            @Suppress("DEPRECATION")
+            return subFlow(FinalityFlow(transaction, sessions, oldRecipients, FinalityFlow.tracker()))
         }
     }
 
