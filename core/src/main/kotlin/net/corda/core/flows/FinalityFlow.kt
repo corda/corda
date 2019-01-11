@@ -52,8 +52,8 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker, emptyList(), false)
 
     /**
-     * Notarise the given transaction and broadcast it to the given [FlowSession]s. This list **must** include
-     * all the participants in the transaction (excluding the local identity).
+     * Notarise the given transaction and broadcast it to the given [FlowSession]s. This list **must** at least include
+     * all the non-local participants of the transaction. Sessions to non-participants can also be provided.
      *
      * @param transaction What to commit.
      */
@@ -65,25 +65,39 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
      * Notarise the given transaction and broadcast it to all the participants.
      *
      * @param transaction What to commit.
-     * @param sessions A collection of [FlowSession]s for each participant.
+     * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
+     * also be provided.
+     */
+    @JvmOverloads
+    constructor(
+            transaction: SignedTransaction,
+            sessions: Collection<FlowSession>,
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+
+    /**
+     * Notarise the given transaction and broadcast it to all the participants.
+     *
+     * @param transaction What to commit.
+     * @param sessions A collection of [FlowSession]s for each non-local participant.
      * @param oldParticipants An **optional** collection of parties for participants who are still using the old API.
      *
      * You will only need to use this parameter if you have upgraded your CorDapp from the V3 FinalityFlow API but are required to provide
      * backwards compatibility with participants running V3 nodes. If you're writing a new CorDapp then this does not apply and this
      * parameter should be ignored.
      */
-    @JvmOverloads
+    @Deprecated(DEPRECATION_MSG)
     constructor(
             transaction: SignedTransaction,
             sessions: Collection<FlowSession>,
-            progressTracker: ProgressTracker = tracker(),
-            oldParticipants: Collection<Party> = emptyList()
+            oldParticipants: Collection<Party>,
+            progressTracker: ProgressTracker
     ) : this(transaction, oldParticipants, progressTracker, sessions, true)
 
     companion object {
         private const val DEPRECATION_MSG = "It is unsafe to use this constructor as it requires nodes to automatically " +
                 "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
-                "that takes in existing FlowSessions."
+                "that requires only FlowSessions."
 
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
