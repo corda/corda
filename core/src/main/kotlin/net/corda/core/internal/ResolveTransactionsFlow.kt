@@ -90,6 +90,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         // Finish fetching data.
 
         val result = topologicalSort(newTxns)
+        // If transaction resolution is performed for a transaction where some states are relevant, then those should be
+        // recorded if this has not already occurred.
         val usedStatesToRecord = if (statesToRecord == StatesToRecord.NONE) StatesToRecord.ONLY_RELEVANT else statesToRecord
         result.forEach {
             // For each transaction, verify it and insert it into the database. As we are iterating over them in a
