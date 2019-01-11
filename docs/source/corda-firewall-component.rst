@@ -231,7 +231,7 @@ Sharing ZooKeeper
 A single ZooKeeper cluster instance can be shared between multiple bridge clusters to reduce infrastructure cost, the ``haConfig.haTopic`` can be configured to allow each bridge cluster accessing different ZooKeeper path.
 
 .. image:: resources/bridge/zookeeper.png
-:scale: 100%
+     :scale: 100%
      :align: center
 
 The above example shows multiple Corda bridges (NodeA and NodeB) connecting to the same ZooKeeper server.
