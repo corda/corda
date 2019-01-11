@@ -73,6 +73,12 @@ class BridgeControlListener(val config: MutualSslConfiguration,
         val artemisSession = artemisClient.session
         registerBridgeControlListener(artemisSession)
         registerBridgeDuplicateChecker(artemisSession)
+        // Attempt to read available inboxes directly from Artemis before requesting updates from connected nodes
+        validInboundQueues.addAll(artemisSession.addressQuery(SimpleString("$P2P_PREFIX#")).queueNames.map { it.toString() })
+        log.info("Found inboxes: $validInboundQueues")
+        if (active) {
+            _activeChange.onNext(true)
+        }
         val startupMessage = BridgeControl.BridgeToNodeSnapshotRequest(bridgeId).serialize(context = SerializationDefaults.P2P_CONTEXT).bytes
         val bridgeRequest = artemisSession.createMessage(false)
         bridgeRequest.writeBodyBufferBytes(startupMessage)
@@ -177,7 +183,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
                 for (outQueue in controlMessage.sendQueues) {
                     bridgeManager.deployBridge(controlMessage.nodeIdentity, outQueue.queueName, outQueue.targets, outQueue.legalNames.toSet())
                 }
-                log.info("Added inbox: ${controlMessage.inboxQueues}")
+                log.info("Added inbox: ${controlMessage.inboxQueues}. Current inboxes: $validInboundQueues.")
                 if (bridgeManager is LoopbackBridgeManager) {
                     // Notify loopback bridge manager inboxes has changed.
                     bridgeManager.inboxesAdded(controlMessage.inboxQueues)
