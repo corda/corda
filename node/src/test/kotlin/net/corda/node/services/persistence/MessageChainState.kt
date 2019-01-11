@@ -15,8 +15,8 @@ import javax.persistence.Table
 @CordaSerializable
 data class MessageData(val value: String)
 
-data class MessageChainState(val message: MessageData, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
-    override val participants: List<AbstractParty> = listOf(by)
+data class MessageChainState(val message: MessageData, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier(), val extraParty: Party? = null) : LinearState, QueryableState {
+    override val participants: List<AbstractParty> = if (extraParty == null) listOf(by) else listOf(by, extraParty)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {

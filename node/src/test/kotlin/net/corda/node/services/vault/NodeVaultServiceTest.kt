@@ -878,7 +878,6 @@ class NodeVaultServiceTest {
         val tx1 = createFirstTx()
         val tx2 = createSecondTx(tx1)
 
-        services.recordTransactions(StatesToRecord.NONE, listOf(tx1))
         services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(tx2))
         services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(tx1))
 

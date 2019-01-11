@@ -90,13 +90,14 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         // Finish fetching data.
 
         val result = topologicalSort(newTxns)
+        val usedStatesToRecord = if (statesToRecord == StatesToRecord.NONE) StatesToRecord.ONLY_RELEVANT else statesToRecord
         result.forEach {
             // For each transaction, verify it and insert it into the database. As we are iterating over them in a
             // depth-first order, we should not encounter any verification failures due to missing data. If we fail
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
             it.verify(serviceHub)
-            serviceHub.recordTransactions(statesToRecord, listOf(it))
+            serviceHub.recordTransactions(usedStatesToRecord, listOf(it))
         }
     }
 
