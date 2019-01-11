@@ -350,14 +350,14 @@ open class TransactionBuilder @JvmOverloads constructor(
             explicitConstraintStates.isEmpty() -> services.cordappProvider.getContractAttachmentID(contractClassName) ?: throw MissingContractAttachments(inputsAndOutputs)
 
             // If there are constraints set, then select an attachment that satisfies them.
-            else -> selectAttachmentThatSatisfiesConstraints(false, contractClassName, explicitConstraintStates, inputStateRefs, services) // Select an attachment that satisfies the constraints.
+            else -> selectAttachmentThatSatisfiesConstraints(false, contractClassName, explicitConstraintStates, inputStateRefs, services)
         }
 
         val attachmentToUse = services.attachments.openAttachment(selectedAttachmentId)?.let { it as ContractAttachment }
                 ?: throw IllegalArgumentException("Contract attachment $selectedAttachmentId for $contractClassName is missing.")
 
-        if(!attachmentToUse.isSigned && explicitConstraintStates.isEmpty()){
-            log.warn("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp which is not signed. " +
+        if (forcedAttachmentId != null && explicitConstraintStates.isEmpty() && !attachmentToUse.isSigned) {
+            log.warnOnce("The transaction builder did not specify an attachment or any constraint for the output state $contractClassName. Selected the installed cordapp which is not signed. " +
                     "It will not use the SignatureConstraint, which is the recommended approach. See: https://docs.corda.net/head/api-contract-constraints.html")
         }
 
