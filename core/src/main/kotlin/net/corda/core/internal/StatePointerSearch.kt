@@ -2,6 +2,7 @@ package net.corda.core.internal
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StatePointer
+import org.apache.commons.lang.ClassUtils
 import java.lang.reflect.Field
 import java.util.*
 
@@ -11,7 +12,7 @@ import java.util.*
  */
 class StatePointerSearch(val state: ContractState) {
     // Classes in these packages should not be part of a search.
-    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle", "net.i2p.crypto")
+    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle.", "net.i2p.crypto.")
 
     // Type required for traversal.
     private data class FieldWithObject(val obj: Any, val field: Field)
@@ -20,14 +21,23 @@ class StatePointerSearch(val state: ContractState) {
     private val statePointers = mutableSetOf<StatePointer<*>>()
 
     // Record seen objects to avoid getting stuck in loops.
-    private val seenObjects = mutableSetOf<Any>().apply { add(state) }
+    private val seenObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>()).apply { add(state) }
 
     // Queue of fields to search.
     private val fieldQueue = ArrayDeque<FieldWithObject>().apply { addAllFields(state) }
 
+    private fun getAllFields(clazz: Class<*>, fields: List<Field> = emptyList()): List<Field> {
+        return if (clazz.superclass != null) {
+            getAllFields(clazz.superclass, fields + clazz.declaredFields)
+        } else {
+            fields
+        }
+    }
+
     // Helper for adding all fields to the queue.
     private fun ArrayDeque<FieldWithObject>.addAllFields(obj: Any) {
-        val fields = obj::class.java.declaredFields
+        val fields = getAllFields(obj::class.java)
+
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
             // Assumption: all required state classes are already loaded.
@@ -39,20 +49,6 @@ class StatePointerSearch(val state: ContractState) {
             }
         }
         addAll(fieldsWithObjects)
-    }
-
-    private fun isStatePointer(obj: Any): Boolean {
-        return StatePointer::class.java.isAssignableFrom(obj.javaClass)
-    }
-
-    private fun isMap(obj: Any): Boolean {
-        return java.util.Map::class.java.isAssignableFrom(obj.javaClass) ||
-                kotlin.collections.Map::class.java.isAssignableFrom(obj.javaClass)
-    }
-
-    private fun isIterable(obj: Any): Boolean {
-        return java.lang.Iterable::class.java.isAssignableFrom(obj.javaClass) ||
-                kotlin.collections.Iterable::class.java.isAssignableFrom(obj.javaClass)
     }
 
     private fun handleIterable(iterable: Iterable<*>) {
@@ -68,10 +64,10 @@ class StatePointerSearch(val state: ContractState) {
 
     private fun handleObject(obj: Any?) {
         if (obj == null) return
-        when {
-            isMap(obj) -> handleMap(obj as Map<*,*>)
-            isStatePointer(obj) -> statePointers.add(obj as StatePointer<*>)
-            isIterable(obj) -> handleIterable(obj as Iterable<*>)
+        when (obj) {
+            is Map<*, *> -> handleMap(obj)
+            is StatePointer<*> -> statePointers.add(obj)
+            is Iterable<*> -> handleIterable(obj)
             else -> {
                 val packageName = obj.javaClass.`package`.name
                 val isBlackListed = blackListedPackages.any { packageName.startsWith(it) }
