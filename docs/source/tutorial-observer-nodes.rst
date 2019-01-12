@@ -50,4 +50,5 @@ Caveats
 * When an observer node is sent a transaction with the ALL_VISIBLE flag set, any transactions in the transaction history
   that have not already been received will also have ALL_VISIBLE states recorded. This mean a node that is both an observer
   and a participant may have some transactions with all states recorded and some with only relevant states recorded, even
-  if those transactions are part of the same chain.
+  if those transactions are part of the same chain. As a result, there may be more states present in the vault than would be
+  expected if just those transactions sent with the ALL_VISIBLE recording flag were processed in this way.
