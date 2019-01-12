@@ -101,14 +101,15 @@ class SendTx(private val party: Party,
     override fun call() {
         val session = initiateFlow(party)
         subFlow(SendTransactionFlow(session, stx))
+        session.receive<Unit>()
     }
 }
 
 @InitiatedBy(SendTx::class)
 class ReceiveTx(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
-
     @Suspendable
     override fun call() {
         subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ONLY_RELEVANT))
+        otherSideSession.send(Unit)
     }
 }
