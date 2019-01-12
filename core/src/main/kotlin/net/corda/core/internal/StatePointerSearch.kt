@@ -66,6 +66,7 @@ class StatePointerSearch(val state: ContractState) {
 
     private fun handleObject(obj: Any?) {
         if (obj == null) return
+        seenObjects.add(obj)
         when (obj) {
             is Map<*, *> -> handleMap(obj)
             is StatePointer<*> -> statePointers.add(obj)
@@ -81,7 +82,6 @@ class StatePointerSearch(val state: ContractState) {
     private fun handleField(obj: Any, field: Field) {
         val newObj = field.get(obj) ?: return
         if (newObj in seenObjects) return
-        seenObjects.add(obj)
         handleObject(newObj)
     }
 
