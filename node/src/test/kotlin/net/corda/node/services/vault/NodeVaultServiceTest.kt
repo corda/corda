@@ -856,42 +856,6 @@ class NodeVaultServiceTest {
     }
 
     @Test
-    fun `Transactions received in wrong order result in correct vault states`() {
-        val middleState = UniqueDummyLinearContract.State(listOf(megaCorp.party), "Dummy linear id")
-
-        fun createFirstTx(): SignedTransaction {
-            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
-                addOutputState(middleState, UNIQUE_DUMMY_LINEAR_CONTRACT_PROGRAM_ID)
-                addOutputState(DummyDealContract.State(listOf(megaCorp.party), "Dummy linear id 2"), DUMMY_DEAL_PROGRAM_ID)
-                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
-            })
-        }
-
-        fun createSecondTx(initialTx: SignedTransaction): SignedTransaction {
-            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
-                addInputState(initialTx.coreTransaction.outRef<UniqueDummyLinearContract.State>(middleState))
-                addOutputState(DummyDealContract.State(listOf(megaCorp.party), "Dummy linear id"), DUMMY_DEAL_PROGRAM_ID)
-                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
-            })
-        }
-
-        val tx1 = createFirstTx()
-        val tx2 = createSecondTx(tx1)
-
-        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(tx2))
-        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(tx1))
-
-        assertEquals(0, database.transaction {
-            vaultService.queryBy<UniqueDummyLinearContract.State>().states.size
-        })
-
-        assertEquals(2, database.transaction {
-            vaultService.queryBy<DummyDealContract.State>().states.size
-        })
-    }
-
-
-    @Test
     @Ignore
     fun `trackByCriteria filters updates and snapshots`() {
         /*
