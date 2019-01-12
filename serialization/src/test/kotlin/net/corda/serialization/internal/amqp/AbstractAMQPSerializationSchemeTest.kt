@@ -40,7 +40,7 @@ class AbstractAMQPSerializationSchemeTest {
         val factory = SerializerFactoryBuilder.build(TESTING_CONTEXT.whitelist, TESTING_CONTEXT.deserializationClassLoader)
         val maxFactories = 512
         val backingMap = AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>({ maxFactories }).toSynchronised()
-        val scheme = object : AbstractAMQPSerializationScheme(emptySet(), backingMap, createSerializerFactoryFactory()) {
+        val scheme = object : AbstractAMQPSerializationScheme(emptySet(), emptySet(), backingMap, createSerializerFactoryFactory()) {
             override fun rpcClientSerializerFactory(context: SerializationContext): SerializerFactory {
                 return factory
             }

@@ -19,7 +19,8 @@ data class NotarySpec(
         val validating: Boolean = true,
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
-        val cluster: ClusterSpec? = null
+        val cluster: ClusterSpec? = null,
+        val maximumHeapSize: String = "512m"
 )
 
 /**
