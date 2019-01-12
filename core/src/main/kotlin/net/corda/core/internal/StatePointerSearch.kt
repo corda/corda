@@ -26,9 +26,9 @@ class StatePointerSearch(val state: ContractState) {
     // Queue of fields to search.
     private val fieldQueue = ArrayDeque<FieldWithObject>().apply { addAllFields(state) }
 
-    private fun getAllFields(clazz: Class<*>, fields: List<Field> = emptyList()): List<Field> {
+    private fun getAllFields(clazz: Class<*>, fields: List<Field>): List<Field> {
         return if (clazz.superclass != null) {
-            getAllFields(clazz.superclass, fields + clazz.declaredFields)
+            getAllFields(clazz.superclass, fields + clazz.declaredFields.asList())
         } else {
             fields
         }
@@ -36,7 +36,7 @@ class StatePointerSearch(val state: ContractState) {
 
     // Helper for adding all fields to the queue.
     private fun ArrayDeque<FieldWithObject>.addAllFields(obj: Any) {
-        val fields = getAllFields(obj::class.java)
+        val fields = getAllFields(obj::class.java, emptyList())
 
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
