@@ -55,7 +55,9 @@ object TwoPartyDealFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val (anonymousMe, anonymousCounterparty) = subFlow(SwapIdentitiesFlow(otherSideSession))
+            val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession))
+            val anonymousMe = txIdentities[ourIdentity]!!
+            val anonymousCounterparty = txIdentities[otherSideSession.counterparty]!!
             // DOCEND 2
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
