@@ -1,18 +1,17 @@
 package net.corda.core.internal
 
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.LinearPointer
 import net.corda.core.contracts.StatePointer
-import net.corda.core.contracts.StaticPointer
 import java.lang.reflect.Field
 import java.util.*
 
 /**
  * Uses reflection to search for instances of [StatePointer] within a [ContractState].
+ * TODO: Doesn't handle calculated properties. Add support for this.
  */
 class StatePointerSearch(val state: ContractState) {
     // Classes in these packages should not be part of a search.
-    private val blackListedPackages = setOf("java.", "javax.")
+    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle", "org.hibernate")
 
     // Type required for traversal.
     private data class FieldWithObject(val obj: Any, val field: Field)
@@ -36,37 +35,56 @@ class StatePointerSearch(val state: ContractState) {
             if (packageName == null) {
                 null
             } else {
-                // Ignore JDK classes.
-                val isBlacklistedPackage = blackListedPackages.any { packageName.startsWith(it) }
-                if (isBlacklistedPackage) {
-                    null
-                } else {
-                    FieldWithObject(obj, field)
-                }
+                FieldWithObject(obj, field)
             }
         }
         addAll(fieldsWithObjects)
     }
 
-    private fun handleField(obj: Any, field: Field) {
+    private fun isStatePointer(obj: Any): Boolean {
+        return StatePointer::class.java.isAssignableFrom(obj.javaClass)
+    }
+
+    private fun isMap(obj: Any): Boolean {
+        return java.util.Map::class.java.isAssignableFrom(obj.javaClass) ||
+                kotlin.collections.Map::class.java.isAssignableFrom(obj.javaClass)
+    }
+
+    private fun isIterable(obj: Any): Boolean {
+        return java.lang.Iterable::class.java.isAssignableFrom(obj.javaClass) ||
+                kotlin.collections.Iterable::class.java.isAssignableFrom(obj.javaClass)
+    }
+
+    private fun handleIterable(iterable: Iterable<*>) {
+        iterable.forEach { obj -> handleObject(obj) }
+    }
+
+    private fun handleMap(map: Map<*, *>) {
+        map.forEach { k, v ->
+            handleObject(k)
+            handleObject(v)
+        }
+    }
+
+    private fun handleObject(obj: Any?) {
+        if (obj == null) return
         when {
-            // StatePointer. Handles nullable StatePointers too.
-            field.type == LinearPointer::class.java -> statePointers.add(field.get(obj) as? LinearPointer<*> ?: return)
-            field.type == StaticPointer::class.java -> statePointers.add(field.get(obj) as? StaticPointer<*> ?: return)
-            // Not StatePointer.
+            isMap(obj) -> handleMap(obj as Map<*,*>)
+            isStatePointer(obj) -> statePointers.add(obj as StatePointer<*>)
+            isIterable(obj) -> handleIterable(obj as Iterable<*>)
             else -> {
-                val newObj = field.get(obj) ?: return
-
-                // Ignore nulls.
-                if (newObj in seenObjects) {
-                    return
-                }
-
-                // Recurse.
-                fieldQueue.addAllFields(newObj)
-                seenObjects.add(obj)
+                val packageName = obj.javaClass.`package`.name
+                val isBlackListed = blackListedPackages.any { packageName.startsWith(it) }
+                if (isBlackListed.not()) fieldQueue.addAllFields(obj)
             }
         }
+    }
+
+    private fun handleField(obj: Any, field: Field) {
+        val newObj = field.get(obj) ?: return
+        if (newObj in seenObjects) return
+        seenObjects.add(obj)
+        handleObject(newObj)
     }
 
     fun search(): Set<StatePointer<*>> {
