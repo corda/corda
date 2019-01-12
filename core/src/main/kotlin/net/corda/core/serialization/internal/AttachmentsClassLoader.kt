@@ -2,7 +2,7 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.CordaException
 import net.corda.core.KeepForDJVM
-import net.corda.common.classloading.loadClassesImplementing
+import net.corda.core.internal.loadClassesImplementing
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException

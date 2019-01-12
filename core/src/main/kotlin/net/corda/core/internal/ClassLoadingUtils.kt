@@ -1,6 +1,9 @@
-package net.corda.common.classloading
+package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
+import net.corda.core.CordaInternal
+import net.corda.core.DeleteForDJVM
+import net.corda.core.StubOutForDJVM
 import kotlin.reflect.full.createInstance
 
 /**
@@ -15,6 +18,7 @@ import kotlin.reflect.full.createInstance
  * - be non-abstract
  * - either be a Kotlin object or have a constructor with no parameters (or only optional ones)
  */
+@StubOutForDJVM
 fun <T: Any> loadClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
     return ClassGraph().addClassLoader(classloader)
             .enableAllInfo()

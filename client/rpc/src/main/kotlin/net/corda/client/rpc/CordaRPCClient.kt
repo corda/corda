@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.common.classloading.loadClassesImplementing
+import net.corda.core.internal.loadClassesImplementing
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
