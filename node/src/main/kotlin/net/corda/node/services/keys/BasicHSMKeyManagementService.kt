@@ -1,13 +1,13 @@
 package net.corda.node.services.keys
 
 import net.corda.core.crypto.*
+import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.MAX_HASH_HEX_SIZE
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.core.crypto.internal.AliasPrivateKey
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -103,7 +103,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripCachedPeerKeys(candidateKeys).filter { containsPublicKey(it) } // TODO: bulk cache access.
+        identityService.stripNotOurKeys(candidateKeys)
     }
 
     // Unlike initial keys, freshkey() is related confidential keys and it utilises platform's software key generation

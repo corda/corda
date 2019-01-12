@@ -11,6 +11,7 @@ import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.FlowStateMachine
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
@@ -34,6 +35,7 @@ import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.createTestSerializationEnv
 import net.corda.testing.internal.inVMExecutors
 import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
 import org.slf4j.LoggerFactory
@@ -48,8 +50,84 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
+import kotlin.reflect.KClass
 
 private val log = LoggerFactory.getLogger("net.corda.testing.internal.InternalTestUtils")
+
+/**
+ * Reference to the finance-contracts CorDapp in this repo. The metadata is taken directly from finance/contracts/build.gradle, including the
+ * fact that the jar is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance.contracts")`.
+ *
+ * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the flows as well.
+ */
+// TODO We can't use net.corda.finance.contracts as finance-workflows contains the package net.corda.finance.contracts.asset.cash.selection. This should be renamed.
+@JvmField
+val FINANCE_CONTRACTS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.schemas")
+
+/**
+ * Reference to the finance-workflows CorDapp in this repo. The metadata is taken directly from finance/workflows/build.gradle, including the
+ * fact that the jar is signed. If you need an unsigned jar then use `cordappWithPackages("net.corda.finance.flows")`.
+ *
+ * You will probably need to use [FINANCE_CORDAPPS] instead to get access to the contract classes as well.
+ */
+@JvmField
+val FINANCE_WORKFLOWS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.flows")
+
+@JvmField
+val FINANCE_CORDAPPS: Set<TestCordappInternal> = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
+
+@JvmField
+val BUSINESS_NETWORK_CORDAPP: TestCordappImpl = findCordapp("net.corda.sample.businessnetwork")
+
+fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
+
+fun cordappsForPackages(packageNames: Iterable<String>): Set<CustomCordapp> {
+    return simplifyScanPackages(packageNames).mapTo(HashSet()) { cordappWithPackages(it) }
+}
+
+/**
+ * Create a *custom* CorDapp which contains all the classes and resoures located in the given packages. The CorDapp's metadata will be the
+ * default values as defined in the [CustomCordapp] c'tor. Use the `copy` to change them. This means the metadata will *not* be the one defined
+ * in the original CorDapp(s) that the given packages may represent. If this is not what you want then use [findCordapp] instead.
+ */
+fun cordappWithPackages(vararg packageNames: String): CustomCordapp = CustomCordapp(packages = simplifyScanPackages(packageNames.asList()))
+
+/** Create a *custom* CorDapp which contains just the given classes. */
+// TODO Rename to cordappWithClasses
+fun cordappForClasses(vararg classes: Class<*>): CustomCordapp = CustomCordapp(packages = emptySet(), classes = classes.toSet())
+
+/**
+ * Find the single CorDapp jar on the current classpath which contains the given package. This is a convenience method for
+ * [TestCordapp.findCordapp] but returns the internal [TestCordappImpl].
+ */
+fun findCordapp(scanPackage: String): TestCordappImpl = TestCordapp.findCordapp(scanPackage) as TestCordappImpl
+
+private fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
+    val stackTrace = Throwable().stackTrace
+    val index = stackTrace.indexOfLast { it.className == directCallerClass.java.name }
+    if (index == -1) return null
+    return try {
+        Class.forName(stackTrace[index + 1].className)
+    } catch (e: ClassNotFoundException) {
+        null
+    }
+}
+
+fun getCallerPackage(directCallerClass: KClass<*>): String? = getCallerClass(directCallerClass)?.`package`?.name
+
+/**
+ * Squashes child packages if the parent is present. Example: ["com.foo", "com.foo.bar"] into just ["com.foo"].
+ */
+@VisibleForTesting
+internal fun simplifyScanPackages(scanPackages: Iterable<String>): Set<String> {
+    return scanPackages.sorted().fold(emptySet()) { soFar, packageName ->
+        when {
+            soFar.isEmpty() -> setOf(packageName)
+            packageName.startsWith("${soFar.last()}.") -> soFar
+            else -> soFar + packageName
+        }
+    }
+}
 
 /**
  * @throws ListenProcessDeathException if [listenProcess] dies before the check succeeds, i.e. the check can't succeed as intended.
