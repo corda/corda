@@ -11,7 +11,7 @@ import java.util.*
  */
 class StatePointerSearch(val state: ContractState) {
     // Classes in these packages should not be part of a search.
-    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle", "org.hibernate")
+    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle", "net.i2p.crypto")
 
     // Type required for traversal.
     private data class FieldWithObject(val obj: Any, val field: Field)
