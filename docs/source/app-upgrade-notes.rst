@@ -28,7 +28,7 @@ Alter the versions you depend on in your Gradle file like so:
 .. sourcecode:: groovy
 
     ext.corda_release_version = '4.0'
-    ext.corda_gradle_plugins_version = '4.0.37'
+    ext.corda_gradle_plugins_version = '4.0.38'
     ext.kotlin_version = '1.2.71'
     ext.quasar_version = '0.7.10'
 
