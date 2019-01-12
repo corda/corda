@@ -76,6 +76,9 @@ val FINANCE_WORKFLOWS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.
 @JvmField
 val FINANCE_CORDAPPS: Set<TestCordappInternal> = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
 
+@JvmField
+val BUSINESS_NETWORK_CORDAPP: TestCordappImpl = findCordapp("net.corda.sample.businessnetwork")
+
 fun cordappsForPackages(vararg packageNames: String): Set<CustomCordapp> = cordappsForPackages(packageNames.asList())
 
 fun cordappsForPackages(packageNames: Iterable<String>): Set<CustomCordapp> {
