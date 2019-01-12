@@ -96,21 +96,21 @@ class PersistentIdentityServiceTests {
     }
 
     @Test
-    fun `stripping others when none registered does not strip`() {
-        assertEquals(identityService.stripCachedPeerKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+    fun `stripping others when none registered strips`() {
+        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
     @Test
-    fun `stripping others when only us registered does not strip`() {
+    fun `stripping others when only us registered strips`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
-        assertEquals(identityService.stripCachedPeerKeys(listOf(BOB_PUBKEY)).first(), BOB_PUBKEY)
+        assertEquals(identityService.stripNotOurKeys(listOf(BOB_PUBKEY)).firstOrNull(), null)
     }
 
     @Test
     fun `stripping others when us and others registered does not strip us`() {
         identityService.verifyAndRegisterIdentity(ALICE_IDENTITY)
         identityService.verifyAndRegisterIdentity(BOB_IDENTITY)
-        val stripped = identityService.stripCachedPeerKeys(listOf(ALICE_PUBKEY, BOB_PUBKEY))
+        val stripped = identityService.stripNotOurKeys(listOf(ALICE_PUBKEY, BOB_PUBKEY))
         assertEquals(stripped.single(), ALICE_PUBKEY)
     }
 
