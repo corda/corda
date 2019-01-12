@@ -16,7 +16,7 @@ class FinalityHandler(val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))
-        logger.warnOnce("Finalised transaction from ${sender.counterparty} recorded using insecure API")
+        logger.warnOnce("Insecure API to record finalised transaction was used by ${sender.counterparty} (${sender.getCounterpartyFlowInfo()})")
     }
 }
 

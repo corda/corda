@@ -132,6 +132,6 @@ private class SwapIdentitiesHandler(private val otherSide: FlowSession) : FlowLo
     @Suspendable
     override fun call() {
         subFlow(SwapIdentitiesFlow(otherSide))
-        logger.warnOnce("Swapped anonymous identities with ${otherSide.counterparty} using insecure API")
+        logger.warnOnce("Insecure API to swap anonymous identities was used by ${otherSide.counterparty} (${otherSide.getCounterpartyFlowInfo()})")
     }
 }
