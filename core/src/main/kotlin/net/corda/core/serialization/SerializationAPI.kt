@@ -206,18 +206,6 @@ interface SerializationContext {
     fun withWhitelisted(clazz: Class<*>): SerializationContext
 
     /**
-     * Helper method to return a new context based on this context with the given list of classes specifically whitelisted.
-     */
-    fun withWhitelist(classes: List<Class<*>>): SerializationContext {
-        var currentContext = this
-        classes.forEach {
-            clazz -> currentContext = currentContext.withWhitelisted(clazz)
-        }
-
-        return currentContext
-    }
-
-    /**
      * Helper method to return a new context based on this context with the given serializers added.
      */
     fun withCustomSerializers(serializers: Set<SerializationCustomSerializer<*, *>>): SerializationContext
@@ -356,4 +344,16 @@ interface ClassWhitelist {
 @DoNotImplement
 interface EncodingWhitelist {
     fun acceptEncoding(encoding: SerializationEncoding): Boolean
+}
+
+/**
+ * Helper method to return a new context based on this context with the given list of classes specifically whitelisted.
+ */
+fun SerializationContext.withWhitelist(classes: List<Class<*>>): SerializationContext {
+    var currentContext = this
+    classes.forEach {
+        clazz -> currentContext = currentContext.withWhitelisted(clazz)
+    }
+
+    return currentContext
 }
