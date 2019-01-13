@@ -324,7 +324,7 @@ class NodeAttachmentService(
 
     private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
         if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
-            val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.map { it + 1 } // +1 as versions starts from 1 not 0
+            val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
             val max = versions.max()
             if (max != null && max > contractVersionFromFile) {
                 val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
