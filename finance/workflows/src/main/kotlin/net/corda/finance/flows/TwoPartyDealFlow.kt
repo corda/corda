@@ -190,7 +190,7 @@ object TwoPartyDealFlow {
 
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
-            ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            ptx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
             return Triple(ptx, arrayListOf(deal.participants.single { it is Party && serviceHub.myInfo.isLegalIdentity(it) }.owningKey), emptyList())
         }
     }

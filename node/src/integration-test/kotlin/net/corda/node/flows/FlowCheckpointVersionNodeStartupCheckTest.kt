@@ -47,7 +47,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             val result = if (page.snapshot.states.isNotEmpty()) {
                 page.snapshot.states.first()
             } else {
-                val r = page.updates.timeout(5, TimeUnit.SECONDS).take(1).toBlocking().single()
+                val r = page.updates.timeout(10, TimeUnit.SECONDS).take(1).toBlocking().single()
                 if (r.consumed.isNotEmpty()) r.consumed.first() else r.produced.first()
             }
             assertNotNull(result)
