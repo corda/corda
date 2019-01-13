@@ -4,6 +4,8 @@ import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
@@ -21,14 +23,12 @@ import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import net.corda.nodeapi.exceptions.DuplicateContractClassException
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestContractJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestJar
 import net.corda.testing.core.internal.ContractJarTestUtils.makeTestSignedContractJar
 import net.corda.testing.core.internal.SelfCleaningDir
-import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
+import net.corda.testing.internal.*
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
@@ -54,7 +54,9 @@ class NodeAttachmentServiceTest {
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
-    private val services = rigorousMock<ServicesForResolution>()
+    private val services = rigorousMock<ServicesForResolution>().also {
+        doReturn(testNetworkParameters()).whenever(it).networkParameters
+    }
 
     @Before
     fun setUp() {
