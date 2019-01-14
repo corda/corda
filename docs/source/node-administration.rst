@@ -3,54 +3,6 @@ Node administration
 
 .. _hiding-sensitive-data:
 
-Hiding sensitive data
----------------------
-A frequent requirement is that configuration files must not expose passwords to unauthorised readers. By leveraging environment variables, it is possible to hide passwords and other similar fields.
-
-Take a simple node config that wishes to protect the node cryptographic stores:
-
-.. parsed-literal::
-
-    myLegalName : "O=PasswordProtectedNode,OU=corda,L=London,C=GB"
-    keyStorePassword : ${KEY_PASS}
-    trustStorePassword : ${TRUST_PASS}
-    p2pAddress : "localhost:12345"
-    devMode : false
-     networkServices {
-        doormanURL = "https://cz.example.com"
-        networkMapURL = "https://cz.example.com"
-    }
-
-By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
-The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
-
-
-Bash
-~~~~
-
-.. sourcecode:: shell
-
-    KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword) TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword) java -jar corda.jar
-
-.. warning:: If this approach is taken, the passwords will appear in the shell history.
-
-
-Windows PowerShell
-~~~~~~~~~~~~~~~~~~
-
-.. sourcecode:: shell
-
-    $env:KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword); $env:TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword); java -jar corda.jar
-
-
-For launching on Windows without PowerShell, it is not possible to perform command substitution, and so the variables must be specified manually, for example:
-
-.. sourcecode:: shell
-
-    SET KEY_PASS=mypassword & SET TRUST_PASS=mypassword & java -jar corda.jar
-
-.. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
-
 
 Logging
 -------
@@ -201,6 +153,55 @@ node is running out of memory, you can give it more by running the node like thi
 The example command above would give a 1 gigabyte Java heap.
 
 .. note:: Unfortunately the JVM does not let you limit the total memory usage of Java program, just the heap size.
+
+Hiding sensitive data
+---------------------
+A frequent requirement is that configuration files must not expose passwords to unauthorised readers. By leveraging environment variables, it is possible to hide passwords and other similar fields.
+
+Take a simple node config that wishes to protect the node cryptographic stores:
+
+.. parsed-literal::
+
+    myLegalName = "O=PasswordProtectedNode,OU=corda,L=London,C=GB"
+    keyStorePassword = ${KEY_PASS}
+    trustStorePassword = ${TRUST_PASS}
+    p2pAddress = "localhost:12345"
+    devMode = false
+     networkServices {
+        doormanURL = "https://cz.example.com"
+        networkMapURL = "https://cz.example.com"
+    }
+
+By delegating to a password store, and using `command substitution` it is possible to ensure that sensitive passwords never appear in plain text.
+The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variables read from a program named ``corporatePasswordStore``.
+
+
+Bash
+~~~~
+
+.. sourcecode:: shell
+
+    KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword) TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword) java -jar corda.jar
+
+.. warning:: If this approach is taken, the passwords will appear in the shell history.
+
+
+Windows PowerShell
+~~~~~~~~~~~~~~~~~~
+
+.. sourcecode:: shell
+
+    $env:KEY_PASS=$(corporatePasswordStore --cordaKeyStorePassword); $env:TRUST_PASS=$(corporatePasswordStore --cordaTrustStorePassword); java -jar corda.jar
+
+
+For launching on Windows without PowerShell, it is not possible to perform command substitution, and so the variables must be specified manually, for example:
+
+.. sourcecode:: shell
+
+    SET KEY_PASS=mypassword & SET TRUST_PASS=mypassword & java -jar corda.jar
+
+.. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
+
 
 Backup recommendations
 ----------------------

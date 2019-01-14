@@ -1,7 +1,7 @@
 .. _node-naming:
 
-Node naming
-===========
+Node identity
+=============
 A node's name must be a valid X.500 distinguished name. In order to be compatible with other implementations
 (particularly TLS implementations), we constrain the allowed X.500 name attribute types to a subset of the minimum
 supported set for X.509 certificates (specified in RFC 3280), plus the locality attribute:
