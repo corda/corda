@@ -28,20 +28,15 @@ class ContractsJarFile(private val file: Path) : ContractsJar {
     override val hash: SecureHash by lazy(LazyThreadSafetyMode.NONE, file::hash)
 
     override fun scan(): List<ContractClassName> {
-        val scanResult = ClassGraph().overrideClasspath(singleton(file)).enableAllInfo().scan()
+        val scanResult = ClassGraph().overrideClasspath(singleton(file)).enableClassInfo().scan()
 
-        val contractClassNames = scanResult.use {
+        return scanResult.use { result ->
             coreContractClasses
-                    .flatMap { scanResult.getClassesImplementing(it.qualifiedName).names }
-                    .toSet()
-        }
-
-        return URLClassLoader(arrayOf(file.toUri().toURL()), Contract::class.java.classLoader).use { cl ->
-            contractClassNames.mapNotNull {
-                val contractClass = cl.loadClass(it)
-                // Only keep instantiable contracts
-                if (contractClass.isConcreteClass) contractClass.name else null
-            }
+                    .flatMap { result.getClassesImplementing(it.qualifiedName)}
+                    .filterNot { it.isAbstract }
+                    .filterNot { it.isInterface }
+                    .map { it.name }
+                    .toList()
         }
     }
 }
