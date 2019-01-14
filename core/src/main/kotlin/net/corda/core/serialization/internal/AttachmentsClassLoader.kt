@@ -2,6 +2,7 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.CordaException
 import net.corda.core.KeepForDJVM
+import net.corda.core.internal.loadClassesImplementing
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
@@ -10,7 +11,11 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationFactory
+import net.corda.core.serialization.SerializationWhitelist
+import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.debug
@@ -18,6 +23,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.*
+import java.util.*
 
 /**
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
@@ -174,34 +180,38 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
 }
 
 /**
- * This is just a factory that provides a cache to avoid constructing expensive [AttachmentsClassLoader]s.
+ * This is just a factory that provides caches to optimise expensive construction/loading of classloaders, serializers, whitelisted classes.
  */
 @VisibleForTesting
 internal object AttachmentsClassLoaderBuilder {
 
-    private const val ATTACHMENT_CLASSLOADER_CACHE_SIZE = 1000
+    private const val CACHE_SIZE = 1000
 
     // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<List<SecureHash>, AttachmentsClassLoader> = createSimpleCache<List<SecureHash>, AttachmentsClassLoader>(ATTACHMENT_CLASSLOADER_CACHE_SIZE)
-            .toSynchronised()
-
-    fun build(attachments: List<Attachment>): AttachmentsClassLoader {
-        return cache.computeIfAbsent(attachments.map { it.id }.sorted()) {
-            AttachmentsClassLoader(attachments)
-        }
-    }
+    private val cache: MutableMap<Set<SecureHash>, SerializationContext> = createSimpleCache(CACHE_SIZE)
 
     fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
+        val attachmentIds = attachments.map { it.id }.toSet()
 
-        // Create classloader from the attachments.
-        val transactionClassLoader = AttachmentsClassLoaderBuilder.build(attachments)
+        val serializationContext = cache.computeIfAbsent(attachmentIds) {
+            // Create classloader and load serializers, whitelisted classes
+            val transactionClassLoader = AttachmentsClassLoader(attachments)
+            val serializers = loadClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+            val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
+                    .flatMap { it.whitelist }
+                    .toList()
 
-        // Create a new serializationContext for the current Transaction.
-        val transactionSerializationContext = SerializationFactory.defaultFactory.defaultContext.withPreventDataLoss().withClassLoader(transactionClassLoader)
+            // Create a new serializationContext for the current Transaction.
+            SerializationFactory.defaultFactory.defaultContext
+                    .withPreventDataLoss()
+                    .withClassLoader(transactionClassLoader)
+                    .withWhitelist(whitelistedClasses)
+                    .withCustomSerializers(serializers)
+        }
 
         // Deserialize all relevant classes in the transaction classloader.
-        return SerializationFactory.defaultFactory.withCurrentContext(transactionSerializationContext) {
-            block(transactionClassLoader)
+        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+            block(serializationContext.deserializationClassLoader)
         }
     }
 }

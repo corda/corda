@@ -322,6 +322,21 @@ class NodeAttachmentService(
         }
     }
 
+    private fun increaseDefaultVersionIfWhitelistedAttachment(contractClassNames: List<ContractClassName>, contractVersionFromFile: Int, attachmentId : AttachmentId) =
+        if (contractVersionFromFile == DEFAULT_CORDAPP_VERSION) {
+            val versions = contractClassNames.mapNotNull { servicesForResolution.networkParameters.whitelistedContractImplementations[it]?.indexOf(attachmentId) }.filter { it >= 0 }.map { it + 1 } // +1 as versions starts from 1 not 0
+            val max = versions.max()
+            if (max != null && max > contractVersionFromFile) {
+                val msg = "Updating version of attachment $attachmentId from '$contractVersionFromFile' to '$max'"
+                if (versions.toSet().size > 1)
+                    log.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                else
+                    log.debug(msg)
+                max
+            } else contractVersionFromFile
+        }
+        else contractVersionFromFile
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
     private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
         return database.transaction {
@@ -339,7 +354,7 @@ class NodeAttachmentService(
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
-                    val contractVersion = getVersion(bytes)
+                    val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
 
                     verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
@@ -477,7 +492,7 @@ class NodeAttachmentService(
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
         check (signed.size <= 1) //sanity check
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
-        if (unsigned.size > 1) //TODO cater better for whiltelisted JARs - CORDA-2405
+        if (unsigned.size > 1)
             log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
     }

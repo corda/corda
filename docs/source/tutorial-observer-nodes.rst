@@ -47,8 +47,8 @@ Caveats
   later re-record the same transaction as an observer. This issue is tracked here:
   https://r3-cev.atlassian.net/browse/CORDA-883
 
-* Observer nodes will only record the states of the transactions sent to them, and not any states from any previous
-  transactions in the chain. If the observer node is required to follow the creation and deletion of states, then each
-  transaction in the chain involving those states must be sent individually. This is because the observer node does not
-  necessarily have any visibility into the states of intermediate transactions, and so cannot always determine whether
-  a previous state has been consumed when a new transaction is received.
+* When an observer node is sent a transaction with the ALL_VISIBLE flag set, any transactions in the transaction history
+  that have not already been received will also have ALL_VISIBLE states recorded. This mean a node that is both an observer
+  and a participant may have some transactions with all states recorded and some with only relevant states recorded, even
+  if those transactions are part of the same chain. As a result, there may be more states present in the vault than would be
+  expected if just those transactions sent with the ALL_VISIBLE recording flag were processed in this way.

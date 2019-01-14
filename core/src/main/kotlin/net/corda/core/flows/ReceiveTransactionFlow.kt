@@ -43,7 +43,7 @@ open class ReceiveTransactionFlow @JvmOverloads constructor(private val otherSid
             it.pushToLoggingContext()
             logger.info("Received transaction acknowledgement request from party ${otherSideSession.counterparty}.")
             checkParameterHash(it.networkParametersHash)
-            subFlow(ResolveTransactionsFlow(it, otherSideSession))
+            subFlow(ResolveTransactionsFlow(it, otherSideSession, statesToRecord))
             logger.info("Transaction dependencies resolution completed.")
             try {
                 it.verify(serviceHub, checkSufficientSignatures)

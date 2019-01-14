@@ -240,9 +240,14 @@ The following controls are enforced for these different types of jars within the
 - Signed contract JARs must be uniquely versioned per contract class (or group of).
   At runtime the node will throw a `DuplicateContractClassException`` exception if this condition is violated.
 
-- Unsigned contract JARs: there may exist multiple instances of the same contract jar.
+- Unsigned contract JARs: there should not exist multiple instances of the same contract jar.
+  When a whitelisted JARs is imported and it doesn't contain a version number, the version will be copied from the position (counting from 1)
+  of this JAR in the whilelist. The same JAR can be present in many lists (if it contains many contracts),
+  in such case the version will be equal to the highest position of the JAR in all lists.
+  The new whitelist needs to be distributed to the node before the JAR is imported, otherwise it will receive default version.
   At run-time the node will warn of duplicates encountered.
   The most recent version given by insertionDate into the attachment storage will be used upon transaction building/resolution.
+
 
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------

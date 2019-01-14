@@ -19,17 +19,21 @@ import net.corda.core.node.services.vault.Builder
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.security.PublicKey
+import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 4
+const val PLATFORM_VERSION = 5
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)

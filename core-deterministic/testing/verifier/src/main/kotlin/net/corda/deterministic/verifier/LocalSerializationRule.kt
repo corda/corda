@@ -4,6 +4,7 @@ import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer
+import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.serialization.internal.*
@@ -57,15 +58,16 @@ class LocalSerializationRule(private val label: String) : TestRule {
 
     private fun createTestSerializationEnv(): SerializationEnvironment {
         val factory = SerializationFactoryImpl(mutableMapOf()).apply {
-            registerScheme(AMQPSerializationScheme(emptySet(), AccessOrderLinkedHashMap(128)))
+            registerScheme(AMQPSerializationScheme(emptySet(), emptySet(), AccessOrderLinkedHashMap(128)))
         }
         return SerializationEnvironment.with(factory, AMQP_P2P_CONTEXT)
     }
 
     private class AMQPSerializationScheme(
             cordappCustomSerializers: Set<SerializationCustomSerializer<*, *>>,
+            cordappSerializationWhitelists: Set<SerializationWhitelist>,
             serializerFactoriesForContexts: AccessOrderLinkedHashMap<SerializationFactoryCacheKey, SerializerFactory>
-    ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, serializerFactoriesForContexts) {
+    ) : AbstractAMQPSerializationScheme(cordappCustomSerializers, cordappSerializationWhitelists, serializerFactoriesForContexts) {
         override fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory {
             throw UnsupportedOperationException()
         }

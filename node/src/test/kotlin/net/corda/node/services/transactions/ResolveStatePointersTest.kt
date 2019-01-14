@@ -87,7 +87,7 @@ class ResolveStatePointersTest {
     @Test
     fun `resolving nested pointers is possible`() {
         // Create barOne.
-        createPointedToState(barOne)
+        val barOneStateAndRef = createPointedToState(barOne)
 
         // Create another Bar - barTwo - which points to barOne.
         val barTwoStateAndRef = createPointedToState(barTwo)
@@ -105,6 +105,7 @@ class ResolveStatePointersTest {
 
         // Check both Bar StateRefs have been added to the transaction.
         assertEquals(2, tx.referenceStates().size)
+        assertEquals(setOf(barOneStateAndRef.ref, barTwoStateAndRef.ref), tx.referenceStates().toSet())
     }
 
     @Test
