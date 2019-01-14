@@ -7,6 +7,7 @@ import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.identity.*
 import net.corda.core.internal.NotaryChangeTransactionBuilder
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.packageName
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.StatesToRecord
@@ -681,7 +682,7 @@ class NodeVaultServiceTest {
     fun observerMode() {
         fun countCash(): Long {
             return database.transaction {
-                vaultService.queryBy(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(), PageSpecification(1)).totalStatesAvailable
+                vaultService.queryBy(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL), PageSpecification(1)).totalStatesAvailable
             }
         }
         val currentCashStates = countCash()
@@ -775,9 +776,9 @@ class NodeVaultServiceTest {
         services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
 
         // Test one.
-        // RelevancyStatus is RELEVANT by default. This should return two states.
+        // RelevancyStatus is RELEVANT by default. This should return three states.
         val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
-        assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
+        assertEquals(setOf(1, 3, 6), resultOne)
 
         // Test two.
         // RelevancyStatus set to NOT_RELEVANT.
@@ -787,9 +788,9 @@ class NodeVaultServiceTest {
 
         // Test three.
         // RelevancyStatus set to ALL.
-        val criteriaThree = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
+        val criteriaThree = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
         val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
-        assertEquals(setOf(1, 3, 6), resultThree)
+        assertEquals(setOf(1, 3, 4, 5, 6), resultThree)
 
         // We should never see 2 or 7.
     }
@@ -853,6 +854,35 @@ class NodeVaultServiceTest {
         assertEquals(1, database.transaction {
             vaultService.queryBy<DummyDealContract.State>().states.size
         })
+    }
+
+    @Test
+    fun `V3 vault queries return all states by default`() {
+        fun createTx(number: Int, vararg participants: Party): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        fun List<StateAndRef<DummyState>>.getNumbers() = map { it.state.data.magicNumber }.toSet()
+
+        CordappResolver.withCordapp(targetPlatformVersion = 3) {
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+            services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+            services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+            services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+
+            // Test one.
+            // RelevancyStatus is ALL by default. This should return five states.
+            val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
+            assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
+        }
+
+        // We should never see 2 or 7.
     }
 
     @Test
