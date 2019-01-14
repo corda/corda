@@ -32,7 +32,7 @@ class CordappContext private constructor(
         }
     }
 
-    @Deprecated("Use factory function 'create'.")
+    @Deprecated("CordappContexts should not be created. Instead retrieve them using `CordappProvider.getAppContext()`.")
     constructor(
             cordapp: Cordapp,
             attachmentId: SecureHash?,
