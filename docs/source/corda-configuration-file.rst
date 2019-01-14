@@ -23,17 +23,16 @@ The Corda configuration file uses the HOCON format which is a superset of JSON. 
 
 Please do NOT use double quotes (``"``) in configuration keys.
 
-Node setup will log ``Config files should not contain \" in property names. Please fix: [key]`` as an error when it finds double quotes around keys.
+Node setup will log ``Config files should not contain " in property names. Please fix: [key]`` as an error when it finds double quotes around keys.
 This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property ``"dataSourceProperties.dataSourceClassName" = "val"`` in *reference.conf* (see: Reference.conf_) would be not overwritten by the property ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
 
 By default the node will fail to start in presence of unknown property keys.
-To alter this behaviour, program line argument ``on-unknown-config-keys`` can be set to ``IGNORE`` (default is ``FAIL``).
+To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
 
-How to overwrite values from node.conf
---------------------------------------
+Overriding values from node.conf
+--------------------------------
 
-Enviroment variables
-  All fields can be used with placeholders for environment variables.
+Environment variables
   For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``.
   See: :ref:`hiding-sensitive-data` section in "Node administration" chapter.
 
@@ -49,7 +48,7 @@ JVM options
 Configuration file fields
 -------------------------
 
-.. note :: The available config fields are listed below in alphabetic order.
+.. note :: The available configuration fields are listed below in alphabetic order.
 
 additionalP2PAddresses
   An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
@@ -68,27 +67,28 @@ attachmentCacheBound
 
   *Default:* 1024
 
-compatibilityZoneURL
-  The root address of Corda compatibility zone network management services, it is used by the Corda node to register with the network and obtain Corda node certificate, (See :doc:`permissioning` for more information.) and also used by the node to obtain network map information.
-  Cannot be set at the same time as the ``networkServices`` option.
 
-  **Important:  old config value, please use networkServices**
+compatibilityZoneURL (deprecated)
+  The root address of the Corda compatibility zone network management services, it is used by the Corda node to register with the network and obtain a Corda node certificate, (See :doc:`permissioning` for more information.) and also is used by the node to obtain network map information.
+  Cannot be set at the same time as the :ref:`networkServices <corda_configuration_file_networkServices>` option.
+
+  **Important:  old configuration value, please use networkServices**
 
   *Default:* not defined
 
 .. _corda_configuration_file_signer_blacklist:
 
 cordappSignerKeyFingerprintBlacklist
-  List of public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
-  Node will not load Cordapps signed by those keys.
+  List of the public keys fingerprints (SHA-256 of public key hash) not allowed as Cordapp JARs signers.
+  The node will not load Cordapps signed by those keys.
   The option takes effect only in production mode and defaults to Corda development keys (``["56CA54E803CB87C8472EBD3FBC6A2F1876E814CEEBF74860BD46997F40729367", "83088052AF16700457AE2C978A7D8AC38DD6A7C713539D00B897CD03A5E5D31D"]``), in development mode any key is allowed to sign Cordpapp JARs.
 
   *Default:* not defined
 
 crlCheckSoftFail
-  This is a boolean flag that when enabled (i.e. `true` value is set) the certificate revocation list (CRL) checking will use the soft fail mode.
+  This is a boolean flag that when enabled (i.e. ``true`` value is set) causes the certificate revocation list (CRL) checking will use the soft fail mode.
   The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
-  If this parameter is set to `false` the rigorous CRL checking takes place, meaning that each certificate in the certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
+  If this parameter is set to ``false`` rigorous CRL checking takes place, involving each certificate in the certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
 
   *Default:* true
 
@@ -112,21 +112,22 @@ database
     *Default:* ``REPEATABLE_READ``
 
   exportHibernateJMXStatistics:
-    Whether to export Hibernate JMX statistics
-    *Caution:* expensive run-time overhead
+    Whether to export Hibernate JMX statistics.
+
+    **Caution: enabling this option causes expensive run-time overhead**
 
     *Default:* false
 
   initialiseSchema
-    Boolean on whether to update database schema at startup (or create when node starts for the first time).
-    If set to ``false`` on startup, the node will validate if it's running against the compatible database schema.
+    Boolean which indicates whether to update the database schema at startup (or create the schema when node starts for the first time).
+    If set to ``false`` on startup, the node will validate if it's running against a compatible database schema.
 
     *Default:* true
 
   initialiseAppSchema
-    The property allows to override (downgrade) ``database.initialiseSchema`` for the Hibernate DDL generation for CorDapp schemas.
+    The property allows to override ``database.initialiseSchema`` for the Hibernate DDL generation for CorDapp schemas.
     ``UPDATE`` performs an update of CorDapp schemas, while ``VALID`` only verifies their integrity and ``NONE`` performs no check.
-    When ``initialiseSchema`` is set to false then ``initialiseAppSchema`` may be set as ``VALID`` or ``NONE`` only.
+    When ``initialiseSchema`` is set to ``false``, then ``initialiseAppSchema`` may be set as ``VALID`` or ``NONE`` only.
 
     *Default:* CorDapp schemas creation is controlled with ``initialiseSchema``.
 
@@ -137,7 +138,7 @@ dataSourceProperties
 
   *Default:*
 
-  .. sourcecode:: kotlin
+  .. parsed-literal::
 
     dataSourceClassName = org.h2.jdbcx.JdbcDataSource
     dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
@@ -158,7 +159,7 @@ devMode
   The node will exit if ``devMode`` is false and the keystore does not exist.
   ``devMode`` also turns on background checking of flow checkpoints to shake out any bugs in the checkpointing process.
   Also, if ``devMode`` is true, Hibernate will try to automatically create the schema required by Corda or update an existing schema in the SQL database; if ``devMode`` is false, Hibernate will simply validate the existing schema, failing on node start if the schema is either not present or not compatible.
-  If no value is specified in the node config file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
+  If no value is specified in the node configuration file, the node will attempt to detect if it's running on a developer machine and set ``devMode=true`` in that case.
   This value can be overridden from the command line using the ``--dev-mode`` option.
 
   *Default:* Corda will try to establish based on OS environment
@@ -175,7 +176,7 @@ devModeOptions
 
 
 emailAddress
-  email address responsible for node administration, used by Compatibility Zone administrator.
+  The email address responsible for node administration, used by the Compatibility Zone administrator.
 
   *Default:* company@example.com
 
@@ -183,7 +184,7 @@ extraNetworkMapKeys
   An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on these keys.
   Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
 
-  **Important: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.**
+  **Important: This is a temporary feature for onboarding network participants that limits their visibility for privacy reasons.**
 
   *Default:* not defined
 
@@ -229,7 +230,7 @@ h2Settings
   See :doc:`node-database-access-h2`.
   For non-localhost address the database password needs to be set in ``dataSourceProperties``.
 
-  *Default:* ???
+  *Default:* NULL
 
 jarDirs
   An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
@@ -244,7 +245,7 @@ jmxMonitoringHttpPort
   If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
   Default Jolokia access url is http://127.0.0.1:port/jolokia/
 
-  *Default:*  not defined
+  *Default:* not defined
 
 jmxReporterType
   Provides an option for registering an alternative JMX reporter.
@@ -339,6 +340,8 @@ networkParameterAcceptanceSettings
 
     *Default:* empty list
 
+.. _corda_configuratation_file_networkServices:
+
 networkServices
   If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
   and thus have different URLs then this option should be used in place of the ``compatibilityZoneURL`` setting.
@@ -402,7 +405,7 @@ rpcSettings
     useSsl
       boolean, indicates whether or not the node should require clients to use SSL for RPC connections.
 
-      *Default:* ``false``
+      *Default:* false
 
     ssl
       (mandatory if ``useSsl=true``) SSL settings for the RPC server.
@@ -419,7 +422,7 @@ rpcSettings
 
 rpcUsers
   A list of users who are authorised to access the RPC system.
-  Each user in the list is a config object with the following fields:
+  Each user in the list is a configuration object with the following fields:
 
   username
     Username consisting only of word characters (a-z, A-Z, 0-9 and _)
