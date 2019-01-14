@@ -7,10 +7,10 @@ Identifying an area to contribute
 ---------------------------------
 There are several ways to identify an area where you can contribute to Corda:
 
-* The easiest is just to drop a message to one of the :ref:`Community Maintainers <community-maintainers>` in Slack saying "I want to
-  help!". We'll work together to find a place for you to contribute
+* The easiest is just to message one of the :ref:`Community Maintainers <community-maintainers>` saying "I want to help!". They'll work
+  with you to find an area for you to contribute
 
-* If you have a specific contribution you would like to make, confirm whether the contribution is appropriate first by reaching out in the
+* If you have a specific contribution in mind, confirm whether the contribution is appropriate first by reaching out in the
   ``#contributing`` channel of the `Corda Slack <http://slack.corda.net/>`_ or contacting one of the
   :ref:`Community Maintainers <community-maintainers>` directly
 
