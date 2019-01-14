@@ -31,7 +31,6 @@ import java.util.function.Predicate
 class LedgerTransaction
 @ConstructorForDeserialization
 // LedgerTransaction is not meant to be created directly from client code, but rather via WireTransaction.toLedgerTransaction
-// TODO sollecitom constructor used to be public, and `public <init>(java.util.List, java.util.List, java.util.List, java.util.List, net.corda.core.crypto.SecureHash, net.corda.core.identity.Party, net.corda.core.contracts.TimeWindow, net.corda.core.contracts.PrivacySalt, net.corda.core.node.NetworkParameters, int, kotlin.jvm.internal.DefaultConstructorMarker)`.
 private constructor(
         // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
