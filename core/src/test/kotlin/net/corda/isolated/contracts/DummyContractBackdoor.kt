@@ -1,4 +1,4 @@
-package net.corda.nodeapi
+package net.corda.isolated.contracts
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.PartyAndReference
