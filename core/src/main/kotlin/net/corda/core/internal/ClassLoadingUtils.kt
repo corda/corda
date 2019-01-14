@@ -1,8 +1,6 @@
 package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
-import net.corda.core.CordaInternal
-import net.corda.core.DeleteForDJVM
 import net.corda.core.StubOutForDJVM
 import kotlin.reflect.full.createInstance
 
@@ -21,7 +19,7 @@ import kotlin.reflect.full.createInstance
 @StubOutForDJVM
 fun <T: Any> loadClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
     return ClassGraph().addClassLoader(classloader)
-            .enableAllInfo()
+            .enableClassInfo()
             .scan()
             .getClassesImplementing(clazz.name)
             .filterNot { it.isAbstract }

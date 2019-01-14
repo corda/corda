@@ -31,7 +31,7 @@ class WebserverDriverTests {
     fun `starting a node and independent web server works`() {
         val addr = driver(DriverParameters(notarySpecs = emptyList())) {
             val node = startNode(providedName = DUMMY_BANK_A_NAME).getOrThrow()
-            val webserverHandle = startWebserver(node, "512m").getOrThrow()
+            val webserverHandle = startWebserver(node).getOrThrow()
             webserverMustBeUp(webserverHandle)
             webserverHandle.listenAddress
         }
