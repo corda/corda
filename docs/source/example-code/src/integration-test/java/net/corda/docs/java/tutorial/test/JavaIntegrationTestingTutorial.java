@@ -32,7 +32,7 @@ import static net.corda.testing.core.ExpectKt.expectEvents;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;
 import static net.corda.testing.core.TestConstants.BOB_NAME;
 import static net.corda.testing.driver.Driver.driver;
-import static net.corda.testing.node.internal.TestCordappsUtilsKt.FINANCE_CORDAPPS;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.FINANCE_CORDAPPS;
 import static org.junit.Assert.assertEquals;
 
 public class JavaIntegrationTestingTutorial {

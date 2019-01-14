@@ -66,7 +66,7 @@ fun makeTestIdentityService(vararg identities: PartyAndCertificate): IdentitySer
  * must have at least an identity of its own. The other components have defaults that work in most situations.
  */
 open class MockServices private constructor(
-        cordappLoader: CordappLoader,
+        private val cordappLoader: CordappLoader,
         override val validatedTransactions: TransactionStorage,
         override val identityService: IdentityService,
         private val initialNetworkParameters: NetworkParameters,
@@ -118,8 +118,8 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val networkParametersStorage: NetworkParametersStorage = MockNetworkParametersStorage(networkParameters)
-                    override val vaultService: VaultService = makeVaultService(schemaService, database)
+                    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                    override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
                                 validatedTransactions as WritableTransactionStorage,
@@ -282,6 +282,12 @@ open class MockServices private constructor(
      */
     constructor() : this(listOf(getCallerPackage(MockServices::class)!!), CordaX500Name("TestIdentity", "", "GB"), makeTestIdentityService())
 
+    /**
+     * Returns the classloader containing all jar deployed in the 'cordapps' folder.
+     */
+    val cordappClassloader: ClassLoader
+        get() = cordappLoader.appClassLoader
+
     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
         txs.forEach {
             (validatedTransactions as WritableTransactionStorage).addTransaction(it)
@@ -289,7 +295,7 @@ open class MockServices private constructor(
     }
 
     override val networkParameters: NetworkParameters
-        get() = networkParametersStorage.run { lookup(currentHash)!! }
+        get() = networkParametersService.run { lookup(currentHash)!! }
 
     final override val attachments = MockAttachmentStorage()
     override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys) }
@@ -306,15 +312,13 @@ open class MockServices private constructor(
         it.start(initialNetworkParameters.whitelistedContractImplementations)
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
-    override val networkParametersStorage: NetworkParametersStorage = MockNetworkParametersStorage(initialNetworkParameters)
+    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
-        get() {
-            return ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersStorage, validatedTransactions)
-        }
+        get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
 
-    internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence): VaultServiceInternal {
-        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService).apply { start() }
+    internal fun makeVaultService(schemaService: SchemaService, database: CordaPersistence, cordappLoader: CordappLoader): VaultServiceInternal {
+        return NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cordappLoader.appClassLoader).apply { start() }
     }
 
     // This needs to be internal as MutableClassToInstanceMap is a guava type and shouldn't be part of our public API

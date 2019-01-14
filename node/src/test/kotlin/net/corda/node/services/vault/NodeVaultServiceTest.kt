@@ -1,10 +1,7 @@
 package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
-import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.argThat
-import com.nhaarman.mockito_kotlin.doNothing
-import com.nhaarman.mockito_kotlin.whenever
+import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.crypto.generateKeyPair
@@ -35,16 +32,12 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.*
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.*
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.junit.*
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
 import java.util.*
@@ -103,8 +96,8 @@ class NodeVaultServiceTest {
         vaultFiller = VaultFiller(services, dummyNotary)
         // This is safe because MockServices only ever have a single identity
         identity = services.myInfo.singleIdentityAndCert()
-        issuerServices = MockServices(cordappPackages, dummyCashIssuer, rigorousMock<IdentityService>(), parameters)
-        bocServices = MockServices(cordappPackages, bankOfCorda, rigorousMock<IdentityService>(), parameters)
+        issuerServices = MockServices(cordappPackages, dummyCashIssuer, mock<IdentityService>(), parameters)
+        bocServices = MockServices(cordappPackages, bankOfCorda, mock<IdentityService>(), parameters)
         services.identityService.verifyAndRegisterIdentity(DUMMY_CASH_ISSUER_IDENTITY)
         services.identityService.verifyAndRegisterIdentity(BOC_IDENTITY)
     }
@@ -133,10 +126,10 @@ class NodeVaultServiceTest {
         return tryLockFungibleStatesForSpending(lockId, baseCriteria, amount, Cash.State::class.java)
     }
 
+    class FungibleFoo(override val amount: Amount<Currency>, override val participants: List<AbstractParty>) : FungibleState<Currency>
     @Test
     fun `fungible state selection test`() {
         val issuerParty = services.myInfo.legalIdentities.first()
-        class FungibleFoo(override val amount: Amount<Currency>, override val participants: List<AbstractParty>) : FungibleState<Currency>
         val fungibleFoo = FungibleFoo(100.DOLLARS, listOf(issuerParty))
         services.apply {
             val tx = signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
@@ -182,7 +175,7 @@ class NodeVaultServiceTest {
             assertThat(w1).hasSize(3)
 
             val originalVault = vaultService
-            val services2 = object : MockServices(emptyList(), MEGA_CORP.name, rigorousMock()) {
+            val services2 = object : MockServices(emptyList(), MEGA_CORP.name, mock()) {
                 override val vaultService: NodeVaultService get() = originalVault
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     for (stx in txs) {
@@ -525,7 +518,7 @@ class NodeVaultServiceTest {
 
     @Test
     fun addNoteToTransaction() {
-        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, rigorousMock(), MEGA_CORP_KEY)
+        val megaCorpServices = MockServices(cordappPackages, MEGA_CORP.name, mock(), MEGA_CORP_KEY)
         database.transaction {
             val freshKey = identity.owningKey
 
@@ -631,7 +624,7 @@ class NodeVaultServiceTest {
         val identity = services.myInfo.singleIdentityAndCert()
         assertEquals(services.identityService.partyFromKey(identity.owningKey), identity.party)
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, rigorousMock<IdentityServiceInternal>().also {
+        val thirdPartyServices = MockServices(emptyList(), MEGA_CORP.name, mock<IdentityServiceInternal>().also {
             doNothing().whenever(it).justVerifyAndRegisterIdentity(argThat { name == MEGA_CORP.name }, any())
         })
         val thirdPartyIdentity = thirdPartyServices.keyManagementService.freshKeyAndCert(thirdPartyServices.myInfo.singleIdentityAndCert(), false)
@@ -650,7 +643,7 @@ class NodeVaultServiceTest {
         // Change notary
         services.identityService.verifyAndRegisterIdentity(DUMMY_NOTARY_IDENTITY)
         val newNotary = DUMMY_NOTARY
-        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary, services.networkParametersStorage.currentHash).build()
+        val changeNotaryTx = NotaryChangeTransactionBuilder(listOf(initialCashState.ref), issueStx.notary!!, newNotary, services.networkParametersService.currentHash).build()
         val cashStateWithNewNotary = StateAndRef(initialCashState.state.copy(notary = newNotary), StateRef(changeNotaryTx.id, 0))
 
         database.transaction {
@@ -860,5 +853,44 @@ class NodeVaultServiceTest {
         assertEquals(1, database.transaction {
             vaultService.queryBy<DummyDealContract.State>().states.size
         })
+    }
+
+    @Test
+    @Ignore
+    fun `trackByCriteria filters updates and snapshots`() {
+        /*
+         * This test is ignored as the functionality it tests is not yet implemented - see CORDA-2389
+         */
+        fun addCashToVault() {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 1, DUMMY_CASH_ISSUER)
+            }
+        }
+
+        fun addDummyToVault() {
+            database.transaction {
+                vaultFiller.fillWithDummyState()
+            }
+        }
+        addCashToVault()
+        addDummyToVault()
+        val criteria = VaultQueryCriteria(contractStateTypes = setOf(Cash.State::class.java))
+        val data = vaultService.trackBy<ContractState>(criteria)
+        for (state in data.snapshot.states) {
+            assertEquals(Cash.PROGRAM_ID, state.state.contract)
+        }
+
+        val allCash = data.updates.all {
+            it.produced.all {
+                it.state.contract == Cash.PROGRAM_ID
+            }
+        }
+
+        addCashToVault()
+        addDummyToVault()
+        addCashToVault()
+        allCash.subscribe {
+            assertTrue(it)
+        }
     }
 }

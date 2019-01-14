@@ -70,13 +70,15 @@ class ExistingInitiatingFlow(private val counterparty: Party) : FlowLogic<Signed
 class ExistingResponderFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
+        // DOCSTART ExistingResponderFlow
+        // First we have to run the SignTransactionFlow, which will return a SignedTransaction.
         val txWeJustSigned = subFlow(object : SignTransactionFlow(otherSide) {
             @Suspendable
             override fun checkTransaction(stx: SignedTransaction) {
-                // Do checks here
+                // Implement responder flow transaction checks here
             }
         })
-        // DOCSTART ExistingResponderFlow
+
         if (otherSide.getCounterpartyFlowInfo().flowVersion >= 2) {
             // The other side is not using the old CorDapp so call ReceiveFinalityFlow to record the finalised transaction.
             // If SignTransactionFlow is used then we can verify the tranaction we receive for recording is the same one

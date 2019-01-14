@@ -15,10 +15,10 @@ import java.net.URL
 
 class CordappProviderImplTests {
     private companion object {
-        val isolatedJAR = this::class.java.getResource("isolated.jar")!!
+        val isolatedJAR: URL = this::class.java.getResource("/isolated.jar")
         // TODO: Cordapp name should differ from the JAR name
         const val isolatedCordappName = "isolated"
-        val emptyJAR = this::class.java.getResource("empty.jar")!!
+        val emptyJAR: URL = this::class.java.getResource("empty.jar")
         val validConfig: Config = ConfigFactory.parseString("key=value")
 
         val stubConfigProvider = object : CordappConfigProvider {
@@ -52,7 +52,7 @@ class CordappProviderImplTests {
     @Test
     fun `test that we find a cordapp class that is loaded into the store`() {
         val provider = newCordappProvider(isolatedJAR)
-        val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        val className = "net.corda.isolated.contracts.AnotherDummyContract"
 
         val expected = provider.cordapps.first()
         val actual = provider.getCordappForClass(className)
@@ -62,9 +62,9 @@ class CordappProviderImplTests {
     }
 
     @Test
-    fun `test that we find an attachment for a cordapp contrat class`() {
+    fun `test that we find an attachment for a cordapp contract class`() {
         val provider = newCordappProvider(isolatedJAR)
-        val className = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        val className = "net.corda.isolated.contracts.AnotherDummyContract"
         val expected = provider.getAppContext(provider.cordapps.first()).attachmentId
         val actual = provider.getContractAttachmentID(className)
 

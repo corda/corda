@@ -230,6 +230,25 @@ The contract attachment non-downgrade rule is enforced in two locations:
 A version number is stored in the manifest information of the enclosing JAR file. This version identifier should be a whole number starting
 from 1. This information should be set using the Gradle cordapp plugin, or manually, as described in :doc:`versioning`.
 
+
+Uniqueness requirement Contract and Version for Signature Constraint
+--------------------------------------------------------------------
+
+CorDapps in Corda 4 may be signed (to use new signature constraints functionality) or unsigned, and versioned.
+The following controls are enforced for these different types of jars within the attachment store of a node:
+
+- Signed contract JARs must be uniquely versioned per contract class (or group of).
+  At runtime the node will throw a `DuplicateContractClassException`` exception if this condition is violated.
+
+- Unsigned contract JARs: there should not exist multiple instances of the same contract jar.
+  When a whitelisted JARs is imported and it doesn't contain a version number, the version will be copied from the position (counting from 1)
+  of this JAR in the whilelist. The same JAR can be present in many lists (if it contains many contracts),
+  in such case the version will be equal to the highest position of the JAR in all lists.
+  The new whitelist needs to be distributed to the node before the JAR is imported, otherwise it will receive default version.
+  At run-time the node will warn of duplicates encountered.
+  The most recent version given by insertionDate into the attachment storage will be used upon transaction building/resolution.
+
+
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
 
@@ -310,70 +329,6 @@ For example:
 
 For Contracts that are annotated with ``@NoConstraintPropagation``, the platform requires that the Transaction Builder specifies
 an actual constraint for the output states (the ``AutomaticPlaceholderConstraint`` can't be used) .
-
-
-Testing
--------
-
-Since all tests involving transactions now require attachments it is also required to load the correct attachments
-for tests. Unit test environments in JVM ecosystems tend to use class directories rather than JARs, and so CorDapp JARs
-typically aren't built for testing. Requiring this would add significant complexity to the build systems of Corda
-and CorDapps, so the test suite has a set of convenient functions to generate CorDapps from package names or
-to specify JAR URLs in the case that the CorDapp(s) involved in testing already exist. You can also just use
-``AlwaysAcceptAttachmentConstraint`` in your tests to disable the constraints mechanism.
-
-MockNetwork/MockNode
-********************
-
-The simplest way to ensure that a vanilla instance of a MockNode generates the correct CorDapps is to use the
-``cordappPackages`` constructor parameter (Kotlin) or the ``setCordappPackages`` method on ``MockNetworkParameters`` (Java)
-when creating the MockNetwork. This will cause the ``AbstractNode`` to use the named packages as sources for CorDapps. All files
-within those packages will be zipped into a JAR and added to the attachment store and loaded as CorDapps by the
-``CordappLoader``.
-
-An example of this usage would be:
-
-.. sourcecode:: java
-
-    class SomeTestClass {
-         MockNetwork network = null;
-
-         @Before
-         void setup() {
-             network = new MockNetwork(new MockNetworkParameters().setCordappPackages(Arrays.asList("com.domain.cordapp")))
-         }
-
-         ... // Your tests go here
-    }
-
-
-MockServices
-************
-
-If your test uses a ``MockServices`` directly you can instantiate it using a constructor that takes a list of packages
-to use as CorDapps using the ``cordappPackages`` parameter.
-
-.. sourcecode:: java
-
-    MockServices mockServices = new MockServices(Arrays.asList("com.domain.cordapp"))
-
-However - there is an easier way! If your unit tests are in the same package as the contract code itself, then you
-can use the no-args constructor of ``MockServices``. The package to be scanned for CorDapps will be the same as the
-the package of the class that constructed the object. This is a convenient default.
-
-Driver
-******
-
-The driver takes a parameter called ``extraCordappPackagesToScan`` which is a list of packages to use as CorDapps.
-
-.. sourcecode:: java
-
-   driver(new DriverParameters().setExtraCordappPackagesToScan(Arrays.asList("com.domain.cordapp"))) ...
-
-Full Nodes
-**********
-
-When testing against full nodes simply place your CorDapp into the cordapps directory of the node.
 
 Debugging
 ---------

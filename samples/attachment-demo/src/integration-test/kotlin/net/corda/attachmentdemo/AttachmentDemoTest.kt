@@ -23,7 +23,7 @@ class AttachmentDemoTest {
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = demoUser, maximumHeapSize = "1g")
             ).map { it.getOrThrow() }
-            val webserverHandle = startWebserver(nodeB).getOrThrow()
+            val webserverHandle = startWebserver(nodeB, "1g").getOrThrow()
 
             val senderThread = supplyAsync {
                 CordaRPCClient(nodeA.rpcAddress).start(demoUser[0].username, demoUser[0].password).use {

@@ -1,6 +1,7 @@
 package net.corda.core.internal
 
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappConfig
@@ -11,18 +12,28 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.ZoneVersionTooLowException
+import net.corda.core.node.services.AttachmentStorage
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
+import net.corda.core.node.services.vault.AttachmentSort
+import net.corda.core.node.services.vault.Builder
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.slf4j.MDC
 import java.security.PublicKey
+import java.util.jar.JarEntry
+import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 4
+const val PLATFORM_VERSION = 5
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
@@ -115,4 +126,35 @@ internal fun NetworkParameters.getPackageOwnerOf(contractClassNames: Set<Contrac
 // Make sure that packages don't overlap so that ownership is clear.
 fun noPackageOverlap(packages: Collection<String>): Boolean {
     return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
+}
+
+/**
+ * Scans trusted (installed locally) contract attachments to find all that contain the [className].
+ * This is required as a workaround until explicit cordapp dependencies are implemented.
+ * DO NOT USE IN CLIENT code.
+ *
+ * @return the contract attachments with the highest version.
+ *
+ * TODO: Should throw when the class is found in multiple contract attachments (not different versions).
+ */
+fun AttachmentStorage.internalFindTrustedAttachmentForClass(className: String): ContractAttachment?{
+    val allTrusted = queryAttachments(
+            AttachmentQueryCriteria.AttachmentsQueryCriteria().withUploader(Builder.`in`(TRUSTED_UPLOADERS)),
+            AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC))))
+
+    // TODO - add caching if performance is affected.
+    for (attId in allTrusted) {
+        val attch = openAttachment(attId)!!
+        if (attch is ContractAttachment && attch.openAsJAR().use { hasFile(it, "$className.class") }) return attch
+    }
+    return null
+}
+
+private fun hasFile(jarStream: JarInputStream, className: String): Boolean {
+    while (true) {
+        val e = jarStream.nextJarEntry ?: return false
+        if (e.name == className) {
+            return true
+        }
+    }
 }

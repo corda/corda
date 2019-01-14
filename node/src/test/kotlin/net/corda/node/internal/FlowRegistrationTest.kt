@@ -10,6 +10,7 @@ import net.corda.core.identity.Party
 import net.corda.core.utilities.unwrap
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
 import org.junit.After
@@ -26,7 +27,7 @@ class FlowRegistrationTest {
     @Before
     fun setup() {
         // no cordapps scanned so it can be tested in isolation
-        mockNetwork = MockNetwork(emptyList())
+        mockNetwork = MockNetwork(MockNetworkParameters())
         initiator = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("initiator", "Reading", "GB")))
         responder = mockNetwork.createNode(MockNodeParameters(legalName = CordaX500Name("responder", "Reading", "GB")))
         mockNetwork.runNetwork()

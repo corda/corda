@@ -44,6 +44,8 @@
       <module name="corda-core_integrationTest" target="1.8" />
       <module name="corda-core_smokeTest" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
+      <module name="corda-isolated_main" target="1.8" />
+      <module name="corda-isolated_test" target="1.8" />
       <module name="corda-project_buildSrc_main" target="1.8" />
       <module name="corda-project_buildSrc_test" target="1.8" />
       <module name="corda-project_canonicalizer_main" target="1.8" />
@@ -158,6 +160,8 @@
       <module name="net.corda-blobinspector_test" target="1.8" />
       <module name="net.corda-finance-contracts-states_main" target="1.8" />
       <module name="net.corda-finance-contracts-states_test" target="1.8" />
+      <module name="net.corda-isolated_main" target="1.8" />
+      <module name="net.corda-isolated_test" target="1.8" />
       <module name="net.corda-verifier_main" target="1.8" />
       <module name="net.corda-verifier_test" target="1.8" />
       <module name="net.corda_buildSrc_main" target="1.8" />

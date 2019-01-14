@@ -94,12 +94,39 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val stateRefs: List<StateRef>? = null,
             val notary: List<AbstractParty>? = null,
             val softLockingCondition: SoftLockingCondition? = null,
-            val timeCondition: TimeCondition? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
-            override val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
-            override val constraints: Set<Vault.ConstraintInfo> = emptySet(),
-            override val participants: List<AbstractParty>? = null
+            val timeCondition: TimeCondition? = null
     ) : CommonQueryCriteria() {
+        // These extra fields are handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
+        constructor(
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                stateRefs: List<StateRef>? = null,
+                notary: List<AbstractParty>? = null,
+                softLockingCondition: SoftLockingCondition? = null,
+                timeCondition: TimeCondition? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+                constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
+                constraints: Set<Vault.ConstraintInfo> = emptySet(),
+                participants: List<AbstractParty>? = null
+        ) : this(status, contractStateTypes, stateRefs, notary, softLockingCondition, timeCondition) {
+            this.relevancyStatus = relevancyStatus
+            this.constraintTypes = constraintTypes
+            this.constraints = constraints
+            this.participants = participants
+        }
+
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            private set
+
+        override var constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
+            private set
+
+        override var constraints: Set<Vault.ConstraintInfo> = emptySet()
+            private set
+
+        override var participants: List<AbstractParty>? = null
+            private set
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -111,7 +138,11 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 stateRefs: List<StateRef>? = this.stateRefs,
                 notary: List<AbstractParty>? = this.notary,
                 softLockingCondition: SoftLockingCondition? = this.softLockingCondition,
-                timeCondition: TimeCondition? = this.timeCondition
+                timeCondition: TimeCondition? = this.timeCondition,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus,
+                constraintTypes: Set<Vault.ConstraintInfo.Type> = this.constraintTypes,
+                constraints: Set<Vault.ConstraintInfo> = this.constraints,
+                participants: List<AbstractParty>? = this.participants
         ): VaultQueryCriteria {
             return VaultQueryCriteria(
                     status,
@@ -119,7 +150,11 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     stateRefs,
                     notary,
                     softLockingCondition,
-                    timeCondition
+                    timeCondition,
+                    relevancyStatus,
+                    constraintTypes,
+                    constraints,
+                    participants
             )
         }
     }
@@ -238,9 +273,21 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     data class VaultCustomQueryCriteria<L : StatePersistable> @JvmOverloads constructor(
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val contractStateTypes: Set<Class<out ContractState>>? = null
     ) : CommonQueryCriteria() {
+        // These extra field is handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
+        constructor(
+                expression: CriteriaExpression<L, Boolean>,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        ) : this(expression, status, contractStateTypes) {
+            this.relevancyStatus = relevancyStatus
+        }
+
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            private set
+
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
@@ -249,12 +296,14 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun copy(
                 expression: CriteriaExpression<L, Boolean> = this.expression,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
+                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
         ): VaultCustomQueryCriteria<L> {
             return VaultCustomQueryCriteria(
                     expression,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }

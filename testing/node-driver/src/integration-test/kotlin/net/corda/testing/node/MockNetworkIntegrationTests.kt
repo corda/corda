@@ -10,7 +10,7 @@ class MockNetworkIntegrationTests {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            MockNetwork(emptyList()).run {
+            MockNetwork(MockNetworkParameters()).run {
                 repeat(2) { createNode() }
                 runNetwork()
                 stopNodes()
