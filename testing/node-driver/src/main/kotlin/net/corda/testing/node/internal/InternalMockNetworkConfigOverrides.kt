@@ -9,11 +9,7 @@ import net.corda.testing.node.MockNetNotaryConfig
 import net.corda.testing.node.MockNodeConfigOverrides
 
 fun MockNetNotaryConfig.toNotaryConfig(): NotaryConfig {
-    return if (this.className == null) {
-        NotaryConfig(validating = this.validating, extraConfig = this.extraConfig, serviceLegalName = this.serviceLegalName)
-    } else {
-        NotaryConfig(validating = this.validating, extraConfig = this.extraConfig, serviceLegalName = this.serviceLegalName, className = this.className)
-    }
+    return NotaryConfig(validating = this.validating, extraConfig = this.extraConfig, serviceLegalName = this.serviceLegalName, className = this.className)
 }
 
 fun MockNodeConfigOverrides.applyMockNodeOverrides(config: NodeConfiguration) {

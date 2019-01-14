@@ -1,6 +1,9 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.StateRef
@@ -26,6 +29,9 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -45,6 +51,8 @@ import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
 import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
+import org.junit.AfterClass
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -74,29 +82,35 @@ class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
                 serviceLegalName)
 
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
-        val notaryConfig = MockNetNotaryConfig(
-                serviceLegalName = serviceLegalName,
-                validating = false,
-                className = TimedFlowTests.TestNotaryService::class.java.name
-        )
+        val notaryConfig = mock<NotaryConfig> {
+            whenever(it.serviceLegalName).thenReturn(serviceLegalName)
+            whenever(it.validating).thenReturn(true)
+            whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
+        }
 
         val notaryNodes = (0 until clusterSize).map {
-            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(
-                    notary = notaryConfig
-            )))
+            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
+                doReturn(notaryConfig).whenever(it).notary
+            }))
         }
 
         val aliceNode = mockNet.createUnstartedNode(
                 InternalMockNodeParameters(
                         legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                        configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(2.seconds, 3, 1.0))
+                        configOverrides = { conf: NodeConfiguration ->
+                            val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
+                            doReturn(retryConfig).whenever(conf).flowTimeout
+                        }
                 )
         )
 
         val patientNode = mockNet.createUnstartedNode(
                 InternalMockNodeParameters(
                         legalName = CordaX500Name("Bob", "BobCorp", "GB"),
-                        configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(10.seconds, 3, 1.0))
+                        configOverrides = { conf: NodeConfiguration ->
+                            val retryConfig = FlowTimeoutConfiguration(10.seconds, 3, 1.0)
+                            doReturn(retryConfig).whenever(conf).flowTimeout
+                        }
                 )
         )
 
