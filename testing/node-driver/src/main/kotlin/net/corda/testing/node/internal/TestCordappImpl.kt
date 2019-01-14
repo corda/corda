@@ -78,13 +78,12 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
         private fun buildCordappJar(projectRoot: Path): Path {
             return projectRootToBuiltJar.computeIfAbsent(projectRoot) {
                 val gradlew = findGradlewDir(projectRoot) / (if (SystemUtils.IS_OS_WINDOWS) "gradlew.bat" else "gradlew")
-                val libs = projectRoot / "build" / "libs"
-                libs.deleteRecursively()
                 log.info("Generating CorDapp jar from local project in $projectRoot ...")
                 val exitCode = ProcessBuilder(gradlew.toString(), "jar").directory(projectRoot.toFile()).inheritIO().start().waitFor()
-                check(exitCode == 0) { "Unable to generate CorDapp jar from local project in $projectRoot ($exitCode)" }
-                val jars = libs.list { it.filter { it.toString().endsWith(".jar") }.toList() }
-                checkNotNull(jars.singleOrNull()) { "Expecting a single built jar in $libs, but instead got $jars" }
+                check(exitCode == 0) { "Unable to generate CorDapp jar from local project in $projectRoot (exit=$exitCode)" }
+                val libs = projectRoot / "build" / "libs"
+                val jars = libs.list { it.filter { it.toString().endsWith(".jar") }.toList() }.sortedBy { it.attributes().creationTime() }
+                checkNotNull(jars.lastOrNull()) { "No jars were built in $libs" }
             }
         }
 
