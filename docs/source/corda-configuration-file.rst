@@ -50,7 +50,7 @@ Configuration file fields
 .. note :: The available configuration fields are listed below in alphabetic order.
 
 additionalP2PAddresses
-  An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the ``p2pAddress``.
+  An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the :ref:`p2pAddress <corda_configuration_file_p2pAddress>`.
   Nodes can use this configuration option to advertise HA endpoints and aliases to external parties.
 
   *Default:* empty list
@@ -339,7 +339,7 @@ networkParameterAcceptanceSettings
 
     *Default:* empty list
 
-.. _corda_configuratation_file_networkServices:
+.. _corda_configuration_file_networkServices:
 
 networkServices
   If the Corda compatibility zone services, both network map and registration (doorman), are not running on the same endpoint
@@ -362,6 +362,7 @@ networkServices
 
     *Default:* not defined
 
+.. _corda_configuration_file_p2pAddress:
 
 p2pAddress
   The host and port on which the node is available for protocol operations over ArtemisMQ.
