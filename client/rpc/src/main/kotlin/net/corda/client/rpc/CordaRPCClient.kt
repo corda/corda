@@ -253,8 +253,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  *  HA mode, the client will round-robin from the beginning of the list and try all servers.
 >>>>>>> Small refactorings following-up on PR-4551
  * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s and [SerializationWhitelist]s
- *  If the created RPC client is intended to use types with custom serializers / whitelists, a classloader will need to be provided that
- *  contains all these classes (i.e. a [URLClassLoader], containing the associated Cordapp jar)
+ *  If the created RPC client is intended to use types with custom serializers / whitelists,
+ *  a classloader will need to be provided that contains the associated CorDapp jars.
  */
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort?,
