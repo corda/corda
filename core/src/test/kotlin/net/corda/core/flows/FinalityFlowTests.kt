@@ -3,6 +3,7 @@ package net.corda.core.flows
 import com.natpryce.hamkrest.and
 import com.natpryce.hamkrest.assertion.assert
 import net.corda.core.flows.mixins.WithFinality
+import net.corda.core.flows.mixins.WithFinality.FinalityInvoker
 import net.corda.core.identity.Party
 import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.transactions.SignedTransaction
@@ -75,15 +76,29 @@ class FinalityFlowTests : WithFinality {
 
     @Test
     fun `allow use of the old API if the CorDapp target version is 3`() {
-        // We need Bob to load at least one old CorDapp so that its FinalityHandler is enabled
-        val bob = createBob(cordapps = listOf(cordappWithPackages("com.template").copy(targetPlatformVersion = 3)))
-        val stx = aliceNode.issuesCashTo(bob)
+        val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
+        val stx = aliceNode.issuesCashTo(oldBob)
         val resultFuture = CordappResolver.withCordapp(targetPlatformVersion = 3) {
             @Suppress("DEPRECATION")
             aliceNode.startFlowAndRunNetwork(FinalityFlow(stx)).resultFuture
         }
         resultFuture.getOrThrow()
-        assertThat(bob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
+        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
+    }
+
+    @Test
+    fun `broadcasting to both new and old participants`() {
+        val newCharlie = mockNet.createNode(InternalMockNodeParameters(legalName = CHARLIE_NAME))
+        val oldBob = createBob(cordapps = listOf(tokenOldCordapp()))
+        val stx = aliceNode.issuesCashTo(oldBob)
+        val resultFuture = aliceNode.startFlowAndRunNetwork(FinalityInvoker(
+                stx,
+                newRecipients = setOf(newCharlie.info.singleIdentity()),
+                oldRecipients = setOf(oldBob.info.singleIdentity())
+        )).resultFuture
+        resultFuture.getOrThrow()
+        assertThat(newCharlie.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
+        assertThat(oldBob.services.validatedTransactions.getTransaction(stx.id)).isNotNull()
     }
 
     private fun createBob(cordapps: List<TestCordappInternal> = emptyList()): TestStartedNode {
@@ -100,4 +115,7 @@ class FinalityFlowTests : WithFinality {
         Cash().generateIssue(builder, amount, other, notary)
         return services.signInitialTransaction(builder)
     }
+
+    /** "Old" CorDapp which will force its node to keep its FinalityHandler enabled */
+    private fun tokenOldCordapp() = cordappWithPackages("com.template").copy(targetPlatformVersion = 3)
 }

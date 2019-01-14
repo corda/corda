@@ -31,6 +31,7 @@ configuration for PostgreSQL:
     }
 
 Note that:
+
 * Database schema name can be set in JDBC URL string e.g. currentSchema=myschema
 * Database schema name must either match the ``dataSource.user`` value to end up
   on the standard schema search path according to the

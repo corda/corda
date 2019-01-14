@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.*
 import org.junit.Assert.*
 import org.junit.Test
 import sandbox.java.lang.sandbox
+import java.text.DecimalFormatSymbols
 
 class DJVMTest : TestBase() {
 
@@ -41,7 +42,8 @@ class DJVMTest : TestBase() {
             stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%9.4f"), arrayOf(doubleOf(1234.5678))).toString()
         }
-        assertEquals("1234.5678", result)
+        val sep = DecimalFormatSymbols.getInstance().decimalSeparator
+        assertEquals("1234${sep}5678", result)
     }
 
     @Test
@@ -50,7 +52,8 @@ class DJVMTest : TestBase() {
             stringClass.getMethod("format", stringClass, Array<Any>::class.java)
                 .invoke(null, stringOf("%7.2f"), arrayOf(floatOf(1234.5678f))).toString()
         }
-        assertEquals("1234.57", result)
+        val sep = DecimalFormatSymbols.getInstance().decimalSeparator
+        assertEquals("1234${sep}57", result)
     }
 
     @Test

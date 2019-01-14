@@ -94,25 +94,24 @@ to "walk the chain" and verify that each input was generated through a valid seq
 Reference input states
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A reference input state is added to a transaction as a ``ReferencedStateAndRef``. A ``ReferencedStateAndRef`` can be
-obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` method which returns a
-``ReferencedStateAndRef``.
-
 .. warning:: Reference states are only available on Corda networks with a minimum platform version >= 4.
+
+A reference input state is added to a transaction as a ``ReferencedStateAndRef``. A ``ReferencedStateAndRef`` can be
+obtained from a ``StateAndRef`` by calling the ``StateAndRef.referenced()`` method which returns a ``ReferencedStateAndRef``.
 
 .. container:: codeset
 
     .. literalinclude:: ../../docs/source/example-code/src/main/kotlin/net/corda/docs/kotlin/FlowCookbook.kt
-:language: kotlin
-            :start-after: DOCSTART 55
-            :end-before: DOCEND 55
-            :dedent: 8
+        :language: kotlin
+        :start-after: DOCSTART 55
+        :end-before: DOCEND 55
+        :dedent: 8
 
-        .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
-:language: java
-            :start-after: DOCSTART 55
-            :end-before: DOCEND 55
-            :dedent: 12
+    .. literalinclude:: ../../docs/source/example-code/src/main/java/net/corda/docs/java/FlowCookbook.java
+        :language: java
+        :start-after: DOCSTART 55
+        :end-before: DOCEND 55
+        :dedent: 12
 
 **Handling of update races:**
 

@@ -15,6 +15,7 @@ import javax.persistence.Table
 @CordaSerializable
 data class Message(val value: String)
 
+@BelongsToContract(MessageContract::class)
 data class MessageState(val message: Message, val by: Party, override val linearId: UniqueIdentifier = UniqueIdentifier()) : LinearState, QueryableState {
     override val participants: List<AbstractParty> = listOf(by)
 

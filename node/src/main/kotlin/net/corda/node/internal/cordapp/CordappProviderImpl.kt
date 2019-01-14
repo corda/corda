@@ -39,28 +39,12 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
 
     fun start(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
         cordappAttachments.putAll(loadContractsIntoAttachmentStore())
-        verifyInstalledCordapps(whitelistedContractImplementations)
+        verifyInstalledCordapps()
     }
 
-    private fun verifyInstalledCordapps(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
+    private fun verifyInstalledCordapps() {
         // This will invoke the lazy flowCordappMap property, thus triggering the MultipleCordappsForFlow check.
         cordappLoader.flowCordappMap
-
-        if (whitelistedContractImplementations.isEmpty()) {
-            log.warn("The network parameters don't specify any whitelisted contract implementations. Please contact your zone operator. See https://docs.corda.net/network-map.html")
-            return
-        }
-
-        // Verify that the installed contract classes correspond with the whitelist hash
-        // And warn if node is not using latest CorDapp
-        cordappAttachments.keys.map(attachmentStorage::openAttachment).mapNotNull { it as? ContractAttachment }.forEach { attch ->
-            (attch.allContracts intersect whitelistedContractImplementations.keys).forEach { contractClassName ->
-                when {
-                    attch.id !in whitelistedContractImplementations[contractClassName]!! -> log.error("Contract $contractClassName found in attachment ${attch.id} is not whitelisted in the network parameters. If this is a production node contact your zone operator. See https://docs.corda.net/network-map.html")
-                    attch.id != whitelistedContractImplementations[contractClassName]!!.last() -> log.warn("You are not using the latest CorDapp version for contract: $contractClassName. Please contact your zone operator.")
-                }
-            }
-        }
     }
 
     override fun getAppContext(): CordappContext {

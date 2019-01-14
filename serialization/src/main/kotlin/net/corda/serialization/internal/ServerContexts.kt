@@ -36,5 +36,6 @@ val AMQP_RPC_SERVER_CONTEXT = SerializationContextImpl(
         emptyMap(),
         true,
         SerializationContext.UseCase.RPCServer,
-        null
+        null,
+        lenientCarpenterEnabled = true
 )

@@ -22,6 +22,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
 import net.corda.testing.driver.driver
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.MultiGraph
@@ -51,7 +52,7 @@ fun main(args: Array<String>) {
             startFlow<CashExitFlow>(),
             invokeRpc(CordaRPCOps::nodeInfo)
     ))
-    driver(DriverParameters(driverDirectory = baseDirectory, extraCordappPackagesToScan = listOf("net.corda.finance"), waitForAllNodesToFinish = true)) {
+    driver(DriverParameters(driverDirectory = baseDirectory, cordappsForAllNodes = FINANCE_CORDAPPS, waitForAllNodesToFinish = true)) {
         val node = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)).get()
         // END 1
 

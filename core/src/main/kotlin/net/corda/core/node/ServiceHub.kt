@@ -38,8 +38,8 @@ interface ServicesForResolution {
     /** Provides access to anything relating to cordapps including contract attachment resolution and app context */
     val cordappProvider: CordappProvider
 
-    /** Provides access to storage of historical network parameters that are used in transaction resolution */
-    val networkParametersStorage: NetworkParametersStorage
+    /** Provides access to historical network parameters that are used in transaction resolution. */
+    val networkParametersService: NetworkParametersService
 
     /** Returns the network parameters the node is operating under. */
     val networkParameters: NetworkParameters
@@ -359,7 +359,7 @@ interface ServiceHub : ServicesForResolution {
      * and thus queryable data will include everything committed as of the last checkpoint.
      *
      * @throws IllegalStateException if called outside of a transaction.
-     * @return A new [Connection]
+     * @return A [Connection]
      */
     fun jdbcSession(): Connection
 

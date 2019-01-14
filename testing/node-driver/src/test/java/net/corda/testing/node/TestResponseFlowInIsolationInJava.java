@@ -1,6 +1,7 @@
 package net.corda.testing.node;
 
 import co.paralleluniverse.fibers.Suspendable;
+import net.corda.core.Utils;
 import net.corda.core.concurrent.CordaFuture;
 import net.corda.core.flows.*;
 import net.corda.core.identity.Party;
@@ -12,7 +13,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.concurrent.Future;
 
-import static java.util.Collections.singletonList;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappsForPackages;
 import static org.hamcrest.Matchers.instanceOf;
 
 /**
@@ -24,7 +25,7 @@ import static org.hamcrest.Matchers.instanceOf;
  */
 public class TestResponseFlowInIsolationInJava {
 
-    private final MockNetwork network = new MockNetwork(singletonList("com.template"));
+    private final MockNetwork network = new MockNetwork(new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages("com.template")));
     private final StartedMockNode a = network.createNode();
     private final StartedMockNode b = network.createNode();
 
@@ -39,10 +40,10 @@ public class TestResponseFlowInIsolationInJava {
     @Test
     public void test() throws Exception {
         // This method returns the Responder flow object used by node B.
-        Future<Responder> initiatedResponderFlowFuture = b.registerResponderFlow(
+        Future<Responder> initiatedResponderFlowFuture = Utils.toFuture(b.registerInitiatedFlow(
                 // We tell node B to respond to BadInitiator with Responder.
                 // We want to observe the Responder flow object to check for errors.
-                BadInitiator.class, Responder::new, Responder.class);
+                BadInitiator.class, Responder.class));
 
         // We run the BadInitiator flow on node A.
         BadInitiator flow = new BadInitiator(b.getInfo().getLegalIdentities().get(0));

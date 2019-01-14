@@ -44,15 +44,20 @@ object ContractJarTestUtils {
         }
     }
 
-    @JvmOverloads
-    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1): Pair<Path, PublicKey> {
+    private fun Path.signWithDummyKey(jarName: Path): PublicKey{
         val alias = "testAlias"
         val pwd = "testPassword"
-        workingDir.generateKey(alias, pwd, ALICE_NAME.toString())
+        this.generateKey(alias, pwd, ALICE_NAME.toString())
+        val signer = this.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
+        (this / "_shredder").delete()
+        (this / "_teststore").delete()
+        return signer
+    }
+
+    @JvmOverloads
+    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1): Pair<Path, PublicKey> {
         val jarName = makeTestContractJar(workingDir, contractName, true, version)
-        val signer = workingDir.signJar(jarName.toAbsolutePath().toString(), alias, pwd)
-        (workingDir / "_shredder").delete()
-        (workingDir / "_teststore").delete()
+        val signer = workingDir.signWithDummyKey(jarName)
         return workingDir.resolve(jarName) to signer
     }
 
@@ -64,6 +69,23 @@ object ContractJarTestUtils {
         createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
         workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
         workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
+        return workingDir.resolve(jarName)
+    }
+
+    @JvmOverloads
+    fun makeTestContractJar(workingDir: Path, contractNames: List<String>, signed: Boolean = false, version: Int = 1, generateManifest: Boolean = true, jarFileName : String? = null): Path {
+        contractNames.forEach {
+            val packages = it.split(".")
+            val className = packages.last()
+            createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
+        }
+        val packages = contractNames.first().split(".")
+        val jarName = jarFileName ?: "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"
+        workingDir.createJar(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray() )
+        if (generateManifest)
+            workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
+        if (signed)
+            workingDir.signWithDummyKey(workingDir.resolve(jarName))
         return workingDir.resolve(jarName)
     }
 

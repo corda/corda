@@ -50,7 +50,7 @@ Corda incubating modules
 The following modules don't yet have a completely stable API, but we will do our best to minimise disruption to
 developers using them until we are able to graduate them into the public API:
 
-* **net.corda.confidential.identities**: experimental support for confidential identities on the ledger
+* **net.corda.confidential**: experimental support for confidential identities on the ledger
 * **net.corda.finance**: a range of elementary contracts (and associated schemas) and protocols, such as abstract fungible assets, cash, obligation and commercial paper
 * **net.corda.client.jfx**: support for Java FX UI
 * **net.corda.client.mock**: client mock utilities

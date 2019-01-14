@@ -8,6 +8,7 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -55,6 +56,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
 
         private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+
+        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
 
     constructor(
@@ -146,7 +149,7 @@ open class TransactionBuilder @JvmOverloads constructor(
             checkConstraintValidity(state)
         }
 
-        return SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
+        val wireTx = SerializationFactory.defaultFactory.withCurrentContext(serializationContext) {
             WireTransaction(
                     createComponentGroups(
                             inputStates(),
@@ -156,10 +159,51 @@ open class TransactionBuilder @JvmOverloads constructor(
                             notary,
                             window,
                             referenceStates,
-                            services.networkParametersStorage.currentHash),
+                            services.networkParametersService.currentHash),
                     privacySalt
             )
         }
+
+        // Check the transaction for missing dependencies, and attempt to add them.
+        // This is a workaround as the current version of Corda does not support cordapp dependencies.
+        // It works by running transaction validation and then scan the attachment storage for missing classes.
+        // TODO - remove once proper support for cordapp dependencies is added.
+        val addedDependency = addMissingDependency(services, wireTx)
+
+        return if (addedDependency)
+            toWireTransactionWithContext(services, serializationContext)
+        else
+            wireTx
+    }
+
+    /**
+     * @return true if a new dependency was successfully added.
+     */
+    private fun addMissingDependency(services: ServicesForResolution, wireTx: WireTransaction): Boolean {
+        try {
+            wireTx.toLedgerTransaction(services).verify()
+        } catch (e: NoClassDefFoundError) {
+            val missingClass = e.message
+            requireNotNull(missingClass) { "Transaction is incorrectly formed." }
+
+            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
+                    ?: throw IllegalArgumentException("Attempted to find dependent attachment for class $missingClass, but could not find a suitable candidate.")
+
+            log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
+                    Automatically attaching contract dependency $attachment.
+                    It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
+                """.trimIndent())
+
+            addAttachment(attachment.id)
+            return true
+        // Ignore these exceptions as they will break unit tests.
+        //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+        } catch (tve: TransactionVerificationException) {
+        } catch (tre: TransactionResolutionException) {
+        } catch (ise: IllegalStateException) {
+        } catch (ise: IllegalArgumentException) {
+        }
+        return false
     }
 
     /**
@@ -185,7 +229,8 @@ open class TransactionBuilder @JvmOverloads constructor(
 
         val explicitAttachmentContractsMap: Map<ContractClassName, SecureHash> = explicitAttachmentContracts.toMap()
 
-        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map {it.state}.groupBy { it.contract }
+        val inputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = inputsWithTransactionState.map { it.state }
+                .groupBy { it.contract }
         val outputContractGroups: Map<ContractClassName, List<TransactionState<ContractState>>> = outputs.groupBy { it.contract }
 
         val allContracts: Set<ContractClassName> = inputContractGroups.keys + outputContractGroups.keys
@@ -199,7 +244,8 @@ open class TransactionBuilder @JvmOverloads constructor(
                     selectAttachmentThatSatisfiesConstraints(true, refStateEntry.key, refStateEntry.value, emptySet(), services)
                 }
 
-        val contractClassNameToInputStateRef : Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract,it.ref) }.groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
+        val contractClassNameToInputStateRef: Map<ContractClassName, Set<StateRef>> = inputsWithTransactionState.map { Pair(it.state.contract, it.ref) }
+                .groupBy { it.first }.mapValues { it.value.map { e -> e.second }.toSet() }
 
         // For each contract, resolve the AutomaticPlaceholderConstraint, and select the attachment.
         val contractAttachmentsAndResolvedOutputStates: List<Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?>> = allContracts.toSet()
@@ -255,20 +301,21 @@ open class TransactionBuilder @JvmOverloads constructor(
         if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
             val attachmentIds = services.attachments.getContractAttachments(contractClassName)
             // only switchover if we have both signed and unsigned attachments for the given contract class name
-            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2)  {
+            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
                 val attachmentsToUse = attachmentIds.map {
                     services.attachments.openAttachment(it)?.let { it as ContractAttachment }
                             ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
                 }
-                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull() ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
+                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
+                        ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
                 val outputConstraints =
-                    if (outputHashConstraints.isNotEmpty()) {
-                        log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
-                        val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
-                        outputs.addAll(outputsSignatureConstraints)
-                        outputs.removeAll(outputHashConstraints)
-                        outputsSignatureConstraints
-                    } else outputSignatureConstraints
+                        if (outputHashConstraints.isNotEmpty()) {
+                            log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
+                            val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+                            outputs.addAll(outputsSignatureConstraints)
+                            outputs.removeAll(outputHashConstraints)
+                            outputsSignatureConstraints
+                        } else outputSignatureConstraints
                 return Pair(attachmentIds.toSet(), outputConstraints)
             }
         }
@@ -643,8 +690,15 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
-    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
+    fun commands(): List<Command<*>> {
+        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
+            commands.groupBy { cmd -> cmd.value }
+                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+        } else {
+            ArrayList(commands)
+        }
+    }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

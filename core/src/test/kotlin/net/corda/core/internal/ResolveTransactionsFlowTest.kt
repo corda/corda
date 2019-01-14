@@ -13,7 +13,9 @@ import net.corda.core.utilities.unwrap
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.cordappsForPackages
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -36,11 +38,9 @@ class ResolveTransactionsFlowTest {
     private lateinit var miniCorp: Party
     private lateinit var notary: Party
 
-    private lateinit var rootTx: SignedTransaction
-
     @Before
     fun setup() {
-        mockNet = MockNetwork(cordappPackages = listOf("net.corda.testing.contracts", "net.corda.core.internal"))
+        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", javaClass.packageName)))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
         miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))

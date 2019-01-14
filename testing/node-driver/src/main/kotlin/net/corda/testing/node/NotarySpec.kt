@@ -20,7 +20,19 @@ data class NotarySpec(
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
         val cluster: ClusterSpec? = null
-)
+) {
+    // These extra fields are handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null,
+                maximumHeapSize: String = "512m"): this(name, validating, rpcUsers, verifierType, cluster) {
+        this.maximumHeapSize = maximumHeapSize
+    }
+
+    var maximumHeapSize: String = "512m"
+}
 
 /**
  * Abstract class specifying information about the consensus algorithm used for a cluster of nodes.

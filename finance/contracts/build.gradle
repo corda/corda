@@ -15,7 +15,6 @@ dependencies {
     // cordapp project(':finance:workflows')
     // cordapp project(':finance:contracts')
     cordaCompile project(':core')
-    compile project(':confidential-identities')
 
     // For JSON
     compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
@@ -32,18 +31,14 @@ configurations {
     testArtifacts.extendsFrom testRuntime
 }
 
-task testJar(type: Jar) {
-    classifier "tests"
-    from sourceSets.test.output
-}
-
 jar {
     baseName 'corda-finance-contracts'
+    manifest {
+        attributes('Corda-Revision': 'n/a')
+        attributes('Corda-Vendor': 'Corda Open Source')
+    }
 }
 
-artifacts {
-    testArtifacts testJar
-}
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1

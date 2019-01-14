@@ -14,6 +14,7 @@ see changes to this list.
 * Ajitha Thayaharan (BCS Technology International)
 * Alberto Arri (R3)
 * amiracam
+* Amol Pednekar
 * Andras Slemmer (R3)
 * Andrius Dagys (R3)
 * Andrzej Cichocki (R3)
@@ -79,6 +80,7 @@ see changes to this list.
 * Emanuel Russo (NTT DATA Italy)
 * Farzad Pezeshkpour (RBS)
 * fracting
+* Francisco Spadafora (NTT DATA Italy)
 * Frederic Dalibard (Natixis)
 * Garrett Macey (Wells Fargo)
 * gary-rowe
@@ -212,6 +214,7 @@ see changes to this list.
 * verymahler
 * Viktor Kolomeyko (R3)
 * Vipin Bharathan
+* Vitalij Reicherdt (Commerzbank AG)
 * Wawrzek Niewodniczanski (R3)
 * Wei Wu Zhang (Commonwealth Bank of Australia)
 * Zabrina Smith (Northern Trust)
