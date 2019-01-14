@@ -1,0 +1,5 @@
+generalwhitelist: #Approve CVE for any image
+images:
+  entdocker.corda.r3cev.com/corda-enterprise-ubuntu-zulu-4.0-snapshot: #Apprive CVE only for ubuntu image, regardles of the version
+    CVE-2018-19591: glibc
+    CVE-2018-14048: libpng

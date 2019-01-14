@@ -1,6 +1,7 @@
 FROM ubuntu:18.04 as build_system
 
-RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
+RUN apt-get update -y
+    && apt-get install --no-install-recommends -y -q \
                          curl \
                          zip \
                          build-essential \
@@ -9,7 +10,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          apt-transport-https \
                          ca-certificates \
                          curl \
-               && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 ENV GOVERSION 1.9
 RUN mkdir /goroot && mkdir /gopath

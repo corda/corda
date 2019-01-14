@@ -60,11 +60,13 @@ final String firewallImageBase = "entdocker.corda.r3cev.com/corda-firewall"
 final String utilsImage = "entdocker.corda.r3cev.com/corda-utils"
 
 enum BASE {
-    ALPINE_ZULU("alpine-zulu"),
-    UBUNTU_ZULU("ubuntu-zulu"),
-    AL_CORRETTO("corretto"),
-    OFFICIAL("")
-    private String knownAs
+    ALPINE_ZULU("alpine-zulu", "DockerfileAlpineZulu"),
+    UBUNTU_ZULU("ubuntu-zulu", "DockerfileUbuntuZulu"),
+    AL_CORRETTO("corretto", "DockerfileCorretto"),
+    CENTOS_CORRETTO("centos-corretto", "DockerfileCentosCorretto"),
+    OFFICIAL("", "DockerfileCorretto")
+    String knownAs
+    String sourceDockerFile
 
     String versionString(String baseTag, String version) {
         return "${baseTag}-${knownAs}" +
@@ -72,8 +74,9 @@ enum BASE {
                 "${version}"
     }
 
-    BASE(String knownAs) {
+    BASE(String knownAs, String sourceDockerFile) {
         this.knownAs = knownAs
+        this.sourceDockerFile = sourceDockerFile
     }
 }
 
@@ -143,9 +146,10 @@ task buildDockerFolder(dependsOn: [":node:capsule:buildCordaJAR", shadowJar, ":t
         }
 
         def commonDockerFile = Paths.get(project.projectDir.absolutePath, "src/docker/CommonDockerFile")
-        def alpineZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAlpineZulu"), commonDockerFile, outputDir.toPath(), "DockerfileAlpineZulu")
-        def corretttoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAmazonLinuxCorretto"), commonDockerFile, outputDir.toPath(), "DockerfileCorretto")
-        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseUbuntuZulu"), commonDockerFile, outputDir.toPath(), "DockerfileUbuntuZulu")
+        def alpineZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAlpineZulu"), commonDockerFile, outputDir.toPath(), BASE.ALPINE_ZULU.sourceDockerFile)
+        def corretttoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseAmazonLinuxCorretto"), commonDockerFile, outputDir.toPath(), BASE.AL_CORRETTO.sourceDockerFile)
+        def ubuntuZuluDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseUbuntuZulu"), commonDockerFile, outputDir.toPath(), BASE.UBUNTU_ZULU.sourceDockerFile)
+        def centosCorrettoDockerFile = combineDockerFiles(Paths.get(project.projectDir.absolutePath, "src/docker/BaseCentosCorretto"), commonDockerFile, outputDir.toPath(), BASE.CENTOS_CORRETTO.sourceDockerFile)
     }
 }
 
@@ -153,10 +157,11 @@ task buildAllImages(dependsOn: [buildDockerFolder]) {
     doLast {
         def dockerDirectory = dockerTempDir.toPath()
         Map<BASE, Tuple2<java.nio.file.Path, String>> nodeTaskMap = [
-                (BASE.ALPINE_ZULU): new Tuple2<>(dockerDirectory, "DockerfileAlpineZulu"),
-                (BASE.UBUNTU_ZULU): new Tuple2<>(dockerDirectory, "DockerfileUbuntuZulu"),
-                (BASE.AL_CORRETTO): new Tuple2<>(dockerDirectory, "DockerfileCorretto"),
-                (BASE.OFFICIAL)   : new Tuple2<>(dockerDirectory, "DockerfileCorretto")
+                (BASE.ALPINE_ZULU):     new Tuple2<>(dockerDirectory, BASE.ALPINE_ZULU.sourceDockerFile),
+                (BASE.UBUNTU_ZULU):     new Tuple2<>(dockerDirectory, BASE.UBUNTU_ZULU.sourceDockerFile),
+                (BASE.AL_CORRETTO):     new Tuple2<>(dockerDirectory, BASE.AL_CORRETTO.sourceDockerFile),
+                (BASE.CENTOS_CORRETTO): new Tuple2<>(dockerDirectory, BASE.CENTOS_CORRETTO.sourceDockerFile),
+                (BASE.OFFICIAL):        new Tuple2<>(dockerDirectory, BASE.OFFICIAL.sourceDockerFile)
         ]
         tagsBuilt.addAll(buildImages(nodeImageBase, suffix, project.version.toString().toLowerCase(), nodeTaskMap))
         tagsBuilt.addAll(buildImages(firewallImageBase, suffix, project.version.toString().toLowerCase(), [
@@ -168,20 +173,21 @@ task buildAllImages(dependsOn: [buildDockerFolder]) {
     }
 }
 
-task pushAllImages(dependsOn: [buildAllImages]) {
+task scanAllBuiltTags(dependsOn: [buildAllImages]) {
+    doLast{
+        exec {
+            workingDir new File(project.projectDir, "container-scan")
+            executable "./docker_up.sh"
+            args tagsBuilt
+        }
+    }
+}
+
+task pushAllImages(dependsOn: [buildAllImages, scanAllBuiltTags]) {
     doLast {
         pushImages(tagsBuilt)
     }
 }
 
-task scanAllBuiltTags(dependsOn: [buildAllImages]) {
-    doLast{
-        exec {
-            workingDir project.buildDir
-            executable "../container-scan/docker_up.sh"
-            args tagsBuilt
-        }
-    }
-}
 
 task buildAndPushImages(dependsOn: [buildAllImages, pushAllImages, scanAllBuiltTags])
