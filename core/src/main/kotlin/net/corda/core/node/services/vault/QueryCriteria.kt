@@ -8,6 +8,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.StatePersistable
 import net.corda.core.serialization.CordaSerializable
@@ -75,7 +76,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
 
     abstract class CommonQueryCriteria : QueryCriteria() {
         abstract val status: Vault.StateStatus
-        open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        open val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
+            get() = if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else field
         open val constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
         open val constraints: Set<Vault.ConstraintInfo> = emptySet()
         open val participants: List<AbstractParty>? = null
@@ -104,7 +106,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 notary: List<AbstractParty>? = null,
                 softLockingCondition: SoftLockingCondition? = null,
                 timeCondition: TimeCondition? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT,
                 constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet(),
                 constraints: Set<Vault.ConstraintInfo> = emptySet(),
                 participants: List<AbstractParty>? = null
@@ -115,7 +117,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             this.participants = participants
         }
 
-        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
             private set
 
         override var constraintTypes: Set<Vault.ConstraintInfo.Type> = emptySet()
@@ -168,7 +170,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
     ) : CommonQueryCriteria() {
         constructor(
                 participants: List<AbstractParty>? = null,
@@ -215,7 +217,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val quantity: ColumnPredicate<Long>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -234,7 +236,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
     ) : CommonQueryCriteria() {
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -280,12 +282,12 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 expression: CriteriaExpression<L, Boolean>,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
         ) : this(expression, status, contractStateTypes) {
             this.relevancyStatus = relevancyStatus
         }
 
-        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
             private set
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {

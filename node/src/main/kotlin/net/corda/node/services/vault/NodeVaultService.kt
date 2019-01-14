@@ -6,6 +6,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.internal.*
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -483,7 +484,7 @@ class NodeVaultService(
             var totalStates = -1L
             if (!skipPagingChecks && !paging.isDefault) {
                 val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-                val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
+                val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL, relevancyStatus = Vault.RelevancyStatus.ALL)
                 val results = _queryBy(criteria.and(countCriteria), PageSpecification(), Sort(emptyList()), contractStateType, true)  // only skip pagination checks for total results count query
                 totalStates = results.otherResults.last() as Long
             }
