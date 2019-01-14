@@ -23,6 +23,7 @@ import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 import java.util.ServiceLoader
+import java.net.URLClassLoader
 
 /**
  * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
@@ -251,11 +252,11 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  *  a classloader will need to be provided that contains the associated CorDapp jars.
  */
 class CordaRPCClient private constructor(
-        private val hostAndPort: NetworkHostAndPort,
+        private val hostAndPort: NetworkHostAndPort?,
+        private val haAddressPool: List<NetworkHostAndPort>,
         private val configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
         private val sslConfiguration: ClientRpcSslOptions? = null,
-        private val classLoader: ClassLoader? = null,
-        private val haAddressPool: List<NetworkHostAndPort> = emptyList()
+        private val classLoader: ClassLoader? = null
 ) {
 
     @JvmOverloads
@@ -273,41 +274,24 @@ class CordaRPCClient private constructor(
             classLoader: ClassLoader? = null
     ) : this(hostAndPort = hostAndPort, haAddressPool = emptyList(), sslConfiguration = sslConfiguration, classLoader = classLoader)
 
-    /**
-     * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
-     * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
-     * HA mode, the client will round-robin from the beginning of the list and try all servers.
-     * @param configuration An optional configuration used to tweak client behaviour.
-     */
     @JvmOverloads
-    constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            configuration: CordaRPCClientConfiguration,
+            sslConfiguration: ClientRpcSslOptions?,
+            classLoader: ClassLoader? = null
+    ) : this(hostAndPort = hostAndPort, haAddressPool = emptyList(), configuration = configuration, sslConfiguration = sslConfiguration, classLoader = classLoader)
 
-    companion object {
-        fun createWithSsl(
-                hostAndPort: NetworkHostAndPort,
-                sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
-        ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
-        }
+    @JvmOverloads
+    constructor(
+            haAddressPool: List<NetworkHostAndPort>,
+            configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null
+    ) : this(hostAndPort = null, haAddressPool = haAddressPool, configuration = configuration, sslConfiguration = sslConfiguration, classLoader = classLoader)
 
-        fun createWithSsl(
-                haAddressPool: List<NetworkHostAndPort>,
-                sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
-        ): CordaRPCClient {
-            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
-        }
-
-        internal fun createWithSslAndClassLoader(
-                hostAndPort: NetworkHostAndPort,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                sslConfiguration: ClientRpcSslOptions? = null,
-                classLoader: ClassLoader? = null
-        ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration, classLoader = classLoader)
-        }
-    }
+    // Here to keep the keep ABI compatibility happy
+    companion object {}
 
     init {
         try {
@@ -334,7 +318,7 @@ class CordaRPCClient private constructor(
         return when {
         // Client->RPC broker
             haAddressPool.isEmpty() -> RPCClient(
-                    rpcConnectorTcpTransport(hostAndPort, config = sslConfiguration),
+                    rpcConnectorTcpTransport(hostAndPort!!, config = sslConfiguration),
                     configuration,
                     if (classLoader != null) AMQP_RPC_CLIENT_CONTEXT.withClassLoader(classLoader) else AMQP_RPC_CLIENT_CONTEXT)
             else -> {

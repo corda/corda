@@ -8,10 +8,10 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
 import net.corda.client.jackson.JacksonSupport
 import net.corda.client.jackson.StringToMethodCallParser
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.PermissionException
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
@@ -95,7 +95,7 @@ object InteractiveShell {
      */
     fun startShell(configuration: ShellConfiguration, classLoader: ClassLoader? = null) {
         rpcOps = { username: String, credentials: String ->
-            val client = createCordaRPCClientWithSslAndClassLoader(hostAndPort = configuration.hostAndPort,
+            val client = CordaRPCClient(hostAndPort = configuration.hostAndPort,
                     configuration = CordaRPCClientConfiguration.DEFAULT.copy(
                             maxReconnectAttempts = 1
                     ),
