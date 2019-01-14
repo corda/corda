@@ -24,7 +24,7 @@ The Corda configuration file uses the HOCON format which is a superset of JSON. 
 Please do NOT use double quotes (``"``) in configuration keys.
 
 Node setup will log ``Config files should not contain " in property names. Please fix: [key]`` as an error when it finds double quotes around keys.
-This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property ``"dataSourceProperties.dataSourceClassName" = "val"`` in *reference.conf* (see: Reference.conf_) would be not overwritten by the property ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
+This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property ``"dataSourceProperties.dataSourceClassName" = "val"`` in :ref:`reference.conf` would be not overwritten by the property ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
 
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
@@ -33,8 +33,7 @@ Overriding values from node.conf
 --------------------------------
 
 Environment variables
-  For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD``.
-  See: :ref:`hiding-sensitive-data` section in "Node administration" chapter.
+  For example: ``${NODE_TRUST_STORE_PASSWORD}`` would be replaced by the contents of environment variable ``NODE_TRUST_STORE_PASSWORD`` (see: :ref:`hiding-sensitive-data` section).
 
 JVM options
   JVM options or environmental variables prefixed with ``corda.`` can override ``node.conf`` fields.
@@ -129,7 +128,7 @@ database
     ``UPDATE`` performs an update of CorDapp schemas, while ``VALID`` only verifies their integrity and ``NONE`` performs no check.
     When ``initialiseSchema`` is set to ``false``, then ``initialiseAppSchema`` may be set as ``VALID`` or ``NONE`` only.
 
-    *Default:* CorDapp schemas creation is controlled with ``initialiseSchema``.
+    *Default:* CorDapp schema creation is controlled with ``initialiseSchema``.
 
 dataSourceProperties
   This section is used to configure the jdbc connection and database driver used for the nodes persistence.
@@ -220,7 +219,7 @@ flowTimeout
 
     *Default:* 1.8
 
-h2Port
+h2Port (deprecated)
   Defines port for h2 DB.
 
   **Important: Deprecated please use h2Setting instead**
@@ -374,7 +373,7 @@ p2pAddress
 
   *Default:* not defined
 
-rpcAddress
+rpcAddress (deprecated)
   The address of the RPC system on which RPC requests can be made to the node.
   If not provided then the node will run without RPC.
 
