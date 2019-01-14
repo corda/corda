@@ -75,6 +75,9 @@ inline val Path.isReadable: Boolean get() = Files.isReadable(this)
 /** @see Files.size */
 inline val Path.size: Long get() = Files.size(this)
 
+/** @see Files.readAttributes */
+fun Path.attributes(vararg options: LinkOption): BasicFileAttributes = Files.readAttributes(this, BasicFileAttributes::class.java, *options)
+
 /** @see Files.getLastModifiedTime */
 fun Path.lastModifiedTime(vararg options: LinkOption): FileTime = Files.getLastModifiedTime(this, *options)
 

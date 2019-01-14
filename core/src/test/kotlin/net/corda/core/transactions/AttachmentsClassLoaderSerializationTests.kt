@@ -9,7 +9,7 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.DummyContractBackdoor
+import net.corda.isolated.contracts.DummyContractBackdoor
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
