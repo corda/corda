@@ -21,9 +21,11 @@ fun <T: Any> loadClassesImplementing(classloader: ClassLoader, clazz: Class<T>):
     return ClassGraph().addClassLoader(classloader)
             .enableClassInfo()
             .scan()
-            .getClassesImplementing(clazz.name)
-            .filterNot { it.isAbstract }
-            .mapNotNull { classloader.loadClass(it.name).asSubclass(clazz) }
-            .map { it.kotlin.objectInstance ?: it.kotlin.createInstance() }
-            .toSet()
+            .use {
+                it.getClassesImplementing(clazz.name)
+                        .filterNot { it.isAbstract }
+                        .mapNotNull { classloader.loadClass(it.name).asSubclass(clazz) }
+                        .map { it.kotlin.objectInstance ?: it.kotlin.createInstance() }
+                        .toSet()
+            }
 }
