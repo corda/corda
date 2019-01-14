@@ -30,6 +30,27 @@ import static kotlin.test.AssertionsKt.fail;
 import static net.corda.finance.contracts.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
+
+    public static void copyCordapps(NodeProcess.Factory factory, NodeConfig notaryConfig) {
+        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve(NodeProcess.CORDAPPS_DIR_NAME));
+        try {
+            Files.createDirectories(cordappsDir);
+        } catch (IOException ex) {
+            fail("Failed to create directories");
+        }
+        try (Stream<Path> paths = Files.walk(Paths.get("build", "resources", "smokeTest"))) {
+            paths.filter(path -> path.toFile().getName().startsWith("cordapp")).forEach(file -> {
+                try {
+                    Files.copy(file, cordappsDir.resolve(file.getFileName()));
+                } catch (IOException ex) {
+                    fail("Failed to copy cordapp jar");
+                }
+            });
+        } catch (IOException e) {
+            fail("Failed to walk files");
+        }
+    }
+
     private List<String> perms = Collections.singletonList("ALL");
     private Set<String> permSet = new HashSet<>(perms);
     private User rpcUser = new User("user1", "test", permSet);
@@ -57,7 +78,7 @@ public class StandaloneCordaRPCJavaClientTest {
     @Before
     public void setUp() {
         factory = new NodeProcess.Factory();
-        copyFinanceCordapp();
+        copyCordapps(factory, notaryConfig);
         notary = factory.create(notaryConfig);
         connection = notary.connect();
         rpcProxy = connection.getProxy();
@@ -72,28 +93,6 @@ public class StandaloneCordaRPCJavaClientTest {
             if (notary != null) {
                 notary.close();
             }
-        }
-    }
-
-    private void copyFinanceCordapp() {
-        Path cordappsDir = (factory.baseDirectory(notaryConfig).resolve(NodeProcess.CORDAPPS_DIR_NAME));
-        try {
-            Files.createDirectories(cordappsDir);
-        } catch (IOException ex) {
-            fail("Failed to create directories");
-        }
-        try (Stream<Path> paths = Files.walk(Paths.get("build", "resources", "smokeTest"))) {
-            paths.forEach(file -> {
-                if (file.toString().contains("corda-finance")) {
-                    try {
-                        Files.copy(file, cordappsDir.resolve(file.getFileName()));
-                    } catch (IOException ex) {
-                        fail("Failed to copy finance jar");
-                    }
-                }
-            });
-        } catch (IOException e) {
-            fail("Failed to walk files");
         }
     }
 

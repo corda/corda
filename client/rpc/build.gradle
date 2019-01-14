@@ -62,10 +62,13 @@ processSmokeTestResources {
         rename 'corda-(.*)', 'corda.jar'
     }
     from(project(':finance:workflows').tasks['jar']) {
-        rename 'finance-workflows-(.*)', 'finance-workflows.jar'
+        rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }
-    from(findJar('finance-contracts')) {
-        rename 'finance-contracts-(.*)', 'finance-contracts.jar'
+    from(findJar('corda-finance-contracts')) {
+        rename '.*finance-contracts-.*', 'cordapp-finance-contracts.jar'
+    }
+    from(project(':confidential-identities').tasks['jar']) {
+        rename '.*confidential-identities-.*', 'cordapp-confidential-identities.jar'
     }
 }
 
@@ -94,6 +97,7 @@ dependencies {
         transitive = false
     }
     smokeTestCompile project(':finance:workflows')
+    smokeTestCompile project(':confidential-identities')
     smokeTestCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     smokeTestCompile "org.apache.logging.log4j:log4j-core:$log4j_version"
     smokeTestCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
