@@ -18,7 +18,7 @@ class ClassLoadingUtilsTest {
 
     @Test
     fun predicateClassAreLoadedSuccessfully() {
-        val classes = loadClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface::class.java)
+        val classes = createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface::class.java)
 
         val classNames = classes.map { it.javaClass.name }
 
@@ -28,7 +28,7 @@ class ClassLoadingUtilsTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun throwsExceptionWhenClassDoesNotContainProperConstructors() {
-        val classes = loadClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
+        val classes = createInstancesOfClassesImplementing(BaseInterface::class.java.classLoader, BaseInterface2::class.java)
     }
 
 }

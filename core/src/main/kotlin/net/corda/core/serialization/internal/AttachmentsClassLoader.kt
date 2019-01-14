@@ -2,7 +2,7 @@ package net.corda.core.serialization.internal
 
 import net.corda.core.CordaException
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.loadClassesImplementing
+import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException.OverlappingAttachmentsException
@@ -11,7 +11,6 @@ import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.SerializationWhitelist
@@ -196,7 +195,7 @@ internal object AttachmentsClassLoaderBuilder {
         val serializationContext = cache.computeIfAbsent(attachmentIds) {
             // Create classloader and load serializers, whitelisted classes
             val transactionClassLoader = AttachmentsClassLoader(attachments)
-            val serializers = loadClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
+            val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
                     .toList()
