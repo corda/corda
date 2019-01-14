@@ -355,30 +355,19 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
     /**
      * AttachmentsQueryCriteria:
      */
-    data class AttachmentsQueryCriteria constructor(val uploaderCondition: ColumnPredicate<String>? = null,
-                                                    val filenameCondition: ColumnPredicate<String>? = null,
-                                                    val uploadDateCondition: ColumnPredicate<Instant>? = null) : AttachmentQueryCriteria() {
+    data class AttachmentsQueryCriteria(val uploaderCondition: ColumnPredicate<String>? = null,
+                                        val filenameCondition: ColumnPredicate<String>? = null,
+                                        val uploadDateCondition: ColumnPredicate<Instant>? = null,
+                                        val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
+                                        val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
+                                        val isSignedCondition: ColumnPredicate<Boolean>? = null,
+                                        val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
+        // V3 c'tors
         constructor(uploaderCondition: ColumnPredicate<String>? = null,
                     filenameCondition: ColumnPredicate<String>? = null,
-                    uploadDateCondition: ColumnPredicate<Instant>? = null,
-                    contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
-                    signersCondition: ColumnPredicate<List<PublicKey>>? = null,
-                    isSignedCondition: ColumnPredicate<Boolean>? = null,
-                    versionCondition: ColumnPredicate<Int>? = null) : this(uploaderCondition, filenameCondition, uploadDateCondition) {
-            this.contractClassNamesCondition = contractClassNamesCondition
-            this.signersCondition = signersCondition
-            this.isSignedCondition = isSignedCondition
-            this.versionCondition = versionCondition
-        }
-
-        var contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null
-            private set
-        var signersCondition: ColumnPredicate<List<PublicKey>>? = null
-            private set
-        var isSignedCondition: ColumnPredicate<Boolean>? = null
-            private set
-        var versionCondition: ColumnPredicate<Int>? = null
-            private set
+                    uploadDateCondition: ColumnPredicate<Instant>? = null) : this(uploaderCondition, filenameCondition, uploadDateCondition, null)
+        constructor(uploaderCondition: ColumnPredicate<String>?) : this(uploaderCondition, null)
+        constructor(uploaderCondition: ColumnPredicate<String>?, filenameCondition: ColumnPredicate<String>?) : this(uploaderCondition, filenameCondition, null)
 
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
@@ -387,13 +376,17 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
         fun copy(
                 uploaderCondition: ColumnPredicate<String>? = this.uploaderCondition,
                 filenameCondition: ColumnPredicate<String>? = this.filenameCondition,
-                uploadDateCondition: ColumnPredicate<Instant>? = this.uploadDateCondition,
-                contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = this.contractClassNamesCondition,
-                signersCondition: ColumnPredicate<List<PublicKey>>? = this.signersCondition,
-                isSignedCondition: ColumnPredicate<Boolean>? = this.isSignedCondition,
-                versionCondition: ColumnPredicate<Int>? = this.versionCondition
+                uploadDateCondition: ColumnPredicate<Instant>? = this.uploadDateCondition
         ): AttachmentsQueryCriteria {
-            return AttachmentsQueryCriteria(uploaderCondition, filenameCondition, uploadDateCondition, contractClassNamesCondition, signersCondition, isSignedCondition, versionCondition)
+            return AttachmentsQueryCriteria(
+                    uploaderCondition,
+                    filenameCondition,
+                    uploadDateCondition,
+                    contractClassNamesCondition,
+                    signersCondition,
+                    isSignedCondition,
+                    versionCondition
+            )
         }
 
         fun withUploader(uploaderPredicate: ColumnPredicate<String>) = copy(uploaderCondition = uploaderPredicate)

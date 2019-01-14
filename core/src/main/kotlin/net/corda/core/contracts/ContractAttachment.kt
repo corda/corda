@@ -14,12 +14,13 @@ import java.security.PublicKey
  */
 @KeepForDJVM
 @CordaSerializable
-class ContractAttachment @JvmOverloads constructor(
+//TODO Can we make this c'tor private?
+class ContractAttachment constructor(
         val attachment: Attachment,
         val contract: ContractClassName,
-        val additionalContracts: Set<ContractClassName>,
-        val uploader: String?,
-        override val signerKeys: List<PublicKey>,
+        val additionalContracts: Set<ContractClassName> = emptySet(),
+        val uploader: String? = null,
+        override val signerKeys: List<PublicKey> = emptyList(),
         val version: Int = DEFAULT_CORDAPP_VERSION) : Attachment by attachment {
     @JvmOverloads
     constructor(attachment: Attachment,
