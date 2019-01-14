@@ -7,7 +7,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.node.services.transactions.ValidatingNotaryFlow
-import net.corda.nodeapi.internal.config.parseAs
 import java.security.PublicKey
 
 /** Notary service backed by a replicated MySQL database. */
@@ -22,11 +21,9 @@ class MySQLNotaryService(
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
     override val uniquenessProvider = with(services) {
-        val mysqlConfig = try {
-            notaryConfig.extraConfig!!.parseAs<MySQLNotaryConfiguration>()
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Failed to register ${MySQLNotaryService::class.java}: mysql configuration not present")
-        }
+        val mysqlConfig = notaryConfig.mysql
+                ?: throw IllegalArgumentException("Failed to register ${MySQLNotaryService::class.java}: mysql configuration not present")
+
         MySQLUniquenessProvider(
                 services.monitoringService.metrics,
                 services.clock,
@@ -39,7 +36,6 @@ class MySQLNotaryService(
             ValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
         } else NonValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
     }
-
 
     override fun start() {
         if (devMode) uniquenessProvider.createTable()

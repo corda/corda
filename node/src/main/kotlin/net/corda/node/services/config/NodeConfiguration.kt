@@ -21,6 +21,7 @@ import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.notary.experimental.bftsmart.BFTSmartConfig
 import net.corda.notary.experimental.raft.RaftConfig
+import net.corda.notary.mysql.MySQLNotaryConfiguration
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -188,7 +189,8 @@ data class NotaryConfig(
         /** Notary implementation-specific configuration parameters. */
         val extraConfig: Config? = null,
         val raft: RaftConfig? = null,
-        val bftSMaRt: BFTSmartConfig? = null
+        val bftSMaRt: BFTSmartConfig? = null,
+        val mysql: MySQLNotaryConfiguration? = null
 )
 
 /**

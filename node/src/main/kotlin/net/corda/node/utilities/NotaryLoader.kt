@@ -13,6 +13,7 @@ import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.SimpleNotaryService
 import net.corda.notary.experimental.bftsmart.BFTSmartNotaryService
 import net.corda.notary.experimental.raft.RaftNotaryService
+import net.corda.notary.mysql.MySQLNotaryService
 import java.security.PublicKey
 
 class NotaryLoader(
@@ -41,6 +42,10 @@ class NotaryLoader(
                 config.raft != null -> {
                     builtInNotary = VirtualCordapp.generateRaftNotary(versionInfo)
                     RaftNotaryService::class.java
+                }
+                config.mysql != null -> {
+                    builtInNotary = VirtualCordapp.generateMySQLNotary(versionInfo)
+                    MySQLNotaryService::class.java
                 }
                 else -> {
                     builtInNotary = VirtualCordapp.generateSimpleNotary(versionInfo)

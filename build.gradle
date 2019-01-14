@@ -434,7 +434,6 @@ bintrayConfig {
             'corda-notary-healthcheck-client',
             'corda-tools-cliutils',
             'corda-notary-jpa',
-            'corda-notary-mysql',
             'corda-common-configuration-parsing',
             'corda-common-validation'
     ]

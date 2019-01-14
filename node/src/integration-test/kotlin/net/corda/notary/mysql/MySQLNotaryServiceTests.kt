@@ -1,6 +1,8 @@
 package net.corda.notary.mysql
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import com.typesafe.config.ConfigFactory
 import net.corda.client.mock.Generator
 import net.corda.core.concurrent.CordaFuture
@@ -21,9 +23,11 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.notary.mysql.MySQLNotaryConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.dummyCommand
@@ -347,15 +351,17 @@ class MySQLNotaryServiceTests : IntegrationTest() {
             setProperty("autoCommit", "false")
         }
         return mockNet.createUnstartedNode(
-                InternalMockNodeParameters(
-                        legalName = notaryNodeName,
+                InternalMockNodeParameters(legalName = notaryNodeName,
                         entropyRoot = BigInteger.valueOf(60L),
-                        configOverrides = MockNodeConfigOverrides(
-                                notary = MockNetNotaryConfig(
+                        configOverrides = {
+                            val notary = NotaryConfig(
                                     validating = true,
-                                    extraConfig = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100).toConfig(),
-                                    serviceLegalName = notaryName,
-                                    className = MySQLNotaryService::class.java.name
-                                ))))
+                                    mysql = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100),
+                                    serviceLegalName = notaryName
+                            )
+                            doReturn(notary).whenever(it).notary
+                        }
+                )
+        )
     }
 }

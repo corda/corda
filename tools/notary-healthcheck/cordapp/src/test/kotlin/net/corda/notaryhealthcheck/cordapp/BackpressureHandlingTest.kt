@@ -2,6 +2,8 @@ package net.corda.notaryhealthcheck.cordapp
 
 import co.paralleluniverse.fibers.Suspendable
 import com.codahale.metrics.MetricRegistry
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
@@ -22,6 +24,9 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.minutes
 import net.corda.core.utilities.seconds
 import net.corda.node.services.api.ServiceHubInternal
+import net.corda.node.services.config.FlowTimeoutConfiguration
+import net.corda.node.services.config.NodeConfiguration
+import net.corda.node.services.config.NotaryConfig
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.DevIdentityGenerator
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
@@ -29,7 +34,8 @@ import net.corda.notaryhealthcheck.utils.Monitorable
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.*
+import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.internal.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -61,22 +67,25 @@ class BackpressureHandlingTestRule(val clusterSize: Int) : ExternalResource() {
                 serviceLegalName)
 
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
-        val notaryConfig = MockNetNotaryConfig(
+        val notaryConfig = NotaryConfig(
                 serviceLegalName = serviceLegalName,
                 validating = false,
                 className = BackpressureHandlingTest.TestNotaryService::class.java.name
         )
 
         val notaryNodes = (0 until clusterSize).map {
-            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = MockNodeConfigOverrides(
-                    notary = notaryConfig
-            )))
+            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
+                doReturn(notaryConfig).whenever(it).notary
+            }))
         }
 
         val aliceNode = mockNet.createUnstartedNode(
                 InternalMockNodeParameters(
                         legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                        configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(BackpressureHandlingTest.defaultFlowTimeout, 3, 1.0))
+                        configOverrides = { conf: NodeConfiguration ->
+                            val retryConfig = FlowTimeoutConfiguration(BackpressureHandlingTest.defaultFlowTimeout, 3, 1.0)
+                            doReturn(retryConfig).whenever(conf).flowTimeout
+                        }
                 )
         )
 
