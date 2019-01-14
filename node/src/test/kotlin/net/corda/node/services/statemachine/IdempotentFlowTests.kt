@@ -1,6 +1,8 @@
 package net.corda.node.services.statemachine
 
 import co.paralleluniverse.fibers.Suspendable
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.InitiatingFlow
@@ -9,8 +11,7 @@ import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
 import net.corda.core.internal.packageName
 import net.corda.core.utilities.seconds
-import net.corda.testing.node.MockNetFlowTimeOut
-import net.corda.testing.node.MockNodeConfigOverrides
+import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.testing.node.internal.*
 import org.junit.After
 import org.junit.Before
@@ -35,7 +36,10 @@ class IdempotentFlowTests {
         mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(this.javaClass.packageName))
         nodeA = mockNet.createNode(InternalMockNodeParameters(
                 legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                configOverrides = MockNodeConfigOverrides(flowTimeout = MockNetFlowTimeOut(1.seconds, 3, 1.0))
+                configOverrides = {
+                    val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
+                    doReturn(retryConfig).whenever(it).flowTimeout
+                }
         ))
         nodeB = mockNet.createNode()
         mockNet.startNodes()
@@ -71,7 +75,7 @@ class IdempotentFlowTests {
         @Suspendable
         override fun call() {
             subFlowExecutionCounter.incrementAndGet() // No checkpoint should be taken before invoking IdempotentSubFlow,
-                                                      // so this should be replayed when TimedSubFlow restarts.
+            // so this should be replayed when TimedSubFlow restarts.
             subFlow(IdempotentSubFlow()) // Checkpoint shouldn't be taken before invoking the sub-flow.
         }
     }

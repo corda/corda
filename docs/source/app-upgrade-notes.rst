@@ -157,7 +157,7 @@ away to the new API, as otherwise things like business network membership checks
 
 This is a three step process:
 
-1. Change the flow that calls ``FinalityFlow``
+1. Change the flow that calls ``FinalityFlow``.
 2. Change or create the flow that will receive the finalised transaction.
 3. Make sure your application's minimum and target version numbers are both set to 4 (see step 2).
 
@@ -176,7 +176,7 @@ As an example, let's take a very simple flow that finalises a transaction withou
         :end-before: DOCEND SimpleFlowUsingOldApi
         :dedent: 4
 
-To use the new API, this flow needs to be annotated with ``InitiatingFlow`` and a ``FlowSession`` to the participant of the transaction must be
+To use the new API, this flow needs to be annotated with ``InitiatingFlow`` and a ``FlowSession`` to the participant(s) of the transaction must be
 passed to ``FinalityFlow`` :
 
 .. container:: codeset

@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -509,16 +510,15 @@ class DriverDSLImpl(
     private fun startRaftNotaryCluster(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
         fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
-            val config = configOf("notary" to mapOf(
-                    "validating" to spec.validating,
-                    "serviceLegalName" to spec.name.toString(),
-                    "className" to "net.corda.notary.raft.RaftNotaryService",
-                    "extraConfig" to mapOf(
-                            "nodeAddress" to nodeAddress.toString(),
-                            "clusterAddresses" to clusterAddresses.map { it.toString() }
-                    ))
+            val config = NotaryConfig(
+                    validating = spec.validating,
+                    serviceLegalName = spec.name,
+                    raft = RaftConfig(
+                            nodeAddress = nodeAddress,
+                            clusterAddresses = clusterAddresses
+                    )
             )
-            return config.root().unwrapped()
+            return mapOf("notary" to config.toConfig().root().unwrapped())
         }
 
         val nodeNames = generateNodeNames(spec)
