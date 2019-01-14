@@ -3,11 +3,12 @@ package net.corda.client.rpc
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.internal.loadClassesImplementing
+import net.corda.core.CordaInternal
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.PLATFORM_VERSION
+import net.corda.core.internal.loadClassesImplementing
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -22,7 +23,7 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
-import java.util.ServiceLoader
+import java.util.*
 
 /**
  * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
@@ -271,22 +272,7 @@ class CordaRPCClient private constructor(
     constructor(haAddressPool: List<NetworkHostAndPort>, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(haAddressPool.first(), configuration, null, null, haAddressPool)
 
     companion object {
-        fun createWithSsl(
-                hostAndPort: NetworkHostAndPort,
-                sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
-        ): CordaRPCClient {
-            return CordaRPCClient(hostAndPort, configuration, sslConfiguration)
-        }
-
-        fun createWithSsl(
-                haAddressPool: List<NetworkHostAndPort>,
-                sslConfiguration: ClientRpcSslOptions,
-                configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT
-        ): CordaRPCClient {
-            return CordaRPCClient(haAddressPool.first(), configuration, sslConfiguration, haAddressPool = haAddressPool)
-        }
-
+        @CordaInternal
         internal fun createWithSslAndClassLoader(
                 hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,

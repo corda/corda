@@ -2,6 +2,7 @@ package net.corda.node.services.rpc
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.RPCException
+import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.internal.div
 import net.corda.core.messaging.ClientRpcSslOptions
 import net.corda.core.utilities.getOrThrow
@@ -17,15 +18,14 @@ import net.corda.testing.internal.useSslRpcOverrides
 import net.corda.testing.node.User
 import org.apache.activemq.artemis.api.core.ActiveMQException
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import javax.security.auth.x500.X500Principal
 
 class RpcSslTest {
-
     @Rule
     @JvmField
     val tempFolder = TemporaryFolder()
@@ -47,7 +47,7 @@ class RpcSslTest {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
-            val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
+            val client = createCordaRPCClientWithSslAndClassLoader(node.rpcAddress, sslConfiguration = clientSslOptions)
             val connection = client.start(user.username, user.password)
 
             connection.proxy.apply {
@@ -57,8 +57,8 @@ class RpcSslTest {
             }
             connection.close()
 
-            Assertions.assertThatThrownBy {
-                val connection2 = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong")
+            assertThatThrownBy {
+                val connection2 = createCordaRPCClientWithSslAndClassLoader(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, "wrong")
                 connection2.proxy.apply {
                     nodeInfo()
                     failedLogin = true
@@ -85,8 +85,8 @@ class RpcSslTest {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(rpcUsers = listOf(user), customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
-            Assertions.assertThatThrownBy {
-                val connection = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password)
+            assertThatThrownBy {
+                val connection = createCordaRPCClientWithSslAndClassLoader(node.rpcAddress, sslConfiguration = clientSslOptions).start(user.username, user.password)
                 connection.proxy.apply {
                     nodeInfo()
                     successful = true
@@ -125,17 +125,17 @@ class RpcSslTest {
 
         driver(DriverParameters(startNodesInProcess = true, notarySpecs = emptyList())) {
             val node = startNode(customOverrides = brokerSslOptions.useSslRpcOverrides()).getOrThrow()
-            val client = CordaRPCClient.createWithSsl(node.rpcAddress, sslConfiguration = clientSslOptions)
+            val client = createCordaRPCClientWithSslAndClassLoader(node.rpcAddress, sslConfiguration = clientSslOptions)
 
-            Assertions.assertThatThrownBy {
+            assertThatThrownBy {
                 client.start(NODE_RPC_USER, NODE_RPC_USER).use { connection ->
                     connection.proxy.nodeInfo()
                 }
             }.isInstanceOf(ActiveMQException::class.java)
 
-            val clientAdmin = CordaRPCClient.createWithSsl(node.rpcAdminAddress, sslConfiguration = clientSslOptions)
+            val clientAdmin = createCordaRPCClientWithSslAndClassLoader(node.rpcAdminAddress, sslConfiguration = clientSslOptions)
 
-            Assertions.assertThatThrownBy {
+            assertThatThrownBy {
                 clientAdmin.start(NODE_RPC_USER, NODE_RPC_USER).use { connection ->
                     connection.proxy.nodeInfo()
                 }
