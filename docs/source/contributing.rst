@@ -3,6 +3,22 @@ How to contribute
 
 .. contents::
 
+Identifying an area to contribute
+---------------------------------
+There are several ways to identify an area where you can contribute to Corda:
+
+* The easiest is just to message one of the :ref:`Community Maintainers <community-maintainers>` saying "I want to help!". They'll work
+  with you to find an area for you to contribute
+
+* If you have a specific contribution in mind, confirm whether the contribution is appropriate first by reaching out in the
+  ``#contributing`` channel of the `Corda Slack <http://slack.corda.net/>`_ or contacting one of the
+  :ref:`Community Maintainers <community-maintainers>` directly
+
+* If you do not have a specific contribution in mind, you can also browse the issues labelled as ``help wanted`` on the
+  `Corda GitHub issues <https://github.com/corda/corda/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_ page
+
+  * Issues that additionally have the ``good first issue`` label are considered ideal for first-timers
+
 Contribution guidelines
 -----------------------
 We believe one of the things that makes Corda special is its coherent design and we seek to retain this defining characteristic. From the
@@ -26,19 +42,6 @@ outset we defined some guidelines to ensure new contributions only ever enhance 
   features at any given time. To avoid surprises and foster transparency,
   `our Jira work tracking system is public <https://r3-cev.atlassian.net/projects/CORDA/summary>`_. If in doubt, reach out to one of the
   :ref:`Community Maintainers <community-maintainers>`
-
-Identifying an area to contribute
----------------------------------
-There are two ways to identify an area where you can contribute to Corda:
-
-* If there is a specific contribution you would like to make, you should first confirm whether the contribution is appropriate by reaching
-  out in the ``#contributing`` channel of the `Corda Slack <http://slack.corda.net/>`_ or contacting one of the
-  :ref:`Community Maintainers <community-maintainers>` directly
-
-* If you do not have a specific contribution in mind, you can browse issues labelled as ``help wanted`` in the
-  `Corda GitHub Issues <https://github.com/corda/corda/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_
-
-  * Issues that additionally have the ``good first issue`` label are considered ideal for first-timers
 
 Making the required changes
 ---------------------------
