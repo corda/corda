@@ -31,7 +31,6 @@ private class NotaryDemoClientApi(val rpc: CordaRPCOps) {
     }
 
     /** A dummy identity. */
-    // TODO refactor, does it work at all?
     private val BOB_NAME = CordaX500Name("Bob Plc", "Rome", "IT")
     private val counterparty = Party(BOB_NAME, Crypto.generateKeyPair(Crypto.DEFAULT_SIGNATURE_SCHEME).public)
 

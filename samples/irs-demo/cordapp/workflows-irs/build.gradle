@@ -4,8 +4,6 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 
 configurations {
-//    integrationTestCompile.extendsFrom testCompile
-//    integrationTestRuntime.extendsFrom testRuntime
     demoArtifacts.extendsFrom testRuntime
 }
 

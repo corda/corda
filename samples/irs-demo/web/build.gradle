@@ -74,10 +74,6 @@ dependencies {
 	compile project(":samples:irs-demo:cordapp:workflows-irs")
 
     testCompile project(":test-utils")
-//	testCompile project(":samples:irs-demo:cordapp:workflows-irs")
-	//TODO
-//    testCompile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
-//    testCompile project(path: ":samples:irs-demo:cordapp:contracts-irs", configuration: "demoArtifacts")
     testCompile project(path: ":samples:irs-demo:cordapp:workflows-irs", configuration: "demoArtifacts")
 
 	// JOpt: for command line flags.

@@ -6,7 +6,7 @@ description 'Corda Notary Demo - Workflows'
 dependencies {
     cordaCompile project(':core')
     cordaCompile project(':client:rpc')
-    cordaCompile project(':node') //todo it was test-utils before, but it causes... circular dependency lol
+    cordaCompile project(':node')
 
     cordapp project(':samples:notary-demo:contracts')
 }

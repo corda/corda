@@ -7,22 +7,13 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-//configurations {
-//    integrationTestCompile.extendsFrom testCompile
-//    integrationTestRuntime.extendsFrom testRuntime
-//}
-
-//TODO clean the dependencies
 dependencies {
-//    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-//    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
 
     // Notary implementations
-    cordapp project(':experimental:notary-raft')
-    cordapp project(':experimental:notary-bft-smart')
     cordapp project(':samples:notary-demo:contracts')
     cordapp project(':samples:notary-demo:workflows')
 }
@@ -90,7 +81,6 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    def className = "" // TODO before rebase "net.corda.notary.raft.RaftNotaryService"
     directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
         extraConfig = [h2Settings: [address: "localhost:0"]]
@@ -241,14 +231,4 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 task notarise(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.notarydemo.NotariseKt'
-}
-
-// TODO contract + workflow
-cordapp {
-    info {
-        name "Corda Notary Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
-    }
 }

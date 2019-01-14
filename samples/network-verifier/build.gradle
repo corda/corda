@@ -18,7 +18,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     nodeDefaults{
         cordapp project(':samples:network-verifier:contracts')
-        cordapp project(':samples:network-verifier:workflows') // TODO fix, flow list doesn't show flows from this module
+        cordapp project(':samples:network-verifier:workflows')
     }
     directory "./build/nodes"
     node {
@@ -52,14 +52,5 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
             adminPort 10012
         }
         extraConfig = ['h2Settings.address' : 'localhost:0']
-    }
-}
-
-cordapp {
-    info {
-        name "Corda Network Verifier"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
     }
 }

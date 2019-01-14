@@ -5,7 +5,7 @@ apply plugin: 'net.corda.plugins.cordformation'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'application'
 
-mainClassName = 'net.corda.irs.IRSDemo' //todo
+mainClassName = 'net.corda.irs.IRSDemo'
 
 sourceSets {
     integrationTest {
@@ -17,15 +17,10 @@ sourceSets {
     }
 }
 
-//configurations {
-//    integrationTestCompile.extendsFrom testCompile
-//    integrationTestRuntime.extendsFrom testRuntime
-//    demoArtifacts.extendsFrom integrationTestRuntime
-//}
-
 dependencies {
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
+    cordapp project(':confidential-identities')
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
@@ -54,6 +49,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
     nodeDefaults{
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+        cordapp project(':confidential-identities')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -112,6 +108,7 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', n
     nodeDefaults{
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
+        cordapp project(':confidential-identities')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -160,21 +157,5 @@ idea {
     module {
         downloadJavadoc = true
         downloadSources = true
-    }
-}
-
-// TODO change jar tasks etc
-//jar {
-//    from sourceSets.main.output
-//    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-//}
-//
-
-cordapp {
-    info {
-        name "Corda IRS Demo"
-        vendor "R3"
-        targetPlatformVersion corda_platform_version.toInteger()
-        minimumPlatformVersion 1
     }
 }
