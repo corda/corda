@@ -60,8 +60,8 @@ relating to the Doorman, Network Map Service and Notary Service, and any other r
 
 CRL configuration
 -----------------
-The Corda Network provides an endpoint serving an empty certificate revocation list for the TLS-level certificates.
-This is intended for deployments that do not provide a CRL infrastructure but still require a strict CRL mode checking.
+The Corda Network provides an endpoint serving an empty certificate revocation list for TLS-level certificates.
+This is intended for deployments that do not provide a CRL infrastructure but still require strict CRL mode checking.
 In order to use this, add the following to your configuration file:
 
 		.. parsed-literal::

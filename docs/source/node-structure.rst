@@ -1,7 +1,7 @@
 Node folder structure
 =====================
 
-A folder with Corda node files has the following structure:
+A folder containing a Corda node files has the following structure:
 
 .. sourcecode:: none
 
@@ -11,7 +11,7 @@ A folder with Corda node files has the following structure:
     ├── brokers                 // Stores buffered RPC messages
     ├── certificates            // The node's certificates
     ├── corda-webserver.jar     // The built-in node webserver (DEPRECATED)
-    ├── corda.jar               // The core Corda libraries (JAR with actually Corda node)
+    ├── corda.jar               // The core Corda libraries (This is the actual Corda node implementation)
     ├── cordapps                // The CorDapp JARs installed on the node
     ├── drivers                 // Contains a Jolokia driver used to export JMX metrics, the node loads any additional JAR files from this directory at startup.
     ├── logs                    // The node's logs
