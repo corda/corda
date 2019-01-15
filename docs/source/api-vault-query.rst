@@ -86,7 +86,7 @@ There are four implementations of this interface which can be chained together t
 
 1. ``VaultQueryCriteria`` provides filterable criteria on attributes within the Vault states table: status (UNCONSUMED,
    CONSUMED), state reference(s), contract state type(s), notaries, soft locked states, timestamps (RECORDED, CONSUMED),
-   state constraints (see :ref:`Constraint Types <implicit_constraint_types>`).
+   state constraints (see :ref:`Constraint Types <implicit_constraint_types>`), relevancy (ALL, RELEVANT, NON_RELEVANT).
 
 	.. note:: Sensible defaults are defined for frequently used attributes (status = UNCONSUMED, always include soft
 	   locked states).
@@ -330,6 +330,14 @@ pages available:
     :end-before: DOCEND VaultQueryExample24
     :dedent: 8
 
+Query for all states, including non-relevant ones:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample25
+    :end-before: DOCEND VaultQueryExample25
+    :dedent: 8
+
 **LinearState and DealState queries using** ``LinearStateQueryCriteria``:
 
 Query for unconsumed linear states for given linear ids:
@@ -364,6 +372,14 @@ Query for unconsumed deal states with deals parties:
     :end-before: DOCEND VaultQueryExample11
     :dedent: 12
 
+Query for all linear states, including non-relevant ones:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample26
+    :end-before: DOCEND VaultQueryExample26
+    :dedent: 8
+
 **FungibleAsset and DealState queries using** ``FungibleAssetQueryCriteria``:
 
 Query for fungible assets for a given currency:
@@ -390,6 +406,14 @@ Query for fungible assets for a specific issuer party:
     :language: kotlin
     :start-after: DOCSTART VaultQueryExample14
     :end-before: DOCEND VaultQueryExample14
+    :dedent: 12
+
+Query for all fungible states, including non-relevant ones:
+
+.. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
+    :language: kotlin
+    :start-after: DOCSTART VaultQueryExample27
+    :end-before: DOCEND VaultQueryExample27
     :dedent: 12
 
 **Aggregate Function queries using** ``VaultCustomQueryCriteria``:

@@ -7,6 +7,7 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.packageName
+import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.*
 import net.corda.core.node.services.Vault.ConstraintInfo.Type.*
 import net.corda.core.node.services.vault.*
@@ -828,6 +829,46 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             expectedEx.expectMessage("Must specify one or more lockIds")
             val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
             vaultService.queryBy<ContractState>(criteriaMissingLockId)
+        }
+    }
+
+    @Test
+    fun `state relevancy queries`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestDeals(listOf("123", "456", "789"), includeMe = true)
+            vaultFiller.fillWithSomeTestDeals(listOf("ABC", "DEF", "GHI"), includeMe = false)
+            vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER, statesToRecord = StatesToRecord.ALL_VISIBLE)
+            vaultFillerCashNotary.fillWithSomeTestCash(100.DOLLARS, notaryServices, 10, DUMMY_CASH_ISSUER, charlie.party, statesToRecord = StatesToRecord.ALL_VISIBLE)
+            vaultFiller.fillWithSomeTestLinearStates(1, "XYZ", includeMe = true)
+            vaultFiller.fillWithSomeTestLinearStates(2, "JKL", includeMe = false)
+
+
+            val dealStates = vaultService.queryBy<DummyDealContract.State>().states
+            assertThat(dealStates).hasSize(3)
+
+            //DOCSTART VaultQueryExample25
+            val relevancyAllCriteria = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val allDealStateCount = vaultService.queryBy<DummyDealContract.State>(relevancyAllCriteria).states
+            //DOCEND VaultQueryExample25
+            assertThat(allDealStateCount).hasSize(6)
+
+            val cashStates = vaultService.queryBy<Cash.State>().states
+            assertThat(cashStates).hasSize(10)
+
+            //DOCSTART VaultQueryExample27
+            val allCashCriteria = FungibleStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val allCashStates = vaultService.queryBy<Cash.State>(allCashCriteria).states
+            //DOCEND VaultQueryExample27
+            assertThat(allCashStates).hasSize(20)
+
+            val linearStates = vaultService.queryBy<DummyLinearContract.State>().states
+            assertThat(linearStates).hasSize(1)
+
+            //DOCSTART VaultQueryExample26
+            val allLinearStateCriteria = LinearStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val allLinearStates = vaultService.queryBy<DummyLinearContract.State>(allLinearStateCriteria).states
+            //DOCEND VaultQueryExample26
+            assertThat(allLinearStates).hasSize(3)
         }
     }
 

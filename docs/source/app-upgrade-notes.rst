@@ -333,6 +333,16 @@ into shared business logic, but it makes perfect sense to put into a user-specif
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
 
+Step 10. Possibly update Vault state queries
+--------------------------------------------
+
+Queries made on a node's vault can filter by the relevancy of those states to the node in Corda 4. As this functionality does not exist in
+Corda 3, apps targeting that release will continue to receive all states in any vault queries. In Corda 4, the default is to return only those
+states relevant to the node when a vault query is made. For apps that only record states for which they are participants, no change is required
+in order to ensure the right set of states is returned from vault queries. Apps that use Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`"),
+however, may need to update any vault queries if the intention is to view all states currently stored in a node's vault. See :doc:`api-vault-query.rst` for
+more details on how to do this.
+
 Step 10. Explore other new features that may be useful
 ------------------------------------------------------
 
