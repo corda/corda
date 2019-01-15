@@ -41,6 +41,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.rules.RuleChain
@@ -167,6 +168,7 @@ class BackpressureHandlingTest {
         }
     }
 
+    @Ignore("https://r3-cev.atlassian.net/browse/ENT-2962")
     @Test
     fun `health check flows can update their ETA and report on it`() {
         try {
