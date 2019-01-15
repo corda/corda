@@ -1,6 +1,5 @@
 package net.corda.client.rpc
 
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
 import net.corda.core.context.*
 import net.corda.core.contracts.FungibleAsset
 import net.corda.core.crypto.random63BitValue
@@ -269,7 +268,7 @@ class CordaRPCClientTest : NodeBasedTest(listOf("net.corda.finance"), notaries =
             val address = NetworkHostAndPort.parse(args[0])
             val financeClassLoader = URLClassLoader(arrayOf(Paths.get(args[1]).toUri().toURL()))
             val rpcUser = CordaRPCClientTest.rpcUser
-            val client = createCordaRPCClientWithSslAndClassLoader(address, classLoader = financeClassLoader)
+            val client = CordaRPCClient(address, classLoader = financeClassLoader)
             val state = client.use(rpcUser.username, rpcUser.password) {
                 // financeClassLoader should be allowing the Cash.State to materialise
                 @Suppress("DEPRECATION")

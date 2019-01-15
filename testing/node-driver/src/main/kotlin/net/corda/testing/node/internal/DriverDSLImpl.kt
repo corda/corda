@@ -5,7 +5,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -164,7 +165,7 @@ class DriverDSLImpl(
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
-        val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
+        val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -754,7 +755,8 @@ class DriverDSLImpl(
                     "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
-                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;)"
+                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
+                    "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"

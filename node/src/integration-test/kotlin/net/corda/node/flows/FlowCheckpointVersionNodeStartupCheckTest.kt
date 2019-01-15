@@ -47,7 +47,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             val result = if (page.snapshot.states.isNotEmpty()) {
                 page.snapshot.states.first()
             } else {
-                val r = page.updates.timeout(10, TimeUnit.SECONDS).take(1).toBlocking().single()
+                val r = page.updates.timeout(30, TimeUnit.SECONDS).take(1).toBlocking().single()
                 if (r.consumed.isNotEmpty()) r.consumed.first() else r.produced.first()
             }
             assertNotNull(result)
@@ -139,7 +139,6 @@ class FlowCheckpointVersionNodeStartupCheckTest {
 
     private fun parametersForRestartingNodes(): DriverParameters {
         return DriverParameters(
-                isDebug = true,
                 startNodesInProcess = false, // Start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList()
