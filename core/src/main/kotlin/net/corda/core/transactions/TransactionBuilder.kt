@@ -40,7 +40,7 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder(
+open class TransactionBuilder @JvmOverloads constructor(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -48,9 +48,7 @@ open class TransactionBuilder(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt(),
-        protected val references: MutableList<StateRef> = defaultReferencesList(),
-        protected val serviceHub: ServiceHub? = defaultServiceHub()
+        protected var privacySalt: PrivacySalt = PrivacySalt()
 ) {
     private companion object {
         private val log = contextLogger()
@@ -70,8 +68,18 @@ open class TransactionBuilder(
             outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
             commands: MutableList<Command<*>> = arrayListOf(),
             window: TimeWindow? = null,
-            privacySalt: PrivacySalt = PrivacySalt()
-    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, defaultReferencesList(), defaultServiceHub())
+            privacySalt: PrivacySalt = PrivacySalt(),
+            references: MutableList<StateRef> = defaultReferencesList(),
+            serviceHub: ServiceHub? = defaultServiceHub()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
+        this.references = references
+        this.serviceHub = serviceHub
+    }
+
+    protected var references: MutableList<StateRef> = defaultReferencesList()
+        private set
+    protected var serviceHub: ServiceHub? = defaultServiceHub()
+        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -188,8 +196,8 @@ open class TransactionBuilder(
 
             addAttachment(attachment.id)
             return true
-        // Ignore these exceptions as they will break unit tests.
-        //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+            // Ignore these exceptions as they will break unit tests.
+            //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
         } catch (tve: TransactionVerificationException) {
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {
