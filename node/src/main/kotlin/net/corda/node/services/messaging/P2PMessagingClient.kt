@@ -515,6 +515,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             require(p2pConsumer != null) { "stop can't be called twice" }
             require(producer != null) { "stop can't be called twice" }
 
+            messagingExecutor?.close()
+
             close(p2pConsumer)
             p2pConsumer = null
 
@@ -542,8 +544,6 @@ class P2PMessagingClient(val config: NodeConfiguration,
             // Wait for the main loop to notice the consumer has gone and finish up.
             shutdownLatch.await()
         }
-        // Only first caller to gets running true to protect against double stop, which seems to happen in some integration tests.
-        messagingExecutor?.close()
         state.locked {
             locator?.close()
         }

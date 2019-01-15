@@ -855,7 +855,7 @@ class SingleThreadedStateMachineManager(
         while (true) {
             val event = flow.fiber.transientValues!!.value.eventQueue.tryReceive() ?: return
             when (event) {
-                is Event.DoRemainingWork -> {}
+                is Event.DoRemainingWork, Event.SoftShutdown -> {}
                 is Event.DeliverSessionMessage -> {
                     // Acknowledge the message so it doesn't leak in the broker.
                     event.deduplicationHandler.afterDatabaseTransaction()
