@@ -13,16 +13,26 @@ import net.corda.testing.driver.VerifierType
  * @property rpcUsers A list of users able to instigate RPC for this node or cluster of nodes.
  * @property verifierType How the notary will verify transactions.
  * @property cluster [ClusterSpec] if this is a distributed cluster notary. If null then this is a single-node notary.
- * @property maximumHeapSize [ClusterSpec] if this is a distributed cluster notary. If null then this is a single-node notary.
  */
 data class NotarySpec(
         val name: CordaX500Name,
         val validating: Boolean = true,
         val rpcUsers: List<User> = emptyList(),
         val verifierType: VerifierType = VerifierType.InMemory,
-        val cluster: ClusterSpec? = null,
-        val maximumHeapSize: String = "512m"
-)
+        val cluster: ClusterSpec? = null
+) {
+    // These extra fields are handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
+    constructor(name: CordaX500Name,
+                validating: Boolean = true,
+                rpcUsers: List<User> = emptyList(),
+                verifierType: VerifierType = VerifierType.InMemory,
+                cluster: ClusterSpec? = null,
+                maximumHeapSize: String = "512m"): this(name, validating, rpcUsers, verifierType, cluster) {
+        this.maximumHeapSize = maximumHeapSize
+    }
+
+    var maximumHeapSize: String = "512m"
+}
 
 /**
  * Abstract class specifying information about the consensus algorithm used for a cluster of nodes.
