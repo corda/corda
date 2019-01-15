@@ -31,8 +31,11 @@ fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, claz
 
 fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: () -> T): T {
     val threadClassLoader = Thread.currentThread().contextClassLoader
-    Thread.currentThread().contextClassLoader = classloader
-    val result = fn()
-    Thread.currentThread().contextClassLoader = threadClassLoader
-    return result
+    try {
+        Thread.currentThread().contextClassLoader = classloader
+        return fn()
+    } finally {
+        Thread.currentThread().contextClassLoader = threadClassLoader
+    }
+
 }

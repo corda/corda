@@ -245,13 +245,8 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  * @param configuration An optional configuration used to tweak client behaviour.
  * @param sslConfiguration An optional [ClientRpcSslOptions] used to enable secure communication with the server.
  * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
-<<<<<<< HEAD
- * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
- * HA mode, the client will round-robin from the beginning of the list and try all servers.
-=======
  *  The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
  *  HA mode, the client will round-robin from the beginning of the list and try all servers.
->>>>>>> Small refactorings following-up on PR-4551
  * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s and [SerializationWhitelist]s
  *  If the created RPC client is intended to use types with custom serializers / whitelists,
  *  a classloader will need to be provided that contains the associated CorDapp jars.
