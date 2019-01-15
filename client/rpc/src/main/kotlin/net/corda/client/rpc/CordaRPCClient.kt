@@ -3,7 +3,7 @@ package net.corda.client.rpc
 import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.client.rpc.internal.RPCClient
 import net.corda.client.rpc.internal.serialization.amqp.AMQPClientSerializationScheme
-import net.corda.core.internal.loadClassesImplementing
+import net.corda.core.internal.createInstancesOfClassesImplementing
 import net.corda.core.context.Actor
 import net.corda.core.context.Trace
 import net.corda.core.identity.CordaX500Name
@@ -244,9 +244,11 @@ open class CordaRPCClientConfiguration @JvmOverloads constructor(
  * @param configuration An optional configuration used to tweak client behaviour.
  * @param sslConfiguration An optional [ClientRpcSslOptions] used to enable secure communication with the server.
  * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
+ *  The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
+ *  HA mode, the client will round-robin from the beginning of the list and try all servers.
  * @param classLoader a classloader, which will be used (if provided) to discover available [SerializationCustomSerializer]s and [SerializationWhitelist]s
- * The client will attempt to connect to a live server by trying each address in the list. If the servers are not in
- * HA mode, the client will round-robin from the beginning of the list and try all servers.
+ *  If the created RPC client is intended to use types with custom serializers / whitelists,
+ *  a classloader will need to be provided that contains the associated CorDapp jars.
  */
 class CordaRPCClient private constructor(
         private val hostAndPort: NetworkHostAndPort,
@@ -255,11 +257,21 @@ class CordaRPCClient private constructor(
         private val classLoader: ClassLoader? = null,
         private val haAddressPool: List<NetworkHostAndPort> = emptyList()
 ) {
+
     @JvmOverloads
+    constructor(hostAndPort: NetworkHostAndPort, configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT) : this(
+            hostAndPort = hostAndPort, haAddressPool = emptyList(), configuration = configuration
+    )
+
     constructor(hostAndPort: NetworkHostAndPort,
                 configuration: CordaRPCClientConfiguration = CordaRPCClientConfiguration.DEFAULT,
-                classLoader: ClassLoader? = null)
-            : this(hostAndPort, configuration, null, classLoader = classLoader)
+                classLoader: ClassLoader): this(hostAndPort, configuration, null, classLoader = classLoader)
+
+    constructor(
+            hostAndPort: NetworkHostAndPort,
+            sslConfiguration: ClientRpcSslOptions? = null,
+            classLoader: ClassLoader? = null
+    ) : this(hostAndPort = hostAndPort, haAddressPool = emptyList(), sslConfiguration = sslConfiguration, classLoader = classLoader)
 
     /**
      * @param haAddressPool A list of [NetworkHostAndPort] representing the addresses of servers in HA mode.
@@ -302,13 +314,15 @@ class CordaRPCClient private constructor(
             effectiveSerializationEnv
         } catch (e: IllegalStateException) {
             try {
+                val cache = Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
+
                 // If the client has provided a classloader, the associated classpath is checked for available custom serializers and serialization whitelists.
                 if (classLoader != null) {
-                    val customSerializers = loadClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
+                    val customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
                     val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, classLoader).toSet()
-                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, customSerializers, serializationWhitelists, Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap())
+                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, customSerializers, serializationWhitelists, cache)
                 } else {
-                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, serializerFactoriesForContexts =  Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap())
+                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, serializerFactoriesForContexts =  cache)
                 }
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
