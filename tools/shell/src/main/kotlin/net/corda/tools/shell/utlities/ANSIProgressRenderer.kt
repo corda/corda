@@ -2,6 +2,8 @@ package net.corda.tools.shell.utlities
 
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.FlowProgressHandle
+import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.loggerFor
 import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LogEvent
@@ -14,6 +16,7 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
+import org.slf4j.LoggerFactory
 import rx.Subscription
 
 abstract class ANSIProgressRenderer {
@@ -250,11 +253,11 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
             // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
             // the config XML and lifecycle goop.
             val manager = LogManager.getContext(false) as LoggerContext
-            val consoleAppender: ConsoleAppender
-            try {
-                consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Selector" }
-            } catch (e: java.util.NoSuchElementException) {
-                throw AppenderNotFoundException("Failed to find Console-Selector appender - cannot display flow progress", e)
+            val consoleAppender: ConsoleAppender?
+            consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().singleOrNull { it.name == "Console-Selector" }
+            if (consoleAppender == null) {
+                loggerFor<StdoutANSIProgressRenderer>().warn("Cannot find console appender - progress tracking may not work as expected")
+                return
             }
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
@@ -301,5 +304,3 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
         System.out.flush()
     }
 }
-
-class AppenderNotFoundException(override val message: String?, override val cause: Throwable? = null): Exception()
