@@ -37,13 +37,12 @@ class TraderDemoTest {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo"),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, maximumHeapSize = "1g"))
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
         )) {
             val (nodeA, nodeB, bankNode) = listOf(
-                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1g"),
-                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1g"),
-                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser), maximumHeapSize = "1g")
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
+                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
             ).map { (it.getOrThrow() as InProcess) }
 
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {
