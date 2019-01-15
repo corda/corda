@@ -13,5 +13,5 @@
     <include file="migration/node-core.changelog-tx-mapping.xml"/>
     <include file="migration/node-core.changelog-v9.xml"/>
     <include file="migration/node-core.changelog-v10.xml"/>
-
+    <include file="migration/node-core.changelog-v11.xml"/>
 </databaseChangeLog>

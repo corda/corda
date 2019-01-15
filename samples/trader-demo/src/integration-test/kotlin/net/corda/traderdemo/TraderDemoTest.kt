@@ -14,6 +14,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.TestCordapp
@@ -44,12 +45,13 @@ class TraderDemoTest : IntegrationTest() {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo"),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, maximumHeapSize = "1g"))
         )) {
             val (nodeA, nodeB, bankNode) = listOf(
-                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
+                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1g"),
+                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), maximumHeapSize = "1g"),
+                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser), maximumHeapSize = "1g")
             ).map { (it.getOrThrow() as InProcess) }
 
             val (nodeARpc, nodeBRpc) = listOf(nodeA, nodeB).map {

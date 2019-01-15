@@ -73,6 +73,8 @@
       <module name="corda-enterprise_main" target="1.8" />
       <module name="corda-enterprise_test" target="1.8" />
       <module name="corda-finance_integrationTest" target="1.8" />
+      <module name="corda-isolated_main" target="1.8" />
+      <module name="corda-isolated_test" target="1.8" />
       <module name="corda-project_buildSrc_main" target="1.8" />
       <module name="corda-project_buildSrc_test" target="1.8" />
       <module name="corda-project_canonicalizer_main" target="1.8" />

@@ -6,12 +6,13 @@ apply plugin: 'kotlin'
 apply plugin: CanonicalizerPlugin
 apply plugin: 'net.corda.plugins.publish-utils'
 apply plugin: 'net.corda.plugins.quasar-utils'
+apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'com.jfrog.artifactory'
 
 description 'Corda Experimental Confidential Identities'
 
 dependencies {
-    compile project(':core')
+    cordaCompile project(':core')
 
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "junit:junit:$junit_version"
@@ -26,6 +27,17 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
     testCompile ("net.corda:corda-finance-contracts:$os_corda_release_version"){
         transitive = false
+    }
+}
+
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    workflow {
+        name "Corda Experimental Confidential Identities"
+        versionId 1
+        vendor "R3"
+        licence "Open Source (Apache 2)"
     }
 }
 

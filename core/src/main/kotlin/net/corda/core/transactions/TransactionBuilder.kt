@@ -12,6 +12,7 @@ import net.corda.core.crypto.keys
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -59,6 +60,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
 
         private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+
+        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
 
     constructor(
@@ -691,8 +694,15 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
-    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
+    fun commands(): List<Command<*>> {
+        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
+            commands.groupBy { cmd -> cmd.value }
+                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+        } else {
+            ArrayList(commands)
+        }
+    }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use

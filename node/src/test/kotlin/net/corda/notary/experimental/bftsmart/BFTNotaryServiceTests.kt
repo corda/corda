@@ -40,6 +40,7 @@ import org.junit.AfterClass
 import org.junit.Assert.assertThat
 import org.junit.BeforeClass
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Paths
 import java.time.Duration
@@ -51,6 +52,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+// This test is excluded from CI due to the experimental nature of the BFT notary
+@Ignore
 class BFTNotaryServiceTests {
     companion object {
         @ClassRule

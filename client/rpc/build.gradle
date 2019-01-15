@@ -64,7 +64,7 @@ processSmokeTestResources {
     from(project(':finance:workflows').tasks['jar']) {
         rename '.*finance-workflows-.*', 'cordapp-finance-workflows.jar'
     }
-    from(findJar('corda-finance-contracts')) {
+    from(project(':finance:contracts').tasks['jar']) {
         rename '.*finance-contracts-.*', 'cordapp-finance-contracts.jar'
     }
     from(project(':confidential-identities').tasks['jar']) {

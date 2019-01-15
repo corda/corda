@@ -7,11 +7,13 @@ import net.corda.core.identity.Party
 import net.corda.core.identity.groupAbstractPartyByWellKnownParty
 import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.internal.pushToLoggingContext
+import net.corda.core.internal.warnOnce
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.StatesToRecord.ONLY_RELEVANT
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.debug
 
 /**
  * Verifies the given transaction, then sends it to the named notary. If the notary agrees that the transaction
@@ -29,44 +31,74 @@ import net.corda.core.utilities.ProgressTracker
  * The flow returns the same transaction but with the additional signatures from the notary.
  *
  * NOTE: This is an inlined flow but for backwards compatibility is annotated with [InitiatingFlow].
- *
- * @param transaction What to commit.
- * @param sessions A collection of [FlowSession]s who will be given the notarised transaction. This list **must** include
- * all participants in the transaction (excluding the local identity).
  */
 // To maintain backwards compatibility with the old API, FinalityFlow can act both as an initiating flow and as an inlined flow.
 // This is only possible because a flow is only truly initiating when the first call to initiateFlow is made (where the
 // presence of @InitiatingFlow is checked). So the new API is inlined simply because that code path doesn't call initiateFlow.
 @InitiatingFlow
 class FinalityFlow private constructor(val transaction: SignedTransaction,
-                                       private val extraRecipients: Set<Party>,
+                                       private val oldParticipants: Collection<Party>,
                                        override val progressTracker: ProgressTracker,
-                                       private val sessions: Collection<FlowSession>?) : FlowLogic<SignedTransaction>() {
+                                       private val sessions: Collection<FlowSession>,
+                                       private val newApi: Boolean) : FlowLogic<SignedTransaction>() {
     @Deprecated(DEPRECATION_MSG)
     constructor(transaction: SignedTransaction, extraRecipients: Set<Party>, progressTracker: ProgressTracker) : this(
-            transaction, extraRecipients, progressTracker, null
+            transaction, extraRecipients, progressTracker, emptyList(), false
     )
     @Deprecated(DEPRECATION_MSG)
-    constructor(transaction: SignedTransaction, extraRecipients: Set<Party>) : this(transaction, extraRecipients, tracker(), null)
+    constructor(transaction: SignedTransaction, extraRecipients: Set<Party>) : this(transaction, extraRecipients, tracker(), emptyList(), false)
     @Deprecated(DEPRECATION_MSG)
-    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker(), null)
+    constructor(transaction: SignedTransaction) : this(transaction, emptySet(), tracker(), emptyList(), false)
     @Deprecated(DEPRECATION_MSG)
-    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker, null)
+    constructor(transaction: SignedTransaction, progressTracker: ProgressTracker) : this(transaction, emptySet(), progressTracker, emptyList(), false)
 
-    constructor(transaction: SignedTransaction, sessions: Collection<FlowSession>, progressTracker: ProgressTracker) : this(
-            transaction, emptySet(), progressTracker, sessions
-    )
-    constructor(transaction: SignedTransaction, sessions: Collection<FlowSession>) : this(
-            transaction, emptySet(), tracker(), sessions
-    )
+    /**
+     * Notarise the given transaction and broadcast it to the given [FlowSession]s. This list **must** at least include
+     * all the non-local participants of the transaction. Sessions to non-participants can also be provided.
+     *
+     * @param transaction What to commit.
+     */
     constructor(transaction: SignedTransaction, firstSession: FlowSession, vararg restSessions: FlowSession) : this(
-            transaction, emptySet(), tracker(), listOf(firstSession) + restSessions.asList()
+            transaction, listOf(firstSession) + restSessions.asList()
     )
+
+    /**
+     * Notarise the given transaction and broadcast it to all the participants.
+     *
+     * @param transaction What to commit.
+     * @param sessions A collection of [FlowSession]s for each non-local participant of the transaction. Sessions to non-participants can
+     * also be provided.
+     */
+    @JvmOverloads
+    constructor(
+            transaction: SignedTransaction,
+            sessions: Collection<FlowSession>,
+            progressTracker: ProgressTracker = tracker()
+    ) : this(transaction, emptyList(), progressTracker, sessions, true)
+
+    /**
+     * Notarise the given transaction and broadcast it to all the participants.
+     *
+     * @param transaction What to commit.
+     * @param sessions A collection of [FlowSession]s for each non-local participant.
+     * @param oldParticipants An **optional** collection of parties for participants who are still using the old API.
+     *
+     * You will only need to use this parameter if you have upgraded your CorDapp from the V3 FinalityFlow API but are required to provide
+     * backwards compatibility with participants running V3 nodes. If you're writing a new CorDapp then this does not apply and this
+     * parameter should be ignored.
+     */
+    @Deprecated(DEPRECATION_MSG)
+    constructor(
+            transaction: SignedTransaction,
+            sessions: Collection<FlowSession>,
+            oldParticipants: Collection<Party>,
+            progressTracker: ProgressTracker
+    ) : this(transaction, oldParticipants, progressTracker, sessions, true)
 
     companion object {
         private const val DEPRECATION_MSG = "It is unsafe to use this constructor as it requires nodes to automatically " +
                 "accept notarised transactions without first checking their relevancy. Instead, use one of the constructors " +
-                "that takes in existing FlowSessions."
+                "that requires only FlowSessions."
 
         object NOTARISING : ProgressTracker.Step("Requesting signature by notary service") {
             override fun childProgressTracker() = NotaryFlow.Client.tracker()
@@ -81,13 +113,13 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
     @Suspendable
     @Throws(NotaryException::class)
     override fun call(): SignedTransaction {
-        if (sessions == null) {
+        if (!newApi) {
             require(CordappResolver.currentTargetVersion < 4) {
                 "A flow session for each external participant to the transaction must be provided. If you wish to continue " +
                         "using this insecure API then specify a target platform version of less than 4 for your CorDapp."
             }
-            logger.warn("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
-                    "FinalityFlow with FlowSessions.")
+            logger.warnOnce("The current usage of FinalityFlow is unsafe. Please consider upgrading your CorDapp to use " +
+                    "FinalityFlow with FlowSessions. (${CordappResolver.currentCordapp?.info})")
         } else {
             require(sessions.none { serviceHub.myInfo.isLegalIdentity(it.counterparty) }) {
                 "Do not provide flow sessions for the local node. FinalityFlow will record the notarised transaction locally."
@@ -103,30 +135,25 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
         transaction.pushToLoggingContext()
         logCommandData()
         val ledgerTransaction = verifyTx()
-        val externalParticipants = extractExternalParticipants(ledgerTransaction)
+        val externalTxParticipants = extractExternalParticipants(ledgerTransaction)
 
-        if (sessions != null) {
-            val missingRecipients = externalParticipants - sessions.map { it.counterparty }
+        if (newApi) {
+            val sessionParties = sessions.map { it.counterparty }
+            val missingRecipients = externalTxParticipants - sessionParties - oldParticipants
             require(missingRecipients.isEmpty()) {
                 "Flow sessions were not provided for the following transaction participants: $missingRecipients"
+            }
+            sessionParties.intersect(oldParticipants).let {
+                require(it.isEmpty()) { "The following parties are specified both in flow sessions and in the oldParticipants list: $it" }
             }
         }
 
         val notarised = notariseAndRecord()
 
-        // Each transaction has its own set of recipients, but extra recipients get them all.
         progressTracker.currentStep = BROADCASTING
 
-        if (sessions == null) {
-            val recipients = externalParticipants + (extraRecipients - serviceHub.myInfo.legalIdentities)
-            logger.info("Broadcasting transaction to parties ${recipients.joinToString(", ", "[", "]")}.")
-            for (recipient in recipients) {
-                logger.info("Sending transaction to party ${recipient.name}.")
-                val session = initiateFlow(recipient)
-                subFlow(SendTransactionFlow(session, notarised))
-                logger.info("Party $recipient received the transaction.")
-            }
-        } else {
+        if (newApi) {
+            oldV3Broadcast(notarised, oldParticipants.toSet())
             for (session in sessions) {
                 try {
                     subFlow(SendTransactionFlow(session, notarised))
@@ -140,11 +167,25 @@ class FinalityFlow private constructor(val transaction: SignedTransaction,
                     )
                 }
             }
+        } else {
+            oldV3Broadcast(notarised, (externalTxParticipants + oldParticipants).toSet())
         }
 
         logger.info("All parties received the transaction successfully.")
 
         return notarised
+    }
+
+    @Suspendable
+    private fun oldV3Broadcast(notarised: SignedTransaction, recipients: Set<Party>) {
+        for (recipient in recipients) {
+            if (!serviceHub.myInfo.isLegalIdentity(recipient)) {
+                logger.debug { "Sending transaction to party $recipient." }
+                val session = initiateFlow(recipient)
+                subFlow(SendTransactionFlow(session, notarised))
+                logger.info("Party $recipient received the transaction.")
+            }
+        }
     }
 
     private fun logCommandData() {

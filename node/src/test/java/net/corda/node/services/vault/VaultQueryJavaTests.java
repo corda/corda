@@ -11,6 +11,7 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.ServicesForResolution;
 import net.corda.core.node.services.AttachmentStorage;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
@@ -41,7 +42,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -60,12 +60,15 @@ import static net.corda.core.node.services.vault.Builder.equal;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.common.internal.ParametersUtilitiesKt.testNetworkParameters;
+import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.core.TestConstants.*;
 import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 public class VaultQueryJavaTests {
@@ -104,6 +107,9 @@ public class VaultQueryJavaTests {
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
         vaultService = services.getVaultService();
         storage = new NodeAttachmentService(new MetricRegistry(), new TestingNamedCacheFactory(100), database);
+        ServicesForResolution serviceForResolution = mock(ServicesForResolution.class);
+        ((NodeAttachmentService) storage).servicesForResolution = serviceForResolution;
+        doReturn(testNetworkParameters()).when(serviceForResolution).getNetworkParameters();
     }
 
     @After

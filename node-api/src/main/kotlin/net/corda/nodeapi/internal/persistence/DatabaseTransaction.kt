@@ -10,11 +10,13 @@ import java.util.UUID
 import javax.persistence.EntityManager
 
 fun currentDBSession(): Session = contextTransaction.session
+
 private val _contextTransaction = ThreadLocal<DatabaseTransaction>()
 var contextTransactionOrNull: DatabaseTransaction?
-    get() = _contextTransaction.get()
+    get() = if (_prohibitDatabaseAccess.get() == true) throw IllegalAccessException("Database access is disabled in this context.") else _contextTransaction.get()
     set(transaction) = _contextTransaction.set(transaction)
-val contextTransaction get() = contextTransactionOrNull ?: error("Was expecting to find transaction set on current strand: ${Strand.currentStrand()}")
+val contextTransaction
+    get() = contextTransactionOrNull ?: error("Was expecting to find transaction set on current strand: ${Strand.currentStrand()}")
 
 class DatabaseTransaction(
         isolation: Int,

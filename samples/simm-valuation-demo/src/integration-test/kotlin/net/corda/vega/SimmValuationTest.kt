@@ -15,6 +15,7 @@ import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
@@ -60,14 +61,15 @@ class SimmValuationTest : IntegrationTest() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
-                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts")) + FINANCE_CORDAPPS,
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, maximumHeapSize = "1g")))
         ) {
-            val nodeAFuture = startNode(providedName = nodeALegalName)
-            val nodeBFuture = startNode(providedName = nodeBLegalName)
+            val nodeAFuture = startNode(providedName = nodeALegalName, maximumHeapSize = "1g")
+            val nodeBFuture = startNode(providedName = nodeBLegalName, maximumHeapSize = "1g")
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
-            val nodeAWebServerFuture = startWebserver(nodeA, maximumHeapSize = "300m")
-            val nodeBWebServerFuture = startWebserver(nodeB, maximumHeapSize = "300m")
+            val nodeAWebServerFuture = startWebserver(nodeA, "1g")
+            val nodeBWebServerFuture = startWebserver(nodeB, "1g")
             val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)
@@ -77,10 +79,9 @@ class SimmValuationTest : IntegrationTest() {
             assertTradeExists(nodeBApi, nodeAParty, testTradeId)
             assertTradeExists(nodeAApi, nodeBParty, testTradeId)
 
-            // TODO Dimos - uncomment this on the CORDA-2390 branch to prove that the fix works.
-//            runValuationsBetween(nodeAApi, nodeBParty)
-//            assertValuationExists(nodeBApi, nodeAParty)
-//            assertValuationExists(nodeAApi, nodeBParty)
+            runValuationsBetween(nodeAApi, nodeBParty)
+            assertValuationExists(nodeBApi, nodeAParty)
+            assertValuationExists(nodeAApi, nodeBParty)
         }
     }
 

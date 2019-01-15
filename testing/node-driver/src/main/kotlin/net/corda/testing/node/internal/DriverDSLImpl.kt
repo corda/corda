@@ -503,7 +503,7 @@ class DriverDSLImpl(
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
-                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides)
+                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides, maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
     }
 

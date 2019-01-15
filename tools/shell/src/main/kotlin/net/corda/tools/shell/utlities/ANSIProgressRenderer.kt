@@ -85,6 +85,7 @@ abstract class ANSIProgressRenderer {
             stepsTreeFeed?.apply {
                 tree = snapshot
                 subscriptionTree = updates.subscribe({
+                    remapIndices(it)
                     tree = it
                     draw(true)
                 }, { done(it) }, { done(null) })
@@ -92,7 +93,15 @@ abstract class ANSIProgressRenderer {
         }
     }
 
-
+    private fun remapIndices(newTree: List<Pair<Int, String>>) {
+        val newIndices = newTree.filter {
+            treeIndexProcessed.contains(tree.indexOf(it))
+        }.map {
+            newTree.indexOf(it)
+        }.toMutableSet()
+        treeIndex = newIndices.max() ?: 0
+        treeIndexProcessed = if (newIndices.isNotEmpty()) newIndices else mutableSetOf(0)
+    }
 
     @Synchronized protected fun draw(moveUp: Boolean, error: Throwable? = null) {
         if (!usingANSI) {
