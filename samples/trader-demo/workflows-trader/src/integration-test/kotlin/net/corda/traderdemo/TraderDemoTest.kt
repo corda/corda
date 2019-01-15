@@ -14,10 +14,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
-import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -37,7 +34,7 @@ class TraderDemoTest {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+                extraCordappPackagesToScan = listOf("net.corda.irs", "net.corda.finance")
         )) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
@@ -84,7 +81,7 @@ class TraderDemoTest {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+                extraCordappPackagesToScan = listOf("net.corda.irs", "net.corda.finance")
         )) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
