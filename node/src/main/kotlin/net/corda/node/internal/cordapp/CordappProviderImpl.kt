@@ -1,7 +1,6 @@
 package net.corda.node.internal.cordapp
 
 import com.google.common.collect.HashBiMap
-import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.cordapp.CordappContext
@@ -9,7 +8,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.internal.cordapp.CordappImpl
-import net.corda.core.internal.createCordappContext
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.serialization.SingletonSerializeAsToken
@@ -96,7 +94,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
      */
     fun getAppContext(cordapp: Cordapp): CordappContext {
         return contextCache.computeIfAbsent(cordapp) {
-            createCordappContext(
+            CordappContext.create(
                     cordapp,
                     getCordappAttachmentId(cordapp),
                     cordappLoader.appClassLoader,
