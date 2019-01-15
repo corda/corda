@@ -100,7 +100,7 @@ class TestCheckScheduleManagementFlow {
 
     @Test
     fun testStartAllFlows() {
-        nodeA.startFlow(StartAllChecksFlow(2, 5))
+        nodeA.startFlow(StartAllChecksFlow(10, 5)).getOrThrow()
         sleep(1.seconds.toMillis())
         nodeA.transaction {
             val pendingChecks = nodeA.services.vaultService.queryBy<SchedulingContract.ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
