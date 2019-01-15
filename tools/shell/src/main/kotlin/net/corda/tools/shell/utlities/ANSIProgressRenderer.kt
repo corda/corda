@@ -187,7 +187,7 @@ abstract class ANSIProgressRenderer {
         }
     }
 
-    private fun renderInBold(payload: String, ansi: Ansi): Unit {
+    private fun renderInBold(payload: String, ansi: Ansi) {
         with(ansi) {
             a(Attribute.INTENSITY_BOLD)
             a(payload)
@@ -195,7 +195,7 @@ abstract class ANSIProgressRenderer {
         }
     }
 
-    private fun renderInFaint(payload: String, ansi: Ansi): Unit {
+    private fun renderInFaint(payload: String, ansi: Ansi) {
         with(ansi) {
             a(Attribute.INTENSITY_FAINT)
             a(payload)
@@ -250,7 +250,7 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
             // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
             // the config XML and lifecycle goop.
             val manager = LogManager.getContext(false) as LoggerContext
-            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Appender" }
+            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Selector" }
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
                     consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {
