@@ -75,7 +75,7 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
         }
         notary = [
                 validating: true,
-                className : "net.corda.notarydemo.MyCustomValidatingNotaryService"
+                className: "net.corda.notarydemo.MyCustomValidatingNotaryService"
         ]
     }
 }

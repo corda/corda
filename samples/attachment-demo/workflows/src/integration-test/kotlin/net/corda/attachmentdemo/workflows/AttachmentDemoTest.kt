@@ -1,6 +1,5 @@
 package net.corda.attachmentdemo.workflows
 
-import net.corda.attachmentdemo.contracts.ATTACHMENT_PROGRAM_ID
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all

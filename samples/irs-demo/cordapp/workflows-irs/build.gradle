@@ -30,7 +30,7 @@ cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
     workflow {
-        name "Corda IRS Demo - Flows"
+        name "Corda IRS Demo"
         versionId 1
         vendor "R3"
         licence "Open Source (Apache 2)"
