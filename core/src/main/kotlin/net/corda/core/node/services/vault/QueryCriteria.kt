@@ -249,8 +249,25 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
             val issuerRef: List<OpaqueBytes>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
-            override val relevancyStatus: Vault.RelevancyStatus = if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else Vault.RelevancyStatus.RELEVANT
+            override val relevancyStatus: Vault.RelevancyStatus
     ) : CommonQueryCriteria() {
+        @JvmOverloads constructor(
+            participants: List<AbstractParty>? = null,
+            owner: List<AbstractParty>? = null,
+            quantity: ColumnPredicate<Long>? = null,
+            issuer: List<AbstractParty>? = null,
+            issuerRef: List<OpaqueBytes>? = null,
+            status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+            contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(
+                participants,
+                owner,
+                quantity,
+                issuer,
+                issuerRef,
+                status,
+                contractStateTypes,
+                if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else Vault.RelevancyStatus.RELEVANT)
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
             return parser.parseCriteria(this)
