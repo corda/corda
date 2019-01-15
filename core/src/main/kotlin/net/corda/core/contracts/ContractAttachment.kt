@@ -1,12 +1,13 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.serialization.CordaSerializable
 import java.security.PublicKey
 
 /**
- * Wrap an attachment in this if it is to be used as an executable contract attachment
+ * An [Attachment] which represents a contract JAR.
  *
  * @property attachment The attachment representing the contract JAR
  * @property contract The contract name contained within the JAR. A Contract attachment has to contain at least 1 contract.
@@ -14,19 +15,31 @@ import java.security.PublicKey
  */
 @KeepForDJVM
 @CordaSerializable
-//TODO Can we make this c'tor private?
-class ContractAttachment constructor(
+class ContractAttachment private constructor(
         val attachment: Attachment,
         val contract: ContractClassName,
-        val additionalContracts: Set<ContractClassName> = emptySet(),
-        val uploader: String? = null,
-        override val signerKeys: List<PublicKey> = emptyList(),
-        val version: Int = DEFAULT_CORDAPP_VERSION) : Attachment by attachment {
+        val additionalContracts: Set<ContractClassName>,
+        val uploader: String?,
+        override val signerKeys: List<PublicKey>,
+        val version: Int
+) : Attachment by attachment {
     @JvmOverloads
     constructor(attachment: Attachment,
                 contract: ContractClassName,
                 additionalContracts: Set<ContractClassName> = emptySet(),
-                uploader: String? = null) : this(attachment, contract, additionalContracts, uploader, emptyList())
+                uploader: String? = null) : this(attachment, contract, additionalContracts, uploader, emptyList(), DEFAULT_CORDAPP_VERSION)
+
+    companion object {
+        @CordaInternal
+        fun create(attachment: Attachment,
+                   contract: ContractClassName,
+                   additionalContracts: Set<ContractClassName> = emptySet(),
+                   uploader: String? = null,
+                   signerKeys: List<PublicKey> = emptyList(),
+                   version: Int = DEFAULT_CORDAPP_VERSION): ContractAttachment {
+            return ContractAttachment(attachment, contract, additionalContracts, uploader, signerKeys, version)
+        }
+    }
 
     val allContracts: Set<ContractClassName> get() = additionalContracts + contract
 

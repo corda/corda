@@ -239,7 +239,7 @@ class NodeAttachmentService(
             val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
-                    ContractAttachment(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
+                    ContractAttachment.create(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()
                             ?: emptyList(), attachment.version)
                 } else {
                     it
