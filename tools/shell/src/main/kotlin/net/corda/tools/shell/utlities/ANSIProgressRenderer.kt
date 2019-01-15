@@ -250,7 +250,12 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
             // than doing things the official way with a dedicated plugin, etc, as it avoids mucking around with all
             // the config XML and lifecycle goop.
             val manager = LogManager.getContext(false) as LoggerContext
-            val consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Selector" }
+            val consoleAppender: ConsoleAppender
+            try {
+                consoleAppender = manager.configuration.appenders.values.filterIsInstance<ConsoleAppender>().single { it.name == "Console-Selector" }
+            } catch (e: java.util.NoSuchElementException) {
+                throw AppenderNotFoundException("Failed to find Console-Selector appender - cannot display flow progress", e)
+            }
             val scrollingAppender = object : AbstractOutputStreamAppender<OutputStreamManager>(
                     consoleAppender.name, consoleAppender.layout, consoleAppender.filter,
                     consoleAppender.ignoreExceptions(), true, consoleAppender.manager) {
@@ -296,3 +301,5 @@ object StdoutANSIProgressRenderer : ANSIProgressRenderer() {
         System.out.flush()
     }
 }
+
+class AppenderNotFoundException(override val message: String?, override val cause: Throwable? = null): Exception()
