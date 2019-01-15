@@ -299,23 +299,17 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
      */
-    data class VaultCustomQueryCriteria<L : StatePersistable> @JvmOverloads constructor(
+    data class VaultCustomQueryCriteria<L : StatePersistable> constructor(
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
     ) : CommonQueryCriteria() {
-        // These extra field is handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
-        constructor(
+        @JvmOverloads constructor(
                 expression: CriteriaExpression<L, Boolean>,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
-        ) : this(expression, status, contractStateTypes) {
-            this.relevancyStatus = relevancyStatus
-        }
-
-        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
-            private set
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(expression, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -325,8 +319,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun copy(
                 expression: CriteriaExpression<L, Boolean> = this.expression,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
-                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
         ): VaultCustomQueryCriteria<L> {
             return VaultCustomQueryCriteria(
                     expression,
