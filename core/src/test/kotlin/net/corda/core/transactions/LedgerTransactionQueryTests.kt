@@ -1,6 +1,7 @@
 package net.corda.core.transactions
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.generateKeyPair
@@ -34,7 +35,7 @@ class LedgerTransactionQueryTests {
     private val services = MockServices(
             listOf("net.corda.testing.contracts"),
             TestIdentity(CordaX500Name("MegaCorp", "London", "GB"), keyPair),
-            rigorousMock<IdentityServiceInternal>().also {
+            mock<IdentityServiceInternal>().also {
                 doReturn(null).whenever(it).partyFromKey(keyPair.public)
             },
             testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),

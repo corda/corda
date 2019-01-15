@@ -1,6 +1,7 @@
 package net.corda.core.crypto
 
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash.Companion.zeroHash
@@ -68,7 +69,7 @@ class PartialMerkleTreeTest {
         testLedger = MockServices(
                 cordappPackages = emptyList(),
                 initialIdentity = TestIdentity(MEGA_CORP.name),
-                identityService = rigorousMock<IdentityServiceInternal>().also {
+                identityService = mock<IdentityServiceInternal>().also {
                     doReturn(MEGA_CORP).whenever(it).partyFromKey(MEGA_CORP_PUBKEY)
                 },
                 networkParameters = testNetworkParameters(minimumPlatformVersion = 4, notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))

@@ -154,7 +154,7 @@ simple: it's given a class representing the transaction, and if the function ret
 acceptable. If it throws an exception, the transaction is rejected.
 
 Each transaction can have multiple input and output states of different types. The set of contracts to run is decided
-by taking the code references inside each state. Each contract is run only once. As an example, a contract that includes
+by taking the code references inside each state. Each contract is run only once. As an example, a transaction that includes
 2 cash states and 1 commercial paper state as input, and has as output 1 cash state and 1 commercial paper state, will
 run two contracts one time each: Cash and CommercialPaper.
 

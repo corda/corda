@@ -72,6 +72,23 @@ We look forward to seeing what you can do with Corda!
    changelog.rst
 
 .. conditional-toctree::
+   :caption: Participate
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   contributing-index.rst
+   corda-repo-layout.rst
+   deterministic-modules.rst
+   changelog
+
+.. conditional-toctree::
+   :caption: Corda Network
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   corda-network/index.md
+
+.. conditional-toctree::
    :caption: Design docs
    :maxdepth: 2
    :if_tag: htmlmode
@@ -90,23 +107,3 @@ We look forward to seeing what you can do with Corda!
    design/data-model-upgrades/signature-constraints.md
    design/data-model-upgrades/package-namespace-ownership.md
    design/targetversion/design.md
-
-.. conditional-toctree::
-   :caption: Participate
-   :maxdepth: 2
-   :if_tag: htmlmode
-   
-   contributing-index.rst
-   corda-repo-layout.rst
-   deterministic-modules.rst
-   changelog
-
-.. conditional-toctree::
-   :caption: Corda Network
-   :maxdepth: 2
-   :if_tag: htmlmode
-
-   corda-network/index.md
-   corda-network/governance-structure.md
-   corda-network/governance-guidelines.md
-   corda-network/joining-corda-network.md

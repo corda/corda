@@ -1,6 +1,7 @@
 package net.corda.notarydemo.flows
 
 import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
@@ -24,6 +25,7 @@ class DummyIssueAndMove(private val notary: Party, private val counterpartyNode:
 
     data class DummyCommand(val dummy: Int = 0) : CommandData
 
+    @BelongsToContract(DoNothingContract::class)
     data class State(override val participants: List<AbstractParty>, val discriminator: Int) : ContractState
 
     @Suspendable

@@ -5,7 +5,8 @@ import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
-import net.corda.client.rpc.internal.createCordaRPCClientWithSslAndClassLoader
+import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -37,6 +38,7 @@ import net.corda.nodeapi.internal.crypto.X509KeyStore
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.nodeapi.internal.network.NodeInfoFilesCopier
+import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
@@ -52,6 +54,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import rx.Subscription
 import rx.schedulers.Schedulers
+import java.io.File
 import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.URL
@@ -162,7 +165,7 @@ class DriverDSLImpl(
     private fun establishRpc(config: NodeConfig, processDeathFuture: CordaFuture<out Process>): CordaFuture<CordaRPCOps> {
         val rpcAddress = config.corda.rpcOptions.address
         val clientRpcSslOptions = clientSslOptionsCompatibleWith(config.corda.rpcOptions)
-        val client = createCordaRPCClientWithSslAndClassLoader(rpcAddress, sslConfiguration = clientRpcSslOptions)
+        val client = CordaRPCClient(rpcAddress, sslConfiguration = clientRpcSslOptions)
         val connectionFuture = poll(executorService, "RPC connection") {
             try {
                 config.corda.rpcUsers[0].run { client.start(username, password) }
@@ -332,7 +335,9 @@ class DriverDSLImpl(
         _executorService = Executors.newScheduledThreadPool(2, ThreadFactoryBuilder().setNameFormat("driver-pool-thread-%d").build())
         _shutdownManager = ShutdownManager(executorService)
 
-        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + getCallerPackage())
+        val callerPackage = getCallerPackage().toMutableList()
+        if(callerPackage.firstOrNull()?.startsWith("net.corda.node") == true) callerPackage.add("net.corda.testing")
+        extraCustomCordapps = cordappsForPackages(extraCordappPackagesToScan + callerPackage)
 
         val notaryInfosFuture = if (compatibilityZone == null) {
             // If no CZ is specified then the driver does the generation of the network parameters and the copying of the
@@ -484,23 +489,22 @@ class DriverDSLImpl(
         return startRegisteredNode(
                 spec.name,
                 localNetworkMap,
-                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides)
+                NodeParameters(rpcUsers = spec.rpcUsers, verifierType = spec.verifierType, customOverrides = notaryConfig + customOverrides, maximumHeapSize = spec.maximumHeapSize)
         ).map { listOf(it) }
     }
 
     private fun startRaftNotaryCluster(spec: NotarySpec, localNetworkMap: LocalNetworkMap?): CordaFuture<List<NodeHandle>> {
         fun notaryConfig(nodeAddress: NetworkHostAndPort, clusterAddress: NetworkHostAndPort? = null): Map<String, Any> {
             val clusterAddresses = if (clusterAddress != null) listOf(clusterAddress) else emptyList()
-            val config = configOf("notary" to mapOf(
-                    "validating" to spec.validating,
-                    "serviceLegalName" to spec.name.toString(),
-                    "className" to "net.corda.notary.raft.RaftNotaryService",
-                    "extraConfig" to mapOf(
-                            "nodeAddress" to nodeAddress.toString(),
-                            "clusterAddresses" to clusterAddresses.map { it.toString() }
-                    ))
+            val config = NotaryConfig(
+                    validating = spec.validating,
+                    serviceLegalName = spec.name,
+                    raft = RaftConfig(
+                            nodeAddress = nodeAddress,
+                            clusterAddresses = clusterAddresses
+                    )
             )
-            return config.root().unwrapped()
+            return mapOf("notary" to config.toConfig().root().unwrapped())
         }
 
         val nodeNames = generateNodeNames(spec)
@@ -751,7 +755,8 @@ class DriverDSLImpl(
                     "io.github**;io.netty**;jdk**;joptsimple**;junit**;kotlin**;net.bytebuddy**;net.i2p**;org.apache**;" +
                     "org.assertj**;org.bouncycastle**;org.codehaus**;org.crsh**;org.dom4j**;org.fusesource**;org.h2**;" +
                     "org.hamcrest**;org.hibernate**;org.jboss**;org.jcp**;org.joda**;org.junit**;org.mockito**;org.objectweb**;" +
-                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;)"
+                    "org.objenesis**;org.slf4j**;org.w3c**;org.xml**;org.yaml**;reflectasm**;rx**;org.jolokia**;" +
+                    "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
             val extraJvmArguments = systemProperties.removeResolvedClasspath().map { "-D${it.key}=${it.value}" } +
                     "-javaagent:$quasarJarPath=$excludePattern"
             val loggingLevel = if (debugPort == null) "INFO" else "DEBUG"
@@ -763,13 +768,21 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
+            // This excludes the samples and the finance module from the system classpath of the out of process nodes
+            // as they will be added to the cordapps folder.
+            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock")
+            val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
+                exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
+            }
+
             return ProcessUtilities.startJavaProcess(
                     className = "net.corda.node.Corda", // cannot directly get class for this, so just use string
                     arguments = arguments,
                     jdwpPort = debugPort,
                     extraJvmArguments = extraJvmArguments,
                     workingDirectory = config.corda.baseDirectory,
-                    maximumHeapSize = maximumHeapSize
+                    maximumHeapSize = maximumHeapSize,
+                    classPath = cp
             )
         }
 

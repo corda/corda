@@ -50,7 +50,6 @@ import java.util.stream.StreamSupport
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.collections.AbstractList
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 
@@ -517,7 +516,10 @@ fun <K, V> createSimpleCache(maxSize: Int, onEject: (MutableMap.MutableEntry<K, 
     }
 }
 
+/** @see Collections.synchronizedMap */
 fun <K, V> MutableMap<K, V>.toSynchronised(): MutableMap<K, V> = Collections.synchronizedMap(this)
+/** @see Collections.synchronizedSet */
+fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronizedSet(this)
 
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
@@ -529,5 +531,24 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
     override fun get(index: Int): U {
         return partialResolvedList[index]
                 ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+    }
+}
+
+/**
+ * Returns a [List] implementation that applies the expensive [transform] function only when an element is accessed and then caches the calculated values.
+ * Size is very cheap as it doesn't call [transform].
+ */
+fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
+
+private const val MAX_SIZE = 100
+private val warnings = Collections.newSetFromMap(createSimpleCache<String, Boolean>(MAX_SIZE)).toSynchronised()
+
+/**
+ * Utility to help log a warning message only once.
+ * It implements an ad hoc Fifo cache because there's none available in the standard libraries.
+ */
+fun Logger.warnOnce(warning: String) {
+    if (warnings.add(warning)) {
+        this.warn(warning)
     }
 }

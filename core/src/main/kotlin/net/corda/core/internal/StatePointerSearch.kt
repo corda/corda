@@ -1,18 +1,17 @@
 package net.corda.core.internal
 
 import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.LinearPointer
 import net.corda.core.contracts.StatePointer
-import net.corda.core.contracts.StaticPointer
 import java.lang.reflect.Field
 import java.util.*
 
 /**
  * Uses reflection to search for instances of [StatePointer] within a [ContractState].
+ * TODO: Doesn't handle calculated properties. Add support for this.
  */
 class StatePointerSearch(val state: ContractState) {
     // Classes in these packages should not be part of a search.
-    private val blackListedPackages = setOf("java.", "javax.")
+    private val blackListedPackages = setOf("java.", "javax.", "org.bouncycastle.", "net.i2p.crypto.")
 
     // Type required for traversal.
     private data class FieldWithObject(val obj: Any, val field: Field)
@@ -21,14 +20,26 @@ class StatePointerSearch(val state: ContractState) {
     private val statePointers = mutableSetOf<StatePointer<*>>()
 
     // Record seen objects to avoid getting stuck in loops.
-    private val seenObjects = mutableSetOf<Any>().apply { add(state) }
+    private val seenObjects = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>()).apply { add(state) }
 
     // Queue of fields to search.
     private val fieldQueue = ArrayDeque<FieldWithObject>().apply { addAllFields(state) }
 
+    // Get fields of class and all super-classes.
+    private fun getAllFields(clazz: Class<*>): List<Field> {
+        val fields = mutableListOf<Field>()
+        var currentClazz = clazz
+        while (currentClazz.superclass != null) {
+            fields.addAll(currentClazz.declaredFields)
+            currentClazz = currentClazz.superclass
+        }
+        return fields
+    }
+
     // Helper for adding all fields to the queue.
     private fun ArrayDeque<FieldWithObject>.addAllFields(obj: Any) {
-        val fields = obj::class.java.declaredFields
+        val fields = getAllFields(obj::class.java)
+
         val fieldsWithObjects = fields.mapNotNull { field ->
             // Ignore classes which have not been loaded.
             // Assumption: all required state classes are already loaded.
@@ -36,37 +47,42 @@ class StatePointerSearch(val state: ContractState) {
             if (packageName == null) {
                 null
             } else {
-                // Ignore JDK classes.
-                val isBlacklistedPackage = blackListedPackages.any { packageName.startsWith(it) }
-                if (isBlacklistedPackage) {
-                    null
-                } else {
-                    FieldWithObject(obj, field)
-                }
+                FieldWithObject(obj, field)
             }
         }
         addAll(fieldsWithObjects)
     }
 
-    private fun handleField(obj: Any, field: Field) {
-        when {
-            // StatePointer. Handles nullable StatePointers too.
-            field.type == LinearPointer::class.java -> statePointers.add(field.get(obj) as? LinearPointer<*> ?: return)
-            field.type == StaticPointer::class.java -> statePointers.add(field.get(obj) as? StaticPointer<*> ?: return)
-            // Not StatePointer.
+    private fun handleIterable(iterable: Iterable<*>) {
+        iterable.forEach { obj -> handleObject(obj) }
+    }
+
+    private fun handleMap(map: Map<*, *>) {
+        map.forEach { k, v ->
+            handleObject(k)
+            handleObject(v)
+        }
+    }
+
+    private fun handleObject(obj: Any?) {
+        if (obj == null) return
+        seenObjects.add(obj)
+        when (obj) {
+            is Map<*, *> -> handleMap(obj)
+            is StatePointer<*> -> statePointers.add(obj)
+            is Iterable<*> -> handleIterable(obj)
             else -> {
-                val newObj = field.get(obj) ?: return
-
-                // Ignore nulls.
-                if (newObj in seenObjects) {
-                    return
-                }
-
-                // Recurse.
-                fieldQueue.addAllFields(newObj)
-                seenObjects.add(obj)
+                val packageName = obj.javaClass.`package`.name
+                val isBlackListed = blackListedPackages.any { packageName.startsWith(it) }
+                if (isBlackListed.not()) fieldQueue.addAllFields(obj)
             }
         }
+    }
+
+    private fun handleField(obj: Any, field: Field) {
+        val newObj = field.get(obj) ?: return
+        if (newObj in seenObjects) return
+        handleObject(newObj)
     }
 
     fun search(): Set<StatePointer<*>> {

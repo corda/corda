@@ -10,6 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.client.jackson.internal.childrenAs
 import net.corda.client.jackson.internal.valueAs
@@ -24,7 +25,8 @@ import net.corda.core.internal.DigitalSignatureWithCert
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.NetworkParametersStorage
+import net.corda.core.node.services.NetworkParametersService
+import net.corda.core.node.services.TransactionStorage
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
 import net.corda.core.serialization.serialize
@@ -94,10 +96,10 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         services = rigorousMock()
         cordappProvider = rigorousMock()
         val networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-        val networkParametersStorage = rigorousMock<NetworkParametersStorage>().also {
+        val networkParametersService = rigorousMock<NetworkParametersService>().also {
             doReturn(networkParameters.serialize().hash).whenever(it).currentHash
         }
-        doReturn(networkParametersStorage).whenever(services).networkParametersStorage
+        doReturn(networkParametersService).whenever(services).networkParametersService
         doReturn(cordappProvider).whenever(services).cordappProvider
         doReturn(networkParameters).whenever(services).networkParameters
         doReturn(attachments).whenever(services).attachments
@@ -237,6 +239,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
         doReturn(attachmentId).whenever(cordappProvider).getContractAttachmentID(DummyContract.PROGRAM_ID)
         val attachmentStorage = rigorousMock<AttachmentStorage>()
         doReturn(attachmentStorage).whenever(services).attachments
+        doReturn(mock<TransactionStorage>()).whenever(services).validatedTransactions
         val attachment = rigorousMock<ContractAttachment>()
         doReturn(attachment).whenever(attachmentStorage).openAttachment(attachmentId)
         doReturn(attachmentId).whenever(attachment).id

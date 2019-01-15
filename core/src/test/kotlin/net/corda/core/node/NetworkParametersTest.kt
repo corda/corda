@@ -1,5 +1,7 @@
 package net.corda.core.node
 
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.crypto.generateKeyPair
 import net.corda.core.internal.getPackageOwnerOf
 import net.corda.core.utilities.OpaqueBytes
@@ -7,16 +9,15 @@ import net.corda.core.utilities.days
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.node.services.config.NotaryConfig
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetNotaryConfig
 import net.corda.testing.node.MockNetworkNotarySpec
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.MOCK_VERSION_INFO
@@ -66,8 +67,14 @@ class NetworkParametersTest {
     // Notaries tests
     @Test
     fun `choosing notary not specified in network parameters will fail`() {
-        val fakeNotary = mockNet.createNode(InternalMockNodeParameters(legalName = BOB_NAME,
-                configOverrides = MockNodeConfigOverrides(notary = MockNetNotaryConfig(validating = false))))
+        val fakeNotary = mockNet.createNode(
+                InternalMockNodeParameters(
+                        legalName = BOB_NAME,
+                        configOverrides = {
+                            doReturn(NotaryConfig(validating = false)).whenever(it).notary
+                        }
+                )
+        )
         val fakeNotaryId = fakeNotary.info.singleIdentity()
         val alice = mockNet.createPartyNode(ALICE_NAME)
         assertThat(alice.services.networkMapCache.notaryIdentities).doesNotContain(fakeNotaryId)

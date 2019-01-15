@@ -9,9 +9,13 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
@@ -20,6 +24,7 @@ import net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitiesSer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -47,8 +52,8 @@ class SimmValuationTest {
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
-        driver(DriverParameters(
-                extraCordappPackagesToScan = listOf("net.corda.vega.contracts", "net.corda.vega.plugin.customserializers"),
+        driver(DriverParameters(isDebug = true,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
@@ -64,6 +69,7 @@ class SimmValuationTest {
             createTradeBetween(nodeAApi, nodeBParty, testTradeId)
             assertTradeExists(nodeBApi, nodeAParty, testTradeId)
             assertTradeExists(nodeAApi, nodeBParty, testTradeId)
+
             runValuationsBetween(nodeAApi, nodeBParty)
             assertValuationExists(nodeBApi, nodeAParty)
             assertValuationExists(nodeAApi, nodeBParty)

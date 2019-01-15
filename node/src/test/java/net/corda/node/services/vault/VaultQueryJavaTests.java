@@ -11,6 +11,7 @@ import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.messaging.DataFeed;
+import net.corda.core.node.ServicesForResolution;
 import net.corda.core.node.services.AttachmentStorage;
 import net.corda.core.node.services.IdentityService;
 import net.corda.core.node.services.Vault;
@@ -23,7 +24,7 @@ import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQue
 import net.corda.finance.contracts.DealState;
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.finance.schemas.CashSchemaV1;
-import net.corda.finance.schemas.test.SampleCashSchemaV2;
+import net.corda.finance.test.SampleCashSchemaV2;
 import net.corda.node.services.api.IdentityServiceInternal;
 import net.corda.node.services.persistence.NodeAttachmentService;
 import net.corda.nodeapi.internal.persistence.CordaPersistence;
@@ -58,12 +59,14 @@ import static net.corda.core.node.services.vault.Builder.equal;
 import static net.corda.core.node.services.vault.Builder.sum;
 import static net.corda.core.node.services.vault.QueryCriteriaUtils.*;
 import static net.corda.core.utilities.ByteArrays.toHexString;
+import static net.corda.testing.common.internal.ParametersUtilitiesKt.testNetworkParameters;
 import static net.corda.testing.core.internal.ContractJarTestUtils.INSTANCE;
 import static net.corda.testing.core.TestConstants.*;
-import static net.corda.testing.internal.RigorousMockKt.rigorousMock;
 import static net.corda.testing.node.MockServices.makeTestDatabaseAndMockServices;
 import static net.corda.testing.node.MockServicesKt.makeTestIdentityService;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 public class VaultQueryJavaTests {
     private static final TestIdentity BOC = new TestIdentity(BOC_NAME);
@@ -82,19 +85,22 @@ public class VaultQueryJavaTests {
 
     @Before
     public void setUp() {
-        List<String> cordappPackages = asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName());
+        List<String> cordappPackages = asList("net.corda.testing.internal.vault", "net.corda.finance.contracts.asset", CashSchemaV1.class.getPackage().getName(), SampleCashSchemaV2.class.getPackage().getName());
         IdentityService identitySvc = makeTestIdentityService(MEGA_CORP.getIdentity(), DUMMY_CASH_ISSUER_INFO.getIdentity(), DUMMY_NOTARY.getIdentity());
         Pair<CordaPersistence, MockServices> databaseAndServices = makeTestDatabaseAndMockServices(
                 cordappPackages,
                 identitySvc,
                 MEGA_CORP,
                 DUMMY_NOTARY.getKeyPair());
-        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, rigorousMock(IdentityServiceInternal.class), BOC.getKeyPair());
+        issuerServices = new MockServices(cordappPackages, DUMMY_CASH_ISSUER_INFO, mock(IdentityServiceInternal.class), BOC.getKeyPair());
         database = databaseAndServices.getFirst();
         MockServices services = databaseAndServices.getSecond();
         vaultFiller = new VaultFiller(services, DUMMY_NOTARY);
         vaultService = services.getVaultService();
         storage = new NodeAttachmentService(new MetricRegistry(), new TestingNamedCacheFactory(100), database);
+        ServicesForResolution serviceForResolution = mock(ServicesForResolution.class);
+        ((NodeAttachmentService) storage).servicesForResolution = serviceForResolution;
+        doReturn(testNetworkParameters()).when(serviceForResolution).getNetworkParameters();
     }
 
     @After

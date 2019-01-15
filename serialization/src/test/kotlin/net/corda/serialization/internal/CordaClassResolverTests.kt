@@ -11,11 +11,11 @@ import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.internal.DEPLOYED_CORDAPP_UPLOADER
 import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.serialization.internal.CheckpointSerializationContext
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
-import net.corda.core.serialization.MissingAttachmentsException
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.core.serialization.internal.CheckpointSerializationContext
+import net.corda.core.serialization.internal.UntrustedAttachmentsException
 import net.corda.node.serialization.kryo.CordaClassResolver
 import net.corda.node.serialization.kryo.CordaKryo
 import net.corda.testing.internal.rigorousMock
@@ -23,7 +23,6 @@ import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExpectedException
-import java.lang.IllegalStateException
 import java.net.URL
 import java.sql.Connection
 import java.util.*
@@ -115,11 +114,12 @@ class CordaClassResolverTests {
         val emptyListClass = listOf<Any>().javaClass
         val emptySetClass = setOf<Any>().javaClass
         val emptyMapClass = mapOf<Any, Any>().javaClass
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("isolated.jar")
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = CordaClassResolverTests::class.java.getResource("/isolated.jar")
     }
 
     private val emptyWhitelistContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, EmptyWhitelist, emptyMap(), true, null)
     private val allButBlacklistedContext: CheckpointSerializationContext = CheckpointSerializationContextImpl(this.javaClass.classLoader, AllButBlacklisted, emptyMap(), true, null)
+
     @Test
     fun `Annotation on enum works for specialised entries`() {
         CordaClassResolver(emptyWhitelistContext).getRegistration(Foo.Bar::class.java)
@@ -212,16 +212,16 @@ class CordaClassResolverTests {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage)
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 
-    @Test(expected = MissingAttachmentsException::class)
-    fun `Attempt to load contract attachment with the incorrect uploader should fails with MissingAttachmentsException`() {
+    @Test(expected = UntrustedAttachmentsException::class)
+    fun `Attempt to load contract attachment with untrusted uploader should fail with UntrustedAttachmentsException`() {
         val storage = MockAttachmentStorage()
         val attachmentHash = importJar(storage, "some_uploader")
         val classLoader = AttachmentsClassLoader(arrayOf(attachmentHash).map { storage.openAttachment(it)!! })
-        val attachedClass = Class.forName("net.corda.finance.contracts.isolated.AnotherDummyContract", true, classLoader)
+        val attachedClass = Class.forName("net.corda.isolated.contracts.AnotherDummyContract", true, classLoader)
         CordaClassResolver(emptyWhitelistContext).getRegistration(attachedClass)
     }
 

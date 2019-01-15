@@ -1,5 +1,6 @@
 package net.corda.node.services.transactions
 
+import com.codahale.metrics.MetricRegistry
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.NullKeys
@@ -10,16 +11,21 @@ import net.corda.core.flows.NotaryError
 import net.corda.core.flows.StateConsumptionDetails
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.notary.UniquenessProvider
+import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.minutes
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.experimental.raft.RaftConfig
+import net.corda.notary.experimental.raft.RaftNotarySchemaV1
+import net.corda.notary.experimental.raft.RaftUniquenessProvider
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.generateStateRef
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.configureTestSSL
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import org.junit.After
@@ -39,7 +45,8 @@ class UniquenessProviderTests(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun data(): Collection<UniquenessProviderFactory> = listOf(
-                PersistentUniquenessProviderFactory()
+                PersistentUniquenessProviderFactory(),
+                RaftUniquenessProviderFactory()
         )
     }
 
@@ -152,11 +159,16 @@ class UniquenessProviderTests(
                 .get()
         assertEquals(UniquenessProvider.Result.Success, result)
 
-        // Idempotency: can re-notarise successfully.
-        testClock.advanceBy(90.minutes)
-        val result2 = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
+        // The reference state gets consumed.
+        val result2 = uniquenessProvider.commit(listOf(referenceState), SecureHash.randomSHA256(), identity, requestSignature, timeWindow)
                 .get()
         assertEquals(UniquenessProvider.Result.Success, result2)
+
+        // Idempotency: can re-notarise successfully.
+        testClock.advanceBy(90.minutes)
+        val result3 = uniquenessProvider.commit(emptyList(), firstTxId, identity, requestSignature, timeWindow, references = listOf(referenceState))
+                .get()
+        assertEquals(UniquenessProvider.Result.Success, result3)
     }
 
     @Test
@@ -386,6 +398,37 @@ class PersistentUniquenessProviderFactory : UniquenessProviderFactory {
     }
 
     override fun cleanUp() {
+        database?.close()
+    }
+}
+
+class RaftUniquenessProviderFactory : UniquenessProviderFactory {
+    private var database: CordaPersistence? = null
+    private var provider: RaftUniquenessProvider? = null
+
+    override fun create(clock: Clock): UniquenessProvider {
+        database?.close()
+        database = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), { null }, { null }, NodeSchemaService(extraSchemas = setOf(RaftNotarySchemaV1)))
+
+        val testSSL = configureTestSSL(CordaX500Name("Raft", "London", "GB"))
+        val raftNodePort = 10987
+
+        return RaftUniquenessProvider(
+                null,
+                testSSL,
+                database!!,
+                clock,
+                MetricRegistry(),
+                TestingNamedCacheFactory(),
+                RaftConfig(NetworkHostAndPort("localhost", raftNodePort), emptyList())
+        ).apply {
+            start()
+            provider = this
+        }
+    }
+
+    override fun cleanUp() {
+        provider?.stop()
         database?.close()
     }
 }

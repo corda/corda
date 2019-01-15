@@ -1,10 +1,7 @@
 package net.corda.node.flows
 
+import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
-import net.corda.core.internal.div
-import net.corda.core.internal.list
-import net.corda.core.internal.moveTo
-import net.corda.core.internal.readLines
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
@@ -18,9 +15,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.CustomCordapp
-import net.corda.testing.node.internal.ListenProcessDeathException
-import net.corda.testing.node.internal.cordappForClasses
+import net.corda.testing.node.internal.*
 import net.test.cordapp.v1.Record
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -36,13 +31,8 @@ import kotlin.test.assertNotNull
 class FlowCheckpointVersionNodeStartupCheckTest {
     companion object {
         val message = Message("Hello world!")
-        val defaultCordapp = cordappForClasses(
-                MessageState::class.java,
-                MessageContract::class.java,
-                SendMessageFlow::class.java,
-                MessageSchema::class.java,
-                MessageSchemaV1::class.java,
-                Record::class.java
+        val defaultCordapp = cordappWithPackages(
+                MessageState::class.packageName, SendMessageFlow::class.packageName
         )
     }
 
@@ -57,7 +47,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             val result = if (page.snapshot.states.isNotEmpty()) {
                 page.snapshot.states.first()
             } else {
-                val r = page.updates.timeout(5, TimeUnit.SECONDS).take(1).toBlocking().single()
+                val r = page.updates.timeout(30, TimeUnit.SECONDS).take(1).toBlocking().single()
                 if (r.consumed.isNotEmpty()) r.consumed.first() else r.produced.first()
             }
             assertNotNull(result)
@@ -90,18 +80,24 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
-            val uniqueName = "different-jar-hash-test-${UUID.randomUUID()}"
-            val cordapp = defaultCordapp.copy(name = uniqueName)
+            val uniqueWorkflowJarName = "different-jar-hash-test-${UUID.randomUUID()}"
+            val uniqueContractJarName = "contract-$uniqueWorkflowJarName"
+            val defaultWorkflowJar = cordappWithPackages(SendMessageFlow::class.packageName)
+            val defaultContractJar = cordappWithPackages(MessageState::class.packageName)
+            val contractJar = defaultContractJar.copy(name = uniqueContractJarName)
+            val workflowJar = defaultWorkflowJar.copy(name = uniqueWorkflowJarName)
 
-            val bobBaseDir = createSuspendedFlowInBob(setOf(cordapp))
+            val bobBaseDir = createSuspendedFlowInBob(setOf(workflowJar, contractJar))
 
             val cordappsDir = bobBaseDir / "cordapps"
-            val cordappJar = cordappsDir.list().single { it.toString().endsWith(".jar") }
+            val cordappJar = cordappsDir.list().single {
+               ! it.toString().contains(uniqueContractJarName) && it.toString().endsWith(".jar")
+            }
             // Make sure we're dealing with right jar
-            assertThat(cordappJar.fileName.toString()).contains(uniqueName)
+            assertThat(cordappJar.fileName.toString()).contains(uniqueWorkflowJarName)
 
             // The name is part of the MANIFEST so changing it is sufficient to change the jar hash
-            val modifiedCordapp = cordapp.copy(name = "${cordapp.name}-modified")
+            val modifiedCordapp = workflowJar.copy(name = "${workflowJar.name}-modified")
             val modifiedCordappJar = CustomCordapp.getJarFile(modifiedCordapp)
             modifiedCordappJar.moveTo(cordappJar, REPLACE_EXISTING)
 
@@ -135,8 +131,8 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             )).getOrThrow()
         }
 
-        val logDir = baseDirectory(BOB_NAME) / NodeStartup.LOGS_DIRECTORY_NAME
-        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
+        val logDir = baseDirectory(BOB_NAME)
+        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith("out.log") }.findAny().get() }
         val matchingLineCount = logFile.readLines { it.filter { line -> logMessage in line }.count() }
         assertEquals(1, matchingLineCount)
     }

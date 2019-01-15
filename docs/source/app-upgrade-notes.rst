@@ -28,7 +28,7 @@ Alter the versions you depend on in your Gradle file like so:
 .. sourcecode:: groovy
 
     ext.corda_release_version = '4.0'
-    ext.corda_gradle_plugins_version = '4.0.37'
+    ext.corda_gradle_plugins_version = '4.0.38'
     ext.kotlin_version = '1.2.71'
     ext.quasar_version = '0.7.10'
 
@@ -121,9 +121,12 @@ away to the new API, as otherwise things like business network membership checks
 
 This is a three step process:
 
-1. Change the flow that calls ``FinalityFlow``
+1. Change the flow that calls ``FinalityFlow``.
 2. Change or create the flow that will receive the finalised transaction.
 3. Make sure your application's minimum and target version numbers are both set to 4 (see step 2).
+
+Upgrading a non-initiating flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As an example, let's take a very simple flow that finalises a transaction without the involvement of a counterpart flow:
 
@@ -140,7 +143,7 @@ As an example, let's take a very simple flow that finalises a transaction withou
         :end-before: DOCEND SimpleFlowUsingOldApi
         :dedent: 4
 
-To use the new API, this flow needs to be annotated with ``InitiatingFlow`` and a ``FlowSession`` to the participant of the transaction must be
+To use the new API, this flow needs to be annotated with ``InitiatingFlow`` and a ``FlowSession`` to the participant(s) of the transaction must be
 passed to ``FinalityFlow`` :
 
 .. container:: codeset
@@ -175,10 +178,17 @@ to record the finalised transaction:
         :end-before: DOCEND SimpleNewResponderFlow
         :dedent: 4
 
-For flows which are already initiating counterpart flows then it's a simple matter of using the existing flow session.
+.. note:: All the nodes in your business network will need the new CorDapp, otherwise they won't know how to receive the transaction. **This
+   includes nodes which previously didn't have the old CorDapp.** If a node is sent a transaction and it doesn't have the new CorDapp loaded
+   then simply restart it with the CorDapp and the transaction will be recorded.
+
+Upgrading an initiating flow
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For flows which are already initiating counterpart flows then it's a matter of using the existing flow session.
 Note however, the new ``FinalityFlow`` is inlined and so the sequence of sends and receives between the two flows will
 change and will be incompatible with your current flows. You can use the flow version API to write your flows in a
-backwards compatible way.
+backwards compatible manner.
 
 Here's what an upgraded initiating flow may look like:
 
@@ -212,8 +222,9 @@ finalised transaction. If the initiator is written in a backwards compatible way
         :end-before: DOCEND ExistingResponderFlow
         :dedent: 12
 
-The responder flow may be waiting for the finalised transaction to appear in the local node's vault using ``waitForLedgerCommit``.
-This is no longer necessary with ``ReceiveFinalityFlow`` and the call to ``waitForLedgerCommit`` can be removed.
+You may already be using ``waitForLedgerCommit`` in your responder flow for the finalised transaction to appear in the local node's vault.
+Now that it's calling ``ReceiveFinalityFlow``, which effectively does the same thing, this is no longer necessary. The call to
+``waitForLedgerCommit`` should be removed.
 
 Step 4. Security: Upgrade your use of SwapIdentitiesFlow
 --------------------------------------------------------

@@ -9,7 +9,7 @@ import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
-import net.corda.nodeapi.DummyContractBackdoor
+import net.corda.isolated.contracts.DummyContractBackdoor
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -26,15 +26,15 @@ import kotlin.test.assertFailsWith
 class AttachmentsClassLoaderSerializationTests {
 
     companion object {
-        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderSerializationTests::class.java.getResource("isolated.jar")
-        private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.finance.contracts.isolated.AnotherDummyContract"
+        val ISOLATED_CONTRACTS_JAR_PATH: URL = AttachmentsClassLoaderSerializationTests::class.java.getResource("/isolated.jar")
+        private const val ISOLATED_CONTRACT_CLASS_NAME = "net.corda.isolated.contracts.AnotherDummyContract"
     }
 
     @Rule
     @JvmField
     val testSerialization = SerializationEnvironmentRule()
 
-    val storage = MockAttachmentStorage()
+    private val storage = MockAttachmentStorage()
 
     @Test
     fun `Can serialize and deserialize with an attachment classloader`() {

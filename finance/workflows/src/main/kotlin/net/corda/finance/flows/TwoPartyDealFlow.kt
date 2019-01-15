@@ -55,7 +55,9 @@ object TwoPartyDealFlow {
         @Suspendable
         override fun call(): SignedTransaction {
             progressTracker.currentStep = GENERATING_ID
-            val (anonymousMe, anonymousCounterparty) = subFlow(SwapIdentitiesFlow(otherSideSession))
+            val txIdentities = subFlow(SwapIdentitiesFlow(otherSideSession))
+            val anonymousMe = txIdentities[ourIdentity]!!
+            val anonymousCounterparty = txIdentities[otherSideSession.counterparty]!!
             // DOCEND 2
             progressTracker.currentStep = SENDING_PROPOSAL
             // Make the first message we'll send to kick off the flow.
@@ -188,7 +190,7 @@ object TwoPartyDealFlow {
 
             // We set the transaction's time-window: it may be that none of the contracts need this!
             // But it can't hurt to have one.
-            ptx.setTimeWindow(serviceHub.clock.instant(), 30.seconds)
+            ptx.setTimeWindow(serviceHub.clock.instant(), 60.seconds)
             return Triple(ptx, arrayListOf(deal.participants.single { it is Party && serviceHub.myInfo.isLegalIdentity(it) }.owningKey), emptyList())
         }
     }

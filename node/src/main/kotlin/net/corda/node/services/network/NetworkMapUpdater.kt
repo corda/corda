@@ -13,6 +13,7 @@ import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.minutes
+import net.corda.node.internal.NetworkParametersStorage
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.node.utilities.NamedThreadFactory
@@ -40,7 +41,7 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                         private val networkMapClient: NetworkMapClient?,
                         private val baseDirectory: Path,
                         private val extraNetworkMapKeys: List<UUID>,
-                        private val networkParametersStorage: NetworkParametersStorageInternal
+                        private val networkParametersStorage: NetworkParametersStorage
 ) : AutoCloseable {
     companion object {
         private val logger = contextLogger()

@@ -269,19 +269,10 @@ Here's an example of it in action from ``FixingFlow.Fixer``.
 Testing
 -------
 
-The ``MockNetwork`` allows the creation of ``MockNode`` instances, which are simplified nodes which can be used for
-testing (see :doc:`api-testing`). When creating the ``MockNetwork`` you supply a list of packages to scan for CorDapps.
-Make sure the packages you provide include your oracle service, and it automatically be installed in the test nodes.
-Then you can create an oracle node on the ``MockNetwork`` and insert any initialisation logic you want to use. In this
-case, our ``Oracle`` service is in the ``net.corda.irs.api`` package, so the following test setup will install
-the service in each node. Then an oracle node with an oracle service which is initialised with some data is created on
-the mock network:
-
-.. literalinclude:: ../../samples/irs-demo/cordapp/src/test/kotlin/net/corda/irs/api/OracleNodeTearOffTests.kt
-   :language: kotlin
-   :start-after: DOCSTART 1
-   :end-before: DOCEND 1
-   :dedent: 4
+The ``MockNetwork`` allows the creation of ``MockNode`` instances, which are simplified nodes which can be used for testing (see :doc:`api-testing`).
+When creating the ``MockNetwork`` you supply a list of ``TestCordapp`` objects which point to CorDapps on
+the classpath. These CorDapps will be installed on each node on the network. Make sure the packages you provide reference to the CorDapp
+containing your oracle service.
 
 You can then write tests on your mock network to verify the nodes interact with your Oracle correctly.
 

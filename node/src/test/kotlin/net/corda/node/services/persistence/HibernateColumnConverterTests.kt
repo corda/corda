@@ -2,6 +2,8 @@ package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
@@ -43,7 +45,7 @@ class HibernateColumnConverterTests {
             return Result(tx, ourIdentity)
         }
     }
-
+    
     @Before
     fun start() {
         mockNet = MockNetwork(

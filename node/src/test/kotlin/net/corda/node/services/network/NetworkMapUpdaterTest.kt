@@ -18,6 +18,7 @@ import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.millis
 import net.corda.node.VersionInfo
+import net.corda.node.internal.NetworkParametersStorage
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
 import net.corda.nodeapi.internal.NodeInfoAndSigned
@@ -70,7 +71,7 @@ class NetworkMapUpdaterTest {
     private val networkMapCache = createMockNetworkMapCache()
     private lateinit var ourKeyPair: KeyPair
     private lateinit var ourNodeInfo: SignedNodeInfo
-    private val networkParametersStorage: NetworkParametersStorageInternal = mock()
+    private val networkParametersStorage: NetworkParametersStorage = mock()
     private lateinit var server: NetworkMapServer
     private lateinit var networkMapClient: NetworkMapClient
     private var updater: NetworkMapUpdater? = null
