@@ -40,7 +40,7 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder @JvmOverloads constructor(
+open class TransactionBuilder constructor(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -48,7 +48,9 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt()
+        protected var privacySalt: PrivacySalt = PrivacySalt(),
+        protected val references: MutableList<StateRef>,
+        protected val serviceHub: ServiceHub?
 ) {
     private companion object {
         private val log = contextLogger()
@@ -60,6 +62,17 @@ open class TransactionBuilder @JvmOverloads constructor(
         private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
 
+    @JvmOverloads constructor(
+            notary: Party? = null,
+            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+            inputs: MutableList<StateRef> = arrayListOf(),
+            attachments: MutableList<SecureHash> = arrayListOf(),
+            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+            commands: MutableList<Command<*>> = arrayListOf(),
+            window: TimeWindow? = null,
+            privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, defaultReferencesList(), defaultServiceHub())
+
     constructor(
             notary: Party? = null,
             lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
@@ -69,17 +82,20 @@ open class TransactionBuilder @JvmOverloads constructor(
             commands: MutableList<Command<*>> = arrayListOf(),
             window: TimeWindow? = null,
             privacySalt: PrivacySalt = PrivacySalt(),
-            references: MutableList<StateRef> = defaultReferencesList(),
-            serviceHub: ServiceHub? = defaultServiceHub()
-    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
-        this.references = references
-        this.serviceHub = serviceHub
-    }
+            references: MutableList<StateRef>
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, references, defaultServiceHub())
 
-    protected var references: MutableList<StateRef> = defaultReferencesList()
-        private set
-    protected var serviceHub: ServiceHub? = defaultServiceHub()
-        private set
+    constructor(
+            notary: Party? = null,
+            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+            inputs: MutableList<StateRef> = arrayListOf(),
+            attachments: MutableList<SecureHash> = arrayListOf(),
+            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+            commands: MutableList<Command<*>> = arrayListOf(),
+            window: TimeWindow? = null,
+            privacySalt: PrivacySalt = PrivacySalt(),
+            serviceHub: ServiceHub?
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, defaultReferencesList(), serviceHub)
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
