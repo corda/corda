@@ -24,7 +24,7 @@ class MySQLUniquenessProviderTest {
     private val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
         setProperty("autoCommit", "false")
     }
-    private val config = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
+    private val config = MySQLNotaryConfig(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
     private val clock = Clock.systemUTC()!!
     private val party = getTestPartyAndCertificate(ALICE_NAME, generateKeyPair().public).party
     private val uniquenessProvider = MySQLUniquenessProvider(MetricRegistry(), clock, config)

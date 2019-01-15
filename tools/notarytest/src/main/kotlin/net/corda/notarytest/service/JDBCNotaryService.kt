@@ -15,7 +15,7 @@ import net.corda.core.utilities.seconds
 import net.corda.node.services.config.ConfigHelper
 import net.corda.node.services.transactions.NonValidatingNotaryFlow
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.notary.mysql.MySQLNotaryConfiguration
+import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.notary.mysql.MySQLUniquenessProvider
 import net.corda.notarytest.flows.AsyncLoadTestFlow
 import java.net.InetAddress
@@ -63,7 +63,7 @@ class JDBCNotaryService(override val services: AppServiceHub, override val notar
     }
 
     private fun createUniquenessProvider(): MySQLUniquenessProvider {
-        val mysqlConfig = appConfig.getConfig("mysql").parseAs<MySQLNotaryConfiguration>()
+        val mysqlConfig = appConfig.getConfig("mysql").parseAs<MySQLNotaryConfig>()
         return MySQLUniquenessProvider(createMetricsRegistry(), services.clock, mysqlConfig)
     }
 }

@@ -50,7 +50,7 @@ import kotlin.concurrent.thread
 class MySQLUniquenessProvider(
         metrics: MetricRegistry,
         val clock: Clock,
-        val config: MySQLNotaryConfiguration
+        val config: MySQLNotaryConfig
 ) : UniquenessProvider, SingletonSerializeAsToken() {
     companion object {
         private val log = loggerFor<MySQLUniquenessProvider>()

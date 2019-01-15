@@ -23,7 +23,7 @@ import net.corda.notary.experimental.raft.RaftUniquenessProvider
 import net.corda.notary.jpa.JPANotaryConfiguration
 import net.corda.notary.jpa.JPANotarySchemaV1
 import net.corda.notary.jpa.JPAUniquenessProvider
-import net.corda.notary.mysql.MySQLNotaryConfiguration
+import net.corda.notary.mysql.MySQLNotaryConfig
 import net.corda.notary.mysql.MySQLUniquenessProvider
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -447,7 +447,7 @@ class MySQLUniquenessProviderFactory : UniquenessProviderFactory {
     private val dataStoreProperties = makeInternalTestDataSourceProperties(configSupplier = { ConfigFactory.empty() }).apply {
         setProperty("autoCommit", "false")
     }
-    private val config = MySQLNotaryConfiguration(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
+    private val config = MySQLNotaryConfig(dataStoreProperties, maxBatchSize = 10, maxBatchInputStates = 100)
 
     override fun create(clock: Clock): UniquenessProvider {
         return MySQLUniquenessProvider(MetricRegistry(), clock, config).apply { createTable() }
