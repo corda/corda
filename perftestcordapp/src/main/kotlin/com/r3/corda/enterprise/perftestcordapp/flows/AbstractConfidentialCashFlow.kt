@@ -51,7 +51,7 @@ abstract class AbstractConfidentialAwareCashFlow<T>(val anonymous: Boolean,
         val recipientSession = initiateFlow(recipient)
         val anonymousRecipient = if (anonymous) {
             progressTracker.currentStep = GENERATING_ID
-            subFlow(SwapIdentitiesFlow(recipientSession)).theirIdentity
+            subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
         } else recipient
         mainCall(anonymousRecipient, recipientSession)
     }
