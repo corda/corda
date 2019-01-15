@@ -230,12 +230,12 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
-            var cnt = 5
+            var maxRemoveRetries = 5
 
-            // Try to remove multipl times in case the network map republishes just in between the removal and the check.
+            // Try to remove multiple times in case the network map republishes just in between the removal and the check.
             while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
                 networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-                if (cnt-- == 0) {
+                if (maxRemoveRetries-- == 0) {
                     throw AssertionError("Could not remove Node info.")
                 }
             }
