@@ -40,7 +40,7 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder constructor(
+open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
