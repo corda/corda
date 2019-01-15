@@ -1,7 +1,7 @@
 Official Corda Docker Image
 ===========================
 
-Running a Node connected to a Compatibility Zone in Docker
+Running a node connected to a Compatibility Zone in Docker
 ----------------------------------------------------------
 
 .. note:: Requirements: A valid node.conf and a valid set of certificates - (signed by the CZ)
@@ -33,7 +33,7 @@ If using the H2 database
 
 5. Persistence - the folder to hold the H2 database files must be mounted at location ``/opt/corda/persistence``
 
-Running a Node connected to a Bootstrapped Network
+Running a node connected to a Bootstrapped Network
 --------------------------------------------------
 
 .. note:: Requirements: A valid node.conf, a valid set of certificates, and an existing network-parameters file
@@ -61,8 +61,8 @@ There is a new mount ``/home/user/sharedFolder/node-infos:/opt/corda/additional-
 As the node within the container starts up, it will place it's own nodeInfo into this directory. This will allow other nodes also using this folder to see this new node.
 
 
-Generating Configs and Certificates
-===================================
+Generating configs and certificates
+-----------------------------------
 
 It is possible to utilize the image to automatically generate a sensible minimal configuration for joining an existing Corda network.
 
@@ -107,7 +107,7 @@ It is now possible to start the node using the generated config and certificates
             corda/corda-4.0-snapshot:latest
 
 
-Joining An Existing Compatibility Zone
+Joining an existing Compatibility Zone
 --------------------------------------
 
 .. note:: Requirements: A Compatibility Zone, the Zone Trust Root and authorisation to join said Zone.

@@ -57,7 +57,22 @@ Business network operators and network participants may choose to enter into leg
 of such digital signatures when determining whether a transaction to which they are party, or upon the details of which they 
 otherwise rely, is to be treated as 'confirmed' in accordance with the terms of the underlying agreement. 
 
+
 Support Service 
 ---------------
 The Support Service is provided to participants and business network operators to manage and resolve inquiries and incidents 
 relating to the Identity Service, Network Map Service and Notary Services.
+
+CRL configuration
+-----------------
+The Corda Network provides an endpoint serving an empty certificate revocation list for TLS-level certificates.
+This is intended for deployments that do not provide a CRL infrastructure but still require strict CRL mode checking.
+In order to use this, add the following to your configuration file:
+
+		.. parsed-literal::
+
+        tlsCertCrlDistPoint = "https://crl.cordaconnect.org/cordatls.crl"
+				tlsCertCrlIssuer = "C=US, L=New York, O=R3 HoldCo LLC, OU=Corda, CN=Corda Root CA"
+
+This set-up ensures that the TLS-level certificates are embedded with the CRL distribution point referencing the CRL issued by R3.
+In cases where a proprietary CRL infrastructure is provided those values need to be changed accordingly.
