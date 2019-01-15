@@ -165,28 +165,39 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * LinearStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultLinearState]
      */
-    data class LinearStateQueryCriteria @JvmOverloads constructor(
-            override val participants: List<AbstractParty>? = null,
+    data class LinearStateQueryCriteria(
+            override val participants: List<AbstractParty>?,
             val uuid: List<UUID>? = null,
             val externalId: List<String>? = null,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
             override val contractStateTypes: Set<Class<out ContractState>>? = null,
             override val relevancyStatus: Vault.RelevancyStatus = if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else Vault.RelevancyStatus.RELEVANT
     ) : CommonQueryCriteria() {
+        // V3 c'tor
+        @JvmOverloads
         constructor(
                 participants: List<AbstractParty>? = null,
-                linearId: List<UniqueIdentifier>? = null,
+                uuid: List<UUID>? = null,
+                externalId: List<String>? = null,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus
-        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, relevancyStatus)
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(participants, uuid, externalId, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
         constructor(
                 participants: List<AbstractParty>? = null,
                 linearId: List<UniqueIdentifier>? = null,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null,
+                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL
+        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes, relevancyStatus)
+
+        // V3 c'tor
+        constructor(
+                participants: List<AbstractParty>? = null,
+                linearId: List<UniqueIdentifier>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null
-        ) : this(participants, linearId?.map { it.id }, linearId?.mapNotNull { it.externalId }, status, contractStateTypes)
+        ) : this(participants, linearId, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -205,7 +216,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     uuid,
                     externalId,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }
@@ -229,7 +241,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     /**
      * FungibleStateQueryCriteria: provides query by attributes defined in [VaultSchema.VaultFungibleStates]
      */
-    data class FungibleAssetQueryCriteria @JvmOverloads constructor(
+    data class FungibleAssetQueryCriteria constructor(
             override val participants: List<AbstractParty>? = null,
             val owner: List<AbstractParty>? = null,
             val quantity: ColumnPredicate<Long>? = null,
@@ -260,7 +272,8 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                     issuer,
                     issuerRef,
                     status,
-                    contractStateTypes
+                    contractStateTypes,
+                    relevancyStatus
             )
         }
     }
@@ -273,24 +286,17 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
      * Params
      *  [expression] refers to a (composable) type safe [CriteriaExpression]
      */
-    data class VaultCustomQueryCriteria<L : StatePersistable> @JvmOverloads constructor(
+    data class VaultCustomQueryCriteria<L : StatePersistable> constructor(
             val expression: CriteriaExpression<L, Boolean>,
             override val status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            override val contractStateTypes: Set<Class<out ContractState>>? = null
+            override val contractStateTypes: Set<Class<out ContractState>>? = null,
+            override val relevancyStatus: Vault.RelevancyStatus = if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else Vault.RelevancyStatus.RELEVANT
     ) : CommonQueryCriteria() {
-        // These extra field is handled this way to preserve Kotlin wire compatibility wrt additional parameters with default values.
-        constructor(
+        @JvmOverloads constructor(
                 expression: CriteriaExpression<L, Boolean>,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes: Set<Class<out ContractState>>? = null,
-                relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
-        ) : this(expression, status, contractStateTypes) {
-            this.relevancyStatus = relevancyStatus
-        }
-
-        override var relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.RELEVANT
-            get() = if (CordappResolver.currentTargetVersion < 4) Vault.RelevancyStatus.ALL else field
-            private set
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(expression, status, contractStateTypes, Vault.RelevancyStatus.RELEVANT)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
@@ -300,8 +306,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
         fun copy(
                 expression: CriteriaExpression<L, Boolean> = this.expression,
                 status: Vault.StateStatus = this.status,
-                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes,
-                relevancyStatus: Vault.RelevancyStatus = this.relevancyStatus
+                contractStateTypes: Set<Class<out ContractState>>? = this.contractStateTypes
         ): VaultCustomQueryCriteria<L> {
             return VaultCustomQueryCriteria(
                     expression,
@@ -330,13 +335,20 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
     /**
      * AttachmentsQueryCriteria:
      */
-    data class AttachmentsQueryCriteria @JvmOverloads constructor(val uploaderCondition: ColumnPredicate<String>? = null,
-                                                                  val filenameCondition: ColumnPredicate<String>? = null,
-                                                                  val uploadDateCondition: ColumnPredicate<Instant>? = null,
-                                                                  val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
-                                                                  val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
-                                                                  val isSignedCondition: ColumnPredicate<Boolean>? = null,
-                                                                  val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
+    data class AttachmentsQueryCriteria(val uploaderCondition: ColumnPredicate<String>? = null,
+                                        val filenameCondition: ColumnPredicate<String>? = null,
+                                        val uploadDateCondition: ColumnPredicate<Instant>? = null,
+                                        val contractClassNamesCondition: ColumnPredicate<List<ContractClassName>>? = null,
+                                        val signersCondition: ColumnPredicate<List<PublicKey>>? = null,
+                                        val isSignedCondition: ColumnPredicate<Boolean>? = null,
+                                        val versionCondition: ColumnPredicate<Int>? = null) : AttachmentQueryCriteria() {
+        // V3 c'tors
+        constructor(uploaderCondition: ColumnPredicate<String>? = null,
+                    filenameCondition: ColumnPredicate<String>? = null,
+                    uploadDateCondition: ColumnPredicate<Instant>? = null) : this(uploaderCondition, filenameCondition, uploadDateCondition, null)
+        constructor(uploaderCondition: ColumnPredicate<String>?) : this(uploaderCondition, null)
+        constructor(uploaderCondition: ColumnPredicate<String>?, filenameCondition: ColumnPredicate<String>?) : this(uploaderCondition, filenameCondition, null)
+
         override fun visit(parser: AttachmentsQueryCriteriaParser): Collection<Predicate> {
             return parser.parseCriteria(this)
         }
@@ -346,7 +358,15 @@ sealed class AttachmentQueryCriteria : GenericQueryCriteria<AttachmentQueryCrite
                 filenameCondition: ColumnPredicate<String>? = this.filenameCondition,
                 uploadDateCondition: ColumnPredicate<Instant>? = this.uploadDateCondition
         ): AttachmentsQueryCriteria {
-            return AttachmentsQueryCriteria(uploaderCondition, filenameCondition, uploadDateCondition)
+            return AttachmentsQueryCriteria(
+                    uploaderCondition,
+                    filenameCondition,
+                    uploadDateCondition,
+                    contractClassNamesCondition,
+                    signersCondition,
+                    isSignedCondition,
+                    versionCondition
+            )
         }
 
         fun withUploader(uploaderPredicate: ColumnPredicate<String>) = copy(uploaderCondition = uploaderPredicate)
