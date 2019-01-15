@@ -1,11 +1,27 @@
 Trader demo
 -----------
 
-This demo brings up five nodes: Bank A, Bank B, Bank Of Corda, Logging Bank and a notary node that they all use. Bank A
+This demo brings up five nodes: Bank A, Bank B, Bank Of Corda, NonLogging Bank and a notary node that they all use. Bank A
 will be the buyer, and requests some cash from the Bank of Corda in order to acquire commercial paper from Bank B, the 
 seller.
 
-The Logging Bank node is present to demonstrate the usage of the "Configuring Responder Flows" feature of Corda described [here](https://docs.corda.net/head/flow-overriding.html)
+The NonLogging Bank node is present to demonstrate the usage of the "Configuring Responder Flows" feature of Corda described [here](https://docs.corda.net/head/flow-overriding.html). 
+The override is defined within the deployNodes section of the `build.gradle`. In this case, we are overriding the default responder for `net.corda.traderdemo.flow.SellerFlow`
+to be a version that does not print out information about the transaction. 
+
+```groovy
+    node {
+        name "O=NonLogging Bank,L=London,C=GB"
+        p2pPort 10025
+        rpcUsers = ext.rpcUsers
+        rpcSettings {
+            address "localhost:10026"
+            adminAddress "localhost:10027"
+        }
+        extraConfig = ['h2Settings.address' : 'localhost:10035']
+        flowOverride("net.corda.traderdemo.flow.SellerFlow", "net.corda.traderdemo.flow.BuyerFlow")
+    }
+```
 
 To run from the command line in Unix:
 
