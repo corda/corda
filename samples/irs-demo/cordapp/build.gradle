@@ -47,6 +47,9 @@ def rpcUsersList = [
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
     nodeDefaults{
+        projectCordapp {
+            deploy = false
+        }
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
         cordapp project(':confidential-identities')

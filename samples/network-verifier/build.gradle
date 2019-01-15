@@ -17,6 +17,9 @@ def nodeTask = tasks.getByPath(':node:capsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask]) {
     ext.rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     nodeDefaults{
+        projectCordapp {
+            deploy = false
+        }
         cordapp project(':samples:network-verifier:contracts')
         cordapp project(':samples:network-verifier:workflows')
     }

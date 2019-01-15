@@ -26,6 +26,9 @@ task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNode
 task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesSingle")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
         cordapp project(':samples:notary-demo:contracts')
         cordapp project(':samples:notary-demo:workflows')
@@ -53,6 +56,9 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesCustom")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
         cordapp project(':samples:notary-demo:contracts')
         cordapp project(':samples:notary-demo:workflows')
@@ -83,6 +89,9 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
         cordapp project(':samples:notary-demo:contracts')
         cordapp project(':samples:notary-demo:workflows')
@@ -149,6 +158,9 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
     directory file("$buildDir/nodes/nodesBFT")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
         cordapp project(':samples:notary-demo:contracts')
         cordapp project(':samples:notary-demo:workflows')

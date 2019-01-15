@@ -1,7 +1,6 @@
 apply plugin: 'kotlin'
 apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
-apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
 description 'Corda attachment demo'
@@ -10,8 +9,6 @@ dependencies {
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaCompile project(':node-driver')
     // Attachment demo cordapp - contracts and workflows parts
     cordapp project(':samples:attachment-demo:contracts')
     cordapp project(':samples:attachment-demo:workflows')
@@ -30,6 +27,9 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
 
     directory "./build/nodes"
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         cordapp project(':samples:attachment-demo:contracts')
         cordapp project(':samples:attachment-demo:workflows')
     }
