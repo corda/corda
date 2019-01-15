@@ -5,7 +5,7 @@ RUN apt-get -qq update && \
     apt-get -qqy install gnupg2 locales && \
     locale-gen en_US.UTF-8
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install bash
+RUN apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade && apt-get -y install bash dnsutils
 
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
