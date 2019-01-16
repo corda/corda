@@ -38,8 +38,8 @@ import kotlin.test.assertNotNull
 class SignatureConstraintVersioningTests {
 
     private val baseUnsinded = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
-    private val oldUnsigedCordapp = baseUnsinded.copy(versionId = 2)
     private val base = baseUnsinded.signed()
+    private val oldUnsigedCordapp = baseUnsinded.copy(versionId = 2)
     private val oldCordapp = base.copy(versionId = 2)
     private val newCordapp = base.copy(versionId = 3)
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
@@ -138,6 +138,7 @@ class SignatureConstraintVersioningTests {
         assertEquals(message, stateAndRef!!.state.data.message)
     }
 
+    //TODO this test doesn't actually verifies that signature constrint was used for the second transaction
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
