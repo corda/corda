@@ -23,6 +23,8 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
     override fun execute(database: Database?) {
         val connection = database?.connection as JdbcConnection
+        val msg = "Attachment version creation from whitelisted JARs"
+
         try {
             logger.info("Start executing...")
             var networkParameters: NetworkParameters? = null
@@ -31,30 +33,30 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 val path = Paths.get(System.getProperty(NODE_BASE_DIR_KEY)) / NETWORK_PARAMS_FILE_NAME
                 networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
-                    logger.info("Network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                    logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
                 } else {
-                    logger.warn("Network parameters not found in $path.")
+                    logger.warn("$msg, network parameters not found in $path.")
                 }
             } else {
-                logger.error("Network parameters not retried, could not determine node base directory due to system property $NODE_BASE_DIR_KEY being not set.")
+                logger.error("$msg, network parameters not retrieved, could not determine node base directory due to system property $NODE_BASE_DIR_KEY being not set.")
             }
 
             if (networkParameters == null) {
                 networkParameters = getNetworkParametersFromDb(connection)
                 if (networkParameters != null) {
-                    logger.info("Network parameters from database, epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                    logger.info("$msg using network parameters from database, epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
                 } else {
-                    logger.warn("Network parameters not found in database.")
+                    logger.warn("$msg skipped, network parameters not found in database.")
                     return
                 }
             }
 
             val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (availableAttachments.isEmpty()) {
-                logger.info("Attachments not found.")
+                logger.info("$msg skipped, no attachments not found.")
                 return
             } else {
-                logger.info("Attachments with version '1': $availableAttachments")
+                logger.info("$msg, candidate attachments with version '1': $availableAttachments")
             }
 
             availableAttachments.forEach { attachmentId ->
@@ -71,7 +73,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 }
             }
         } catch (e: Exception) {
-            logger.error("Exception while retrieving network parameters ${e.message}", e)
+            logger.error("$msg exception ${e.message}", e)
         }
     }
 
