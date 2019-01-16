@@ -5,10 +5,16 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
+import net.corda.core.internal.div
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
-import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.deserialize
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_BASE_DIR_KEY
+import java.nio.file.Path
+import java.nio.file.Paths
 
 class AttachmentVersionNumberMigration : CustomTaskChange {
     companion object {
@@ -18,37 +24,52 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     override fun execute(database: Database?) {
         val connection = database?.connection as JdbcConnection
         try {
-            logger.debug("Start executing...")
-            val networkParameters = getNetworkParameters(connection)
-            if (networkParameters == null) {
-                logger.debug("Network parameters not found.")
-                return
+            logger.info("Start executing...")
+            var networkParameters: NetworkParameters? = null
+
+            if (System.getProperty(NODE_BASE_DIR_KEY).isNotEmpty()) {
+                val path = Paths.get(System.getProperty(NODE_BASE_DIR_KEY)) / NETWORK_PARAMS_FILE_NAME
+                val networkParameters = getNetworkParametersFromFile(path)
+                if (networkParameters != null) {
+                    logger.info("Network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                } else {
+                    logger.warn("Network parameters not found in $path.")
+                }
             } else {
-                logger.debug("Network parameters epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
-            }
-            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
-            if (availableAttachments.isEmpty()) {
-                logger.debug("Attachments not found.")
-                return
-            } else {
-                logger.debug("Attachments with version '1': $availableAttachments")
+                logger.error("Network parameters not retried, could not determine node base directory due to system property $NODE_BASE_DIR_KEY being not set.")
             }
 
-            availableAttachments.forEach { attachmentId ->
-                val versions = networkParameters?.whitelistedContractImplementations?.values.mapNotNull { it.indexOfFirst { it.toString() == attachmentId} }.filter { it >= 0 }
-                val maxPosition = versions.max() ?: 0
-                if (maxPosition > 0) {
-                    val version = maxPosition + 1
-                    val msg = "Updating version of attachment $attachmentId to '$version'"
-                    if (versions.toSet().size > 1)
-                        logger.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
-                    else
-                        logger.debug(msg)
-                    updateVersion(connection, attachmentId, version)
+            if (networkParameters == null) {
+                networkParameters = getNetworkParametersFromDb(connection)
+                if (networkParameters != null) {
+                    logger.info("Network parameters from database, epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                } else {
+                    logger.warn("Network parameters not found in database.")
+                    return
                 }
             }
 
-            logger.debug("Done")
+            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
+            if (availableAttachments.isEmpty()) {
+                logger.info("Attachments not found.")
+                return
+            } else {
+                logger.info("Attachments with version '1': $availableAttachments")
+            }
+
+            availableAttachments.forEach { attachmentId ->
+                val versions = networkParameters?.whitelistedContractImplementations?.values.mapNotNull { it.indexOfFirst { it.toString() == attachmentId } }.filter { it >= 0 }
+                val maxPosition = versions.max() ?: 0
+                if (maxPosition > 0) {
+                    val version = maxPosition + 1
+                    val msg = "Updating version of attachment $attachmentId to '$version'."
+                    if (versions.toSet().size > 1)
+                        logger.warn("Several versions based on whitelistedContractImplementations position are available: ${versions.toSet()}. $msg")
+                    else
+                        logger.info(msg)
+                    updateVersion(connection, attachmentId, version)
+                }
+            }
         } catch (e: Exception) {
             logger.error("Exception while retrieving network parameters ${e.message}", e)
         }
@@ -68,7 +89,12 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     override fun setUp() {
     }
 
-    private fun getNetworkParameters(connection: JdbcConnection): NetworkParameters? =
+    private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
+        val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
+        return networkParametersBytes?.raw?.deserialize()
+    }
+
+    private fun getNetworkParametersFromDb(connection: JdbcConnection): NetworkParameters? =
             connection.createStatement().use {
                 val rs = it.executeQuery("SELECT PARAMETERS_BYTES FROM NODE_NETWORK_PARAMETERS ORDER BY EPOCH DESC")
                 if (rs.next()) {
