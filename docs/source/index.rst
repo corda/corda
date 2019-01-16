@@ -55,13 +55,20 @@ We look forward to seeing what you can do with Corda!
 
    corda-nodes-index.rst
    corda-networks-index.rst
-   docker.rst
+   docker-image.rst
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
    cli-application-shell-extensions.rst
 
 .. Documentation is not included in the pdf unless it is included in a toctree somewhere
+
+.. conditional-toctree::
+   :caption: Corda Network
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   corda-network/index.md
 
 .. conditional-toctree::
    :caption: Contents
@@ -81,13 +88,6 @@ We look forward to seeing what you can do with Corda!
    corda-repo-layout.rst
    deterministic-modules.rst
    changelog
-
-.. conditional-toctree::
-   :caption: Corda Network
-   :maxdepth: 2
-   :if_tag: htmlmode
-
-   corda-network/index.md
 
 .. conditional-toctree::
    :caption: Design docs
