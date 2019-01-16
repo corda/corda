@@ -93,6 +93,7 @@ application development please continue to refer to `the main project documentat
 
    corda-nodes-index.rst
    corda-networks-index.rst
+   docker.rst
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst

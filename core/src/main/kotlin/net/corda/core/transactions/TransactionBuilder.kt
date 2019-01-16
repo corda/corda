@@ -46,7 +46,7 @@ import kotlin.collections.component2
 @DeleteForDJVM
 open class TransactionBuilder(
         var notary: Party? = null,
-        var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+        var lockId: UUID = defaultLockId(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
@@ -56,9 +56,20 @@ open class TransactionBuilder(
         protected val references: MutableList<StateRef> = arrayListOf(),
         protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
+    constructor(notary: Party? = null,
+                lockId: UUID = defaultLockId(),
+                inputs: MutableList<StateRef> = arrayListOf(),
+                attachments: MutableList<SecureHash> = arrayListOf(),
+                outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+                commands: MutableList<Command<*>> = arrayListOf(),
+                window: TimeWindow? = null,
+                privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, arrayListOf())
+
     constructor(notary: Party) : this(notary, window = null)
 
     private companion object {
+        private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
         private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }

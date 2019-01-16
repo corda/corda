@@ -26,15 +26,6 @@ By default, the node will look for a configuration file called ``node.conf`` and
 in the current working directory. You can override the configuration file and workspace paths on the command line (e.g.
 ``./corda.jar --config-file=test.conf --base-directory=/opt/corda/nodes/test``).
 
-You can increase the amount of Java heap memory available to the node using the ``-Xmx`` command line argument. For
-example, the following would run the node with a heap size of 2048MB:
-
-.. code-block:: shell
-
-   java -Xmx2048m -jar corda.jar
-
-You should do this if you receive an ``OutOfMemoryError`` exception when interacting with the node.
-
 Optionally run the node's webserver as well by opening a terminal window in the node's folder and running:
 
 .. code-block:: shell

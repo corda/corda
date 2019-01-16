@@ -5,15 +5,17 @@ Nodes
    :maxdepth: 1
 
    node-structure
-   generating-a-node
-   docker-image
-   running-a-node
-   deploying-a-node
+   node-naming
    corda-configuration-file
-   clientrpc
-   shell
+   node-commandline
+   node-administration
+   deploying-a-node
    node-database
    node-database-access-h2
    node-administration
    node-operations-upgrading
    node-operations-upgrade-cordapps
+   shell
+   clientrpc
+   generating-a-node
+   running-a-node
