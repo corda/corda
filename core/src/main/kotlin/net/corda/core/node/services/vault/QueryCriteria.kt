@@ -338,7 +338,7 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
                 expression: CriteriaExpression<L, Boolean>,
                 status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes: Set<Class<out ContractState>>? = null
-        ) : this(expression, status, contractStateTypes, Vault.RelevancyStatus.RELEVANT)
+        ) : this(expression, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)
