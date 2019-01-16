@@ -27,10 +27,12 @@ import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.cordappsForPackages
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
 
+@Ignore
 class AttachmentLoadingTests {
     private companion object {
         @ClassRule

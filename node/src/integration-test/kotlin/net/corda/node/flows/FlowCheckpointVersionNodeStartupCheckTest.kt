@@ -5,8 +5,8 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
-import net.corda.node.internal.NodeStartup
-import net.corda.testMessage.*
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -18,11 +18,13 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.*
-import net.test.cordapp.v1.Record
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.ListenProcessDeathException
+import net.corda.testing.node.internal.cordappWithPackages
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
+import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -63,6 +65,7 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
         }
     }
 
+    @Ignore
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar name`() {
         driver(parametersForRestartingNodes()) {
@@ -85,6 +88,7 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
         }
     }
 
+    @Ignore
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
