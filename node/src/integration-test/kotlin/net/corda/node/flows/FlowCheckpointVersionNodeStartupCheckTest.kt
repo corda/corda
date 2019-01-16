@@ -47,7 +47,7 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             val result = if (page.snapshot.states.isNotEmpty()) {
                 page.snapshot.states.first()
             } else {
-                val r = page.updates.timeout(5, TimeUnit.SECONDS).take(1).toBlocking().single()
+                val r = page.updates.timeout(30, TimeUnit.SECONDS).take(1).toBlocking().single()
                 if (r.consumed.isNotEmpty()) r.consumed.first() else r.produced.first()
             }
             assertNotNull(result)
@@ -80,18 +80,24 @@ class FlowCheckpointVersionNodeStartupCheckTest {
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
-            val uniqueName = "different-jar-hash-test-${UUID.randomUUID()}"
-            val cordapp = defaultCordapp.copy(name = uniqueName)
+            val uniqueWorkflowJarName = "different-jar-hash-test-${UUID.randomUUID()}"
+            val uniqueContractJarName = "contract-$uniqueWorkflowJarName"
+            val defaultWorkflowJar = cordappWithPackages(SendMessageFlow::class.packageName)
+            val defaultContractJar = cordappWithPackages(MessageState::class.packageName)
+            val contractJar = defaultContractJar.copy(name = uniqueContractJarName)
+            val workflowJar = defaultWorkflowJar.copy(name = uniqueWorkflowJarName)
 
-            val bobBaseDir = createSuspendedFlowInBob(setOf(cordapp))
+            val bobBaseDir = createSuspendedFlowInBob(setOf(workflowJar, contractJar))
 
             val cordappsDir = bobBaseDir / "cordapps"
-            val cordappJar = cordappsDir.list().single { it.toString().endsWith(".jar") }
+            val cordappJar = cordappsDir.list().single {
+               ! it.toString().contains(uniqueContractJarName) && it.toString().endsWith(".jar")
+            }
             // Make sure we're dealing with right jar
-            assertThat(cordappJar.fileName.toString()).contains(uniqueName)
+            assertThat(cordappJar.fileName.toString()).contains(uniqueWorkflowJarName)
 
             // The name is part of the MANIFEST so changing it is sufficient to change the jar hash
-            val modifiedCordapp = cordapp.copy(name = "${cordapp.name}-modified")
+            val modifiedCordapp = workflowJar.copy(name = "${workflowJar.name}-modified")
             val modifiedCordappJar = CustomCordapp.getJarFile(modifiedCordapp)
             modifiedCordappJar.moveTo(cordappJar, REPLACE_EXISTING)
 
@@ -125,15 +131,14 @@ class FlowCheckpointVersionNodeStartupCheckTest {
             )).getOrThrow()
         }
 
-        val logDir = baseDirectory(BOB_NAME) / NodeStartup.LOGS_DIRECTORY_NAME
-        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith(".log") }.findAny().get() }
+        val logDir = baseDirectory(BOB_NAME)
+        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith("out.log") }.findAny().get() }
         val matchingLineCount = logFile.readLines { it.filter { line -> logMessage in line }.count() }
         assertEquals(1, matchingLineCount)
     }
 
     private fun parametersForRestartingNodes(): DriverParameters {
         return DriverParameters(
-                isDebug = true,
                 startNodesInProcess = false, // Start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList()

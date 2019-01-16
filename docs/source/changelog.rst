@@ -52,18 +52,8 @@ Version 4.0
 
 * Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
 
-* ``SwapIdentitiesFlow``, from the experimental confidential-identities module, is now an inlined flow. Instead of passing in a ``Party`` with
-  whom to exchange the anonymous identity, a ``FlowSession`` to that party is required instead. The flow running on the other side must
-  also call ``SwapIdentitiesFlow``. This change was required as the previous API allowed any counterparty to generate anonoymous identities
-  with a node at will with no checks.
-
-  The result type has changed to a simple wrapper class, instead of a Map, to make extracting the identities easier. Also, the wire protocol
-  of the flow has slightly changed.
-
-  .. note:: V3 and V4 of confidential-identities are not compatible and confidential-identities V3 will not work with a V4 Corda node. CorDapps
-     in such scenarios using confidential-identities must be updated.
-
-  The ``confidential-identities`` dependency in your CorDapp must now be ``compile`` and not ``cordaCompile``.
+* The experimental confidential-identities is now a separate CorDapp and must now be loaded onto the node alongside any CorDapp that needs it.
+  This also means your gradle dependency for it should be ``cordapp`` and not ``cordaCompile``.
 
 * Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
@@ -86,6 +76,9 @@ Version 4.0
 * Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
 
+* BFT-Smart and Raft notary implementations have been move to the ``net.corda.notary.experimental`` package to emphasise
+  their experimental nature.
+
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
 * CorDapps now have the ability to specify a minimum platform version in their MANIFEST.MF to prevent old nodes from loading them.
@@ -99,38 +92,15 @@ Version 4.0
 
 * ``FinalityFlow`` is now an inlined flow and requires ``FlowSession`` s to each party intended to receive the transaction. This is to fix the
   security problem with the old API that required every node to accept any transaction it received without any checks. Existing CorDapp
-  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended that CorDapps switch to
+  binaries relying on this old behaviour will continue to function as previously. However, it is strongly recommended CorDapps switch to
   this new API. See :doc:`app-upgrade-notes` for further details.
+
+* For similar reasons, ``SwapIdentitiesFlow``, from confidential-identities, is also now an inlined flow. The old API has been preserved but
+  it is strongly recommended CorDapps switch to this new API. See :doc:`app-upgrade-notes` for further details.
 
 * Introduced new optional network bootstrapper command line option (--minimum-platform-version) to set as a network parameter
 
-* BFT-Smart and Raft notary implementations have been extracted out of node into ``experimental`` CorDapps to emphasise
-  their experimental nature. Moreover, the BFT-Smart notary will only work in dev mode due to its use of Java serialization.
-
 * Vault storage of contract state constraints metadata and associated vault query functions to retrieve and sort by constraint type.
-
-* UPGRADE REQUIRED: changes have been made to how notary implementations are configured and loaded.
-  No upgrade steps are required for the single-node notary (both validating and non-validating variants).
-  Other notary implementations have been moved out of the Corda node into individual Cordapps, and require configuration
-  file updates.
-
-  To run a notary you will now need to include the appropriate notary CorDapp in the ``cordapps/`` directory:
-
-    * ``corda-notary-raft`` for the Raft notary.
-    * ``corda-notary-bft-smart`` for the BFT-Smart notary.
-
-  It is now required to specify the fully qualified notary service class name, ``className``, and the legal name of
-  the notary service in case of distributed notaries: ``serviceLegalName``.
-
-  Implementation-specific configuration values have been moved to the ``extraConfig`` configuration block.
-
-  Example configuration changes for the Raft notary:
-
-  .. image:: resources/notary-config-update.png
-
-  Example configuration changes for the BFT-Smart notary:
-
-  .. image:: resources/notary-config-update-bft.png
 
 * New overload for ``CordaRPCClient.start()`` method allowing to specify target legal identity to use for RPC call.
 

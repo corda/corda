@@ -1,3 +1,9 @@
+.. highlight:: groovy
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Building and installing a CorDapp
 =================================
 
@@ -110,8 +116,6 @@ Here is an overview of the various Corda dependencies:
   frameworks
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
-* ``corda-notary-bft-smart`` - A Corda notary implementation
-* ``corda-notary-raft`` - A Corda notary implementation
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
 * ``corda-serialization`` - The Corda core serialization library. Automatically included by other dependencies
 * ``corda-serialization-deterministic`` - The Corda core serialization library. Automatically included by other
@@ -342,6 +346,9 @@ This is typically done by appending the version string to the CorDapp's name. Th
 once the JAR has been deployed on a node. If it does, make sure no one is relying on ``FlowContext.appName`` in their
 flows (see :doc:`versioning`).
 
+
+.. _cordapp_install_ref:
+
 Installing the CorDapp JAR
 --------------------------
 
@@ -468,3 +475,35 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
         }
 
 .. note:: It is possible, but *not recommended*, to include everything in a single CorDapp jar and use both the ``contract`` and ``workflow`` Gradle plugin tags.
+
+.. _cordapp_contract_attachments_ref:
+
+CorDapp Contract Attachments
+----------------------------
+
+As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted uploader, either by
+
+- installing manually as per :ref:`Installing the CorDapp JAR <cordapp_install_ref>` and re-starting the node.
+
+- uploading the attachment JAR to the node via RPC, either programmatically (see :ref:`Connecting to a node via RPC <clientrpc_connect_ref>`)
+  or via the :doc:`shell` by issuing the following command:
+
+``>>> run uploadAttachment jar: path/to/the/file.jar``
+
+Contract attachments that are received from a peer over the p2p network are considered **untrusted** and will throw a `UntrustedAttachmentsException` exception
+when processed by a listening flow that cannot resolve that attachment from its local attachment storage. The flow will be aborted and sent to the nodes flow hospital for recovery and retry.
+The untrusted attachment JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for viewing using the following CRaSH shell command:
+
+``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
+
+Should the node operator deem the attachment trustworthy, they may then issue the following CRaSH shell command to reload it as trusted:
+
+``>>> run uploadAttachment jar: path/to/the/trusted-file.jar``
+
+and subsequently retry the failed flow (currently this requires a node re-start).
+
+.. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
+   Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
+
+
+

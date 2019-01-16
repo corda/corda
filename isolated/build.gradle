@@ -11,6 +11,9 @@ dependencies {
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
+    sealing {
+        enabled false // This needs to be disabled for AttachmentsClassLoaderSerializationTests to work
+    }
     contract {
         name "Isolated Test CorDapp"
         versionId 1

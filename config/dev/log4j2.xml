@@ -10,27 +10,59 @@
     </Properties>
 
     <Appenders>
-        <Console name="Console-Appender" target="SYSTEM_OUT">
-            <PatternLayout>
-                <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{short.message}%n}{INFO=white,WARN=red,FATAL=bright red}">
-                    <Script name="MDCSelector" language="javascript"><![CDATA[
-                    result = null;
-                    if (!logEvent.getContextData().size() == 0) {
-                        result = "WithMDC";
-                    } else {
-                        result = null;
-                    }
-                    result;
-               ]]>
-                    </Script>
-                    <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{short.message}%n}{INFO=white,WARN=red,FATAL=bright red}"/>
-                </ScriptPatternSelector>
-            </PatternLayout>
-        </Console>
+        <ScriptAppenderSelector name="Console-Selector">
+            <Script language="nashorn"><![CDATA[
+                var System = Java.type('java.lang.System');
+                var level = System.getProperty("consoleLogLevel");
+                var enabled = System.getProperty("consoleLoggingEnabled");
+                enabled == "true" && (level == "debug" || level == "trace") ? "Console-Debug-Appender" : "Console-Appender";
+            ]]></Script>
+            <AppenderSet>
+
+                <!-- The default console appender - prints no exception information -->
+                <Console name="Console-Appender" target="SYSTEM_OUT">
+                    <PatternLayout>
+                        <ScriptPatternSelector
+                                defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}">
+                            <Script name="MDCSelector" language="javascript"><![CDATA[
+                                result = null;
+                                if (!logEvent.getContextData().size() == 0) {
+                                    result = "WithMDC";
+                                } else {
+                                    result = null;
+                                }
+                                result;
+                                ]]>
+                            </Script>
+                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{0}}{INFO=white,WARN=red,FATAL=bright red}"/>
+                        </ScriptPatternSelector>
+                    </PatternLayout>
+                </Console>
+
+                <!-- The console appender when debug or trace level logging is specified. Prints full stack trace -->
+                <Console name="Console-Debug-Appender" target="SYSTEM_OUT">
+                    <PatternLayout>
+                        <ScriptPatternSelector defaultPattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}">
+                            <Script name="MDCSelector" language="javascript"><![CDATA[
+                                result = null;
+                                if (!logEvent.getContextData().size() == 0) {
+                                    result = "WithMDC";
+                                } else {
+                                    result = null;
+                                }
+                                result;
+                                ]]>
+                            </Script>
+                            <PatternMatch key="WithMDC" pattern="%highlight{[%level{length=5}] %date{HH:mm:ssZ} [%t] %c{2}.%method - %msg %X%n%throwable{}}{INFO=white,WARN=red,FATAL=bright red}"/>
+                        </ScriptPatternSelector>
+                    </PatternLayout>
+                </Console>
+            </AppenderSet>
+        </ScriptAppenderSelector>
 
         <!-- Required for printBasicInfo -->
         <Console name="Console-Appender-Println" target="SYSTEM_OUT">
-            <PatternLayout pattern="%msg%n%throwable{short.message}" />
+            <PatternLayout pattern="%msg%n%throwable{0}" />
         </Console>
 
         <!-- Will generate up to 100 log files for a given day. During every rollover it will delete
@@ -73,8 +105,8 @@
 
         </RollingRandomAccessFile>
 
-        <Rewrite name="Console-ErrorCode-Appender">
-            <AppenderRef ref="Console-Appender"/>
+        <Rewrite name="Console-ErrorCode-Selector">
+            <AppenderRef ref="Console-Selector"/>
             <ErrorCodeRewritePolicy/>
         </Rewrite>
 
@@ -91,7 +123,7 @@
 
     <Loggers>
         <Root level="${defaultLogLevel}">
-            <AppenderRef ref="Console-ErrorCode-Appender" level="${consoleLogLevel}"/>
+            <AppenderRef ref="Console-ErrorCode-Selector" level="${consoleLogLevel}"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Root>
         <Logger name="BasicInfo" additivity="false">
@@ -99,11 +131,11 @@
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.hibernate.SQL" level="info" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Appender"/>
+            <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.apache.activemq.artemis.core.server" level="error" additivity="false">
-            <AppenderRef ref="Console-ErrorCode-Appender"/>
+            <AppenderRef ref="Console-ErrorCode-Selector"/>
             <AppenderRef ref="RollingFile-ErrorCode-Appender"/>
         </Logger>
         <Logger name="org.jolokia" additivity="true" level="warn">

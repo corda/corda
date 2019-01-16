@@ -9,6 +9,7 @@ import java.security.PublicKey
 import java.time.Duration
 import java.time.Instant
 
+@JvmOverloads
 fun testNetworkParameters(
         notaries: List<NotaryInfo> = emptyList(),
         minimumPlatformVersion: Int = 1,
