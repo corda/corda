@@ -28,7 +28,7 @@ class ContractAttachmentSerializer(factory: SerializerFactory) : CustomSerialize
     }
 
     override fun fromProxy(proxy: ContractAttachmentProxy): ContractAttachment {
-        return ContractAttachment(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader, proxy.signers, proxy.version)
+        return ContractAttachment.create(proxy.attachment, proxy.contract, proxy.contracts, proxy.uploader, proxy.signers, proxy.version)
     }
 
     @KeepForDJVM

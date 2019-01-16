@@ -93,6 +93,10 @@ application development please continue to refer to `the main project documentat
 
    corda-nodes-index.rst
    corda-networks-index.rst
+   azure-vm.rst
+   aws-vm.rst
+   loadtesting.rst
+   cli-application-shell-extensions.rst
    certificate-revocation
 
 .. conditional-toctree::

@@ -198,7 +198,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 logWarnWithMDC(msg)
                 bridgeMetricsService?.packetDropEvent(artemisMessage, msg)
                 // Ack the message to prevent same message being sent to us again.
-                artemisMessage.acknowledge()
+                artemisMessage.individualAcknowledge()
                 return
             }
             val properties = HashMap<String, Any?>()
@@ -220,7 +220,7 @@ open class AMQPBridgeManager(config: MutualSslConfiguration,
                 logDebugWithMDC { "Bridge ACK ${sendableMessage.onComplete.get()}" }
                 lock.withLock {
                     if (sendableMessage.onComplete.get() == MessageStatus.Acknowledged) {
-                        artemisMessage.acknowledge()
+                        artemisMessage.individualAcknowledge()
                     } else {
                         logInfoWithMDC("Rollback rejected message uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}")
                         // We need to commit any acknowledged messages before rolling back the failed

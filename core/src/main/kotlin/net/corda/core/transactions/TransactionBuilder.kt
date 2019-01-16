@@ -44,7 +44,7 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder @JvmOverloads constructor(
+open class TransactionBuilder(
         var notary: Party? = null,
         var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
@@ -52,38 +52,16 @@ open class TransactionBuilder @JvmOverloads constructor(
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt()
+        protected var privacySalt: PrivacySalt = PrivacySalt(),
+        protected val references: MutableList<StateRef> = arrayListOf(),
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
+    constructor(notary: Party) : this(notary, window = null)
+
     private companion object {
         private val log = contextLogger()
-
-        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
-
-        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
-
         private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
-
-    constructor(
-            notary: Party? = null,
-            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
-            inputs: MutableList<StateRef> = arrayListOf(),
-            attachments: MutableList<SecureHash> = arrayListOf(),
-            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-            commands: MutableList<Command<*>> = arrayListOf(),
-            window: TimeWindow? = null,
-            privacySalt: PrivacySalt = PrivacySalt(),
-            references: MutableList<StateRef> = defaultReferencesList(),
-            serviceHub: ServiceHub? = defaultServiceHub()
-    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
-        this.references = references
-        this.serviceHub = serviceHub
-    }
-
-    protected var references: MutableList<StateRef> = defaultReferencesList()
-        private set
-    protected var serviceHub: ServiceHub? = defaultServiceHub()
-        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -200,8 +178,8 @@ open class TransactionBuilder @JvmOverloads constructor(
 
             addAttachment(attachment.id)
             return true
-        // Ignore these exceptions as they will break unit tests.
-        //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+            // Ignore these exceptions as they will break unit tests.
+            //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
         } catch (tve: TransactionVerificationException) {
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {

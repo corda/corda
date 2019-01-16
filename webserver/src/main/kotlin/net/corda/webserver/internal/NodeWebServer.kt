@@ -199,7 +199,7 @@ class NodeWebServer(val config: WebServerConfig) {
 
     private fun connectLocalRpcAsNodeUser(): CordaRPCOps {
         log.info("Connecting to node at ${config.rpcAddress} as ${config.runAs}")
-        val client = CordaRPCClient(config.rpcAddress, classLoader = javaClass.classLoader)
+        val client = CordaRPCClient(hostAndPort = config.rpcAddress, classLoader = javaClass.classLoader)
         val connection = client.start(config.runAs.username, config.runAs.password)
         return connection.proxy
     }

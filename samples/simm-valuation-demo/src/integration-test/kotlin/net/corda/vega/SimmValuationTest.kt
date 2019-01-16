@@ -62,14 +62,13 @@ class SimmValuationTest : IntegrationTest() {
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
                 cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
-                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()),
-                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, maximumHeapSize = "1g")))
+                systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
-            val nodeAFuture = startNode(providedName = nodeALegalName, maximumHeapSize = "1g")
-            val nodeBFuture = startNode(providedName = nodeBLegalName, maximumHeapSize = "1g")
+            val nodeAFuture = startNode(providedName = nodeALegalName)
+            val nodeBFuture = startNode(providedName = nodeBLegalName)
             val (nodeA, nodeB) = listOf(nodeAFuture, nodeBFuture).map { it.getOrThrow() }
-            val nodeAWebServerFuture = startWebserver(nodeA, "1g")
-            val nodeBWebServerFuture = startWebserver(nodeB, "1g")
+            val nodeAWebServerFuture = startWebserver(nodeA)
+            val nodeBWebServerFuture = startWebserver(nodeB)
             val nodeAApi = HttpApi.fromHostAndPort(nodeAWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBApi = HttpApi.fromHostAndPort(nodeBWebServerFuture.getOrThrow().listenAddress, "api/simmvaluationdemo")
             val nodeBParty = getPartyWithName(nodeAApi, nodeBLegalName)

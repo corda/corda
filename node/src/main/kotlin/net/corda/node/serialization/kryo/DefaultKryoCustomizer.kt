@@ -235,7 +235,7 @@ object DefaultKryoCustomizer {
                     override val id = attachmentHash
                 }
 
-                return ContractAttachment(lazyAttachment, contract, additionalContracts, uploader, signers, version)
+                return ContractAttachment.create(lazyAttachment, contract, additionalContracts, uploader, signers, version)
             } else {
                 val attachment = GeneratedAttachment(input.readBytesWithLength())
                 val contract = input.readString()
@@ -243,7 +243,7 @@ object DefaultKryoCustomizer {
                 val uploader = input.readString()
                 val signers = kryo.readClassAndObject(input) as List<PublicKey>
                 val version = input.readInt()
-                return ContractAttachment(attachment, contract, additionalContracts, uploader, signers, version)
+                return ContractAttachment.create(attachment, contract, additionalContracts, uploader, signers, version)
             }
         }
     }
