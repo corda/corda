@@ -27,6 +27,7 @@ import org.junit.*
 import org.junit.Assert.assertEquals
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.lang.AssertionError
 import java.net.URL
 import java.nio.file.Files
 import java.time.Instant
@@ -225,11 +226,23 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
                 systemProperties = mapOf("net.corda.node.internal.nodeinfo.publish.interval" to 1.seconds.toString())
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
+            val aliceNodeInfo = aliceNode.nodeInfo.serialize().hash
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
-            assertThat(networkMapServer.networkMapHashes()).doesNotContain(aliceNode.nodeInfo.serialize().hash)
+
+            var maxRemoveRetries = 5
+
+            // Try to remove multiple times in case the network map republishes just in between the removal and the check.
+            while (aliceNodeInfo in networkMapServer.networkMapHashes()) {
+                networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
+                if (maxRemoveRetries-- == 0) {
+                    throw AssertionError("Could not remove Node info.")
+                }
+            }
+
+            // Wait until the node info is republished.
             Thread.sleep(2000)
-            assertThat(networkMapServer.networkMapHashes()).contains(aliceNode.nodeInfo.serialize().hash)
+            assertThat(networkMapServer.networkMapHashes()).contains(aliceNodeInfo)
         }
     }
 
