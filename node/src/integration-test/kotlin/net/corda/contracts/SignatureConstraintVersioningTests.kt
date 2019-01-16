@@ -138,20 +138,35 @@ class SignatureConstraintVersioningTests {
         assertEquals(message, stateAndRef!!.state.data.message)
     }
 
-    //TODO this test doesn't actually verifies that signature constrint was used for the second transaction
+    //TODO the test actually doesn't check that signature constraint was used for the second transaction
     @Test
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
+        val stateAndRef = `use states to create transaction with newer cordapp`(oldUnsigedCordapp, newCordapp, listOf(oldUnsigedCordapp, newCordapp))
+        assertNotNull(stateAndRef)
+        assertEquals(transformetMessage, stateAndRef!!.state.data.message)
+    }
+
+    //TODO the test actually doesn't check that signature constraint was used for the second transaction
+    @Test
+    fun `auto migration from WhitelistConstraint to SignatureConstraint fail for not whitelisted signed JAR`() {
+        assertFailsWith(TransactionVerificationException.ContractConstraintRejection::class) {
+            `use states to create transaction with newer cordapp`(oldUnsigedCordapp, newCordapp, listOf(oldUnsigedCordapp))
+        }
+    }
+
+    private fun `use states to create transaction with newer cordapp`(cordapp: CustomCordapp, newCordapp: CustomCordapp, whiteListedCordapps : List<CustomCordapp>): StateAndRef<MessageState>? {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
-        val attachmentHashes = listOf(oldUnsigedCordapp, newCordapp).map{ Files.newInputStream(it.jarFile).readFully().sha256() }
+        val attachmentHashes = whiteListedCordapps.map{ Files.newInputStream(it.jarFile).readFully().sha256() }
 
-        val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
+        return internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
                 networkParameters = testNetworkParameters(notaries = emptyList(),
                         minimumPlatformVersion = 4, whitelistedContractImplementations = mapOf(TEST_MESSAGE_CONTRACT_PROGRAM_ID to attachmentHashes))
-                ) {
+        ) {
+            // create transaction using first Cordapp
             var (nodeName, baseDirectory) = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldUnsigedCordapp))).getOrThrow()
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(cordapp))).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
@@ -159,32 +174,31 @@ class SignatureConstraintVersioningTests {
                 nodeHandle.stop()
                 Pair(nodeName, nodeHandle.baseDirectory)
             }()
-            println(oldUnsigedCordapp.jarFile)
 
-            val oldUnsigedCordappPath = baseDirectory.resolve(Paths.get("cordapps")).resolve(oldUnsigedCordapp.jarFile.fileName)
-            oldUnsigedCordappPath.delete()
+            // delete the first cordapp
+            val cordappPath = baseDirectory.resolve(Paths.get("cordapps")).resolve(cordapp.jarFile.fileName)
+            cordappPath.delete()
 
+            // create transaction using the upgraded cordapp resuing   input for transaction
             var result = {
-            val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp))).getOrThrow()
-            var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                val page = it.proxy.vaultQuery(MessageState::class.java)
-                page.states.singleOrNull()
-            }
-            CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
-            }
-            result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                val page = it.proxy.vaultQuery(MessageState::class.java)
-                page.states.singleOrNull()
-            }
+                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp))).getOrThrow()
+                var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                    val page = it.proxy.vaultQuery(MessageState::class.java)
+                    page.states.singleOrNull()
+                }
+                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                    it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
+                }
+                result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                    val page = it.proxy.vaultQuery(MessageState::class.java)
+                    page.states.singleOrNull()
+                }
 
-            nodeHandle.stop()
-            result
-        }()
+                nodeHandle.stop()
+                result
+            }()
             result
         }
-        assertNotNull(stateAndRef)
-        assertEquals(transformetMessage, stateAndRef!!.state.data.message)
     }
 }
 
