@@ -1,10 +1,8 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.internal.div
-import net.corda.core.internal.exists
-import net.corda.core.internal.readAllLines
-import net.corda.core.internal.toMultiMap
+import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.nodeapi.internal.ContractsJar
@@ -12,10 +10,13 @@ import org.slf4j.LoggerFactory
 import java.nio.file.Path
 
 private const val EXCLUDE_WHITELIST_FILE_NAME = "exclude_whitelist.txt"
+private const val INCLUDE_WHITELIST_FILE_NAME = "include_whitelist.txt"
 private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.network.WhitelistGenerator")
 
 fun generateWhitelist(networkParameters: NetworkParameters?,
                       excludeContracts: List<ContractClassName>,
+                      includeContracts: List<ContractClassName>,
+                      signedJars: List<SecureHash>,
                       cordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
@@ -26,18 +27,28 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
         }
     }
 
-    val newWhiteList = cordappJars
+    val newWhiteList = cordappJars.filter { !signedJars.contains(it.hash) }
             .flatMap { jar -> (jar.scan() - excludeContracts).map { it to jar.hash } }
             .toMultiMap()
 
-    return (newWhiteList.keys + existingWhitelist.keys).associateBy({ it }) {
+    val newSignedJarsWhiteList = cordappJars.filter { signedJars.contains(it.hash) }
+            .flatMap { jar -> (jar.scan() - excludeContracts + includeContracts).map { it to jar.hash } }
+            .toMultiMap()
+
+    return (newWhiteList.keys + existingWhitelist.keys + newSignedJarsWhiteList.keys).associateBy({ it }) {
         val existingHashes = existingWhitelist[it] ?: emptyList()
         val newHashes = newWhiteList[it] ?: emptyList()
-        (existingHashes + newHashes).distinct()
+        val newHashesFormSignedJar = newSignedJarsWhiteList[it] ?: emptyList()
+        (existingHashes + newHashes + newHashesFormSignedJar).distinct()
     }
 }
 
 fun readExcludeWhitelist(directory: Path): List<String> {
     val file = directory / EXCLUDE_WHITELIST_FILE_NAME
+    return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
+}
+
+fun readIncludeWhitelist(directory: Path): List<String> {
+    val file = directory / INCLUDE_WHITELIST_FILE_NAME
     return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
 }
