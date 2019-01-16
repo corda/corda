@@ -96,7 +96,7 @@ class TransactionBuilderTest {
     fun `reference states`() {
         doReturn(unsignedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
 
-        val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary)
+        val referenceState = TransactionState(DummyState(), DummyContract.PROGRAM_ID, notary, constraint = AlwaysAcceptAttachmentConstraint)
         val referenceStateRef = StateRef(SecureHash.randomSHA256(), 1)
         val builder = TransactionBuilder(notary)
                 .addReferenceState(StateAndRef(referenceState, referenceStateRef).referenced())
