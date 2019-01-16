@@ -320,6 +320,9 @@ Version 4.0
 
 * Logging for P2P and RPC has been separated, to make it easier to enable all P2P or RPC logging without hand-picking loggers for individual classes.
 
+* Vault Query Criteria have been enhanced to allow filtering by state relevancy. Queries can request all states, just relevant ones, or just non relevant ones. The default is to return all states, to maintain backwards compatibility.
+  Note that this means apps running on nodes using Observer node functionality should update their queries to request only relevant states if they are only expecting to see states in which they participate.
+
 Version 3.3
 -----------
 
