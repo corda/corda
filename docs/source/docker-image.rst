@@ -6,7 +6,7 @@ Running a node connected to a Compatibility Zone in Docker
 
 .. note:: Requirements: A valid node.conf and a valid set of certificates - (signed by the CZ)
 
-In this example, the certificates are stored at ``/home/user/cordaBase/certificates``, the node configuration is in ``/home/user/cordaBase/config/node.conf`` and the CorDapps to run are in ``/home/TeamCityOutput/cordapps``
+In this example, the certificates are stored at ``/home/user/cordaBase/certificates``, the node configuration is in ``/home/user/cordaBase/config/node.conf`` and the CorDapps to run are in ``/path/to/cordapps``
 
 .. code-block:: shell
 
@@ -17,19 +17,19 @@ In this example, the certificates are stored at ``/home/user/cordaBase/certifica
             -v /home/user/cordaBase/certificates:/opt/corda/certificates \
             -v /home/user/cordaBase/persistence:/opt/corda/persistence \
             -v /home/user/cordaBase/logs:/opt/corda/logs \
-            -v /home/TeamCityOutput/cordapps:/opt/corda/cordapps \
+            -v /path/to/cordapps:/opt/corda/cordapps \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-4.0-snapshot:latest
+            corda/corda-4.0:RELEASE
 
-As the node runs within a container, several mount points are required
+As the node runs within a container, several mount points are required:
 
 1. CorDapps - CorDapps must be mounted at location ``/opt/corda/cordapps``
 2. Certificates - certificates must be mounted at location ``/opt/corda/certificates``
 3. Config - the node config must be mounted at location ``/etc/corda/node.config``
 4. Logging - all log files will be written to location ``/opt/corda/logs``
 
-If using the H2 database
+If using the H2 database:
 
 5. Persistence - the folder to hold the H2 database files must be mounted at location ``/opt/corda/persistence``
 
