@@ -26,7 +26,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false,
-                                                              override val preventDataLoss: Boolean = false) : SerializationContext {
+                                                              override val preventDataLoss: Boolean = false,
+                                                              override val customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet()) : SerializationContext {
     /**
      * {@inheritDoc}
      */
@@ -54,6 +55,10 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
         return copy(whitelist = object : ClassWhitelist {
             override fun hasListed(type: Class<*>): Boolean = whitelist.hasListed(type) || type.name == clazz.name
         })
+    }
+
+    override fun withCustomSerializers(serializers: Set<SerializationCustomSerializer<*, *>>): SerializationContextImpl {
+        return copy(customSerializers = customSerializers.union(serializers))
     }
 
     override fun withPreferredSerializationVersion(magic: SerializationMagic) = copy(preferredSerializationVersion = magic)

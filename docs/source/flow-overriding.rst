@@ -1,3 +1,9 @@
+.. highlight:: kotlin
+.. raw:: html
+
+   <script type="text/javascript" src="_static/jquery.js"></script>
+   <script type="text/javascript" src="_static/codesets.js"></script>
+
 Configuring Responder Flows
 ===========================
 
@@ -12,64 +18,9 @@ Subclassing a Flow
 If you have a workflow which is mostly common, but also requires slight alterations in specific situations, most developers would be familiar
 with refactoring into `Base` and `Sub` classes. A simple example is shown below.
 
-java
-~~~~
+.. container:: codeset
 
-   .. code-block:: java
-
-    @InitiatingFlow
-    public class Initiator extends FlowLogic<String> {
-        private final Party otherSide;
-
-        public Initiator(Party otherSide) {
-            this.otherSide = otherSide;
-        }
-
-        @Override
-        public String call() throws FlowException {
-            return initiateFlow(otherSide).receive(String.class).unwrap((it) -> it);
-        }
-    }
-
-    @InitiatedBy(Initiator.class)
-    public class BaseResponder extends FlowLogic<Void> {
-        private FlowSession counterpartySession;
-
-        public BaseResponder(FlowSession counterpartySession) {
-            super();
-            this.counterpartySession = counterpartySession;
-        }
-
-        @Override
-        public Void call() throws FlowException {
-            counterpartySession.send(getMessage());
-            return Void;
-        }
-
-
-        protected String getMessage() {
-            return "This Is the Legacy Responder";
-        }
-    }
-
-    public class SubResponder extends BaseResponder {
-
-        public SubResponder(FlowSession counterpartySession) {
-            super(counterpartySession);
-        }
-
-        @Override
-        protected String getMessage() {
-            return "This is the sub responder";
-        }
-    }
-
-
-
-kotlin
-~~~~~~
-
-    .. code-block:: kotlin
+   .. sourcecode:: kotlin
 
         @InitiatedBy(Initiator::class)
         open class BaseResponder(internal val otherSideSession: FlowSession) : FlowLogic<Unit>() {
@@ -87,8 +38,53 @@ kotlin
             }
         }
 
+   .. sourcecode:: java
+
+        @InitiatingFlow
+        public class Initiator extends FlowLogic<String> {
+            private final Party otherSide;
+
+            public Initiator(Party otherSide) {
+                this.otherSide = otherSide;
+            }
+
+            @Override
+            public String call() throws FlowException {
+                return initiateFlow(otherSide).receive(String.class).unwrap((it) -> it);
+            }
+        }
+
+        @InitiatedBy(Initiator.class)
+        public class BaseResponder extends FlowLogic<Void> {
+            private FlowSession counterpartySession;
+
+            public BaseResponder(FlowSession counterpartySession) {
+                super();
+                this.counterpartySession = counterpartySession;
+            }
+
+            @Override
+            public Void call() throws FlowException {
+                counterpartySession.send(getMessage());
+                return Void;
+            }
 
 
+            protected String getMessage() {
+                return "This Is the Legacy Responder";
+            }
+        }
+
+        public class SubResponder extends BaseResponder {
+            public SubResponder(FlowSession counterpartySession) {
+                super(counterpartySession);
+            }
+
+            @Override
+            protected String getMessage() {
+                return "This is the sub responder";
+            }
+        }
 
 
 Corda would detect that both ``BaseResponder`` and ``SubResponder`` are configured for responding to ``Initiator``.

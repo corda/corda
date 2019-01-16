@@ -3,10 +3,6 @@ package net.corda.core.internal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.cordapp.Cordapp
-import net.corda.core.cordapp.CordappConfig
-import net.corda.core.cordapp.CordappContext
-import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.DataVendingFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.node.NetworkParameters
@@ -29,7 +25,7 @@ import java.util.jar.JarInputStream
 
 // *Internal* Corda-specific utilities.
 
-const val PLATFORM_VERSION = 4
+const val PLATFORM_VERSION = 5
 
 fun ServicesForResolution.ensureMinimumPlatformVersion(requiredMinPlatformVersion: Int, feature: String) {
     checkMinimumPlatformVersion(networkParameters.minimumPlatformVersion, requiredMinPlatformVersion, feature)
@@ -55,10 +51,6 @@ fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serial
 @DeleteForDJVM
 fun TransactionBuilder.toLedgerTransaction(services: ServicesForResolution, serializationContext: SerializationContext): LedgerTransaction {
     return toLedgerTransactionWithContext(services, serializationContext)
-}
-
-fun createCordappContext(cordapp: Cordapp, attachmentId: SecureHash?, classLoader: ClassLoader, config: CordappConfig): CordappContext {
-    return CordappContext(cordapp, attachmentId, classLoader, config)
 }
 
 /** Checks if this flow is an idempotent flow. */

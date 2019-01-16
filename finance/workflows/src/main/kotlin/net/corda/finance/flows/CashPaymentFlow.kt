@@ -52,7 +52,7 @@ open class CashPaymentFlow(
         val recipientSession = initiateFlow(recipient)
         recipientSession.send(anonymous)
         val anonymousRecipient = if (anonymous) {
-            subFlow(SwapIdentitiesFlow(recipientSession)).theirIdentity
+            subFlow(SwapIdentitiesFlow(recipientSession))[recipient]!!
         } else {
             recipient
         }

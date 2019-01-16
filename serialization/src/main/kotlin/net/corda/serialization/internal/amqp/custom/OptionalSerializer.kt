@@ -7,7 +7,7 @@ import java.time.OffsetTime
 import java.util.*
 
 /**
- * A serializer for [OffsetTime] that uses a proxy object to write out the time and zone offset.
+ * A serializer for [Optional] that uses a proxy object to write out the value stored in the optional or [Optional.EMPTY].
  */
 class OptionalSerializer(factory: SerializerFactory) : CustomSerializer.Proxy<Optional<*>, OptionalSerializer.OptionalProxy>(Optional::class.java, OptionalProxy::class.java, factory) {
 

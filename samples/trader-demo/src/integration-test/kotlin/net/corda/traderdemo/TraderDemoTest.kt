@@ -1,7 +1,6 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -10,17 +9,15 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.testing.core.BOC_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.singleIdentity
+import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
+import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import net.corda.testing.node.internal.cordappWithPackages
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
@@ -37,7 +34,11 @@ class TraderDemoTest {
                 startFlow<CashPaymentFlow>(),
                 startFlow<CommercialPaperIssueFlow>(),
                 all()))
-        driver(DriverParameters(startNodesInProcess = true, inMemoryDB = false, cordappsForAllNodes = FINANCE_CORDAPPS + cordappWithPackages(javaClass.packageName))) {
+        driver(DriverParameters(
+                startNodesInProcess = true,
+                inMemoryDB = false,
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+        )) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
                     startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
@@ -80,7 +81,11 @@ class TraderDemoTest {
 
     @Test
     fun `Test restart node during flow works properly`() {
-        driver(DriverParameters(startNodesInProcess = false, inMemoryDB = false, cordappsForAllNodes = FINANCE_CORDAPPS + cordappWithPackages(javaClass.packageName))) {
+        driver(DriverParameters(
+                startNodesInProcess = false,
+                inMemoryDB = false,
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+        )) {
             val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
             val bankUser = User("user1", "test", permissions = setOf(all()))
             val (nodeA, nodeB, bankNode) = listOf(

@@ -9,9 +9,11 @@ import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
+import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
@@ -51,7 +53,7 @@ class SimmValuationTest {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
-                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts")) + FINANCE_CORDAPPS,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
@@ -68,10 +70,9 @@ class SimmValuationTest {
             assertTradeExists(nodeBApi, nodeAParty, testTradeId)
             assertTradeExists(nodeAApi, nodeBParty, testTradeId)
 
-            // TODO Dimos - uncomment this on the CORDA-2390 branch to prove that the fix works.
-//            runValuationsBetween(nodeAApi, nodeBParty)
-//            assertValuationExists(nodeBApi, nodeAParty)
-//            assertValuationExists(nodeAApi, nodeBParty)
+            runValuationsBetween(nodeAApi, nodeBParty)
+            assertValuationExists(nodeBApi, nodeAParty)
+            assertValuationExists(nodeAApi, nodeBParty)
         }
     }
 

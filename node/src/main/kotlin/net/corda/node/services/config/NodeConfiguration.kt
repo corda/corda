@@ -16,6 +16,8 @@ import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.notary.experimental.bftsmart.BFTSmartConfig
+import net.corda.notary.experimental.raft.RaftConfig
 import net.corda.tools.shell.SSHDConfiguration
 import java.net.URL
 import java.nio.file.Path
@@ -141,7 +143,7 @@ data class NotaryConfig(
         /** The legal name of cluster in case of a distributed notary service. */
         val serviceLegalName: CordaX500Name? = null,
         /** The name of the notary service class to load. */
-        val className: String = "net.corda.node.services.transactions.SimpleNotaryService",
+        val className: String? = null,
         /**
          * If the wait time estimate on the internal queue exceeds this value, the notary may send
          * a wait time update to the client (implementation specific and dependent on the counter
@@ -149,7 +151,9 @@ data class NotaryConfig(
          */
         val etaMessageThresholdSeconds: Int = NotaryServiceFlow.defaultEstimatedWaitTime.seconds.toInt(),
         /** Notary implementation-specific configuration parameters. */
-        val extraConfig: Config? = null
+        val extraConfig: Config? = null,
+        val raft: RaftConfig? = null,
+        val bftSMaRt: BFTSmartConfig? = null
 )
 
 /**

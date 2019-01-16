@@ -8,6 +8,7 @@ import net.corda.core.crypto.*
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
+import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -39,44 +40,35 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder @JvmOverloads constructor(
+open class TransactionBuilder(
         var notary: Party? = null,
-        var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+        var lockId: UUID = defaultLockId(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt()
+        protected var privacySalt: PrivacySalt = PrivacySalt(),
+        protected val references: MutableList<StateRef> = arrayListOf(),
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
+    constructor(notary: Party? = null,
+                lockId: UUID = defaultLockId(),
+                inputs: MutableList<StateRef> = arrayListOf(),
+                attachments: MutableList<SecureHash> = arrayListOf(),
+                outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+                commands: MutableList<Command<*>> = arrayListOf(),
+                window: TimeWindow? = null,
+                privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, arrayListOf())
+
+    constructor(notary: Party) : this(notary, window = null)
+
     private companion object {
+        private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-
-        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
-
-        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
+        private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
-
-    constructor(
-            notary: Party? = null,
-            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
-            inputs: MutableList<StateRef> = arrayListOf(),
-            attachments: MutableList<SecureHash> = arrayListOf(),
-            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-            commands: MutableList<Command<*>> = arrayListOf(),
-            window: TimeWindow? = null,
-            privacySalt: PrivacySalt = PrivacySalt(),
-            references: MutableList<StateRef> = defaultReferencesList(),
-            serviceHub: ServiceHub? = defaultServiceHub()
-    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
-        this.references = references
-        this.serviceHub = serviceHub
-    }
-
-    protected var references: MutableList<StateRef> = defaultReferencesList()
-        private set
-    protected var serviceHub: ServiceHub? = defaultServiceHub()
-        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -719,8 +711,15 @@ with @BelongsToContract, or supply an explicit contract parameter to addOutputSt
     /** Returns an immutable list of output [TransactionState]s. */
     fun outputStates(): List<TransactionState<*>> = ArrayList(outputs)
 
-    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers. */
-    fun commands(): List<Command<*>> = commands.groupBy { cmd -> cmd.value }.entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+    /** Returns an immutable list of [Command]s, grouping by [CommandData] and joining signers (from v4, v3 and below return all commands with duplicates for different signers). */
+    fun commands(): List<Command<*>> {
+        return if (CordappResolver.currentTargetVersion >= CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS) {
+            commands.groupBy { cmd -> cmd.value }
+                    .entries.map { (data, cmds) -> Command(data, cmds.flatMap(Command<*>::signers).toSet().toList()) }
+        } else {
+            ArrayList(commands)
+        }
+    }
 
     /**
      * Sign the built transaction and return it. This is an internal function for use by the service hub, please use
