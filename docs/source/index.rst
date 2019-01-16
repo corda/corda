@@ -55,6 +55,7 @@ We look forward to seeing what you can do with Corda!
 
    corda-nodes-index.rst
    corda-networks-index.rst
+   docker.rst
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
