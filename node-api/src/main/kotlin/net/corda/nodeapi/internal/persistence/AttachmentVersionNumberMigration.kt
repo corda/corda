@@ -29,7 +29,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
             if (System.getProperty(NODE_BASE_DIR_KEY).isNotEmpty()) {
                 val path = Paths.get(System.getProperty(NODE_BASE_DIR_KEY)) / NETWORK_PARAMS_FILE_NAME
-                val networkParameters = getNetworkParametersFromFile(path)
+                networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
                     logger.info("Network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
                 } else {
