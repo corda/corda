@@ -121,3 +121,21 @@ By default, the node database has the following tables:
 +-----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | V_PKEY_HASH_EX_ID_MAP       | ID, PUBLIC_KEY_HASH, TRANSACTION_ID, OUTPUT_INDEX, EXTERNAL_ID                                                                                                                                           |
 +-----------------------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+
+Database connection pool
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Corda uses `Hikari Pool <https://github.com/brettwooldridge/HikariCP>`_ for creating the connection pool.
+To configure the connection pool any custom properties can be set in the `dataSourceProperties` section.
+
+For example:
+.. sourcecode:: groovy
+
+    dataSourceProperties = {
+        dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+        ...
+        maximumPoolSize = 10
+        connectionTimeout = 50000
+    }
+
