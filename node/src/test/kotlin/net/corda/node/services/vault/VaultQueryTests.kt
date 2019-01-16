@@ -844,31 +844,31 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
 
 
             val dealStates = vaultService.queryBy<DummyDealContract.State>().states
-            assertThat(dealStates).hasSize(3)
+            assertThat(dealStates).hasSize(6)
 
             //DOCSTART VaultQueryExample25
-            val relevancyAllCriteria = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val relevancyAllCriteria = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
             val allDealStateCount = vaultService.queryBy<DummyDealContract.State>(relevancyAllCriteria).states
             //DOCEND VaultQueryExample25
-            assertThat(allDealStateCount).hasSize(6)
+            assertThat(allDealStateCount).hasSize(3)
 
             val cashStates = vaultService.queryBy<Cash.State>().states
-            assertThat(cashStates).hasSize(10)
+            assertThat(cashStates).hasSize(20)
 
             //DOCSTART VaultQueryExample27
-            val allCashCriteria = FungibleStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val allCashCriteria = FungibleStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
             val allCashStates = vaultService.queryBy<Cash.State>(allCashCriteria).states
             //DOCEND VaultQueryExample27
-            assertThat(allCashStates).hasSize(20)
+            assertThat(allCashStates).hasSize(10)
 
             val linearStates = vaultService.queryBy<DummyLinearContract.State>().states
-            assertThat(linearStates).hasSize(1)
+            assertThat(linearStates).hasSize(3)
 
             //DOCSTART VaultQueryExample26
-            val allLinearStateCriteria = LinearStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+            val allLinearStateCriteria = LinearStateQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
             val allLinearStates = vaultService.queryBy<DummyLinearContract.State>(allLinearStateCriteria).states
             //DOCEND VaultQueryExample26
-            assertThat(allLinearStates).hasSize(3)
+            assertThat(allLinearStates).hasSize(1)
         }
     }
 

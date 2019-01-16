@@ -776,9 +776,9 @@ class NodeVaultServiceTest {
         services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
 
         // Test one.
-        // RelevancyStatus is RELEVANT by default. This should return three states.
+        // RelevancyStatus is ALL by default. This should return five states.
         val resultOne = vaultService.queryBy<DummyState>().states.getNumbers()
-        assertEquals(setOf(1, 3, 6), resultOne)
+        assertEquals(setOf(1, 3, 4, 5, 6), resultOne)
 
         // Test two.
         // RelevancyStatus set to NOT_RELEVANT.
@@ -787,10 +787,10 @@ class NodeVaultServiceTest {
         assertEquals(setOf(4, 5), resultTwo)
 
         // Test three.
-        // RelevancyStatus set to ALL.
-        val criteriaThree = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.ALL)
+        // RelevancyStatus set to RELEVANT.
+        val criteriaThree = VaultQueryCriteria(relevancyStatus = Vault.RelevancyStatus.RELEVANT)
         val resultThree = vaultService.queryBy<DummyState>(criteriaThree).states.getNumbers()
-        assertEquals(setOf(1, 3, 4, 5, 6), resultThree)
+        assertEquals(setOf(1, 3, 6), resultThree)
 
         // We should never see 2 or 7.
     }

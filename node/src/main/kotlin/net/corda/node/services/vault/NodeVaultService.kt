@@ -482,7 +482,7 @@ class NodeVaultService(
             var totalStates = -1L
             if (!skipPagingChecks && !paging.isDefault) {
                 val count = builder { VaultSchemaV1.VaultStates::recordedTime.count() }
-                val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL, relevancyStatus = Vault.RelevancyStatus.ALL)
+                val countCriteria = QueryCriteria.VaultCustomQueryCriteria(count, Vault.StateStatus.ALL)
                 val results = _queryBy(criteria.and(countCriteria), PageSpecification(), Sort(emptyList()), contractStateType, true)  // only skip pagination checks for total results count query
                 totalStates = results.otherResults.last() as Long
             }

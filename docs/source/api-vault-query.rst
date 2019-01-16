@@ -330,7 +330,7 @@ pages available:
     :end-before: DOCEND VaultQueryExample24
     :dedent: 8
 
-Query for all states, including non-relevant ones:
+Query for only relevant states in the vault:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
@@ -372,7 +372,7 @@ Query for unconsumed deal states with deals parties:
     :end-before: DOCEND VaultQueryExample11
     :dedent: 12
 
-Query for all linear states, including non-relevant ones:
+Query for only relevant linear states in the vault:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
@@ -408,7 +408,7 @@ Query for fungible assets for a specific issuer party:
     :end-before: DOCEND VaultQueryExample14
     :dedent: 12
 
-Query for all fungible states, including non-relevant ones:
+Query for only relevant fungible states in the vault:
 
 .. literalinclude:: ../../node/src/test/kotlin/net/corda/node/services/vault/VaultQueryTests.kt
     :language: kotlin
