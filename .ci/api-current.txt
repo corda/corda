@@ -6568,10 +6568,6 @@ public final class net.corda.client.rpc.CordaRPCClient extends java.lang.Object
   public static final net.corda.client.rpc.CordaRPCClient$Companion Companion
 ##
 public static final class net.corda.client.rpc.CordaRPCClient$Companion extends java.lang.Object
-  @NotNull
-  public final net.corda.client.rpc.CordaRPCClient createWithSsl(java.util.List<net.corda.core.utilities.NetworkHostAndPort>, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
-  @NotNull
-  public final net.corda.client.rpc.CordaRPCClient createWithSsl(net.corda.core.utilities.NetworkHostAndPort, net.corda.core.messaging.ClientRpcSslOptions, net.corda.client.rpc.CordaRPCClientConfiguration)
 ##
 public class net.corda.client.rpc.CordaRPCClientConfiguration extends java.lang.Object
   public <init>(java.time.Duration)
