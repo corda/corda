@@ -265,23 +265,14 @@ sealed class QueryCriteria : GenericQueryCriteria<QueryCriteria, IQueryCriteriaP
     ) : CommonQueryCriteria() {
         @JvmOverloads
         constructor(
-            participants: List<AbstractParty>? = null,
-            owner: List<AbstractParty>? = null,
-            quantity: ColumnPredicate<Long>? = null,
-            issuer: List<AbstractParty>? = null,
-            issuerRef: List<OpaqueBytes>? = null,
-            status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
-            contractStateTypes: Set<Class<out ContractState>>? = null
-        ) : this(
-                participants,
-                owner,
-                quantity,
-                issuer,
-                issuerRef,
-                status,
-                contractStateTypes,
-                Vault.RelevancyStatus.ALL
-        )
+                participants: List<AbstractParty>? = null,
+                owner: List<AbstractParty>? = null,
+                quantity: ColumnPredicate<Long>? = null,
+                issuer: List<AbstractParty>? = null,
+                issuerRef: List<OpaqueBytes>? = null,
+                status: Vault.StateStatus = Vault.StateStatus.UNCONSUMED,
+                contractStateTypes: Set<Class<out ContractState>>? = null
+        ) : this(participants, owner, quantity, issuer, issuerRef, status, contractStateTypes, Vault.RelevancyStatus.ALL)
 
         override fun visit(parser: IQueryCriteriaParser): Collection<Predicate> {
             super.visit(parser)

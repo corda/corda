@@ -842,7 +842,6 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             vaultFiller.fillWithSomeTestLinearStates(1, "XYZ", includeMe = true)
             vaultFiller.fillWithSomeTestLinearStates(2, "JKL", includeMe = false)
 
-
             val dealStates = vaultService.queryBy<DummyDealContract.State>().states
             assertThat(dealStates).hasSize(6)
 
