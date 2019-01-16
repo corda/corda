@@ -27,7 +27,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
 
         try {
             logger.info("Start executing...")
-            var networkParameters: NetworkParameters? = null
+            var networkParameters: NetworkParameters?
 
             if (System.getProperty(NODE_BASE_DIR_KEY).isNotEmpty()) {
                 val path = Paths.get(System.getProperty(NODE_BASE_DIR_KEY)) / NETWORK_PARAMS_FILE_NAME
@@ -35,20 +35,12 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
                 } else {
-                    logger.warn("$msg, network parameters not found in $path.")
-                }
-            } else {
-                logger.error("$msg, network parameters not retrieved, could not determine node base directory due to system property $NODE_BASE_DIR_KEY being not set.")
-            }
-
-            if (networkParameters == null) {
-                networkParameters = getNetworkParametersFromDb(connection)
-                if (networkParameters != null) {
-                    logger.info("$msg using network parameters from database, epoch: ${networkParameters.epoch}, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
-                } else {
-                    logger.warn("$msg skipped, network parameters not found in database.")
+                    logger.warn("$msg skipped, network parameters not found in $path.")
                     return
                 }
+            } else {
+                logger.error("$msg skipped, network parameters not retrieved, could not determine node base directory due to system property $NODE_BASE_DIR_KEY being not set.")
+                return
             }
 
             val availableAttachments = getAttachmentsWithDefaultVersion(connection)
@@ -95,18 +87,6 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
         val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
         return networkParametersBytes?.raw?.deserialize()
     }
-
-    private fun getNetworkParametersFromDb(connection: JdbcConnection): NetworkParameters? =
-            connection.createStatement().use {
-                val rs = it.executeQuery("SELECT PARAMETERS_BYTES FROM NODE_NETWORK_PARAMETERS ORDER BY EPOCH DESC")
-                if (rs.next()) {
-                    val networkParametersBytes = rs.getBytes(1) as ByteArray
-                    val networkParameters: NetworkParameters = networkParametersBytes.deserialize()
-                    rs.close()
-                    networkParameters
-                } else
-                    null
-            }
 
     private fun getAttachmentsWithDefaultVersion(connection: JdbcConnection): List<String> =
             connection.createStatement().use {
