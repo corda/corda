@@ -338,9 +338,9 @@ Step 10. Possibly update Vault state queries
 
 Queries made on a node's vault can filter by the relevancy of those states to the node in Corda 4. As this functionality does not exist in
 Corda 3, apps targeting that release will continue to receive all states in any vault queries. In Corda 4, the default is to return all
-states in the vault, to maintain backwards compatibility. For apps that only record states for which they are participants, updating queries
-to request only relevant states may be required if the app is to run on a node that uses observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
-See :doc:`api-vault-query.rst` for more details on how to do this.
+states in the vault, to maintain backwards compatibility. However, it may make sense to migrate queries expecting just those states relevant
+to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
+may result in queries returning more states than expected if the node is using Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
 
 Step 10. Explore other new features that may be useful
 ------------------------------------------------------
