@@ -420,7 +420,9 @@ open class TransactionBuilder(
         // Sanity check.
         constraints.isEmpty() -> throw IllegalArgumentException("Cannot transition from no constraints.")
 
-        // When all input states have the same constraint.
+        attachmentToUse.signerKeys.isNotEmpty() && constraints.all { it is WhitelistedByZoneAttachmentConstraint } -> makeSignatureAttachmentConstraint(attachmentToUse.signerKeys)
+
+        // When all input states have the same constraint except the above case
         constraints.size == 1 -> constraints.single()
 
         // Fail when combining the insecure AlwaysAcceptAttachmentConstraint with something else. The size must be at least 2 at this point.
