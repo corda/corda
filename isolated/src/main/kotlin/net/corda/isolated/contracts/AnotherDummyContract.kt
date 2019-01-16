@@ -5,7 +5,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.nodeapi.DummyContractBackdoor
 
 @Suppress("UNUSED")
 class AnotherDummyContract : Contract, DummyContractBackdoor {
