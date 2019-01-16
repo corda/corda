@@ -3,14 +3,11 @@ package net.corda.contracts
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.contracts.*
-import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
-import net.corda.core.internal.deleteRecursively
-import net.corda.core.internal.div
-import net.corda.core.internal.packageName
+import net.corda.core.internal.*
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.MissingContractAttachments
@@ -31,6 +28,8 @@ import net.corda.testing.node.internal.*
 
 import org.junit.Assume.assumeFalse
 import org.junit.Test
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.sql.DriverManager
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -38,7 +37,9 @@ import kotlin.test.assertNotNull
 
 class SignatureConstraintVersioningTests {
 
-    private val base = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName).signed()
+    private val baseUnsinded = cordappWithPackages(MessageState::class.packageName, DummyMessageContract::class.packageName)
+    private val oldUnsigedCordapp = baseUnsinded.copy(versionId = 2)
+    private val base = baseUnsinded.signed()
     private val oldCordapp = base.copy(versionId = 2)
     private val newCordapp = base.copy(versionId = 3)
     private val user = User("mark", "dadada", setOf(startFlow<CreateMessage>(), startFlow<ConsumeMessage>(), invokeRpc("vaultQuery")))
@@ -141,53 +142,48 @@ class SignatureConstraintVersioningTests {
     fun `auto migration from WhitelistConstraint to SignatureConstraint`() {
         assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
 
-        val newSignedCordapp = newCordapp.signJar()
-        val attachmentHashes = listOf(oldCordapp.toHash(), newSignedCordapp.toHash())
+        val attachmentHashes = listOf(oldUnsigedCordapp, newCordapp).map{ Files.newInputStream(it.jarFile).readFully().sha256() }
 
         val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
                 startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4,
-                        whitelistedContractImplementations = mapOf(TEST_MESSAGE_CONTRACT_PROGRAM_ID to attachmentHashes)),
-                signCordapps = false
+                networkParameters = testNetworkParameters(notaries = emptyList(),
+                        minimumPlatformVersion = 4, whitelistedContractImplementations = mapOf(TEST_MESSAGE_CONTRACT_PROGRAM_ID to attachmentHashes))
                 ) {
-            var nodeName = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user),
-                        additionalCordapps = listOf(oldCordapp), regenerateCordappsOnStart = true)).getOrThrow()
+            var (nodeName, baseDirectory) = {
+                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(oldUnsigedCordapp))).getOrThrow()
                 val nodeName = nodeHandle.nodeInfo.singleIdentity().name
                 CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
                     it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
                 }
                 nodeHandle.stop()
-                nodeName
+                Pair(nodeName, nodeHandle.baseDirectory)
             }()
-            var result = {
-                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user),
-                        additionalCordapps = listOf(newSignedCordapp), regenerateCordappsOnStart = true)).getOrThrow()
-                var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
-                }
-                result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
+            println(oldUnsigedCordapp.jarFile)
 
-                nodeHandle.stop()
-                result
-            }()
+            val oldUnsigedCordappPath = baseDirectory.resolve(Paths.get("cordapps")).resolve(oldUnsigedCordapp.jarFile.fileName)
+            oldUnsigedCordappPath.delete()
+
+            var result = {
+            val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp))).getOrThrow()
+            var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+            CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
+            }
+            result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
+                val page = it.proxy.vaultQuery(MessageState::class.java)
+                page.states.singleOrNull()
+            }
+
+            nodeHandle.stop()
+            result
+        }()
             result
         }
         assertNotNull(stateAndRef)
         assertEquals(transformetMessage, stateAndRef!!.state.data.message)
-    }
-
-    private fun TestCordappImpl.toHash() : SecureHash.SHA256 {
-        val cordappJar = TestCordappDirectories.getJarDirectory(this).list().single { it.toString().endsWith(".jar") }
-        val bytes = cordappJar.inputStream().readFully()
-        return bytes.sha256()
     }
 }
 
