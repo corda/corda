@@ -9,8 +9,10 @@ import net.corda.finance.flows.CashException
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
@@ -18,7 +20,7 @@ import java.util.Collections.nCopies
 import kotlin.test.assertNotNull
 
 class CashSelectionH2ImplTest {
-    private val mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.finance"))
+    private val mockNet = MockNetwork(MockNetworkParameters(threadPerNode = true, cordappsForAllNodes = FINANCE_CORDAPPS))
 
     @After
     fun cleanUp() {

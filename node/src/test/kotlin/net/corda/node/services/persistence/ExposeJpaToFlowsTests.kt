@@ -13,7 +13,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.After
 import org.junit.Before
@@ -43,7 +43,7 @@ class ExposeJpaToFlowsTests {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages(javaClass.packageName)))
+        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(enclosedCordapp())))
         val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
                 cordappPackages = listOf(javaClass.packageName),
                 identityService = makeTestIdentityService(myself.identity),

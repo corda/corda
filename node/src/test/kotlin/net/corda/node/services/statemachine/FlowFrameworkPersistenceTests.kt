@@ -43,7 +43,7 @@ class FlowFrameworkPersistenceTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.testing.contracts"),
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
                 servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()
         )
         aliceFlowManager = MockNodeFlowManager()

@@ -1,11 +1,11 @@
 package net.corda.node.internal
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByService
 import net.corda.core.context.InvocationContext
 import net.corda.core.context.InvocationOrigin
 import net.corda.core.contracts.ContractState
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StartableByService
 import net.corda.core.node.AppServiceHub
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
@@ -18,7 +18,10 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.node.internal.cordapp.DummyRPCFlow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -28,69 +31,13 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
-@StartableByService
-class DummyServiceFlow : FlowLogic<InvocationContext>() {
-    companion object {
-        object TEST_STEP : ProgressTracker.Step("Custom progress step")
-    }
-    override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
-
-    @Suspendable
-    override fun call(): InvocationContext {
-        // We call a subFlow, otehrwise there is no chance to subscribe to the ProgressTracker
-        subFlow(CashIssueFlow(100.DOLLARS, OpaqueBytes.of(1), serviceHub.networkMapCache.notaryIdentities.first()))
-        progressTracker.currentStep = TEST_STEP
-        return stateMachine.context
-    }
-}
-
-@CordaService
-class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
-    fun startServiceFlow() {
-        val handle = appServiceHub.startFlow(DummyServiceFlow())
-        val context = handle.returnValue.get()
-        assertEquals(this.javaClass.name, (context.origin as InvocationOrigin.Service).serviceClassName)
-    }
-
-    fun startServiceFlowAndTrack() {
-        val handle = appServiceHub.startTrackedFlow(DummyServiceFlow())
-        val count = AtomicInteger(0)
-        val subscriber = handle.progress.subscribe { count.incrementAndGet() }
-        handle.returnValue.get()
-        // Simply prove some progress was made.
-        // The actual number is currently 11, but don't want to hard code an implementation detail.
-        assertTrue(count.get() > 1)
-        subscriber.unsubscribe()
-    }
-}
-
-@CordaService
-class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
-    fun startInvalidRPCFlow() {
-        val handle = appServiceHub.startFlow(DummyRPCFlow())
-        handle.returnValue.get()
-    }
-
-}
-
-@CordaService
-class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
-
-@CordaService
-class VaultQueryService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
-    init {
-        val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
-        serviceHub.vaultService.trackBy(ContractState::class.java, criteria)
-    }
-}
-
 class CordaServiceTest {
     private lateinit var mockNet: MockNetwork
     private lateinit var nodeA: StartedMockNode
 
     @Before
     fun start() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.node.internal","net.corda.finance"))
+        mockNet = MockNetwork(MockNetworkParameters(threadPerNode = true, cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp())))
         nodeA = mockNet.createNode()
         mockNet.startNodes()
     }
@@ -138,5 +85,61 @@ class CordaServiceTest {
     @Test
     fun `Can query vault service in constructor`() {
         nodeA.services.cordaService(VaultQueryService::class.java)
+    }
+
+    @StartableByService
+    class DummyServiceFlow : FlowLogic<InvocationContext>() {
+        companion object {
+            object TEST_STEP : ProgressTracker.Step("Custom progress step")
+        }
+        override val progressTracker: ProgressTracker = ProgressTracker(TEST_STEP)
+
+        @Suspendable
+        override fun call(): InvocationContext {
+            // We call a subFlow, otehrwise there is no chance to subscribe to the ProgressTracker
+            subFlow(CashIssueFlow(100.DOLLARS, OpaqueBytes.of(1), serviceHub.networkMapCache.notaryIdentities.first()))
+            progressTracker.currentStep = TEST_STEP
+            return stateMachine.context
+        }
+    }
+
+    @CordaService
+    class TestCordaService(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
+        fun startServiceFlow() {
+            val handle = appServiceHub.startFlow(DummyServiceFlow())
+            val context = handle.returnValue.get()
+            assertEquals(this.javaClass.name, (context.origin as InvocationOrigin.Service).serviceClassName)
+        }
+
+        fun startServiceFlowAndTrack() {
+            val handle = appServiceHub.startTrackedFlow(DummyServiceFlow())
+            val count = AtomicInteger(0)
+            val subscriber = handle.progress.subscribe { count.incrementAndGet() }
+            handle.returnValue.get()
+            // Simply prove some progress was made.
+            // The actual number is currently 11, but don't want to hard code an implementation detail.
+            assertTrue(count.get() > 1)
+            subscriber.unsubscribe()
+        }
+    }
+
+    @CordaService
+    class TestCordaService2(val appServiceHub: AppServiceHub): SingletonSerializeAsToken() {
+        fun startInvalidRPCFlow() {
+            val handle = appServiceHub.startFlow(DummyRPCFlow())
+            handle.returnValue.get()
+        }
+
+    }
+
+    @CordaService
+    class LegacyCordaService(@Suppress("UNUSED_PARAMETER") simpleServiceHub: ServiceHub) : SingletonSerializeAsToken()
+
+    @CordaService
+    class VaultQueryService(val serviceHub: AppServiceHub): SingletonSerializeAsToken() {
+        init {
+            val criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED)
+            serviceHub.vaultService.trackBy(ContractState::class.java, criteria)
+        }
     }
 }

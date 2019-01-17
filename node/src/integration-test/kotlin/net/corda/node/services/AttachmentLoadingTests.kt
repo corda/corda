@@ -23,7 +23,7 @@ import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.net.URL
@@ -50,7 +50,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             installIsolatedCordapp(ALICE_NAME)
 
@@ -73,7 +73,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             installIsolatedCordapp(ALICE_NAME)
             installIsolatedCordapp(BOB_NAME)
