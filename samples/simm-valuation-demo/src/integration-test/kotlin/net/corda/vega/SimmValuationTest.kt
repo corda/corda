@@ -15,7 +15,6 @@ import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
@@ -27,7 +26,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -61,7 +59,7 @@ class SimmValuationTest : IntegrationTest() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
-                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
             val nodeAFuture = startNode(providedName = nodeALegalName)
