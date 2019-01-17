@@ -6,8 +6,13 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
-import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.core.internal.reflection.LocalTypeInformation
+import net.corda.core.internal.reflection.LocalTypeModel
+import net.corda.serialization.internal.amqp.factories.CachingCustomSerializerRegistry
+import net.corda.serialization.internal.amqp.api.CustomSerializerRegistry
+import net.corda.serialization.internal.amqp.factories.DefaultDescriptorBasedSerializerRegistry
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.factories.WhitelistBasedTypeModelConfiguration
 import net.corda.serialization.internal.model.FingerPrinter
 
 class FingerPrinterTesting : FingerPrinter {
@@ -34,7 +39,7 @@ class FingerPrinterTestingTests {
         val fpt = FingerPrinterTesting()
         val descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry()
         val customSerializerRegistry: CustomSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
-        val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
+        val typeModel = LocalTypeModel.configuredWith(WhitelistBasedTypeModelConfiguration(AllWhitelist, customSerializerRegistry))
 
         assertEquals("0", fpt.fingerprint(typeModel.inspect(Integer::class.java)))
         assertEquals("1", fpt.fingerprint(typeModel.inspect(String::class.java)))

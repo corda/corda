@@ -2,7 +2,6 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
-import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions
 import org.junit.Test

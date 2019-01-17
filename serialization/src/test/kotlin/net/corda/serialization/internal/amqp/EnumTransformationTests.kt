@@ -4,8 +4,9 @@ import net.corda.core.serialization.CordaSerializationTransformEnumDefault
 import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
 import net.corda.core.serialization.CordaSerializationTransformRename
 import net.corda.core.serialization.CordaSerializationTransformRenames
-import net.corda.serialization.internal.model.EnumTransforms
-import net.corda.serialization.internal.model.InvalidEnumTransformsException
+import net.corda.core.internal.reflection.EnumTransforms
+import net.corda.core.internal.reflection.InvalidEnumTransformsException
+import net.corda.core.internal.reflection.TransformsAnnotationProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.test.assertFailsWith

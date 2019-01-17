@@ -24,7 +24,7 @@ import net.corda.nodeapi.internal.registerDevSigningCertificates
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.schema.amqpMagic
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.TestIdentity

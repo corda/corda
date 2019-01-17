@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.internal.reflection.TypeIdentifier
 import java.io.NotSerializableException
 import java.lang.reflect.Type
 

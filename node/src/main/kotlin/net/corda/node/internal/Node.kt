@@ -60,7 +60,7 @@ import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
-import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.api.SerializerFactory
 import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger

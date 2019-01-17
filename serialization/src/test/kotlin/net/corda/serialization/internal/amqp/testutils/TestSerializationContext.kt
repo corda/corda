@@ -3,7 +3,7 @@ package net.corda.serialization.internal.amqp.testutils
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.SerializationContextImpl
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.schema.amqpMagic
 
 val serializationProperties: MutableMap<Any, Any> = mutableMapOf()
 

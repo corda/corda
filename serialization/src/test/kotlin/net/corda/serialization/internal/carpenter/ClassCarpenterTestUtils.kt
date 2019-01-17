@@ -6,8 +6,13 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
 import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.testName
 import net.corda.serialization.internal.model.*
+import net.corda.core.internal.reflection.TypeIdentifier
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.schema.AMQPRemoteTypeModel
+import net.corda.serialization.internal.amqp.schema.Envelope
+import net.corda.serialization.internal.amqp.utils.asClass
 import org.junit.Assert.assertTrue
 
 /**

@@ -3,6 +3,10 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.amqp.serializers.CustomSerializer
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.schema.Schema
 import org.apache.qpid.proton.codec.Data
 import org.assertj.core.api.Assertions
 import org.junit.Test

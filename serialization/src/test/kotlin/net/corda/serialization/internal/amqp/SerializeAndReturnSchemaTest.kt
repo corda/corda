@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.serialization.internal.amqp.schema.CompositeType
 import net.corda.serialization.internal.amqp.testutils.serializeAndReturnSchema
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import net.corda.serialization.internal.amqp.testutils.testName

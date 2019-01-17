@@ -28,6 +28,7 @@ dependencies {
     deterministicLibraries "com.google.code.findbugs:jsr305:$jsr305_version"
     deterministicLibraries "net.i2p.crypto:eddsa:$eddsa_version"
     deterministicLibraries "org.slf4j:slf4j-api:$slf4j_version"
+    deterministicLibraries "com.google.guava:guava:$guava_version"
 }
 
 jar {
@@ -52,6 +53,7 @@ task patchCore(type: Zip, dependsOn: coreJarTask) {
         exclude 'net/corda/core/serialization/*SerializationFactory*.class'
         exclude 'net/corda/core/serialization/internal/CheckpointSerializationFactory*.class'
         exclude 'net/corda/core/internal/rules/*.class'
+        exclude 'net/corda/core/internal/reflection/DefaultCacheProvider*'
     }
 
     reproducibleFileOrder = true

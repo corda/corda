@@ -3,6 +3,10 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationCustomSerializer
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.serializers.CorDappCustomSerializer
+import net.corda.serialization.internal.amqp.serializers.CustomSerializer
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions
@@ -33,7 +37,7 @@ class CorDappSerializerTests {
     class InternalProxySerializer(factory: SerializerFactory) :
             CustomSerializer.Proxy<NeedsProxy, InternalProxySerializer.Proxy>(
                     NeedsProxy::class.java,
-                    InternalProxySerializer.Proxy::class.java,
+                    Proxy::class.java,
                     factory) {
         data class Proxy(val proxy_a_: String)
 

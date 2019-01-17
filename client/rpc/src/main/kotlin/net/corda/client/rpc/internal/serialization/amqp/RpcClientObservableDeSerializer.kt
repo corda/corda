@@ -8,6 +8,11 @@ import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.loggerFor
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.serializers.CustomSerializer
+import net.corda.serialization.internal.amqp.schema.CompositeType
+import net.corda.serialization.internal.amqp.schema.Field
+import net.corda.serialization.internal.amqp.schema.Schema
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
 import rx.Observable

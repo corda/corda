@@ -27,7 +27,7 @@ import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.schema.amqpMagic
 import java.io.File
 import java.io.InputStream
 import java.nio.file.FileAlreadyExistsException

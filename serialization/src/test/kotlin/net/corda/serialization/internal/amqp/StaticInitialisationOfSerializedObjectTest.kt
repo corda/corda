@@ -3,6 +3,8 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.api.AMQPSerializer
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -76,7 +78,7 @@ class StaticInitialisationOfSerializedObjectTest {
     fun deserializeTest() {
         data class D(val c: C2)
 
-        val url = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
+        val url = StaticInitialisationOfSerializedObjectTest::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest")
 
         // Original version of the class for the serialised version of this class
         //
@@ -112,7 +114,7 @@ class StaticInitialisationOfSerializedObjectTest {
     fun deserializeTest2() {
         data class D(val c: C2)
 
-        val url = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")
+        val url = StaticInitialisationOfSerializedObjectTest::class.java.getResource("StaticInitialisationOfSerializedObjectTest.deserializeTest2")
 
         // Original version of the class for the serialised version of this class
         //

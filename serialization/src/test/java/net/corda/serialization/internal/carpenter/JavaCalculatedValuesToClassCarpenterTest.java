@@ -6,15 +6,15 @@ import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.*;
-import net.corda.serialization.internal.amqp.Schema;
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
+import net.corda.serialization.internal.amqp.schema.Envelope;
 import net.corda.serialization.internal.model.RemoteTypeInformation;
-import net.corda.serialization.internal.model.TypeIdentifier;
+import net.corda.core.internal.reflection.TypeIdentifier;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import static java.util.Collections.singletonList;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactoryNoEvolution;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

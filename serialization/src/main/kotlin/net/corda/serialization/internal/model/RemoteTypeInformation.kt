@@ -1,5 +1,8 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.internal.reflection.EnumTransforms
+import net.corda.core.internal.reflection.TypeIdentifier
+
 typealias TypeDescriptor = String
 
 /**

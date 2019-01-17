@@ -15,6 +15,13 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.SerializationScheme
+import net.corda.serialization.internal.amqp.serializers.CustomSerializer
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.createSerializerFactoryFactory
+import net.corda.serialization.internal.amqp.schema.amqpMagic
+import net.corda.serialization.internal.amqp.serializers.CorDappCustomSerializer
+import net.corda.serialization.internal.amqp.serializers.custom.*
+import net.corda.serialization.internal.amqp.utils.AccessOrderLinkedHashMap
 import java.util.*
 
 val AMQP_ENABLED get() = SerializationDefaults.P2P_CONTEXT.preferredSerializationVersion == amqpMagic
@@ -108,35 +115,35 @@ abstract class AbstractAMQPSerializationScheme(
     private fun registerCustomSerializers(context: SerializationContext, factory: SerializerFactory) {
         with(factory) {
             register(publicKeySerializer)
-            register(net.corda.serialization.internal.amqp.custom.PrivateKeySerializer)
-            register(net.corda.serialization.internal.amqp.custom.ThrowableSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.BigDecimalSerializer)
-            register(net.corda.serialization.internal.amqp.custom.BigIntegerSerializer)
-            register(net.corda.serialization.internal.amqp.custom.CurrencySerializer)
-            register(net.corda.serialization.internal.amqp.custom.OpaqueBytesSubSequenceSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.InstantSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.DurationSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalDateSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.LocalTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ZonedDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ZoneIdSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OffsetTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OffsetDateTimeSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.OptionalSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.YearSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.YearMonthSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.MonthDaySerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.PeriodSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ClassSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.X509CertificateSerializer)
-            register(net.corda.serialization.internal.amqp.custom.X509CRLSerializer)
-            register(net.corda.serialization.internal.amqp.custom.CertPathSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.StringBufferSerializer)
-            register(net.corda.serialization.internal.amqp.custom.InputStreamSerializer)
-            register(net.corda.serialization.internal.amqp.custom.BitSetSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.EnumSetSerializer(this))
-            register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(this))
+            register(PrivateKeySerializer)
+            register(ThrowableSerializer(this))
+            register(BigDecimalSerializer)
+            register(BigIntegerSerializer)
+            register(CurrencySerializer)
+            register(OpaqueBytesSubSequenceSerializer(this))
+            register(InstantSerializer(this))
+            register(DurationSerializer(this))
+            register(LocalDateSerializer(this))
+            register(LocalDateTimeSerializer(this))
+            register(LocalTimeSerializer(this))
+            register(ZonedDateTimeSerializer(this))
+            register(ZoneIdSerializer(this))
+            register(OffsetTimeSerializer(this))
+            register(OffsetDateTimeSerializer(this))
+            register(OptionalSerializer(this))
+            register(YearSerializer(this))
+            register(YearMonthSerializer(this))
+            register(MonthDaySerializer(this))
+            register(PeriodSerializer(this))
+            register(ClassSerializer(this))
+            register(X509CertificateSerializer)
+            register(X509CRLSerializer)
+            register(CertPathSerializer(this))
+            register(StringBufferSerializer)
+            register(InputStreamSerializer)
+            register(BitSetSerializer(this))
+            register(EnumSetSerializer(this))
+            register(ContractAttachmentSerializer(this))
             registerNonDeterministicSerializers(factory)
         }
 
@@ -186,7 +193,7 @@ abstract class AbstractAMQPSerializationScheme(
     @StubOutForDJVM
     private fun registerNonDeterministicSerializers(factory: SerializerFactory) {
         with(factory) {
-            register(net.corda.serialization.internal.amqp.custom.SimpleStringSerializer)
+            register(SimpleStringSerializer)
         }
     }
 
@@ -194,7 +201,7 @@ abstract class AbstractAMQPSerializationScheme(
     protected abstract fun rpcServerSerializerFactory(context: SerializationContext): SerializerFactory
 
     // Not used as a simple direct import to facilitate testing
-    open val publicKeySerializer: CustomSerializer<*> = net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+    open val publicKeySerializer: CustomSerializer<*> = PublicKeySerializer
 
     fun getSerializerFactory(context: SerializationContext): SerializerFactory {
         val key = SerializationFactoryCacheKey(context.whitelist, context.deserializationClassLoader, context.preventDataLoss, context.customSerializers)

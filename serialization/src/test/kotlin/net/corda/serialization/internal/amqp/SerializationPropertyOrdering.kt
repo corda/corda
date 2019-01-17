@@ -1,13 +1,10 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.ConstructorForDeserialization
+import net.corda.serialization.internal.amqp.schema.CompositeType
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals
-import org.apache.qpid.proton.amqp.Symbol
-import java.lang.reflect.Method
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class SerializationPropertyOrdering {
     companion object {

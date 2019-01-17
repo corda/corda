@@ -1,6 +1,6 @@
 package net.corda.serialization.internal
 
-import net.corda.serialization.internal.amqp.custom.ThrowableSerializer
+import net.corda.serialization.internal.amqp.serializers.custom.ThrowableSerializer
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test

@@ -4,9 +4,10 @@ import junit.framework.TestCase.assertTrue
 import junit.framework.TestCase.assertEquals
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.serialization.internal.amqp.testutils.*
-import net.corda.serialization.internal.model.ConfigurableLocalTypeModel
-import net.corda.serialization.internal.model.LocalPropertyInformation
-import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.core.internal.reflection.LocalPropertyInformation
+import net.corda.core.internal.reflection.LocalTypeInformation
+import net.corda.core.internal.reflection.LocalTypeModel
+import net.corda.serialization.internal.amqp.factories.WhitelistBasedTypeModelConfiguration
 import org.junit.Test
 import org.assertj.core.api.Assertions
 import java.io.NotSerializableException
@@ -16,7 +17,7 @@ class PrivatePropertyTests {
 
     private val registry = TestDescriptorBasedSerializerRegistry()
     private val factory = testDefaultFactoryNoEvolution(registry)
-    val typeModel = ConfigurableLocalTypeModel(WhitelistBasedTypeModelConfiguration(factory.whitelist, factory))
+    val typeModel = LocalTypeModel.configuredWith(WhitelistBasedTypeModelConfiguration(factory.whitelist, factory))
 
     @Test
     fun testWithOnePrivateProperty() {
@@ -114,8 +115,7 @@ class PrivatePropertyTests {
         Assertions.assertThatThrownBy {
             SerializationOutput(factory).serialize(c1)
         }.isInstanceOf(NotSerializableException::class.java).hasMessageContaining(
-                "Defined setter for parameter a takes parameter of type class java.lang.String " +
-                        "yet underlying type is int")
+                "takes parameter of type class java.lang.String yet underlying type is int")
     }
 
     @Test

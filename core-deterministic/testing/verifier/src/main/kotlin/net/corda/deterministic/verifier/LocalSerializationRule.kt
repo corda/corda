@@ -1,6 +1,5 @@
 package net.corda.deterministic.verifier
 
-import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationContext.UseCase.P2P
 import net.corda.core.serialization.SerializationCustomSerializer
@@ -9,6 +8,9 @@ import net.corda.core.serialization.internal.SerializationEnvironment
 import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.schema.amqpMagic
+import net.corda.serialization.internal.amqp.utils.AccessOrderLinkedHashMap
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement

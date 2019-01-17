@@ -7,8 +7,12 @@ import net.corda.core.utilities.ByteSequence
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationContextImpl
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.factories.createSerializerFactoryFactory
 import net.corda.serialization.internal.amqp.testutils.serializationProperties
 import net.corda.testing.internal.createTestSerializationEnv
+import net.corda.serialization.internal.amqp.utils.AccessOrderLinkedHashMap
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers

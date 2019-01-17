@@ -11,7 +11,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
-import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+import net.corda.serialization.internal.amqp.serializers.custom.PublicKeySerializer
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactoryNoEvolution
