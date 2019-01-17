@@ -2,10 +2,13 @@ package net.corda.core.internal
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.DeleteForDJVM
+import net.corda.core.contracts.TransactionResolutionException
+import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.StatesToRecord
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.ContractUpgradeWireTransaction
@@ -104,8 +107,24 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // depth-first order, we should not encounter any verification failures due to missing data. If we fail
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
+            it.resolveAndCheckNetworkParameters(serviceHub)
             it.verify(serviceHub)
             serviceHub.recordTransactions(usedStatesToRecord, listOf(it))
+        }
+    }
+
+    private fun SignedTransaction.resolveAndCheckNetworkParameters(services: ServiceHub) {
+        val hashOrDefault = networkParametersHash ?: services.networkParametersService.defaultHash
+        val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault)
+                ?: throw TransactionResolutionException(id)
+        val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
+        groupedInputsAndRefs.map { (txHash, stateRefList) ->
+            val tx = services.validatedTransactions.getTransaction(txHash)?.coreTransaction
+                    ?: throw TransactionResolutionException(id)
+            val paramHash = tx.networkParametersHash ?: services.networkParametersService.defaultHash
+            val params = services.networkParametersService.lookup(paramHash) ?: throw TransactionResolutionException(id)
+            if (txNetworkParameters.epoch < params.epoch)
+                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, stateRefList.first(), txNetworkParameters, params)
         }
     }
 
@@ -192,7 +211,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     private fun fetchMissingParameters(downloads: List<SignedTransaction>) {
         val parameters = downloads.mapNotNull { it.networkParametersHash }
-        val missingParameters = parameters.filter { !(serviceHub.networkParametersStorage as NetworkParametersStorageInternal).hasParameters(it) }
+        val missingParameters = parameters.filter { !(serviceHub.networkParametersService as NetworkParametersServiceInternal).hasParameters(it) }
         if (missingParameters.isNotEmpty())
             subFlow(FetchNetworkParametersFlow(missingParameters.toSet(), otherSide))
     }

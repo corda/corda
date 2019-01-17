@@ -174,27 +174,10 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @DeleteForDJVM
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
-        resolveAndCheckNetworkParameters(services)
         when (coreTransaction) {
             is NotaryChangeWireTransaction -> verifyNotaryChangeTransaction(services, checkSufficientSignatures)
             is ContractUpgradeWireTransaction -> verifyContractUpgradeTransaction(services, checkSufficientSignatures)
             else -> verifyRegularTransaction(services, checkSufficientSignatures)
-        }
-    }
-
-    @DeleteForDJVM
-    private fun resolveAndCheckNetworkParameters(services: ServiceHub) {
-        val hashOrDefault = networkParametersHash ?: services.networkParametersStorage.defaultHash
-        val txNetworkParameters = services.networkParametersStorage.lookup(hashOrDefault)
-                ?: throw TransactionResolutionException(id)
-        val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
-        groupedInputsAndRefs.map { entry ->
-            val tx = services.validatedTransactions.getTransaction(entry.key)?.coreTransaction
-                                ?: throw TransactionResolutionException(id)
-            val paramHash = tx.networkParametersHash ?: services.networkParametersStorage.defaultHash
-            val params = services.networkParametersStorage.lookup(paramHash) ?: throw TransactionResolutionException(id)
-            if (txNetworkParameters.epoch < params.epoch)
-                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, entry.value.first(), txNetworkParameters, params)
         }
     }
 

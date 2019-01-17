@@ -13,6 +13,7 @@ import net.corda.core.internal.FetchDataFlow
 import net.corda.core.internal.NetworkParametersServiceInternal
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
+import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData

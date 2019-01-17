@@ -197,17 +197,17 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
 /**
  * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
  * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion is >= 4.
- * Nodes on lower versions won't understand this flow.
+ * Nodes on lower versions won't respond to this flow.
  */
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
     override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
-        return (serviceHub.networkParametersStorage as NetworkParametersStorageInternal).lookupSigned(txid)
+        return (serviceHub.networkParametersService as NetworkParametersServiceInternal).lookupSigned(txid)
     }
 
     override fun maybeWriteToDisk(downloaded: List<SignedDataWithCert<NetworkParameters>>) {
         for (parameters in downloaded) {
-            with(serviceHub.networkParametersStorage as NetworkParametersStorageInternal) {
+            with(serviceHub.networkParametersService as NetworkParametersStorage) {
                 if (!hasParameters(parameters.id)) {
                     // This will perform the signature check too and throws SignatureVerificationException
                     saveParameters(parameters)

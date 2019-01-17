@@ -22,7 +22,6 @@ import net.corda.testing.contracts.DummyContract
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.StartedMockNode
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.*
 import org.junit.After
 import org.junit.Before
@@ -105,7 +104,7 @@ class NetworkParametersResolutionTest {
         megaCorpNode.transaction {
             megaCorpNode.services.recordTransactions(dummy1, dummy2)
             // Record parameters too.
-            with(megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal) {
+            with(megaCorpNode.services.networkParametersService as NetworkParametersStorage) {
                 parameters1?.let { saveParameters(certKeyPair.sign(it)) }
                 parameters2?.let { saveParameters(certKeyPair.sign(it)) }
             }
@@ -136,8 +135,8 @@ class NetworkParametersResolutionTest {
         assertThat(stx1.networkParametersHash).isEqualTo(hash2)
         assertThat(stx2.networkParametersHash).isEqualTo(hash1)
         miniCorpNode.transaction {
-            assertThat(miniCorpNode.services.networkParametersStorage.lookup(hash1)).isNull()
-            assertThat(miniCorpNode.services.networkParametersStorage.lookup(hash2)).isNull()
+            assertThat(miniCorpNode.services.networkParametersService.lookup(hash1)).isNull()
+            assertThat(miniCorpNode.services.networkParametersService.lookup(hash2)).isNull()
         }
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx2.id), megaCorp)
         val future = miniCorpNode.startFlow(p)
@@ -150,14 +149,13 @@ class NetworkParametersResolutionTest {
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx1.id)).isNull()
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx2.id)).isNull()
             // Even though the resolution failed, we should still have downloaded the parameters to the storage.
-            assertThat(miniCorpNode.services.networkParametersStorage.lookup(hash1)).isEqualTo(params1)
-            assertThat(miniCorpNode.services.networkParametersStorage.lookup(hash2)).isEqualTo(params2)
+            assertThat(miniCorpNode.services.networkParametersService.lookup(hash1)).isEqualTo(params1)
+            assertThat(miniCorpNode.services.networkParametersService.lookup(hash2)).isEqualTo(params2)
         }
     }
 
     @Test
     fun `transaction chain out of order parameters with default`() {
-        val defaultHash = megaCorpNode.services.networkParametersStorage.defaultHash
         val hash7 = params4.serialize().hash
         // stx1 with epoch 4 -> stx2 with default epoch, which is 3
         val (stx1, stx2) = makeTransactions(params4, null)
@@ -173,7 +171,7 @@ class NetworkParametersResolutionTest {
         miniCorpNode.transaction {
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx1.id)).isNull()
             assertThat(miniCorpNode.services.validatedTransactions.getTransaction(stx2.id)).isNull()
-            assertThat(miniCorpNode.services.networkParametersStorage.lookup(hash7)).isEqualTo(params4)
+            assertThat(miniCorpNode.services.networkParametersService.lookup(hash7)).isEqualTo(params4)
         }
     }
 
@@ -195,8 +193,8 @@ class NetworkParametersResolutionTest {
 
         megaCorpNode.transaction {
             megaCorpNode.services.recordTransactions(stx2, stx3)
-            (megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal).saveParameters(certKeyPair.sign(params1))
-            (megaCorpNode.services.networkParametersStorage as NetworkParametersStorageInternal).saveParameters(certKeyPair.sign(params3))
+            (megaCorpNode.services.networkParametersService as NetworkParametersStorage).saveParameters(certKeyPair.sign(params1))
+            (megaCorpNode.services.networkParametersService as NetworkParametersStorage).saveParameters(certKeyPair.sign(params3))
         }
 
         val p = ResolveTransactionsFlowTest.TestFlow(setOf(stx3.id), megaCorp)
