@@ -1,5 +1,7 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.serialization.internal.amqp.api.AMQPNotSerializableException
+import net.corda.serialization.internal.model.ifThrowsAppend
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import java.io.NotSerializableException

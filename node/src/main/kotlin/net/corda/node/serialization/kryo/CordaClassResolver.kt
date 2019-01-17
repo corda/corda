@@ -14,7 +14,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.serialization.internal.AttachmentsClassLoader
 import net.corda.serialization.internal.MutableClassWhitelist
 import net.corda.serialization.internal.TransientClassWhiteList
-import net.corda.serialization.internal.amqp.hasCordaSerializable
+import net.corda.serialization.internal.amqp.utils.hasCordaSerializable
 import java.io.PrintWriter
 import java.lang.reflect.Modifier.isAbstract
 import java.nio.charset.StandardCharsets.UTF_8

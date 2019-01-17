@@ -3,8 +3,16 @@ package net.corda.serialization.internal.model
 import com.google.common.hash.Hashing
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.toBase64
-import net.corda.serialization.internal.amqp.*
+import net.corda.core.internal.reflection.DefaultCacheProvider
+import net.corda.core.internal.reflection.LocalPropertyInformation
+import net.corda.core.internal.reflection.LocalTypeInformation
+import net.corda.core.internal.reflection.TypeIdentifier
 import java.io.NotSerializableException
+import java.lang.reflect.Type
+
+interface CustomTypeDescriptorLookup {
+    fun getCustomTypeDescriptor(type: Type): String?
+}
 
 /**
  * A fingerprinter that fingerprints [LocalTypeInformation].
@@ -28,7 +36,7 @@ interface FingerPrinter {
  * selected types.
  */
 class TypeModellingFingerPrinter(
-        private val customTypeDescriptorLookup: CustomSerializerRegistry,
+        private val customTypeDescriptorLookup: CustomTypeDescriptorLookup,
         private val debugEnabled: Boolean = false) : FingerPrinter {
 
     private val cache: MutableMap<TypeIdentifier, String> = DefaultCacheProvider.createCache()
@@ -88,7 +96,7 @@ internal class FingerprintWriter(debugEnabled: Boolean = false) {
  * during fingerprinting.
  */
 private class FingerPrintingState(
-        private val customSerializerRegistry: CustomSerializerRegistry,
+        private val customSerializerRegistry: CustomTypeDescriptorLookup,
         private val writer: FingerprintWriter) {
 
     companion object {
@@ -217,7 +225,7 @@ private class FingerPrintingState(
 
     // Give any custom serializers loaded into the factory the chance to supply their own type-descriptors
     private fun fingerprintWithCustomSerializerOrElse(type: LocalTypeInformation, defaultAction: () -> Unit) {
-        val customTypeDescriptor = customSerializerRegistry.findCustomSerializer(type.observedType.asClass(), type.observedType)?.typeDescriptor?.toString()
+        val customTypeDescriptor = customSerializerRegistry.getCustomTypeDescriptor(type.observedType)
         if (customTypeDescriptor != null) writer.write(customTypeDescriptor)
         else defaultAction()
     }

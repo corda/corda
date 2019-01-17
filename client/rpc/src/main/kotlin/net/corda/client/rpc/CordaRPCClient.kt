@@ -20,7 +20,7 @@ import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.rpcConnectorTcpTransport
 import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
-import net.corda.serialization.internal.amqp.SerializerFactory
+import net.corda.serialization.internal.amqp.api.SerializerFactory
 import java.time.Duration
 import java.util.ServiceLoader
 import java.net.URLClassLoader

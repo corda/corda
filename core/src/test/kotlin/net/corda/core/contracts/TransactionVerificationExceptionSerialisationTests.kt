@@ -6,8 +6,8 @@ import net.corda.serialization.internal.AMQP_RPC_CLIENT_CONTEXT
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.DeserializationInput
 import net.corda.serialization.internal.amqp.SerializationOutput
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.serializers.custom.PublicKeySerializer
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity

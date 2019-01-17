@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import net.corda.core.serialization.SerializationContext;
 import net.corda.core.serialization.SerializationFactory;
 import net.corda.core.serialization.SerializedBytes;
-import net.corda.serialization.internal.amqp.SchemaKt;
+import net.corda.serialization.internal.amqp.schema.SchemaKt;
 import net.corda.testing.core.SerializationEnvironmentRule;
 import org.junit.Before;
 import org.junit.Rule;

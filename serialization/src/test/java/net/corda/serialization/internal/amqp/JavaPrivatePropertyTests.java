@@ -1,14 +1,12 @@
 package net.corda.serialization.internal.amqp;
 
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
 import net.corda.serialization.internal.amqp.testutils.TestDescriptorBasedSerializerRegistry;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 
 import java.io.NotSerializableException;
-import java.lang.reflect.Field;
-import java.util.Map;
 
-import static net.corda.core.internal.InternalUtils.uncheckedCast;
 import static net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt.testDefaultFactory;
 import static org.junit.Assert.*;
 

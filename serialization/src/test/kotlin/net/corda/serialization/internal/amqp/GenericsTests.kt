@@ -9,6 +9,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.serializers.custom.PublicKeySerializer
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.TestIdentity
@@ -285,7 +288,7 @@ class GenericsTests {
         m.isAccessible = true
 
         val factory1 = testDefaultFactory()
-        factory1.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        factory1.register(PublicKeySerializer)
         val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(state)
 
         // attempt at having a class loader without some of the derived non core types loaded and thus
@@ -295,18 +298,18 @@ class GenericsTests {
         val factory2 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, altClassLoader)
         )
-        factory2.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        factory2.register(PublicKeySerializer)
         val ser2 = TestSerializationOutput(VERBOSE, factory2).serializeAndReturnSchema(state)
 
         //  now deserialise those objects
         val factory3 = testDefaultFactory()
-        factory3.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        factory3.register(PublicKeySerializer)
         DeserializationInput(factory3).deserializeAndReturnEnvelope(ser1.obj)
 
         val factory4 = SerializerFactoryBuilder.build(AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, cl())
         )
-        factory4.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        factory4.register(PublicKeySerializer)
         DeserializationInput(factory4).deserializeAndReturnEnvelope(ser2.obj)
     }
 
@@ -359,8 +362,8 @@ class GenericsTests {
         val factory1 = testDefaultFactoryNoEvolution()
         val factory2 = testDefaultFactory()
 
-        factory1.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
-        factory2.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        factory1.register(PublicKeySerializer)
+        factory2.register(PublicKeySerializer)
 
         val ser1 = TestSerializationOutput(VERBOSE, factory1).serializeAndReturnSchema(
                 TransactionStateWrapper(Collections.singletonList(sas)))

@@ -47,10 +47,9 @@ task patchSerialization(type: Zip, dependsOn: serializationJarTask) {
         exclude 'net/corda/serialization/internal/AttachmentsClassLoaderBuilder*'
         exclude 'net/corda/serialization/internal/ByteBufferStreams*'
         exclude 'net/corda/serialization/internal/DefaultWhitelist*'
-        exclude 'net/corda/serialization/internal/amqp/AMQPSerializerFactories*'
-        exclude 'net/corda/serialization/internal/amqp/AMQPStreams*'
+        exclude 'net/corda/serialization/internal/amqp/factories/AMQPSerializerFactories*'
+        exclude 'net/corda/serialization/internal/amqp/utils/AMQPStreams*'
         exclude 'net/corda/serialization/internal/amqp/AMQPSerializationThreadContext*'
-        exclude 'net/corda/serialization/internal/model/DefaultCacheProvider*'
     }
 
     reproducibleFileOrder = true

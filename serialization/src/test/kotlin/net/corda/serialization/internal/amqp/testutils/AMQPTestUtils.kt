@@ -11,6 +11,13 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.EmptyWhitelist
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import net.corda.serialization.internal.amqp.schema.TransformsSchema
+import net.corda.serialization.internal.amqp.api.AMQPSerializer
+import net.corda.serialization.internal.amqp.factories.DefaultDescriptorBasedSerializerRegistry
+import net.corda.serialization.internal.amqp.api.DescriptorBasedSerializerRegistry
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.schema.Schema
 import net.corda.testing.common.internal.ProjectStructure
 import org.apache.qpid.proton.codec.Data
 import org.junit.Test

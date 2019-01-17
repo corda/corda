@@ -15,6 +15,8 @@ import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.utils.AccessOrderLinkedHashMap
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Notification

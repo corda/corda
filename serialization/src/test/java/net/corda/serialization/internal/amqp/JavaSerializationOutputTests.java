@@ -2,6 +2,8 @@ package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.ConstructorForDeserialization;
 import net.corda.core.serialization.SerializedBytes;
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
+import net.corda.serialization.internal.amqp.schema.*;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;

@@ -6,10 +6,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.asset.Cash
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.DeserializationInput
-import net.corda.serialization.internal.amqp.Schema
+import net.corda.serialization.internal.amqp.schema.Schema
 import net.corda.serialization.internal.amqp.SerializationOutput
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
-import net.corda.serialization.internal.amqp.custom.PublicKeySerializer
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.serializers.custom.PublicKeySerializer
 import net.corda.testing.core.SerializationEnvironmentRule
 import org.junit.Rule
 import org.junit.Test

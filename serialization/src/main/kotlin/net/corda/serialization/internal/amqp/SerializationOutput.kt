@@ -7,7 +7,12 @@ import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationEncoding
 import net.corda.serialization.internal.SectionId
 import net.corda.serialization.internal.byteArrayOutput
-import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.core.internal.reflection.TypeIdentifier
+import net.corda.serialization.internal.amqp.api.AMQPNotSerializableException
+import net.corda.serialization.internal.amqp.api.AMQPSerializer
+import net.corda.serialization.internal.amqp.api.LocalSerializerFactory
+import net.corda.serialization.internal.amqp.schema.*
+import net.corda.serialization.internal.amqp.utils.*
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
 import java.io.OutputStream

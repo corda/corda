@@ -10,6 +10,8 @@ import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
 import net.corda.client.rpc.internal.ObservableContext as ClientObservableContext
 
 /**

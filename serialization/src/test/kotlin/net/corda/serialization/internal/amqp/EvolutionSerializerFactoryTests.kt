@@ -4,7 +4,11 @@ import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvel
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
 import net.corda.serialization.internal.model.RemoteTypeInformation
-import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.core.internal.reflection.TypeIdentifier
+import net.corda.serialization.internal.amqp.factories.DefaultEvolutionSerializerFactory
+import net.corda.serialization.internal.amqp.factories.EvolutionSerializationException
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.schema.AMQPRemoteTypeModel
 import org.junit.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull

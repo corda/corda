@@ -1,8 +1,7 @@
 package net.corda.serialization.internal.model
 
-import net.corda.serialization.internal.carpenter.*
-import java.io.NotSerializableException
-import java.lang.ClassCastException
+import net.corda.core.internal.reflection.DefaultCacheProvider
+import net.corda.core.internal.reflection.TypeIdentifier
 import java.lang.reflect.Type
 
 /**

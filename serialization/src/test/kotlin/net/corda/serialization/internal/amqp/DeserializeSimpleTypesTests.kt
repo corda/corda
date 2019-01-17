@@ -1,12 +1,10 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.CordaSerializable
+import net.corda.serialization.internal.amqp.schema.AMQPTypeIdentifiers
 import net.corda.serialization.internal.amqp.testutils.*
 import org.junit.Test
-import java.io.NotSerializableException
 import kotlin.test.assertEquals
-import kotlin.test.assertFails
-import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 // Prior to certain fixes being made within the [PropertySerializaer] classes these simple

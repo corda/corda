@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.InputStreamAndHash
-import net.corda.serialization.internal.amqp.custom.InputStreamSerializer
+import net.corda.serialization.internal.amqp.serializers.custom.InputStreamSerializer
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory

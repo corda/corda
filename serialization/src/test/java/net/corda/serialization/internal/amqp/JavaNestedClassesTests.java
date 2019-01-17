@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import net.corda.core.contracts.ContractState;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.serialization.SerializedBytes;
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;

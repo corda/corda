@@ -3,6 +3,9 @@ package net.corda.serialization.internal.amqp
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializedBytes
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.schema.CompositeType
+import net.corda.serialization.internal.amqp.schema.RestrictedType
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
@@ -135,7 +138,8 @@ class EnumTests {
                 Support(Bras.UNDERWIRE, DayOfWeek.WEDNESDAY),
                 Support(Bras.PADDED, DayOfWeek.SUNDAY)))
 
-        val obj = DeserializationInput(sf1).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(week))
+        val obj = DeserializationInput(sf1)
+                .deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(week))
 
         assertEquals(week.tops[0].top, obj.tops[0].top)
         assertEquals(week.tops[0].day, obj.tops[0].day)
@@ -150,7 +154,8 @@ class EnumTests {
         data class C(val c: BrasWithInit)
 
         val c = C(BrasWithInit.PUSHUP)
-        val obj = DeserializationInput(sf1).deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(c))
+        val obj = DeserializationInput(sf1)
+                .deserialize(TestSerializationOutput(VERBOSE, sf1).serialize(c))
 
         assertEquals(c.c, obj.c)
     }

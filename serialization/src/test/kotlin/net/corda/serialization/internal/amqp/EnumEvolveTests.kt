@@ -380,7 +380,8 @@ class EnumEvolveTests {
         data class C(val e: BadNewValue)
 
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(BadNewValue.A))
+            SerializationOutput(sf)
+                    .serialize(C(BadNewValue.A))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -397,7 +398,8 @@ class EnumEvolveTests {
         data class C(val e: OutOfOrder)
 
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(OutOfOrder.A))
+            SerializationOutput(sf)
+                    .serialize(C(OutOfOrder.A))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -422,7 +424,7 @@ class EnumEvolveTests {
 
         assertThatThrownBy {
             DeserializationInput(sf).deserialize(SerializedBytes<C>(
-                    EvolvabilityTests::class.java.getResource(resource).readBytes()))
+                    EnumEvolveTests::class.java.getResource(resource).readBytes()))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -449,7 +451,7 @@ class EnumEvolveTests {
         // val so = SerializationOutput(sf)
         // File(URI("$localPath/$resource.A")).writeBytes(so.serialize(C(ExtendedEnum.A)).bytes)
 
-        val path1 = EvolvabilityTests::class.java.getResource("$resource.A")
+        val path1 = EnumEvolveTests::class.java.getResource("$resource.A")
 
         val obj1 = DeserializationInput(sf).deserialize(SerializedBytes<C>(File(path1.toURI()).readBytes()))
         assertEquals(ExtendedEnum.A, obj1.e)

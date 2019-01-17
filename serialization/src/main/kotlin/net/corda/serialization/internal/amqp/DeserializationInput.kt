@@ -8,7 +8,18 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.loggerFor
 import net.corda.serialization.internal.*
-import net.corda.serialization.internal.model.TypeIdentifier
+import net.corda.core.internal.reflection.TypeIdentifier
+import net.corda.serialization.internal.amqp.api.AMQPNoTypeNotSerializableException
+import net.corda.serialization.internal.amqp.api.AMQPNotSerializableException
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.api.SerializerFactory
+import net.corda.serialization.internal.amqp.schema.Envelope
+import net.corda.serialization.internal.amqp.schema.ReferencedObject
+import net.corda.serialization.internal.amqp.schema.amqpMagic
+import net.corda.serialization.internal.amqp.utils.asByteBuffer
+import net.corda.serialization.internal.amqp.utils.asClass
+import net.corda.serialization.internal.amqp.utils.isSubClassOf
+import net.corda.serialization.internal.amqp.utils.suitableForObjectReference
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
 import org.apache.qpid.proton.amqp.UnsignedInteger
@@ -155,7 +166,7 @@ class DeserializationInput constructor(
                     throw AMQPNotSerializableException(
                             type,
                             "Retrieval of existing reference failed. Requested index $objectIndex " +
-                            "is outside of the bounds for the list of size: ${objectHistory.size}")
+                                    "is outside of the bounds for the list of size: ${objectHistory.size}")
 
                 val objectRetrieved = objectHistory[objectIndex]
                 if (!objectRetrieved::class.java.isSubClassOf(type.asClass())) {
@@ -177,7 +188,7 @@ class DeserializationInput constructor(
                             throw AMQPNotSerializableException(
                                     type,
                                     "Described type with descriptor ${obj.descriptor} was " +
-                                    "expected to be of type $type but was ${serializer.type}")
+                                            "expected to be of type $type but was ${serializer.type}")
                         }
                         serializer.readObject(obj.described, schemas, this, context)
                     }
