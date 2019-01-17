@@ -3,21 +3,6 @@ apply plugin: 'idea'
 apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordformation'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('workflows-trader/src/integration-test/kotlin')
-        }
-    }
-}
-
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
@@ -104,11 +89,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         extraConfig = ['h2Settings.address' : 'localhost:10035']
         flowOverride("net.corda.traderdemo.flow.SellerFlow", "net.corda.traderdemo.flow.BuyerFlow")
     }
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 idea {
