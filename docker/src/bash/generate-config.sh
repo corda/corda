@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-
 die() {
     printf '%s\n' "$1" >&2
     exit 1
@@ -15,7 +14,8 @@ show_help(){
 }
 
 function generateTestnetConfig() {
-    RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
+    : ${RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)}
+    RPC_PASSWORD=${RPC_PASSWORD} \
     DB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
     MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS} \
     MY_P2P_PORT=${MY_P2P_PORT} \
@@ -36,8 +36,8 @@ function generateGenericCZConfig(){
     if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
         die "Network Trust Root file not found"
     fi
-
-    RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
+    : ${RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)}
+    RPC_PASSWORD=${RPC_PASSWORD} \
     DB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
     MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS} \
     MY_P2P_PORT=${MY_P2P_PORT} \
