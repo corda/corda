@@ -90,6 +90,7 @@ import rx.Observable
 import rx.Scheduler
 import java.io.IOException
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -778,7 +779,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader.appClassLoader)
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1090,10 +1091,10 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader)
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(dataSource)
     } catch (ex: Exception) {
