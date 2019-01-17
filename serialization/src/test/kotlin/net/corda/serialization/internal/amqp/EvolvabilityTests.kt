@@ -20,7 +20,10 @@ import java.io.NotSerializableException
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
-import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import net.corda.serialization.internal.amqp.serializers.custom.InstantSerializer
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.schema.AMQPRemoteTypeModel
+import net.corda.serialization.internal.amqp.serializers.custom.PublicKeySerializer
 
 // To regenerate any of the binary test files do the following
 //
@@ -599,8 +602,8 @@ class EvolvabilityTests {
     @Ignore("Test fails after moving NetworkParameters and NotaryInfo into core from node-api")
     fun readBrokenNetworkParameters() {
         val sf = testDefaultFactory()
-        sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
-        sf.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        sf.register(InstantSerializer(sf))
+        sf.register(PublicKeySerializer)
 
         //
         // filename breakdown
@@ -636,8 +639,8 @@ class EvolvabilityTests {
                 3, listOf(NotaryInfo(DUMMY_NOTARY, false)), 1000, 1000, Instant.EPOCH, 1, emptyMap())
 
         val sf = testDefaultFactory()
-        sf.register(net.corda.serialization.internal.amqp.custom.InstantSerializer(sf))
-        sf.register(net.corda.serialization.internal.amqp.custom.PublicKeySerializer)
+        sf.register(InstantSerializer(sf))
+        sf.register(PublicKeySerializer)
 
         val testOutput = TestSerializationOutput(true, sf)
         val serialized = testOutput.serialize(networkParameters)
@@ -707,7 +710,8 @@ class EvolvabilityTests {
         val url = EvolvabilityTests::class.java.getResource(resource)
 
         val sc2 = url.readBytes()
-        val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
+        val deserialized = DeserializationInput(sf)
+                .deserialize(SerializedBytes<Evolved>(sc2))
 
         assertEquals("dronf", deserialized.fnord)
     }

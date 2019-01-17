@@ -6,7 +6,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.copyBytes
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.schema.amqpMagic
 import org.slf4j.LoggerFactory
 import java.io.NotSerializableException
 import java.util.*

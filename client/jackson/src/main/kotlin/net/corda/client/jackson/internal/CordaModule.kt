@@ -39,8 +39,8 @@ import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.parseAsHex
 import net.corda.core.utilities.toHexString
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.*
-import net.corda.serialization.internal.model.LocalTypeInformation
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.utils.hasCordaSerializable
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.security.cert.CertPath

@@ -3,6 +3,7 @@ package net.corda.serialization.internal.carpenter
 import com.google.common.reflect.TypeToken
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
 import net.corda.serialization.internal.amqp.testutils.TestSerializationOutput
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory

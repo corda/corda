@@ -1,7 +1,7 @@
 package net.corda.serialization.internal.amqp;
 
-import kotlin.Suppress;
 import net.corda.core.serialization.SerializedBytes;
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
 import net.corda.serialization.internal.amqp.testutils.AMQPTestUtilsKt;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Rule;

@@ -10,7 +10,7 @@ import net.corda.node.serialization.amqp.RpcServerObservableSerializer
 import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.SerializationOutput
-import net.corda.serialization.internal.amqp.SerializerFactoryBuilder
+import net.corda.serialization.internal.amqp.factories.SerializerFactoryBuilder
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.junit.Test
 import rx.Observable

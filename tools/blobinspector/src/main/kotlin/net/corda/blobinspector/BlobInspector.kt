@@ -21,7 +21,7 @@ import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.DeserializationInput
-import net.corda.serialization.internal.amqp.amqpMagic
+import net.corda.serialization.internal.amqp.schema.amqpMagic
 import picocli.CommandLine.*
 import java.io.PrintStream
 import java.net.MalformedURLException

@@ -1,6 +1,8 @@
 package net.corda.serialization.internal.amqp;
 
 import net.corda.core.serialization.SerializationCustomSerializer;
+import net.corda.serialization.internal.amqp.api.SerializerFactory;
+import net.corda.serialization.internal.amqp.serializers.CorDappCustomSerializer;
 import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import org.junit.Test;
 

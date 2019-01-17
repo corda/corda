@@ -8,6 +8,12 @@ import net.corda.node.services.rpc.ObservableContextInterface
 import net.corda.node.services.rpc.ObservableSubscription
 import net.corda.nodeapi.RPCApi
 import net.corda.serialization.internal.amqp.*
+import net.corda.serialization.internal.amqp.serializers.CustomSerializer
+import net.corda.serialization.internal.amqp.schema.CompositeType
+import net.corda.serialization.internal.amqp.schema.Field
+import net.corda.serialization.internal.amqp.schema.Schema
+import net.corda.serialization.internal.amqp.schema.SerializationSchemas
+import net.corda.serialization.internal.amqp.utils.withList
 import org.apache.qpid.proton.codec.Data
 import rx.Notification
 import rx.Observable

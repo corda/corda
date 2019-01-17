@@ -2,6 +2,9 @@ package net.corda.serialization.internal.amqp
 
 import net.corda.core.serialization.*
 import net.corda.serialization.internal.NotSerializableDetailedException
+import net.corda.serialization.internal.amqp.schema.EnumDefaultSchemaTransform
+import net.corda.serialization.internal.amqp.schema.RenameSchemaTransform
+import net.corda.serialization.internal.amqp.schema.TransformTypes
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import org.assertj.core.api.Assertions.assertThat
@@ -9,8 +12,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.io.NotSerializableException
 import java.net.URI
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -421,7 +422,8 @@ class EnumEvolvabilityTests {
 
         val sb1 = EvolvabilityTests::class.java.getResource(resource).readBytes()
 
-        val envelope = DeserializationInput(sf).deserializeAndReturnEnvelope(SerializedBytes<WrapsUnknown>(sb1)).envelope
+        val envelope = DeserializationInput(sf)
+                .deserializeAndReturnEnvelope(SerializedBytes<WrapsUnknown>(sb1)).envelope
 
         assertTrue(envelope.transformsSchema.types.containsKey(WithUnknownTest::class.java.name))
         assertTrue(envelope.transformsSchema.types[WithUnknownTest::class.java.name]!!.containsKey(TransformTypes.Unknown))
@@ -441,7 +443,8 @@ class EnumEvolvabilityTests {
         data class C(val e: AcceptMultipleRename)
 
         val sf = testDefaultFactory()
-        SerializationOutput(sf).serialize(C(AcceptMultipleRename.C))
+        SerializationOutput(sf)
+                .serialize(C(AcceptMultipleRename.C))
     }
 
     //
@@ -460,10 +463,10 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectMultipleRenameTo.A))
-        }.isInstanceOfSatisfying(NotSerializableDetailedException::class.java) { ex ->
-            assertThat(ex.reason).isEqualToIgnoringCase("There are multiple transformations to C, which is not allowed")
-            assertThat(ex.message).endsWith(RejectMultipleRenameTo::class.simpleName)
+            SerializationOutput(sf)
+                    .serialize(C(RejectMultipleRenameTo.A))
+        }.isInstanceOfSatisfying(NotSerializableException::class.java) { ex ->
+            assertThat(ex.message).isEqualToIgnoringCase("There are multiple transformations to C, which is not allowed")
         }
     }
 
@@ -483,10 +486,10 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectMultipleRenameFrom.A))
+            SerializationOutput(sf)
+                    .serialize(C(RejectMultipleRenameFrom.A))
         }.isInstanceOf(NotSerializableException::class.java)
-        .hasToString("Unable to serialize/deserialize net.corda.serialization.internal.amqp.EnumEvolvabilityTests\$RejectMultipleRenameFrom: " +
-                "There are multiple transformations from D, which is not allowed")
+                .hasMessage("There are multiple transformations from D, which is not allowed")
     }
 
     //
@@ -512,7 +515,8 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectCyclicRename.A))
+            SerializationOutput(sf)
+                    .serialize(C(RejectCyclicRename.A))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -531,7 +535,8 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectCyclicRenameRedux.A))
+            SerializationOutput(sf)
+                    .serialize(C(RejectCyclicRenameRedux.A))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -544,7 +549,8 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectBadDefault.D))
+            SerializationOutput(sf)
+                    .serialize(C(RejectBadDefault.D))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 
@@ -557,7 +563,8 @@ class EnumEvolvabilityTests {
 
         val sf = testDefaultFactory()
         assertThatThrownBy {
-            SerializationOutput(sf).serialize(C(RejectBadDefaultToSelf.D))
+            SerializationOutput(sf)
+                    .serialize(C(RejectBadDefaultToSelf.D))
         }.isInstanceOf(NotSerializableException::class.java)
     }
 }
