@@ -350,3 +350,9 @@ Corda 4 adds several new APIs that help you build applications. Why not explore:
 * The `new withEntityManager API <api/javadoc/net/corda/core/node/ServiceHub.html#withEntityManager-block->`_ for using JPA inside your flows and services.
 * :ref:`reference_states`, that let you use an input state without consuming it.
 * :ref:`state_pointers`, that make it easier to 'point' to one state from another and follow the latest version of a linear state.
+
+.. note:: When upgrading a node from Corda 3 to Corda 4, the states in the vault of the node are modified to be usable with Corda 4 features.
+          As part of this, all states in the vault created while the node was running Corda 3 will be marked as relevant. This could be incorrect
+          if the node was using Observer node functionality in Corda 3. The effects of this will only be visible if an app running on the node
+          is upgraded to target Corda 4 and starts using new features in Corda 4 (for example filtering vault queries by state relevancy).
+          This is tracked by https://r3-cev.atlassian.net/projects/CORDA/issues/CORDA-2435.
