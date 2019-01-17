@@ -27,14 +27,13 @@ dependencies {
         transitive = false
     }
     cordapp project(':finance:workflows')
+    cordapp project(':confidential-identities')
+    cordapp project(':samples:bank-of-corda-demo')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-
-    // Corda Plugins: dependent flows and services
-    cordapp project(':samples:bank-of-corda-demo')
 
     testCompile project(':test-utils')
     testCompile "junit:junit:$junit_version"
@@ -45,9 +44,12 @@ def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     ext.rpcUsers = [['username': "demo", 'password': "demo", 'permissions': ["ALL"]]]
-
+    nodeDefaults {
+        cordapp project(':finance:workflows')
+        cordapp project(':finance:contracts')
+        cordapp project(':confidential-identities')
+    }
     directory "./build/nodes"
-    // This name "Notary" is hard-coded into TraderDemoClientApi so if you change it here, change it there too.
     node {
         name "O=Notary Service,L=Zurich,C=CH"
         notary = [validating : true]
@@ -57,12 +59,10 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
             adminAddress "localhost:10004"
         }
         extraConfig = ['h2Settings.address' : 'localhost:10014']
-        cordapps = ["$project.group:workflows:$corda_release_version", "$project.group:contracts:$corda_release_version"]
     }
     node {
         name "O=Bank A,L=London,C=GB"
         p2pPort 10005
-        cordapps = ["$project.group:workflows:$corda_release_version", "$project.group:contracts:$corda_release_version"]
         rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10006"
@@ -73,7 +73,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     node {
         name "O=Bank B,L=New York,C=US"
         p2pPort 10008
-        cordapps = ["$project.group:workflows:$corda_release_version", "$project.group:contracts:$corda_release_version"]
         rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10009"
@@ -84,7 +83,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     node {
         name "O=BankOfCorda,L=New York,C=US"
         p2pPort 10011
-        cordapps = ["$project.group:workflows:$corda_release_version", "$project.group:contracts:$corda_release_version"]
         rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10012"
@@ -97,7 +95,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     node {
         name "O=LoggingBank,L=London,C=GB"
         p2pPort 10025
-        cordapps = ["$project.group:workflows:$corda_release_version", "$project.group:contracts:$corda_release_version"]
         rpcUsers = ext.rpcUsers
         rpcSettings {
             address "localhost:10026"
