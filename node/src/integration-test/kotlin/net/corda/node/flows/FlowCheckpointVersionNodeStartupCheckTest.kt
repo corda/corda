@@ -24,7 +24,6 @@ import net.corda.testing.node.internal.cordappWithPackages
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -65,7 +64,6 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
         }
     }
 
-    @Ignore
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar name`() {
         driver(parametersForRestartingNodes()) {
@@ -88,7 +86,6 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
         }
     }
 
-    @Ignore
     @Test
     fun `restart node with incompatible version of suspended flow due to different jar hash`() {
         driver(parametersForRestartingNodes()) {
@@ -142,10 +139,8 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
                     additionalCordapps = cordapps
             )).getOrThrow()
         }
-
-        val logDir = baseDirectory(BOB_NAME)
-        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith("out.log") }.findAny().get() }
-        val matchingLineCount = logFile.readLines { it.filter { line -> logMessage in line }.count() }
+        val logFiles = baseDirectory(BOB_NAME).list().filter { it.fileName.toString().contains("stdout.*log\$".toRegex()) }
+        val matchingLineCount = logFiles.map { it.readLines { it.filter { line -> logMessage in line }.count() } }.sum()
         assertEquals(1, matchingLineCount)
     }
 
