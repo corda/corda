@@ -42,6 +42,35 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
+    @StartableByRPC
+    @InitiatingFlow
+    class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val pongSession = initiateFlow(pongParty)
+            pongSession.sendAndReceive<Unit>(times)
+            pingStarted.getOrPut(runId) { openFuture() }.set(Unit)
+            for (i in 1..times) {
+                logger.info("PING $i")
+                val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
+                assertEquals(i, j)
+            }
+        }
+    }
+
+    @InitiatedBy(Ping::class)
+    class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
+            for (i in 1..times) {
+                logger.info("PONG $i")
+                val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
+                assertEquals(i, j)
+            }
+        }
+    }
+
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
