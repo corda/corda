@@ -314,8 +314,8 @@ Version 4.0
 * Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``,
   ``corda-finance`` is kept for backward compatibility, it is recommended to use separated jars.
 
-* All sample CorDapps where split into separate apps: workflows and contracts to reflect new convention. It is recommended to structure your CorDapps
-  this way, see  :doc:`app-upgrade-notes` on upgrading your CorDapp.
+* All sample CorDapps were split into separate apps: workflows and contracts to reflect new convention. It is recommended to structure your CorDapps
+  this way, see :doc:`app-upgrade-notes` on upgrading your CorDapp.
 
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 

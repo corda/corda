@@ -117,3 +117,13 @@ jar {
         )
     }
 }
+
+cordapp {
+    targetPlatformVersion corda_platform_version.toInteger()
+    minimumPlatformVersion 1
+    info {
+        name "Bank of Corda Demo"
+        version "1"
+        vendor "R3"
+    }
+}
