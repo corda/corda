@@ -4,11 +4,11 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "5.0-SNAPSHOT"
+    ext.corda_release_version = "4.0-SNAPSHOT"
     ext.corda_release_distribution = "com.r3.corda"
 
     //OS version for shared dependencies
-    ext.os_corda_release_version = "5.0-SNAPSHOT"
+    ext.os_corda_release_version = "4.0-SNAPSHOT"
 
     // Increment this on any release that changes public APIs anywhere in the Corda platform
     ext.corda_platform_version = constants.getProperty("platformVersion")
