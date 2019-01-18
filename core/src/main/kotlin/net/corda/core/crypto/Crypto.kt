@@ -385,10 +385,6 @@ object Crypto {
         }
     }
 
-    private fun keyFactory(signatureScheme: SignatureScheme) = signatureScheme.getKeyFactory {
-        KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
-    }
-
     /**
      * Generic way to sign [ByteArray] data with a [PrivateKey]. Strategy on on identifying the actual signing scheme is based
      * on the [PrivateKey] type, but if the schemeCodeName is known, then better use
@@ -1066,5 +1062,9 @@ object Crypto {
     @StubOutForDJVM
     private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
+    }
+
+    private fun keyFactory(signatureScheme: SignatureScheme) = signatureScheme.getKeyFactory {
+        KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
     }
 }
