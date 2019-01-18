@@ -38,21 +38,12 @@ class SimmValuationTest {
         const val testTradeId = "trade1"
     }
 
-    @Before
-    fun setup() {
-        System.setProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME, CurrencyParameterSensitivitiesSerializer::class.packageName)
-    }
-
-    @After
-    fun tearDown() {
-        System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
-    }
-
     @Test
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
+                startNodesInProcess = false, // starting nodes in separate processes to ensure system class path does not contain 3rd party libraries (masking serialization issues)
                 cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts"), findCordapp("net.corda.confidential")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {
