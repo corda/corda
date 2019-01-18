@@ -316,7 +316,7 @@ For example:
 - For upgradeable constraints like the ``WhitelistedByZoneAttachmentConstraint``, the output states will inherit the same,
   and the selected attachment will be the latest version installed on the node.
 
-- A more complex case is when for ``MyContract``, one input state is constrained by the ``HashAttachmentConstraint``, while another
+- A more complex and unlikely case is when for ``MyContract``, one input state is constrained by the ``HashAttachmentConstraint``, while another
   state by the ``WhitelistedByZoneAttachmentConstraint``. To respect the rule from above, if the hash of the ``HashAttachmentConstraint``
   is whitelisted by the network, then the output states will inherit the ``HashAttachmentConstraint``, as it is more restrictive.
   If the hash was not whitelisted, then the builder will fail as it is unable to select a correct constraint.
@@ -329,6 +329,57 @@ For example:
 
 For Contracts that are annotated with ``@NoConstraintPropagation``, the platform requires that the Transaction Builder specifies
 an actual constraint for the output states (the ``AutomaticPlaceholderConstraint`` can't be used) .
+
+
+How to use the ``SignatureAttachmentConstraint`` if states were already created on the network with the ``WhitelistedByZoneAttachmentConstraint``
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. As the original developer of the Cordapp, the first step is to sign the latest version of the JAR that was released. The key used for signing will be used
+to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned by different parties and it will be
+expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
+
+2. Next step is to whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
+more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
+
+3. Any flows that build transactions using this Cordapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
+ This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
+
+4. As a node operator you need to add the new signed version of the cordapp to the "cordapps" folder together with the latest version of the flows jar
+that will contain code like:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        // This will read the signers for the deployed cordapp.
+        val attachment = this.serviceHub.cordappProvider.getContractAttachmentID(contractClass)
+        val signers = this.serviceHub.attachments.openAttachment(attachment!!)!!.signerKeys
+
+        // Create the key that will have to pass for all future versions.
+        // Could be as simple as: val ownersKey = signers.first()
+        val ownersKey = CompositeKey.Builder().addKeys(signers).build()
+
+        val txBuilder = TransactionBuilder(notary)
+                // Set the Signature constraint on the cordapp.
+                .addOutputState(outputState, constraint = SignatureAttachmentConstraint(ownersKey))
+                ...
+
+    .. sourcecode:: java
+
+        // This will read the signers for the deployed cordapp.
+        SecureHash attachment = this.getServiceHub().getCordappProvider().getContractAttachmentID(IOUContract.ID);
+        List<PublicKey> signers = this.getServiceHub().getAttachments().openAttachment(attachment).getSignerKeys();
+
+        // Create the key that will have to pass for all future versions.
+        // Could be as simple as: PublicKey ownersKey = signers.get(0) .
+        PublicKey ownersKey = new CompositeKey.Builder().addKeys(signers).build(null);
+
+        PublicKey ownerPublicKey = fetchPublicKey() // Read the public key from
+        TransactionBuilder txBuilder = new TransactionBuilder(notary)
+                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
+                .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
+                ...
+
 
 Debugging
 ---------
