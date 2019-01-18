@@ -32,7 +32,6 @@ import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
 
-@Ignore
 class AttachmentLoadingTests {
     private companion object {
         @ClassRule
@@ -58,7 +57,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+                cordappsForAllNodes = cordappsForPackages(javaClass.packageName, "net.corda.testing.internal")
         )) {
             installIsolatedCordapp(ALICE_NAME)
 
@@ -81,7 +80,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName)
+                cordappsForAllNodes = cordappsForPackages(javaClass.packageName, "net.corda.testing.internal")
         )) {
             installIsolatedCordapp(ALICE_NAME)
             installIsolatedCordapp(BOB_NAME)
