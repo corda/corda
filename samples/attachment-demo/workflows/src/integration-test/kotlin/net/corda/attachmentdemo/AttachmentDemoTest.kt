@@ -1,5 +1,7 @@
-package net.corda.attachmentdemo.workflows
+package net.corda.attachmentdemo
 
+import net.corda.attachmentdemo.workflows.recipient
+import net.corda.attachmentdemo.workflows.sender
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
@@ -9,6 +11,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.findCordapp
 import org.junit.Test
 import java.util.concurrent.CompletableFuture.supplyAsync
 
@@ -17,7 +20,11 @@ class AttachmentDemoTest {
     @Test
     fun `attachment demo using a 10MB zip file`() {
         val numOfExpectedBytes = 10_000_000
-        driver(DriverParameters(portAllocation = incrementalPortAllocation(20000), startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.attachmentdemo.contracts") )) {
+        driver(DriverParameters(
+                portAllocation = incrementalPortAllocation(20000),
+                startNodesInProcess = true,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.attachmentdemo.contracts"), findCordapp("net.corda.attachmentdemo.workflows")))
+        ) {
             val demoUser = listOf(User("demo", "demo", setOf(all())))
             val (nodeA, nodeB) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = demoUser, maximumHeapSize = "1g"),
