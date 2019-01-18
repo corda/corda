@@ -44,8 +44,12 @@ Community maintainers
 ^^^^^^^^^^^^^^^^^^^^^
 Current community maintainers:
 
-* `Joel Dudley <https://github.com/joeldudleyr3>`_ - Contact via the `Corda Slack team <http://slack.corda.net/>`_, either in the
-  ``#community`` channel or via direct message using the handle ``@joel``
+* `Joel Dudley <https://github.com/joeldudleyr3>`_ - Contact me:
+
+    * On the `Corda Slack team <http://slack.corda.net/>`_, either in the ``#community`` channel or by direct message using the handle
+      ``@joel``
+
+    * By email: joel.dudley at r3.com
 
 We anticipate additional maintainers joining the project in the future from across the community.
 

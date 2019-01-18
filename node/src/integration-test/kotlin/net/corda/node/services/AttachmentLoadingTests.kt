@@ -1,24 +1,27 @@
 package net.corda.node.services
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.flows.*
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startFlow
-import net.corda.core.serialization.MissingAttachmentsException
+import net.corda.core.serialization.internal.UntrustedAttachmentsException
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.testing.common.internal.checkNotOnClasspath
-import net.corda.testing.core.*
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.BOB_NAME
+import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
-import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.cordappsForPackages
@@ -29,8 +32,8 @@ import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
 
-@Ignore("Temporarily ignored as it fails with: java.lang.SecurityException: sealing violation: can't seal package net.corda.nodeapi: already loaded")
-class AttachmentLoadingTests : IntegrationTest() {
+@Ignore
+class AttachmentLoadingTests {
     private companion object {
         @ClassRule
         @JvmField
@@ -66,11 +69,10 @@ class AttachmentLoadingTests : IntegrationTest() {
 
             val stateRef = alice.rpc.startFlowDynamic(issuanceFlowClass, 1234).returnValue.getOrThrow()
 
-            // The exception that we actually want is MissingAttachmentsException, but this is thrown in a responder flow on Bob. To work
-            // around that it's re-thrown as a FlowException so that it can be propagated to Alice where we pick it here.
-            assertThatThrownBy {
-                alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow()
-            }.hasMessage("Attempting to load Contract Attachments downloaded from the network")
+            assertThatThrownBy { alice.rpc.startFlow(::ConsumeAndBroadcastFlow, stateRef, bob.nodeInfo.singleIdentity()).returnValue.getOrThrow() }
+                    // ConsumeAndBroadcastResponderFlow re-throws any non-FlowExceptions with just their class name in the message so that
+                    // we can verify here Bob threw the correct exception
+                    .hasMessage(UntrustedAttachmentsException::class.java.name)
         }
     }
 
@@ -107,7 +109,10 @@ class AttachmentLoadingTests : IntegrationTest() {
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
             val stateAndRef = serviceHub.toStateAndRef<ContractState>(stateRef)
             val stx = serviceHub.signInitialTransaction(
-                    TransactionBuilder(notary).addInputState(stateAndRef).addCommand(dummyCommand(ourIdentity.owningKey))
+                    TransactionBuilder(notary)
+                            .addInputState(stateAndRef)
+                            .addOutputState(ConsumeContract.State())
+                            .addCommand(Command(ConsumeContract.Cmd, ourIdentity.owningKey))
             )
             stx.verify(serviceHub, checkSufficientSignatures = false)
             val session = initiateFlow(otherSide)
@@ -123,10 +128,24 @@ class AttachmentLoadingTests : IntegrationTest() {
         override fun call() {
             try {
                 subFlow(ReceiveFinalityFlow(otherSide))
-            } catch (e: MissingAttachmentsException) {
-                throw FlowException(e.message)
+            } catch (e: FlowException) {
+                throw e
+            } catch (e: Exception) {
+                throw FlowException(e.javaClass.name)
             }
             otherSide.send("OK")
         }
+    }
+
+    class ConsumeContract : Contract {
+        override fun verify(tx: LedgerTransaction) {
+            // Accept everything
+        }
+
+        class State : ContractState {
+            override val participants: List<AbstractParty> get() = emptyList()
+        }
+
+        object Cmd : TypeOnlyCommandData()
     }
 }

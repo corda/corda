@@ -264,7 +264,7 @@ data class ContractUpgradeLedgerTransaction(
     private fun verifyConstraints() {
         val attachmentForConstraintVerification = AttachmentWithContext(
                 legacyContractAttachment as? ContractAttachment
-                        ?: ContractAttachment(legacyContractAttachment, legacyContractClassName, signerKeys = legacyContractAttachment.signerKeys),
+                        ?: ContractAttachment.create(legacyContractAttachment, legacyContractClassName, signerKeys = legacyContractAttachment.signerKeys),
                 upgradedContract.legacyContract,
                 networkParameters)
 

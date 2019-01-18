@@ -5,8 +5,8 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.internal.CheckpointIncompatibleException
-import net.corda.node.internal.NodeStartup
-import net.corda.testMessage.*
+import net.corda.testMessage.Message
+import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -18,8 +18,9 @@ import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.*
-import net.test.cordapp.v1.Record
+import net.corda.testing.node.internal.CustomCordapp
+import net.corda.testing.node.internal.ListenProcessDeathException
+import net.corda.testing.node.internal.cordappWithPackages
 import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
@@ -55,7 +56,7 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
             val result = if (page.snapshot.states.isNotEmpty()) {
                 page.snapshot.states.first()
             } else {
-                val r = page.updates.timeout(10, TimeUnit.SECONDS).take(1).toBlocking().single()
+                val r = page.updates.timeout(30, TimeUnit.SECONDS).take(1).toBlocking().single()
                 if (r.consumed.isNotEmpty()) r.consumed.first() else r.produced.first()
             }
             assertNotNull(result)
@@ -138,16 +139,13 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
                     additionalCordapps = cordapps
             )).getOrThrow()
         }
-
-        val logDir = baseDirectory(BOB_NAME)
-        val logFile = logDir.list { it.filter { it.fileName.toString().endsWith("out.log") }.findAny().get() }
-        val matchingLineCount = logFile.readLines { it.filter { line -> logMessage in line }.count() }
+        val logFiles = baseDirectory(BOB_NAME).list().filter { it.fileName.toString().contains("stdout.*log\$".toRegex()) }
+        val matchingLineCount = logFiles.map { it.readLines { it.filter { line -> logMessage in line }.count() } }.sum()
         assertEquals(1, matchingLineCount)
     }
 
     private fun parametersForRestartingNodes(): DriverParameters {
         return DriverParameters(
-                isDebug = true,
                 startNodesInProcess = false, // Start nodes in separate processes to ensure CordappLoader is not shared between restarts
                 inMemoryDB = false, // Ensure database is persisted between node restarts so we can keep suspended flows
                 cordappsForAllNodes = emptyList()

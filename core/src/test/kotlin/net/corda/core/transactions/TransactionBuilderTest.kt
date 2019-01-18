@@ -164,7 +164,7 @@ class TransactionBuilderTest {
         override val signerKeys: List<PublicKey> get() = emptyList()
     }, DummyContract.PROGRAM_ID)
 
-    private fun signedAttachment(vararg parties: Party) = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
+    private fun signedAttachment(vararg parties: Party) = ContractAttachment.create(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }

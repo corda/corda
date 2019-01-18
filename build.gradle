@@ -6,7 +6,7 @@ buildscript {
     // Our version: bump this on release.
     ext.corda_release_version = "4.0-SNAPSHOT"
     ext.corda_release_distribution = "com.r3.corda"
-    
+
     //OS version for shared dependencies
     ext.os_corda_release_version = "4.0-SNAPSHOT"
 
