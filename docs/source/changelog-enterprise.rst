@@ -7,6 +7,9 @@ release, see :doc:`upgrade-notes`.
 Unreleased
 ----------
 
+Version 4.0
+-----------
+
 Please refer to :doc:`changelog` for all Open Source changes which automatically also apply to Enterprise.
 
 Changelog entries in this unreleased section refer to Enterprise-only changes.
