@@ -24,7 +24,7 @@
 
         <journal-min-files>2</journal-min-files>
 
-        <journal-pool-files>-1</journal-pool-files>
+        <journal-pool-files>10</journal-pool-files>
 
         <journal-buffer-size>10M</journal-buffer-size>
 

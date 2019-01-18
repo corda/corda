@@ -1,7 +1,9 @@
 package com.r3.ha.utilities
 
 import net.corda.cliutils.*
-import net.corda.core.internal.*
+import net.corda.core.internal.copyTo
+import net.corda.core.internal.deleteIfExists
+import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import org.w3c.dom.Document
 import picocli.CommandLine
@@ -9,7 +11,6 @@ import picocli.CommandLine.Option
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
@@ -17,15 +18,16 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
 class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate and install required Artemis broker configuration files.") {
-
     companion object {
         // Required when creating broker instance. Are removed from generated configuration files.
-        private const val ARTEMIS_DEFAULT_USER          = "corda"
-        private const val ARTEMIS_DEFAULT_USER_PASS     = "corda"
+        private const val ARTEMIS_DEFAULT_USER = "corda"
+        private const val ARTEMIS_DEFAULT_USER_PASS = "corda"
 
-        private const val USER_ID                       = "{{USER_IDENTITY}}"
-        private const val CONNECTOR_STRING              = "tcp://%s?sslEnabled=true;keyStorePath=%s;keyStorePassword=%s;trustStorePath=%s;trustStorePassword=%s"
-        private const val ACCEPTOR_STRING               = "tcp://%s?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;protocols=CORE,AMQP;useEpoll=true;amqpCredits=1000;amqpLowCredits=300;sslEnabled=true;keyStorePath=%s;keyStorePassword=%s;trustStorePath=%s;trustStorePassword=%s;needClientAuth=true;enabledCipherSuites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;enabledProtocols=TLSv1.2"
+        private const val USER_ID = "{{USER_IDENTITY}}"
+        private const val CONNECTOR_STRING = "tcp://%s?sslEnabled=true;keyStorePath=%s;keyStorePassword=%s;trustStorePath=%s;trustStorePassword=%s"
+        private const val ACCEPTOR_STRING = "tcp://%s?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;protocols=CORE,AMQP;useEpoll=true;amqpCredits=1000;amqpLowCredits=300;sslEnabled=true;keyStorePath=%s;keyStorePassword=%s;trustStorePath=%s;trustStorePassword=%s;needClientAuth=true;enabledCipherSuites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;enabledProtocols=TLSv1.2"
+        private const val DEFAULT_JOURNAL_BUFFER_TIMEOUT = "2876000"
+        private const val DEFAULT_CLUSTER_PASSWORD = "changeit"
     }
 
     @Option(names = ["--install"], description = ["Install an Artemis instance."])
@@ -61,6 +63,12 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
     @Option(names = ["--user"], description = ["The X500 name of connecting users (clients). Example value: \"CN=artemis, O=Corda, L=London, C=GB\""], required = true)
     private lateinit var userX500Name: String
 
+    @Option(names = ["--cluster-user"], description = ["The username of the Artemis cluster."], defaultValue = "corda-cluster-user")
+    private lateinit var clusterUsername: String
+
+    @Option(names = ["--cluster-password"], description = ["Artemis cluster password."], defaultValue = DEFAULT_CLUSTER_PASSWORD)
+    private lateinit var clusterPassword: String
+
     override fun runProgram(): Int {
         validateConditionalOptions()
 
@@ -72,7 +80,6 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
             val args = "create corda_p2p_broker --allow-anonymous --user $ARTEMIS_DEFAULT_USER --password $ARTEMIS_DEFAULT_USER_PASS -- $workingDir"
             val process = if (CordaSystemUtils.isOsWindows()) {
                 ProcessBuilder("cmd.exe", "/c", "${dist!! / "bin/artemis.cmd"} $args").start()
-
             } else {
                 ProcessBuilder("/bin/sh", "-c", "${dist!! / "bin/artemis"} $args").start()
             }
@@ -84,19 +91,16 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         }
 
         // Generate login.config
-        (workingDir / "login.config").deleteIfExists()
         javaClass.classLoader.getResourceAsStream("login.config").copyTo(workingDir / "login.config", StandardCopyOption.REPLACE_EXISTING)
 
         // Generate artemis-users.properties
         "artemis-users.properties".let {
             val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name)
-            (workingDir / it).deleteIfExists()
-            (workingDir / it).write(templateResolved.toByteArray(), StandardOpenOption.CREATE)
+            templateResolved.toByteArray().inputStream().copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
         // Generate artemis-roles.properties
         "artemis-roles.properties".let {
-            (workingDir / it).deleteIfExists()
             javaClass.classLoader.getResourceAsStream(it).copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
@@ -107,23 +111,24 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
 
     private fun validateConditionalOptions() {
         if (createInstance) {
-            require (dist != null) { printError("Attempting to create a new Artemis instance. Distribution path missing.")}
+            require(dist != null) { printError("Attempting to create a new Artemis instance. Distribution path missing.") }
         }
 
         if (mode.isHa) {
-            require (connectors.isNotEmpty()) { printError("Artemis instance set to $mode. Connector entries missing.") }
+            require(connectors.isNotEmpty()) { printError("Artemis instance set to $mode. Connector entries missing.") }
         }
     }
 
     private fun generateBrokerXml() {
         val file = (workingDir / "broker.xml").toFile()
-        var journalBufferTimeoutValue = "2876000"
 
-        if (file.exists()) {
+        val journalBufferTimeoutValue = if (file.exists()) {
             // If the file already exists, read the journal-buffer-timeout and configure the same in the newly generated broker.xml
             val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
             val elements = doc.getElementsByTagName("journal-buffer-timeout")
-            journalBufferTimeoutValue = elements.item(0).textContent
+            elements.item(0).textContent
+        } else {
+            DEFAULT_JOURNAL_BUFFER_TIMEOUT
         }
 
         // Generate  new one using the template.
@@ -162,7 +167,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
                 child.textContent = "true"
                 appendChild(child)
             }
-        } else  {
+        } else {
             doc.createElement("slave").apply {
                 val failback = doc.createElement("allow-failback")
                 failback.textContent = "true"
@@ -213,6 +218,15 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
         clusterConnection.appendChild(staticConnectors)
         val clusterConnections = doc.createElement("cluster-connections").apply { appendChild(clusterConnection) }
         doc.getElementsByTagName("core").item(0).appendChild(clusterConnections)
+
+        val clusterUser = doc.createElement("cluster-user").apply { textContent = clusterUsername }
+        doc.getElementsByTagName("core").item(0).appendChild(clusterUser)
+
+        if (clusterPassword == DEFAULT_CLUSTER_PASSWORD) {
+            printWarning("Using default cluster password, please consider changing the password in broker.xml or provide a password using --cluster-password.")
+        }
+        val clusterPass = doc.createElement("cluster-password").apply { textContent = clusterPassword }
+        doc.getElementsByTagName("core").item(0).appendChild(clusterPass)
     }
 
     private enum class HAMode(val isHa: Boolean) {
