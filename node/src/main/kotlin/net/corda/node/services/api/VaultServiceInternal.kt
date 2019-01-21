@@ -10,6 +10,12 @@ interface VaultServiceInternal : VaultService {
     fun start()
 
     /**
+     * Check that there are no states in the vault that were created using an old version of Corda. These may not be usable with new
+     * features, so prevent the node from starting up in this case.
+     */
+    fun oldStatesPresent(): Boolean
+
+    /**
      * Splits the provided [txns] into batches of [WireTransaction] and [NotaryChangeWireTransaction].
      * This is required because the batches get aggregated into single updates, and we want to be able to
      * indicate whether an update consists entirely of regular or notary change transactions, which may require
