@@ -120,6 +120,10 @@ Operating modes of the Bridge and Float with a single node
 
 Embedded Developer Node (node + artemis + internal bridge, no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
 
 The simplest development deployment of the node is without firewall and thus just use the embedded bridge and Peer-to-Peer
 Artemis with the node as TLS endpoint and to have the outgoing packets use the internal bridge functionality.
@@ -132,6 +136,11 @@ where this is the only available option:
 
 Node + Bridge (no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
+* Corda Firewall JAR
 
 The next simplest deployment is to turn off the built in bridge using the ``externalBridge`` enterprise config property
 and to run a single combined firewall process. This might be suitable for a test environment, to conserve VMs.
@@ -148,6 +157,11 @@ and to run a single combined firewall process. This might be suitable for a test
 
 DMZ ready (node + bridge + float)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
+* Corda Firewall JAR
 
 To familiarize oneself with the a more complete deployment including a DMZ and separated inbound and outbound paths
 the ``firewallMode`` property in the ``firewall.conf`` should be set to ``BridgeInner`` for the bridge and
@@ -165,6 +179,12 @@ The diagram below shows such a non-HA deployment. This would not be recommended 
 
 DMZ ready with outbound SOCKS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
+* Corda Firewall JAR
+* SOCKS Proxy
 
 Some organisations require dynamic outgoing connections to operate via a SOCKS proxy. The code supports this option
 by adding extra information to the ``outboundConfig`` section of the bridge process. An simplified example deployment is shown here
@@ -176,6 +196,13 @@ to highlight the option:
 
 Full production HA DMZ ready mode (hot/cold node, hot/warm bridge)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
+* Corda Firewall JAR
+* Zookeeper v3.5.3-beta
+* Optional: SOCKS Proxy
 
 Finally, we show a full HA solution as recommended for production. This does require adding an external ZooKeeper
 cluster to provide bridge master selection and extra instances of the bridge and float. This allows
@@ -194,6 +221,13 @@ Operating modes of shared Bridge and Float
 
 Multiple nodes + Bridge (no float, no DMZ)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Prerequisites
+"""""""""""""
+* Java runtime
+* Corda Enterprise JAR
+* Corda Firewall JAR
+* Apache Artemis v2.6.2 or RedHat amq broker v7.2.2
+* Optional: Zookeeper v3.5.3-beta if using Bridge cluster
 
 It is possible to allow two or more Corda nodes (HA and/or non-HA) handle outgoing and incoming P2P communication through a shared bridge. This is possible by configuring the nodes to use
 and external Artemis messaging broker which can be easily configured using the ha-tool. For more information, please see :doc:`HA Utilities <ha-utilities>`. While this example is the simplest deployment
@@ -212,6 +246,14 @@ Most of the HA components are agnostic to the node, with exception of the bridge
 The bridge's SSL keystore will need to be updated when adding new node to the shared HA infrastructure. This can be done by using any keytool or by using :doc:`HA Utilities <ha-utilities>`,
 the `SSL key copier` is tailored to import multiple node's SSL keys into the bridge's keystore. For more information, please see :doc:`Cookbook <corda-firewall-cookbook>`.
 
+
+Standalone Artemis server
+-------------------------
+The Corda node can be configured to use a external Artemis broker instead of embedded broker to provide messaging layer HA capability in enterprise environment.
+
+Detailed setup instruction for Apache Artemis can be found in `Apache Artemis documentation <https://activemq.apache.org/artemis/docs/latest/index.html>`_. Also see :doc:`HA Utilities <ha-utilities>` for Artemis server configuration tool.
+
+We have tested Corda against Apache Artemis v2.6.2 and RedHat amq broker v7.2.2, it is recommended to use these Artemis versions with Corda.
 
 Apache ZooKeeper
 ----------------
