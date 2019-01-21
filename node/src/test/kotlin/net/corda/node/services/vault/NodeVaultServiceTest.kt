@@ -905,22 +905,26 @@ class NodeVaultServiceTest {
         services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
         services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
 
-        assertEquals(false, vaultService.oldStatesPresent())
+        database.transaction {
+            assertEquals(false, vaultService.oldStatesPresent())
+        }
 
-        val session = currentDBSession()
-        val stateToAdd = VaultSchemaV1.VaultStates(
+        database.transaction {
+            val session = currentDBSession()
+            val stateToAdd = VaultSchemaV1.VaultStates(
                 notary = DUMMY_NOTARY,
                 contractStateClassName = DummyState::class.java.toString(),
                 stateStatus = Vault.StateStatus.UNCONSUMED,
                 recordedTime = Instant.now(),
                 relevancyStatus = Vault.RelevancyStatus.RELEVANT,
                 constraintType = Vault.ConstraintInfo.Type.ALWAYS_ACCEPT
-        )
-        val persistentStateRef = PersistentStateRef("C517D22982867E517E3E933A99C8F53658C8708A7B84FE37C36D0D8AF1EA167C", 23)
-        stateToAdd.stateRef = persistentStateRef
-        session.save(stateToAdd)
+            )
+            val persistentStateRef = PersistentStateRef("C517D22982867E517E3E933A99C8F53658C8708A7B84FE37C36D0D8AF1EA167C", 23)
+            stateToAdd.stateRef = persistentStateRef
+            session.save(stateToAdd)
 
-        assertEquals(true, vaultService.oldStatesPresent())
+            assertEquals(true, vaultService.oldStatesPresent())
+        }
     }
 
     @Test

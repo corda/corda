@@ -489,27 +489,31 @@ class NodeVaultService(
     }
 
     private fun getPersistentParties(session: Session): Set<VaultSchemaV1.PersistentParty> {
-        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.PersistentParty::class.java)
-        val queryRootPersistentStates = criteriaQuery.from(VaultSchemaV1.PersistentParty::class.java)
-        criteriaQuery.select(queryRootPersistentStates)
-        val query = session.createQuery(criteriaQuery)
-        val result = query.resultList.toSet()
+        return database.transaction {
+            val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.PersistentParty::class.java)
+            val queryRootPersistentStates = criteriaQuery.from(VaultSchemaV1.PersistentParty::class.java)
+            criteriaQuery.select(queryRootPersistentStates)
+            val query = session.createQuery(criteriaQuery)
+            val result = query.resultList.toSet()
 
-        log.debug("Found ${result.size} persistent party entries")
-        return result
+            log.debug("Found ${result.size} persistent party entries")
+            result
+        }
     }
 
     override fun oldStatesPresent(): Boolean {
         log.info("Updating vault data from previous version to be compatible with the new version.")
         val session = getSession()
-        val persistentStates: List<VaultSchemaV1.VaultStates> = getPersistentStates(
-                session,
-                QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL),
-                PageSpecification(),
-                Sort(emptySet()),
-                ContractState::class.java).filter { it[0] is VaultSchemaV1.VaultStates }.map { it[0] as VaultSchemaV1.VaultStates }
-        val persistentStateRefs = persistentStates.map { StateRef(SecureHash.parse(it.stateRef!!.txId), it.stateRef!!.index)}.toSet()
+        val persistentStates: List<VaultSchemaV1.VaultStates> = database.transaction {
+            getPersistentStates(
+                    session,
+                    QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL),
+                    PageSpecification(),
+                    Sort(emptySet()),
+                    ContractState::class.java).filter { it[0] is VaultSchemaV1.VaultStates }.map { it[0] as VaultSchemaV1.VaultStates }
+        }
         val stateParties = getPersistentParties(session)
+        val persistentStateRefs = persistentStates.map { StateRef(SecureHash.parse(it.stateRef!!.txId), it.stateRef!!.index)}.toSet()
         val statePartyRefs = stateParties.map { StateRef(SecureHash.parse(it.compositeKey.stateRef!!.txId), it.compositeKey.stateRef!!.index) }.toSet()
 
         // There are no V3 states if all the states in the vault are also in the state_party table
