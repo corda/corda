@@ -93,12 +93,14 @@ application development please continue to refer to `the main project documentat
 
    corda-nodes-index.rst
    corda-networks-index.rst
-   docker.rst
+   docker-image.rst
    azure-vm.rst
    aws-vm.rst
    loadtesting.rst
    cli-application-shell-extensions.rst
    certificate-revocation
+
+.. Documentation is not included in the pdf unless it is included in a toctree somewhere
 
 .. conditional-toctree::
    :caption: Corda Network
@@ -106,3 +108,42 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    corda-network/index.md
+
+.. conditional-toctree::
+   :caption: Contents
+   :maxdepth: 2
+   :if_tag: pdfmode
+
+   deterministic-modules.rst
+   release-notes.rst
+   changelog.rst
+
+.. conditional-toctree::
+   :caption: Participate
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   contributing-index.rst
+   corda-repo-layout.rst
+   deterministic-modules.rst
+   changelog
+
+.. conditional-toctree::
+   :caption: Design docs
+   :maxdepth: 2
+   :if_tag: htmlmode
+
+   design/design-review-process.md
+   design/certificate-hierarchies/design.md
+   design/failure-detection-master-election/design.md
+   design/float/design.md
+   design/hadr/design.md
+   design/kafka-notary/design.md
+   design/monitoring-management/design.md
+   design/sgx-integration/design.md
+   design/reference-states/design.md
+   design/sgx-infrastructure/design.md
+   design/threat-model/corda-threat-model.md
+   design/data-model-upgrades/signature-constraints.md
+   design/data-model-upgrades/package-namespace-ownership.md
+   design/targetversion/design.md

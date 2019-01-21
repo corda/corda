@@ -43,22 +43,12 @@ class SimmValuationTest : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
-    @Before
-    fun setup() {
-        System.setProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME, CurrencyParameterSensitivitiesSerializer::class.packageName)
-    }
-
-    @After
-    override fun tearDown() {
-        System.clearProperty(AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
-        super.tearDown()
-    }
-
     @Test
     fun `runs SIMM valuation demo`() {
         val logConfigFile = projectRootDir / "samples" / "simm-valuation-demo" / "src" / "main" / "resources" / "log4j2.xml"
         assertThat(logConfigFile).isRegularFile()
         driver(DriverParameters(isDebug = true,
+                startNodesInProcess = false, // starting nodes in separate processes to ensure system class path does not contain 3rd party libraries (masking serialization issues)
                 cordappsForAllNodes = listOf(findCordapp("net.corda.vega.flows"), findCordapp("net.corda.vega.contracts")) + FINANCE_CORDAPPS,
                 systemProperties = mapOf("log4j.configurationFile" to logConfigFile.toString()))
         ) {

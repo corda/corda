@@ -89,6 +89,7 @@ import rx.Scheduler
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.KeyStoreException
@@ -814,7 +815,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-        database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader.appClassLoader)
+        database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1132,11 +1133,11 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader)
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
         start(dataSource, jdbcUrl)
     } catch (ex: Exception) {

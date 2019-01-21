@@ -19,6 +19,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.bouncycastle.util.io.Streams
 import org.junit.Ignore
 import org.junit.Test
@@ -30,7 +31,7 @@ class HashLookupCommandTest {
     fun `hash lookup command returns correct response`() {
         val user = User("u", "p", setOf(Permissions.all()))
 
-        driver(DriverParameters(notarySpecs = emptyList(), extraCordappPackagesToScan = listOf("net.corda.testing.contracts"))) {
+        driver(DriverParameters(notarySpecs = emptyList(), cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP))) {
             val nodeFuture = startNode(providedName = ALICE_NAME, rpcUsers = listOf(user), startInSameProcess = true)
             val node = nodeFuture.getOrThrow()
             val txId = issueTransaction(node)

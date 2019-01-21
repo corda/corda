@@ -14,14 +14,15 @@ import org.junit.Test;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static java.util.Collections.singletonList;
 import static net.corda.testing.core.TestUtils.singleIdentity;
-import static net.corda.testing.node.internal.InternalTestUtilsKt.cordappsForPackages;
+import static net.corda.testing.node.internal.InternalTestUtilsKt.enclosedCordapp;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.Assert.fail;
 
 public class FlowsInJavaTest {
     private final MockNetwork mockNet = new MockNetwork(
-            new MockNetworkParameters().withCordappsForAllNodes(cordappsForPackages("net.corda.core.flows"))
+            new MockNetworkParameters().withCordappsForAllNodes(singletonList(enclosedCordapp(this)))
     );
     private StartedMockNode aliceNode;
     private StartedMockNode bobNode;

@@ -24,7 +24,7 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.ClassRule
 import org.junit.Ignore
@@ -57,7 +57,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName, "net.corda.testing.internal")
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             installIsolatedCordapp(ALICE_NAME)
 
@@ -80,7 +80,7 @@ class AttachmentLoadingTests {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
-                cordappsForAllNodes = cordappsForPackages(javaClass.packageName, "net.corda.testing.internal")
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )) {
             installIsolatedCordapp(ALICE_NAME)
             installIsolatedCordapp(BOB_NAME)

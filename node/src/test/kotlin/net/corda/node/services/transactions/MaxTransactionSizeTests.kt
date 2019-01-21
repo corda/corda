@@ -16,9 +16,13 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -37,10 +41,12 @@ class MaxTransactionSizeTests {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(listOf("net.corda.testing.contracts"), networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000))
+        mockNet = MockNetwork(MockNetworkParameters(
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
+                networkParameters = testNetworkParameters(maxTransactionSize = 3_000_000)
+        ))
         aliceNode = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         bobNode = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
-        bobNode.registerInitiatedFlow(ReceiveLargeTransactionFlow::class.java)
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity
         alice = aliceNode.info.singleIdentity()
@@ -90,11 +96,10 @@ class MaxTransactionSizeTests {
             assertEquals(hash1, bigFile1.sha256)
             SendLargeTransactionFlow(notary, bob, hash1, hash2, hash3, hash4, verify = false)
         }
-        assertFailsWith<UnexpectedFlowEndException> {
-            val future = aliceNode.startFlow(flow)
-            mockNet.runNetwork()
-            future.getOrThrow()
-        }
+
+        val future = aliceNode.startFlow(flow)
+        mockNet.runNetwork()
+        assertThatThrownBy { future.getOrThrow() }.hasMessageContaining("Transaction exceeded network's maximum transaction size limit")
     }
 
     private fun StartedMockNode.importAttachment(inputStream: InputStream): AttachmentId {
@@ -133,7 +138,11 @@ class MaxTransactionSizeTests {
     class ReceiveLargeTransactionFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
         @Suspendable
         override fun call() {
-            subFlow(ReceiveTransactionFlow(otherSide))
+            try {
+                subFlow(ReceiveTransactionFlow(otherSide))
+            } catch (e: IllegalArgumentException) {
+                throw FlowException(e.message)
+            }
             // Unblock the other side by sending some dummy object (Unit is fine here as it's a singleton).
             otherSide.send(Unit)
         }

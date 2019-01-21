@@ -38,6 +38,7 @@ import net.corda.testing.node.InMemoryMessagingNetwork
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
+import org.apache.commons.lang.ClassUtils
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
@@ -76,6 +77,13 @@ val FINANCE_WORKFLOWS_CORDAPP: TestCordappImpl = findCordapp("net.corda.finance.
 @JvmField
 val FINANCE_CORDAPPS: Set<TestCordappInternal> = setOf(FINANCE_CONTRACTS_CORDAPP, FINANCE_WORKFLOWS_CORDAPP)
 
+/**
+ * *Custom* CorDapp containing the contents of the `net.corda.testing.contracts` package, i.e. the dummy contracts. This is not a real CorDapp
+ * in the way that [FINANCE_CONTRACTS_CORDAPP] and [FINANCE_WORKFLOWS_CORDAPP] are.
+ */
+@JvmField
+val DUMMY_CONTRACTS_CORDAPP: CustomCordapp = cordappWithPackages("net.corda.testing.contracts")
+
 @JvmField
 val BUSINESS_NETWORK_CORDAPP: TestCordappImpl = findCordapp("net.corda.sample.businessnetwork")
 
@@ -101,6 +109,25 @@ fun cordappForClasses(vararg classes: Class<*>): CustomCordapp = CustomCordapp(p
  * [TestCordapp.findCordapp] but returns the internal [TestCordappImpl].
  */
 fun findCordapp(scanPackage: String): TestCordappImpl = TestCordapp.findCordapp(scanPackage) as TestCordappImpl
+
+/** Create a *custom* CorDapp which just contains the enclosed classes of the receiver class. */
+fun Any.enclosedCordapp(): CustomCordapp {
+    val receiverClass = javaClass.enclosingClass ?: javaClass // In case this is called in the companion object
+    val classes = HashSet<Class<*>>()
+    receiverClass.collectEnclosedClasses(classes)
+    ClassUtils.getAllSuperclasses(receiverClass).forEach { (it as Class<*>).collectEnclosedClasses(classes) }
+    ClassUtils.getAllInterfaces(receiverClass).forEach { (it as Class<*>).collectEnclosedClasses(classes) }
+    require(classes.isNotEmpty()) { "${receiverClass.name} does not contain any enclosed classes to build a CorDapp out of" }
+    return CustomCordapp(name = receiverClass.name, classes = classes)
+}
+
+private fun Class<*>.collectEnclosedClasses(classes: MutableSet<Class<*>>) {
+    val enclosedClasses = declaredClasses
+    if (enclosedClasses.isNotEmpty() || enclosingClass != null) {
+        classes += this
+    }
+    enclosedClasses.forEach { it.collectEnclosedClasses(classes) }
+}
 
 private fun getCallerClass(directCallerClass: KClass<*>): Class<*>? {
     val stackTrace = Throwable().stackTrace
