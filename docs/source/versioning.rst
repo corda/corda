@@ -102,3 +102,30 @@ being Corda flows or services.
    automatically as long as the information is provided in your Gradle file. See ":ref:`contract_non-downgrade_rule_ref`" for more information.
 
 .. note:: You can read the original design doc here: :doc:`design/targetversion/design`.
+
+
+
+Classloaders in Corda
+---------------------
+
+Corda is a platform that runs client code, not very different from this point of view from an application server like JBoss.
+
+The node administrator "deploys" cordapps in the ``cordapps`` folder. These cordapps register endpoints and logic that the node will execute.
+
+What is different from a traditional application server is that client code - the smart contract logic - is also run when verifying transactions.
+The special requirement for this code is that anytime a transaction is loaded and verified, on any node, it needs to run the exact same code and get the exact same result.
+
+To implement these requirements, there are currently 2 types of classloaders:
+
+
+1. The ``App Classloader``, which is created from all the cordapps deployed on the node.
+This classloader is used when executing the flow logic and when executing rpc commands.
+In a future Corda version it may be split up into isolated Classloaders per Cordapp.
+Anything that is serialized/deserialized and stored on the node is done on this classloader.
+
+2. The ``Attachments Classloader``.
+Every time a transaction is sent over the wire to another node, it will be sent together with all its dependencies.
+Which means the receiving node will also download all attachments needed to verify the transaction (and store them in the ``AttachmentsStorage``).
+When the node needs to verify a transaction it will build a new short-lived ``Classloader`` from the attachments listed in the transaction.
+This classloader is used to deserialize the binary format of the transaction and to execute the ``Contract.verify`` code.
+The exact same classloader will be built on any node that verifies that transaction as all attachments are referenced by their cryptographic hash.

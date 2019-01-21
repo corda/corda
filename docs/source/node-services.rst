@@ -248,11 +248,11 @@ begin the formation of new transactions consuming them. The equivalent
 services are also forwarded to RPC clients, so that they may show 
 updating views of states held by the node. 
 
-NodeSchemaService and HibernateObserver
+NodeSchemaService and PersistentStateService
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``HibernateObserver`` runs within the node framework and listens for 
-vault state updates, the ``HibernateObserver`` then uses the mapping 
+The ``PersistentStateService`` runs within the node framework and listens for
+vault state updates, the ``PersistentStateService`` then uses the mapping
 services of the ``NodeSchemaService`` to record the states in auxiliary 
 database tables. This allows Corda state updates to be exposed to 
 external legacy systems by insertion of unpacked data into existing 
