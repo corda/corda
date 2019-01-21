@@ -692,7 +692,7 @@ class DriverDSLImpl(
     companion object {
         internal val log = contextLogger()
 
-        private val notaryHandleTimeout = Duration.ofMinutes(1)
+        private val notaryHandleTimeout = Duration.ofMinutes(2)
         private val defaultRpcUserList = listOf(InternalUser("default", "default", setOf("ALL")).toConfig().root().unwrapped())
         private val names = arrayOf(ALICE_NAME, BOB_NAME, DUMMY_BANK_A_NAME)
         /**

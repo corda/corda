@@ -11,6 +11,10 @@ import javax.persistence.*
  */
 object SampleCashSchemaV2 : MappedSchema(schemaFamily = CashSchema.javaClass, version = 2,
         mappedTypes = listOf(PersistentCashState::class.java)) {
+
+    override val migrationResource: String?
+        get() = "cash_states_v2.changelog"
+
     @Entity
     @Table(name = "cash_states_v2", indexes = [Index(name = "ccy_code_idx2", columnList = "ccy_code")])
     class PersistentCashState(

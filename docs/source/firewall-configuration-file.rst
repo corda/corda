@@ -242,6 +242,9 @@ absolute path to the firewall's base directory.
 :healthCheckPhrase: An optional Health Check Phrase which if passed through the channel will cause AMQP Server to echo it back instead of doing normal pipeline processing.
     This parameter can be used to facilitate F5 "TCP Echo" health-check monitor. Only when TCP posting starting with ``healthCheckPhrase`` in UTF-8 encoding is sent to application port the server will echo the same pass phrase back.
 
+:silencedIPs: An optional list of strings of that will be compared to the remote IPv4/IPv6 source address of inbound socket connections.
+    If there is a match all logging for this connection will be reduced to TRACE level. The intention is to allow simple filtering of health check connections from load balancers and other monitoring components.
+
 Complete example
 ================
 As an example to show all features, the following is a walk-through of the configuration steps to set-up a pair of HA hot-cold nodes for two separate legal identities,
@@ -774,7 +777,7 @@ Configuration file: ``firewall.conf`` for ``vmInfra1`` should look as follows:
            password = "password"
         }
 
-        artemisSSLConfiguration : {
+        artemisSSLConfiguration {
             keyStorePassword = "artemisStorePass"
             trustStorePassword = "artemisTrustpass"
             sslKeystore = "artemis/artemis.jks"

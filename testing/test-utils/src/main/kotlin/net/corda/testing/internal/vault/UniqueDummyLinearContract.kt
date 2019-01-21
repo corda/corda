@@ -32,6 +32,8 @@ class UniqueDummyLinearContract : Contract {
 }
 
 object UniqueDummyLinearStateSchema : MappedSchema(schemaFamily = UniqueDummyLinearStateSchema::class.java, version = 1, mappedTypes = listOf(UniquePersistentLinearDummyState::class.java)) {
+    override val migrationResource: String?
+        get() = "unique_dummy_linear_state.changelog"
     @Entity
     @Table(name = "unique_dummy_linear_state")
     class UniquePersistentLinearDummyState(
