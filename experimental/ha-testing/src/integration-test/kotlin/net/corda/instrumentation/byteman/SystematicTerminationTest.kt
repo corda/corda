@@ -26,8 +26,8 @@ import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalDriverDSL
-import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.poll
 import org.apache.activemq.artemis.core.client.impl.ClientMessageImpl
@@ -107,7 +107,7 @@ class SystematicTerminationTest(private val terminationData: TerminationData) : 
         val portAllocation = incrementalPortAllocation(10000)
 
         internalDriver(
-                cordappsForAllNodes = cordappsForPackages("net.corda.finance.contracts", "net.corda.finance.schemas"),
+                cordappsForAllNodes = FINANCE_CORDAPPS,
                 portAllocation = portAllocation,
                 inMemoryDB = false
                 //, isDebug = true

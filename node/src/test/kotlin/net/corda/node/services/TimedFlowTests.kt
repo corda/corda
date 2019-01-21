@@ -37,8 +37,7 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
 import org.junit.Before
 import org.junit.ClassRule
@@ -301,8 +300,8 @@ class TimedFlowTestRule(private val clusterSize: Int) : ExternalResource() {
 
     override fun before() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.node.services"),
-                defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
+                cordappsForAllNodes = listOf(cordappForClasses(TimedFlowTests.TestNotaryService::class.java), DUMMY_CONTRACTS_CORDAPP),
+                servicePeerAllocationStrategy = RoundRobin(),
                 threadPerNode = true
         )
         val started = startClusterAndNode(mockNet)

@@ -30,7 +30,7 @@ dependencies {
 
     cordaCompile project(":client:rpc")
     cordaCompile project(":node-api")
-    cordaCompile project(":finance")
+    cordaCompile project(":finance:workflows")
     cordaCompile project(":perftestcordapp")
 
     // Logging

@@ -64,7 +64,7 @@ class MySQLNotaryServiceTests : IntegrationTest() {
 
     @Before
     fun before() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.notary.mysql"), threadPerNode = true)
+        mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()), threadPerNode = true)
         notaryParty = DevIdentityGenerator.generateDistributedNotarySingularIdentity(listOf(mockNet.baseDirectory(mockNet.nextNodeId)), notaryName)
         val networkParameters = NetworkParametersCopier(testNetworkParameters(notaries = listOf(NotaryInfo(notaryParty, true)), minimumPlatformVersion = 4))
         val notaryNodeUnstarted = createNotaryNode()

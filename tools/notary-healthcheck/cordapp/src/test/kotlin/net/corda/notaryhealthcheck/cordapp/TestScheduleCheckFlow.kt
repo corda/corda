@@ -8,14 +8,15 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.utilities.seconds
 import net.corda.notaryhealthcheck.utils.Monitorable
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-
 
 class TestScheduleCheckFlow {
     private lateinit var mockNet: MockNetwork
@@ -24,7 +25,10 @@ class TestScheduleCheckFlow {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(threadPerNode = true, cordappPackages = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp"))
+        mockNet = MockNetwork(MockNetworkParameters(
+                threadPerNode = true,
+                cordappsForAllNodes = listOf(findCordapp("net.corda.notaryhealthcheck.contract"), findCordapp("net.corda.notaryhealthcheck.cordapp"))
+        ))
 
         nodeA = mockNet.createPartyNode()
         notary = mockNet.defaultNotaryIdentity

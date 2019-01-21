@@ -25,14 +25,13 @@ import net.corda.nodeapi.internal.config.CertificateStore
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.crypto.loadOrCreateKeyStore
 import net.corda.testing.core.*
-import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.internalDriver
 import org.apache.activemq.artemis.api.core.SimpleString
 import org.apache.activemq.artemis.core.config.Configuration
@@ -101,7 +100,7 @@ class SNIBridgeTest : IntegrationTest() {
     @Test
     fun `Nodes behind all in one bridge can communicate with external node`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<BridgeRestartTest.Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), portAllocation = incrementalPortAllocation(20000)) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), portAllocation = incrementalPortAllocation(20000)) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
             // We create a config for ALICE_NAME so we can use the dir lookup from the Driver when starting the bridge
@@ -186,7 +185,7 @@ class SNIBridgeTest : IntegrationTest() {
     @Test(timeout = 600000)
     fun `Nodes behind one bridge can communicate with each other using loopback bridge`() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<BridgeRestartTest.Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge")) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp())) {
             val artemisPort = portAllocation.nextPort()
             val advertisedP2PPort = portAllocation.nextPort()
             // We create a config for ALICE_NAME so we can use the dir lookup from the Driver when starting the bridge

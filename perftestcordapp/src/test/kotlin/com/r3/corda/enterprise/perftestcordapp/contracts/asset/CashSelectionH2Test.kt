@@ -9,18 +9,20 @@ import net.corda.core.internal.concurrent.transpose
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.MockNodeConfigOverrides
 import net.corda.testing.node.MockNodeParameters
+import net.corda.testing.node.internal.findCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import java.util.Collections.nCopies
 
 class CashSelectionH2Test {
-    private val mockNet = MockNetwork(
+    private val mockNet = MockNetwork(MockNetworkParameters(
             threadPerNode = true,
-            cordappPackages = listOf("com.r3.corda.enterprise.perftestcordapp")
-    )
+            cordappsForAllNodes = listOf(findCordapp("com.r3.corda.enterprise.perftestcordapp"))
+    ))
 
     @After
     fun cleanUp() {
