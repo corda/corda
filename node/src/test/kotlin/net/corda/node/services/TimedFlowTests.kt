@@ -9,11 +9,7 @@ import net.corda.core.contracts.AlwaysAcceptAttachmentConstraint
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FinalityFlow
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.FlowSession
-import net.corda.core.flows.NotarisationRequestSignature
-import net.corda.core.flows.NotaryFlow
+import net.corda.core.flows.*
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.FlowIORequest
@@ -42,17 +38,8 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
 import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetFlowTimeOut
-import net.corda.testing.node.MockNetNotaryConfig
 import net.corda.testing.node.MockNetworkParameters
-import net.corda.testing.node.MockNodeConfigOverrides
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.InternalMockNodeParameters
-import net.corda.testing.node.internal.TestStartedNode
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.startFlow
 import net.corda.testing.node.internal.*
-import org.junit.AfterClass
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
@@ -66,81 +53,6 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
-
-class TimedFlowTestRule(val clusterSize: Int) : ExternalResource() {
-
-    lateinit var mockNet: InternalMockNetwork
-    lateinit var notary: Party
-    lateinit var node: TestStartedNode
-    lateinit var patientNode: TestStartedNode
-
-    private fun startClusterAndNode(mockNet: InternalMockNetwork): Triple<Party, TestStartedNode, TestStartedNode> {
-        val replicaIds = (0 until clusterSize)
-        val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
-        val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
-                replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
-                serviceLegalName)
-
-        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
-        val notaryConfig = mock<NotaryConfig> {
-            whenever(it.serviceLegalName).thenReturn(serviceLegalName)
-            whenever(it.validating).thenReturn(true)
-            whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
-        }
-
-        val notaryNodes = (0 until clusterSize).map {
-            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
-                doReturn(notaryConfig).whenever(it).notary
-            }))
-        }
-
-        val aliceNode = mockNet.createUnstartedNode(
-                InternalMockNodeParameters(
-                        legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
-                        configOverrides = { conf: NodeConfiguration ->
-                            val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
-                            doReturn(retryConfig).whenever(conf).flowTimeout
-                        }
-                )
-        )
-
-        val patientNode = mockNet.createUnstartedNode(
-                InternalMockNodeParameters(
-                        legalName = CordaX500Name("Bob", "BobCorp", "GB"),
-                        configOverrides = { conf: NodeConfiguration ->
-                            val retryConfig = FlowTimeoutConfiguration(10.seconds, 3, 1.0)
-                            doReturn(retryConfig).whenever(conf).flowTimeout
-                        }
-                )
-        )
-
-        // MockNetwork doesn't support notary clusters, so we create all the nodes we need unstarted, and then install the
-        // network-parameters in their directories before they're started.
-        val nodes = (notaryNodes + aliceNode + patientNode).map { node ->
-            networkParameters.install(mockNet.baseDirectory(node.id))
-            node.start()
-        }
-
-        return Triple(notaryIdentity, nodes[nodes.lastIndex - 1], nodes.last())
-    }
-
-
-    override fun before() {
-        mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.node.services"),
-                defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
-                threadPerNode = true
-        )
-        val started = startClusterAndNode(mockNet)
-        notary = started.first
-        node = started.second
-        patientNode = started.third
-    }
-
-    override fun after() {
-        mockNet.stopNodes()
-    }
-}
 
 class TimedFlowTests {
     companion object {
@@ -325,5 +237,81 @@ class TimedFlowTests {
         override fun createServiceFlow(otherPartySession: FlowSession): FlowLogic<Void?> = NonValidatingNotaryFlow(otherPartySession, this, waitEtaThreshold)
         override fun start() {}
         override fun stop() {}
+    }
+}
+
+
+class TimedFlowTestRule(private val clusterSize: Int) : ExternalResource() {
+
+    lateinit var mockNet: InternalMockNetwork
+    lateinit var notary: Party
+    lateinit var node: TestStartedNode
+    lateinit var patientNode: TestStartedNode
+
+    private fun startClusterAndNode(mockNet: InternalMockNetwork): Triple<Party, TestStartedNode, TestStartedNode> {
+        val replicaIds = (0 until clusterSize)
+        val serviceLegalName = CordaX500Name("Custom Notary", "Zurich", "CH")
+        val notaryIdentity = DevIdentityGenerator.generateDistributedNotaryCompositeIdentity(
+                replicaIds.map { mockNet.baseDirectory(mockNet.nextNodeId + it) },
+                serviceLegalName)
+
+        val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
+        val notaryConfig = mock<NotaryConfig> {
+            whenever(it.serviceLegalName).thenReturn(serviceLegalName)
+            whenever(it.validating).thenReturn(true)
+            whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
+        }
+
+        val notaryNodes = (0 until clusterSize).map {
+            mockNet.createUnstartedNode(InternalMockNodeParameters(configOverrides = {
+                doReturn(notaryConfig).whenever(it).notary
+            }))
+        }
+
+        val aliceNode = mockNet.createUnstartedNode(
+                InternalMockNodeParameters(
+                        legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
+                        configOverrides = { conf: NodeConfiguration ->
+                            val retryConfig = FlowTimeoutConfiguration(1.seconds, 3, 1.0)
+                            doReturn(retryConfig).whenever(conf).flowTimeout
+                        }
+                )
+        )
+
+        val patientNode = mockNet.createUnstartedNode(
+                InternalMockNodeParameters(
+                        legalName = CordaX500Name("Bob", "BobCorp", "GB"),
+                        configOverrides = { conf: NodeConfiguration ->
+                            val retryConfig = FlowTimeoutConfiguration(10.seconds, 3, 1.0)
+                            doReturn(retryConfig).whenever(conf).flowTimeout
+                        }
+                )
+        )
+
+        // MockNetwork doesn't support notary clusters, so we create all the nodes we need unstarted, and then install the
+        // network-parameters in their directories before they're started.
+        val nodes = (notaryNodes + aliceNode + patientNode).map { node ->
+            networkParameters.install(mockNet.baseDirectory(node.id))
+            node.start()
+        }
+
+        return Triple(notaryIdentity, nodes[nodes.lastIndex - 1], nodes.last())
+    }
+
+
+    override fun before() {
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.node.services"),
+                defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
+                threadPerNode = true
+        )
+        val started = startClusterAndNode(mockNet)
+        notary = started.first
+        node = started.second
+        patientNode = started.third
+    }
+
+    override fun after() {
+        mockNet.stopNodes()
     }
 }
