@@ -243,7 +243,7 @@ data class DriverParameters(
         val notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
         @Deprecated("extraCordappPackagesToScan does not preserve the original CorDapp's versioning and metadata, which may lead to " +
                 "misleading results in tests. Use cordappsForAllNodes instead.")
-        val extraCordappPackagesToScan: List<String> = emptyList(),
+        val extraCordappPackagesToScan: List<String> = listOf("migration"),
         @Suppress("DEPRECATION") val jmxPolicy: JmxPolicy = JmxPolicy(),
         val networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
         val notaryCustomOverrides: Map<String, Any?> = emptyMap(),
@@ -261,7 +261,7 @@ data class DriverParameters(
             startNodesInProcess: Boolean = false,
             waitForAllNodesToFinish: Boolean = false,
             notarySpecs: List<NotarySpec> = listOf(NotarySpec(DUMMY_NOTARY_NAME)),
-            extraCordappPackagesToScan: List<String> = emptyList(),
+            extraCordappPackagesToScan: List<String> = listOf("migration"),
             @Suppress("DEPRECATION") jmxPolicy: JmxPolicy = JmxPolicy(),
             networkParameters: NetworkParameters = testNetworkParameters(notaries = emptyList()),
             notaryCustomOverrides: Map<String, Any?> = emptyMap(),

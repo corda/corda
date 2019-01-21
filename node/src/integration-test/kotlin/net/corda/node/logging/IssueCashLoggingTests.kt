@@ -8,15 +8,19 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assume
 import org.junit.Test
 
 class IssueCashLoggingTests {
 
     @Test
     fun `issuing and sending cash as payment do not result in duplicate insertion warnings`() {
+        Assume.assumeTrue(!IntegrationTest.isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database, as it uses H2 specific JDBC URL
+
         val user = User("mark", "dadada", setOf(all()))
         driver(DriverParameters(cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val nodeA = startNode(rpcUsers = listOf(user)).getOrThrow()

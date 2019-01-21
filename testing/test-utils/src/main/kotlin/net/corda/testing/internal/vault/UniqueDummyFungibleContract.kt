@@ -36,6 +36,9 @@ class UniqueDummyFungibleContract : Contract {
 }
 
 object UniqueDummyFungibleStateSchema : MappedSchema(schemaFamily = UniqueDummyFungibleStateSchema::class.java, version = 1, mappedTypes = listOf(UniquePersistentDummyFungibleState::class.java)) {
+    override val migrationResource: String?
+        get() = "unique_dummy_fungible_state.changelog"
+
     @Entity
     @Table(name = "unique_dummy_fungible_state")
     class UniquePersistentDummyFungibleState(

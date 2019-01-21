@@ -72,5 +72,13 @@ DROP TABLE ${schema}.private_network CASCADE CONSTRAINTS
 DROP TABLE ${schema}.pk_hash_to_ext_id_map CASCADE CONSTRAINTS
 DROP TABLE ${schema}.state_party CASCADE CONSTRAINTS
 DROP TABLE ${schema}.foos CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cash_states_v3_participants CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cash_states_v3 CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cash_states_v2_participants CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cash_states_v2 CASCADE CONSTRAINTS
+DROP TABLE ${schema}.contract_cash_states_v1 CASCADE CONSTRAINTS
+DROP TABLE ${schema}.cash_states_v2 CASCADE CONSTRAINTS
+DROP TABLE ${schema}.unique_dummy_fungible_state CASCADE CONSTRAINTS
+DROP TABLE ${schema}.unique_dummy_linear_state CASCADE CONSTRAINTS
 DROP VIEW ${schema}.v_pkey_hash_ex_id_map CASCADE CONSTRAINTS
 DROP SEQUENCE ${schema}.hibernate_sequence
