@@ -311,4 +311,5 @@ network.
 Each machine's own address is used for the RPC connection as the node's internal messaging client needs it to
 connect to the broker.
 
-
+.. note:: It is possible to eliminate the need for a 3rd party load balancer by adding ``additionalP2PAddresses`` field if the compatibility zone operates at minimum platform version 4.
+          The ``p2pAddress`` should point to the primary node's machine address and ``additionalP2PAddresses`` should add the back-up node's machine address.
