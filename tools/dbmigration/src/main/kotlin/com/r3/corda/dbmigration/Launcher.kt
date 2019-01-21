@@ -133,7 +133,7 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
     }
 
     fun runMigrationCommand(schemas: Set<MappedSchema>, withMigration: (SchemaMigration, DataSource) -> Unit): Unit = this.runWithDataSource { dataSource ->
-        withMigration(SchemaMigration(schemas, dataSource, config.database, classLoader), dataSource)
+        withMigration(SchemaMigration(schemas, dataSource, config.database, classLoader, currentDirectory = null), dataSource)
     }
 }
 
