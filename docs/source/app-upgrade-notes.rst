@@ -17,6 +17,10 @@ However, there are usually new features and other opt-in changes that may improv
 application that are worth considering for any actively maintained software. This guide shows you how to upgrade your app to benefit
 from the new features in the latest release.
 
+.. note:: A number of new features will only work with states created in V4 nodes at present. As a result, if a node is upgraded to use
+          Corda 4, but states created with Corda 3 are present in the node, the node will report an error and exit. Apps upgraded to use
+          Corda 4 should therefore start from a clean node. This will be fixed in Corda 4.1.
+
 .. contents::
    :depth: 3
 
@@ -342,7 +346,7 @@ states in the vault, to maintain backwards compatibility. However, it may make s
 to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
 may result in queries returning more states than expected if the node is using Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
 
-Step 10. Explore other new features that may be useful
+Step 11. Explore other new features that may be useful
 ------------------------------------------------------
 
 Corda 4 adds several new APIs that help you build applications. Why not explore:
