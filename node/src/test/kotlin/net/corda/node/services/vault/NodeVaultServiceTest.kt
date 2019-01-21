@@ -15,6 +15,7 @@ import net.corda.core.node.services.*
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.QueryCriteria.*
+import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NonEmptySet
@@ -28,6 +29,7 @@ import net.corda.finance.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
@@ -41,6 +43,7 @@ import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.*
 import rx.observers.TestSubscriber
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -883,6 +886,41 @@ class NodeVaultServiceTest {
         }
 
         // We should never see 2 or 7.
+    }
+
+    @Test
+    fun `Checking for old vault states works correctly`() {
+        fun createTx(number: Int, vararg participants: Party): SignedTransaction {
+            return services.signInitialTransaction(TransactionBuilder(DUMMY_NOTARY).apply {
+                addOutputState(DummyState(number, participants.toList()), DummyContract.PROGRAM_ID)
+                addCommand(DummyCommandData, listOf(megaCorp.publicKey))
+            })
+        }
+
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(1, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(2, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ONLY_RELEVANT, listOf(createTx(3, miniCorp.party, megaCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(4, miniCorp.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(5, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.ALL_VISIBLE, listOf(createTx(6, megaCorp.party, bankOfCorda.party)))
+        services.recordTransactions(StatesToRecord.NONE, listOf(createTx(7, bankOfCorda.party)))
+
+        assertEquals(false, vaultService.oldStatesPresent())
+
+        val session = currentDBSession()
+        val stateToAdd = VaultSchemaV1.VaultStates(
+                notary = DUMMY_NOTARY,
+                contractStateClassName = DummyState::class.java.toString(),
+                stateStatus = Vault.StateStatus.UNCONSUMED,
+                recordedTime = Instant.now(),
+                relevancyStatus = Vault.RelevancyStatus.RELEVANT,
+                constraintType = Vault.ConstraintInfo.Type.ALWAYS_ACCEPT
+        )
+        val persistentStateRef = PersistentStateRef("C517D22982867E517E3E933A99C8F53658C8708A7B84FE37C36D0D8AF1EA167C", 23)
+        stateToAdd.stateRef = persistentStateRef
+        session.save(stateToAdd)
+
+        assertEquals(true, vaultService.oldStatesPresent())
     }
 
     @Test
