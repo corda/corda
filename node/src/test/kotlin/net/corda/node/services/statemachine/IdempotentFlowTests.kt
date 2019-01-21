@@ -9,7 +9,6 @@ import net.corda.core.flows.InitiatingFlow
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.IdempotentFlow
 import net.corda.core.internal.TimedFlow
-import net.corda.core.internal.packageName
 import net.corda.core.utilities.seconds
 import net.corda.node.services.config.FlowTimeoutConfiguration
 import net.corda.testing.node.internal.*
@@ -33,7 +32,7 @@ class IdempotentFlowTests {
 
     @Before
     fun start() {
-        mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = cordappsForPackages(this.javaClass.packageName))
+        mockNet = InternalMockNetwork(threadPerNode = true, cordappsForAllNodes = listOf(enclosedCordapp()))
         nodeA = mockNet.createNode(InternalMockNodeParameters(
                 legalName = CordaX500Name("Alice", "AliceCorp", "GB"),
                 configOverrides = {

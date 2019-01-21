@@ -20,6 +20,7 @@ import net.corda.testing.driver.InProcess
 import net.corda.testing.driver.driver
 import net.corda.testing.node.ClusterSpec
 import net.corda.testing.node.NotarySpec
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.junit.Test
 import java.util.*
 import kotlin.test.assertEquals
@@ -32,7 +33,7 @@ class RaftNotaryServiceTests {
     fun `detect double spend`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
         )) {
             val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()
@@ -65,7 +66,7 @@ class RaftNotaryServiceTests {
     fun `notarise issue tx with time-window`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
                 notarySpecs = listOf(NotarySpec(notaryName, cluster = ClusterSpec.Raft(clusterSize = 3)))
         )) {
             val bankA = startNode(providedName = DUMMY_BANK_A_NAME).map { (it as InProcess) }.getOrThrow()

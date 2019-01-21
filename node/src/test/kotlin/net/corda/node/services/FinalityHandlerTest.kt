@@ -6,7 +6,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.cordapp.CordappResolver
-import net.corda.core.internal.packageName
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -43,7 +42,7 @@ class FinalityHandlerTest {
                 legalName = BOB_NAME,
                 // The node disables the FinalityHandler completely if there are no old CorDapps loaded, so we need to add
                 // a token old CorDapp to keep the handler running.
-                additionalCordapps = setOf(cordappWithPackages(javaClass.packageName).copy(targetPlatformVersion = 3))
+                additionalCordapps = setOf(DUMMY_CONTRACTS_CORDAPP.copy(targetPlatformVersion = 3))
         ))
 
         val stx = alice.issueCashTo(bob)
