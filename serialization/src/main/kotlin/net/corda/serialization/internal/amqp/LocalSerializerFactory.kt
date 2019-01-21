@@ -210,7 +210,6 @@ class DefaultLocalSerializerFactory(
             typeInformation: LocalTypeInformation
     ): AMQPSerializer<Any> = makeAndCache(typeInformation) {
         logger.debug { "class=${clazz.simpleName}, type=$type is a composite type" }
-
         when {
             clazz.isSynthetic -> // Explicitly ban synthetic classes, we have no way of recreating them when deserializing. This also
                 // captures Lambda expressions and other anonymous functions
