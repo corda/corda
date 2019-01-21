@@ -235,7 +235,7 @@ jarDirs
   An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
   Each should be a string.
   Only the JARs in the directories are added, not the directories themselves.
-  This is useful for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]``.
+  This is useful for including JDBC drivers and the like. e.g. ``jarDirs = [ ${baseDirectory}"/libs" ]``.
   (Note that you have to use the ``baseDirectory`` substitution value when pointing to a relative path).
 
   *Default:* not defined
