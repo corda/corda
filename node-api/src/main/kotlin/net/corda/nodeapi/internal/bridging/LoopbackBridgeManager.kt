@@ -116,7 +116,7 @@ class LoopbackBridgeManager(config: MutualSslConfiguration,
         private fun clientArtemisMessageHandler(artemisMessage: ClientMessage) {
             logDebugWithMDC { "Loopback Send to ${legalNames.first()} uuid: ${artemisMessage.getObjectProperty("_AMQ_DUPL_ID")}" }
             val peerInbox = translateLocalQueueToInboxAddress(queueName)
-            producer?.send(SimpleString(peerInbox), artemisMessage) { artemisMessage.acknowledge() }
+            producer?.send(SimpleString(peerInbox), artemisMessage) { artemisMessage.individualAcknowledge() }
             bridgeMetricsService?.let { metricsService ->
                 val properties = ArtemisMessagingComponent.Companion.P2PMessagingHeaders.whitelistedHeaders.mapNotNull { key ->
                     if (artemisMessage.containsProperty(key)) {

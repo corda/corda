@@ -58,7 +58,7 @@ class FlowWorker(flowWorkerId: String, private val flowWorkerServiceHub: FlowWor
 
         consumer.setMessageHandler { message ->
             handleFlowWorkerMessage(message, session, producer)
-            message.acknowledge()
+            message.individualAcknowledge()
         }
 
         thread {

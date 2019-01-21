@@ -123,7 +123,7 @@ class BackpressureHandlingTest {
         private val waitEtaThreshold: Duration = NotaryServiceFlow.defaultEstimatedWaitTime
         private var waitETA: Duration = waitEtaThreshold
 
-        val defaultFlowTimeout = 2.seconds
+        val defaultFlowTimeout = 5.seconds
 
         private val notary by lazy { globalRule.notary }
         private val node by lazy { globalRule.node }
@@ -159,7 +159,7 @@ class BackpressureHandlingTest {
             val resultFuture = services.startFlow(flow).resultFuture
             var exceptionThrown = false
             try {
-                resultFuture.get(3, TimeUnit.SECONDS)
+                resultFuture.get(7, TimeUnit.SECONDS)
             } catch (e: TimeoutException) {
                 exceptionThrown = true
             }
@@ -180,13 +180,13 @@ class BackpressureHandlingTest {
                 val resultFuture = services.startFlow(flow).resultFuture
                 var exceptionThrown = false
                 try {
-                    resultFuture.get(3, TimeUnit.SECONDS)
+                    resultFuture.get(7, TimeUnit.SECONDS)
                 } catch (e: TimeoutException) {
                     exceptionThrown = true
                 }
                 assertTrue(exceptionThrown)
-                flow.stateMachine.updateTimedFlowTimeout(2)
-                resultFuture.get(10, TimeUnit.SECONDS)
+                flow.stateMachine.updateTimedFlowTimeout(5)
+                resultFuture.get(20, TimeUnit.SECONDS)
                 progressTrackerDone.get()
 
                 val metricName = MetricRegistry.name(Metrics.reportedWaitTimeSeconds(notary.metricPrefix()))
