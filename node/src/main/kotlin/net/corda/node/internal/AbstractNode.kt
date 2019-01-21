@@ -381,6 +381,10 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             installCordaServices()
             contractUpgradeService.start()
             vaultService.start()
+            if (vaultService.oldStatesPresent()) {
+                stop()
+                throw OldStatesException()
+            }
             ScheduledActivityObserver.install(vaultService, schedulerService, flowLogicRefFactory)
 
             val frozenTokenizableServices = tokenizableServices!!
@@ -1073,6 +1077,9 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 }
 
 class ConfigurationException(message: String) : CordaException(message)
+
+class OldStatesException : Exception("Detected states created using Corda 3 in the vault. Certain Corda 4 features cannot work with Corda 3" +
+        " states. Exiting.")
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
