@@ -4,7 +4,6 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.model.DefaultCacheProvider
 import net.corda.serialization.internal.model.TypeIdentifier
-import java.lang.IllegalStateException
 import java.lang.reflect.Type
 
 interface CustomSerializerRegistry {
