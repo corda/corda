@@ -1,10 +1,9 @@
 package net.corda.core.node.services
 
-import net.corda.core.CordaInternal
 import net.corda.core.DoNotImplement
 import net.corda.core.contracts.Attachment
-import net.corda.core.contracts.ContractAttachment
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import java.io.IOException
@@ -79,22 +78,15 @@ interface AttachmentStorage {
     }
 
     /**
-     * Find the Attachment Id of the contract attachment with the highest version for a given contract class name
-     * from trusted upload sources.  If both a signed and unsigned attachment exist, prefer the signed one.
+     * Find the Attachment Id(s) of the contract attachments with the highest version for a given contract class name
+     * from trusted upload sources.
+     * Return both signed and unsigned attachment ids where both versions exist (signed first, unsigned second), otherwise return a
+     * single signed or unsigned version id, or an empty list if none meet the criteria.
      *
      * @param contractClassName The fully qualified name of the contract class.
      * @param minContractVersion The minimum contract version that should be returned.
-     * @return the [AttachmentId] of the contract, or null if none meet the criteria.
+     * @return the [AttachmentId]s of the contract attachments, or an empty list if none meet the criteria.
      */
-    fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId?
-
-    /**
-     * Find the Attachment Ids of the contract attachments for a given contract class name
-     * from trusted upload sources.
-     *
-     * @param contractClassName The fully qualified name of the contract class.
-     * @return the [AttachmentId]s of the contract attachments, or an empty set if none meet the criteria.
-     */
-    fun getContractAttachments(contractClassName: String): Set<AttachmentId>
+    fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int = DEFAULT_CORDAPP_VERSION): List<AttachmentId>
 }
 
