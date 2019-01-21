@@ -493,7 +493,10 @@ class NodeVaultService(
         val queryRootPersistentStates = criteriaQuery.from(VaultSchemaV1.PersistentParty::class.java)
         criteriaQuery.select(queryRootPersistentStates)
         val query = session.createQuery(criteriaQuery)
-        return query.resultList.toSet()
+        val result = query.resultList.toSet()
+
+        log.debug("Found ${result.size} persistent party entries")
+        return result
     }
 
     override fun oldStatesPresent(): Boolean {
