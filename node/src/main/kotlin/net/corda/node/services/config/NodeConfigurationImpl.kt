@@ -75,7 +75,8 @@ data class NodeConfigurationImpl(
         override val jmxReporterType: JmxReporterType? = Defaults.jmxReporterType,
         override val flowOverrides: FlowOverrideConfig?,
         override val cordappSignerKeyFingerprintBlacklist: List<String> = Defaults.cordappSignerKeyFingerprintBlacklist,
-        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings
+        override val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = Defaults.networkParameterAcceptanceSettings,
+        override val allowPreV4States: Boolean = Defaults.allowPreV4States
 ) : NodeConfiguration {
     internal object Defaults {
         val jmxMonitoringHttpPort: Int? = null
@@ -108,6 +109,7 @@ data class NodeConfigurationImpl(
         val jmxReporterType: JmxReporterType = NodeConfiguration.defaultJmxReporterType
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
+        const val allowPreV4States: Boolean = false
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 

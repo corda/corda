@@ -380,7 +380,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             installCordaServices()
             contractUpgradeService.start()
             vaultService.start()
-            if (vaultService.oldStatesPresent()) {
+            if (!configuration.allowPreV4States && vaultService.oldStatesPresent()) {
                 stop()
                 throw OldStatesException()
             }
