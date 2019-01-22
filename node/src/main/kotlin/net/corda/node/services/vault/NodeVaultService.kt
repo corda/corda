@@ -210,6 +210,7 @@ class NodeVaultService(
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
+            val referenceStates = loadStates(tx.references)
 
             // Is transaction irrelevant?
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
@@ -217,7 +218,7 @@ class NodeVaultService(
                 return null
             }
 
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
+            return Vault.Update(consumedStates.toSet() + referenceStates.toSet(), ourNewStates.toSet())
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
