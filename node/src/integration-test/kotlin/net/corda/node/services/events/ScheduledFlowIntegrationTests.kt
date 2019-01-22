@@ -27,6 +27,9 @@ import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
 import org.junit.ClassRule
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.cordappWithPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import java.time.Instant
 import java.util.*
@@ -107,7 +110,7 @@ class ScheduledFlowIntegrationTests : IntegrationTest() {
     fun `test that when states are being spent at the same time that schedules trigger everything is processed`() {
         driver(DriverParameters(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts", "net.corda.testMessage")
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, cordappWithPackages("net.corda.testMessage"), enclosedCordapp())
         )) {
             val N = 23
             val rpcUser = User("admin", "admin", setOf("ALL"))

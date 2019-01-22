@@ -225,6 +225,12 @@ We've upgraded to Gradle 4.10.1.
 Changes for administrators in Corda 4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Official Docker images
+++++++++++++++++++++++
+
+Corda 4 adds an :doc:`docker-image` for starting the node. It's based on Ubuntu and uses the Azul Zulu
+spin of Java 8. Other tools will have Docker images in future as well.
+
 Auto-acceptance for network parameters updates
 ++++++++++++++++++++++++++++++++++++++++++++++
 

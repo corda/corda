@@ -12,7 +12,7 @@ class ReleaseLockCli : CliWrapperBase(RELEASE_LOCK, "Releases whatever locks are
     override fun runProgram(): Int {
         val db = cmdLineOptions.toConfig()
         db.runWithDataSource { it ->
-            SchemaMigration(emptySet(), it, db.config.database, Thread.currentThread().contextClassLoader).forceReleaseMigrationLock()
+            SchemaMigration(emptySet(), it, db.config.database, Thread.currentThread().contextClassLoader, currentDirectory = null).forceReleaseMigrationLock()
         }
         return ExitCodes.SUCCESS
     }

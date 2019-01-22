@@ -48,8 +48,10 @@ class ValidatingNotaryServiceTests {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts"),
-                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4))
+        mockNet = InternalMockNetwork(
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
+                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+        )
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         notaryNode = mockNet.defaultNotaryNode
         notary = mockNet.defaultNotaryIdentity

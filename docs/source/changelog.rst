@@ -77,7 +77,7 @@ Version 4.0
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
 
 * BFT-Smart and Raft notary implementations have been move to the ``net.corda.notary.experimental`` package to emphasise
-  their experimental nature.
+  their experimental nature. Note that it not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
 
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
@@ -319,6 +319,9 @@ Version 4.0
 * The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
 
 * Logging for P2P and RPC has been separated, to make it easier to enable all P2P or RPC logging without hand-picking loggers for individual classes.
+
+* Vault Query Criteria have been enhanced to allow filtering by state relevancy. Queries can request all states, just relevant ones, or just non relevant ones. The default is to return all states, to maintain backwards compatibility.
+  Note that this means apps running on nodes using Observer node functionality should update their queries to request only relevant states if they are only expecting to see states in which they participate.
 
 Version 3.3
 -----------

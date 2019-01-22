@@ -802,9 +802,10 @@ class DriverDSLImpl(
                         else emptyList()
             }.invoke()
 
-            // This excludes the samples and the finance module from the system classpath of the out of process nodes
-            // as they will be added to the cordapps folder.
-            val exclude = listOf("samples", "corda-finance", "finance", "integrationTest", "test", "corda-mock")
+            // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
+            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.) or irrelevant testing libraries (test, corda-mock etc.).
+            // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
+            val exclude = listOf("samples", "corda-finance", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
             val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
                 exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
             }

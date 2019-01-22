@@ -34,8 +34,7 @@ import net.corda.notaryhealthcheck.utils.Monitorable
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.internal.GlobalDatabaseRule
 import net.corda.testing.internal.LogHelper
-import net.corda.testing.node.InMemoryMessagingNetwork
-import net.corda.testing.node.MockNetworkParameters
+import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.internal.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -101,8 +100,12 @@ class BackpressureHandlingTestRule(val clusterSize: Int) : ExternalResource() {
 
     override fun before() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp"),
-                defaultParameters = MockNetworkParameters().withServicePeerAllocationStrategy(InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin()),
+                cordappsForAllNodes = listOf(
+                        findCordapp("net.corda.notaryhealthcheck.contract"),
+                        findCordapp("net.corda.notaryhealthcheck.cordapp"),
+                        cordappForClasses(BackpressureHandlingTest.TestNotaryService::class.java)
+                ),
+                servicePeerAllocationStrategy = RoundRobin(),
                 threadPerNode = true
         )
         val started = startClusterAndNode(mockNet)

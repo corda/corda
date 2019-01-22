@@ -14,15 +14,11 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.packageName
 import net.corda.testing.core.*
 import net.corda.testing.internal.matchers.allOf
 import net.corda.testing.internal.matchers.flow.willReturn
 import net.corda.testing.internal.matchers.hasOnlyEntries
-import net.corda.testing.node.internal.InternalMockNetwork
-import net.corda.testing.node.internal.TestStartedNode
-import net.corda.testing.node.internal.cordappsForPackages
-import net.corda.testing.node.internal.startFlow
+import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.AfterClass
 import org.junit.Test
@@ -33,7 +29,7 @@ class SwapIdentitiesFlowTests {
         private val mockNet = InternalMockNetwork(
                 networkSendManuallyPumped = false,
                 threadPerNode = true,
-                cordappsForAllNodes = cordappsForPackages(this::class.packageName)
+                cordappsForAllNodes = listOf(enclosedCordapp())
         )
 
         @AfterClass
@@ -166,18 +162,19 @@ class SwapIdentitiesFlowTests {
 
     private fun TestStartedNode.holdsOwningKey() = HoldsOwningKeyMatcher(this)
     //endregion
-}
 
-@InitiatingFlow
-private class SwapIdentitiesInitiator(private val otherSide: Party) : FlowLogic<Map<Party, AnonymousParty>>() {
-    @Suspendable
-    override fun call(): Map<Party, AnonymousParty> = subFlow(SwapIdentitiesFlow(initiateFlow(otherSide)))
-}
+    @InitiatingFlow
+    private class SwapIdentitiesInitiator(private val otherSide: Party) : FlowLogic<Map<Party, AnonymousParty>>() {
+        @Suspendable
+        override fun call(): Map<Party, AnonymousParty>  = subFlow(SwapIdentitiesFlow(initiateFlow(otherSide)))
 
-@InitiatedBy(SwapIdentitiesInitiator::class)
-private class SwapIdentitiesResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(SwapIdentitiesFlow(otherSide))
+    }
+
+    @InitiatedBy(SwapIdentitiesInitiator::class)
+    private class SwapIdentitiesResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(SwapIdentitiesFlow(otherSide))
+        }
     }
 }

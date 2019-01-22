@@ -96,7 +96,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     
     //All other nodes should be using LoggingBuyerFlow as it is a subclass of BuyerFlow
     node {
-        name "O=LoggingBank,L=London,C=GB"
+        name "O=NonLogging Bank,L=London,C=GB"
         p2pPort 10025
         cordapps = ["net.corda:corda-finance-contracts:$os_corda_release_version"]
         rpcUsers = ext.rpcUsers

@@ -71,7 +71,7 @@ In the ``build.gradle`` file for your contract module, add a block like this::
         contract {
             name "MegaApp Contracts"
             vendor "MegaCorp"
-            license "MegaLicense"
+            licence "MegaLicence"
             versionId 1
         }
     }
@@ -87,7 +87,7 @@ And in the ``build.gradle`` file for your workflows jar, add a block like this::
         workflow {
             name "MegaApp"
             vendor "MegaCorp"
-            license "MegaLicense"
+            licence "MegaLicence"
             versionId 1
         }
     }

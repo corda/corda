@@ -7,17 +7,21 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.testing.MESSAGE_CHAIN_CONTRACT_PROGRAM_ID
+import net.corda.node.testing.MessageChainContract
+import net.corda.node.testing.MessageChainState
+import net.corda.node.testing.MessageData
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.cordappWithPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -30,9 +34,10 @@ class TransactionOrderingTests {
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(cordappWithPackages(MessageChainState::class.packageName)),
+                cordappsForAllNodes = listOf(cordappWithPackages("net.corda.node.testing"), enclosedCordapp()),
                 networkSendManuallyPumped = false,
-                threadPerNode = true)
+                threadPerNode = true
+        )
     }
 
     @After
@@ -91,25 +96,26 @@ class TransactionOrderingTests {
         val bobStates = bob.services.vaultService.queryBy(MessageChainState::class.java, queryCriteria)
         assertEquals(3, bobStates.states.size)
     }
-}
 
-@InitiatingFlow
-@StartableByRPC
-class SendTx(private val party: Party,
-             private val stx: SignedTransaction) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        val session = initiateFlow(party)
-        subFlow(SendTransactionFlow(session, stx))
-        session.receive<Unit>()
+
+    @InitiatingFlow
+    @StartableByRPC
+    class SendTx(private val party: Party,
+                 private val stx: SignedTransaction) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(party)
+            subFlow(SendTransactionFlow(session, stx))
+            session.receive<Unit>()
+        }
     }
-}
 
-@InitiatedBy(SendTx::class)
-class ReceiveTx(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ONLY_RELEVANT))
-        otherSideSession.send(Unit)
+    @InitiatedBy(SendTx::class)
+    class ReceiveTx(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ONLY_RELEVANT))
+            otherSideSession.send(Unit)
+        }
     }
 }

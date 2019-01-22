@@ -66,7 +66,7 @@ class FlowFrameworkTests {
     @Before
     fun setUpMockNet() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts") + FINANCE_CORDAPPS,
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP),
                 servicePeerAllocationStrategy = RoundRobin()
         )
 

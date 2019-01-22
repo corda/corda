@@ -20,7 +20,9 @@ import net.corda.notaryhealthcheck.utils.Monitorable
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkNotarySpec
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.findCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -34,14 +36,17 @@ class TestCheckScheduleManagementFlow {
     private lateinit var nodeA: StartedMockNode
     private lateinit var notary1: Party
     private lateinit var notary2: Party
+
     @Before
     fun setup() {
-        mockNet = MockNetwork(
+        mockNet = MockNetwork(MockNetworkParameters(
                 threadPerNode = true,
-                cordappPackages = listOf("net.corda.notaryhealthcheck.contract", "net.corda.notaryhealthcheck.cordapp"),
+                cordappsForAllNodes = listOf(findCordapp("net.corda.notaryhealthcheck.contract"), findCordapp("net.corda.notaryhealthcheck.cordapp")),
                 notarySpecs = listOf(
                         MockNetworkNotarySpec(CordaX500Name.parse("O=Notary1, L=London, C=GB")),
-                        MockNetworkNotarySpec(CordaX500Name.parse("O=Notary2, L=New York, C=US"))))
+                        MockNetworkNotarySpec(CordaX500Name.parse("O=Notary2, L=New York, C=US"))
+                )
+        ))
 
         nodeA = mockNet.createPartyNode()
         notary1 = mockNet.notaryNodes.first().info.legalIdentities.first()

@@ -1,4 +1,4 @@
-package net.corda.node.services.persistence
+package net.corda.node.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
@@ -48,7 +48,7 @@ object MessageChainSchemaV1 : MappedSchema(
     ) : PersistentState()
 }
 
-const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.node.services.persistence.MessageChainContract"
+const val MESSAGE_CHAIN_CONTRACT_PROGRAM_ID = "net.corda.node.testing.MessageChainContract"
 
 open class MessageChainContract : Contract {
     override fun verify(tx: LedgerTransaction) {
@@ -67,4 +67,3 @@ open class MessageChainContract : Contract {
         class Send : Commands
     }
 }
-

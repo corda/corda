@@ -5,7 +5,6 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.flows.FinalityFlow
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.node.services.queryBy
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -14,7 +13,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.issuedBy
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.startFlow
 import org.assertj.core.api.Assertions.assertThat
@@ -24,11 +23,7 @@ import rx.schedulers.Schedulers
 import java.util.concurrent.CountDownLatch
 
 class ServiceHubConcurrentUsageTest {
-    private val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(
-            "net.corda.finance.schemas",
-            "net.corda.node.services.vault.VaultQueryExceptionsTests",
-            Cash::class.packageName
-    ))
+    private val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP))
 
     @After
     fun stopNodes() {
@@ -42,7 +37,7 @@ class ServiceHubConcurrentUsageTest {
         val initiatingFlow = TestFlow(mockNet.defaultNotaryIdentity)
         val node = mockNet.createPartyNode()
 
-        node.services.validatedTransactions.updates.observeOn(Schedulers.io()).subscribe { _ ->
+        node.services.validatedTransactions.updates.observeOn(Schedulers.io()).subscribe {
             try {
                 node.services.vaultService.queryBy<ContractState>().states
                 successful = true

@@ -1,4 +1,4 @@
-package net.corda.node.services.persistence
+package net.corda.nodeapi.internal.persistence
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -8,10 +8,8 @@ import net.corda.core.schemas.CommonSchemaV1
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.startHikariPool
+import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.schema.NodeSchemaService
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.apache.commons.io.FileUtils
@@ -29,10 +27,12 @@ import javax.persistence.*
 class SchemaMigrationTest {
 
     private fun configureDatabase(hikariProperties: Properties,
-                          databaseConfig: DatabaseConfig,
-                          schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence =
-            createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(), null)
-                .apply { startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys) }
+                                  databaseConfig: DatabaseConfig,
+                                  schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence {
+        return createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(), null).apply {
+            startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys)
+        }
+    }
 
     @Test
     fun `Ensure that runMigration is disabled by default`() {
@@ -59,7 +59,12 @@ class SchemaMigrationTest {
         val dataSourceProps = MockServices.makeTestDataSourceProperties()
 
         //run the migration on the database
-        val migration = SchemaMigration(schemaService.schemaOptions.keys, HikariDataSource(HikariConfig(dataSourceProps)), DatabaseConfig())
+        val migration = SchemaMigration(
+                schemaService.schemaOptions.keys,
+                HikariDataSource(HikariConfig(dataSourceProps)),
+                DatabaseConfig(),
+                currentDirectory = null
+        )
         migration.runMigration(false)
 
         //start the node with "runMigration = false" and check that it started correctly
@@ -73,7 +78,8 @@ class SchemaMigrationTest {
 
         // create a migration file for the DummyTestSchemaV1 and add it to the classpath
         val tmpFolder = Files.createTempDirectory("test")
-        val fileName = MigrationExporter(tmpFolder, dataSourceProps, Thread.currentThread().contextClassLoader, HikariDataSource(HikariConfig(dataSourceProps))).generateMigrationForCorDapp(DummyTestSchemaV1).second.fileName
+        val fileName = MigrationExporter(tmpFolder, dataSourceProps, Thread.currentThread().contextClassLoader, HikariDataSource(HikariConfig(dataSourceProps)))
+                .generateMigrationForCorDapp(DummyTestSchemaV1).second.fileName
         addToClassPath(tmpFolder)
 
         // run the migrations for DummyTestSchemaV1, which should pick up the migration file
