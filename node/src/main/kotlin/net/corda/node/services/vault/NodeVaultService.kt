@@ -485,7 +485,7 @@ class NodeVaultService(
 
     override fun oldStatesPresent(): Boolean {
         log.info("Checking for states in vault from a previous version")
-        return database.transaction {
+        val oldStatesPresent = database.transaction {
             val session = getSession()
             val persistentStates = getPersistentStateCount(session)
             val stateParties = getPersistentPartyCount(session)
@@ -493,6 +493,8 @@ class NodeVaultService(
             // There are no V3 states if all the states in the vault are also in the state_party table
             stateParties != persistentStates
         }
+        log.info("Finished checking for old states. Old states present: $oldStatesPresent")
+        return oldStatesPresent
     }
 
     @VisibleForTesting
