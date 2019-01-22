@@ -34,7 +34,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
-import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -350,8 +349,9 @@ class NodeAttachmentService(
         val id = bytes.sha256()
 
         if (!hasAttachment(id)) {
+            checkIsAValidJAR(bytes.inputStream())
             return database.transaction {
-                withContractsInJar(ByteArrayInputStream(bytes)) { contractClassNames, inputStream ->
+                withContractsInJar(bytes.inputStream()) { contractClassNames, inputStream ->
                     require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
 
                     val jarSigners = getSigners(bytes)
@@ -379,19 +379,30 @@ class NodeAttachmentService(
         }
 
         // This branch is called to update the `uploader` field if the current one is more trusted.
-        if (isUploaderTrusted(uploader)) {
+        val updated = if (isUploaderTrusted(uploader)) {
             database.transaction {
                 val session = currentDBSession()
                 val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                 // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                 if (attachment.uploader != uploader) {
+                    verifyVersionUniquenessForSignedAttachments(attachment.contractClassNames!!, attachment.version, attachment.signers)
                     attachment.uploader = uploader
                     session.saveOrUpdate(attachment)
                     log.info("Updated attachment $id with uploader $uploader")
-                }
+                    attachment.contractClassNames?.forEach { contractsCache.invalidate(it) }
+                    loadAttachmentContent(id)?.let { attachmentAndContent ->
+                        // TODO: this is racey. ENT-2870
+                        attachmentContentCache.put(id, Optional.of(attachmentAndContent))
+                        attachmentCache.put(id, Optional.of(attachmentAndContent.first))
+                    }
+                    true
+                } else false
             }
-            // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
-        }
+        } else false
+
+        if(updated) return id
+
+        // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
         throw DuplicateAttachmentException(id.toString())
     }
 
@@ -487,7 +498,7 @@ class NodeAttachmentService(
 
     private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
-        check (signed.size <= 1) //sanity check
+        check(signed.size <= 1) //sanity check
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
         if (unsigned.size > 1)
             log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
