@@ -80,12 +80,12 @@ interface AttachmentStorage {
     /**
      * Find the Attachment Id(s) of the contract attachments with the highest version for a given contract class name
      * from trusted upload sources.
-     * Return both signed and unsigned attachment ids where both versions exist (signed first, unsigned second), otherwise return a
+     * Return highest version of both signed and unsigned attachment ids (signed first, unsigned second), otherwise return a
      * single signed or unsigned version id, or an empty list if none meet the criteria.
      *
      * @param contractClassName The fully qualified name of the contract class.
      * @param minContractVersion The minimum contract version that should be returned.
-     * @return the [AttachmentId]s of the contract attachments, or an empty list if none meet the criteria.
+     * @return the [AttachmentId]s of the contract attachments (signed always first in list), or an empty list if none meet the criteria.
      */
     fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int = DEFAULT_CORDAPP_VERSION): List<AttachmentId>
 }

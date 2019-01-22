@@ -499,7 +499,12 @@ class NodeAttachmentService(
 
     override fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int): List<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
-        return newestAttachmentIds?.toList() ?: emptyList()
+        val newestAttachmentIds = versions.tailMap(minContractVersion, true)
+        val newestSignedAttachment = newestAttachmentIds.values.map { it.signed }.lastOrNull { it != null }
+        val newestUnsignedAttachment = newestAttachmentIds.values.map { it.unsigned }.lastOrNull { it != null }
+        return if (newestSignedAttachment != null || newestUnsignedAttachment != null)
+            AttachmentIds(newestSignedAttachment, newestUnsignedAttachment).toList()
+        else
+            emptyList()
     }
 }
