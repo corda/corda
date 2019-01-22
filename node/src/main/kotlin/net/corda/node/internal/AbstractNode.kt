@@ -1077,8 +1077,8 @@ class FlowStarterImpl(private val smm: StateMachineManager, private val flowLogi
 
 class ConfigurationException(message: String) : CordaException(message)
 
-class OldStatesException : Exception("Detected states created using Corda 3 in the vault. Certain Corda 4 features cannot work with Corda 3" +
-        " states. Exiting.")
+class OldStatesException : Exception("Detected states created using Corda 3 in the vault. Currently certain Corda 4 features cannot work with Corda 3" +
+        " states. See the release notes for more details. Exiting.")
 
 fun createCordaPersistence(databaseConfig: DatabaseConfig,
                            wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
