@@ -34,6 +34,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.nodeapi.internal.withContractsInJar
+import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -350,7 +351,7 @@ class NodeAttachmentService(
 
         if (!hasAttachment(id)) {
             return database.transaction {
-                withContractsInJar(jar) { contractClassNames, inputStream ->
+                withContractsInJar(ByteArrayInputStream(bytes)) { contractClassNames, inputStream ->
                     require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
 
                     val jarSigners = getSigners(bytes)
