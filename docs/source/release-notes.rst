@@ -15,6 +15,10 @@ comes with those same guarantees. States and apps valid in Corda 3 are transpare
    along with how you can adjust your app to opt-in to new features making your app more secure and
    easier to upgrade.
 
+.. note:: Currently, states created with a node running Corda 3 are incompatible with some Corda 4 features.
+   If a node running Corda 4 detects that these states are present, it will exit to prevent errors from
+   occurring while using those states. This is a temporary condition that will be fixed for Corda 4.1.
+
 Additionally, be aware that the data model upgrades are changes to the Corda consensus rules. To use
 apps that benefit from them, *all* nodes in a compatibility zone must be upgraded and the zone must be
 enforcing that upgrade. This may take time in large zones like the testnet. Please take this into
