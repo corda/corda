@@ -25,7 +25,7 @@ dependencies {
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
     cordaRuntime project(':node-api')
-    // IRS demo cordapp - contracts and workflows parts
+
     cordapp project(':samples:irs-demo:cordapp:contracts-irs')
     cordapp project(':samples:irs-demo:cordapp:workflows-irs')
 }

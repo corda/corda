@@ -37,7 +37,7 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         name "O=Bank A,L=London,C=GB"
         p2pPort 10006
         // This configures the default cordapp for this node
-        projectCordapp {
+        cordapp (project(':samples:cordapp-configuration:workflows')) {
             config "someStringValue=test"
         }
         rpcSettings {
@@ -50,8 +50,8 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         name "O=Bank B,L=New York,C=US"
         p2pPort 10010
         // This configures the default cordapp for this node
-        projectCordapp {
-            config project.file("workflows/src/config.conf")
+        cordapp (project(':samples:cordapp-configuration:workflows')){
+            config project.file("src/config.conf")
         }
         rpcSettings {
             port 10011

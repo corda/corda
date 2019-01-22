@@ -25,9 +25,6 @@ dependencies {
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 
-    // Cordapp dependencies
-    // Specify your cordapp's dependencies below, including dependent cordapps
-
     // Test dependencies
     testCompile "junit:junit:$junit_version"
 }
