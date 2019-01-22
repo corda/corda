@@ -380,13 +380,15 @@ class NodeAttachmentService(
 
         // This branch is called to update the `uploader` field if the current one is more trusted.
         if (isUploaderTrusted(uploader)) {
-            val session = currentDBSession()
-            val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-            // update the `uploader` field (as the existing attachment may have been resolved from a peer)
-            if (attachment.uploader != uploader) {
-                attachment.uploader = uploader
-                session.saveOrUpdate(attachment)
-                log.info("Updated attachment $id with uploader $uploader")
+            database.transaction {
+                val session = currentDBSession()
+                val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
+                // update the `uploader` field (as the existing attachment may have been resolved from a peer)
+                if (attachment.uploader != uploader) {
+                    attachment.uploader = uploader
+                    session.saveOrUpdate(attachment)
+                    log.info("Updated attachment $id with uploader $uploader")
+                }
             }
             // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
         }
