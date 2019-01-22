@@ -81,17 +81,17 @@ class HashLookupCommandTest {
     private fun issueTransaction(node: NodeHandle): SecureHash {
         return node.rpc.startFlow(::DummyIssue).returnValue.get()
     }
+}
 
-    @StartableByRPC
-    internal class DummyIssue : FlowLogic<SecureHash>() {
-        @Suspendable
-        override fun call(): SecureHash {
-            val me = serviceHub.myInfo.legalIdentities.first().ref(0)
-            val fakeNotary = me.party
-            val builder = DummyContract.generateInitial(1, fakeNotary as Party, me)
-            val stx = serviceHub.signInitialTransaction(builder)
-            serviceHub.recordTransactions(stx)
-            return stx.id
-        }
+@StartableByRPC
+internal class DummyIssue : FlowLogic<SecureHash>() {
+    @Suspendable
+    override fun call(): SecureHash {
+        val me = serviceHub.myInfo.legalIdentities.first().ref(0)
+        val fakeNotary = me.party
+        val builder = DummyContract.generateInitial(1, fakeNotary as Party, me)
+        val stx = serviceHub.signInitialTransaction(builder)
+        serviceHub.recordTransactions(stx)
+        return stx.id
     }
 }
