@@ -288,7 +288,7 @@ open class TransactionBuilder(
         val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
         val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
         if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
-            val attachmentIds = services.attachments.getContractAttachments(contractClassName)
+            val attachmentIds = services.attachments.getLatestContractAttachments(contractClassName)
             // only switchover if we have both signed and unsigned attachments for the given contract class name
             if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
                 val attachmentsToUse = attachmentIds.map {
@@ -465,7 +465,7 @@ open class TransactionBuilder(
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
-        return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
+        return services.attachments.getLatestContractAttachments(contractClassName, minimumRequiredContractClassVersion).firstOrNull()
                 ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
     }
 
