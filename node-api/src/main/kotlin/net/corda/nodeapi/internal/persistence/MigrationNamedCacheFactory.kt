@@ -22,6 +22,9 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
         return when(name) {
             "HibernateConfiguration_sessionFactories" -> caffeine.maximumSize(
                     nodeConfiguration?.database?.mappedSchemaCacheSize ?: DatabaseConfig.Defaults.mappedSchemaCacheSize)
+            "DBTransactionStorage_transactions" -> caffeine.maximumWeight(
+                    nodeConfiguration?.transactionCacheSizeBytes ?: NodeConfiguration.defaultTransactionCacheSize
+            )
             else -> throw IllegalArgumentException("Unexpected cache name $name.")
         }
     }
