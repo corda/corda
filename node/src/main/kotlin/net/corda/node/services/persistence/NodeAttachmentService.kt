@@ -96,7 +96,7 @@ class NodeAttachmentService(
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
-            @Column(name = "uploader", updatable = false, nullable = true)
+            @Column(name = "uploader", nullable = true)
             var uploader: String? = null,
 
             @Column(name = "filename", updatable = false, nullable = true)
@@ -381,7 +381,6 @@ class NodeAttachmentService(
                     if (attachment.uploader != uploader) {
                         verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
-                        session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
