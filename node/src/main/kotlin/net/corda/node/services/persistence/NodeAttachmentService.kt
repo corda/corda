@@ -88,17 +88,17 @@ class NodeAttachmentService(
             @Id
             @Column(name = "att_id", nullable = false)
             var attId: String,
-            //TODO make this field 'val' and 'updatable = false' to avoid adding the column to SQL query when the attachment is updated (for now can't be due to unit test util 'TestStartedNode.hackAttachment')
+
             @Column(name = "content", nullable = false)
             @Lob
             var content: ByteArray,
-            //TODO make this field 'val'
+
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
             @Column(name = "uploader", nullable = true)
             var uploader: String? = null,
-            //TODO make this field 'val'
+
             @Column(name = "filename", updatable = false, nullable = true)
             var filename: String? = null,
 
