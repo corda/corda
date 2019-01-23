@@ -44,7 +44,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     override fun openAttachment(id: SecureHash): Attachment? = files[id]?.first
 
-    override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<SecureHash> {
+    override fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {
         criteria as AttachmentQueryCriteria.AttachmentsQueryCriteria
         val contractClassNames =
                 if (criteria.contractClassNamesCondition is ColumnPredicate.EqualityComparison)
@@ -113,15 +113,10 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
         return sha256
     }
 
-    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+    override fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int): List<AttachmentId> {
         val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)),
                 versionCondition = Builder.greaterThanOrEqual(minContractVersion), uploaderCondition = Builder.`in`(TRUSTED_UPLOADERS))
         val attachmentSort = AttachmentSort(listOf(AttachmentSort.AttachmentSortColumn(AttachmentSort.AttachmentSortAttribute.VERSION, Sort.Direction.DESC)))
-        return queryAttachments(attachmentQueryCriteria, attachmentSort).firstOrNull()
-    }
-
-    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
-        val attachmentQueryCriteria = AttachmentQueryCriteria.AttachmentsQueryCriteria(contractClassNamesCondition = Builder.equal(listOf(contractClassName)))
-        return queryAttachments(attachmentQueryCriteria).toSet()
+        return queryAttachments(attachmentQueryCriteria, attachmentSort)
     }
 }
