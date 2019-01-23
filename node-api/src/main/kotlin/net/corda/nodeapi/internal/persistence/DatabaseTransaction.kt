@@ -96,7 +96,8 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-        connection.close()
+        // TODO: add a way of not closing the transaction.
+        //connection.close()
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {

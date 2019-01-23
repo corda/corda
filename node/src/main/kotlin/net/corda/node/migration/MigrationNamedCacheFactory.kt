@@ -1,4 +1,4 @@
-package net.corda.nodeapi.internal.persistence
+package net.corda.node.migration
 
 import com.codahale.metrics.MetricRegistry
 import com.github.benmanes.caffeine.cache.Cache
@@ -8,6 +8,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache
 import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.BindableNamedCacheFactory
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.lang.IllegalArgumentException
 
 // TODO: Need to resolve circular dependency
@@ -21,10 +22,14 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
     private fun <K, V> configuredForNamed(caffeine: Caffeine<K, V>, name: String): Caffeine<K, V> {
         return when(name) {
             "HibernateConfiguration_sessionFactories" -> caffeine.maximumSize(
-                    nodeConfiguration?.database?.mappedSchemaCacheSize ?: DatabaseConfig.Defaults.mappedSchemaCacheSize)
+                    nodeConfiguration?.database?.mappedSchemaCacheSize ?: DatabaseConfig.Defaults.mappedSchemaCacheSize
+            )
             "DBTransactionStorage_transactions" -> caffeine.maximumWeight(
                     nodeConfiguration?.transactionCacheSizeBytes ?: NodeConfiguration.defaultTransactionCacheSize
             )
+            "PersistentIdentityService_partyByKey" -> caffeine.maximumSize(defaultCacheSize)
+            "PersistentIdentityService_partyByName" -> caffeine.maximumSize(defaultCacheSize)
+            "BasicHSMKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)
             else -> throw IllegalArgumentException("Unexpected cache name $name.")
         }
     }
@@ -36,4 +41,6 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
     override fun <K, V> buildNamed(caffeine: Caffeine<in K, in V>, name: String, loader: CacheLoader<K, V>): LoadingCache<K, V> {
         return configuredForNamed(caffeine, name).build(loader)
     }
+
+    private val defaultCacheSize = 1024L
 }
