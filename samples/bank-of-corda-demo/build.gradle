@@ -25,9 +25,6 @@ dependencies {
     // Javax is required for webapis
     compile "org.glassfish.jersey.core:jersey-server:${jersey_version}"
 
-    // Cordapp dependencies
-    // Specify your cordapp's dependencies below, including dependent cordapps
-
     // Test dependencies
     testCompile "junit:junit:$junit_version"
 }
@@ -121,10 +118,9 @@ jar {
 cordapp {
     targetPlatformVersion corda_platform_version.toInteger()
     minimumPlatformVersion 1
-    workflow {
-        name "net/corda/samples/bank-of-corda-demo"
-        versionId 1
+    info {
+        name "Bank of Corda Demo"
+        version "1"
         vendor "R3"
-        licence "Open Source (Apache 2)"
     }
 }
