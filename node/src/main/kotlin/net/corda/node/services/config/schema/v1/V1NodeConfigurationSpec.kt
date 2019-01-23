@@ -73,6 +73,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
+    private val allowPreV4States by boolean().optional().withDefaultValue(Defaults.allowPreV4States)
     @Suppress("unused")
     private val custom by nestedObject().optional()
 
@@ -128,7 +129,8 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
+                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
+                    allowPreV4States = configuration[allowPreV4States]
             ))
         } catch (e: Exception) {
             return when (e) {

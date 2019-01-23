@@ -84,6 +84,7 @@ interface NodeConfiguration {
     val cordappSignerKeyFingerprintBlacklist: List<String>
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
+    val allowPreV4States: Boolean
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

@@ -458,6 +458,45 @@ class NodeVaultService(
         return claimedStates
     }
 
+    private fun getPersistentStateCount(session: Session): Long {
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        criteriaQuery.select(criteriaBuilder.countDistinct(queryRootStates.get<PersistentStateRef>("stateRef").get<String>("txId")))
+        val query = session.createQuery(criteriaQuery)
+        val result = query.singleResult
+
+        log.debug("Found $result vault states")
+        return result
+    }
+
+    private fun getPersistentPartyCount(session: Session): Long {
+        val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
+        val queryRootPersistentStates = criteriaQuery.from(VaultSchemaV1.PersistentParty::class.java)
+        criteriaQuery.select(criteriaBuilder.countDistinct(queryRootPersistentStates
+                .get<VaultSchemaV1.PersistentStateRefAndKey>("compositeKey")
+                .get<PersistentStateRef>("stateRef")
+                .get<String>("txId")))
+        val query = session.createQuery(criteriaQuery)
+        val result = query.singleResult
+
+        log.debug("Found $result persistent party entries")
+        return result
+    }
+
+    override fun oldStatesPresent(): Boolean {
+        log.info("Checking for states in vault from a previous version")
+        val oldStatesPresent = database.transaction {
+            val session = getSession()
+            val persistentStates = getPersistentStateCount(session)
+            val stateParties = getPersistentPartyCount(session)
+
+            // There are no V3 states if all the states in the vault are also in the state_party table
+            stateParties != persistentStates
+        }
+        log.info("Finished checking for old states. Old states present: $oldStatesPresent")
+        return oldStatesPresent
+    }
+
     @VisibleForTesting
     internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
         val keysToCheck = when (state) {
@@ -491,7 +530,6 @@ class NodeVaultService(
 
             val criteriaQuery = criteriaBuilder.createQuery(Tuple::class.java)
             val queryRootVaultStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-
             // TODO: revisit (use single instance of parser for all queries)
             val criteriaParser = HibernateQueryCriteriaParser(contractStateType, contractStateTypeMappings, criteriaBuilder, criteriaQuery, queryRootVaultStates)
 
