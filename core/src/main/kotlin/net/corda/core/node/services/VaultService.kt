@@ -56,7 +56,8 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
              * Notary change transactions only modify the notary field on states, and potentially need to be handled
              * differently.
              */
-            val type: UpdateType = UpdateType.GENERAL
+            val type: UpdateType = UpdateType.GENERAL,
+            val references: Set<StateAndRef<U>>
     ) {
         /** Checks whether the update contains a state of the specified type. */
         inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
@@ -232,9 +233,9 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
 
     companion object {
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
+        val NoUpdate = Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
         @Deprecated("No longer used. The vault does not emit empty updates")
-        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE)
+        val NoNotaryUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.NOTARY_CHANGE, references = emptySet())
     }
 }
 
@@ -284,7 +285,7 @@ interface VaultService {
         val result = trackBy<ContractState>(query)
         val snapshot = result.snapshot.states
         return if (snapshot.isNotEmpty()) {
-            doneFuture(Vault.Update(consumed = setOf(snapshot.single()), produced = emptySet()))
+            doneFuture(Vault.Update(consumed = setOf(snapshot.single()), produced = emptySet(), references = emptySet()))
         } else {
             result.updates.toFuture()
         }

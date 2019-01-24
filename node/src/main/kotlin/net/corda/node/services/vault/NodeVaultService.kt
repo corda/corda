@@ -106,6 +106,7 @@ class NodeVaultService(
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
             val consumedStateRefs = update.consumed.map { it.ref }
+            val referenceStateRefs = update.references
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
             val session = currentDBSession()
@@ -168,6 +169,27 @@ class NodeVaultService(
                     session.save(state)
                 }
             }
+            referenceStateRefs.forEach { (state, ref) ->
+                val keys = state.data.participants.map { it.owningKey }
+                val persistentStateRef = PersistentStateRef(ref)
+                val constraintInfo = Vault.ConstraintInfo(state.constraint)
+                val isRelevant = isRelevant(state.data, keyManagementService.filterMyKeys(keys).toSet())
+                val stateToAdd = VaultSchemaV1.VaultStates(
+                        notary = state.notary,
+                        contractStateClassName = state.data.javaClass.name,
+                        stateStatus = Vault.StateStatus.UNCONSUMED,
+                        recordedTime = clock.instant(),
+                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
+                        constraintType = constraintInfo.type(),
+                        constraintData = constraintInfo.data()
+                )
+                state.data.participants.groupBy { it.owningKey }.forEach { participants ->
+                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
+                    session.save(persistentParty)
+                }
+                stateToAdd.stateRef = persistentStateRef
+                session.save(stateToAdd)
+            }
         }
         return update
     }
@@ -210,6 +232,7 @@ class NodeVaultService(
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
+            val referenceStates = loadStates(tx.references)
 
             // Is transaction irrelevant?
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
@@ -217,7 +240,7 @@ class NodeVaultService(
                 return null
             }
 
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = referenceStates.toSet())
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
@@ -244,12 +267,14 @@ class NodeVaultService(
                 return null
             }
 
+            val referenceStateAndRefs = ltx.references
+
             val updateType = if (tx is ContractUpgradeWireTransaction) {
                 Vault.UpdateType.CONTRACT_UPGRADE
             } else {
                 Vault.UpdateType.NOTARY_CHANGE
             }
-            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType)
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet())
         }
 
 
