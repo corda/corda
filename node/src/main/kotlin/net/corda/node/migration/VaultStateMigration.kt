@@ -10,8 +10,12 @@ import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.node.services.Vault
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.utilities.contextLogger
+import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.Session
@@ -73,7 +77,7 @@ class VaultStateMigration : CustomTaskChange, CordaMigration() {
 
     override fun execute(database: Database?) {
         logger.info("Migrating vault state data to V4 tables")
-        initialiseNodeServices(database!!)
+        initialiseNodeServices(database!!, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
         cordaDB.transaction {
             val session = currentDBSession()
@@ -95,3 +99,20 @@ class VaultStateMigration : CustomTaskChange, CordaMigration() {
         }
     }
 }
+
+
+/*
+ * A minimal set of schema for retrieving data from the database.
+ *
+ * Note that adding an extra schema here may cause migrations to fail if it ends up creating a table before the same table
+ * is created in a migration script.
+ */
+object VaultMigrationSchema
+
+object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
+        mappedTypes = listOf(
+                DBTransactionStorage.DBTransaction::class.java,
+                PersistentIdentityService.PersistentIdentity::class.java,
+                PersistentIdentityService.PersistentIdentityNames::class.java,
+                BasicHSMKeyManagementService.PersistentKey::class.java
+        ))

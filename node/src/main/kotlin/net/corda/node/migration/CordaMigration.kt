@@ -9,10 +9,8 @@ import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.PublicKeyToTextConverter
-import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
@@ -24,7 +22,7 @@ import javax.sql.DataSource
  * Provide a set of node services for use when migrating items in the database.
  *
  * For more complex migrations, information such as the transaction data may need to be extracted from the database. In order to do this,
- * many node services need to be initialised. This sets up enough of the node services to access items in the database using hibernate
+ * some node services need to be initialised. This sets up enough of the node services to access items in the database using hibernate
  * queries.
  */
 abstract class CordaMigration {
@@ -45,13 +43,14 @@ abstract class CordaMigration {
     private lateinit var _dbTransactions: DBTransactionStorage
 
 
-    fun initialiseNodeServices(database: Database) {
+    fun initialiseNodeServices(database: Database,
+                               schema: Set<MappedSchema>) {
         val url = (database.connection as JdbcConnection).url
         val dataSource = MigrationDataSource(database)
         val metricRegistry = MetricRegistry()
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
-        _cordaDB = createDatabase(url, cacheFactory, identityService)
+        _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
         cordaDB.start(dataSource)
         identityService.database = cordaDB
 
@@ -62,15 +61,24 @@ abstract class CordaMigration {
         }
     }
 
-    private fun createDatabase(jdbcUrl: String, cacheFactory: MigrationNamedCacheFactory, identityService: PersistentIdentityService): CordaPersistence {
+    private fun createDatabase(jdbcUrl: String,
+                               cacheFactory: MigrationNamedCacheFactory,
+                               identityService: PersistentIdentityService,
+                               schema: Set<MappedSchema>): CordaPersistence {
         val configDefaults = DatabaseConfig()
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
-                AbstractPartyToX500NameAsStringConverter(identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous))
-        return CordaPersistence(configDefaults, setOf(VaultMigrationSchemaV1, VaultSchemaV1), jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+                AbstractPartyToX500NameAsStringConverter(
+                        identityService::wellKnownPartyFromX500Name,
+                        identityService::wellKnownPartyFromAnonymous)
+        )
+        return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
     }
 }
 
+/*
+ * Wrap the liquibase database as a DataSource, so it can be used with a CordaPersistence instance
+ */
 class MigrationDataSource(val database: Database) : DataSource {
     override fun getConnection(): Connection {
         return (database.connection as JdbcConnection).wrappedConnection
@@ -111,14 +119,3 @@ class MigrationDataSource(val database: Database) : DataSource {
         throw SQLFeatureNotSupportedException()
     }
 }
-
-
-object VaultMigrationSchema
-
-object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
-        mappedTypes = listOf(
-                DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentIdentity::class.java,
-                PersistentIdentityService.PersistentIdentityNames::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java
-        ))
