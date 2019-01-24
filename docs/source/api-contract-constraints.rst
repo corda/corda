@@ -1,3 +1,5 @@
+.. highlight:: kotlin
+
 API: Contract Constraints
 =========================
 
@@ -337,7 +339,38 @@ common sources of ``MissingContractAttachments`` exceptions:
 
 Not setting CorDapp packages in tests
 *************************************
-You are running a test and have not specified the CorDapp packages to scan. See the instructions above.
+You are running a test and have not specified the CorDapp packages to scan.
+When using ``MockNetwork`` ensure you have provided a package containing the contract class in ``MockNetworkParameters``. See :doc:`api-testing`.
+
+Similarly package names need to be provided when testing using ``DriverDSl``. ``DriverParameters`` has a property ``cordappsForAllNodes`` (Kotlin)
+or method ``withCordappsForAllNodes`` in Java. Pass the collection of ``TestCordapp`` created by utility method ``TestCordapp.findCordapp(String)``.
+
+Example of creation of two Cordapps with Finance App Flows and Finance App Contracts in Kotlin:
+
+   .. sourcecode:: kotlin
+
+        Driver.driver(DriverParameters(cordappsForAllNodes = listOf(TestCordapp.findCordapp("net.corda.finance.schemas"),
+                TestCordapp.findCordapp("net.corda.finance.flows"))) {
+            // Your test code goes here
+        })
+
+The same example in Java:
+
+   .. sourcecode:: java
+
+        Driver.driver(new DriverParameters()
+                .withCordappsForAllNodes(Arrays.asList(TestCordapp.findCordapp("net.corda.finance.schemas"),
+                TestCordapp.findCordapp("net.corda.finance.flows"))), dsl -> {
+            // Your test code goes here
+        });
+
+
+Staring a node missing CorDapp(s)
+*********************************
+
+When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node.
+By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified.
+See :doc:`generating-a-node` for detailed instructions.
 
 Wrong fully-qualified contract name
 ***********************************
