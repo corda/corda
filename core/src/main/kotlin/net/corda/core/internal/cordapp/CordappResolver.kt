@@ -30,9 +30,10 @@ object CordappResolver {
     @Synchronized
     fun register(cordapp: Cordapp) {
         cordapp.cordappClasses.forEach {
-            if (cordappClasses.containsKey(it)) {
+            val cordapps = cordappClasses[it]
+            if (cordapps != null) {
                 // we do not register CorDapps that originate from the same file.
-                if (cordappClasses[it]!!.none { it.jarHash.equals(cordapp.jarHash) }) {
+                if (cordapps.none { it.jarHash == cordapp.jarHash }) {
                     logger.warn("More than one CorDapp registered for $it.")
                     cordappClasses[it] = cordappClasses[it]!! + cordapp
                 }
