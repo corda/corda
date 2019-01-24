@@ -17,8 +17,12 @@ object CordappResolver {
     private var cordappResolver: () -> Cordapp? = {
         Exception().stackTrace
                 .mapNotNull { cordappClasses[it.className] }
-                // If there is more than one cordapp registered for a class name we can't determine the "correct" one and return null.
-                .firstOrNull { it.size == 1 }?.single()
+                // for each class, we filter out CorDapps that originate from the same file.
+                .map { it.distinctBy { it.jarHash } }
+                // in case there are multiple classes matched, we select the first one having a single CorDapp registered against it.
+                .firstOrNull { it.size == 1 }
+                // otherwise we return null, signalling we cannot reliably determine the current CorDapp.
+                ?.single()
     }
 
     /*
