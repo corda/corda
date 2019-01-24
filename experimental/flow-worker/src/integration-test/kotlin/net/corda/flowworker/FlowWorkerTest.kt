@@ -10,6 +10,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -29,12 +30,12 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import net.corda.testing.node.internal.TestCordappInternal
+import net.corda.testing.node.internal.*
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
@@ -55,23 +56,6 @@ class FlowWorkerTest {
 
     private val portAllocation = incrementalPortAllocation(10000)
 
-    companion object {
-        private val networkParameters = NetworkParameters(
-                minimumPlatformVersion = 1,
-                notaries = listOf(),
-                modifiedTime = Instant.now(),
-                maxMessageSize = MAX_MESSAGE_SIZE,
-                maxTransactionSize = 4000000,
-                epoch = 1,
-                whitelistedContractImplementations = emptyMap()
-        )
-
-        private fun signNetworkParams(certKeyPair: CertificateAndKeyPair, trustRoot: X509Certificate): NetworkParametersAndSigned {
-            val signedParams = certKeyPair.sign(networkParameters)
-            return NetworkParametersAndSigned(signedParams, trustRoot)
-        }
-    }
-
     private val bankAKeyPair = generateKeyPair()
     private val bankBKeyPair = generateKeyPair()
     private val notaryKeyPair = generateKeyPair()
@@ -85,6 +69,27 @@ class FlowWorkerTest {
     private val bankAInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1111)), listOf(bankAPartyAndCertificate), 1, 1)
     private val bankBInfo = NodeInfo(listOf(NetworkHostAndPort("localhost", 1112)), listOf(bankBPartyAndCertificate), 1, 1)
 
+    private val financeCordapp =  cordappWithPackages("net.corda.finance").copy(name = "finance-cordapp")
+    private val financeCordappPath = CustomCordapp.getJarFile(financeCordapp)
+
+    private val confidentialIdentitiesCordapp =  cordappWithPackages("net.corda.confidential").copy(name = "confidential-cordapp")
+    private val confidentialIdentitiesCordappPath = CustomCordapp.getJarFile(confidentialIdentitiesCordapp)
+
+    private val networkParameters = NetworkParameters(
+            minimumPlatformVersion = 1,
+            notaries = listOf(NotaryInfo(notary, false)),
+            modifiedTime = Instant.now(),
+            maxMessageSize = MAX_MESSAGE_SIZE,
+            maxTransactionSize = 4000000,
+            epoch = 1,
+            whitelistedContractImplementations = emptyMap()
+    )
+
+    private fun signNetworkParams(certKeyPair: CertificateAndKeyPair, trustRoot: X509Certificate): NetworkParametersAndSigned {
+        val signedParams = certKeyPair.sign(networkParameters)
+        return NetworkParametersAndSigned(signedParams, trustRoot)
+    }
+
     @Test
     fun `cash issue`() {
         val baseDirectory = DriverParameters().driverDirectory
@@ -92,12 +97,13 @@ class FlowWorkerTest {
         nodeDirectory.createDirectories()
         val brokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        TestCordappInternal.installCordapps(nodeDirectory, FINANCE_CORDAPPS)
         val config = genericConfig().copy(
                 myLegalName = DUMMY_BANK_A_NAME,
                 baseDirectory = nodeDirectory,
                 messagingServerAddress = brokerAddress,
-                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+                dataSourceProperties = MockServices.makeTestDataSourceProperties(),
+                database = DatabaseConfig(runMigration = true),
+                cordappDirectories = listOf(financeCordappPath.parent)
         )
         // create test certificates
         config.configureWithDevSSLCertificate()
@@ -154,12 +160,13 @@ class FlowWorkerTest {
         bankANodeDirectory.createDirectories()
         val bankAbrokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        TestCordappInternal.installCordapps(bankANodeDirectory, FINANCE_CORDAPPS)
         val bankAConfig = genericConfig().copy(
                 myLegalName = DUMMY_BANK_A_NAME,
                 baseDirectory = bankANodeDirectory,
                 messagingServerAddress = bankAbrokerAddress,
-                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+                dataSourceProperties = MockServices.makeTestDataSourceProperties(),
+                database = DatabaseConfig(runMigration = true),
+                cordappDirectories = listOf(confidentialIdentitiesCordappPath.parent)
         )
         // create test certificates
         bankAConfig.configureWithDevSSLCertificate()
@@ -181,12 +188,13 @@ class FlowWorkerTest {
         bankBNodeDirectory.createDirectories()
         val bankBbrokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        TestCordappInternal.installCordapps(bankBNodeDirectory, FINANCE_CORDAPPS)
         val bankBConfig = genericConfig().copy(
                 myLegalName = DUMMY_BANK_B_NAME,
                 baseDirectory = bankBNodeDirectory,
                 messagingServerAddress = bankBbrokerAddress,
-                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+                dataSourceProperties = MockServices.makeTestDataSourceProperties(),
+                database = DatabaseConfig(runMigration = true),
+                cordappDirectories = listOf(confidentialIdentitiesCordappPath.parent)
         )
         // create test certificates
         bankBConfig.configureWithDevSSLCertificate()
@@ -239,6 +247,7 @@ class FlowWorkerTest {
     private fun genericConfig(): NodeConfigurationImpl {
         return NodeConfigurationImpl(baseDirectory = Paths.get("."), myLegalName = DUMMY_BANK_A_NAME, emailAddress = "",
                 keyStorePassword = "pass", trustStorePassword = "pass", crlCheckSoftFail = true, dataSourceProperties = Properties(),
+
                 rpcUsers = listOf(), verifierType = VerifierType.InMemory, flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
                 p2pAddress = NetworkHostAndPort("localhost", 1), rpcSettings = NodeRpcSettings(NetworkHostAndPort("localhost", 1), null, ssl = null),
                 relay = null, messagingServerAddress = null, enterpriseConfiguration = EnterpriseConfiguration(mutualExclusionConfiguration = MutualExclusionConfiguration(updateInterval = 0, waitInterval = 0)),

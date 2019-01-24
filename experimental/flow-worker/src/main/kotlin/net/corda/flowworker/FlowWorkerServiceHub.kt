@@ -150,7 +150,10 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
 
     private val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
     override val networkParametersService = DBNetworkParametersStorage(cacheFactory, database, networkMapClient).tokenize()
-    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
+    private val servicesForResolution = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions).also {
+        // circular dependency, hurr durr..
+        attachments.servicesForResolution = it
+    }
     @Suppress("LeakingThis")
     override val vaultService = NodeVaultService(clock, keyManagementService, servicesForResolution, database, schemaService, cacheFactory, cordappLoader.appClassLoader).tokenize()
     override val networkMapUpdater= NetworkMapUpdater(
@@ -173,6 +176,9 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
     override val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     override val auditService = DummyAuditService().tokenize()
 
+    // SMM now has a dependency on the messaging layer
+    private val network = makeMessagingService().tokenize()
+
     @Suppress("LeakingThis")
     val smm = makeStateMachineManager()
 
@@ -189,9 +195,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
                 cordappLoader.appClassLoader
         )
     }
-
-    // TODO Making this non-lateinit requires MockNode being able to create a blank InMemoryMessaging instance
-    private lateinit var network: MessagingService
 
     private val cordappServices = MutableClassToInstanceMap.create<SerializeAsToken>()
     private val flowFactories = ConcurrentHashMap<Class<out FlowLogic<*>>, InitiatedFlowFactory<*>>()
@@ -391,11 +394,6 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
         log.info("Flow Worker starting up ...")
 
         initialiseSerialization()
-
-        // TODO First thing we do is create the MessagingService. This should have been done by the c'tor but it's not
-        // possible (yet) to due restriction from MockNode
-        network = makeMessagingService().tokenize()
-
         installCoreFlows()
         registerCordappFlows()
 

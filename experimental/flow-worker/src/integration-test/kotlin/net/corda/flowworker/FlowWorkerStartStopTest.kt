@@ -10,6 +10,7 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.NotaryInfo
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
@@ -30,18 +31,22 @@ import net.corda.nodeapi.internal.bridging.BridgeControlListener
 import net.corda.nodeapi.internal.createDevNetworkMapCa
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.CustomCordapp
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.TestCordappInternal
+import net.corda.testing.node.internal.cordappWithPackages
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
 import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.junit.Rule
 import org.junit.Test
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.cert.X509Certificate
@@ -59,26 +64,29 @@ class FlowWorkerStartStopTest {
     companion object {
 
         private val logger = contextLogger()
-
-        private val networkParameters = NetworkParameters(
-                minimumPlatformVersion = 1,
-                notaries = listOf(),
-                modifiedTime = Instant.now(),
-                maxMessageSize = MAX_MESSAGE_SIZE,
-                maxTransactionSize = 4000000,
-                epoch = 1,
-                whitelistedContractImplementations = emptyMap()
-        )
-
-        private fun signNetworkParams(certKeyPair: CertificateAndKeyPair, trustRoot: X509Certificate): NetworkParametersAndSigned {
-            val signedParams = certKeyPair.sign(networkParameters)
-            return NetworkParametersAndSigned(signedParams, trustRoot)
-        }
     }
+
+    private val financeCordapp =  cordappWithPackages("net.corda.finance").copy(name = "finance-cordapp")
+    private val financeCordappPath = CustomCordapp.getJarFile(financeCordapp)
 
     private val notaryKeyPair = generateKeyPair()
     private val notary = Party(DUMMY_NOTARY_NAME, notaryKeyPair.public)
     private val notaryPartyAndCertificate = getTestPartyAndCertificate(notary)
+
+    private val networkParameters = NetworkParameters(
+            minimumPlatformVersion = 1,
+            notaries = listOf(NotaryInfo(notary, false)),
+            modifiedTime = Instant.now(),
+            maxMessageSize = MAX_MESSAGE_SIZE,
+            maxTransactionSize = 4000000,
+            epoch = 1,
+            whitelistedContractImplementations = emptyMap()
+    )
+
+    private fun signNetworkParams(certKeyPair: CertificateAndKeyPair, trustRoot: X509Certificate): NetworkParametersAndSigned {
+        val signedParams = certKeyPair.sign(networkParameters)
+        return NetworkParametersAndSigned(signedParams, trustRoot)
+    }
 
     @Test
     fun startStop() {
@@ -129,12 +137,13 @@ class FlowWorkerStartStopTest {
         nodeDirectory.createDirectories()
         val brokerAddress = NetworkHostAndPort("localhost", portAllocation.nextPort())
 
-        TestCordappInternal.installCordapps(nodeDirectory, FINANCE_CORDAPPS)
         val config = genericConfig().copy(
                 myLegalName = legalName,
                 baseDirectory = nodeDirectory,
                 messagingServerAddress = brokerAddress,
-                dataSourceProperties = MockServices.makeTestDataSourceProperties()
+                dataSourceProperties = MockServices.makeTestDataSourceProperties(),
+                database = DatabaseConfig(runMigration = true),
+                cordappDirectories = listOf(financeCordappPath.parent)
         )
         // create test certificates
         config.configureWithDevSSLCertificate()
