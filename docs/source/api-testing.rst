@@ -33,8 +33,8 @@ A ``MockNetwork`` is created as follows:
         :end-before: DOCEND 1
 
 The ``MockNetwork`` requires at a minimum a list of CorDapps to be installed on each ``StartedMockNode``. The CorDapps are looked up on the
-classpath by package name, using ``TestCordapp.findCordapp``. `TestCordapp.findCordapp`` scans the current classpath to find the CorDapp that contains the given package.
-All the CorDapp's metadata present in its MANIFEST are inherited.
+classpath by package name, using ``TestCordapp.findCordapp``. ``TestCordapp.findCordapp`` scans the current classpath to find the CorDapp that contains the given package.
+This includes all the associated CorDapp metadata present in its MANIFEST.
 
 ``MockNetworkParameters`` provides other properties for the network which can be tweaked. They default to sensible values if not specified.
 
