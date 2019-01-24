@@ -368,8 +368,9 @@ The same example in Java:
 Staring a node missing CorDapp(s)
 *********************************
 
-When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node. See :doc:`generating-a-node` for detailed instructions.
-By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified. See :doc:`generating-a-node` for detailed instructions.
+When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node.
+By default Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified.
+See :doc:`generating-a-node` for detailed instructions.
 
 Wrong fully-qualified contract name
 ***********************************
