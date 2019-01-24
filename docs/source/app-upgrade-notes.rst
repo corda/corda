@@ -281,6 +281,10 @@ would need to be transformed into::
 Note that every package should exist in only one CorDapp, otherwise the discovery process won't be able to determine which one to use and you will most probably see an exception telling you ``There is more than one CorDapp containing the package``.
 For instance, if you have 2 CorDapps containing the packages ``net.corda.examples.obligation.contracts`` and ``net.corda.examples.obligation.flows``, you will get this error if you specify the package ``net.corda.examples.obligation``.
 
+
+.. note:: If you have any CorDapp code (e.g. flows/contracts/states) that is only used by the tests and located in the same test module, it won't be discovered now.
+    You will need to move them in the main module of one of your CorDapps or create a new, separate CorDapp for them, in case you don't want this code to live inside your production CorDapps.
+
 Step 6. Security: Add BelongsToContract annotations
 ---------------------------------------------------
 
