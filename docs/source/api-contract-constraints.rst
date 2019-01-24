@@ -340,12 +340,12 @@ common sources of ``MissingContractAttachments`` exceptions:
 Not setting CorDapp packages in tests
 *************************************
 You are running a test and have not specified the CorDapp packages to scan.
-When using ``mockNetwork`` ensure you provided a package containing the contract class in ``MockNetworkParameters``. See :doc:`api-testing`.
+When using ``MockNetwork`` ensure you provided a package containing the contract class in ``MockNetworkParameters``. See :doc:`api-testing`.
 
-Similarly package names need to be provided when tasting using ``DriverDSl``. ``DriverParameters`` has property ``cordappsForAllNodes`` (Kotlin)
+Similarly package names need to be provided when tasting using ``DriverDSl``. ``DriverParameters`` has a property ``cordappsForAllNodes`` (Kotlin)
 or method ``withCordappsForAllNodes`` in Java. Pass the collection of ``TestCordapp`` created by utility method ``TestCordapp.findCordapp(String)``.
 
-Example to create two Cordapps with Finance App Flows and Finance App Contracts in Kotlin:
+Example of creation of two Cordapps with Finance App Flows and Finance App Contracts in Kotlin:
 
    .. sourcecode:: kotlin
 
@@ -368,8 +368,8 @@ The same example in Java:
 Staring node without CorDapp
 ****************************
 
-When running the Corda node ensure all CordApp JARs are placed in ``cordapss`` directory of each node, see :doc:`generating-a-node`.
-Also Gradle Cordform task ``deployNodes`` copies all JARs if Cordapps to deploy are specified, see :doc:`generating-a-node`.
+When running the Corda node ensure all CordDapp JARs are placed in ``cordapps`` directory of each node, see :doc:`generating-a-node`.
+Also Gradle Cordform task ``deployNodes`` copies all JARs if CorDapps to deploy are specified, see :doc:`generating-a-node`.
 
 Wrong fully-qualified contract name
 ***********************************
