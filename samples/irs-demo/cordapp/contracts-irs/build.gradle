@@ -9,7 +9,7 @@ dependencies {
 
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
-    cordapp project(':finance:contracts')
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
 }
 
 cordapp {

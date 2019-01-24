@@ -22,7 +22,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     // The trader demo CorDapp depends upon Cash CorDapp features
-    cordapp project(':finance:contracts')
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
     cordapp project(':finance:workflows')
     cordapp project(':confidential-identities')
     cordapp project(':samples:bank-of-corda-demo')
@@ -35,7 +35,7 @@ dependencies {
     testCompile "org.assertj:assertj-core:${assertj_version}"
 
     integrationTestCompile project(':finance:workflows')
-    integrationTestCompile project(':finance:contracts')
+    integrationTestCompile ("net.corda:corda-finance-contracts:$os_corda_release_version")
 }
 
 task integrationTest(type: Test, dependsOn: []) {
