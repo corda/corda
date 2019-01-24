@@ -89,8 +89,10 @@ class SchemaMigration(
                 }
             }
 
-            System.setProperty(NODE_BASE_DIR_KEY, currentDirectory.toString()) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
-
+            val path = currentDirectory?.toString()
+            if (path != null) {
+                System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
+            }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))

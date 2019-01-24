@@ -28,9 +28,9 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
         try {
             logger.info("Start executing...")
             var networkParameters: NetworkParameters?
-
-            if (System.getProperty(NODE_BASE_DIR_KEY).isNotEmpty()) {
-                val path = Paths.get(System.getProperty(NODE_BASE_DIR_KEY)) / NETWORK_PARAMS_FILE_NAME
+            val baseDir = System.getProperty(SchemaMigration.NODE_BASE_DIR_KEY)
+            if (baseDir != null) {
+                val path = Paths.get(baseDir) / NETWORK_PARAMS_FILE_NAME
                 networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
