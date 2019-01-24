@@ -7,21 +7,15 @@ apply plugin: 'net.corda.plugins.quasar-utils'
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'net.corda.plugins.cordformation'
 
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaRuntime project(path: ":webserver:webcapsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
-    cordaCompile project(':client:jfx')
-    cordaCompile project(':client:rpc')
-    cordaCompile project(':test-utils')
+
+    // Notary implementations
+    cordapp project(':samples:notary-demo:contracts')
+    cordapp project(':samples:notary-demo:workflows')
 }
 
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
@@ -32,7 +26,12 @@ task deployNodes(dependsOn: ['deployNodesSingle', 'deployNodesRaft', 'deployNode
 task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesSingle")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
+        cordapp project(':samples:notary-demo:contracts')
+        cordapp project(':samples:notary-demo:workflows')
     }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
@@ -57,7 +56,12 @@ task deployNodesSingle(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     directory file("$buildDir/nodes/nodesCustom")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
+        cordapp project(':samples:notary-demo:contracts')
+        cordapp project(':samples:notary-demo:workflows')
     }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
@@ -83,10 +87,14 @@ task deployNodesCustom(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 }
 
 task deployNodesRaft(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
-    def className = ""
     directory file("$buildDir/nodes/nodesRaft")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
+        cordapp project(':samples:notary-demo:contracts')
+        cordapp project(':samples:notary-demo:workflows')
     }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
@@ -150,7 +158,12 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
     def clusterAddresses = ["localhost:11000", "localhost:11010", "localhost:11020", "localhost:11030"]
     directory file("$buildDir/nodes/nodesBFT")
     nodeDefaults {
+        projectCordapp {
+            deploy = false
+        }
         extraConfig = [h2Settings: [address: "localhost:0"]]
+        cordapp project(':samples:notary-demo:contracts')
+        cordapp project(':samples:notary-demo:workflows')
     }
     node {
         name "O=Alice Corp,L=Madrid,C=ES"
@@ -230,23 +243,4 @@ task deployNodesBFT(type: Cordform, dependsOn: ['jar', nodeTask, webTask]) {
 task notarise(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     main = 'net.corda.notarydemo.NotariseKt'
-}
-
-jar {
-    manifest {
-        attributes(
-                'Automatic-Module-Name': 'net.corda.samples.demos.notary'
-        )
-    }
-}
-
-cordapp {
-    targetPlatformVersion corda_platform_version.toInteger()
-    minimumPlatformVersion 1
-    workflow {
-        name "net/corda/samples/notary-demo"
-        versionId 1
-        vendor "R3"
-        licence "Open Source (Apache 2)"
-    }
 }

@@ -20,7 +20,6 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
 import net.corda.finance.plugin.registerFinanceJSONMappers
-import net.corda.irs.contract.InterestRateSwap
 import net.corda.irs.web.IrsDemoWebApplication
 import net.corda.test.spring.springDriver
 import net.corda.testing.core.DUMMY_BANK_A_NAME
@@ -37,7 +36,6 @@ import net.corda.testing.node.User
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import rx.Observable
 import java.time.Duration

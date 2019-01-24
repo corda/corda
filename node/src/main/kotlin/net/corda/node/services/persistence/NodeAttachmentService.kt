@@ -96,7 +96,7 @@ class NodeAttachmentService(
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
-            @Column(name = "uploader", updatable = false, nullable = true)
+            @Column(name = "uploader", nullable = true)
             var uploader: String? = null,
 
             @Column(name = "filename", updatable = false, nullable = true)
@@ -381,7 +381,6 @@ class NodeAttachmentService(
                     if (attachment.uploader != uploader) {
                         verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
-                        session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
@@ -497,14 +496,14 @@ class NodeAttachmentService(
         return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
     }
 
-    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+    override fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int): List<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
-        return newestAttachmentIds?.toList()?.first()
-    }
-
-    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
-        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        return versions.values.flatMap { it.toList() }.toSet()
+        val newestAttachmentIds = versions.tailMap(minContractVersion, true)
+        val newestSignedAttachment = newestAttachmentIds.values.map { it.signed }.lastOrNull { it != null }
+        val newestUnsignedAttachment = newestAttachmentIds.values.map { it.unsigned }.lastOrNull { it != null }
+        return if (newestSignedAttachment != null || newestUnsignedAttachment != null)
+            AttachmentIds(newestSignedAttachment, newestUnsignedAttachment).toList()
+        else
+            emptyList()
     }
 }
