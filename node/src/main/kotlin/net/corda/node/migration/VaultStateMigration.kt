@@ -1,14 +1,10 @@
 package net.corda.node.migration
 
-import liquibase.change.custom.CustomTaskChange
 import liquibase.database.Database
-import liquibase.exception.ValidationErrors
-import liquibase.resource.ResourceAccessor
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.crypto.containsAny
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
@@ -16,29 +12,14 @@ import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.Session
 
-class VaultStateMigration : CustomTaskChange, CordaMigration() {
+class VaultStateMigration : CordaMigration() {
     companion object {
         private val logger = contextLogger()
-    }
-
-    override fun validate(database: Database?): ValidationErrors? {
-        return null
-    }
-
-    override fun setUp() {
-        // No setup required.
-    }
-
-    override fun setFileOpener(resourceAccessor: ResourceAccessor?) {
-        // No file opener required
-    }
-
-    override fun getConfirmationMessage(): String? {
-        return null
     }
 
     private fun getVaultStates(session: Session): List<VaultSchemaV1.VaultStates> {
@@ -85,14 +66,13 @@ class VaultStateMigration : CustomTaskChange, CordaMigration() {
             val refPersistentMapping = persistentStates.map { Pair(persistentStateToStateRef(it), it) }.toMap()
             val states = persistentStates.map { getStateAndRef(it)}
 
-            logger.debug("Adding all states to state party table")
+            logger.debug("Adding ${states.size} states to state party table")
             states.forEach { addStateParties(session, it) }
 
             logger.debug("Updating not relevant states in the vault")
             states.filter {
-                val myKeys = identityService.stripNotOurKeys(it.state.data.participants.map { it.owningKey })
-                //TODO: Refactor isRelevant to be visible. Do we need KeyManagementService to do this?
-                !it.state.data.participants.map {it.owningKey}.any { it.containsAny(myKeys)}
+                val myKeys = identityService.stripNotOurKeys(it.state.data.participants.map { it.owningKey }).toSet()
+                !NodeVaultService.isRelevant(it.state.data, myKeys)
             }.forEach {
                 refPersistentMapping[it.ref]?.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
             }

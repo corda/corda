@@ -1,8 +1,11 @@
 package net.corda.node.migration
 
 import com.codahale.metrics.MetricRegistry
+import liquibase.change.custom.CustomTaskChange
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
+import liquibase.exception.ValidationErrors
+import liquibase.resource.ResourceAccessor
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -25,7 +28,7 @@ import javax.sql.DataSource
  * some node services need to be initialised. This sets up enough of the node services to access items in the database using hibernate
  * queries.
  */
-abstract class CordaMigration {
+abstract class CordaMigration : CustomTaskChange {
 
     val identityService: PersistentIdentityService
         get() = _identityService
@@ -73,6 +76,20 @@ abstract class CordaMigration {
                         identityService::wellKnownPartyFromAnonymous)
         )
         return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+    }
+
+    override fun validate(database: Database?): ValidationErrors? {
+        return null
+    }
+
+    override fun setUp() {
+    }
+
+    override fun setFileOpener(resourceAccessor: ResourceAccessor?) {
+    }
+
+    override fun getConfirmationMessage(): String? {
+        return null
     }
 }
 
