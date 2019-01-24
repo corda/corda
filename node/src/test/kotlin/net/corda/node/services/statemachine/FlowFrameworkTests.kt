@@ -272,25 +272,25 @@ class FlowFrameworkTests {
                 .addCommand(dummyCommand(alice.owningKey))
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        val committerStx = aliceNode.registerCordappFlowFactory(CommitReceiverFlow::class) {
-            CommitterFlow(it)
+        val committerStx = aliceNode.registerCordappFlowFactory(CommitterFlow::class) {
+            CommitReceiverFlow(it, stx.id)
         }.flatMap { it.stateMachine.resultFuture }
         // The waitForLedgerCommit call has to occur on separate flow
-        val waiterStx = bobNode.services.startFlow(WaiterFlow(stx.id)).resultFuture
-        val commitReceiverStx = bobNode.services.startFlow(CommitReceiverFlow(stx, alice)).resultFuture
+        val waiterStx = bobNode.services.startFlow(WaitForLedgerCommitFlow(stx.id)).resultFuture
+        val commitReceiverStx = bobNode.services.startFlow(CommitterFlow(stx, alice)).resultFuture
         mockNet.runNetwork()
         assertThat(committerStx.getOrThrow()).isEqualTo(waiterStx.getOrThrow()).isEqualTo(commitReceiverStx.getOrThrow())
     }
 
     @Test
-    fun `committer throws exception before calling the finality flow`() {
+    fun `waitForLedgerCommit throws exception if any active session ends in error`() {
         val ptx = TransactionBuilder(notary = notaryIdentity)
                 .addOutputState(DummyState(), DummyContract.PROGRAM_ID)
                 .addCommand(dummyCommand())
         val stx = aliceNode.services.signInitialTransaction(ptx)
 
-        aliceNode.registerCordappFlowFactory(CommitReceiverFlow::class) { CommitterFlow(it) { throw Exception("Error") } }
-        val waiter = bobNode.services.startFlow(CommitReceiverFlow(stx, alice)).resultFuture
+        aliceNode.registerCordappFlowFactory(WaitForLedgerCommitFlow::class) { ExceptionFlow { throw Exception("Error") } }
+        val waiter = bobNode.services.startFlow(WaitForLedgerCommitFlow(stx.id, alice)).resultFuture
         mockNet.runNetwork()
         assertThatExceptionOfType(UnexpectedFlowEndException::class.java).isThrownBy {
             waiter.getOrThrow()
@@ -357,7 +357,7 @@ class FlowFrameworkTests {
     }
 
     @Test
-    fun `session init with unknown class is sent to the flow hospital, from where it's dropped`() {
+    fun `session init with unknown class is sent to the flow hospital, from where we then drop it`() {
         aliceNode.sendSessionMessage(InitialSessionMessage(SessionId(random63BitValue()), 0, "not.a.real.Class", 1, "", null), bob)
         mockNet.runNetwork()
         assertThat(receivedSessionMessages).hasSize(1) // Only the session-init is expected as the session-reject is blocked by the flow hospital
@@ -484,28 +484,29 @@ class FlowFrameworkTests {
         }
     }
 
-    class WaiterFlow(private val txId: SecureHash) : FlowLogic<SignedTransaction>() {
+    @InitiatingFlow
+    class WaitForLedgerCommitFlow(private val txId: SecureHash, private val party: Party? = null) : FlowLogic<SignedTransaction>() {
         @Suspendable
-        override fun call(): SignedTransaction = waitForLedgerCommit(txId)
+        override fun call(): SignedTransaction {
+            if (party != null) {
+                initiateFlow(party).send(Unit)
+            }
+            return waitForLedgerCommit(txId)
+        }
     }
 
     @InitiatingFlow
-    class CommitReceiverFlow(val stx: SignedTransaction, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
+    class CommitterFlow(private val stx: SignedTransaction, private val otherParty: Party) : FlowLogic<SignedTransaction>() {
         @Suspendable
         override fun call(): SignedTransaction {
-            val otherPartySession = initiateFlow(otherParty)
-            otherPartySession.send(stx)
-            return subFlow(ReceiveFinalityFlow(otherPartySession, expectedTxId = stx.id))
+            val session = initiateFlow(otherParty)
+            return subFlow(FinalityFlow(stx, session))
         }
     }
 
-    class CommitterFlow(private val otherPartySession: FlowSession, private val throwException: (() -> Exception)? = null) : FlowLogic<SignedTransaction>() {
+    class CommitReceiverFlow(private val otherSide: FlowSession, private val txId: SecureHash) : FlowLogic<SignedTransaction>() {
         @Suspendable
-        override fun call(): SignedTransaction {
-            val stx = otherPartySession.receive<SignedTransaction>().unwrap { it }
-            if (throwException != null) throw throwException.invoke()
-            return subFlow(FinalityFlow(stx, otherPartySession))
-        }
+        override fun call(): SignedTransaction = subFlow(ReceiveFinalityFlow(otherSide, expectedTxId = txId))
     }
 
     private class LazyServiceHubAccessFlow : FlowLogic<Unit>() {
