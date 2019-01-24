@@ -15,28 +15,34 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.VersionInfo
 import net.corda.testing.common.internal.testNetworkParameters
+import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.node.StartedMockNode
 import net.corda.testing.node.internal.*
 import net.corda.testing.node.transaction
 import org.junit.After
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 
 class ReferencedStatesFlowTests {
-    companion object {
-        @JvmStatic
-        private val mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
-                threadPerNode = true,
-                initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4)
-        )
-    }
 
-    private val nodes = (0..1).map {
-        mockNet.createNode(
-                parameters = InternalMockNodeParameters(version = VersionInfo(4, "Blah", "Blah", "Blah"))
-        )
+    var mockNet: InternalMockNetwork = InternalMockNetwork(
+            cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
+            threadPerNode = true,
+            initialNetworkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+    )
+    lateinit var nodes: List<TestStartedNode>
+
+    @Before
+    fun setup() {
+        nodes = (0..1).map {
+            mockNet.createNode(
+                    parameters = InternalMockNodeParameters(version = VersionInfo(4, "Blah", "Blah", "Blah"))
+            )
+        }
     }
 
     @After
