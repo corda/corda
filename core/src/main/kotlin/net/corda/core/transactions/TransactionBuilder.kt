@@ -468,7 +468,7 @@ open class TransactionBuilder(
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
         return services.attachments.getLatestContractAttachments(contractClassName, minimumRequiredContractClassVersion).firstOrNull()
-                ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
+                ?: throw MissingContractAttachments(states, contractClassName, minimumRequiredContractClassVersion)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
