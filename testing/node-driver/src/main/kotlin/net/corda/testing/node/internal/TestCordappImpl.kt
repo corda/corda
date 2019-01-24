@@ -58,7 +58,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
                         .scan()
                         .use { it.allResources }
                         .asSequence()
-                        .map { it.classpathElementURL.toPath() }
+                        .map { it.classpathElementFile.toPath() }
                         .filterNot { it.toString().endsWith("-tests.jar") }
                         .map { if (it.toString().endsWith(".jar")) it else findProjectRoot(it) }
                         .toSet()
