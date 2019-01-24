@@ -101,59 +101,73 @@ class NodeVaultService(
         }
     }
 
+    private fun saveStates(session: Session, states: Map<StateRef, StateAndRef<ContractState>>) {
+        states.forEach { stateAndRef ->
+            val stateOnly = stateAndRef.value.state.data
+            // TODO: Optimise this.
+            //
+            // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
+            // node. The behaviour is as follows:
+            //
+            // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
+            //    "vault_states" table.
+            // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
+            //    relevancy_status = 0 in the "vault_states" table.
+            //
+            // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
+            // included in the result.
+            //
+            // The same functionality could be obtained by passing in a list of participants to the vault query,
+            // however this:
+            //
+            // * requires a join on the participants table which results in slow queries
+            // * states may flip from being non-relevant to relevant
+            // * it's more complicated for CorDapp developers
+            //
+            // Adding a new column in the "VaultStates" table was considered the best approach.
+            val keys = stateOnly.participants.map { it.owningKey }
+            val persistentStateRef = PersistentStateRef(stateAndRef.key)
+            // This check is done to set the "relevancyStatus". When one performs a vault query, it is possible to return ALL states, ONLY
+            // RELEVANT states or NOT relevant states.
+            val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+            val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
+            // Save a row for each party in the state_party table.
+            // TODO: Perhaps these can be stored in a batch?
+            stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
+                val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
+                session.save(persistentParty)
+            }
+            val stateToAdd = VaultSchemaV1.VaultStates(
+                    notary = stateAndRef.value.state.notary,
+                    contractStateClassName = stateAndRef.value.state.data.javaClass.name,
+                    stateStatus = Vault.StateStatus.UNCONSUMED,
+                    recordedTime = clock.instant(),
+                    relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
+                    constraintType = constraintInfo.type(),
+                    constraintData = constraintInfo.data()
+            )
+            stateToAdd.stateRef = persistentStateRef
+            session.save(stateToAdd)
+        }
+    }
+
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
             val consumedStateRefs = update.consumed.map { it.ref }
+            val referenceStateRefsMap = update.references.associateBy { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
             val session = currentDBSession()
-            producedStateRefsMap.forEach { stateAndRef ->
-                val stateOnly = stateAndRef.value.state.data
-                // TODO: Optimise this.
-                //
-                // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
-                // node. The behaviour is as follows:
-                //
-                // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
-                //    "vault_states" table.
-                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
-                //    relevancy_status = 0 in the "vault_states" table.
-                //
-                // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
-                // included in the result.
-                //
-                // The same functionality could be obtained by passing in a list of participants to the vault query,
-                // however this:
-                //
-                // * requires a join on the participants table which results in slow queries
-                // * states may flip from being non-relevant to relevant
-                // * it's more complicated for CorDapp developers
-                //
-                // Adding a new column in the "VaultStates" table was considered the best approach.
-                val keys = stateOnly.participants.map { it.owningKey }
-                val persistentStateRef = PersistentStateRef(stateAndRef.key)
-                val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
-                val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
-                // Save a row for each party in the state_party table.
-                // TODO: Perhaps these can be stored in a batch?
-                stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
-                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
-                    session.save(persistentParty)
-                }
-                val stateToAdd = VaultSchemaV1.VaultStates(
-                        notary = stateAndRef.value.state.notary,
-                        contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                        stateStatus = Vault.StateStatus.UNCONSUMED,
-                        recordedTime = clock.instant(),
-                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
-                        constraintType = constraintInfo.type(),
-                        constraintData = constraintInfo.data()
-                )
-                stateToAdd.stateRef = persistentStateRef
-                session.save(stateToAdd)
-            }
+
+            // Persist the outputs.
+            saveStates(session, producedStateRefsMap)
+
+            // Persist the reference states.
+            saveStates(session, referenceStateRefsMap)
+
+            // Persist the consumed inputs.
             consumedStateRefs.forEach { stateRef ->
                 val state = session.get<VaultSchemaV1.VaultStates>(VaultSchemaV1.VaultStates::class.java, PersistentStateRef(stateRef))
                 state?.run {
@@ -168,6 +182,7 @@ class NodeVaultService(
                     session.save(state)
                 }
             }
+
         }
         return update
     }
@@ -208,16 +223,34 @@ class NodeVaultService(
                 StatesToRecord.ALL_VISIBLE -> tx.outputs.withIndex()
             }.map { tx.outRef<ContractState>(it.index) }
 
-            // Retrieve all unconsumed states for this transaction's inputs
+            // Retrieve all unconsumed states for this transaction's inputs.
             val consumedStates = loadStates(tx.inputs)
 
-            // Is transaction irrelevant?
+            // Is transaction irrelevant? If so, then we don't care about the reference states either.
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
                 return null
             }
 
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
+            // This list should only contain NEW states which we have not seen before as an output in another transaction. If we can't
+            // obtain the references from the vault then the reference must be a state we have not seen before, therefore we should store it
+            // in the vault. If StateToRecord is set to ALL_VISIBLE or ONLY_RELEVANT then we should store all of the previously unseen
+            // states in the reference list. The assumption is that we might need to inspect them at some point if they were referred to
+            // in the contracts of the input or output states. If states to record is none then we shouldn't record any reference states.
+            val newReferenceStateAndRefs = if (tx.references.isEmpty()) {
+                emptyList()
+            } else {
+                 when (statesToRecord) {
+                    StatesToRecord.NONE -> throw AssertionError("Should not reach here")
+                    StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
+                        val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
+                        // TODO: This is expensive - is there another way?
+                        tx.toLedgerTransaction(servicesForResolution).references.filter { it.ref in notSeenReferences }
+                    }
+                }
+            }
+
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
@@ -244,12 +277,14 @@ class NodeVaultService(
                 return null
             }
 
+            val referenceStateAndRefs = ltx.references
+
             val updateType = if (tx is ContractUpgradeWireTransaction) {
                 Vault.UpdateType.CONTRACT_UPGRADE
             } else {
                 Vault.UpdateType.NOTARY_CHANGE
             }
-            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType)
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet())
         }
 
 
@@ -293,7 +328,7 @@ class NodeVaultService(
                         softLockReserve(uuid, stateRefs)
                     }
                 }
-                persistentStateService.persist(vaultUpdate.produced)
+                persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
