@@ -16,7 +16,7 @@ class VaultUpdateTests {
     private companion object {
         const val DUMMY_PROGRAM_ID = "net.corda.core.node.VaultUpdateTests.DummyContract"
         val DUMMY_NOTARY = TestIdentity(DUMMY_NOTARY_NAME, 20).party
-        val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL)
+        val emptyUpdate = Vault.Update(emptySet(), emptySet(), type = Vault.UpdateType.GENERAL, references = emptySet())
     }
 
     object DummyContract : Contract {
