@@ -106,7 +106,7 @@ class NodeVaultService(
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
             val consumedStateRefs = update.consumed.map { it.ref }
-            val referenceStateRefs = update.references
+            val referenceStateAndRefs = update.references
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
             val session = currentDBSession()
@@ -169,7 +169,7 @@ class NodeVaultService(
                     session.save(state)
                 }
             }
-            referenceStateRefs.forEach { (state, ref) ->
+            referenceStateAndRefs.forEach { (state, ref) ->
                 val keys = state.data.participants.map { it.owningKey }
                 val persistentStateRef = PersistentStateRef(ref)
                 val constraintInfo = Vault.ConstraintInfo(state.constraint)
@@ -232,15 +232,27 @@ class NodeVaultService(
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStates(tx.inputs)
-            val referenceStates = loadStates(tx.references)
 
-            // Is transaction irrelevant?
+            // This list should only contain NEW states which we have not seen before as an output in another transaction. If we can't
+            // obtain the references from the vault then the reference must be a state we have not seen before, therefore we should store it
+            // in the vault. If StateToRecord is set to ALL_VISIBLE or ONLY_RELEVANT then we should store all of the previously unseen
+            // states in the reference list. The assumption is that we might need to inspect them at some point if they were referred to
+            // in the contracts of the input or output states.
+            val newReferenceStateAndRefs = when (statesToRecord) {
+                StatesToRecord.NONE -> throw AssertionError("Should not reach here")
+                StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
+                    val notSeenReferences = tx.references - loadStates(tx.references).map { it.ref }
+                    tx.toLedgerTransaction(servicesForResolution).references.filter { it.ref in notSeenReferences }
+                }
+            }
+
+            // Is transaction irrelevant? If so, then we don't care about the reference states either.
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
                 return null
             }
 
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = referenceStates.toSet())
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
@@ -318,7 +330,7 @@ class NodeVaultService(
                         softLockReserve(uuid, stateRefs)
                     }
                 }
-                persistentStateService.persist(vaultUpdate.produced)
+                persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }

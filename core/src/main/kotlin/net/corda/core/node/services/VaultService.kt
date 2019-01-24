@@ -47,7 +47,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
      * other transactions observed, then the changes are observed "net" of those.
      */
     @CordaSerializable
-    data class Update<U : ContractState>(
+    data class Update<U : ContractState> @JvmOverloads constructor(
             val consumed: Set<StateAndRef<U>>,
             val produced: Set<StateAndRef<U>>,
             val flowId: UUID? = null,
@@ -57,10 +57,10 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
              * differently.
              */
             val type: UpdateType = UpdateType.GENERAL,
-            val references: Set<StateAndRef<U>>
+            val references: Set<StateAndRef<U>> = emptySet()
     ) {
         /** Checks whether the update contains a state of the specified type. */
-        inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T }
+        inline fun <reified T : ContractState> containsType() = consumed.any { it.state.data is T } || produced.any { it.state.data is T } || references.any { it.state.data is T }
 
         /** Checks whether the update contains a state of the specified type and state status */
         fun <T : ContractState> containsType(clazz: Class<T>, status: StateStatus) =
@@ -84,7 +84,7 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             val combinedConsumed = consumed + (rhs.consumed - produced)
             // The ordering below matters to preserve ordering of consumed/produced Sets when they are insertion order dependent implementations.
             val combinedProduced = produced.filter { it !in rhs.consumed }.toSet() + rhs.produced
-            return copy(consumed = combinedConsumed, produced = combinedProduced)
+            return copy(consumed = combinedConsumed, produced = combinedProduced, references = references + rhs.references)
         }
 
         override fun toString(): String {
@@ -100,8 +100,23 @@ class Vault<out T : ContractState>(val states: Iterable<StateAndRef<T>>) {
             produced.forEach {
                 sb.appendln("${it.ref}: ${it.state}")
             }
+            sb.appendln("References:")
+            references.forEach {
+                sb.appendln("${it.ref}: ${it.state}")
+            }
             return sb.toString()
         }
+
+        /** Additional copy method to maintain backwards compatibility. */
+        fun copy(
+                consumed: Set<StateAndRef<U>>,
+                produced: Set<StateAndRef<U>>,
+                flowId: UUID? = null,
+                type: UpdateType = UpdateType.GENERAL
+        ): Update<U> {
+            return Update(consumed, produced, flowId, type, references)
+        }
+
     }
 
     @CordaSerializable
