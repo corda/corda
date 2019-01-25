@@ -9,8 +9,11 @@ import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.loggerFor
 import java.lang.annotation.Inherited
 import java.security.PublicKey
+
+private val log = loggerFor<AttachmentConstraint>()
 
 /**
  * This annotation should only be added to [Contract] classes.
@@ -46,8 +49,12 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
+            log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
             attachment.id == attachmentId && isUploaderTrusted(attachment.contractAttachment.uploader)
-        } else false
+        } else {
+            log.warn("Hash constraint check failed: $attachmentId does not match contract attachment JAR ${attachment.id} or contract attachment JAR is untrusted")
+            false
+        }
     }
 }
 
@@ -61,8 +68,12 @@ object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             val whitelist = attachment.networkParameters.whitelistedContractImplementations
+            log.debug("Checking ${attachment.contract} is in CZ whitelist $whitelist")
             attachment.id in (whitelist[attachment.contract] ?: emptyList())
-        } else false
+        } else {
+            log.warn("CZ whitelisted constraint check failed: ${attachment.id} not in CZ whitelist")
+            false
+        }
     }
 }
 
@@ -100,5 +111,11 @@ object AutomaticPlaceholderConstraint : AttachmentConstraint {
  */
 @KeepForDJVM
 data class SignatureAttachmentConstraint(val key: PublicKey) : AttachmentConstraint {
-    override fun isSatisfiedBy(attachment: Attachment): Boolean = key.isFulfilledBy(attachment.signerKeys.map { it })
+    override fun isSatisfiedBy(attachment: Attachment): Boolean {
+        return if (!key.isFulfilledBy(attachment.signerKeys.map { it })) {
+            log.warn("Untrusted signing key: expected $key. but contract attachment contains ${attachment.signerKeys}")
+            false
+        }
+        else true
+    }
 }
