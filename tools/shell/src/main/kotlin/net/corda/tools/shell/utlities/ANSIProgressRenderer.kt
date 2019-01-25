@@ -2,8 +2,8 @@ package net.corda.tools.shell.utlities
 
 import net.corda.core.internal.Emoji
 import net.corda.core.messaging.FlowProgressHandle
-import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.loggerFor
+import net.corda.tools.shell.utlities.StdoutANSIProgressRenderer.draw
 import org.apache.commons.lang.SystemUtils
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.core.LogEvent
@@ -16,8 +16,9 @@ import org.fusesource.jansi.Ansi
 import org.fusesource.jansi.Ansi.Attribute
 import org.fusesource.jansi.AnsiConsole
 import org.fusesource.jansi.AnsiOutputStream
-import org.slf4j.LoggerFactory
 import rx.Subscription
+import java.util.stream.IntStream
+import kotlin.streams.toList
 
 abstract class ANSIProgressRenderer {
 
@@ -107,6 +108,7 @@ abstract class ANSIProgressRenderer {
     }
 
     @Synchronized protected fun draw(moveUp: Boolean, error: Throwable? = null) {
+
         if (!usingANSI) {
             val currentMessage = tree.getOrNull(treeIndex)?.second
             if (currentMessage != null && currentMessage != prevMessagePrinted) {
@@ -130,7 +132,16 @@ abstract class ANSIProgressRenderer {
 
             if (error != null) {
                 val errorIcon = if (usingUnicode) Emoji.skullAndCrossbones else "ERROR: "
-                ansi.a("$errorIcon ${error.message}")
+
+                var errorToPrint = error
+                var indent = 0
+                while (errorToPrint != null) {
+                    ansi.fgRed()
+                    ansi.a("${IntStream.range(indent, indent).mapToObj { "\t" }.toList().joinToString(separator = "") { s -> s }} $errorIcon ${error.message}")
+                    ansi.reset()
+                    errorToPrint = error.cause
+                    indent++
+                }
                 ansi.eraseLine(Ansi.Erase.FORWARD)
                 ansi.newline()
                 newLinesDrawn++

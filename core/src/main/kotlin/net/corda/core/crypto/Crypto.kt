@@ -290,7 +290,7 @@ object Crypto {
     fun decodePrivateKey(encodedKey: ByteArray): PrivateKey {
         val keyInfo = PrivateKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(keyInfo.privateKeyAlgorithm)
-        val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+        val keyFactory = keyFactory(signatureScheme)
         return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
     }
 
@@ -323,7 +323,7 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         try {
-            val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+            val keyFactory = keyFactory(signatureScheme)
             return keyFactory.generatePrivate(PKCS8EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw InvalidKeySpecException("This private key cannot be decoded, please ensure it is PKCS8 encoded and that " +
@@ -342,7 +342,7 @@ object Crypto {
     fun decodePublicKey(encodedKey: ByteArray): PublicKey {
         val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(encodedKey)
         val signatureScheme = findSignatureScheme(subjectPublicKeyInfo.algorithm)
-        val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+        val keyFactory = keyFactory(signatureScheme)
         return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
     }
 
@@ -377,7 +377,7 @@ object Crypto {
             "Unsupported key/algorithm for schemeCodeName: ${signatureScheme.schemeCodeName}"
         }
         try {
-            val keyFactory = KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
+            val keyFactory = keyFactory(signatureScheme)
             return keyFactory.generatePublic(X509EncodedKeySpec(encodedKey))
         } catch (ikse: InvalidKeySpecException) {
             throw throw InvalidKeySpecException("This public key cannot be decoded, please ensure it is X509 encoded and " +
@@ -1062,5 +1062,9 @@ object Crypto {
     @StubOutForDJVM
     private fun setBouncyCastleRNG() {
         CryptoServicesRegistrar.setSecureRandom(newSecureRandom())
+    }
+
+    private fun keyFactory(signatureScheme: SignatureScheme) = signatureScheme.getKeyFactory {
+        KeyFactory.getInstance(signatureScheme.algorithmName, providerMap[signatureScheme.providerName])
     }
 }
