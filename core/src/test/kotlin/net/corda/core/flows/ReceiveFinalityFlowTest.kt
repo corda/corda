@@ -32,6 +32,7 @@ class ReceiveFinalityFlowTest {
         mockNet.stopNodes()
     }
 
+    @Ignore
     @Test
     fun `sent to flow hospital on error and retry on node restart`() {
         val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
