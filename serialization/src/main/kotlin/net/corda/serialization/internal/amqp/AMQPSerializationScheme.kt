@@ -7,8 +7,6 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.cordapp.Cordapp
-import net.corda.core.internal.isAbstractClass
-import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.internal.toSynchronised
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.*
@@ -90,7 +88,7 @@ abstract class AbstractAMQPSerializationScheme(
                             .whitelistPackages(scanSpec)
                             .addClassLoader(cl)
                             .enableAllInfo()
-                            .scan()
+                            .pooledScan()
                             .use {
                                 val serializerClass = SerializationCustomSerializer::class.java
                                 it.getClassesImplementing(serializerClass.name).loadClasses(serializerClass)

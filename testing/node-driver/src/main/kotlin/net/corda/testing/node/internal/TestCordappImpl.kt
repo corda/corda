@@ -1,7 +1,10 @@
 package net.corda.testing.node.internal
 
 import io.github.classgraph.ClassGraph
-import net.corda.core.internal.*
+import net.corda.core.internal.attributes
+import net.corda.core.internal.div
+import net.corda.core.internal.exists
+import net.corda.core.internal.list
 import net.corda.core.utilities.contextLogger
 import net.corda.testing.node.TestCordapp
 import org.apache.commons.lang.SystemUtils
@@ -55,7 +58,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
             return packageToRootPaths.computeIfAbsent(scanPackage) {
                 ClassGraph()
                         .whitelistPackages(scanPackage)
-                        .scan()
+                        .pooledScan()
                         .use { it.allResources }
                         .asSequence()
                         .map { it.classpathElementURL.toPath() }

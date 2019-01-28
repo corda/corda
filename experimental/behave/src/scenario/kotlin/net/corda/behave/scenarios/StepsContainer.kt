@@ -5,7 +5,6 @@ import io.github.classgraph.ClassGraph
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.api.StepsProvider
 import net.corda.behave.scenarios.steps.*
-import net.corda.core.internal.objectOrNewInstance
 import net.corda.core.utilities.contextLogger
 
 @Suppress("KDocMissingDocumentation")
@@ -18,7 +17,7 @@ class StepsContainer(val state: ScenarioState) : En {
             ClassGraph()
                     .addClassLoader(this::class.java.classLoader)
                     .enableAllInfo()
-                    .scan()
+                    .pooledScan()
                     .use { it.getClassesImplementing(StepsProvider::class.java.name).loadClasses(StepsProvider::class.java) }
                     .map { it.kotlin.objectOrNewInstance() }
         }

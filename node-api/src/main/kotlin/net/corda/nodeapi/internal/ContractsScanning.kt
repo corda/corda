@@ -9,7 +9,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import org.slf4j.LoggerFactory
 import java.io.InputStream
-import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -28,7 +27,7 @@ class ContractsJarFile(private val file: Path) : ContractsJar {
     override val hash: SecureHash by lazy(LazyThreadSafetyMode.NONE, file::hash)
 
     override fun scan(): List<ContractClassName> {
-        val scanResult = ClassGraph().overrideClasspath(singleton(file)).enableAllInfo().scan()
+        val scanResult = ClassGraph().overrideClasspath(singleton(file)).enableAllInfo().pooledScan()
 
         val contractClassNames = scanResult.use {
             coreContractClasses
