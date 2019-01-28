@@ -62,16 +62,8 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'bash make-docsite.sh' // Windows
-    commandLine 'bash', './make-docsite.sh' // Linux
-}
-
-task installDocsiteRequirements(type: Exec) {
-    // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'bash install-docsite-requirements.sh' // Windows
-    commandLine 'bash', './install-docsite-requirements.sh' // Linux
+task makeDocs(type: Exec) {
+    commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "roastario/docs-builder:latest", "bash",  "-c", "rm -rf build && rm -rf virtualenv && install-docsite-requirements.sh && make-docsite.sh"
 }
 
 apidocs.shouldRunAfter makeDocs
