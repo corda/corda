@@ -60,13 +60,15 @@ class RegistrationTool : CordaCliWrapper("node-registration", "Corda registratio
     }
 
     private fun initialiseSerialization() {
-        nodeSerializationEnv =
-                SerializationEnvironment.with(
-                        SerializationFactoryImpl().apply {
-                            registerScheme(AMQPClientSerializationScheme(emptyList()))
-                        },
-                        AMQP_P2P_CONTEXT,
-                        rpcClientContext = AMQP_RPC_CLIENT_CONTEXT)
+        if (nodeSerializationEnv == null) {
+            nodeSerializationEnv =
+                    SerializationEnvironment.with(
+                            SerializationFactoryImpl().apply {
+                                registerScheme(AMQPClientSerializationScheme(emptyList()))
+                            },
+                            AMQP_P2P_CONTEXT,
+                            rpcClientContext = AMQP_RPC_CLIENT_CONTEXT)
+        }
     }
 
     override fun runProgram(): Int {
