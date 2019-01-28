@@ -573,7 +573,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
         loadedServices.forEach {
             try {
-                installCordaService(flowStarter, it)
+                installCordaService(it)
             } catch (e: NoSuchMethodException) {
                 log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                         ServiceHub::class.java.name)
@@ -637,7 +637,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
     }
 
-    private fun <T : SerializeAsToken> installCordaService(flowStarter: FlowStarter, serviceClass: Class<T>) {
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
@@ -659,6 +659,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         service.tokenize()
         log.info("Installed ${serviceClass.name} Corda service")
+
+        return service
     }
 
     private fun registerCordappFlows() {
