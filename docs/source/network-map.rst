@@ -140,9 +140,9 @@ connectivity is required for zone members, required cryptographic algorithms and
 Network parameters update process
 ---------------------------------
 
-Occasionally, the Corda zone operator may need to change network parameters. There are many reasons that can lead to this decision:
-adding a notary, setting new fields that were added to enable smooth network interoperability, or a change of the existing compatibility
-constants is required, for example.
+Network parameters are controlled by the zone operator of the Corda network that you are a member of. Occasionally, they may need to change
+these parameters. There are many reasons that can lead to this decision: adding a notary, setting new fields that were added to enable
+smooth network interoperability, or a change of the existing compatibility constants is required, for example.
 
 .. note:: A future release may support the notion of phased roll-out of network parameter changes.
 
