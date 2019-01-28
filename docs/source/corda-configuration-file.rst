@@ -507,9 +507,9 @@ rpcAddress (deprecated)
 
   *Default:* not defined
 
-:cryptoServiceName: (optional) name of the CryptoService implementation. This only needs to be set if you intend to use a different provider than the default one (see :doc:`cryptoservice-configuration.rst`).
+:cryptoServiceName: (optional) name of the CryptoService implementation. This only needs to be set if you intend to use a different provider than the default one (see :doc:`cryptoservice-configuration`).
 
-:cryptoServiceConf: (optional) path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider than the default one (see :doc:`cryptoservice-configuration.rst`).
+:cryptoServiceConf: (optional) path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider than the default one (see :doc:`cryptoservice-configuration`).
 
 :custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 rpcSettings
