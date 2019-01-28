@@ -44,6 +44,7 @@ import net.corda.serialization.internal.withTokenContext
 import org.apache.activemq.artemis.utils.ReusableLatch
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.lang.Integer.min
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.*
@@ -620,7 +621,7 @@ class MultiThreadedStateMachineManager(
 
     private fun calculateDefaultTimeoutSeconds(retryCount: Int): Long {
         return with(serviceHub.configuration.flowTimeout) {
-            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, retryCount.toDouble()).toLong()
+            val timeoutDelaySeconds = timeout.seconds * Math.pow(backoffBase, min(retryCount, maxRestartCount).toDouble()).toLong()
             maxOf(1L, ((1.0 + Math.random()) * timeoutDelaySeconds / 2).toLong())
         }
     }
