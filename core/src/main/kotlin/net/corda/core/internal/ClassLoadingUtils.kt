@@ -1,5 +1,6 @@
 package net.corda.core.internal
 
+import io.github.classgraph.ClassGraph
 import net.corda.core.StubOutForDJVM
 
 /**

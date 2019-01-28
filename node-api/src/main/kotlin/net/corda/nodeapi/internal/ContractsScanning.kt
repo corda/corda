@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption

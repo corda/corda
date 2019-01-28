@@ -5,6 +5,8 @@ import io.github.classgraph.ClassGraph
 import net.corda.behave.scenarios.api.StepsBlock
 import net.corda.behave.scenarios.api.StepsProvider
 import net.corda.behave.scenarios.steps.*
+import net.corda.core.internal.objectOrNewInstance
+import net.corda.core.internal.pooledScan
 import net.corda.core.utilities.contextLogger
 
 @Suppress("KDocMissingDocumentation")
