@@ -11,8 +11,8 @@ import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import java.lang.IllegalArgumentException
 
-// TODO: Need to resolve circular dependency
-
+// A cache factory suitable for use while migrating the database to a new version. This version does not need node configuration in order to
+// construct a cache.
 class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
                                  private val nodeConfiguration: NodeConfiguration?) : BindableNamedCacheFactory, SingletonSerializeAsToken() {
 

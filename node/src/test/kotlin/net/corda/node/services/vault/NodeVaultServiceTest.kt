@@ -552,21 +552,20 @@ class NodeVaultServiceTest {
 
     @Test
     fun `is ownable state relevant`() {
-        val service = vaultService
         val amount = Amount(1000, Issued(BOC.ref(1), GBP))
         val wellKnownCash = Cash.State(amount, identity.party)
         val myKeys = services.keyManagementService.filterMyKeys(listOf(wellKnownCash.owner.owningKey))
-        assertTrue { service.isRelevant(wellKnownCash, myKeys.toSet()) }
+        assertTrue { NodeVaultService.isRelevant(wellKnownCash, myKeys.toSet()) }
 
         val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
         val anonymousCash = Cash.State(amount, anonymousIdentity.party)
         val anonymousKeys = services.keyManagementService.filterMyKeys(listOf(anonymousCash.owner.owningKey))
-        assertTrue { service.isRelevant(anonymousCash, anonymousKeys.toSet()) }
+        assertTrue { NodeVaultService.isRelevant(anonymousCash, anonymousKeys.toSet()) }
 
         val thirdPartyIdentity = AnonymousParty(generateKeyPair().public)
         val thirdPartyCash = Cash.State(amount, thirdPartyIdentity)
         val thirdPartyKeys = services.keyManagementService.filterMyKeys(listOf(thirdPartyCash.owner.owningKey))
-        assertFalse { service.isRelevant(thirdPartyCash, thirdPartyKeys.toSet()) }
+        assertFalse { NodeVaultService.isRelevant(thirdPartyCash, thirdPartyKeys.toSet()) }
     }
 
     // TODO: Unit test linear state relevancy checks

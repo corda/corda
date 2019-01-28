@@ -7,6 +7,7 @@ import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
@@ -40,10 +41,10 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _cordaDB: CordaPersistence
 
-    val dbTransactions: DBTransactionStorage
+    val dbTransactions: WritableTransactionStorage
         get() = _dbTransactions
 
-    private lateinit var _dbTransactions: DBTransactionStorage
+    private lateinit var _dbTransactions: WritableTransactionStorage
 
 
     fun initialiseNodeServices(database: Database,
