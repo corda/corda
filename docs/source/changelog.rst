@@ -76,8 +76,8 @@ Version 4.0
 * Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
 
-* BFT-Smart and Raft notary implementations have been move to the ``net.corda.notary.experimental`` package to emphasise
-  their experimental nature. Note that it not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
+* BFT-Smart and Raft notary implementations have been moved to the ``net.corda.notary.experimental`` package to emphasise
+  their experimental nature. Note that it is not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
 
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
