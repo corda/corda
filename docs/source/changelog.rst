@@ -9,6 +9,8 @@ Unreleased
 
 * Updating postgres dependency to 42.2.5
 
+* Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
+
 .. _changelog_v4.0:
 
 Version 4.0

@@ -11,6 +11,8 @@ import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.ServiceHub
+import net.corda.core.node.services.CordaService
+import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.testing.common.internal.testNetworkParameters
@@ -138,6 +140,15 @@ class UnstartedMockNode private constructor(private val node: InternalMockNetwor
     val id get() : Int = node.id
 
     /**
+     * Install a custom test-only [CordaService].
+     *
+     * NOTE: There is no need to call this method if the service class is defined in the CorDapp and the [TestCordapp] API is used.
+     *
+     * @return the instance of the service object.
+     */
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T = node.installCordaService(serviceClass)
+
+    /**
      * Start the node
      *
      * @return A [StartedMockNode] object.
@@ -179,6 +190,8 @@ class StartedMockNode private constructor(private val node: TestStartedNode) {
 
     /**
      * Manually register an initiating-responder flow pair based on the [FlowLogic] annotations.
+     *
+     * NOTE: There is no need to call this method if the flow pair is defined in the CorDapp and the [TestCordapp] API is used.
      *
      * @param initiatedFlowClass [FlowLogic] class which is annotated with [InitiatedBy].
      * @return An [Observable] which emits responder flows each time one is executed.
