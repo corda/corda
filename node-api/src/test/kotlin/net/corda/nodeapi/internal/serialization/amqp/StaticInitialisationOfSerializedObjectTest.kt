@@ -1,8 +1,11 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.contracts.FungibleState
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
+import net.corda.nodeapi.internal.serialization.amqp.testutils.testDefaultFactory
 import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
 import org.assertj.core.api.Assertions
 import org.junit.Test
@@ -49,12 +52,7 @@ class StaticInitialisationOfSerializedObjectTest {
         data class D(val c: C)
 
         val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
-
-        val typeMap = sf::class.java.getDeclaredField("serializersByType")
-        typeMap.isAccessible = true
-
-        @Suppress("UNCHECKED_CAST")
-        val serialisersByType = typeMap.get(sf) as ConcurrentHashMap<Type, AMQPSerializer<Any>>
+        val serialisersByType = getSerializers(sf)
 
         // pre building a serializer, we shouldn't have anything registered
         assertEquals(0, serialisersByType.size)
@@ -65,6 +63,24 @@ class StaticInitialisationOfSerializedObjectTest {
 
         // post creation of the serializer we should have one element in the map, this
         // proves we didn't statically construct an instance of C when building the serializer
+        assertEquals(1, serialisersByType.size)
+    }
+
+    @Test
+    fun testFutureInterfacesAreExcludedFromSerialization() {
+        data class D(val c: Int): FungibleState
+
+        val defaultFactory = testDefaultFactory()
+        val bytesAndSchema = TestSerializationOutput(EnumEvolvabilityTests.VERBOSE, defaultFactory).serializeAndReturnSchema(D(2))
+        val typeDescriptorForClassD = bytesAndSchema.schema.types[0].descriptor.name!!
+        val schemas = SerializationSchemas(bytesAndSchema.schema, TransformsSchema(emptyMap()))
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val serialisersByType = getSerializers(factory)
+
+        factory.get(typeDescriptorForClassD, schemas)
+
+        // Only a serializer for class D should be created (and no serializer for FungibleState)
         assertEquals(1, serialisersByType.size)
     }
 
@@ -142,5 +158,15 @@ class StaticInitialisationOfSerializedObjectTest {
         Assertions.assertThatThrownBy {
             DeserializationInput(sf2).deserialize(SerializedBytes<D>(bytes))
         }.isInstanceOf(NotSerializableException::class.java)
+    }
+
+    fun getSerializers(factory: SerializerFactory): ConcurrentHashMap<Type, AMQPSerializer<Any>> {
+        val typeMap = factory::class.java.getDeclaredField("serializersByType")
+        typeMap.isAccessible = true
+
+        @Suppress("UNCHECKED_CAST")
+        val serializers = typeMap.get(factory) as ConcurrentHashMap<Type, AMQPSerializer<Any>>
+
+        return serializers
     }
 }

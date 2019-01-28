@@ -54,6 +54,14 @@ open class SerializerFactory(
     val classloader: ClassLoader
         get() = classCarpenter.classloader
 
+    /**
+     * This is a set of interfaces, introduced in subsequent versions that are ignored during serialization
+     * to maintain compatibility between these later versions and this one.
+     *
+     * See: CORDA-2422
+     */
+    private val FUTURE_INGORED_INTERFACES = setOf("net.corda.core.contracts.FungibleState")
+
     private fun getEvolutionSerializer(typeNotation: TypeNotation, newSerializer: AMQPSerializer<Any>,
                                        schemas: SerializationSchemas)
             = evolutionSerializerGetter.getEvolutionSerializer(this, typeNotation, newSerializer, schemas)
@@ -220,7 +228,9 @@ open class SerializerFactory(
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
         val metaSchema = CarpenterMetaSchema.newInstance()
-        val notationByName = schemaAndDescriptor.schemas.schema.types.associate { it.name to it }
+        val notationByName = schemaAndDescriptor.schemas.schema.types
+                .filterNot{ it.name in FUTURE_INGORED_INTERFACES }
+                .associate { it.name to it }
         val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
             try {
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
