@@ -1,3 +1,5 @@
+import java.nio.file.Files
+
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'kotlin'
 
@@ -62,8 +64,14 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(type: Exec) {
-    commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "roastario/docs-builder:latest", "bash",  "-c", "rm -rf build && rm -rf virtualenv && install-docsite-requirements.sh && make-docsite.sh"
+task makeDocs(type: Exec, dependsOn: ['ensureBuildFolderPresent']) {
+    commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash",  "-c", "make-docsite.sh"
+}
+
+task ensureBuildFolderPresent{
+    doLast{
+        Files.createDirectories(new File(project.buildDir, "html").toPath())
+    }
 }
 
 apidocs.shouldRunAfter makeDocs
