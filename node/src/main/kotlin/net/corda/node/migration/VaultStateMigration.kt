@@ -46,6 +46,7 @@ class VaultStateMigration : CordaMigration() {
         initialiseNodeServices(database!!, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
         val persistentStates = VaultStateIterator(cordaDB)
+        val myKeys = identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
         persistentStates.forEach {
             cordaDB.transaction {
                 val session = currentDBSession()
@@ -53,9 +54,6 @@ class VaultStateMigration : CordaMigration() {
 
                 addStateParties(session, stateAndRef)
 
-                val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
-                    participant.owningKey
-                }).toSet()
                 if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
                     it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                 }
