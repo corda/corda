@@ -17,8 +17,10 @@ object CordappResolver {
     private var cordappResolver: () -> Cordapp? = {
         Exception().stackTrace
                 .mapNotNull { cordappClasses[it.className] }
-                // If there is more than one cordapp registered for a class name we can't determine the "correct" one and return null.
-                .firstOrNull { it.size == 1 }?.single()
+                // in case there are multiple classes matched, we select the first one having a single CorDapp registered against it.
+                .firstOrNull { it.size == 1 }
+                // otherwise we return null, signalling we cannot reliably determine the current CorDapp.
+                ?.single()
     }
 
     /*
@@ -28,9 +30,13 @@ object CordappResolver {
     @Synchronized
     fun register(cordapp: Cordapp) {
         cordapp.cordappClasses.forEach {
-            if (cordappClasses.containsKey(it)) {
-                logger.warn("More than one CorDapp registered for $it.")
-                cordappClasses[it] = cordappClasses[it]!! + cordapp
+            val cordapps = cordappClasses[it]
+            if (cordapps != null) {
+                // we do not register CorDapps that originate from the same file.
+                if (cordapps.none { it.jarHash == cordapp.jarHash }) {
+                    logger.warn("More than one CorDapp registered for $it.")
+                    cordappClasses[it] = cordappClasses[it]!! + cordapp
+                }
             } else {
                 cordappClasses[it] = setOf(cordapp)
             }
