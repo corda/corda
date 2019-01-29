@@ -68,7 +68,7 @@ task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
 task makeDocs(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
     } else {
         commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder corda/docs-builder:latest bash -c make-docsite.sh"
     }
