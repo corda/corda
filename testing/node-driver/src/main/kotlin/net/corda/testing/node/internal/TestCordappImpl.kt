@@ -68,7 +68,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
         private fun findProjectRoot(path: Path): Path {
             var current = path
             while (true) {
-                if ((current / "build.gradle").exists()) {
+                if ((current / "build.gradle").exists() || (current / "build.gradle.kts").exists()) {
                     return current
                 }
                 current = current.parent
