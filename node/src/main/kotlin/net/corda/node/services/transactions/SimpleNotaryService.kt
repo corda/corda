@@ -13,14 +13,17 @@ class SimpleNotaryService(override val services: ServiceHubInternal, override va
     private val notaryConfig = services.configuration.notary
             ?: throw IllegalArgumentException("Failed to register ${this::class.java}: notary configuration not present")
 
+    init {
+        val mode = if (notaryConfig.validating) "validating" else "non-validating"
+        log.info("Starting notary in $mode mode")
+    }
+
     override val uniquenessProvider = PersistentUniquenessProvider(services.clock, services.database, services.cacheFactory)
 
     override fun createServiceFlow(otherPartySession: FlowSession): NotaryServiceFlow {
         return if (notaryConfig.validating) {
-            log.info("Starting in validating mode")
             ValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
         } else {
-            log.info("Starting in non-validating mode")
             NonValidatingNotaryFlow(otherPartySession, this, notaryConfig.etaMessageThresholdSeconds.seconds)
         }
     }
