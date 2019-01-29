@@ -86,7 +86,7 @@ class NodeVaultService(
     override fun start() {
         bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
-            update.produced.forEach {
+            (update.produced + update.references).forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
