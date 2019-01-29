@@ -334,11 +334,11 @@ an actual constraint for the output states (the ``AutomaticPlaceholderConstraint
 How to use the ``SignatureAttachmentConstraint`` if states were already created on the network with the ``WhitelistedByZoneAttachmentConstraint``
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
-1. As the original developer of the Cordapp, the first step is to sign the latest version of the JAR that was released. The key used for signing will be used
-to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned by different parties and it will be
-expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
+1. As the original developer of the corDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
+The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
+by different parties and it will be expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
 
-2. Next step is to whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
+2. Whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
 more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
 
 3. Any flows that build transactions using this Cordapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
