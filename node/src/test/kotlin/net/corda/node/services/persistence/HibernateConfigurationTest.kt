@@ -39,6 +39,7 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.HibernateConfiguration
+import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.rigorousMock
@@ -50,6 +51,7 @@ import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hibernate.SessionFactory
 import org.junit.*
 import java.math.BigDecimal
@@ -962,5 +964,35 @@ class HibernateConfigurationTest {
 
     private fun toStateRef(pStateRef: PersistentStateRef): StateRef {
         return StateRef(SecureHash.parse(pStateRef.txId), pStateRef.index)
+    }
+
+    @Test
+    fun `schema change`() {
+        fun createNewDB(schemas: Set<MappedSchema>, initialiseSchema: Boolean = true):  CordaPersistence {
+            val schemaService = NodeSchemaService(extraSchemas = schemas)
+            val dataSourceProps = makeTestDataSourceProperties("aa")
+            val identityService = mock<IdentityService>().also { mock ->
+                doReturn(null).whenever(mock).wellKnownPartyFromAnonymous(any<AbstractParty>())
+                listOf(dummyCashIssuer, dummyNotary).forEach {
+                    doReturn(it.party).whenever(mock).wellKnownPartyFromAnonymous(it.party)
+                    doReturn(it.party).whenever(mock).wellKnownPartyFromX500Name(it.name)
+                }
+            }
+            database = configureDatabase(dataSourceProps, DatabaseConfig(initialiseSchema = initialiseSchema), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
+            return database
+        }
+
+        createNewDB(setOf(CashSchemaV1, SampleCashSchemaV1)).apply {
+            database.transaction {
+                vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 4, issuer.ref(1), rng = Random(0L))
+            }
+        }
+        createNewDB(setOf(CashSchemaV1, SampleCashSchemaV1, SampleCashSchemaV2), initialiseSchema = false).use {
+            assertThatThrownBy {
+                it.transaction {
+                    vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 4, issuer.ref(1), rng = Random(0L))
+                }
+            }.isInstanceOf(HibernateSchemaChangeException::class.java)
+        }
     }
 }
