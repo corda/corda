@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 NODE_LIST=("dockerNode1" "dockerNode2" "dockerNode3")
 NETWORK_NAME=mininet
+CORDAPP_VERSION="4.0-SNAPSHOT"
+DOCKER_IMAGE_VERSION="corda-zulu-4.0-rc02"
 
 mkdir cordapps
 rm -f cordapps/*
 
-wget -O cordapps/finance-contracts.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/4.0-SNAPSHOT/corda-finance-contracts-4.0-SNAPSHOT.jar
-wget -O cordapps/finance-workflows.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/4.0-SNAPSHOT/corda-finance-workflows-4.0-SNAPSHOT.jar
-wget -O cordapps/confidential-identities.jar    https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/4.0-SNAPSHOT/corda-confidential-identities-4.0-SNAPSHOT.jar
+wget -O cordapps/finance-contracts.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/${CORDAPP_VERSION}/corda-finance-contracts-4.0-SNAPSHOT.jar
+wget -O cordapps/finance-workflows.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/${CORDAPP_VERSION}/corda-finance-workflows-4.0-SNAPSHOT.jar
+wget -O cordapps/confidential-identities.jar    https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/${CORDAPP_VERSION}/corda-confidential-identities-4.0-SNAPSHOT.jar
 
 rm keystore
 
@@ -76,7 +78,7 @@ do
             -v $(pwd)/${NODE}/logs:/opt/corda/logs \
             --name ${NODE} \
             --network="${NETWORK_NAME}" \
-            corda/corda-zulu-4.0-rc02:latest config-generator --generic
+            corda/${DOCKER_IMAGE_VERSION}:latest config-generator --generic
 
     docker rm -f ${NODE}
     docker run -d \
@@ -92,5 +94,5 @@ do
             -e CORDA_ARGS="--sshd --sshd-port=222$(echo ${NODE} | sed 's/[^0-9]*//g')" \
             --name ${NODE} \
             --network="${NETWORK_NAME}" \
-            corda/corda-zulu-4.0-rc02:latest
+            corda/${DOCKER_IMAGE_VERSION}:latest
 done
