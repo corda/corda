@@ -45,10 +45,10 @@ class VaultStateMigration : CordaMigration() {
         logger.info("Migrating vault state data to V4 tables")
         initialiseNodeServices(database!!, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
-        val persistentStates = VaultStateIterator(cordaDB)
-        val myKeys = identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
-        persistentStates.forEach {
-            cordaDB.transaction {
+        cordaDB.transaction {
+            val persistentStates = VaultStateIterator(cordaDB)
+            val myKeys = identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
+            persistentStates.forEach {
                 val session = currentDBSession()
                 val stateAndRef = getStateAndRef(it)
 

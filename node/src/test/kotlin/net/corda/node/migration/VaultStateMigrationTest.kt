@@ -1,11 +1,8 @@
 package net.corda.node.migration
 
-import com.nhaarman.mockito_kotlin.mock
 import liquibase.database.Database
-import liquibase.database.DatabaseConnection
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.Amount
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.Issued
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
@@ -21,18 +18,14 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.test.SampleCashSchemaV3
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.vault.VaultQueryTestsBase
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
-import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
@@ -52,38 +45,23 @@ class VaultStateMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
-        val bigCorp = TestIdentity(CordaX500Name("BigCorporation", "New York", "US"))
         val bob = TestIdentity(BOB_NAME, 80)
         val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
-        val charlie = TestIdentity(CHARLIE_NAME, 90)
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
-        val DUMMY_CASH_ISSUER = dummyCashIssuer.ref(1)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
-        val DUMMY_OBLIGATION_ISSUER = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10).party
         val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
         val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
         val ALICE_IDENTITY get() = alice.identity
-        val BIG_CORP get() = bigCorp.party
-        val BIG_CORP_IDENTITY get() = bigCorp.identity
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
-        val BOC get() = bankOfCorda.party
         val BOC_IDENTITY get() = bankOfCorda.identity
         val BOC_KEY get() = bankOfCorda.keyPair
-        val BOC_PUBKEY get() = bankOfCorda.publicKey
-        val CASH_NOTARY get() = cashNotary.party
         val CASH_NOTARY_IDENTITY get() = cashNotary.identity
-        val CHARLIE get() = charlie.party
-        val CHARLIE_IDENTITY get() = charlie.identity
         val DUMMY_NOTARY get() = dummyNotary.party
-        val DUMMY_NOTARY_KEY get() = dummyNotary.keyPair
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_PUBKEY get() = megaCorp.publicKey
         val MEGA_CORP_KEY get() = megaCorp.keyPair
-        val MEGA_CORP get() = megaCorp.party
         val MINI_CORP_IDENTITY get() = miniCorp.identity
-        val MINI_CORP get() = miniCorp.party
 
         val clock: TestClock = TestClock(Clock.systemUTC())
 
@@ -114,18 +92,6 @@ class VaultStateMigrationTest {
         liquibaseDB = Mockito.mock(Database::class.java)
         Mockito.`when`(liquibaseDB.connection).thenReturn(liquibaseConnection)
 
-
-        val cash = Cash()
-        (1..101).map { createCashTransaction(cash, it.DOLLARS, BOB) }.forEach {
-            storeTransaction(it)
-            createVaultStatesFromTransaction(it)
-        }
-
-        (1..101).map { createCashTransaction(cash, it.DOLLARS, ALICE) }.forEach {
-            storeTransaction(it)
-            createVaultStatesFromTransaction(it)
-        }
-
         saveOurIdentities(listOf(bob.keyPair))
         saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity))
     }
@@ -135,13 +101,13 @@ class VaultStateMigrationTest {
         cordaDB.close()
     }
 
-    fun createCashTransaction(cash: Cash, value: Amount<Currency>, owner: AbstractParty): SignedTransaction {
+    private fun createCashTransaction(cash: Cash, value: Amount<Currency>, owner: AbstractParty): SignedTransaction {
         val tx = TransactionBuilder(DUMMY_NOTARY)
         cash.generateIssue(tx, Amount(value.quantity, Issued(bankOfCorda.ref(1), value.token)), owner, DUMMY_NOTARY)
         return notaryServices.signInitialTransaction(tx, bankOfCorda.party.owningKey)
     }
 
-    fun createVaultStatesFromTransaction(tx: SignedTransaction) {
+    private fun createVaultStatesFromTransaction(tx: SignedTransaction) {
         cordaDB.transaction {
             tx.coreTransaction.outputs.forEachIndexed { index, state ->
                 val constraintInfo = Vault.ConstraintInfo(state.constraint)
@@ -160,7 +126,7 @@ class VaultStateMigrationTest {
         }
     }
 
-    fun saveOurIdentities(identities: List<KeyPair>) {
+    private fun saveOurIdentities(identities: List<KeyPair>) {
         cordaDB.transaction {
             identities.forEach {
                 val persistentKey = BasicHSMKeyManagementService.PersistentKey(it.public, it.private)
@@ -169,10 +135,10 @@ class VaultStateMigrationTest {
         }
     }
 
-    fun saveAllIdentities(identities: List<PartyAndCertificate>) {
+    private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
             identities.forEach {
-                val persistentID = PersistentIdentityService.PersistentIdentity(it.owningKey.toString(), it.certPath.encoded)
+                val persistentID = PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded)
                 val persistentName = PersistentIdentityService.PersistentIdentityNames(it.name.toString(), it.owningKey.hash.toString())
                 session.save(persistentID)
                 session.save(persistentName)
@@ -180,7 +146,7 @@ class VaultStateMigrationTest {
         }
     }
 
-    fun storeTransaction(tx: SignedTransaction) {
+    private fun storeTransaction(tx: SignedTransaction) {
         cordaDB.transaction {
             val persistentTx = DBTransactionStorage.DBTransaction(
                     txId = tx.id.toString(),
@@ -191,19 +157,21 @@ class VaultStateMigrationTest {
         }
     }
 
-    fun getVaultStateCount(): Long {
-        //TODO: query by relevancy
+    private fun getVaultStateCount(relevancyStatus: Vault.RelevancyStatus = Vault.RelevancyStatus.ALL): Long {
         return cordaDB.transaction {
             val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
             val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
             criteriaQuery.select(criteriaBuilder.count(queryRootStates))
+            if (relevancyStatus != Vault.RelevancyStatus.ALL) {
+                criteriaQuery.where(criteriaBuilder.equal(queryRootStates.get<Vault.RelevancyStatus>("relevancyStatus"), relevancyStatus))
+            }
             val query = session.createQuery(criteriaQuery)
             query.singleResult
         }
     }
 
-    fun getStatePartyCount(): Long {
+    private fun getStatePartyCount(): Long {
         return cordaDB.transaction {
             val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
             val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
@@ -214,14 +182,37 @@ class VaultStateMigrationTest {
         }
     }
 
+    private fun addCashStates(statesToAdd: Int, owner: AbstractParty) {
+        val cash = Cash()
+        (1..statesToAdd).map { createCashTransaction(cash, it.DOLLARS, owner) }.forEach {
+            storeTransaction(it)
+            createVaultStatesFromTransaction(it)
+        }
+    }
+
     @Test
     fun `check a simple migration works`() {
-        assertEquals(202, getVaultStateCount())
+        addCashStates(10, BOB)
+        addCashStates(10, ALICE)
+        assertEquals(20, getVaultStateCount())
         assertEquals(0, getStatePartyCount())
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
-        assertEquals(202, getVaultStateCount())
-        assertEquals(202, getStatePartyCount())
+        assertEquals(20, getVaultStateCount())
+        assertEquals(20, getStatePartyCount())
+        assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
+    }
+
+    @Test
+    fun `check state paging works`() {
+        addCashStates(300, BOB)
+
+        assertEquals(0, getStatePartyCount())
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(300, getStatePartyCount())
+        assertEquals(300, getVaultStateCount())
+        assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 }
 
