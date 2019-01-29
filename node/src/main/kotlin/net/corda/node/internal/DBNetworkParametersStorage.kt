@@ -90,7 +90,6 @@ class DBNetworkParametersStorage(
         }
     }
 
-    // TODO Revisit this approach.
     private fun tryDownloadUnknownParameters(parametersHash: SecureHash): NetworkParameters? {
         return if (networkMapClient != null) {
             try {
