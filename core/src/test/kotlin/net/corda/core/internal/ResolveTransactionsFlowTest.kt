@@ -229,7 +229,7 @@ class ResolveTransactionsFlowTest {
 
 
     @InitiatingFlow
-    private open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
+    open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
         constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
@@ -243,7 +243,7 @@ class ResolveTransactionsFlowTest {
     }
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
-    private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
+    class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
         override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }
