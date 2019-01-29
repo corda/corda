@@ -56,15 +56,17 @@ object CheckpointVerifier {
     }
 
     // Throws exception when the flow is incompatible
-    private fun checkFlowCompatible(subFlow: SubFlow, currentCordapps: Map<SecureHash.SHA256, Cordapp>, platformVersion: Int) {
+    private fun checkFlowCompatible(subFlow: SubFlow, currentCordappsByHash: Map<SecureHash.SHA256, Cordapp>, platformVersion: Int) {
         val subFlowVersion = subFlow.subFlowVersion
 
         if (subFlowVersion.platformVersion != platformVersion) {
             throw CheckpointIncompatibleException.SubFlowCoreVersionIncompatibleException(subFlow.flowClass, subFlowVersion.platformVersion)
         }
 
-        if (subFlowVersion is SubFlowVersion.CorDappFlow && subFlowVersion.corDappHash !in currentCordapps) {
-            val matchingCordapp = currentCordapps.values.find { subFlow.flowClass in it.allFlows }
+        // If the sub-flow is from a CorDapp then make sure we have that exact CorDapp jar loaded
+        if (subFlowVersion is SubFlowVersion.CorDappFlow && subFlowVersion.corDappHash !in currentCordappsByHash) {
+            // If we don't then see if the flow exists in any of the CorDapps so that we can give the user a more useful error message
+            val matchingCordapp = currentCordappsByHash.values.find { subFlow.flowClass in it.allFlows }
             if (matchingCordapp != null) {
                 throw CheckpointIncompatibleException.FlowVersionIncompatibleException(subFlow.flowClass, matchingCordapp, subFlowVersion.corDappHash)
             } else {
