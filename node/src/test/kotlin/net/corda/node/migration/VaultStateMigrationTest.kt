@@ -50,23 +50,16 @@ class VaultStateMigrationTest {
         val bankOfCorda = TestIdentity(BOC_NAME)
         val bob = TestIdentity(BOB_NAME, 80)
         val charlie = TestIdentity(CHARLIE_NAME, 90)
-        val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
-        val megaCorp = TestIdentity(CordaX500Name("MegaCorp", "London", "GB"))
-        val miniCorp = TestIdentity(CordaX500Name("MiniCorp", "London", "GB"))
         val ALICE get() = alice.party
         val ALICE_IDENTITY get() = alice.identity
         val BOB get() = bob.party
         val BOB_IDENTITY get() = bob.identity
         val BOC_IDENTITY get() = bankOfCorda.identity
         val BOC_KEY get() = bankOfCorda.keyPair
-        val CASH_NOTARY_IDENTITY get() = cashNotary.identity
         val CHARLIE get() = charlie.party
         val DUMMY_NOTARY get() = dummyNotary.party
-        val MEGA_CORP_IDENTITY get() = megaCorp.identity
-        val MEGA_CORP_KEY get() = megaCorp.keyPair
-        val MINI_CORP_IDENTITY get() = miniCorp.identity
 
         val clock: TestClock = TestClock(Clock.systemUTC())
 
@@ -87,11 +80,8 @@ class VaultStateMigrationTest {
 
     @Before
     fun setUp() {
-        val identityService = makeTestIdentityService(BOC_IDENTITY, CASH_NOTARY_IDENTITY, MINI_CORP_IDENTITY, MEGA_CORP_IDENTITY)
-        notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
-        (notaryServices.myInfo.legalIdentitiesAndCerts + BOC_IDENTITY + CASH_NOTARY_IDENTITY + MINI_CORP_IDENTITY + MEGA_CORP_IDENTITY).forEach { identity ->
-            notaryServices.identityService.verifyAndRegisterIdentity(identity)
-        }
+        val identityService = makeTestIdentityService(dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
+        notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
         cordaDB = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
         val liquibaseConnection = Mockito.mock(JdbcConnection::class.java)
         Mockito.`when`(liquibaseConnection.url).thenReturn(cordaDB.jdbcUrl)
@@ -191,9 +181,11 @@ class VaultStateMigrationTest {
 
     private fun addCashStates(statesToAdd: Int, owner: AbstractParty) {
         val cash = Cash()
-        (1..statesToAdd).map { createCashTransaction(cash, it.DOLLARS, owner) }.forEach {
-            storeTransaction(it)
-            createVaultStatesFromTransaction(it)
+        cordaDB.transaction {
+            (1..statesToAdd).map { createCashTransaction(cash, it.DOLLARS, owner) }.forEach {
+                storeTransaction(it)
+                createVaultStatesFromTransaction(it)
+            }
         }
     }
 
@@ -222,19 +214,46 @@ class VaultStateMigrationTest {
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
-    // Used to test migration performance
     @Test
-    @Ignore
-    fun `Migrate large database`() {
-        val stateMultiplier = 100L
-        logger.info("Start adding states to vault")
-        (1..stateMultiplier).forEach {
-            addCashStates(100, BOB)
+    fun `Check state fields are correct`() {
+        fun <T> getState(clazz: Class<T>): T {
+            return cordaDB.transaction {
+                val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
+                val criteriaQuery = criteriaBuilder.createQuery(clazz)
+                val queryRootStates = criteriaQuery.from(clazz)
+                criteriaQuery.select(queryRootStates)
+                val query = session.createQuery(criteriaQuery)
+                query.singleResult
+            }
         }
-        logger.info("Finish adding states to vault")
+        val tx = createCashTransaction(Cash(), 100.DOLLARS, ALICE)
+        storeTransaction(tx)
+        createVaultStatesFromTransaction(tx)
+        val expectedPersistentParty = VaultSchemaV1.PersistentParty(
+                PersistentStateRef(tx.id.toString(), 0),
+                ALICE
+        )
+        val state = tx.coreTransaction.outputs.first()
+        val constraintInfo = Vault.ConstraintInfo(state.constraint)
+        val expectedPersistentState = VaultSchemaV1.VaultStates(
+                notary = state.notary,
+                contractStateClassName = state.data.javaClass.name,
+                stateStatus = Vault.StateStatus.UNCONSUMED,
+                recordedTime = clock.instant(),
+                relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT,
+                constraintType = constraintInfo.type(),
+                constraintData = constraintInfo.data()
+        )
+
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
-        assertEquals((100 * stateMultiplier), getStatePartyCount())
+        val persistentStateParty = getState(VaultSchemaV1.PersistentParty::class.java)
+        val persistentState = getState(VaultSchemaV1.VaultStates::class.java)
+        assertEquals(expectedPersistentState.notary, persistentState.notary)
+        assertEquals(expectedPersistentState.stateStatus, persistentState.stateStatus)
+        assertEquals(expectedPersistentState.relevancyStatus, persistentState.relevancyStatus)
+        assertEquals(expectedPersistentParty.x500Name, persistentStateParty.x500Name)
+        assertEquals(expectedPersistentParty.compositeKey, persistentStateParty.compositeKey)
     }
 
     @Test
@@ -249,7 +268,7 @@ class VaultStateMigrationTest {
     @Test
     fun `All parties added to state party table`() {
         val packages = listOf(DummyLinearStateSchemaV1::class.packageName)
-        val services = MockServices(packages, dummyNotary, notaryServices.identityService, dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
+        val services = MockServices(packages, dummyNotary, notaryServices.identityService, dummyCashIssuer.keyPair)
 
         val tx = TransactionBuilder(notary = dummyNotary.party).apply {
             addOutputState(DummyLinearContract.State(
@@ -271,6 +290,52 @@ class VaultStateMigrationTest {
         assertEquals(3, getStatePartyCount())
         assertEquals(1, getVaultStateCount())
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
+    }
+
+    @Test
+    fun `State with corresponding transaction missing is skipped`() {
+        val cash = Cash()
+        val unknownTx = createCashTransaction(cash, 100.DOLLARS, BOB)
+        createVaultStatesFromTransaction(unknownTx)
+
+        addCashStates(10, BOB)
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(10, getStatePartyCount())
+    }
+
+    @Test
+    fun `State with unknown ID is handled correctly`() {
+        addCashStates(1, CHARLIE)
+        addCashStates(10, BOB)
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(11, getStatePartyCount())
+        assertEquals(1, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
+        assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
+    }
+
+    @Test
+    fun `Null database causes migration to be ignored`() {
+        val migration = VaultStateMigration()
+        // Just check this does not throw an exception
+        migration.execute(null)
+    }
+
+    // Used to test migration performance
+    @Test
+    @Ignore
+    fun `Migrate large database`() {
+        val statesAtOnce = 500L
+        val stateMultiplier = 200L
+        logger.info("Start adding states to vault")
+        (1..stateMultiplier).forEach {
+            addCashStates(statesAtOnce.toInt(), BOB)
+        }
+        logger.info("Finish adding states to vault")
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals((statesAtOnce * stateMultiplier), getStatePartyCount())
     }
 }
 

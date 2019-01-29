@@ -16,6 +16,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import org.hibernate.Session
 
@@ -34,10 +35,13 @@ class VaultStateMigration : CordaMigration() {
     }
 
     private fun getStateAndRef(persistentState: VaultSchemaV1.VaultStates): StateAndRef<ContractState> {
-        val txHash = SecureHash.parse(persistentState.stateRef!!.txId)
-        val tx = dbTransactions.getTransaction(txHash)!!
-        val state = tx.coreTransaction.outputs[persistentState.stateRef!!.index]
-        val stateRef = StateRef(txHash, persistentState.stateRef!!.index)
+        val persistentStateRef = persistentState.stateRef ?:
+                throw VaultStateMigrationException("Persistent state ref missing from state")
+        val txHash = SecureHash.parse(persistentStateRef.txId)
+        val tx = dbTransactions.getTransaction(txHash) ?:
+                throw VaultStateMigrationException("Transaction $txHash not present in vault")
+        val state = tx.coreTransaction.outputs[persistentStateRef.index]
+        val stateRef = StateRef(txHash, persistentStateRef.index)
         return StateAndRef(state, stateRef)
     }
 
@@ -49,11 +53,14 @@ class VaultStateMigration : CordaMigration() {
         }
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
-        cordaDB.transaction {
-            val persistentStates = VaultStateIterator(cordaDB)
-            val myKeys = identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
-            persistentStates.forEach {
-                val session = currentDBSession()
+        val myKeys = cordaDB.transaction {
+            identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
+        }
+
+        val persistentStates = VaultStateIterator(cordaDB)
+        persistentStates.forEach {
+            val session = currentDBSession()
+            try {
                 val stateAndRef = getStateAndRef(it)
 
                 addStateParties(session, stateAndRef)
@@ -61,6 +68,8 @@ class VaultStateMigration : CordaMigration() {
                 if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
                     it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                 }
+            } catch (e: VaultStateMigrationException) {
+                logger.error("An error occurred while migrating a vault state: ${e.message}. Skipping")
             }
         }
         logger.info("Finished performing vault state data migration")
@@ -72,7 +81,8 @@ class VaultStateMigration : CordaMigration() {
  * A minimal set of schema for retrieving data from the database.
  *
  * Note that adding an extra schema here may cause migrations to fail if it ends up creating a table before the same table
- * is created in a migration script.
+ * is created in a migration script. As such, this migration must be run after the tables for the following have been created (and,
+ * if they are removed in the future, before they are deleted).
  */
 object VaultMigrationSchema
 
@@ -108,30 +118,46 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
     }
 
-    private val pageSize = DEFAULT_PAGE_SIZE
+    private val pageSize = 1000//DEFAULT_PAGE_SIZE
     private var pageNumber = 0
+    private var transaction: DatabaseTransaction? = null
     private var currentPage = getNextPage()
 
-    private fun getNextPage(): List<VaultSchemaV1.VaultStates> {
-        return database.transaction {
-            val session = currentDBSession()
-            val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
-            val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-            criteriaQuery.select(queryRootStates)
-            val query = session.createQuery(criteriaQuery)
-            query.firstResult = (pageNumber * pageSize)
-            query.maxResults = pageSize
-            pageNumber++
-            val result = query.resultList
-            logger.debug("Current page has ${result.size} vault states")
-            result
+    private fun endTransaction() {
+        try {
+            transaction?.commit()
+        } catch (e: Exception) {
+            transaction?.rollback()
+            logger.error("Failed to commit transaction while iterating vault states: ${e.message}", e)
+        } finally {
+            transaction?.close()
         }
+    }
+
+    private fun getNextPage(): List<VaultSchemaV1.VaultStates> {
+        endTransaction()
+        transaction = database.newTransaction()
+        val session = currentDBSession()
+        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
+        val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        criteriaQuery.select(queryRootStates)
+        val query = session.createQuery(criteriaQuery)
+        query.firstResult = (pageNumber * pageSize)
+        query.maxResults = pageSize
+        pageNumber++
+        val result = query.resultList
+        logger.debug("Current page has ${result.size} vault states")
+        return result
     }
 
     private var currentIndex = 0
 
     override fun hasNext(): Boolean {
-        return currentIndex + ((pageNumber - 1) * pageSize) < numStates
+        val nextElementPresent = currentIndex + ((pageNumber - 1) * pageSize) < numStates
+        if (!nextElementPresent) {
+            endTransaction()
+        }
+        return nextElementPresent
     }
 
     override fun next(): VaultSchemaV1.VaultStates {
@@ -144,3 +170,5 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         return stateToReturn
     }
 }
+
+class VaultStateMigrationException(msg: String) : Exception(msg)
