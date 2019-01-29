@@ -4,6 +4,7 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -15,6 +16,7 @@ import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.contextLogger
 import net.corda.finance.DOLLARS
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.schemas.CashSchemaV1
@@ -26,19 +28,20 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+import net.corda.testing.internal.vault.DummyLinearContract
+import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
 import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestIdentityService
-import org.junit.After
-import org.junit.Before
-import org.junit.ClassRule
-import org.junit.Test
+import org.junit.*
 import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class VaultStateMigrationTest {
 
@@ -46,6 +49,7 @@ class VaultStateMigrationTest {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
         val bob = TestIdentity(BOB_NAME, 80)
+        val charlie = TestIdentity(CHARLIE_NAME, 90)
         val cashNotary = TestIdentity(CordaX500Name("Cash Notary Service", "Zurich", "CH"), 21)
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
@@ -58,6 +62,7 @@ class VaultStateMigrationTest {
         val BOC_IDENTITY get() = bankOfCorda.identity
         val BOC_KEY get() = bankOfCorda.keyPair
         val CASH_NOTARY_IDENTITY get() = cashNotary.identity
+        val CHARLIE get() = charlie.party
         val DUMMY_NOTARY get() = dummyNotary.party
         val MEGA_CORP_IDENTITY get() = megaCorp.identity
         val MEGA_CORP_KEY get() = megaCorp.keyPair
@@ -68,6 +73,8 @@ class VaultStateMigrationTest {
         @ClassRule
         @JvmField
         val testSerialization = SerializationEnvironmentRule()
+
+        val logger = contextLogger()
     }
 
     val cordappPackages = listOf(
@@ -116,7 +123,7 @@ class VaultStateMigrationTest {
                         contractStateClassName = state.data.javaClass.name,
                         stateStatus = Vault.StateStatus.UNCONSUMED,
                         recordedTime = clock.instant(),
-                        relevancyStatus = Vault.RelevancyStatus.RELEVANT,
+                        relevancyStatus = Vault.RelevancyStatus.RELEVANT, //Always persist as relevant to mimic V3
                         constraintType = constraintInfo.type(),
                         constraintData = constraintInfo.data()
                 )
@@ -191,7 +198,7 @@ class VaultStateMigrationTest {
     }
 
     @Test
-    fun `check a simple migration works`() {
+    fun `Check a simple migration works`() {
         addCashStates(10, BOB)
         addCashStates(10, ALICE)
         assertEquals(20, getVaultStateCount())
@@ -204,7 +211,7 @@ class VaultStateMigrationTest {
     }
 
     @Test
-    fun `check state paging works`() {
+    fun `Check state paging works`() {
         addCashStates(300, BOB)
 
         assertEquals(0, getStatePartyCount())
@@ -212,6 +219,57 @@ class VaultStateMigrationTest {
         migration.execute(liquibaseDB)
         assertEquals(300, getStatePartyCount())
         assertEquals(300, getVaultStateCount())
+        assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
+    }
+
+    // Used to test migration performance
+    @Test
+    @Ignore
+    fun `Migrate large database`() {
+        val stateMultiplier = 100L
+        logger.info("Start adding states to vault")
+        (1..stateMultiplier).forEach {
+            addCashStates(100, BOB)
+        }
+        logger.info("Finish adding states to vault")
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals((100 * stateMultiplier), getStatePartyCount())
+    }
+
+    @Test
+    fun `Check the connection is open post migration`() {
+        addCashStates(12, ALICE)
+
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertFalse(cordaDB.dataSource.connection.isClosed)
+    }
+
+    @Test
+    fun `All parties added to state party table`() {
+        val packages = listOf(DummyLinearStateSchemaV1::class.packageName)
+        val services = MockServices(packages, dummyNotary, notaryServices.identityService, dummyCashIssuer.keyPair, BOC_KEY, MEGA_CORP_KEY)
+
+        val tx = TransactionBuilder(notary = dummyNotary.party).apply {
+            addOutputState(DummyLinearContract.State(
+                    linearId = UniqueIdentifier("test"),
+                    participants = listOf(BOB, ALICE, CHARLIE),
+                    linearString = "foo",
+                    linearNumber = 0L,
+                    linearBoolean = false,
+                    linearTimestamp = clock.instant()), DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+            )
+            addCommand(dummyCommand())
+        }
+        val stx = services.signInitialTransaction(tx)
+        storeTransaction(stx)
+        createVaultStatesFromTransaction(stx)
+
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(3, getStatePartyCount())
+        assertEquals(1, getVaultStateCount())
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 }

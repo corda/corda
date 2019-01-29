@@ -76,6 +76,8 @@ abstract class CordaMigration : CustomTaskChange {
                         identityService::wellKnownPartyFromX500Name,
                         identityService::wellKnownPartyFromAnonymous)
         )
+        // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
+        // migrations may fail.
         return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
     }
 

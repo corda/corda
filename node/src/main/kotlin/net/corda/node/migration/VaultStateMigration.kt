@@ -43,7 +43,11 @@ class VaultStateMigration : CordaMigration() {
 
     override fun execute(database: Database?) {
         logger.info("Migrating vault state data to V4 tables")
-        initialiseNodeServices(database!!, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
+        if (database == null) {
+            logger.warn("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
+            return
+        }
+        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
         cordaDB.transaction {
             val persistentStates = VaultStateIterator(cordaDB)
