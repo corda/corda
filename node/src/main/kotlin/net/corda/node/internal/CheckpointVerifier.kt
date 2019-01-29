@@ -18,42 +18,59 @@ object CheckpointVerifier {
      * Verifies that all Checkpoints stored in the db can be safely loaded with the currently installed version.
      * @throws CheckpointIncompatibleException if any offending checkpoint is found.
      */
-    fun verifyCheckpointsCompatible(checkpointStorage: CheckpointStorage, currentCordapps: List<Cordapp>, platformVersion: Int, serviceHub: ServiceHub, tokenizableServices: List<Any>) {
+    fun verifyCheckpointsCompatible(
+            checkpointStorage: CheckpointStorage,
+            currentCordapps: List<Cordapp>,
+            platformVersion: Int,
+            serviceHub: ServiceHub,
+            tokenizableServices: List<Any>
+    ) {
         val checkpointSerializationContext = CheckpointSerializationDefaults.CHECKPOINT_CONTEXT.withTokenContext(
-                CheckpointSerializeAsTokenContextImpl(tokenizableServices, CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER, CheckpointSerializationDefaults.CHECKPOINT_CONTEXT, serviceHub)
+                CheckpointSerializeAsTokenContextImpl(
+                        tokenizableServices,
+                        CheckpointSerializationDefaults.CHECKPOINT_SERIALIZER,
+                        CheckpointSerializationDefaults.CHECKPOINT_CONTEXT,
+                        serviceHub
+                )
         )
-        checkpointStorage.getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
 
+        val cordappsByHash = currentCordapps.associateBy { it.jarHash }
+
+        checkpointStorage.getAllCheckpoints().forEach { (_, serializedCheckpoint) ->
             val checkpoint = try {
                 serializedCheckpoint.checkpointDeserialize(context = checkpointSerializationContext)
+            } catch (e: ClassNotFoundException) {
+                val message = e.message
+                if (message != null) {
+                    throw CheckpointIncompatibleException.CordappNotInstalledException(message)
+                } else {
+                    throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
+                }
             } catch (e: Exception) {
                 throw CheckpointIncompatibleException.CannotBeDeserialisedException(e)
             }
 
             // For each Subflow, compare the checkpointed version to the current version.
-            checkpoint.subFlowStack.forEach { checkFlowCompatible(it, currentCordapps, platformVersion) }
+            checkpoint.subFlowStack.forEach { checkFlowCompatible(it, cordappsByHash, platformVersion) }
         }
     }
 
     // Throws exception when the flow is incompatible
-    private fun checkFlowCompatible(subFlow: SubFlow, currentCordapps: List<Cordapp>, platformVersion: Int) {
-        val corDappInfo = subFlow.subFlowVersion
+    private fun checkFlowCompatible(subFlow: SubFlow, currentCordappsByHash: Map<SecureHash.SHA256, Cordapp>, platformVersion: Int) {
+        val subFlowVersion = subFlow.subFlowVersion
 
-        if (corDappInfo.platformVersion != platformVersion) {
-            throw CheckpointIncompatibleException.SubFlowCoreVersionIncompatibleException(subFlow.flowClass, corDappInfo.platformVersion)
+        if (subFlowVersion.platformVersion != platformVersion) {
+            throw CheckpointIncompatibleException.SubFlowCoreVersionIncompatibleException(subFlow.flowClass, subFlowVersion.platformVersion)
         }
 
-        if (corDappInfo is SubFlowVersion.CorDappFlow) {
-            val installedCordapps = currentCordapps.filter { it.name == corDappInfo.corDappName }
-            when (installedCordapps.size) {
-                0 -> throw CheckpointIncompatibleException.FlowNotInstalledException(subFlow.flowClass)
-                1 -> {
-                    val currenCordapp = installedCordapps.first()
-                    if (corDappInfo.corDappHash != currenCordapp.jarHash) {
-                        throw CheckpointIncompatibleException.FlowVersionIncompatibleException(subFlow.flowClass, currenCordapp, corDappInfo.corDappHash)
-                    }
-                }
-                else -> throw IllegalStateException("Multiple Cordapps with name ${corDappInfo.corDappName} installed.") // This should not happen
+        // If the sub-flow is from a CorDapp then make sure we have that exact CorDapp jar loaded
+        if (subFlowVersion is SubFlowVersion.CorDappFlow && subFlowVersion.corDappHash !in currentCordappsByHash) {
+            // If we don't then see if the flow exists in any of the CorDapps so that we can give the user a more useful error message
+            val matchingCordapp = currentCordappsByHash.values.find { subFlow.flowClass in it.allFlows }
+            if (matchingCordapp != null) {
+                throw CheckpointIncompatibleException.FlowVersionIncompatibleException(subFlow.flowClass, matchingCordapp, subFlowVersion.corDappHash)
+            } else {
+                throw CheckpointIncompatibleException.CordappNotInstalledException(subFlow.flowClass.name)
             }
         }
     }
@@ -64,15 +81,20 @@ object CheckpointVerifier {
  */
 sealed class CheckpointIncompatibleException(override val message: String) : Exception() {
     class CannotBeDeserialisedException(val e: Exception) : CheckpointIncompatibleException(
-            "Found checkpoint that cannot be deserialised using the current Corda version. Please revert to the previous version of Corda, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again. Cause: ${e.message}")
+            "Found checkpoint that cannot be deserialised using the current Corda version. Please revert to the previous version of Corda, " +
+                    "drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again. Cause: ${e.message}")
 
     class SubFlowCoreVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, oldVersion: Int) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is incompatible with the current Corda platform. Please revert to the previous version of Corda (version ${oldVersion}), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+            "Found checkpoint for flow: $flowClass that is incompatible with the current Corda platform. Please revert to the previous " +
+                    "version of Corda (version $oldVersion), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 
     class FlowVersionIncompatibleException(val flowClass: Class<out FlowLogic<*>>, val cordapp: Cordapp, oldHash: SecureHash) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is incompatible with the current installed version of ${cordapp.name}. Please reinstall the previous version of the CorDapp (with hash: ${oldHash}), drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+            "Found checkpoint for flow: $flowClass that is incompatible with the current installed version of ${cordapp.name}. " +
+                    "Please reinstall the previous version of the CorDapp (with hash: $oldHash), drain your node " +
+                    "(see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 
-    class FlowNotInstalledException(val flowClass: Class<out FlowLogic<*>>) : CheckpointIncompatibleException(
-            "Found checkpoint for flow: ${flowClass} that is no longer installed. Please install the missing CorDapp, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
+    class CordappNotInstalledException(classNotFound: String) : CheckpointIncompatibleException(
+            "Found checkpoint for CorDapp that is no longer installed. Specifically, could not find class $classNotFound. Please install the " +
+                    "missing CorDapp, drain your node (see https://docs.corda.net/upgrading-cordapps.html#flow-drains), and try again.")
 }
 
