@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 import java.nio.file.Files
 
 apply plugin: 'org.jetbrains.dokka'
@@ -23,7 +25,7 @@ def internalPackagePrefixes(sourceDirs) {
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
     dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
-                            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
 }
 
@@ -64,13 +66,11 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(type: Exec, dependsOn: ['ensureBuildFolderPresent']) {
-    commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash",  "-c", "make-docsite.sh"
-}
-
-task ensureBuildFolderPresent{
-    doLast{
-        Files.createDirectories(new File(project.buildDir, "html").toPath())
+task makeDocs(type: Exec) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
+    } else {
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder corda/docs-builder:latest bash -c make-docsite.sh"
     }
 }
 
