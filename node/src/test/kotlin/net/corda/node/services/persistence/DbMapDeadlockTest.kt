@@ -9,12 +9,10 @@ import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.internal.TestingNamedCacheFactory
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.lang.Thread.sleep
-import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import javax.persistence.Column
@@ -22,7 +20,6 @@ import javax.persistence.Entity
 import javax.persistence.Id
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class TestKey(val value: Int) {
     override fun equals(other: Any?): Boolean {
@@ -73,17 +70,6 @@ class DbMapDeadlockTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val sqlServerProperties : Properties
-            get() {
-                return Properties().also {
-                    it.setProperty("dataSourceClassName", "com.microsoft.sqlserver.jdbc.SQLServerDataSource")
-                    it.setProperty("dataSource.url", "jdbc:sqlserver://localhost:1433;databaseName=perftesting;encrypt=true;trustServerCertificate=true;hostNameInCertificate=*;loginTimeout=30;sendStringParametersAsUnicode=false")
-                    it.setProperty("dataSource.user", "sa")
-                    it.setProperty("dataSource.password", "yourStrong(!)Password")
-                    it.setProperty("autoCommit", "false")
-                }
-            }
-
     private val h2Properties : Properties
     get(){
         return Properties().also {
@@ -99,19 +85,11 @@ class DbMapDeadlockTest {
         recreateDeadlock(h2Properties)
     }
 
-    // To run this test, run sql server in docker using: docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=yourStrong(!)Password' -p 1433:1433 -d microsoft/mssql-server-linux:2017-latest
-    // and create a database called 'perftesting' in the db server
-    @Ignore("Requires a local SqlServer running, e.g. in a docker container")
-    @Test
-    fun checkAppendOnlyPersistentMapForDeadlockSqlServer(){
-        recreateDeadlock(sqlServerProperties)
-    }
-
     fun recreateDeadlock(hikariProperties: Properties) {
         val cacheFactory = TestingNamedCacheFactory()
-        val dbConfig = DatabaseConfig(initialiseSchema = true, transactionIsolationLevel = TransactionIsolationLevel.READ_COMMITTED, runMigration = true)
+        val dbConfig = DatabaseConfig(initialiseSchema = true, transactionIsolationLevel = TransactionIsolationLevel.READ_COMMITTED)
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
-        createCordaPersistence(dbConfig, { null }, { null }, schemaService, cacheFactory, null).apply {
+        createCordaPersistence(dbConfig, { null }, { null }, schemaService, hikariProperties, cacheFactory, null).apply {
             startHikariPool(hikariProperties, dbConfig, schemaService.schemaOptions.keys)
         }.use { persistence ->
 
