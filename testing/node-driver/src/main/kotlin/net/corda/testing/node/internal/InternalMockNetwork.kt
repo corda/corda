@@ -28,7 +28,6 @@ import net.corda.core.utilities.seconds
 import net.corda.node.VersionInfo
 import net.corda.node.internal.AbstractNode
 import net.corda.node.internal.InitiatedFlowFactory
-import net.corda.node.internal.NetworkParametersStorage
 import net.corda.node.internal.NodeFlowManager
 import net.corda.node.services.api.FlowStarter
 import net.corda.node.services.api.ServiceHubInternal
