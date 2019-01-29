@@ -38,22 +38,25 @@ example here: https://github.com/corda/oracle-example.
 
 ## Running the system test
 
-The system test utilize docker. Amount of RAM required to run the IRS system test is around 2.5GB, it is important
-to allocated appropriate system resources (On MacOS/Windows this may require explicit changes to docker configuration)
+The system test utilizes Docker. The amount of RAM required to run the IRS system test is around 2.5GB, so it is important
+to make sure the appropriate system resources are allocated (On MacOS/Windows this may require explicit changes to your Docker configuration).
 
 ### Gradle
 
-The system test is designed to exercise the entire stack, including Corda nodes and the web frontend. It uses [Docker](https://www.docker.com), [docker-compose](https://docs.docker.com/compose/), and
-[PhantomJS](http://phantomjs.org/). Docker and docker-compose need to be installed and configured to be inside the system path
-(default installation). PhantomJs binary have to be put in a known location and have execution permission enabled
-(``chmod a+x phantomjs`` on Unix) and the full path to the binary exposed as system property named ``phantomjs.binary.path`` or
-a system variable named ``PHANTOMJS_BINARY_PATH``.
-Having this done, the system test can be run by running the Gradle task ``:samples:irs-demo:systemTest``.
+The system test is designed to exercise the entire stack, including Corda nodes and the web frontend. It uses [Docker](https://www.docker.com),
+[docker-compose](https://docs.docker.com/compose/), and
+[PhantomJS](http://phantomjs.org/). Docker and docker-compose need to be installed and configured to on the system path
+(which happens by default). The PhantomJs binary has to be put in a known location and needs execution permissions enabled
+(``chmod a+x phantomjs`` on *nix) and the full path to the binary needs to be available as system property named ``phantomjs.binary.path`` or
+an environment variable named ``PHANTOMJS_BINARY_PATH``.
+
+To start the test, run ``:samples:irs-demo:systemTest``.
 
 ### Other
 
-In order to run the the test by other means that the Gradle task - two more system properties are expected -
-``CORDAPP_DOCKER_COMPOSE`` and ``WEB_DOCKER_COMPOSE`` which should specify full path docker-compose file for IRS cordapp
- and web frontend respectively. Those can be obtained by running ``:samples:irs-demo:cordapp:prepareDockerNodes`` and
-``web:generateDockerCompose`` Gradle tasks. ``systemTest`` task simply executes those two and set proper system properties up.
+In order to run the test by other means than the Gradle task - two more environment variables are expected -
+``CORDAPP_DOCKER_COMPOSE`` and ``WEB_DOCKER_COMPOSE`` which should specify the full path for the docker-compose files for the IRS cordapp
+ and web frontend respectively. Those can be obtained by running the ``:samples:irs-demo:cordapp:prepareDockerNodes`` and
+``web:generateDockerCompose`` Gradle tasks. The ``:samples:irs-demo:systemTest`` Gradle task simply executes these two tasks and sets up the
+correct environment variables.
 
