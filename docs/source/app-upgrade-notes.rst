@@ -108,9 +108,7 @@ CorDapp specific versionId identifiers if this follows the convention of always 
 starting from 1.
 
 If you use the finance demo app, you should adjust your dependencies so you depend on the finance-contracts
-and finance-workflows artifacts from your own contract and workflow JAR respectively. Although a single
-finance jar still exists in Corda 4 for backwards compatibility, it should not be installed or used for
-updated apps. This way, only the code that needs to be on the ledger actually will be.
+and finance-workflows artifacts from your own contract and workflow JAR respectively.
 
 Step 3. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
@@ -326,7 +324,7 @@ There are two improvements to how Java package protection is handled in Corda 4:
 1. Package sealing
 2. Package namespace ownership
 
-**Sealing.** App isolation has been improved. Version 4 of the finance CorDapp (*corda-finance.jar*) is now built as a set of sealed and
+**Sealing.** App isolation has been improved. Version 4 of the finance CorDapps (*corda-finance-contracts.jar*, *corda-finance-workflows.jar*) is now built as a set of sealed and
 signed JAR files. This means classes in your own CorDapps cannot be placed under the following package namespace:  ``net.corda.finance``
 
 In the unlikely event that you were injecting code into ``net.corda.finance.*`` package namespaces from your own apps, you will need to move them
