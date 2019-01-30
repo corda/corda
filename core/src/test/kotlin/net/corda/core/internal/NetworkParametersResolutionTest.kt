@@ -22,8 +22,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
-import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
-import net.corda.testing.node.internal.cordappForClasses
+import net.corda.testing.node.internal.cordappsForPackages
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
 import org.junit.Before
@@ -42,8 +41,7 @@ class NetworkParametersResolutionTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(MockNetworkParameters(
-                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP,  cordappForClasses(ResolveTransactionsFlowTest.TestFlow::class.java, ResolveTransactionsFlowTest.TestResponseFlow::class.java))))
+        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", javaClass.packageName)))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
         miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
