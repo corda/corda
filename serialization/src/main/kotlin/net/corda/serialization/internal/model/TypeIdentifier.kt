@@ -24,7 +24,6 @@ class IncompatibleTypeIdentifierException(message: String) : NotSerializableExce
  * [TypeIdentifier] provides a family of type identifiers, together with a [prettyPrint] method for displaying them.
  */
 sealed class TypeIdentifier {
-
     /**
      * The name of the type.
      */
@@ -38,7 +37,7 @@ sealed class TypeIdentifier {
      * @throws IncompatibleTypeIdentifierException if the type identifier is incompatible with the locally-defined type
      * to which it refers.
      */
-    abstract fun getLocalType(classLoader: ClassLoader = ClassLoader.getSystemClassLoader()): Type
+    abstract fun getLocalType(classLoader: ClassLoader = systemClassLoader): Type
 
     open val erased: TypeIdentifier get() = this
 
@@ -61,6 +60,9 @@ sealed class TypeIdentifier {
         if (simplifyClassNames) split(".", "$").last() else this
 
     companion object {
+        // This method has locking.  So we memo the value here.
+        private val systemClassLoader: ClassLoader = ClassLoader.getSystemClassLoader()
+
         /**
          * Obtain the [TypeIdentifier] for an erased Java class.
          *
@@ -204,7 +206,7 @@ sealed class TypeIdentifier {
 
         override fun toString() = "Parameterised(${prettyPrint()})"
         override fun getLocalType(classLoader: ClassLoader): Type {
-            val rawType = classLoader.loadClass(name)
+            val rawType = Class.forName(name, false, classLoader)
             if (rawType.typeParameters.size != parameters.size) {
                 throw IncompatibleTypeIdentifierException(
                         "Class $rawType expects ${rawType.typeParameters.size} type arguments, " +

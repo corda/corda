@@ -124,7 +124,7 @@ internal fun checkConstraintValidity(state: TransactionState<*>) {
  */
 internal fun ContractClassName.contractHasAutomaticConstraintPropagation(classLoader: ClassLoader? = null): Boolean {
     return (classLoader ?: NoConstraintPropagation::class.java.classLoader)
-            .loadClass(this)
+            .run { Class.forName(this@contractHasAutomaticConstraintPropagation, false, this) }
             .getAnnotation(NoConstraintPropagation::class.java) == null
 }
 
