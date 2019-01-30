@@ -151,17 +151,27 @@ The available config fields are listed below.
 :security: Contains various nested fields controlling user authentication/authorization, in particular for RPC accesses. See
     :doc:`clientrpc` for details.
 
-:notary: Optional configuration object which if present configures the node to run as a notary.
+:notary: Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT-SMaRt
+    cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
     :validating: Boolean to determine whether the notary is a validating or non-validating one.
 
-    :serviceLegalName: If the node is part of a distributed cluster, specify the legal name of the cluster. At runtime, Corda
-        checks whether this name matches the name of the certificate of the notary cluster.
+    :raft: If part of a distributed Raft cluster, specify this configuration object with the following settings:
 
-    :className: The fully qualified class name of the notary service to run. The class is expected to be loaded from
-        a notary CorDapp. Defaults to run the ``SimpleNotaryService``, which is built in.
+        :nodeAddress: The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
+            separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
 
-    :extraConfig: an optional configuration block for providing notary implementation-specific values.
+        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
+            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+            new cluster will be bootstrapped.
+
+    :bftSMaRt: If part of a distributed BFT-SMaRt cluster, specify this configuration object with the following settings:
+
+        :replicaId: The zero-based index of the current replica. All replicas must specify a unique replica id.
+
+        :clusterAddresses: Must list the addresses of all the members in the cluster. At least one of the members must
+            be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+            new cluster will be bootstrapped.
 
 :rpcUsers: A list of users who are authorised to access the RPC system. Each user in the list is a config object with the
     following fields:
