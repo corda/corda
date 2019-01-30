@@ -84,7 +84,7 @@ fun CordaCliWrapper.start(args: Array<String>) {
         exitProcess(ExitCodes.SUCCESS)
     } catch (e: ExecutionException) {
         val throwable = e.cause ?: e
-        if (this.verbose || this.subCommands().any { it.verbose }) {
+        if (this.verbose || this.subCommands.any { it.verbose }) {
             throwable.printStackTrace()
         } else {
         }
@@ -164,7 +164,7 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
             registerConverter(Path::class.java) { Paths.get(it).toAbsolutePath().normalize() }
             commandSpec.name(alias)
             commandSpec.usageMessage().description(description)
-            subCommands().forEach {
+            subCommands.forEach {
                 val subCommand = CommandLine(it)
                 it.args = args
                 subCommand.commandSpec.usageMessage().description(it.description)
@@ -173,8 +173,8 @@ abstract class CordaCliWrapper(alias: String, description: String) : CliWrapperB
         }
     }
 
-    fun subCommands(): Set<CliWrapperBase> {
-        return additionalSubCommands() + installShellExtensionsParser
+    val subCommands: Set<CliWrapperBase> by lazy {
+        additionalSubCommands() + installShellExtensionsParser
     }
 
     override fun call(): Int {

@@ -422,7 +422,8 @@ myLegalName
   *Default:* not defined
 
 notary
-  Optional configuration object which if present configures the node to run as a notary.
+  Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT-SMaRt
+  cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
 
   validating
     Boolean to determine whether the notary is a validating or non-validating one.
@@ -435,16 +436,36 @@ notary
 
     *Default:* not defined
 
-  className
-    The fully qualified class name of the notary service to run.
-    The class is expected to be loaded from a notary CorDapp.
+  raft
+    *(Experimental)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
 
-    *Default:*  ``SimpleNotaryService`` (which is built in).
+      nodeAddress
+        The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
+        separate transport layer for communication that does not integrate with ArtemisMQ messaging services.
 
-  extraConfig
-    an optional configuration block for providing notary implementation-specific values.
+        *Default:* not defined
 
-    *Default:* not defined
+      clusterAddresses
+        Must list the addresses of all the members in the cluster. At least one of the members must
+        be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+        new cluster will be bootstrapped.
+
+        *Default:* not defined
+
+  bftSMaRt
+    *(Experimental)* If part of a distributed BFT-SMaRt cluster, specify this configuration object with the following settings:
+
+      replicaId
+        The zero-based index of the current replica. All replicas must specify a unique replica id.
+
+        *Default:* not defined
+
+      clusterAddresses
+        Must list the addresses of all the members in the cluster. At least one of the members must
+        be active and be able to communicate with the cluster leader for the node to join the cluster. If empty, a
+        new cluster will be bootstrapped.
+
+        *Default:* not defined
 
 networkParameterAcceptanceSettings
   Optional settings for managing the network parameter auto-acceptance behaviour.

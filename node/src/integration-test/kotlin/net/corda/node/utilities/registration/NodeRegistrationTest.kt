@@ -1,13 +1,12 @@
 package net.corda.node.utilities.registration
 
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.internal.logElapsedTime
 import net.corda.core.internal.readFully
-import net.corda.core.messaging.startFlow
-import net.corda.core.utilities.*
-import net.corda.finance.DOLLARS
-import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.core.utilities.NetworkHostAndPort
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.loggerFor
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
@@ -16,13 +15,11 @@ import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_INTERMEDIATE_CA
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_ROOT_CA
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
-import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
-import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.SharedCompatibilityZoneParams
 import net.corda.testing.node.internal.internalDriver
 import net.corda.testing.node.internal.network.NetworkMapServer
@@ -49,11 +46,10 @@ class NodeRegistrationTest : IntegrationTest() {
     companion object {
         private val notaryName = CordaX500Name("NotaryService", "Zurich", "CH")
         private val aliceName = CordaX500Name("Alice", "London", "GB")
-        private val genevieveName = CordaX500Name("Genevieve", "London", "GB")
 
         @ClassRule
         @JvmField
-        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName, genevieveName)
+        val databaseSchemas = IntegrationTestSchemas(notaryName, aliceName)
     }
 
     @Rule
@@ -91,17 +87,12 @@ class NodeRegistrationTest : IntegrationTest() {
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = listOf(NotarySpec(notaryName)),
-                cordappsForAllNodes = FINANCE_CORDAPPS,
                 notaryCustomOverrides = mapOf("devMode" to false)
         ) {
-          val (alice, genevieve) = listOf(
-                    startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)),
-                    startNode(providedName = genevieveName, customOverrides = mapOf("devMode" to false))
-            ).transpose().getOrThrow()
+            startNode(providedName = aliceName, customOverrides = mapOf("devMode" to false)).getOrThrow()
 
             assertThat(registrationHandler.idsPolled).containsOnly(
                     aliceName.organisation,
-                    genevieveName.organisation,
                     notaryName.organisation)
         }
     }

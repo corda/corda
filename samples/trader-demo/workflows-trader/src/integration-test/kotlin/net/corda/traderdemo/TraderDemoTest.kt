@@ -1,10 +1,14 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
+import net.corda.finance.USD
+import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
@@ -17,15 +21,22 @@ import net.corda.testing.driver.driver
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.core.BOC_NAME
+import net.corda.testing.core.DUMMY_BANK_A_NAME
+import net.corda.testing.core.DUMMY_BANK_B_NAME
+import net.corda.testing.core.singleIdentity
+import net.corda.testing.driver.*
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
+import net.corda.testing.node.internal.assertCheckpoints
 import net.corda.testing.node.internal.poll
 import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
+import java.sql.DriverManager
 import java.util.concurrent.Executors
 
 class TraderDemoTest : IntegrationTest() {
@@ -94,27 +105,20 @@ class TraderDemoTest : IntegrationTest() {
                 inMemoryDB = false,
                 cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
         )) {
-            val demoUser = User("demo", "demo", setOf(startFlow<SellerFlow>(), all()))
-            val bankUser = User("user1", "test", permissions = setOf(all()))
-            val (nodeA, nodeB, bankNode) = listOf(
-                    startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser)),
-                    startNode(providedName = BOC_NAME, rpcUsers = listOf(bankUser))
-            ).map { (it.getOrThrow() as OutOfProcess) }
-
-            val nodeBRpc = CordaRPCClient(nodeB.rpcAddress).start(demoUser.username, demoUser.password).proxy
-            val nodeARpc = CordaRPCClient(nodeA.rpcAddress).start(demoUser.username, demoUser.password).proxy
-            val nodeBankRpc = let {
-                val client = CordaRPCClient(bankNode.rpcAddress)
-                client.start(bankUser.username, bankUser.password).proxy
-            }
-
-            TraderDemoClientApi(nodeBankRpc).runIssuer(amount = 100.DOLLARS, buyerName = nodeA.nodeInfo.singleIdentity().name, sellerName = nodeB.nodeInfo.singleIdentity().name)
-            val stxFuture = nodeBRpc.startFlow(::SellerFlow, nodeA.nodeInfo.singleIdentity(), 5.DOLLARS).returnValue
-            nodeARpc.stateMachinesFeed().updates.toBlocking().first() // wait until initiated flow starts
-            nodeA.stop()
-            startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to nodeA.p2pAddress.toString()))
-            stxFuture.getOrThrow()
+            val (buyer, seller, bank) = listOf(
+                    startNode(providedName = DUMMY_BANK_A_NAME),
+                    startNode(providedName = DUMMY_BANK_B_NAME),
+                    startNode(providedName = BOC_NAME)
+            ).map { it.getOrThrow() }
+            TraderDemoClientApi(bank.rpc).runIssuer(amount = 100.DOLLARS, buyerName = DUMMY_BANK_A_NAME, sellerName = DUMMY_BANK_B_NAME)
+            val saleFuture = seller.rpc.startFlow(::SellerFlow, buyer.nodeInfo.singleIdentity(), 5.DOLLARS).returnValue
+            buyer.rpc.stateMachinesFeed().updates.toBlocking().first() // wait until initiated flow starts
+            buyer.stop()
+            assertCheckpoints(DUMMY_BANK_A_NAME, 1)
+            val buyer2 = startNode(providedName = DUMMY_BANK_A_NAME, customOverrides = mapOf("p2pAddress" to buyer.p2pAddress.toString())).getOrThrow()
+            saleFuture.getOrThrow()
+            assertThat(buyer2.rpc.getCashBalance(USD)).isEqualTo(95.DOLLARS)
+            assertThat(seller.rpc.getCashBalance(USD)).isEqualTo(5.DOLLARS)
         }
     }
 }

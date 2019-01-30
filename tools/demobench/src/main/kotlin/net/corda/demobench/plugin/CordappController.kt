@@ -11,6 +11,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.streams.toList
 
+// TODO This class needs to be revisted. It seems to operate on outdated concepts.
 class CordappController : Controller() {
     companion object {
         const val FINANCE_CONTRACTS_CORDAPP_FILENAME = "corda-finance-contracts"
@@ -19,7 +20,11 @@ class CordappController : Controller() {
 
     private val jvm by inject<JVMConfig>()
     private val cordappDir: Path = jvm.applicationDir / NodeConfig.CORDAPP_DIR_NAME
-    private val financeCordappJars = setOf(cordappDir / "$FINANCE_CONTRACTS_CORDAPP_FILENAME.jar", cordappDir / "$FINANCE_WORKFLOWS_CORDAPP_FILENAME.jar")
+    private val cordappJars = setOf(
+            cordappDir / "$FINANCE_CONTRACTS_CORDAPP_FILENAME.jar",
+            cordappDir / "$FINANCE_WORKFLOWS_CORDAPP_FILENAME.jar",
+            cordappDir / "corda-confidential-identities.jar"
+    )
 
     /**
      * Install any built-in cordapps that this node requires.
@@ -29,7 +34,7 @@ class CordappController : Controller() {
         if (!config.cordappsDir.exists()) {
             config.cordappsDir.createDirectories()
         }
-        financeCordappJars.forEach {financeCordappJar ->
+        cordappJars.forEach { financeCordappJar ->
             if (financeCordappJar.exists()) {
                 financeCordappJar.copyToDirectory(config.cordappsDir, StandardCopyOption.REPLACE_EXISTING)
                 log.info("Installed 'Finance' cordapp: $financeCordappJar")
@@ -45,7 +50,7 @@ class CordappController : Controller() {
         if (!config.cordappsDir.isDirectory()) return emptyList()
         return config.cordappsDir.walk(1) { paths ->
             paths.filter(Path::isCordapp)
-                 .filter { financeCordappJars.any { !it.endsWith(it.fileName) } }
+                 .filter { cordappJars.any { !it.endsWith(it.fileName) } }
                  .toList()
         }
     }

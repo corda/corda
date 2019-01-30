@@ -6,7 +6,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -597,7 +596,7 @@ class DriverDSLImpl(
                 extraCustomCordapps + (cordappsForAllNodes ?: emptySet())
         )
 
-        if (parameters.startInSameProcess ?: startNodesInProcess) {
+        val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
@@ -621,7 +620,7 @@ class DriverDSLImpl(
                     }
                 }
             }
-            return nodeFuture
+            nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, bytemanJarPath, bytemanPort, systemProperties, parameters.maximumHeapSize)
@@ -642,7 +641,7 @@ class DriverDSLImpl(
             }
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = addressMustBeBoundFuture(executorService, effectiveP2PAddress, process)
-            return p2pReadyFuture.flatMap {
+            p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
                 }
@@ -662,6 +661,8 @@ class DriverDSLImpl(
                 }
             }
         }
+
+        return nodeFuture.doOnError { onNodeExit() }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): CordaFuture<A> {

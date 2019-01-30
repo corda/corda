@@ -22,8 +22,8 @@ import net.corda.testing.internal.LogHelper
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDataSourceProperties
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -171,7 +171,7 @@ class DBCheckpointStorageTests {
             checkpointStorage.addCheckpoint(id1, checkpoint1)
         }
 
-        Assertions.assertThatThrownBy {
+        assertThatThrownBy {
             database.transaction {
                 CheckpointVerifier.verifyCheckpointsCompatible(checkpointStorage, emptyList(), 1, mockServices, emptyList())
             }

@@ -4,6 +4,11 @@
     <bytecodeTargetLevel target="1.8">
       <module name="api-scanner_main" target="1.8" />
       <module name="api-scanner_test" target="1.8" />
+      <module name="attachment-demo-contracts_main" target="1.8" />
+      <module name="attachment-demo-contracts_test" target="1.8" />
+      <module name="attachment-demo-workflows_integrationTest" target="1.8" />
+      <module name="attachment-demo-workflows_main" target="1.8" />
+      <module name="attachment-demo-workflows_test" target="1.8" />
       <module name="attachment-demo_integrationTest" target="1.8" />
       <module name="attachment-demo_main" target="1.8" />
       <module name="attachment-demo_test" target="1.8" />
@@ -57,6 +62,8 @@
       <module name="consensus-benchmark_test" target="1.8" />
       <module name="contract_main" target="1.8" />
       <module name="contract_test" target="1.8" />
+      <module name="contracts-irs_main" target="1.8" />
+      <module name="contracts-irs_test" target="1.8" />
       <module name="contracts-states_integrationTest" target="1.8" />
       <module name="contracts-states_main" target="1.8" />
       <module name="contracts-states_test" target="1.8" />
@@ -93,6 +100,8 @@
       <module name="corda-webserver_integrationTest" target="1.8" />
       <module name="corda-webserver_main" target="1.8" />
       <module name="corda-webserver_test" target="1.8" />
+      <module name="cordapp-configuration-workflows_main" target="1.8" />
+      <module name="cordapp-configuration-workflows_test" target="1.8" />
       <module name="cordapp-configuration_main" target="1.8" />
       <module name="cordapp-configuration_test" target="1.8" />
       <module name="cordapp_integrationTest" target="1.8" />
@@ -231,6 +240,10 @@
       <module name="net.corda_canonicalizer_test" target="1.8" />
       <module name="network-bootstrapper_main" target="1.8" />
       <module name="network-bootstrapper_test" target="1.8" />
+      <module name="network-verifier-contracts_main" target="1.8" />
+      <module name="network-verifier-contracts_test" target="1.8" />
+      <module name="network-verifier-workflows_main" target="1.8" />
+      <module name="network-verifier-workflows_test" target="1.8" />
       <module name="network-verifier_main" target="1.8" />
       <module name="network-verifier_test" target="1.8" />
       <module name="network-visualiser_main" target="1.8" />
@@ -250,6 +263,10 @@
       <module name="node_test" target="1.8" />
       <module name="notary-bft-smart_main" target="1.8" />
       <module name="notary-bft-smart_test" target="1.8" />
+      <module name="notary-demo-contracts_main" target="1.8" />
+      <module name="notary-demo-contracts_test" target="1.8" />
+      <module name="notary-demo-workflows_main" target="1.8" />
+      <module name="notary-demo-workflows_test" target="1.8" />
       <module name="notary-demo_main" target="1.8" />
       <module name="notary-demo_test" target="1.8" />
       <module name="notary-healthcheck-client_main" target="1.8" />
@@ -353,6 +370,11 @@
       <module name="webserver_integrationTest" target="1.8" />
       <module name="webserver_main" target="1.8" />
       <module name="webserver_test" target="1.8" />
+      <module name="workflows-irs_main" target="1.8" />
+      <module name="workflows-irs_test" target="1.8" />
+      <module name="workflows-trader_integrationTest" target="1.8" />
+      <module name="workflows-trader_main" target="1.8" />
+      <module name="workflows-trader_test" target="1.8" />
       <module name="workflows_integrationTest" target="1.8" />
       <module name="workflows_main" target="1.8" />
       <module name="workflows_test" target="1.8" />

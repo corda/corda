@@ -79,7 +79,7 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         val autoCompleteFile = getAutoCompleteFileLocation(alias)
         autoCompleteFile.parent.createDirectories()
         val hierarchy = CommandLine(parent)
-        parent.subCommands().forEach { hierarchy.addSubcommand(it.alias, it)}
+        parent.subCommands.forEach { hierarchy.addSubcommand(it.alias, it)}
 
         val builder = StringBuilder(picocli.AutoComplete.bash(alias, hierarchy))
         builder.append(jarVersion(alias))
