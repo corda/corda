@@ -1,8 +1,6 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
@@ -16,16 +14,9 @@ import net.corda.node.services.Permissions.Companion.startFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.InProcess
-import net.corda.testing.driver.OutOfProcess
 import net.corda.testing.driver.driver
-import net.corda.testing.node.NotarySpec
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.core.BOC_NAME
-import net.corda.testing.core.DUMMY_BANK_A_NAME
-import net.corda.testing.core.DUMMY_BANK_B_NAME
-import net.corda.testing.core.singleIdentity
-import net.corda.testing.driver.*
 import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
@@ -36,7 +27,6 @@ import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
-import java.sql.DriverManager
 import java.util.concurrent.Executors
 
 class TraderDemoTest : IntegrationTest() {

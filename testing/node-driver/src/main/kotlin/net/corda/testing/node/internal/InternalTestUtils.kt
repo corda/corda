@@ -352,6 +352,7 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
     return completable
 }
 
+// TODO This needs to be updated to work with the remote database environment
 fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
     DriverManager.getConnection("jdbc:h2:file:${baseDirectory(name) / "persistence"}", "sa", "").use { connection ->
         connection.createStatement().executeQuery("select count(*) from NODE_CHECKPOINTS").use { rs ->

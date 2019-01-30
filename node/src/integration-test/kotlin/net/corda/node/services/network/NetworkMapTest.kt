@@ -23,12 +23,9 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hamcrest.CoreMatchers.`is`
-import org.junit.After
+import org.junit.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.net.URL

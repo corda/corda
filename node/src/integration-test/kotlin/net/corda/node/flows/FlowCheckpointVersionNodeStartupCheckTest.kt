@@ -9,8 +9,6 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.unwrap
 import net.corda.node.internal.CheckpointIncompatibleException
-import net.corda.testMessage.Message
-import net.corda.testMessage.MessageState
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -19,24 +17,20 @@ import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
+import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.internal.ListenProcessDeathException
 import net.corda.testing.node.internal.assertCheckpoints
 import net.corda.testing.node.internal.enclosedCordapp
-import net.corda.testing.internal.IntegrationTest
-import net.corda.testing.internal.IntegrationTestSchemas
-import net.corda.testing.node.TestCordapp
-import net.corda.testing.node.internal.CustomCordapp
-import net.corda.testing.node.internal.ListenProcessDeathException
-import net.corda.testing.node.internal.cordappWithPackages
-import net.test.cordapp.v1.SendMessageFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.ClassRule
 import org.junit.Test
 import java.nio.file.Path
+import kotlin.streams.toList
 import kotlin.test.assertFailsWith
 
 // TraderDemoTest already has a test which checks the node can resume a flow from a checkpoint
-class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
+class FlowCheckpointVersionNodeStartupCheckTest : IntegrationTest() {
     companion object {
         @ClassRule
         @JvmField
@@ -62,9 +56,6 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
             assertBobFailsToStartWithLogMessage(
                     CheckpointIncompatibleException.CordappNotInstalledException(ReceiverFlow::class.java.name).message
             )
-
-            // Clean-up
-            stdOutLogFile(BOB_NAME).let { it.renameTo("${it.fileName}-no-cordapp") }
 
             // Now test the scenerio where the CorDapp's hash is different but the flow exists within the jar
             val modifiedCordapp = defaultCordapp.copy(name = "${defaultCordapp.name}-modified")
@@ -105,7 +96,10 @@ class FlowCheckpointVersionNodeStartupCheckTest: IntegrationTest() {
     }
 
     private fun DriverDSL.stdOutLogFile(name: CordaX500Name): Path {
-        return baseDirectory(name).list { it.filter { it.toString().endsWith("stdout.log") }.findAny().get() }
+        return baseDirectory(name)
+                .list { it.filter { it.toString().endsWith("stdout.log") }.toList() }
+                .sortedBy { it.attributes().creationTime() }
+                .last()
     }
 
     @InitiatingFlow
