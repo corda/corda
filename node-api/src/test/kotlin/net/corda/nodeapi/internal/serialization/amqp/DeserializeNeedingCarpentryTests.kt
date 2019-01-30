@@ -232,26 +232,4 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
         }
     }
 
-    @Test
-    fun unknownInterface() {
-        val cc = ClassCarpenter(whitelist = AllWhitelist)
-
-        val interfaceClass = cc.build(InterfaceSchema(
-                "gen.Interface",
-                mapOf("age" to NonNullableField(Int::class.java))))
-
-        val concreteClass = cc.build(ClassSchema(testName(), mapOf(
-                "age" to NonNullableField(Int::class.java),
-                "name" to NonNullableField(String::class.java)),
-                interfaces = listOf(I::class.java, interfaceClass)))
-
-        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(
-                concreteClass.constructors.first().newInstance(12, "timmy"))
-        val deserializedObj = DeserializationInput(sf2).deserialize(serialisedBytes)
-
-        assertTrue(deserializedObj is I)
-        assertEquals("timmy", (deserializedObj as I).getName())
-        assertEquals("timmy", deserializedObj::class.java.getMethod("getName").invoke(deserializedObj))
-        assertEquals(12, deserializedObj::class.java.getMethod("getAge").invoke(deserializedObj))
-    }
 }

@@ -216,17 +216,39 @@ open class SerializerFactory(
 
     /**
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
-     * if not, use the [ClassCarpenter] to generate a class to use in it's place.
+     * if not, use the [ClassCarpenter] to generate a class to use in its place.
+     *
+     * The processing of the schema is performed in the following steps:
+     * - All the (non-interface) types are attempted to be loaded from the current classpath.
+     * - For any of those types that cannot be found in the current classpath:
+     *      - The associated interfaces are loaded from the classpath.
+     *      - These types are added to the CarpenterMetaSchema, which contains everything in need of carpenting
+     *
+     * As a result, interfaces are only loaded on-demand, according to the needs for carpenting.
+     * This is done in order to preserve backwards compatibility, in cases where 2 nodes communicate and one of the transported classes
+     * implements an interface that one of them is unaware of (i.e. introduced by a subsequent version). In this case, this node is not
+     * expected to make use of this interface anyway, since the associated CorDapps will be developed in versions that do not contain it,
+     * so it should not attempt to load it all.
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
+        val interfacesPerClass = schemaAndDescriptor.schemas.schema.types.associateBy({it.name},
+                {clazz -> schemaAndDescriptor.schemas.schema.types.filter { it.name in clazz.provides }}
+        )
+
         val metaSchema = CarpenterMetaSchema.newInstance()
-        val notationByName = schemaAndDescriptor.schemas.schema.types.associate { it.name to it }
+        val notationByName = schemaAndDescriptor.schemas.schema.types
+                .filterNot { it.name in interfacesPerClass.values.flatten().map { it.name } }
+                .associate { it.name to it }
         val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
             try {
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
                 name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
-                metaSchema.buildFor(notation, classloader)
+                // class missing from the classpath, so load its interfaces and add it for carpenting (see method docs).
+                if (interfacesPerClass.containsKey(name)) {
+                    interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
+                    metaSchema.buildFor(notation, classloader)
+                }
                 null
             }
         }.toMap()
