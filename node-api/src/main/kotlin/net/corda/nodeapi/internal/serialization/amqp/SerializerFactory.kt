@@ -245,10 +245,8 @@ open class SerializerFactory(
                 name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
                 // class missing from the classpath, so load its interfaces and add it for carpenting (see method docs).
-                if (interfacesPerClass.containsKey(name)) {
-                    interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
-                    metaSchema.buildFor(notation, classloader)
-                }
+                interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
+                metaSchema.buildFor(notation, classloader)
                 null
             }
         }.toMap()
