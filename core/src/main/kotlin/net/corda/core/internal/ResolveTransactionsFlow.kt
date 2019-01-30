@@ -77,6 +77,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class, FetchDataFlow.IllegalTransactionRequest::class)
     override fun call() {
+        val counterpartyPlatformVersion = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion ?:
+                throw FlowException("Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache")
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
         for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
@@ -85,6 +87,11 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             newTxns += downloadDependencies(page)
             val txsWithMissingAttachments = if (pageNumber == 0) signedTransaction?.let { newTxns + it } ?: newTxns else newTxns
             fetchMissingAttachments(txsWithMissingAttachments)
+            // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
+            // request to node V3 that doesn't know about this protocol.
+            if (counterpartyPlatformVersion >= 4) {
+                fetchMissingParameters(txsWithMissingAttachments)
+            }
         }
         otherSide.send(FetchDataFlow.Request.End)
         // Finish fetching data.
@@ -179,5 +186,14 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
         val missingAttachments = attachments.filter { serviceHub.attachments.openAttachment(it) == null }
         if (missingAttachments.isNotEmpty())
             subFlow(FetchAttachmentsFlow(missingAttachments.toSet(), otherSide))
+    }
+
+    // TODO This can also be done in parallel. See comment to [fetchMissingAttachments] above.
+    @Suspendable
+    private fun fetchMissingParameters(downloads: List<SignedTransaction>) {
+        val parameters = downloads.mapNotNull { it.networkParametersHash }
+        val missingParameters = parameters.filter { !(serviceHub.networkParametersService as NetworkParametersStorage).hasParameters(it) }
+        if (missingParameters.isNotEmpty())
+            subFlow(FetchNetworkParametersFlow(missingParameters.toSet(), otherSide))
     }
 }

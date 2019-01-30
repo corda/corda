@@ -8,12 +8,9 @@ import net.corda.core.contracts.TimeWindow
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
-import net.corda.core.internal.BackpressureAwareTimedFlow
-import net.corda.core.internal.FetchDataFlow
-import net.corda.core.internal.NetworkParametersServiceInternal
+import net.corda.core.internal.*
 import net.corda.core.internal.notary.generateSignature
 import net.corda.core.internal.notary.validateSignatures
-import net.corda.core.internal.pushToLoggingContext
 import net.corda.core.transactions.*
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.UntrustworthyData
@@ -107,7 +104,7 @@ class NotaryFlow {
                 check(stx.coreTransaction is NotaryChangeWireTransaction) {
                     "Notary $notaryParty is not on the network parameter whitelist. A non-whitelisted notary can only be used for notary change transactions"
                 }
-                val historicNotary = (serviceHub.networkParametersService as NetworkParametersServiceInternal).getHistoricNotary(notaryParty)
+                val historicNotary = (serviceHub.networkParametersService as NetworkParametersStorage).getHistoricNotary(notaryParty)
                         ?: throw IllegalStateException("The notary party $notaryParty specified by transaction ${stx.id}, is not recognised as a current or historic notary.")
                 historicNotary.validating
 

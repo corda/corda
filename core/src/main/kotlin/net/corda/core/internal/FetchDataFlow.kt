@@ -10,6 +10,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SerializationToken
 import net.corda.core.serialization.SerializeAsToken
@@ -51,6 +52,8 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     class HashNotFound(val requested: SecureHash) : FlowException()
 
+    class MissingNetworkParameters(val requested: SecureHash) : FlowException("Failed to fetch network parameters with hash: $requested")
+
     class IllegalTransactionRequest(val requested: SecureHash) : FlowException("Illegal attempt to request a transaction (${requested}) that is not in the transitive dependency graph of the sent transaction.")
 
     @CordaSerializable
@@ -64,11 +67,11 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 
     @CordaSerializable
     enum class DataType {
-        TRANSACTION, ATTACHMENT
+        TRANSACTION, ATTACHMENT, PARAMETERS
     }
 
     @Suspendable
-    @Throws(HashNotFound::class)
+    @Throws(HashNotFound::class, MissingNetworkParameters::class)
     override fun call(): Result<T> {
         // Load the items we have from disk and figure out which we're missing.
         val (fromDisk, toFetch) = loadWhatWeHave()
@@ -139,7 +142,7 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 }
 
 /**
- * Given a set of hashes either loads from from local storage  or requests them from the other peer. Downloaded
+ * Given a set of hashes either loads from local storage or requests them from the other peer. Downloaded
  * attachments are saved to local storage automatically.
  */
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
@@ -158,10 +161,10 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
                     } catch (e: FileAlreadyExistsException) {
                         // This can happen when another transaction will insert the same attachment during this transaction.
                         // The outcome is the same (the attachment is imported), so we can ignore this exception.
-                        logger.debug("Attachment ${attachment.id} already inserted.")
+                        logger.debug { "Attachment ${attachment.id} already inserted." }
                     }
                 } else {
-                    logger.debug("Attachment ${attachment.id} already exists, skipping.")
+                    logger.debug { "Attachment ${attachment.id} already exists, skipping." }
                 }
             }
         }
@@ -192,4 +195,29 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
         FetchDataFlow<SignedTransaction, SignedTransaction>(requests, otherSide, DataType.TRANSACTION) {
 
     override fun load(txid: SecureHash): SignedTransaction? = serviceHub.validatedTransactions.getTransaction(txid)
+}
+
+/**
+ * Given a set of hashes either loads from local network parameters storage or requests them from the other peer. Downloaded
+ * network parameters are saved to local parameters storage automatically. This flow can be used only if the minimumPlatformVersion is >= 4.
+ * Nodes on lower versions won't respond to this flow.
+ */
+class FetchNetworkParametersFlow(requests: Set<SecureHash>,
+                                 otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
+    override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
+        return (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(txid)
+    }
+
+    override fun maybeWriteToDisk(downloaded: List<SignedDataWithCert<NetworkParameters>>) {
+        for (parameters in downloaded) {
+            with(serviceHub.networkParametersService as NetworkParametersStorage) {
+                if (!hasParameters(parameters.id)) {
+                    // This will perform the signature check too and throws SignatureVerificationException
+                    saveParameters(parameters)
+                } else {
+                    logger.debug { "Network parameters ${parameters.id} already exists in storage, skipping." }
+                }
+            }
+        }
+    }
 }
