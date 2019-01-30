@@ -16,9 +16,6 @@ dependencies {
     // cordapp project(':finance:contracts')
     cordaCompile project(':core')
 
-    // For JSON
-    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
-
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')
     testCompile "junit:junit:$junit_version"

@@ -1,14 +1,12 @@
 package net.corda.traderdemo
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.div
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all
@@ -27,7 +25,6 @@ import net.corda.traderdemo.flow.CommercialPaperIssueFlow
 import net.corda.traderdemo.flow.SellerFlow
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.sql.DriverManager
 import java.util.concurrent.Executors
 
 class TraderDemoTest {

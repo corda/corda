@@ -12,9 +12,9 @@ import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.finance.utils.sumCash
-import net.corda.finance.utils.sumCashOrNull
-import net.corda.finance.utils.sumCashOrZero
+import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.contracts.utils.sumCashOrNull
+import net.corda.finance.contracts.utils.sumCashOrZero
 import java.security.PublicKey
 import java.util.*
 

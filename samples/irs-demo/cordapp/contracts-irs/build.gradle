@@ -6,10 +6,12 @@ dependencies {
     // The irs demo CorDapp depends upon Cash CorDapp features
     cordaCompile project(':core')
     cordaRuntime project(':node-api')
+    cordapp project(':finance:contracts')
+
+    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
 
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
-    cordapp project(':finance:contracts')
 }
 
 cordapp {

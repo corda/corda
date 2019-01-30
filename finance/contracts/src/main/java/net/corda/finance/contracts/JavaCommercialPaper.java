@@ -1,26 +1,16 @@
 package net.corda.finance.contracts;
 
-import co.paralleluniverse.fibers.Suspendable;
 import kotlin.Unit;
 import net.corda.core.contracts.*;
 import net.corda.core.crypto.NullKeys.NullPublicKey;
 import net.corda.core.identity.AbstractParty;
 import net.corda.core.identity.AnonymousParty;
-import net.corda.core.identity.Party;
-import net.corda.core.identity.PartyAndCertificate;
-import net.corda.core.node.ServiceHub;
 import net.corda.core.transactions.LedgerTransaction;
-import net.corda.core.transactions.TransactionBuilder;
-import net.corda.finance.contracts.asset.Cash;
-import net.corda.finance.utils.StateSumming;
+import net.corda.finance.contracts.utils.StateSumming;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Currency;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
@@ -98,19 +88,15 @@ public class JavaCommercialPaper implements Contract {
 
             State state = (State) that;
 
-            if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
-            if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
-            if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
-            return maturityDate != null ? maturityDate.equals(state.maturityDate) : state.maturityDate == null;
+            if (!Objects.equals(issuance, state.issuance)) return false;
+            if (!Objects.equals(owner, state.owner)) return false;
+            if (!Objects.equals(faceValue, state.faceValue)) return false;
+            return Objects.equals(maturityDate, state.maturityDate);
         }
 
         @Override
         public int hashCode() {
-            int result = issuance != null ? issuance.hashCode() : 0;
-            result = 31 * result + (owner != null ? owner.hashCode() : 0);
-            result = 31 * result + (faceValue != null ? faceValue.hashCode() : 0);
-            result = 31 * result + (maturityDate != null ? maturityDate.hashCode() : 0);
-            return result;
+            return Objects.hash(issuance, owner, faceValue, maturityDate);
         }
 
         State withoutOwner() {
@@ -225,32 +211,6 @@ public class JavaCommercialPaper implements Contract {
                 });
             }
         }
-    }
-
-    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary, Integer encumbrance) {
-        State state = new State(issuance, issuance.getParty(), faceValue, maturityDate);
-        TransactionState output = new TransactionState<>(state, JCP_PROGRAM_ID, notary, encumbrance);
-        return new TransactionBuilder(notary).withItems(output, new Command<>(new Commands.Issue(), issuance.getParty().getOwningKey()));
-    }
-
-    public TransactionBuilder generateIssue(@NotNull PartyAndReference issuance, @NotNull Amount<Issued<Currency>> faceValue, @Nullable Instant maturityDate, @NotNull Party notary) {
-        return generateIssue(issuance, faceValue, maturityDate, notary, null);
-    }
-
-    @Suspendable
-    public void generateRedeem(final TransactionBuilder tx,
-                               final StateAndRef<State> paper,
-                               final ServiceHub services,
-                               final PartyAndCertificate ourIdentity) throws InsufficientBalanceException {
-        Cash.generateSpend(services, tx, Structures.withoutIssuer(paper.getState().getData().getFaceValue()), ourIdentity, paper.getState().getData().getOwner(), Collections.emptySet());
-        tx.addInputState(paper);
-        tx.addCommand(new Command<>(new Commands.Redeem(), paper.getState().getData().getOwner().getOwningKey()));
-    }
-
-    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, AbstractParty newOwner) {
-        tx.addInputState(paper);
-        tx.addOutputState(new TransactionState<>(new State(paper.getState().getData().getIssuance(), newOwner, paper.getState().getData().getFaceValue(), paper.getState().getData().getMaturityDate()), JCP_PROGRAM_ID, paper.getState().getNotary(), paper.getState().getEncumbrance()));
-        tx.addCommand(new Command<>(new Commands.Move(), paper.getState().getData().getOwner().getOwningKey()));
     }
 
     private static <T> T onlyElementOf(Iterable<T> iterable) {

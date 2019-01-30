@@ -28,7 +28,7 @@ import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2
 import net.corda.finance.test.SampleCashSchemaV3
-import net.corda.finance.utils.sumCash
+import net.corda.finance.contracts.utils.sumCash
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.schema.ContractStateAndRef
@@ -42,7 +42,6 @@ import net.corda.nodeapi.internal.persistence.HibernateConfiguration
 import net.corda.nodeapi.internal.persistence.HibernateSchemaChangeException
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.internal.vault.DummyDealStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV2

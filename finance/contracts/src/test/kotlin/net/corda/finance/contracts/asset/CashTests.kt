@@ -13,10 +13,11 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.*
-import net.corda.finance.utils.sumCash
-import net.corda.finance.utils.sumCashBy
-import net.corda.finance.utils.sumCashOrNull
-import net.corda.finance.utils.sumCashOrZero
+import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.contracts.utils.sumCashBy
+import net.corda.finance.contracts.utils.sumCashOrNull
+import net.corda.finance.contracts.utils.sumCashOrZero
+import net.corda.finance.workflows.asset.CashUtils
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.core.*
@@ -527,7 +528,7 @@ class CashTests {
         val ourIdentity = services.myInfo.singleIdentityAndCert()
         val tx = TransactionBuilder(dummyNotary.party)
         database.transaction {
-            Cash.generateSpend(services, tx, amount, ourIdentity, dest)
+            CashUtils.generateSpend(services, tx, amount, ourIdentity, dest)
         }
         return tx.toWireTransaction(services)
     }
@@ -625,7 +626,7 @@ class CashTests {
     fun generateSimpleSpendWithParties() {
         database.transaction {
             val tx = TransactionBuilder(dummyNotary.party)
-            Cash.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
+            CashUtils.generateSpend(ourServices, tx, 80.DOLLARS, ourServices.myInfo.singleIdentityAndCert(), alice.party, setOf(miniCorp.party))
 
             assertEquals(vaultStatesUnconsumed.elementAt(2).ref, tx.inputStates()[0])
         }
@@ -834,7 +835,7 @@ class CashTests {
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         val wtx = tx.toWireTransaction(ourServices)
         fun out(i: Int) = wtx.getOutput(i) as Cash.State
@@ -857,14 +858,14 @@ class CashTests {
                     PartyAndAmount(miniCorpAnonymised, 400.DOLLARS),
                     PartyAndAmount(charlie.party.anonymise(), 150.DOLLARS)
             )
-            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
         database.transaction {
             val payments = listOf(
                     PartyAndAmount(miniCorpAnonymised, 400.POUNDS),
                     PartyAndAmount(charlie.party.anonymise(), 150.POUNDS)
             )
-            Cash.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
+            CashUtils.generateSpend(ourServices, tx, payments, ourServices.myInfo.singleIdentityAndCert())
         }
 
         val wtx = tx.toWireTransaction(ourServices)

@@ -25,7 +25,7 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static kotlin.test.AssertionsKt.assertEquals;
 import static net.corda.finance.Currencies.DOLLARS;
-import static net.corda.finance.contracts.GetBalances.getCashBalance;
+import static net.corda.finance.workflows.GetBalances.getCashBalance;
 import static net.corda.node.services.Permissions.invokeRpc;
 import static net.corda.node.services.Permissions.startFlow;
 import static net.corda.testing.core.TestConstants.ALICE_NAME;

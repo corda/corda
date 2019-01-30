@@ -15,6 +15,8 @@ import net.corda.finance.`issued by`
 import net.corda.finance.contracts.asset.CASH
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.STATE
+import net.corda.finance.workflows.asset.CashUtils
+import net.corda.finance.workflows.CommercialPaperUtils
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.*
 import net.corda.testing.dsl.EnforceVerifyOrFail
@@ -24,7 +26,6 @@ import net.corda.testing.internal.TEST_TX_TIME
 import net.corda.testing.internal.vault.VaultFiller
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.MockServices.Companion.makeTestDatabaseAndMockServices
-import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import net.corda.testing.node.makeTestIdentityService
 import net.corda.testing.node.transaction
@@ -289,7 +290,7 @@ class CommercialPaperTestsGeneric {
         // MegaCorp™ issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val faceValue = 10000.DOLLARS `issued by` dummyCashIssuer.ref(1)
         val issuance = megaCorpServices.myInfo.singleIdentity().ref(1)
-        val issueBuilder = CommercialPaper().generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, dummyNotary.party)
+        val issueBuilder = CommercialPaperUtils.generateIssue(issuance, faceValue, TEST_TX_TIME + 30.days, dummyNotary.party)
         issueBuilder.setTimeWindow(TEST_TX_TIME, 30.seconds)
         val issuePtx = megaCorpServices.signInitialTransaction(issueBuilder)
         val issueTx = notaryServices.addSignature(issuePtx)
@@ -298,8 +299,8 @@ class CommercialPaperTestsGeneric {
         val moveTX = aliceDatabase.transaction {
             // Alice pays $9000 to BigCorp to own some of their debt.
             val builder = TransactionBuilder(dummyNotary.party)
-            Cash.generateSpend(aliceServices, builder, 9000.DOLLARS, alice.identity, AnonymousParty(megaCorp.publicKey))
-            CommercialPaper().generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(alice.keyPair.public))
+            CashUtils.generateSpend(aliceServices, builder, 9000.DOLLARS, alice.identity, AnonymousParty(megaCorp.publicKey))
+            CommercialPaperUtils.generateMove(builder, issueTx.tx.outRef(0), AnonymousParty(alice.keyPair.public))
             val ptx = aliceServices.signInitialTransaction(builder)
             val ptx2 = megaCorpServices.addSignature(ptx)
             val stx = notaryServices.addSignature(ptx2)
@@ -319,7 +320,7 @@ class CommercialPaperTestsGeneric {
             fun makeRedeemTX(time: Instant): Pair<SignedTransaction, UUID> {
                 val builder = TransactionBuilder(dummyNotary.party)
                 builder.setTimeWindow(time, 30.seconds)
-                CommercialPaper().generateRedeem(builder, moveTX.tx.outRef(1), megaCorpServices, megaCorpServices.myInfo.singleIdentityAndCert())
+                CommercialPaperUtils.generateRedeem(builder, moveTX.tx.outRef(1), megaCorpServices, megaCorpServices.myInfo.singleIdentityAndCert())
                 val ptx = aliceServices.signInitialTransaction(builder)
                 val ptx2 = megaCorpServices.addSignature(ptx)
                 val stx = notaryServices.addSignature(ptx2)

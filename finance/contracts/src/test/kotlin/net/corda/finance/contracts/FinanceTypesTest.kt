@@ -1,5 +1,6 @@
 package net.corda.finance.contracts
 
+import loadTestCalendar
 import org.junit.Test
 import java.time.LocalDate
 import kotlin.test.assertEquals
@@ -26,7 +27,7 @@ class FinanceTypesTest {
     @Test
     fun `tenor days to maturity adjusted for holiday`() {
         val tenor = Tenor("1M")
-        val calendar = BusinessCalendar.getInstance("London")
+        val calendar = loadTestCalendar("London")
         val currentDay = LocalDate.of(2016, 2, 27)
         val maturityDate = currentDay.plusMonths(1).plusDays(2) // 2016-3-27 is a Sunday, next day is a holiday
         val expectedDaysToMaturity = (maturityDate.toEpochDay() - currentDay.toEpochDay()).toInt()
@@ -46,7 +47,13 @@ class FinanceTypesTest {
 
     @Test
     fun `schedule generator 2`() {
-        val ret = BusinessCalendar.createGenericSchedule(startDate = LocalDate.of(2015, 11, 25), period = Frequency.Monthly, noOfAdditionalPeriods = 3, calendar = BusinessCalendar.getInstance("London"), dateRollConvention = DateRollConvention.Following)
+        val ret = BusinessCalendar.createGenericSchedule(
+                startDate = LocalDate.of(2015, 11, 25),
+                period = Frequency.Monthly,
+                noOfAdditionalPeriods = 3,
+                calendar = loadTestCalendar("London"),
+                dateRollConvention = DateRollConvention.Following
+        )
         // Xmas should not be in the list!
         assertFalse(LocalDate.of(2015, 12, 25) in ret)
         println(ret)
@@ -55,7 +62,7 @@ class FinanceTypesTest {
 
     @Test
     fun `create a UK calendar`() {
-        val cal = BusinessCalendar.getInstance("London")
+        val cal = loadTestCalendar("London")
         val holdates = cal.holidayDates
         println(holdates)
         assertTrue(LocalDate.of(2016, 12, 27) in holdates) // Christmas this year is at the weekend...
@@ -63,7 +70,7 @@ class FinanceTypesTest {
 
     @Test
     fun `create a US UK calendar`() {
-        val cal = BusinessCalendar.getInstance("London", "NewYork")
+        val cal = loadTestCalendar("London") + loadTestCalendar("NewYork")
         assertTrue(LocalDate.of(2016, 7, 4) in cal.holidayDates) // The most American of holidays
         assertTrue(LocalDate.of(2016, 8, 29) in cal.holidayDates) // August Bank Holiday for brits only
         println("Calendar contains both US and UK holidays")
@@ -71,14 +78,14 @@ class FinanceTypesTest {
 
     @Test
     fun `calendar test of modified following`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val result = ldn.applyRollConvention(LocalDate.of(2016, 12, 25), DateRollConvention.ModifiedFollowing)
         assertEquals(LocalDate.of(2016, 12, 28), result)
     }
 
     @Test
     fun `calendar test of modified following pt 2`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val result = ldn.applyRollConvention(LocalDate.of(2016, 12, 31), DateRollConvention.ModifiedFollowing)
         assertEquals(LocalDate.of(2016, 12, 30), result)
     }
@@ -86,28 +93,28 @@ class FinanceTypesTest {
 
     @Test
     fun `calendar test of modified previous`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val result = ldn.applyRollConvention(LocalDate.of(2016, 1, 1), DateRollConvention.ModifiedPrevious)
         assertEquals(LocalDate.of(2016, 1, 4), result)
     }
 
     @Test
     fun `calendar test of previous`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val result = ldn.applyRollConvention(LocalDate.of(2016, 12, 25), DateRollConvention.Previous)
         assertEquals(LocalDate.of(2016, 12, 23), result)
     }
 
     @Test
     fun `calendar test of following`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val result = ldn.applyRollConvention(LocalDate.of(2016, 12, 25), DateRollConvention.Following)
         assertEquals(LocalDate.of(2016, 12, 28), result)
     }
 
     @Test
     fun `calendar date advancing`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val firstDay = LocalDate.of(2015, 12, 20)
         val expected = mapOf(0 to firstDay,
                 1 to LocalDate.of(2015, 12, 21),
@@ -127,7 +134,7 @@ class FinanceTypesTest {
 
     @Test
     fun `calendar date preceeding`() {
-        val ldn = BusinessCalendar.getInstance("London")
+        val ldn = loadTestCalendar("London")
         val firstDay = LocalDate.of(2015, 12, 31)
         val expected = mapOf(0 to firstDay,
                 1 to LocalDate.of(2015, 12, 30),
@@ -143,6 +150,5 @@ class FinanceTypesTest {
             val result = ldn.moveBusinessDays(firstDay, DateRollDirection.BACKWARD, inc)
             assertEquals(exp, result)
         }
-
     }
 }
