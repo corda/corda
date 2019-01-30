@@ -8,7 +8,6 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.hash
 import net.corda.core.internal.packageName
@@ -43,7 +42,6 @@ import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.*
 import org.mockito.Mockito
-import java.io.File
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
@@ -158,7 +156,6 @@ class VaultStateMigrationTest {
                     stateMachineRunId = null,
                     transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
             )
-//            File("C:/Users/James Higgs/test/tx_blob").writeBytes(persistentTx.transaction)
             session.save(persistentTx)
         }
     }

@@ -9,11 +9,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
-import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
-import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -23,14 +19,7 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.serialization.internal.AMQP_P2P_CONTEXT
-import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
-import net.corda.serialization.internal.CordaSerializationMagic
-import net.corda.serialization.internal.SerializationFactoryImpl
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
-import net.corda.serialization.internal.amqp.amqpMagic
 import org.hibernate.Session
-import java.security.PublicKey
 
 class VaultStateMigration : CordaMigration() {
     companion object {
