@@ -24,11 +24,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -110,83 +106,97 @@ class NodeVaultService(
         }
     }
 
+    private fun saveStates(session: Session, states: Map<StateRef, StateAndRef<ContractState>>, now: Instant, produced: Boolean) {
+        states.forEach { stateAndRef ->
+            val stateOnly = stateAndRef.value.state.data
+            val uuid = if (produced && stateOnly is FungibleState<*>) {
+                FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
+            } else null
+            if (uuid != null) {
+                FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
+                log.trace { "Reserving soft lock for flow id $uuid and state ${stateAndRef.key}" }
+            }         // TODO: Optimise this.
+            //
+            // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
+            // node. The behaviour is as follows:
+            //
+            // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
+            //    "vault_states" table.
+            // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
+            //    relevancy_status = 0 in the "vault_states" table.
+            //
+            // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
+            // included in the result.
+            //
+            // The same functionality could be obtained by passing in a list of participants to the vault query,
+            // however this:
+            //
+            // * requires a join on the participants table which results in slow queries
+            // * states may flip from being non-relevant to relevant
+            // * it's more complicated for CorDapp developers
+            //
+            // Adding a new column in the "VaultStates" table was considered the best approach.
+            val keys = stateOnly.participants.map { it.owningKey }
+            val persistentStateRef = PersistentStateRef(stateAndRef.key)
+            // This check is done to set the "relevancyStatus". When one performs a vault query, it is possible to return ALL states, ONLY
+            // RELEVANT states or NOT relevant states.
+            val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
+            val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
+            // Save a row for each party in the state_party table.
+            // TODO: Perhaps these can be stored in a batch?
+            stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
+                val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
+                session.save(persistentParty)
+            }
+            val stateToAdd = VaultSchemaV1.VaultStates(
+                    notary = stateAndRef.value.state.notary,
+                    contractStateClassName = stateAndRef.value.state.data.javaClass.name,
+                    stateStatus = Vault.StateStatus.UNCONSUMED,
+                    lockId = uuid,
+                    lockUpdateTime = if (uuid == null) null else now,
+                    recordedTime = clock.instant(),
+                    relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
+                    constraintType = constraintInfo.type(),
+                    constraintData = constraintInfo.data()
+            )
+            stateToAdd.stateRef = persistentStateRef
+            session.save(stateToAdd)
+        }
+    }
+
     private fun recordUpdate(update: Vault.Update<ContractState>): Vault.Update<ContractState> {
         if (!update.isEmpty()) {
             val producedStateRefs = update.produced.map { it.ref }
             val producedStateRefsMap = update.produced.associateBy { it.ref }
             val consumedStateRefs = update.consumed.map { it.ref }
+            val referenceStateRefsMap = update.references.associateBy { it.ref }
             log.trace { "Removing $consumedStateRefs consumed contract states and adding $producedStateRefs produced contract states to the database." }
 
             val session = currentDBSession()
             val now = clock.instant()
-            producedStateRefsMap.forEach { stateAndRef ->
-                val stateOnly = stateAndRef.value.state.data
-                val uuid = if (stateOnly is FungibleState<*>) {
-                    FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
-                } else null
-                if (uuid != null) {
-                    FlowStateMachineImpl.currentStateMachine()?.hasSoftLockedStates = true
-                    log.trace { "Reserving soft lock for flow id $uuid and state ${stateAndRef.key}" }
-                }
-                // TODO: Optimise this.
-                //
-                // For EVERY state to be committed to the vault, this checks whether it is spendable by the recording
-                // node. The behaviour is as follows:
-                //
-                // 1) All vault updates marked as RELEVANT will, of course, all have relevancy_status = 1 in the
-                //    "vault_states" table.
-                // 2) For ALL_VISIBLE updates, those which are not relevant according to the relevancy rules will have
-                //    relevancy_status = 0 in the "vault_states" table.
-                //
-                // This is useful when it comes to querying for fungible states, when we do not want irrelevant states
-                // included in the result.
-                //
-                // The same functionality could be obtained by passing in a list of participants to the vault query,
-                // however this:
-                //
-                // * requires a join on the participants table which results in slow queries
-                // * states may flip from being non-relevant to relevant
-                // * it's more complicated for CorDapp developers
-                //
-                // Adding a new column in the "VaultStates" table was considered the best approach.
-                val keys = stateOnly.participants.map { it.owningKey }
-                val persistentStateRef = PersistentStateRef(stateAndRef.key)
-                val isRelevant = isRelevant(stateOnly, keyManagementService.filterMyKeys(keys).toSet())
-                val constraintInfo = Vault.ConstraintInfo(stateAndRef.value.state.constraint)
-                // Save a row for each party in the state_party table.
-                // TODO: Perhaps these can be stored in a batch?
-                stateOnly.participants.groupBy { it.owningKey }.forEach { participants ->
-                    val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
-                    session.save(persistentParty)
-                }
-                val stateToAdd = VaultSchemaV1.VaultStates(
-                        notary = stateAndRef.value.state.notary,
-                        contractStateClassName = stateAndRef.value.state.data.javaClass.name,
-                        stateStatus = Vault.StateStatus.UNCONSUMED,
-                        lockId = uuid,
-                        lockUpdateTime = if (uuid == null) null else now,
-                        recordedTime = clock.instant(),
-                        relevancyStatus = if (isRelevant) Vault.RelevancyStatus.RELEVANT else Vault.RelevancyStatus.NOT_RELEVANT,
-                        constraintType = constraintInfo.type(),
-                        constraintData = constraintInfo.data()
-                )
-                stateToAdd.stateRef = persistentStateRef
-                session.save(stateToAdd)
+
+            // Persist the outputs.
+            saveStates(session, producedStateRefsMap, now, true)
+
+            // Persist the reference states.
+            saveStates(session, referenceStateRefsMap, now, false)
+
+            // Persist the consumed inputs.
+                if (consumedStateRefs.isNotEmpty()) {
+                    // We have to do this so that the session does not hold onto the prior version of the states status.  i.e.
+                    // it is not aware of this query.
+                    session.flush()
+                    session.clear()
+                    val criteriaBuilder = session.criteriaBuilder
+                    val updateQuery = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
+                    val root = updateQuery.from(VaultSchemaV1.VaultStates::class.java)
+                    updateQuery.set(root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.CONSUMED)
+                    updateQuery.set(root.get<Instant>(VaultSchemaV1.VaultStates::consumedTime.name), now)
+                    updateQuery.set(root.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
+                    updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefs.map { PersistentStateRef(it) }))
+                    session.createQuery(updateQuery).executeUpdate()
             }
-            if (consumedStateRefs.isNotEmpty()) {
-                // We have to do this so that the session does not hold onto the prior version of the states status.  i.e.
-                // it is not aware of this query.
-                session.flush()
-                session.clear()
-                val criteriaBuilder = session.criteriaBuilder
-                val updateQuery = criteriaBuilder.createCriteriaUpdate(VaultSchemaV1.VaultStates::class.java)
-                val root = updateQuery.from(VaultSchemaV1.VaultStates::class.java)
-                updateQuery.set(root.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name), Vault.StateStatus.CONSUMED)
-                updateQuery.set(root.get<Instant>(VaultSchemaV1.VaultStates::consumedTime.name), now)
-                updateQuery.set(root.get<String>(VaultSchemaV1.VaultStates::lockId.name), criteriaBuilder.nullLiteral(String::class.java))
-                updateQuery.where(root.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name).`in`(consumedStateRefs.map { PersistentStateRef(it) }))
-                session.createQuery(updateQuery).executeUpdate()
-            }
+
         }
         return update
     }
@@ -238,13 +248,31 @@ class NodeVaultService(
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStatesWithVaultFilter(tx.inputs)
 
-            // Is transaction irrelevant?
+            // Is transaction irrelevant? If so, then we don't care about the reference states either.
             if (consumedStates.isEmpty() && ourNewStates.isEmpty()) {
                 log.trace { "tx ${tx.id} was irrelevant to this vault, ignoring" }
                 return null
             }
 
-            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet())
+            // This list should only contain NEW states which we have not seen before as an output in another transaction. If we can't
+            // obtain the references from the vault then the reference must be a state we have not seen before, therefore we should store it
+            // in the vault. If StateToRecord is set to ALL_VISIBLE or ONLY_RELEVANT then we should store all of the previously unseen
+            // states in the reference list. The assumption is that we might need to inspect them at some point if they were referred to
+            // in the contracts of the input or output states. If states to record is none then we shouldn't record any reference states.
+            val newReferenceStateAndRefs = if (tx.references.isEmpty()) {
+                emptyList()
+            } else {
+                 when (statesToRecord) {
+                    StatesToRecord.NONE -> throw AssertionError("Should not reach here")
+                    StatesToRecord.ALL_VISIBLE, StatesToRecord.ONLY_RELEVANT -> {
+                        val notSeenReferences = tx.references - loadStatesWithVaultFilter(tx.references).map { it.ref }
+                        // TODO: This is expensive - is there another way?
+                        tx.toLedgerTransaction(servicesForResolution).references.filter { it.ref in notSeenReferences }
+                    }
+                }
+            }
+
+            return Vault.Update(consumedStates.toSet(), ourNewStates.toSet(), references = newReferenceStateAndRefs.toSet())
         }
 
         fun resolveAndMakeUpdate(tx: CoreTransaction): Vault.Update<ContractState>? {
@@ -271,12 +299,14 @@ class NodeVaultService(
                 return null
             }
 
+            val referenceStateAndRefs = ltx.references
+
             val updateType = if (tx is ContractUpgradeWireTransaction) {
                 Vault.UpdateType.CONTRACT_UPGRADE
             } else {
                 Vault.UpdateType.NOTARY_CHANGE
             }
-            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType)
+            return Vault.Update(consumedStateAndRefs.toSet(), producedStateAndRefs.toSet(), null, updateType, referenceStateAndRefs.toSet())
         }
 
 
@@ -339,7 +369,18 @@ class NodeVaultService(
                 // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
                 val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
                 val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
-                persistentStateService.persist(vaultUpdate.produced)
+                if (uuid != null) {
+                    val fungible = netUpdate.produced.filter { stateAndRef ->
+                        val state = stateAndRef.state.data
+                        state is FungibleAsset<*> || state is FungibleState<*>
+                    }
+                    if (fungible.isNotEmpty()) {
+                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
+                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
+                        softLockReserve(uuid, stateRefs)
+                    }
+                }
+                persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }

@@ -27,7 +27,18 @@ class CachingCustomSerializerRegistry(
 
     private data class CustomSerializerIdentifier(val actualTypeIdentifier: TypeIdentifier, val declaredTypeIdentifier: TypeIdentifier)
 
-    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, AMQPSerializer<Any>> = DefaultCacheProvider.createCache()
+    private sealed class CustomSerializerLookupResult {
+
+        abstract val serializerIfFound: AMQPSerializer<Any>?
+
+        object None : CustomSerializerLookupResult() {
+            override val serializerIfFound: AMQPSerializer<Any>? = null
+        }
+
+        data class CustomSerializerFound(override val serializerIfFound: AMQPSerializer<Any>) : CustomSerializerLookupResult()
+    }
+
+    private val customSerializersCache: MutableMap<CustomSerializerIdentifier, CustomSerializerLookupResult> = DefaultCacheProvider.createCache()
     private var customSerializers: List<SerializerFor> = emptyList()
 
     /**
@@ -36,6 +47,11 @@ class CachingCustomSerializerRegistry(
      */
     override fun register(customSerializer: CustomSerializer<out Any>) {
         logger.trace("action=\"Registering custom serializer\", class=\"${customSerializer.type}\"")
+
+        if (!customSerializersCache.isEmpty()) {
+            logger.warn("Attempting to register custom serializer $customSerializer.type} in an active cache." +
+                    "All serializers should be registered before the cache comes into use.")
+        }
 
         descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
             customSerializers += customSerializer
@@ -49,6 +65,11 @@ class CachingCustomSerializerRegistry(
     override fun registerExternal(customSerializer: CorDappCustomSerializer) {
         logger.trace("action=\"Registering external serializer\", class=\"${customSerializer.type}\"")
 
+        if (!customSerializersCache.isEmpty()) {
+            logger.warn("Attempting to register custom serializer ${customSerializer.type} in an active cache." +
+                    "All serializers must be registered before the cache comes into use.")
+        }
+
         descriptorBasedSerializerRegistry.getOrBuild(customSerializer.typeDescriptor.toString()) {
             customSerializers += customSerializer
             customSerializer
@@ -60,10 +81,11 @@ class CachingCustomSerializerRegistry(
                 TypeIdentifier.forClass(clazz),
                 TypeIdentifier.forGenericType(declaredType))
 
-        return customSerializersCache[typeIdentifier]
-                ?: doFindCustomSerializer(clazz, declaredType)?.also { serializer ->
-                    customSerializersCache.putIfAbsent(typeIdentifier, serializer)
-                }
+        return customSerializersCache.getOrPut(typeIdentifier) {
+                val customSerializer = doFindCustomSerializer(clazz, declaredType)
+                if (customSerializer == null) CustomSerializerLookupResult.None
+                else CustomSerializerLookupResult.CustomSerializerFound(customSerializer)
+        }.serializerIfFound
     }
 
     private fun doFindCustomSerializer(clazz: Class<*>, declaredType: Type): AMQPSerializer<Any>? {

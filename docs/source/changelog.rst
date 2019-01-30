@@ -4,6 +4,11 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+Unreleased
+----------
+
+* Updating postgres dependency to 42.2.5
+
 .. _changelog_v4.0:
 
 Version 4.0
