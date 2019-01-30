@@ -72,7 +72,7 @@ class VaultStateMigration : CordaMigration() {
                 logger.error("An error occurred while migrating a vault state: ${e.message}. Skipping")
             }
         }
-        logger.info("Finished performing vault state data migration")
+        logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
     }
 }
 
@@ -103,7 +103,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         val logger = contextLogger()
     }
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
-    private val numStates = getTotalStates()
+    val numStates = getTotalStates()
 
     private fun getTotalStates(): Long {
         return database.transaction {
@@ -118,7 +118,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
     }
 
-    private val pageSize = 1000//DEFAULT_PAGE_SIZE
+    private val pageSize = DEFAULT_PAGE_SIZE
     private var pageNumber = 0
     private var transaction: DatabaseTransaction? = null
     private var currentPage = getNextPage()

@@ -49,7 +49,7 @@ class VaultStateMigrationTest {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
         val bob = TestIdentity(BOB_NAME, 80)
-        val charlie = TestIdentity(CHARLIE_NAME, 90)
+        private val charlie = TestIdentity(CHARLIE_NAME, 90)
         val dummyCashIssuer = TestIdentity(CordaX500Name("Snake Oil Issuer", "London", "GB"), 10)
         val dummyNotary = TestIdentity(DUMMY_NOTARY_NAME, 20)
         val ALICE get() = alice.party
@@ -72,7 +72,8 @@ class VaultStateMigrationTest {
 
     val cordappPackages = listOf(
             "net.corda.finance.contracts",
-            CashSchemaV1::class.packageName)
+            CashSchemaV1::class.packageName,
+            DummyLinearStateSchemaV1::class.packageName)
 
     lateinit var liquibaseDB: Database
     lateinit var cordaDB: CordaPersistence
@@ -189,6 +190,34 @@ class VaultStateMigrationTest {
         }
     }
 
+    private fun createLinearStateTransaction(idString: String,
+                                             parties: List<AbstractParty> = listOf(),
+                                             linearString: String = "foo",
+                                             linearNumber: Long = 0L,
+                                             linearBoolean: Boolean = false): SignedTransaction {
+        val tx = TransactionBuilder(notary = dummyNotary.party).apply {
+            addOutputState(DummyLinearContract.State(
+                    linearId = UniqueIdentifier(idString),
+                    participants = parties,
+                    linearString = linearString,
+                    linearNumber = linearNumber,
+                    linearBoolean = linearBoolean,
+                    linearTimestamp = clock.instant()), DUMMY_LINEAR_CONTRACT_PROGRAM_ID
+            )
+            addCommand(dummyCommand())
+        }
+        return notaryServices.signInitialTransaction(tx)
+    }
+
+    private fun addLinearStates(statesToAdd: Int, parties: List<AbstractParty>) {
+        cordaDB.transaction {
+            (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties)}.forEach {
+                storeTransaction(it)
+                createVaultStatesFromTransaction(it)
+            }
+        }
+    }
+
     @Test
     fun `Check a simple migration works`() {
         addCashStates(10, BOB)
@@ -258,6 +287,8 @@ class VaultStateMigrationTest {
 
     @Test
     fun `Check the connection is open post migration`() {
+        // Liquibase automatically closes the database connection when doing an actual migration. This test ensures the custom migration
+        // leaves it open.
         addCashStates(12, ALICE)
 
         val migration = VaultStateMigration()
@@ -267,21 +298,7 @@ class VaultStateMigrationTest {
 
     @Test
     fun `All parties added to state party table`() {
-        val packages = listOf(DummyLinearStateSchemaV1::class.packageName)
-        val services = MockServices(packages, dummyNotary, notaryServices.identityService, dummyCashIssuer.keyPair)
-
-        val tx = TransactionBuilder(notary = dummyNotary.party).apply {
-            addOutputState(DummyLinearContract.State(
-                    linearId = UniqueIdentifier("test"),
-                    participants = listOf(BOB, ALICE, CHARLIE),
-                    linearString = "foo",
-                    linearNumber = 0L,
-                    linearBoolean = false,
-                    linearTimestamp = clock.instant()), DUMMY_LINEAR_CONTRACT_PROGRAM_ID
-            )
-            addCommand(dummyCommand())
-        }
-        val stx = services.signInitialTransaction(tx)
+        val stx = createLinearStateTransaction("test", parties = listOf(ALICE, BOB, CHARLIE))
         storeTransaction(stx)
         createVaultStatesFromTransaction(stx)
 
@@ -327,7 +344,7 @@ class VaultStateMigrationTest {
     @Ignore
     fun `Migrate large database`() {
         val statesAtOnce = 500L
-        val stateMultiplier = 200L
+        val stateMultiplier = 300L
         logger.info("Start adding states to vault")
         (1..stateMultiplier).forEach {
             addCashStates(statesAtOnce.toInt(), BOB)
@@ -336,6 +353,46 @@ class VaultStateMigrationTest {
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
         assertEquals((statesAtOnce * stateMultiplier), getStatePartyCount())
+    }
+
+    private fun makePersistentDataSourceProperties(): Properties {
+        val props = Properties()
+        props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+        props.setProperty("dataSource.url", "jdbc:h2:~/test/vault_query_persistence;DB_CLOSE_ON_EXIT=TRUE")
+        props.setProperty("dataSource.user", "sa")
+        props.setProperty("dataSource.password", "")
+        return props
+    }
+
+    // Used to generate a persistent database for further testing.
+    @Test
+    @Ignore
+    fun `Create persistent DB`() {
+        val cashStatesToAdd = 100
+        val linearStatesToAdd = 100
+        val stateMultiplier = 1000
+
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+
+        for (i in 1..stateMultiplier) {
+            addCashStates(cashStatesToAdd, BOB)
+            addLinearStates(linearStatesToAdd, listOf(BOB, ALICE))
+        }
+        saveOurIdentities(listOf(bob.keyPair))
+        saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity))
+        cordaDB.close()
+    }
+
+    @Test
+    @Ignore
+    fun `Run on persistent DB`() {
+        cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        val connection = (liquibaseDB.connection as JdbcConnection)
+        Mockito.`when`(connection.url).thenReturn(cordaDB.jdbcUrl)
+        Mockito.`when`(connection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        cordaDB.close()
     }
 }
 
