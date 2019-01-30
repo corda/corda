@@ -9,6 +9,11 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._contextSerializationEnv
+import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.internal.nodeSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -18,7 +23,14 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.amqpMagic
 import org.hibernate.Session
+import java.security.PublicKey
 
 class VaultStateMigration : CordaMigration() {
     companion object {
@@ -28,9 +40,14 @@ class VaultStateMigration : CordaMigration() {
     private fun addStateParties(session: Session, stateAndRef: StateAndRef<ContractState>) {
         val state = stateAndRef.state.data
         val persistentStateRef = PersistentStateRef(stateAndRef.ref)
-        state.participants.groupBy { it.owningKey }.forEach { participants ->
-            val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
-            session.save(persistentParty)
+        try {
+            state.participants.groupBy { it.owningKey }.forEach { participants ->
+                val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
+                session.save(persistentParty)
+            }
+        } catch (e: AbstractMethodError) {
+            throw VaultStateMigrationException("Cannot add state parties as state class is not on the classpath " +
+                    "and participants cannot be synthesised")
         }
     }
 
@@ -51,28 +68,32 @@ class VaultStateMigration : CordaMigration() {
             logger.warn("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
             return
         }
-        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
+        effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
+            initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
-        val myKeys = cordaDB.transaction {
-            identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
-        }
-
-        val persistentStates = VaultStateIterator(cordaDB)
-        persistentStates.forEach {
-            val session = currentDBSession()
-            try {
-                val stateAndRef = getStateAndRef(it)
-
-                addStateParties(session, stateAndRef)
-
-                if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
-                    it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
-                }
-            } catch (e: VaultStateMigrationException) {
-                logger.error("An error occurred while migrating a vault state: ${e.message}. Skipping")
+            val myKeys = cordaDB.transaction {
+                identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
             }
+
+            val persistentStates = VaultStateIterator(cordaDB)
+            persistentStates.forEach {
+                val session = currentDBSession()
+                try {
+                    val stateAndRef = getStateAndRef(it)
+
+                    addStateParties(session, stateAndRef)
+
+                    // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
+                    // state parties.
+                    if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
+                        it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
+                    }
+                } catch (e: VaultStateMigrationException) {
+                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
+                }
+            }
+            logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
         }
-        logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
     }
 }
 

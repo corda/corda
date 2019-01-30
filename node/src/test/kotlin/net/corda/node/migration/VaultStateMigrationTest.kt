@@ -4,9 +4,11 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Issued
+import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.hash
 import net.corda.core.internal.packageName
@@ -18,7 +20,10 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
 import net.corda.finance.DOLLARS
+import net.corda.finance.contracts.Commodity
 import net.corda.finance.contracts.asset.Cash
+import net.corda.finance.contracts.asset.Obligation
+import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -28,6 +33,7 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
+import net.corda.testing.internal.vault.CommodityState
 import net.corda.testing.internal.vault.DUMMY_LINEAR_CONTRACT_PROGRAM_ID
 import net.corda.testing.internal.vault.DummyLinearContract
 import net.corda.testing.internal.vault.DummyLinearStateSchemaV1
@@ -37,6 +43,7 @@ import net.corda.testing.node.TestClock
 import net.corda.testing.node.makeTestIdentityService
 import org.junit.*
 import org.mockito.Mockito
+import java.io.File
 import java.security.KeyPair
 import java.time.Clock
 import java.util.*
@@ -151,6 +158,7 @@ class VaultStateMigrationTest {
                     stateMachineRunId = null,
                     transaction = tx.serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
             )
+//            File("C:/Users/James Higgs/test/tx_blob").writeBytes(persistentTx.transaction)
             session.save(persistentTx)
         }
     }
@@ -212,6 +220,23 @@ class VaultStateMigrationTest {
     private fun addLinearStates(statesToAdd: Int, parties: List<AbstractParty>) {
         cordaDB.transaction {
             (1..statesToAdd).map { createLinearStateTransaction("A".repeat(it), parties)}.forEach {
+                storeTransaction(it)
+                createVaultStatesFromTransaction(it)
+            }
+        }
+    }
+
+    private fun createCommodityTransaction(amount: Amount<Issued<Commodity>>, owner: AbstractParty): SignedTransaction {
+        val txBuilder = TransactionBuilder(notary = dummyNotary.party)
+        OnLedgerAsset.generateIssue(txBuilder, TransactionState(CommodityState(amount, owner), Obligation.PROGRAM_ID, dummyNotary.party), Obligation.Commands.Issue())
+        return notaryServices.signInitialTransaction(txBuilder)
+    }
+
+    private fun addCommodityStates(statesToAdd: Int, owner: AbstractParty) {
+        cordaDB.transaction {
+            (1..statesToAdd).map{
+                createCommodityTransaction(Amount(it.toLong(), Issued(bankOfCorda.ref(2), Commodity.getInstance("FCOJ")!!)), owner)
+            }.forEach {
                 storeTransaction(it)
                 createVaultStatesFromTransaction(it)
             }
@@ -358,7 +383,7 @@ class VaultStateMigrationTest {
     private fun makePersistentDataSourceProperties(): Properties {
         val props = Properties()
         props.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-        props.setProperty("dataSource.url", "jdbc:h2:~/test/vault_query_persistence;DB_CLOSE_ON_EXIT=TRUE")
+        props.setProperty("dataSource.url", "jdbc:h2:~/test/persistence;DB_CLOSE_ON_EXIT=TRUE")
         props.setProperty("dataSource.user", "sa")
         props.setProperty("dataSource.password", "")
         return props
@@ -368,15 +393,24 @@ class VaultStateMigrationTest {
     @Test
     @Ignore
     fun `Create persistent DB`() {
-        val cashStatesToAdd = 100
-        val linearStatesToAdd = 100
-        val stateMultiplier = 1000
+        val cashStatesToAdd = 0
+        val linearStatesToAdd = 0
+        val commodityStatesToAdd = 100
+        val stateMultiplier = 1
 
         cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+
+        // Starting the database this way runs the migration under test. This is fine for the unit tests (as the changelog table is ignored),
+        // but when starting an actual node using these databases the migration will be skipped, as it has an entry in the changelog table.
+        // This must therefore be removed.
+        cordaDB.dataSource.connection.createStatement().use {
+            it.execute("DELETE FROM DATABASECHANGELOG WHERE FILENAME IN ('migration/vault-schema.changelog-v9.xml')")
+        }
 
         for (i in 1..stateMultiplier) {
             addCashStates(cashStatesToAdd, BOB)
             addLinearStates(linearStatesToAdd, listOf(BOB, ALICE))
+            addCommodityStates(commodityStatesToAdd, BOB)
         }
         saveOurIdentities(listOf(bob.keyPair))
         saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity))
