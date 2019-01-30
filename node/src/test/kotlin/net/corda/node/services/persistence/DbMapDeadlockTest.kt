@@ -15,6 +15,7 @@ import org.junit.rules.TemporaryFolder
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CyclicBarrier
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
@@ -135,7 +136,9 @@ class DbMapDeadlockTest {
                     SecondPersistenceClass::class.java
             )
 
-            val latch = CountDownLatch(1)
+            val latch1 = CyclicBarrier(2)
+            val latch2 = CountDownLatch(1)
+            val latch3 = CyclicBarrier(2)
 
             var otherThreadException: Exception? = null
 
@@ -146,13 +149,15 @@ class DbMapDeadlockTest {
             val otherThread = thread(name = "testThread2") {
                 try {
                     log.info("Thread2 waiting")
-                    latch.await()
+                    latch1.await()
+                    latch2.await()
                     log.info("Thread2 starting transaction")
                     persistence.transaction {
                         log.info("Thread2 getting key 2")
                         testMap.get(TestKey(2))
                         log.info("Thread2 set other value 100")
                         otherMap.set(TestKey(100), 100)
+                        latch3.await()
                         log.info("Thread2 getting value 10")
                         val v = testMap.get(TestKey(10))
                         assertEquals(10, v)
@@ -164,8 +169,8 @@ class DbMapDeadlockTest {
             }
 
 
-            log.info("MainThread sleep 200")
-            sleep(200)
+            log.info("MainThread waiting for Thread2 to start waiting")
+            latch1.await()
 
             // The main thread will write to the same key in the second table, and then read key 1 from the read table. As it will do that
             // before triggering the run on thread 2, it will get the row lock in the second table when flushing before the read, then
@@ -180,10 +185,12 @@ class DbMapDeadlockTest {
                 testMap.get(TestKey(1))
 
                 // Then it will trigger the start of the second thread (see above) and then sleep for a bit to make sure the other
-                // thread actually runs.
+                // thread actually runs and beats this thread to the get(10).  The test will still pass if it doesn't.
                 log.info("MainThread signal")
-                latch.countDown()
-                log.info("MainThread sleep 2000")
+                latch2.countDown()
+                log.info("MainThread wait for Thread2 to be getting the same key")
+                latch3.await()
+                log.info("MainThread sleep for 2 seconds so ideally Thread2 reaches the get first")
                 sleep(2000)
 
                 // finally it will try to get the same value from the read table that the other thread is trying to read.
@@ -196,7 +203,7 @@ class DbMapDeadlockTest {
                     checkException(e)
                 }
             }
-            log.info("MainThread waiting for Thread2")
+            log.info("MainThread joining with Thread2")
             otherThread.join()
             checkException(otherThreadException)
             log.info("MainThread done")
