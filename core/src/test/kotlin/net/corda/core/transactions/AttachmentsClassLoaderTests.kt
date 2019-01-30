@@ -14,6 +14,7 @@ import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
@@ -117,6 +118,36 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
+    fun `Overlapping rules for META-INF serializationwhitelist files`() {
+        val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some data").inputStream(), "app", "file1.jar")
+        val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some other data").inputStream(), "app", "file2.jar")
+
+        AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+    }
+
+    @Ignore("Enable once `requireNoDuplicates` is fixed. The check is currently skipped due to the incorrect logic.")
+    @Test
+    fun `Overlapping rules for META-INF random service files`() {
+        val att1 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some data").inputStream(), "app", "file1.jar")
+        val att2 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some other data").inputStream(), "app", "file2.jar")
+
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
+            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Ignore("Added test that was removed when the hash-2-signature constraint was added. Enable once `requireNoDuplicates` is fixed.")
+    @Test
+    fun `Test overlapping file exception`() {
+        val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
+        val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
+
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
+            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Test
     fun `Check platform independent path handling in attachment jars`() {
         val att1 = importAttachment(fakeAttachment("/folder1/foldera/file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("\\folder1\\folderb\\file2.txt", "some other data").inputStream(), "app", "file2.jar")
@@ -133,7 +164,7 @@ class AttachmentsClassLoaderTests {
         val data2b = readAttachment(storage.openAttachment(att2)!!, "/folder1/folderb/file2.txt")
         assertArrayEquals("some other data".toByteArray(), data2b)
     }
-    
+
     private fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {
         return jar.use { storage.importAttachment(jar, uploader, filename) }
     }
