@@ -50,12 +50,21 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         private val ignoreDirectories = listOf("org/jolokia/", "org/json/simple/")
         private val ignorePackages = ignoreDirectories.map { it.replace("/", ".") }
 
-        private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int) = when {
-            path.endsWith("/") -> false                     // Directories (packages) can overlap.
-            targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
-            path.endsWith(".class") -> true                 // All class files need to be unique.
-            !path.startsWith("meta-inf") -> true            // All files outside of Meta-inf need to be unique.
-            else -> false                                          // This allows overlaps over any non-class files in "Meta-inf".
+        // This function attempts to strike a balance between security and usability when it comes to the no-overlap rule.
+        // TODO - investigate potential exploits.
+        private fun shouldCheckForNoOverlap(path: String, targetPlatformVersion: Int): Boolean {
+            require(path.toLowerCase() == path)
+            require(!path.contains("\\"))
+
+            return when {
+                path.endsWith("/") -> false                     // Directories (packages) can overlap.
+                targetPlatformVersion < 4 && ignoreDirectories.any { path.startsWith(it) } -> false    // Ignore jolokia and json-simple for old cordapps.
+                path.endsWith(".class") -> true                 // All class files need to be unique.
+                !path.startsWith("meta-inf") -> true            // All files outside of META-INF need to be unique.
+                (path == "meta-inf/services/net.corda.core.serialization.serializationwhitelist") -> false // Allow overlapping on the SerializationWhitelist.
+                path.startsWith("meta-inf/services") -> true    // Services can't overlap to prevent a malicious party from injecting additional implementations of an interface used by a contract.
+                else -> false                                          // This allows overlaps over any non-class files in "META-INF" - except 'services'.
+            }
         }
 
         private fun requireNoDuplicates(attachments: List<Attachment>) {
