@@ -24,11 +24,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -110,10 +106,10 @@ class NodeVaultService(
         }
     }
 
-    private fun saveStates(session: Session, states: Map<StateRef, StateAndRef<ContractState>>, now: Instant) {
+    private fun saveStates(session: Session, states: Map<StateRef, StateAndRef<ContractState>>, now: Instant, produced: Boolean) {
         states.forEach { stateAndRef ->
             val stateOnly = stateAndRef.value.state.data
-            val uuid = if (stateOnly is FungibleState<*>) {
+            val uuid = if (produced && stateOnly is FungibleState<*>) {
                 FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
             } else null
             if (uuid != null) {
@@ -180,10 +176,10 @@ class NodeVaultService(
             val now = clock.instant()
 
             // Persist the outputs.
-            saveStates(session, producedStateRefsMap, now)
+            saveStates(session, producedStateRefsMap, now, true)
 
             // Persist the reference states.
-            saveStates(session, referenceStateRefsMap, now)
+            saveStates(session, referenceStateRefsMap, now, false)
 
             // Persist the consumed inputs.
                 if (consumedStateRefs.isNotEmpty()) {
