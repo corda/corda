@@ -81,12 +81,12 @@ class NodeVaultService(
      * Maintain a list of contract state interfaces to concrete types stored in the vault
      * for usage in generic queries of type queryBy<LinearState> or queryBy<FungibleState<*>>
      */
-    private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>()
+    private val contractStateTypeMappings = mutableMapOf<String, MutableSet<String>>().toSynchronised()
 
     override fun start() {
         bootstrapContractStateTypes()
         rawUpdates.subscribe { update ->
-            update.produced.forEach {
+            (update.produced + update.references).forEach {
                 val concreteType = it.state.data.javaClass
                 log.trace { "State update of type: $concreteType" }
                 val seen = contractStateTypeMappings.any { it.value.contains(concreteType.name) }
