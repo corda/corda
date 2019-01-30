@@ -178,7 +178,7 @@ private fun Array<String>.readNodeConfigPaths(): NodeConfigurationPaths? {
 }
 
 private fun option(opt: String, longOpt: String, description: String, hasArg: Boolean = true, isRequired: Boolean = false, type: Class<*> = String::class.java): Option {
-    val option = Option("d", "base-directory", true, "Path to the Corda node base directory")
+    val option = Option(opt, longOpt, hasArg, description)
     option.isRequired = isRequired
     option.setType(type)
     return option
