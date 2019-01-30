@@ -55,7 +55,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
             return packageToRootPaths.computeIfAbsent(scanPackage) {
                 ClassGraph()
                         .whitelistPackages(scanPackage)
-                        .scan()
+                        .pooledScan()
                         .use { it.allResources }
                         .asSequence()
                         .map { it.classpathElementURL.toPath() }

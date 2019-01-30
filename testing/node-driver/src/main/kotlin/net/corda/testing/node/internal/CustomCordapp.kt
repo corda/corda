@@ -52,7 +52,7 @@ data class CustomCordapp(
         val scanResult = classGraph
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
-                .scan()
+                .pooledScan()
 
         scanResult.use {
             JarOutputStream(file.outputStream()).use { jos ->
