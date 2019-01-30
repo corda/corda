@@ -342,27 +342,22 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
                 checkMinimumPlatformVersion(ltx.networkParameters!!.minimumPlatformVersion, 4, "Signature constraints")
             }
 
-            val constraintAttachment = if (state.contract in hashToSignatureConstrainedContracts) {
-                // hash to to signature constraint migration logic:
-                // pass the unsigned attachment when verifying the constraint of the input state, and the signed attachment when verifying
-                // the constraint of the output state.
-                val unsignedAttachment = contractAttachmentsByContract[state.contract].unsigned
-                        ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
-                val signedAttachment = contractAttachmentsByContract[state.contract].signed
-                        ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
-                when {
-                    // use unsigned attachment if hash-constrained input state
-                    state.data in ltx.inputStates -> AttachmentWithContext(unsignedAttachment, state.contract, ltx.networkParameters!!)
-                    // use signed attachment if signature-constrained output state
-                    state.data in ltx.outputStates -> AttachmentWithContext(signedAttachment, state.contract, ltx.networkParameters!!)
-                    else -> throw IllegalStateException("${state.contract} must use either signed or unsigned attachment in hash to signature constraints migration")
+            val constraintAttachment =
+                if (state.contract in hashToSignatureConstrainedContracts && state.constraint is HashAttachmentConstraint) {
+                    val unsignedAttachment = contractAttachmentsByContract[state.contract].unsigned
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
+                    AttachmentWithContext(unsignedAttachment, state.contract, ltx.networkParameters!!)
+                } else if (state.contract in hashToSignatureConstrainedContracts && state.constraint is SignatureAttachmentConstraint) {
+                    val signedAttachment = contractAttachmentsByContract[state.contract].signed
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
+                    AttachmentWithContext(signedAttachment, state.contract, ltx.networkParameters!!)
                 }
-            } else {
-                // standard processing logic
-                val contractAttachment = contractAttachmentsByContract[state.contract]?.firstOrNull()
-                        ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
-                AttachmentWithContext(contractAttachment, state.contract, ltx.networkParameters!!)
-            }
+                else {
+                    // standard processing logic
+                    val contractAttachment = contractAttachmentsByContract[state.contract]?.firstOrNull()
+                            ?: throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, state.contract)
+                    AttachmentWithContext(contractAttachment, state.contract, ltx.networkParameters!!)
+                }
 
             if (!state.constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(ltx.id, state.contract)
