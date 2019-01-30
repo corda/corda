@@ -52,8 +52,13 @@ import javax.persistence.*
 class NodeAttachmentService(
         metrics: MetricRegistry,
         cacheFactory: NamedCacheFactory,
-        private val database: CordaPersistence
+        private val database: CordaPersistence,
+        val devMode: Boolean
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
+    constructor(metrics: MetricRegistry,
+                cacheFactory: NamedCacheFactory,
+                database: CordaPersistence) : this(metrics, cacheFactory, database, false)
+
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 
@@ -356,9 +361,8 @@ class NodeAttachmentService(
                     val jarSigners = getSigners(bytes)
                     val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
-
-                    verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
-
+                    if (!devMode)
+                        verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
                             content = bytes,
@@ -379,7 +383,8 @@ class NodeAttachmentService(
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
-                        verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
+                        if (!devMode)
+                            verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
