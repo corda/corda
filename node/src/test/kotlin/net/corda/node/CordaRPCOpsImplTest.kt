@@ -47,10 +47,10 @@ import net.corda.testing.core.expect
 import net.corda.testing.core.expectEvents
 import net.corda.testing.core.sequence
 import net.corda.testing.internal.fromUserList
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.InternalMockNodeParameters
 import net.corda.testing.node.internal.TestStartedNode
-import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.testActor
 import org.apache.commons.io.IOUtils
 import org.assertj.core.api.Assertions.*
@@ -94,7 +94,7 @@ class CordaRPCOpsImplTest {
 
     @Before
     fun setup() {
-        mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.finance"))
+        mockNet = InternalMockNetwork(cordappsForAllNodes = FINANCE_CORDAPPS)
         aliceNode = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME))
         rpc = aliceNode.rpcOps
         CURRENT_RPC_CONTEXT.set(RpcAuthContext(InvocationContext.rpc(testActor()), buildSubject("TEST_USER", emptySet())))

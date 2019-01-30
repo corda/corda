@@ -2,7 +2,6 @@ package net.corda.core.internal
 
 import io.github.classgraph.ClassGraph
 import net.corda.core.StubOutForDJVM
-import kotlin.reflect.full.createInstance
 
 /**
  * Creates instances of all the classes in the classpath of the provided classloader, which implement the interface of the provided class.
@@ -17,15 +16,26 @@ import kotlin.reflect.full.createInstance
  * - either be a Kotlin object or have a constructor with no parameters (or only optional ones)
  */
 @StubOutForDJVM
-fun <T: Any> loadClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
+fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
     return ClassGraph().addClassLoader(classloader)
             .enableClassInfo()
-            .scan()
+            .pooledScan()
             .use {
                 it.getClassesImplementing(clazz.name)
                         .filterNot { it.isAbstract }
-                        .mapNotNull { classloader.loadClass(it.name).asSubclass(clazz) }
-                        .map { it.kotlin.objectInstance ?: it.kotlin.createInstance() }
+                        .map { classloader.loadClass(it.name).asSubclass(clazz) }
+                        .map { it.kotlin.objectOrNewInstance() }
                         .toSet()
             }
+}
+
+fun <T: Any?> executeWithThreadContextClassLoader(classloader: ClassLoader, fn: () -> T): T {
+    val threadClassLoader = Thread.currentThread().contextClassLoader
+    try {
+        Thread.currentThread().contextClassLoader = classloader
+        return fn()
+    } finally {
+        Thread.currentThread().contextClassLoader = threadClassLoader
+    }
+
 }

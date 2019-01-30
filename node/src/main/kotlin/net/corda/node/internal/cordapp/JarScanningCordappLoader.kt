@@ -280,7 +280,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     private fun scanCordapp(cordappJarPath: RestrictedURL): RestrictedScanResult {
         logger.info("Scanning CorDapp in ${cordappJarPath.url}")
         return cachedScanResult.computeIfAbsent(cordappJarPath) {
-            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().scan()
+            val scanResult = ClassGraph().addClassLoader(appClassLoader).overrideClasspath(cordappJarPath.url).enableAllInfo().pooledScan()
             RestrictedScanResult(scanResult, cordappJarPath.qualifiedNamePrefix)
         }
     }

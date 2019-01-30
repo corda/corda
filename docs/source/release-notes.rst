@@ -223,6 +223,12 @@ We've upgraded to Gradle 4.10.1.
 Changes for administrators in Corda 4
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Official Docker images
+++++++++++++++++++++++
+
+Corda 4 adds an :doc:`docker-image` for starting the node. It's based on Ubuntu and uses the Azul Zulu
+spin of Java 8. Other tools will have Docker images in future as well.
+
 Auto-acceptance for network parameters updates
 ++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -240,7 +246,7 @@ Errors generated in Corda are now hashed to produce a unique error code that can
 used to perform a lookup into a knowledge base. The lookup URL will be printed to the logs when an error
 occur. Here's an example::
 
-[ERROR] 2018-12-19T17:18:39,199Z [main] internal.NodeStartupLogging.invoke - Exception during node startup: The name 'O=Wawrzek Test C4, L=London, C=GB' for identity doesn't match what's in the key store: O=Wawrzek Test C4, L=Ely, C=GB [errorCode=wuxa6f, moreInformationAt=https://errors.corda.net/OS/4.0-SNAPSHOT/wuxa6f]
+[ERROR] 2018-12-19T17:18:39,199Z [main] internal.NodeStartupLogging.invoke - Exception during node startup: The name 'O=Wawrzek Test C4, L=London, C=GB' for identity doesn't match what's in the key store: O=Wawrzek Test C4, L=Ely, C=GB [errorCode=wuxa6f, moreInformationAt=https://errors.corda.net/OS/4.0/wuxa6f]
 
 The hope is that common error conditions can quickly be resolved and opaque errors explained in a more
 user friendly format to facilitate faster debugging and trouble shooting.

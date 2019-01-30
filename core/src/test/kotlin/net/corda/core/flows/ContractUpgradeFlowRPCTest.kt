@@ -8,8 +8,6 @@ import com.natpryce.hamkrest.isA
 import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.testing.internal.matchers.rpc.willReturn
-import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.core.flows.mixins.WithContracts
 import net.corda.core.flows.mixins.WithFinality
 import net.corda.core.messaging.CordaRPCOps
@@ -21,6 +19,8 @@ import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
+import net.corda.testing.internal.matchers.rpc.willReturn
+import net.corda.testing.internal.matchers.rpc.willThrow
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.*
 import org.junit.AfterClass
@@ -28,7 +28,7 @@ import org.junit.Test
 
 class ContractUpgradeFlowRPCTest : WithContracts, WithFinality {
     companion object {
-        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", "net.corda.finance.contracts.asset", "net.corda.core.flows"))
+        private val classMockNet = InternalMockNetwork(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()))
 
         @JvmStatic
         @AfterClass

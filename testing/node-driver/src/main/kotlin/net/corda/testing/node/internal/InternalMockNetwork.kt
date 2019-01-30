@@ -1,7 +1,5 @@
 package net.corda.testing.node.internal
 
-import com.google.common.jimfs.Configuration.unix
-import com.google.common.jimfs.Jimfs
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.DoNotImplement
@@ -163,7 +161,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
     var nextNodeId = 0
         private set
-    private val filesystem = Jimfs.newFileSystem(unix())
     private val busyLatch = ReusableLatch()
     val messagingNetwork = InMemoryMessagingNetwork.create(networkSendManuallyPumped, servicePeerAllocationStrategy, busyLatch)
     // A unique identifier for this network to segregate databases with the same nodeID but different networks.
@@ -230,7 +227,6 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
 
     init {
         try {
-            filesystem.getPath("/nodes").createDirectory()
             val notaryInfos = generateNotaryIdentities()
             networkParameters = initialNetworkParameters.copy(notaries = notaryInfos)
             // The network parameters must be serialised before starting any of the nodes
@@ -477,16 +473,20 @@ open class InternalMockNetwork(cordappPackages: List<String> = emptyList(),
         return node
     }
 
-    fun restartNode(node: TestStartedNode, nodeFactory: (MockNodeArgs) -> MockNode): TestStartedNode {
+    fun restartNode(
+            node: TestStartedNode,
+            parameters: InternalMockNodeParameters = InternalMockNodeParameters(),
+            nodeFactory: (MockNodeArgs) -> MockNode = defaultFactory
+    ): TestStartedNode {
         node.internals.disableDBCloseOnStop()
         node.dispose()
         return createNode(
-                InternalMockNodeParameters(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id),
+                parameters.copy(legalName = node.internals.configuration.myLegalName, forcedID = node.internals.id),
                 nodeFactory
         )
     }
 
-    fun restartNode(node: TestStartedNode): TestStartedNode = restartNode(node, defaultFactory)
+    fun baseDirectory(node: TestStartedNode): Path = baseDirectory(node.internals.id)
 
     fun baseDirectory(nodeId: Int): Path = testDirectory / "nodes/$nodeId"
 

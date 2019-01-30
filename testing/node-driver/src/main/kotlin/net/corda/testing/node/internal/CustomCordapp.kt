@@ -25,7 +25,7 @@ import java.util.zip.ZipEntry
  * disparate classes. The CorDapp metadata that's present in the MANIFEST can also be tailored.
  */
 data class CustomCordapp(
-        val packages: Set<String>,
+        val packages: Set<String> = emptySet(),
         val name: String = "custom-cordapp",
         val versionId: Int = 1,
         val targetPlatformVersion: Int = PLATFORM_VERSION,
@@ -52,7 +52,7 @@ data class CustomCordapp(
         val scanResult = classGraph
                 .whitelistPackages(*packages.toTypedArray())
                 .whitelistClasses(*classes.map { it.name }.toTypedArray())
-                .scan()
+                .pooledScan()
 
         scanResult.use {
             JarOutputStream(file.outputStream()).use { jos ->

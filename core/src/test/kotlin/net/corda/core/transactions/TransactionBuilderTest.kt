@@ -59,8 +59,8 @@ class TransactionBuilderTest {
         doReturn(setOf(DummyContract.PROGRAM_ID)).whenever(attachment).allContracts
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
-        doReturn(contractAttachmentId).whenever(attachmentStorage)
-                .getContractAttachmentWithHighestContractVersion("net.corda.testing.contracts.DummyContract", DEFAULT_CORDAPP_VERSION)
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
+                .getLatestContractAttachments("net.corda.testing.contracts.DummyContract")
     }
 
     @Test
@@ -146,8 +146,8 @@ class TransactionBuilderTest {
 
         doReturn(attachments).whenever(services).attachments
         doReturn(signedAttachment).whenever(attachments).openAttachment(contractAttachmentId)
-        doReturn(contractAttachmentId).whenever(attachments)
-                .getContractAttachmentWithHighestContractVersion("net.corda.testing.contracts.DummyContract", DEFAULT_CORDAPP_VERSION)
+        doReturn(listOf(contractAttachmentId)).whenever(attachments)
+                .getLatestContractAttachments("net.corda.testing.contracts.DummyContract")
 
         val outputState = TransactionState(data = DummyState(), contract = DummyContract.PROGRAM_ID, notary = notary)
         val builder = TransactionBuilder()
@@ -164,7 +164,7 @@ class TransactionBuilderTest {
         override val signerKeys: List<PublicKey> get() = emptyList()
     }, DummyContract.PROGRAM_ID)
 
-    private fun signedAttachment(vararg parties: Party) = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
+    private fun signedAttachment(vararg parties: Party) = ContractAttachment.create(object : AbstractAttachment({ byteArrayOf() }) {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }

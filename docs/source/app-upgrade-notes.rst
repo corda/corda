@@ -261,7 +261,29 @@ becomes::
     )
 
 You may need to use the new ``TestCordapp`` API when testing with the node driver or mock network, especially if you decide to stick with the
-pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests does not honour CorDapp versioning.
+pre-Corda 4 ``FinalityFlow`` API. The previous way of pulling in CorDapps into your tests (i.e. via using the ``cordappPackages`` parameter) does not honour CorDapp versioning.
+The new API ``TestCordapp.findCordapp()`` discovers the CorDapps that contain the provided packages scanning the classpath, so you have to ensure that the classpath the tests are running under contains either the CorDapp ``.jar`` or (if using Gradle) the relevant Gradle sub-project.
+In the first case, the versioning information in the CorDapp ``.jar`` file will be maintained. In the second case, the versioning information will be retrieved from the Gradle ``cordapp`` task.
+For example, if you are using ``MockNetwork`` for your tests, the following code::
+
+    val mockNetwork = MockNetwork(
+        cordappPackages = listOf("net.corda.examples.obligation", "net.corda.finance.contracts"),
+        notarySpecs = listOf(MockNetworkNotarySpec(notary))
+    )
+
+would need to be transformed into::
+
+    val mockNetwork = MockNetwork(MockNetworkParameters(
+        cordappsForAllNodes = listOf(TestCordapp.findCordapp("net.corda.businessnetworks.membership")),
+        notarySpecs = listOf(MockNetworkNotarySpec(notary))
+    ))
+
+Note that every package should exist in only one CorDapp, otherwise the discovery process won't be able to determine which one to use and you will most probably see an exception telling you ``There is more than one CorDapp containing the package``.
+For instance, if you have 2 CorDapps containing the packages ``net.corda.examples.obligation.contracts`` and ``net.corda.examples.obligation.flows``, you will get this error if you specify the package ``net.corda.examples.obligation``.
+
+
+.. note:: If you have any CorDapp code (e.g. flows/contracts/states) that is only used by the tests and located in the same test module, it won't be discovered now.
+    You will need to move them in the main module of one of your CorDapps or create a new, separate CorDapp for them, in case you don't want this code to live inside your production CorDapps.
 
 Step 6. Security: Add BelongsToContract annotations
 ---------------------------------------------------
@@ -332,6 +354,15 @@ that causes transaction details to be converted to a PDF and sent to a particula
 into shared business logic, but it makes perfect sense to put into a user-specific app they developed themselves.
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
+
+Step 10. Possibly update Vault state queries
+--------------------------------------------
+
+Queries made on a node's vault can filter by the relevancy of those states to the node in Corda 4. As this functionality does not exist in
+Corda 3, apps targeting that release will continue to receive all states in any vault queries. In Corda 4, the default is to return all
+states in the vault, to maintain backwards compatibility. However, it may make sense to migrate queries expecting just those states relevant
+to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
+may result in queries returning more states than expected if the node is using Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
 
 Step 10. Explore other new features that may be useful
 ------------------------------------------------------

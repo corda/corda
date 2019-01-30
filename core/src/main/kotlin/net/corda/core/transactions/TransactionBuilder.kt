@@ -40,46 +40,35 @@ import kotlin.collections.component2
  * [TransactionState] with this notary specified will be generated automatically.
  */
 @DeleteForDJVM
-open class TransactionBuilder @JvmOverloads constructor(
+open class TransactionBuilder(
         var notary: Party? = null,
-        var lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
+        var lockId: UUID = defaultLockId(),
         protected val inputs: MutableList<StateRef> = arrayListOf(),
         protected val attachments: MutableList<SecureHash> = arrayListOf(),
         protected val outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
         protected val commands: MutableList<Command<*>> = arrayListOf(),
         protected var window: TimeWindow? = null,
-        protected var privacySalt: PrivacySalt = PrivacySalt()
+        protected var privacySalt: PrivacySalt = PrivacySalt(),
+        protected val references: MutableList<StateRef> = arrayListOf(),
+        protected val serviceHub: ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
 ) {
+    constructor(notary: Party? = null,
+                lockId: UUID = defaultLockId(),
+                inputs: MutableList<StateRef> = arrayListOf(),
+                attachments: MutableList<SecureHash> = arrayListOf(),
+                outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
+                commands: MutableList<Command<*>> = arrayListOf(),
+                window: TimeWindow? = null,
+                privacySalt: PrivacySalt = PrivacySalt()
+    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt, arrayListOf())
+
+    constructor(notary: Party) : this(notary, window = null)
+
     private companion object {
+        private fun defaultLockId() = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID()
         private val log = contextLogger()
-
-        private fun defaultReferencesList(): MutableList<StateRef> = arrayListOf()
-
-        private fun defaultServiceHub(): ServiceHub? = (Strand.currentStrand() as? FlowStateMachine<*>)?.serviceHub
-
         private const val CORDA_VERSION_THAT_INTRODUCED_FLATTENED_COMMANDS = 4
     }
-
-    constructor(
-            notary: Party? = null,
-            lockId: UUID = (Strand.currentStrand() as? FlowStateMachine<*>)?.id?.uuid ?: UUID.randomUUID(),
-            inputs: MutableList<StateRef> = arrayListOf(),
-            attachments: MutableList<SecureHash> = arrayListOf(),
-            outputs: MutableList<TransactionState<ContractState>> = arrayListOf(),
-            commands: MutableList<Command<*>> = arrayListOf(),
-            window: TimeWindow? = null,
-            privacySalt: PrivacySalt = PrivacySalt(),
-            references: MutableList<StateRef> = defaultReferencesList(),
-            serviceHub: ServiceHub? = defaultServiceHub()
-    ) : this(notary, lockId, inputs, attachments, outputs, commands, window, privacySalt) {
-        this.references = references
-        this.serviceHub = serviceHub
-    }
-
-    protected var references: MutableList<StateRef> = defaultReferencesList()
-        private set
-    protected var serviceHub: ServiceHub? = defaultServiceHub()
-        private set
 
     private val inputsWithTransactionState = arrayListOf<StateAndRef<ContractState>>()
     private val referencesWithTransactionState = arrayListOf<TransactionState<ContractState>>()
@@ -196,8 +185,8 @@ open class TransactionBuilder @JvmOverloads constructor(
 
             addAttachment(attachment.id)
             return true
-        // Ignore these exceptions as they will break unit tests.
-        //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
+            // Ignore these exceptions as they will break unit tests.
+            //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
         } catch (tve: TransactionVerificationException) {
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {
@@ -291,32 +280,34 @@ open class TransactionBuilder @JvmOverloads constructor(
     ): Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
-        // Hash to Signature constraints migration switchover
+        // Hash to Signature constraints migration switchover (only applicable from version 4 onwards)
         // identify if any input-output pairs are transitioning from hash to signature constraints:
         // 1. output states contain implicitly selected hash constraint (pre-existing from set of unconsumed states in a nodes vault) or explicitly set SignatureConstraint
         // 2. node has signed jar for associated contract class and version
-        val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
-        if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
-            val attachmentIds = services.attachments.getContractAttachments(contractClassName)
-            // only switchover if we have both signed and unsigned attachments for the given contract class name
-            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
-                val attachmentsToUse = attachmentIds.map {
-                    services.attachments.openAttachment(it)?.let { it as ContractAttachment }
-                            ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
+        if (services.networkParameters.minimumPlatformVersion >= 4) {
+            val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+            val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+            val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
+            if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
+                val attachmentIds = services.attachments.getLatestContractAttachments(contractClassName)
+                // only switchover if we have both signed and unsigned attachments for the given contract class name
+                if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
+                    val attachmentsToUse = attachmentIds.map {
+                        services.attachments.openAttachment(it)?.let { it as ContractAttachment }
+                                ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
+                    }
+                    val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
+                            ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
+                    val outputConstraints =
+                            if (outputHashConstraints.isNotEmpty()) {
+                                log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
+                                val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+                                outputs.addAll(outputsSignatureConstraints)
+                                outputs.removeAll(outputHashConstraints)
+                                outputsSignatureConstraints
+                            } else outputSignatureConstraints
+                    return Pair(attachmentIds.toSet(), outputConstraints)
                 }
-                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
-                        ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
-                val outputConstraints =
-                        if (outputHashConstraints.isNotEmpty()) {
-                            log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
-                            val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
-                            outputs.addAll(outputsSignatureConstraints)
-                            outputs.removeAll(outputHashConstraints)
-                            outputsSignatureConstraints
-                        } else outputSignatureConstraints
-                return Pair(attachmentIds.toSet(), outputConstraints)
             }
         }
 
@@ -476,8 +467,8 @@ open class TransactionBuilder @JvmOverloads constructor(
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
-        return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
-                ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
+        return services.attachments.getLatestContractAttachments(contractClassName, minimumRequiredContractClassVersion).firstOrNull()
+                ?: throw MissingContractAttachments(states, contractClassName, minimumRequiredContractClassVersion)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys

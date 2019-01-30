@@ -7,7 +7,13 @@ import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.NetworkParametersService
 import java.security.cert.X509Certificate
 
-interface NetworkParametersServiceInternal : NetworkParametersService {
+interface NetworkParametersStorage : NetworkParametersService {
+    /**
+     * Return parameters epoch for the given parameters hash. Null if there are no parameters for this hash in the storage and we are unable to
+     * get them from network map.
+     */
+    fun getEpochFromHash(hash: SecureHash): Int?
+
     /**
      * Return signed network parameters with certificate for the given hash. Null if there are no parameters for this hash in the storage.
      * (No fallback to network map.)
@@ -23,9 +29,7 @@ interface NetworkParametersServiceInternal : NetworkParametersService {
      * Returns the [NotaryInfo] for a notary [party] in the current or any historic network parameter whitelist, or null if not found.
      */
     fun getHistoricNotary(party: Party): NotaryInfo?
-}
 
-interface NetworkParametersStorage : NetworkParametersServiceInternal {
     /**
      * Save signed network parameters data. Internally network parameters bytes should be stored with the signature.
      * It's because of ability of older nodes to function in network where parameters were extended with new fields.

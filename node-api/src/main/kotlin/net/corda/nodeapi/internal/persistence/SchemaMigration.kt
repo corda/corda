@@ -13,6 +13,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.nio.file.Path
 import java.sql.Statement
 import javax.sql.DataSource
 
@@ -20,10 +21,12 @@ class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
         private val databaseConfig: DatabaseConfig,
-        private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader) {
+        private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader,
+        private val currentDirectory: Path?) {
 
     companion object {
         private val logger = contextLogger()
+        const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
     }
 
     /**
@@ -86,6 +89,10 @@ class SchemaMigration(
                 }
             }
 
+            val path = currentDirectory?.toString()
+            if (path != null) {
+                System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
+            }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))

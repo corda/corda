@@ -11,7 +11,10 @@ import net.corda.core.flows.FlowSession
 import net.corda.core.internal.FetchDataFlow.DownloadedVsRequestedDataMismatch
 import net.corda.core.internal.FetchDataFlow.HashNotFound
 import net.corda.core.node.NetworkParameters
-import net.corda.core.serialization.*
+import net.corda.core.serialization.CordaSerializable
+import net.corda.core.serialization.SerializationToken
+import net.corda.core.serialization.SerializeAsToken
+import net.corda.core.serialization.SerializeAsTokenContext
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NonEmptySet
 import net.corda.core.utilities.UntrustworthyData
@@ -202,7 +205,7 @@ class FetchTransactionsFlow(requests: Set<SecureHash>, otherSide: FlowSession) :
 class FetchNetworkParametersFlow(requests: Set<SecureHash>,
                                  otherSide: FlowSession) : FetchDataFlow<SignedDataWithCert<NetworkParameters>, SignedDataWithCert<NetworkParameters>>(requests, otherSide, DataType.PARAMETERS) {
     override fun load(txid: SecureHash): SignedDataWithCert<NetworkParameters>? {
-        return (serviceHub.networkParametersService as NetworkParametersServiceInternal).lookupSigned(txid)
+        return (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(txid)
     }
 
     override fun maybeWriteToDisk(downloaded: List<SignedDataWithCert<NetworkParameters>>) {

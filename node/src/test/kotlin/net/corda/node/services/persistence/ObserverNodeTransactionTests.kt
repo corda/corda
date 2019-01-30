@@ -6,17 +6,21 @@ import net.corda.core.contracts.StateAndContract
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.internal.packageName
 import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
+import net.corda.node.testing.MESSAGE_CHAIN_CONTRACT_PROGRAM_ID
+import net.corda.node.testing.MessageChainContract
+import net.corda.node.testing.MessageChainState
+import net.corda.node.testing.MessageData
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.InternalMockNetwork
 import net.corda.testing.node.internal.cordappWithPackages
+import net.corda.testing.node.internal.enclosedCordapp
 import net.corda.testing.node.internal.startFlow
 import org.junit.After
 import org.junit.Before
@@ -25,15 +29,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class ObserverNodeTransactionTests {
-
     private lateinit var mockNet: InternalMockNetwork
 
     @Before
     fun start() {
         mockNet = InternalMockNetwork(
-                cordappsForAllNodes = listOf(cordappWithPackages(MessageChainState::class.packageName)),
+                cordappsForAllNodes = listOf(cordappWithPackages("net.corda.node.testing"), enclosedCordapp()),
                 networkSendManuallyPumped = false,
-                threadPerNode = true)
+                threadPerNode = true
+        )
     }
 
     @After
@@ -50,15 +54,15 @@ class ObserverNodeTransactionTests {
 
         fun buildTransactionChain(initialMessage: MessageData, chainLength: Int) {
             node.services.startFlow(StartMessageChainFlow(initialMessage, notary)).resultFuture.getOrThrow()
-            var result = node.services.vaultService.queryBy(MessageChainState::class.java).states.filter {
+            var result = node.services.vaultService.queryBy(MessageChainState::class.java).states.singleOrNull {
                 it.state.data.message.value.startsWith(initialMessage.value)
-            }.singleOrNull()
+            }
 
             for (_i in 0.until(chainLength -1 )) {
                 node.services.startFlow(ContinueMessageChainFlow(result!!, notary)).resultFuture.getOrThrow()
-                result = node.services.vaultService.queryBy(MessageChainState::class.java).states.filter {
+                result = node.services.vaultService.queryBy(MessageChainState::class.java).states.singleOrNull {
                     it.state.data.message.value.startsWith(initialMessage.value)
-                }.singleOrNull()
+                }
             }
         }
 
@@ -86,101 +90,98 @@ class ObserverNodeTransactionTests {
         val outputMessage = MessageData("AAAA")
         checkObserverTransactions(outputMessage)
     }
-}
 
-@StartableByRPC
-class StartMessageChainFlow(private val message: MessageData, private val notary: Party) : FlowLogic<SignedTransaction>() {
-    companion object {
-        object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
-        object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
-        object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
-        object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
-            override fun childProgressTracker() = FinalityFlow.tracker()
+
+    @StartableByRPC
+    class StartMessageChainFlow(private val message: MessageData, private val notary: Party) : FlowLogic<SignedTransaction>() {
+        companion object {
+            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
+            object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+            object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+            object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+                override fun childProgressTracker() = FinalityFlow.tracker()
+            }
+
+            fun tracker() = ProgressTracker(GENERATING_TRANSACTION, VERIFYING_TRANSACTION, SIGNING_TRANSACTION, FINALISING_TRANSACTION)
         }
 
-        fun tracker() = ProgressTracker(GENERATING_TRANSACTION, VERIFYING_TRANSACTION, SIGNING_TRANSACTION, FINALISING_TRANSACTION)
+        override val progressTracker = tracker()
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+            progressTracker.currentStep = GENERATING_TRANSACTION
+
+            val messageState = MessageChainState(message = message, by = ourIdentity)
+            val txCommand = Command(MessageChainContract.Commands.Send(), messageState.participants.map { it.owningKey })
+            val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID), txCommand)
+
+            progressTracker.currentStep = VERIFYING_TRANSACTION
+            txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
+
+            progressTracker.currentStep = SIGNING_TRANSACTION
+            val signedTx = serviceHub.signInitialTransaction(txBuilder)
+
+            progressTracker.currentStep = FINALISING_TRANSACTION
+            return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
+        }
     }
 
-    override val progressTracker = tracker()
+    @StartableByRPC
+    class ContinueMessageChainFlow(private val stateRef: StateAndRef<MessageChainState>,
+                                   private val notary: Party) : FlowLogic<SignedTransaction>() {
+        companion object {
+            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
+            object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
+            object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
+            object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
+                override fun childProgressTracker() = FinalityFlow.tracker()
+            }
 
-    @Suspendable
-    override fun call(): SignedTransaction {
-        progressTracker.currentStep = GENERATING_TRANSACTION
-
-        val messageState = MessageChainState(message = message, by = ourIdentity)
-        val txCommand = Command(MessageChainContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(StateAndContract(messageState, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID), txCommand)
-
-        progressTracker.currentStep = VERIFYING_TRANSACTION
-        txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
-
-        progressTracker.currentStep = SIGNING_TRANSACTION
-        val signedTx = serviceHub.signInitialTransaction(txBuilder)
-
-        progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
-    }
-}
-
-@StartableByRPC
-class ContinueMessageChainFlow(private val stateRef: StateAndRef<MessageChainState>,
-                               private val notary: Party) : FlowLogic<SignedTransaction>() {
-    companion object {
-        object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on the message.")
-        object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
-        object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
-        object FINALISING_TRANSACTION : ProgressTracker.Step("Obtaining notary signature and recording transaction.") {
-            override fun childProgressTracker() = FinalityFlow.tracker()
+            fun tracker() = ProgressTracker(GENERATING_TRANSACTION, VERIFYING_TRANSACTION, SIGNING_TRANSACTION, FINALISING_TRANSACTION)
         }
 
-        fun tracker() = ProgressTracker(GENERATING_TRANSACTION, VERIFYING_TRANSACTION, SIGNING_TRANSACTION, FINALISING_TRANSACTION)
+        override val progressTracker = tracker()
+
+        @Suspendable
+        override fun call(): SignedTransaction {
+            progressTracker.currentStep = GENERATING_TRANSACTION
+
+            val oldMessageState = stateRef.state.data
+            val messageState = MessageChainState(MessageData(oldMessageState.message.value + "A"),
+                    ourIdentity,
+                    stateRef.state.data.linearId)
+            val txCommand = Command(MessageChainContract.Commands.Send(), messageState.participants.map { it.owningKey })
+            val txBuilder = TransactionBuilder(notary).withItems(
+                    StateAndContract(messageState, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID),
+                    txCommand,
+                    stateRef)
+
+            progressTracker.currentStep = VERIFYING_TRANSACTION
+            txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
+
+            progressTracker.currentStep = SIGNING_TRANSACTION
+            val signedTx = serviceHub.signInitialTransaction(txBuilder)
+
+            progressTracker.currentStep = FINALISING_TRANSACTION
+            return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
+        }
     }
 
-    override val progressTracker = tracker()
-
-    @Suspendable
-    override fun call(): SignedTransaction {
-        progressTracker.currentStep = GENERATING_TRANSACTION
-
-        val oldMessageState = stateRef.state.data
-        val messageState = MessageChainState(MessageData(oldMessageState.message.value + "A"),
-                ourIdentity,
-                stateRef.state.data.linearId)
-        val txCommand = Command(MessageChainContract.Commands.Send(), messageState.participants.map { it.owningKey })
-        val txBuilder = TransactionBuilder(notary).withItems(
-                StateAndContract(messageState, MESSAGE_CHAIN_CONTRACT_PROGRAM_ID),
-                txCommand,
-                stateRef)
-
-        progressTracker.currentStep = VERIFYING_TRANSACTION
-        txBuilder.toWireTransaction(serviceHub).toLedgerTransaction(serviceHub).verify()
-
-        progressTracker.currentStep = SIGNING_TRANSACTION
-        val signedTx = serviceHub.signInitialTransaction(txBuilder)
-
-        progressTracker.currentStep = FINALISING_TRANSACTION
-        return subFlow(FinalityFlow(signedTx, emptyList(), FINALISING_TRANSACTION.childProgressTracker()))
+    @InitiatingFlow
+    @StartableByRPC
+    class ReportToCounterparty(private val regulator: Party, private val signedTx: SignedTransaction) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            val session = initiateFlow(regulator)
+            subFlow(SendTransactionFlow(session, signedTx))
+        }
     }
-}
 
-@InitiatingFlow
-@StartableByRPC
-class ReportToCounterparty(
-        private val regulator: Party,
-        private val signedTx: SignedTransaction) : FlowLogic<Unit>() {
-
-    @Suspendable
-    override fun call() {
-        val session = initiateFlow(regulator)
-        subFlow(SendTransactionFlow(session, signedTx))
-    }
-}
-
-@InitiatedBy(ReportToCounterparty::class)
-class ReceiveReportedTransaction(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
-
-    @Suspendable
-    override fun call() {
-        subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ALL_VISIBLE))
+    @InitiatedBy(ReportToCounterparty::class)
+    class ReceiveReportedTransaction(private val otherSideSession: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            subFlow(ReceiveTransactionFlow(otherSideSession, true, StatesToRecord.ALL_VISIBLE))
+        }
     }
 }

@@ -92,7 +92,7 @@ open class DataVendingFlow(val otherSideSession: FlowSession, val payload: Any) 
                             ?: throw FetchDataFlow.HashNotFound(it)
                 }
                 FetchDataFlow.DataType.PARAMETERS -> dataRequest.hashes.map {
-                    (serviceHub.networkParametersService as NetworkParametersServiceInternal).lookupSigned(it)
+                    (serviceHub.networkParametersService as NetworkParametersStorage).lookupSigned(it)
                             ?: throw FetchDataFlow.MissingNetworkParameters(it)
                 }
             }

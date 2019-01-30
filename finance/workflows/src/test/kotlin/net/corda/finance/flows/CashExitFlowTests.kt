@@ -9,7 +9,9 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.testing.core.BOC_NAME
 import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -26,8 +28,7 @@ class CashExitFlowTests {
 
     @Before
     fun start() {
-        mockNet = MockNetwork(servicePeerAllocationStrategy = RoundRobin(),
-                cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+        mockNet = MockNetwork(MockNetworkParameters(servicePeerAllocationStrategy = RoundRobin(), cordappsForAllNodes = FINANCE_CORDAPPS))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity

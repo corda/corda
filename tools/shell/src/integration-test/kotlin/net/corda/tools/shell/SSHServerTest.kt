@@ -150,32 +150,33 @@ class SSHServerTest {
             session.disconnect()
 
             // There are ANSI control characters involved, so we want to avoid direct byte to byte matching.
-            assertThat(linesWithDoneCount).hasSize(1)
+            assertThat(linesWithDoneCount).size().isGreaterThanOrEqualTo(1)
         }
     }
 
-    @StartableByRPC
-    @InitiatingFlow
-    class FlowICanRun : FlowLogic<String>() {
+}
 
-        private val HELLO_STEP = ProgressTracker.Step("Hello")
+@StartableByRPC
+@InitiatingFlow
+class FlowICanRun : FlowLogic<String>() {
 
-        @Suspendable
-        override fun call(): String {
-            progressTracker?.currentStep = HELLO_STEP
-            return "bambam"
-        }
+    private val HELLO_STEP = ProgressTracker.Step("Hello")
 
-        override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
+    @Suspendable
+    override fun call(): String {
+        progressTracker?.currentStep = HELLO_STEP
+        return "bambam"
     }
 
-    @Suppress("unused")
-    @StartableByRPC
-    @InitiatingFlow
-    class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
-        @Suspendable
-        override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
+    override val progressTracker: ProgressTracker? = ProgressTracker(HELLO_STEP)
+}
 
-        override val progressTracker: ProgressTracker? = ProgressTracker()
-    }
+@Suppress("unused")
+@StartableByRPC
+@InitiatingFlow
+class FlowICannotRun(private val otherParty: Party) : FlowLogic<String>() {
+    @Suspendable
+    override fun call(): String = initiateFlow(otherParty).receive<String>().unwrap { it }
+
+    override val progressTracker: ProgressTracker? = ProgressTracker()
 }

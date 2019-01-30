@@ -5,7 +5,7 @@ import net.corda.finance.CHF
 import net.corda.finance.GBP
 import net.corda.finance.RUB
 import net.corda.finance.USD
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.Test
 import java.math.BigDecimal
 import java.util.*
@@ -39,7 +39,8 @@ class ExchangeRateModelTest {
 
         assertEquals(instance.exchangeAmount(tenQuidInSwissies, GBP), tenQuid)
 
-        Assertions.assertThatThrownBy { instance.exchangeAmount(tenQuid, RUB) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy { instance.exchangeAmount(tenQuid, RUB) }
+                .isInstanceOf(IllegalArgumentException::class.java)
                 .hasMessage("No exchange rate for RUB")
     }
 }

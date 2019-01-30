@@ -79,7 +79,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class, FetchDataFlow.IllegalTransactionRequest::class)
     override fun call() {
-        val minimumPlatformVersion = serviceHub.networkParameters.minimumPlatformVersion
+        val counterpartyPlatformVersion = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion ?:
+                throw FlowException("Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache")
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
         for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
@@ -91,7 +92,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             fetchMissingAttachments(txsWithMissingAttachments)
             // Fetch missing parameters flow was added in version 4. This check is needed so we don't end up with node V4 sending parameters
             // request to node V3 that doesn't know about this protocol.
-            if (minimumPlatformVersion >= 4) {
+            if (counterpartyPlatformVersion >= 4) {
                 fetchMissingParameters(txsWithMissingAttachments)
             }
         }
@@ -211,7 +212,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     private fun fetchMissingParameters(downloads: List<SignedTransaction>) {
         val parameters = downloads.mapNotNull { it.networkParametersHash }
-        val missingParameters = parameters.filter { !(serviceHub.networkParametersService as NetworkParametersServiceInternal).hasParameters(it) }
+        val missingParameters = parameters.filter { !(serviceHub.networkParametersService as NetworkParametersStorage).hasParameters(it) }
         if (missingParameters.isNotEmpty())
             subFlow(FetchNetworkParametersFlow(missingParameters.toSet(), otherSide))
     }

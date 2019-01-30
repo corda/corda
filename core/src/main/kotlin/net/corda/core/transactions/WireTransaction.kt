@@ -48,7 +48,7 @@ import java.util.function.Predicate
  */
 @CordaSerializable
 @KeepForDJVM
-class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt) : TraversableTransaction(componentGroups) {
+class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: PrivacySalt = PrivacySalt()) : TraversableTransaction(componentGroups) {
     @DeleteForDJVM
     constructor(componentGroups: List<ComponentGroup>) : this(componentGroups, PrivacySalt())
 

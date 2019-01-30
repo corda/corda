@@ -26,11 +26,7 @@ class FinalityFlowTests : WithFinality {
         private val CHARLIE = TestIdentity(CHARLIE_NAME, 90).party
     }
 
-    override val mockNet = InternalMockNetwork(cordappsForAllNodes = cordappsForPackages(
-            "net.corda.finance.contracts.asset",
-            "net.corda.finance.schemas",
-            "net.corda.core.flows.mixins"
-    ))
+    override val mockNet = InternalMockNetwork(cordappsForAllNodes = listOf(FINANCE_CONTRACTS_CORDAPP, enclosedCordapp()))
 
     private val aliceNode = makeNode(ALICE_NAME)
 

@@ -4,6 +4,13 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+Unreleased
+----------
+
+* Updating postgres dependency to 42.2.5
+
+* Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
+
 .. _changelog_v4.0:
 
 Version 4.0
@@ -77,7 +84,7 @@ Version 4.0
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
 
 * BFT-Smart and Raft notary implementations have been move to the ``net.corda.notary.experimental`` package to emphasise
-  their experimental nature.
+  their experimental nature. Note that it not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
 
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 
@@ -314,11 +321,17 @@ Version 4.0
 * Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``,
   ``corda-finance`` is kept for backward compatibility, it is recommended to use separated jars.
 
+* All sample CorDapps were split into separate apps: workflows and contracts to reflect new convention. It is recommended to structure your CorDapps
+  this way, see :doc:`app-upgrade-notes` on upgrading your CorDapp.
+
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 
 * The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
 
 * Logging for P2P and RPC has been separated, to make it easier to enable all P2P or RPC logging without hand-picking loggers for individual classes.
+
+* Vault Query Criteria have been enhanced to allow filtering by state relevancy. Queries can request all states, just relevant ones, or just non relevant ones. The default is to return all states, to maintain backwards compatibility.
+  Note that this means apps running on nodes using Observer node functionality should update their queries to request only relevant states if they are only expecting to see states in which they participate.
 
 Version 3.3
 -----------
