@@ -19,20 +19,27 @@ service.
 .. code:: bash
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+
+        nodeDefaults {
+                cordapps = [
+                "net.corda:corda-finance-contracts:$corda_release_version",
+                "net.corda:corda-finance-workflows:$corda_release_version",
+                "net.corda:corda-confidential-identities:$corda_release_version"
+                ]
+        }
+
         directory "./build/nodes"
         node {
             name "O=Notary,L=London,C=GB"
             notary = [validating : true]
             p2pPort 10002
             rpcPort 10003
-            cordapps = ["net.corda:corda-finance-contracts:$corda_release_version, net.corda:corda-finance-workflows:$corda_release_version"]
         }
         node {
             name "O=PartyA,L=London,C=GB"
             p2pPort 10005
             rpcPort 10006
             webPort 10007
-            cordapps = ["net.corda:corda-finance-contracts:$corda_release_version, net.corda:corda-finance-workflows:$corda_release_version"]
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL]]]
         }
         node {
@@ -41,7 +48,6 @@ service.
             rpcPort 10009
             webPort 10010
             sshdPort 10024
-            cordapps = ["net.corda:corda-finance-contracts:$corda_release_version, net.corda:corda-finance-workflows:$corda_release_version"]
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
     }

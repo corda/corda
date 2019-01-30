@@ -315,7 +315,7 @@ Version 4.0
 * CorDapps built by ``corda-gradle-plugins`` are now signed and sealed JAR files.
   Signing can be configured or disabled, and it defaults to using the Corda development certificate.
 
-* Finance CorDapps are now built as a sealed and signed JAR file.
+* Finance CorDapps are now built as sealed and signed JAR files.
   Custom classes can no longer be placed in the packages defined in either finance Cordapp or access it's non-public members.
 
 * Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``. There is no longer a single cordapp which provides both.
