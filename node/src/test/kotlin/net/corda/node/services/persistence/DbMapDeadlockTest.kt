@@ -16,11 +16,13 @@ import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.atomic.AtomicReference
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class TestKey(val value: Int) {
     override fun equals(other: Any?): Boolean {
@@ -44,7 +46,6 @@ class MyPersistenceClass(
 
         @Column(name = "lValue", nullable = false)
         val value: Int)
-
 
 @Entity
 @javax.persistence.Table(name = "otherlockobjects")
@@ -71,18 +72,18 @@ class DbMapDeadlockTest {
     @JvmField
     val temporaryFolder = TemporaryFolder()
 
-    private val h2Properties : Properties
-    get(){
-        return Properties().also {
-            it.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
-            it.setProperty("dataSource.url", "jdbc:h2:file:${temporaryFolder.root}/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000")
-            it.setProperty("dataSource.user", "sa")
-            it.setProperty("dataSource.password", "")
+    private val h2Properties: Properties
+        get() {
+            return Properties().also {
+                it.setProperty("dataSourceClassName", "org.h2.jdbcx.JdbcDataSource")
+                it.setProperty("dataSource.url", "jdbc:h2:file:${temporaryFolder.root}/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000")
+                it.setProperty("dataSource.user", "sa")
+                it.setProperty("dataSource.password", "")
+            }
         }
-    }
 
     @Test
-    fun checkAppendOnlyPersistentMapForDeadlockH2(){
+    fun checkAppendOnlyPersistentMapForDeadlockH2() {
         recreateDeadlock(h2Properties)
     }
 
@@ -140,7 +141,7 @@ class DbMapDeadlockTest {
             val latch2 = CountDownLatch(1)
             val latch3 = CyclicBarrier(2)
 
-            var otherThreadException: Exception? = null
+            val otherThreadException = AtomicReference<Exception?>(null)
 
             // This thread will wait for the main thread to do a few things. Then it will starting to read key 2, and write a key to
             // the second table. This read will be buffered (not flushed) at first. The subsequent access to read value 10 fromt the
@@ -164,7 +165,8 @@ class DbMapDeadlockTest {
                     }
                     log.info("Thread2 done")
                 } catch (e: Exception) {
-                    otherThreadException = e
+                    log.info("Thread2 threw")  // Don't log the exception though, since we expect it and check in the assertions what it is.
+                    otherThreadException.set(e)
                 }
             }
 
@@ -205,7 +207,8 @@ class DbMapDeadlockTest {
             }
             log.info("MainThread joining with Thread2")
             otherThread.join()
-            checkException(otherThreadException)
+            assertNotNull(otherThreadException.get())
+            checkException(otherThreadException.get())
             log.info("MainThread done")
         }
     }
@@ -213,13 +216,13 @@ class DbMapDeadlockTest {
     // We have to catch any exception thrown and check what they are - primary key constraint violations are fine, we are trying
     // to insert the same key twice after all. Any deadlock time outs or similar are completely not fine and should be a test failure.
     private fun checkException(exception: Exception?) {
-        if (exception == null){
+        if (exception == null) {
             return
         }
         val persistenceException = exception as? javax.persistence.PersistenceException
-        if ( persistenceException!= null ){
+        if (persistenceException != null) {
             val hibernateException = persistenceException.cause as? org.hibernate.exception.ConstraintViolationException
-            if( hibernateException != null ) {
+            if (hibernateException != null) {
                 log.info("Primary key violation exception is fine")
                 return
             }

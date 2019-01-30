@@ -73,25 +73,13 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
                     } else {
                         // Unknown.  Store away!
                         isUnique = (store(key, value) == null)
-                        if (!isUnique && !weAreWriting(key)) {
-                            // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
-                            Transactional.Committed(value)
-                        } else {
-                            // Some database transactions, including us, writing, with readers seeing whatever is in the database and writers seeing the (in memory) value.
-                            Transactional.InFlight(this, key, _readerValueLoader = { loadValue(key) }).apply { alsoWrite(value) }
-                        }
+                        transactionalForStoreResult(isUnique, key, value)
                     }
                 }
                 else -> {
                     // Missing or null.  Store away!
                     isUnique = (store(key, value) == null)
-                    if (!isUnique && !weAreWriting(key)) {
-                        // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
-                        Transactional.Committed(value)
-                    } else {
-                        // Some database transactions, including us, writing, with readers seeing whatever is in the database and writers seeing the (in memory) value.
-                        Transactional.InFlight(this, key, _readerValueLoader = { loadValue(key) }).apply { alsoWrite(value) }
-                    }
+                    transactionalForStoreResult(isUnique, key, value)
                 }
             }
         }
@@ -99,6 +87,16 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
             log.warn("Double insert in ${this.javaClass.name} for entity class $persistentEntityClass key $key, not inserting the second time")
         }
         return isUnique
+    }
+
+    private fun transactionalForStoreResult(isUnique: Boolean, key: K, value: V): Transactional<V> {
+        return if (!isUnique && !weAreWriting(key)) {
+            // If we found a value already in the database, and we were not already writing, then it's already committed but got evicted.
+            Transactional.Committed(value)
+        } else {
+            // Some database transactions, including us, writing, with readers seeing whatever is in the database and writers seeing the (in memory) value.
+            Transactional.InFlight(this, key, _readerValueLoader = { loadValue(key) }).apply { alsoWrite(value) }
+        }
     }
 
     /**
@@ -151,7 +149,7 @@ abstract class AppendOnlyPersistentMapBase<K, V, E, out EK>(
         // This gets called if a value is read and the cache has no Transactional for this key yet.
         return if (anyoneWriting(key)) {
             // If someone is writing (but not us)
-            // For those not writing, the value cannot be seen.
+            // For those not writing, they need to re-load the value from the database (which their database transaction MIGHT see).
             // For those writing, they need to re-load the value from the database (which their database transaction CAN see).
             Transactional.InFlight(this, key, { loadValue(key) }, { loadValue(key)!! })
         } else {
