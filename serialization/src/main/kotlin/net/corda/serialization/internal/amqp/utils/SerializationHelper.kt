@@ -1,9 +1,9 @@
 package net.corda.serialization.internal.amqp.utils
 
 import com.google.common.primitives.Primitives
-import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.*
 import net.corda.core.internal.reflection.TypeIdentifier
+import net.corda.core.internal.reflection.resolveAgainst
 import net.corda.serialization.internal.amqp.api.AMQPNotSerializableException
 import net.corda.serialization.internal.amqp.schema.Descriptor
 import net.corda.serialization.internal.amqp.schema.ReferencedObject
@@ -48,7 +48,7 @@ fun Data.writeReferencedObject(refObject: ReferencedObject) {
 }
 
 fun resolveTypeVariables(actualType: Type, contextType: Type?): Type {
-    val resolvedType = if (contextType != null) TypeToken.of(contextType).resolveType(actualType).type else actualType
+    val resolvedType = if (contextType != null) actualType.resolveAgainst(contextType) else actualType
     // TODO: surely we check it is concrete at this point with no TypeVariables
     return if (resolvedType is TypeVariable<*>) {
         val bounds = resolvedType.bounds
@@ -109,7 +109,7 @@ internal fun Type.asParameterizedType(): ParameterizedType {
 }
 
 internal fun Type.isSubClassOf(type: Type): Boolean {
-    return TypeToken.of(this).isSubtypeOf(TypeToken.of(type).rawType)
+    return type.asClass().isAssignableFrom(this.asClass())
 }
 
 // ByteArrays, primitives and boxed primitives are not stored in the object history
