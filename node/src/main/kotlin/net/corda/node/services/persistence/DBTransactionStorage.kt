@@ -81,7 +81,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         private const val transactionSignatureOverheadEstimate = 1024
 
         private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
-            val actTx = tx.valueWithoutIsolation
+            val actTx = tx.peekableValue
             if (actTx == null) {
                 return 0
             }

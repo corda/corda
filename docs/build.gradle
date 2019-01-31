@@ -1,3 +1,7 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+import java.nio.file.Files
+
 apply plugin: 'org.jetbrains.dokka'
 apply plugin: 'kotlin'
 
@@ -21,7 +25,7 @@ def internalPackagePrefixes(sourceDirs) {
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
     dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../client/jackson/src/main/kotlin',
-                            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
+            '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
 }
 
@@ -62,22 +66,22 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(dependsOn: ['installDocsiteRequirements', 'makeHtmlDocs', 'makePdfDocs'])
+task makeDocs(dependsOn: ['makeHtmlDocs', 'makePdfDocs'])
 
-task makeHtmlDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    commandLine 'cmd', '/c', 'bash make-docsite-html.sh' // Windows
-    commandLine 'bash', './make-docsite-html.sh' // Linux
+task makeHtmlDocs(type: Exec) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite-html.sh"
+    } else {
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder corda/docs-builder:latest bash -c make-docsite-html.sh"
+    }
 }
 
-task makePdfDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
-    commandLine 'cmd', '/c', 'bash make-docsite-pdf.sh' // Windows
-    commandLine 'bash', './make-docsite-pdf.sh' // Linux
-}
-
-task installDocsiteRequirements(type: Exec) {
-    // TODO: Non-msys Windows script
-    commandLine 'cmd', '/c', 'bash install-docsite-requirements.sh' // Windows
-    commandLine 'bash', './install-docsite-requirements.sh' // Linux
+task makePdfDocs(type: Exec) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite-pdf.sh"
+    } else {
+        commandLine "bash", "-c", "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder corda/docs-builder:latest bash -c make-docsite-pdf.sh"
+    }
 }
 
 apidocs.shouldRunAfter makeDocs
