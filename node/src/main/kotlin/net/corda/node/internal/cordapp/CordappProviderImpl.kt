@@ -35,7 +35,7 @@ open class CordappProviderImpl(val cordappLoader: CordappLoader,
      */
     override val cordapps: List<CordappImpl> get() = cordappLoader.cordapps
 
-    fun start(whitelistedContractImplementations: Map<String, List<AttachmentId>>) {
+    fun start() {
         cordappAttachments.putAll(loadContractsIntoAttachmentStore())
         verifyInstalledCordapps()
     }
