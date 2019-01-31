@@ -161,7 +161,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
     }
 
-    private val pageSize = 1000//DEFAULT_PAGE_SIZE
+    private val pageSize = 1000
     private var pageNumber = 0
     private var transaction: DatabaseTransaction? = null
     private var currentPage = getNextPage()
