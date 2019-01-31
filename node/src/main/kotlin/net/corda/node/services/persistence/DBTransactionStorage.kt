@@ -67,14 +67,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(SecureHash.parse(it.txId),
-                                it.transaction.deserialize<SignedTransaction>(context = contextToUse())//context = SerializationDefaults.STORAGE_CONTEXT)
+                                it.transaction.deserialize<SignedTransaction>(context = contextToUse())
                                         .toTxCacheValue())
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction().apply {
                             txId = key.toString()
                             stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
-                            transaction = value.toSignedTx().serialize(context = contextToUse()).bytes //context = SerializationDefaults.STORAGE_CONTEXT
+                            transaction = value.toSignedTx().serialize(context = contextToUse()).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,

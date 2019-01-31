@@ -338,7 +338,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-        log.info("Finished starting and migrating database")
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
