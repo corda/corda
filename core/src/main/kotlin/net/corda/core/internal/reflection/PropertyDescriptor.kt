@@ -1,6 +1,5 @@
 package net.corda.core.internal.reflection
 
-import com.google.common.reflect.TypeToken
 import net.corda.core.KeepForDJVM
 import net.corda.core.internal.isPublic
 import net.corda.core.serialization.SerializableCalculatedProperty
@@ -62,7 +61,7 @@ data class PropertyDescriptor(val field: Field?, val setter: Method?, val getter
     }
 }
 
-private fun Type.isSupertypeOf(that: Type) = TypeToken.of(this).isSupertypeOf(that)
+private fun Type.isSupertypeOf(that: Type) = asClass().isAssignableFrom(that.asClass())
 
 // match an uppercase letter that also has a corresponding lower case equivalent
 private val propertyMethodRegex = Regex("(?<type>get|set|is)(?<var>\\p{Lu}.*)")
