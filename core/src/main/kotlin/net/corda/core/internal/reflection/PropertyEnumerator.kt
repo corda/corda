@@ -4,7 +4,7 @@ import net.corda.core.KeepForDJVM
 import java.util.*
 
 @KeepForDJVM
-data class PropertyEnumerator(private val readers: Map<String, PropertyReader>): (Any) -> Sequence<Pair<String, Any?>> {
+data class PropertyEnumerator(private val readers: Map<String, PropertyReader>) {
 
     companion object {
         fun forType(typeInformation: LocalTypeInformation) =
@@ -13,7 +13,7 @@ data class PropertyEnumerator(private val readers: Map<String, PropertyReader>):
                 }.toMap())
     }
 
-    override fun invoke(value: Any): Sequence<Pair<String, Any?>> =
+    fun enumerate(value: Any): Sequence<Pair<String, Any?>> =
             readers.asSequence().map { (name, reader) -> name to reader.read(value) }
 }
 
@@ -40,7 +40,7 @@ class ObjectGraphTraverser private constructor(private val localTypeModel: Local
             PropertyEnumerator.forType(typeInformation)
         }
 
-        return converter(value).flatMap { (_, propertyValue) -> traverse(propertyValue, filter) } +
+        return converter.enumerate(value).flatMap { (_, propertyValue) -> traverse(propertyValue, filter) } +
                 if (filter(value)) sequenceOf(value) else emptySequence()
     }
 }
