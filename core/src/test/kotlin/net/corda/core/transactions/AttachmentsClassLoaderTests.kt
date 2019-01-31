@@ -17,8 +17,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import java.net.URL
+import java.nio.file.Paths
 import kotlin.test.assertFailsWith
 
 class AttachmentsClassLoaderTests {
@@ -125,7 +127,6 @@ class AttachmentsClassLoaderTests {
         AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
 
-    @Ignore("Enable once `requireNoDuplicates` is fixed. The check is currently skipped due to the incorrect logic.")
     @Test
     fun `Overlapping rules for META-INF random service files`() {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some data").inputStream(), "app", "file1.jar")
@@ -136,12 +137,22 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Ignore("Added test that was removed when the hash-2-signature constraint was added. Enable once `requireNoDuplicates` is fixed.")
     @Test
     fun `Test overlapping file exception`() {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
+        assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
+            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        }
+    }
+
+    @Test
+    fun `partial overlaps not possible`() {
+        // Cover a previous bug whereby overlap checking had been optimized to only check contract classes, which isn't
+        // a valid optimization as code used by the contract class could then be overlapped.
+        val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", ISOLATED_CONTRACTS_JAR_PATH.file)
+        val att2 = importAttachment(fakeAttachment("net/corda/finance/contracts/isolated/AnotherDummyContract\$State.class", "some attackdata").inputStream(), "app", "file2.jar")
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
             AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
