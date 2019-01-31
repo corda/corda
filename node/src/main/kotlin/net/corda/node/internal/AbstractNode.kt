@@ -169,7 +169,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
+    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
     val cryptoService = configuration.makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
@@ -370,7 +370,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
-            cordappProvider.start(netParams.whitelistedContractImplementations)
+            cordappProvider.start()
             nodeProperties.start()
             // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
