@@ -393,7 +393,7 @@ class VaultStateMigrationTest {
         val cashStatesToAdd = 1000
         val linearStatesToAdd = 0
         val commodityStatesToAdd = 0
-        val stateMultiplier = 100
+        val stateMultiplier = 10
 
         cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
 

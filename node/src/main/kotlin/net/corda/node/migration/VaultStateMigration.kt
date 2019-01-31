@@ -210,11 +210,6 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
         val stateToReturn = currentPage[currentIndex]
         currentIndex++
-        if (currentIndex % 10 == 0) {
-            val session = currentDBSession()
-            session.flush()
-            session.clear()
-        }
         return stateToReturn
     }
 
