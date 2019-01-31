@@ -68,23 +68,26 @@ class StaticInitialisationOfSerializedObjectTest {
 
     @Test
     fun interfacesAreNotLoadedWhenNotNeeded() {
-        data class D(val c: Int): AttachmentConstraint {
+        data class DummyClass(val c: Int): AttachmentConstraint {
             override fun isSatisfiedBy(attachment: Attachment): Boolean = true
         }
 
-        val schemaForD = TestSerializationOutput(EnumEvolvabilityTests.VERBOSE).serializeAndReturnSchema(D(2)).schema
-        val typeDescriptorForClassD = schemaForD.types[0].descriptor.name!!
-        val typeNameForClassD = schemaForD.types[0].name
-        val schemas = SerializationSchemas(schemaForD, TransformsSchema(emptyMap()))
+        val schemaForClass = TestSerializationOutput(EnumEvolvabilityTests.VERBOSE).serializeAndReturnSchema(DummyClass(2)).schema
+        val schemaTypes = schemaForClass.types
+        val classType = schemaTypes.find { it.name.contains("DummyClass") }!!
+        val interfaceType = schemaTypes.find { it.name.contains("AttachmentConstraint") }!!
+        val schemas = SerializationSchemas(schemaForClass, TransformsSchema(emptyMap()))
 
         val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
         val serializersByType = factory.serializersByType
 
-        factory.get(typeDescriptorForClassD, schemas)
+        factory.get(classType.descriptor.name!!, schemas)
 
         // Class D is in the classpath (no need to carpent it), so the interface should not be loaded
         val loadedTypes = serializersByType.keys().toList().map { it.typeName }
-        assertThat(loadedTypes).containsExactly(typeNameForClassD)
+        assertThat(loadedTypes)
+                .contains(classType.name)
+                .doesNotContain(interfaceType.name)
     }
 
 
