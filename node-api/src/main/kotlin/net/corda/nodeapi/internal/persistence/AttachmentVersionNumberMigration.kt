@@ -13,6 +13,7 @@ import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_BASE_DIR_KEY
+import java.io.IOException
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -65,7 +66,8 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 }
             }
         } catch (e: Exception) {
-            logger.error("$msg exception ${e.message}", e)
+            logger.error("$msg exception ${e.message}")
+            e.printStackTrace()
         }
     }
 
@@ -84,8 +86,14 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     }
 
     private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
-        val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
-        return networkParametersBytes?.raw?.deserialize()
+        try{
+            val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
+            return networkParametersBytes?.raw?.deserialize()
+        }catch (e: IOException){
+            //this is likely because we are currently performing an initial-registration
+            return null
+        }
+
     }
 
     private fun getAttachmentsWithDefaultVersion(connection: JdbcConnection): List<String> =
