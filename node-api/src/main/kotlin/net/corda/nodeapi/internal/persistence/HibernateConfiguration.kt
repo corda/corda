@@ -90,6 +90,10 @@ class HibernateConfiguration(
                 .setProperty("hibernate.format_sql", "true")
                 .setProperty("hibernate.hbm2ddl.auto", hbm2dll)
                 .setProperty("hibernate.connection.isolation", databaseConfig.transactionIsolationLevel.jdbcValue.toString())
+                .setProperty("hibernate.jdbc.batch_size", "20")
+                .setProperty("hibernate.jdbc.batch_versioned_data", "true")
+                .setProperty("hibernate.order_inserts", "true")
+                .setProperty("hibernate.order_updates", "true")
 
         schemas.forEach { schema ->
             // TODO: require mechanism to set schemaOptions (databaseSchema, tablePrefix) which are not global to session

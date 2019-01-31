@@ -6,9 +6,12 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.DEFAULT_PAGE_SIZE
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
+import net.corda.core.serialization.SerializationContext
+import net.corda.core.serialization.internal.SerializationEnvironment
+import net.corda.core.serialization.internal._allEnabledSerializationEnvs
+import net.corda.core.serialization.internal._contextSerializationEnv
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
@@ -19,7 +22,16 @@ import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.nodeapi.internal.persistence.currentDBSession
+import net.corda.serialization.internal.AMQP_P2P_CONTEXT
+import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
+import net.corda.serialization.internal.CordaSerializationMagic
+import net.corda.serialization.internal.SerializationFactoryImpl
+import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
+import net.corda.serialization.internal.amqp.amqpMagic
 import org.hibernate.Session
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.ForkJoinTask
+import java.util.concurrent.RecursiveAction
 
 class VaultStateMigration : CordaMigration() {
     companion object {
@@ -32,7 +44,7 @@ class VaultStateMigration : CordaMigration() {
         try {
             state.participants.groupBy { it.owningKey }.forEach { participants ->
                 val persistentParty = VaultSchemaV1.PersistentParty(persistentStateRef, participants.value.first())
-                session.save(persistentParty)
+                session.persist(persistentParty)
             }
         } catch (e: AbstractMethodError) {
             throw VaultStateMigrationException("Cannot add state parties as state class is not on the classpath " +
@@ -65,7 +77,7 @@ class VaultStateMigration : CordaMigration() {
             }
 
             val persistentStates = VaultStateIterator(cordaDB)
-            persistentStates.forEach {
+            persistentStates.parallelForEach {
                 val session = currentDBSession()
                 try {
                     val stateAndRef = getStateAndRef(it)
@@ -76,6 +88,7 @@ class VaultStateMigration : CordaMigration() {
                     // state parties.
                     if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
                         it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
+                        session.merge(it)
                     }
                 } catch (e: VaultStateMigrationException) {
                     logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
@@ -111,6 +124,26 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
 
     companion object {
         val logger = contextLogger()
+
+        private object AMQPInspectorSerializationScheme : AbstractAMQPSerializationScheme(emptyList()) {
+            override fun canDeserializeVersion(magic: CordaSerializationMagic, target: SerializationContext.UseCase): Boolean {
+                return magic == amqpMagic
+            }
+
+            override fun rpcClientSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+            override fun rpcServerSerializerFactory(context: SerializationContext) = throw UnsupportedOperationException()
+        }
+
+        private fun initialiseSerialization() {
+            // Deserialise with the lenient carpenter as we only care for the AMQP field getters
+            _contextSerializationEnv.set(SerializationEnvironment.with(
+                    SerializationFactoryImpl().apply {
+                        registerScheme(AMQPInspectorSerializationScheme)
+                    },
+                    p2pContext = AMQP_P2P_CONTEXT.withLenientCarpenter(),
+                    storageContext = AMQP_STORAGE_CONTEXT.withLenientCarpenter()
+            ))
+        }
     }
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
     val numStates = getTotalStates()
@@ -128,7 +161,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
     }
 
-    private val pageSize = DEFAULT_PAGE_SIZE
+    private val pageSize = 1000//DEFAULT_PAGE_SIZE
     private var pageNumber = 0
     private var transaction: DatabaseTransaction? = null
     private var currentPage = getNextPage()
@@ -177,7 +210,63 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
         val stateToReturn = currentPage[currentIndex]
         currentIndex++
+        if (currentIndex % 10 == 0) {
+            val session = currentDBSession()
+            session.flush()
+            session.clear()
+        }
         return stateToReturn
+    }
+
+    private val pool = ForkJoinPool.commonPool()
+
+    private class VaultPageTask(val database: CordaPersistence,
+                                val page: List<VaultSchemaV1.VaultStates>,
+                                val block: (VaultSchemaV1.VaultStates) -> Unit): RecursiveAction() {
+
+        private val pageSize = page.size
+        private val tolerance = 10
+
+        override fun compute() {
+            if (pageSize > tolerance) {
+                ForkJoinTask.invokeAll(createSubtasks())
+            } else {
+                applyBlock()
+            }
+
+        }
+
+        private fun createSubtasks(): List<VaultPageTask> {
+            return listOf(VaultPageTask(database, page.subList(0, pageSize / 2), block), VaultPageTask(database, page.subList(pageSize / 2, pageSize), block))
+        }
+
+        private fun applyBlock() {
+            if (_allEnabledSerializationEnvs.isEmpty()) {
+                initialiseSerialization()
+            }
+            effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
+                database.transaction {
+                    page.forEach { block(it) }
+                }
+            }
+        }
+    }
+
+    private fun hasNextPage(): Boolean {
+        val nextPagePresent = pageNumber * pageSize < numStates
+        if (!nextPagePresent) {
+            endTransaction()
+        }
+        return nextPagePresent
+    }
+
+    // Split up each page and execute the logic in parallel on each chunk.
+    fun parallelForEach(block: (VaultSchemaV1.VaultStates) -> Unit) {
+        pool.invoke(VaultPageTask(database, currentPage, block))
+        while (hasNextPage()) {
+            currentPage = getNextPage()
+            pool.invoke(VaultPageTask(database, currentPage, block))
+        }
     }
 }
 

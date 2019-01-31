@@ -112,7 +112,7 @@ class MigrationDataSource(val database: Database) : DataSource {
 
 
     override fun setLoginTimeout(seconds: Int) {
-        _loginTimeout = 0
+        _loginTimeout = seconds
     }
 
     override fun getLoginTimeout(): Int {

@@ -255,13 +255,13 @@ class VaultStateMigrationTest {
 
     @Test
     fun `Check state paging works`() {
-        addCashStates(300, BOB)
+        addCashStates(1010, BOB)
 
         assertEquals(0, getStatePartyCount())
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
-        assertEquals(300, getStatePartyCount())
-        assertEquals(300, getVaultStateCount())
+        assertEquals(1010, getStatePartyCount())
+        assertEquals(1010, getVaultStateCount())
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
@@ -390,10 +390,10 @@ class VaultStateMigrationTest {
     @Test
     @Ignore
     fun `Create persistent DB`() {
-        val cashStatesToAdd = 0
+        val cashStatesToAdd = 1000
         val linearStatesToAdd = 0
-        val commodityStatesToAdd = 100
-        val stateMultiplier = 1
+        val commodityStatesToAdd = 0
+        val stateMultiplier = 100
 
         cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
 
