@@ -127,7 +127,6 @@ class AttachmentsClassLoaderTests {
         AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
 
-    @Ignore("Enable once `requireNoDuplicates` is fixed. The check is currently skipped due to the incorrect logic.")
     @Test
     fun `Overlapping rules for META-INF random service files`() {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some data").inputStream(), "app", "file1.jar")
@@ -138,7 +137,6 @@ class AttachmentsClassLoaderTests {
         }
     }
 
-    @Ignore("Added test that was removed when the hash-2-signature constraint was added. Enable once `requireNoDuplicates` is fixed.")
     @Test
     fun `Test overlapping file exception`() {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
