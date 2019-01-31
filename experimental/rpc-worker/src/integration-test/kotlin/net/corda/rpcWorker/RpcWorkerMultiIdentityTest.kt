@@ -13,6 +13,7 @@ import net.corda.finance.flows.CashPaymentFlow
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.assertj.core.api.Assertions
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -21,7 +22,7 @@ class RpcWorkerMultiIdentityTest {
 
     @Test
     fun `cash pay`() {
-        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val rpcUser = User("username", "password", permissions = setOf("ALL"))
             val combinedRpcHandle = startRpcFlowWorker(setOf(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME), listOf(rpcUser), 1).get()
             val bankC = startNode(providedName = DUMMY_BANK_C_NAME).get()

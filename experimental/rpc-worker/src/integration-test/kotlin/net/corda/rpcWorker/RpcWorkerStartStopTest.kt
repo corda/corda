@@ -11,6 +11,7 @@ import net.corda.flowworker.logMemoryStats
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.Test
 
 
@@ -25,7 +26,7 @@ class RpcWorkerStartStopTest {
 
         log.logMemoryStats("Very beginning")
 
-        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val bankAUser = User("username", "password", permissions = setOf("ALL"))
             val bankA = startRpcFlowWorker(DUMMY_BANK_A_NAME, listOf(bankAUser), 1).get()
 
@@ -39,7 +40,7 @@ class RpcWorkerStartStopTest {
         log.logMemoryStats("Between restarts")
 
         // Starting brand new instance
-        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, extraCordappPackagesToScan = listOf("net.corda.finance"))) {
+        rpcFlowWorkerDriver(DriverParameters(startNodesInProcess = true, cordappsForAllNodes = FINANCE_CORDAPPS)) {
             val bankAUser = User("username", "password", permissions = setOf("ALL"))
             val bankA = startRpcFlowWorker(DUMMY_BANK_A_NAME, listOf(bankAUser), 1).get()
 

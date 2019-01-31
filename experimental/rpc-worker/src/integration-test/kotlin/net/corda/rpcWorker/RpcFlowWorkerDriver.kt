@@ -39,6 +39,7 @@ import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.config.toConfig
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
+import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.driver.DriverParameters
@@ -56,14 +57,14 @@ fun <A> rpcFlowWorkerDriver(
 ): A {
     return genericDriver(
             defaultParameters = defaultParameters,
-            driverDslWrapper = { driverDSL: DriverDSLImpl -> RpcFlowWorkerDriverDSL(driverDSL) },
+            driverDslWrapper = { driverDSL: DriverDSLImpl -> RpcFlowWorkerDriverDSL(driverDSL, defaultParameters) },
             coerce = { it }, dsl = dsl
     )
 }
 
 data class RpcFlowWorkerHandle(val rpcAddress: NetworkHostAndPort)
 
-data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : InternalDriverDSL by driverDSL {
+data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl, private val driverParameters: DriverParameters) : InternalDriverDSL by driverDSL {
 
     fun startRpcFlowWorker(myLegalName: CordaX500Name, rpcUsers: List<net.corda.testing.node.User>, numberOfFlowWorkers: Int = 1): CordaFuture<RpcFlowWorkerHandle> {
         return startRpcFlowWorker(Collections.singleton(myLegalName), rpcUsers, numberOfFlowWorkers)
@@ -124,6 +125,12 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
 
         val rpcWorkerConfig = generateRpcWorkerConfig(rpcUsers)
 
+        //install cordapps
+        TestCordappInternal.installCordapps(
+                rpcWorkerConfig.baseDirectory,
+                (driverParameters.cordappsForAllNodes ?: emptySet()).mapTo(HashSet()) { it as TestCordappInternal }
+        )
+
         val rpcWorkerFuture = rpcWorkerServiceHubsFuture.transpose().map { rpcWorkerServiceHubs ->
 
             val rpcWorkerBroker = createRpcWorkerBroker(rpcWorkerConfig)
@@ -175,7 +182,8 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
                 myLegalName = myLegalName,
                 baseDirectory = baseDirectory,
                 messagingServerAddress = flowWorkerBrokerAddress,
-                dataSourceProperties = dataSourceProperties
+                dataSourceProperties = dataSourceProperties,
+                cordappDirectories = listOf(baseDirectory / "cordapps")
         )
         // create test certificates
         config.configureWithDevSSLCertificate()
@@ -220,6 +228,7 @@ data class RpcFlowWorkerDriverDSL(private val driverDSL: DriverDSLImpl) : Intern
                 rpcUsers = listOf(), verifierType = VerifierType.InMemory, flowTimeout = FlowTimeoutConfiguration(5.seconds, 3, 1.0),
                 p2pAddress = NetworkHostAndPort("localhost", 1), rpcSettings = NodeRpcSettings(NetworkHostAndPort("localhost", 1), null, ssl = null),
                 relay = null, messagingServerAddress = null, enterpriseConfiguration = EnterpriseConfiguration(mutualExclusionConfiguration = MutualExclusionConfiguration(updateInterval = 0, waitInterval = 0), externalBridge = true),
+                database = DatabaseConfig(runMigration = true),
                 notary = null, flowOverrides = FlowOverrideConfig(listOf()))
     }
 
