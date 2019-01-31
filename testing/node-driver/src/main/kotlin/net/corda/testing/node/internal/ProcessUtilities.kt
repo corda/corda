@@ -42,9 +42,9 @@ object ProcessUtilities {
             if (workingDirectory != null) {
                 // Timestamp may be handy if the same process started, killed and then re-started. Without timestamp
                 // StdOut and StdErr will be overwritten.
-                val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"))
-                redirectError((workingDirectory / "$className.stderr.$timestamp.log").toFile())
-                redirectOutput((workingDirectory / "$className.stdout.$timestamp.log").toFile())
+                val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS"))
+                redirectError((workingDirectory / "$className.$timestamp.stderr.log").toFile())
+                redirectOutput((workingDirectory / "$className.$timestamp.stdout.log").toFile())
                 directory(workingDirectory.toFile())
             }
         }.start()

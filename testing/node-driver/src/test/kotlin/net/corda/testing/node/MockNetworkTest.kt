@@ -1,5 +1,16 @@
 package net.corda.testing.node
 
+import co.paralleluniverse.fibers.Suspendable
+import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.FlowSession
+import net.corda.core.flows.InitiatedBy
+import net.corda.core.flows.InitiatingFlow
+import net.corda.core.identity.Party
+import net.corda.core.node.AppServiceHub
+import net.corda.core.node.services.CordaService
+import net.corda.core.serialization.SingletonSerializeAsToken
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.unwrap
 import net.corda.testing.core.*
 import org.assertj.core.api.Assertions.*
 import org.junit.After
@@ -43,5 +54,35 @@ class MockNetworkTest {
         val unstarted = mockNetwork.createUnstartedNode(DUMMY_BANK_A_NAME, forcedID = NODE_ID)
         val ex = assertFailsWith<IllegalStateException> { unstarted.started }
         assertThat(ex).hasMessage("Node ID=$NODE_ID is not running")
+    }
+
+    @Test
+    fun installCordaService() {
+        val unstarted = mockNetwork.createUnstartedNode()
+        assertThat(unstarted.installCordaService(TestService::class.java)).isNotNull()
+        val started = unstarted.start()
+        started.registerInitiatedFlow(TestResponder::class.java)
+        val future = started.startFlow(TestInitiator(started.info.singleIdentity()))
+        mockNetwork.runNetwork()
+        assertThat(future.getOrThrow()).isEqualTo(TestService::class.java.name)
+    }
+
+    @CordaService
+    class TestService(services: AppServiceHub) : SingletonSerializeAsToken()
+
+    @InitiatingFlow
+    class TestInitiator(private val party: Party) : FlowLogic<String>() {
+        @Suspendable
+        override fun call(): String {
+            return initiateFlow(party).receive<String>().unwrap { it }
+        }
+    }
+
+    @InitiatedBy(TestInitiator::class)
+    class TestResponder(private val otherSide: FlowSession) : FlowLogic<Unit>() {
+        @Suspendable
+        override fun call() {
+            otherSide.send(serviceHub.cordaService(TestService::class.java).javaClass.name)
+        }
     }
 }

@@ -140,19 +140,20 @@ connectivity is required for zone members, required cryptographic algorithms and
 Network parameters update process
 ---------------------------------
 
-In case of the need to change network parameters Corda zone operator will start the update process. There are many reasons
-that may lead to this decision: adding a notary, setting new fields that were added to enable smooth network interoperability,
-or a change of the existing compatibility constants is required, for example.
+Network parameters are controlled by the zone operator of the Corda network that you are a member of. Occasionally, they may need to change
+these parameters. There are many reasons that can lead to this decision: adding a notary, setting new fields that were added to enable
+smooth network interoperability, or a change of the existing compatibility constants is required, for example.
 
 .. note:: A future release may support the notion of phased roll-out of network parameter changes.
 
-To synchronize all nodes in the compatibility zone to use the new set of the network parameters two RPC methods are
-provided. The process requires human interaction and approval of the change, so node operators can review the
-differences before agreeing to them.
+Updating of the parameters by the zone operator is done in two phases:
+1. Advertise the proposed network parameter update to the entire network.
+2. Switching the network onto the new parameters - also known as a `flag day`.
 
-When the update is about to happen the network map service starts to advertise the additional information with the usual network map
-data. It includes new network parameters hash, description of the change and the update deadline. Nodes query the network map server
-for the new set of parameters.
+The proposed parameter update will include, along with the new parameters, a human-readable description of the changes as well as the
+deadline for accepting the update. The acceptance deadline marks the date and time that the zone operator intends to switch the entire
+network onto the new parameters. This will be a reasonable amount of time in the future, giving the node operators time to inspect,
+discuss and accept the parameters.
 
 The fact a new set of parameters is being advertised shows up in the node logs with the message
 "Downloaded new network parameters", and programs connected via RPC can receive ``ParametersUpdateInfo`` by using

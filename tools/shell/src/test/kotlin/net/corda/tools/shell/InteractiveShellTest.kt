@@ -134,7 +134,7 @@ class InteractiveShellTest {
 
         return objectMapper
     }
-    
+
     @Test
     fun flowStartSimple() {
         check("a: Hi there", "Hi there")
@@ -147,26 +147,26 @@ class InteractiveShellTest {
 
     @Test
     fun flowStartWithNestedTypes() = check(
-        input = "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
-        expected = "(100.12 USD, DF489807F81C8C8829E509E1BCB92E6692B9DD9D624B7456435CB2F51DC82587)"
+            input = "pair: { first: $100.12, second: df489807f81c8c8829e509e1bcb92e6692b9dd9d624b7456435cb2f51dc82587 }",
+            expected = "(100.12 USD, DF489807F81C8C8829E509E1BCB92E6692B9DD9D624B7456435CB2F51DC82587)"
     )
 
     @Test
     fun flowStartWithArrayType() = check(
-        input = "b: [ One, Two, Three, Four ]",
-        expected = "One+Two+Three+Four"
+            input = "b: [ One, Two, Three, Four ]",
+            expected = "One+Two+Three+Four"
     )
 
     @Test
     fun flowStartWithUserAmount() = check(
-        input = """b: 500, amount: { "quantity": 10001, "token":{ "label": "of value" } }""",
-        expected = "10501 of value"
+            input = """b: 500, amount: { "quantity": 10001, "token":{ "label": "of value" } }""",
+            expected = "10501 of value"
     )
 
     @Test
     fun flowStartWithArrayOfNestedTypes() = check(
-        input = """amounts: [ { "quantity": 10, "token": { "label": "(1)" } }, { "quantity": 200, "token": { "label": "(2)" } } ]""",
-        expected = "10 (1)++200 (2)"
+            input = """amounts: [ { "quantity": 10, "token": { "label": "(1)" } }, { "quantity": 200, "token": { "label": "(2)" } } ]""",
+            expected = "10 (1)++200 (2)"
     )
 
     @Test(expected = InteractiveShell.NoApplicableConstructor::class)

@@ -10,9 +10,11 @@ import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowLogic
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.concurrent.openFuture
+import net.corda.core.internal.div
 import net.corda.core.internal.times
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.internal.SerializationEnvironment
@@ -30,6 +32,7 @@ import net.corda.node.services.messaging.Message
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import net.corda.testing.database.DatabaseConstants
+import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.createTestSerializationEnv
@@ -39,12 +42,14 @@ import net.corda.testing.node.TestCordapp
 import net.corda.testing.node.User
 import net.corda.testing.node.testContext
 import org.apache.commons.lang.ClassUtils
+import org.assertj.core.api.Assertions.assertThat
 import org.slf4j.LoggerFactory
 import rx.Observable
 import rx.subjects.AsyncSubject
 import java.io.InputStream
 import java.net.Socket
 import java.net.SocketException
+import java.sql.DriverManager
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ScheduledExecutorService
@@ -345,6 +350,16 @@ fun CordaRPCOps.waitForShutdown(): Observable<Unit> {
         }
     })
     return completable
+}
+
+// TODO This needs to be updated to work with the remote database environment
+fun DriverDSL.assertCheckpoints(name: CordaX500Name, expected: Long) {
+    DriverManager.getConnection("jdbc:h2:file:${baseDirectory(name) / "persistence"}", "sa", "").use { connection ->
+        connection.createStatement().executeQuery("select count(*) from NODE_CHECKPOINTS").use { rs ->
+            rs.next()
+            assertThat(rs.getLong(1)).isEqualTo(expected)
+        }
+    }
 }
 
 /**
