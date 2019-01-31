@@ -235,14 +235,14 @@ open class SerializerFactory(
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
         val schemaTypes = schemaAndDescriptor.schemas.schema.types
         val interfacesPerClass = schemaTypes.associateBy({it.name},
-                {clazz -> schemaTypes.filter { it.name in clazz.provides }}
+                {type -> schemaTypes.filter { it.name in type.provides }}
         )
         val allInterfaceNames = interfacesPerClass.values.asSequence().flatten().map { it.name }
 
         val metaSchema = CarpenterMetaSchema.newInstance()
         val notationByNameForNonInterfaceTypes = schemaTypes
                 .filterNot { it.name in allInterfaceNames }
-                .associate { it.name to it }
+                .associateBy({it.name}, {it})
         val noCarpentryRequired = notationByNameForNonInterfaceTypes.mapNotNull { (name, notation) ->
             try {
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
