@@ -35,7 +35,7 @@ internal val Type.upperBound: Type
     }
 
 /** A TypeTable maintains mappings from [TypeVariable]s to types. */
-data class TypeTable(private val map: Map<TypeVariable<*>, Type>, private val guarded: List<TypeVariable<*>>) {
+private data class TypeTable(private val map: Map<TypeVariable<*>, Type>, private val guarded: List<TypeVariable<*>>) {
 
     companion object {
         val empty = TypeTable(emptyMap(), emptyList())
@@ -45,14 +45,6 @@ data class TypeTable(private val map: Map<TypeVariable<*>, Type>, private val gu
         return resolveInternal(variable, copy(guarded = guarded + variable))
     }
 
-    /**
-     * Resolves `variable` using the encapsulated type mapping. If it maps to yet another
-     * non-reified type or has bounds, `forDependants` is used to do further resolution, which
-     * doesn't try to resolve any type variable on generic declarations that are already being
-     * resolved.
-     *
-     * Should only be called by [.resolve].
-     */
     private fun resolveInternal(variable: TypeVariable<*>, forDependants: TypeTable): Type {
         if (guarded.any { it.genericDeclaration == variable.genericDeclaration }) return variable
 
@@ -71,7 +63,7 @@ data class TypeTable(private val map: Map<TypeVariable<*>, Type>, private val gu
     }
 }
 
-internal class TypeResolver(private val typeTable: TypeTable) {
+private class TypeResolver(private val typeTable: TypeTable) {
 
     companion object {
         fun against(contextType: Type): TypeResolver {
