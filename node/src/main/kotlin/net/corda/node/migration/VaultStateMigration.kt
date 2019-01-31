@@ -69,33 +69,30 @@ class VaultStateMigration : CordaMigration() {
             logger.warn("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
             return
         }
-        effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
-            initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
+        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
-            val myKeys = cordaDB.transaction {
-                identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
-            }
-
-            val persistentStates = VaultStateIterator(cordaDB)
-            persistentStates.parallelForEach {
-                val session = currentDBSession()
-                try {
-                    val stateAndRef = getStateAndRef(it)
-
-                    addStateParties(session, stateAndRef)
-
-                    // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
-                    // state parties.
-                    if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
-                        it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
-                        session.merge(it)
-                    }
-                } catch (e: VaultStateMigrationException) {
-                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
-                }
-            }
-            logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
+        val myKeys = cordaDB.transaction {
+            identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
         }
+
+        val persistentStates = VaultStateIterator(cordaDB)
+        persistentStates.parallelForEach {
+            val session = currentDBSession()
+            try {
+                val stateAndRef = getStateAndRef(it)
+
+                addStateParties(session, stateAndRef)
+
+                // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
+                // state parties.
+                if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
+                    it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
+                }
+            } catch (e: VaultStateMigrationException) {
+                logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
+            }
+        }
+        logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
     }
 }
 
@@ -119,7 +116,6 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
 )
 
 
-// Can this be generalised (add extra criteria etc)? May also want to move into own file
 class VaultStateIterator(private val database: CordaPersistence) : Iterator<VaultSchemaV1.VaultStates> {
 
     companion object {
