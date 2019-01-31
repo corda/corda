@@ -55,18 +55,18 @@ object ContractJarTestUtils {
     }
 
     @JvmOverloads
-    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1): Pair<Path, PublicKey> {
-        val jarName = makeTestContractJar(workingDir, contractName, true, version)
+    fun makeTestSignedContractJar(workingDir: Path, contractName: String, version: Int = 1, versionSeed: Int = 0): Pair<Path, PublicKey> {
+        val jarName = makeTestContractJar(workingDir, contractName, true, version, versionSeed)
         val signer = workingDir.signWithDummyKey(jarName)
         return workingDir.resolve(jarName) to signer
     }
 
     @JvmOverloads
-    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1): Path {
+    fun makeTestContractJar(workingDir: Path, contractName: String, signed: Boolean = false, version: Int = 1, versionSeed: Int = 0): Path {
         val packages = contractName.split(".")
-        val jarName = "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"
+        val jarName = "attachment-${packages.last()}-$version-$versionSeed-${(if (signed) "signed" else "")}.jar"
         val className = packages.last()
-        createTestClass(workingDir, className, packages.subList(0, packages.size - 1))
+        createTestClass(workingDir, className, packages.subList(0, packages.size - 1), versionSeed)
         workingDir.createJar(jarName, "${contractName.replace(".", "/")}.class")
         workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
         return workingDir.resolve(jarName)
@@ -81,7 +81,7 @@ object ContractJarTestUtils {
         }
         val packages = contractNames.first().split(".")
         val jarName = jarFileName ?: "attachment-${packages.last()}-$version-${(if (signed) "signed" else "")}.jar"
-        workingDir.createJar(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray() )
+        workingDir.createJar(jarName, *contractNames.map{ "${it.replace(".", "/")}.class" }.toTypedArray())
         if (generateManifest)
             workingDir.addManifest(jarName, Pair(Attributes.Name(CORDAPP_CONTRACT_VERSION), version.toString()))
         if (signed)
@@ -89,12 +89,13 @@ object ContractJarTestUtils {
         return workingDir.resolve(jarName)
     }
 
-    private fun createTestClass(workingDir: Path, className: String, packages: List<String>): Path {
+    private fun createTestClass(workingDir: Path, className: String, packages: List<String>, versionSeed: Int = 0): Path {
         val newClass = """package ${packages.joinToString(".")};
                 import net.corda.core.contracts.*;
                 import net.corda.core.transactions.*;
 
                 public class $className implements Contract {
+                    private int seed = $versionSeed;
                     @Override
                     public void verify(LedgerTransaction tx) throws IllegalArgumentException {
                     }

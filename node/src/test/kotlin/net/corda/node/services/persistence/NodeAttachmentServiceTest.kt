@@ -44,6 +44,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -55,6 +56,7 @@ class NodeAttachmentServiceTest {
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
+    private lateinit var devModeStorage: NodeAttachmentService
     private val services = rigorousMock<ServicesForResolution>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
@@ -73,6 +75,12 @@ class NodeAttachmentServiceTest {
             }
         }
         storage.servicesForResolution = services
+        devModeStorage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database, true).also {
+            database.transaction {
+                it.start()
+            }
+        }
+        devModeStorage.servicesForResolution = services
     }
 
     @After
@@ -685,6 +693,32 @@ class NodeAttachmentServiceTest {
         SelfCleaningDir().use { _ ->
             val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
             assertEquals(0, latestAttachments.size)
+        }
+    }
+
+    @Test
+    fun `development mode - retrieve latest versions of signed contracts - multiple versions of same version id exist in store`() {
+        SelfCleaningDir().use { file ->
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val (signedContractJarSameVersion, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", versionSeed = Random().nextInt())
+
+            signedContractJar.read { devModeStorage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdSameVersionLatest: AttachmentId? = null
+            signedContractJarSameVersion.read { attachmentIdSameVersionLatest = devModeStorage.privilegedImportAttachment(it, "app", "contract-signed-same-version.jar") }
+
+            // this assertion is only true in development mode
+            assertEquals(
+                    2,
+                    devModeStorage.queryAttachments(AttachmentsQueryCriteria(
+                            contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                            versionCondition = Builder.equal(1),
+                            isSignedCondition = Builder.equal(true))).size
+            )
+
+            val latestAttachments = devModeStorage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(1, latestAttachments.size)
+            // should return latest version given by insertion date
+            assertEquals(attachmentIdSameVersionLatest, latestAttachments[0])
         }
     }
 
