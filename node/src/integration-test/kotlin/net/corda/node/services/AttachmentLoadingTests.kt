@@ -22,18 +22,18 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverDSL
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
+import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.NotarySpec
 import net.corda.testing.node.internal.enclosedCordapp
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.ClassRule
-import org.junit.Ignore
 import org.junit.Test
 import java.net.URL
 import java.net.URLClassLoader
 
-class AttachmentLoadingTests {
-    private companion object {
+class AttachmentLoadingTests : IntegrationTest() {
+    companion object {
         @ClassRule
         @JvmField
         val databaseSchemas = IntegrationTestSchemas(ALICE_NAME, BOB_NAME, DUMMY_NOTARY_NAME)
