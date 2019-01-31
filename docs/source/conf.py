@@ -67,7 +67,7 @@ release = 'Master'
 html_context = {'version': 'Master'}
 
 # Properties.
-kotlin_version = '1.2.51'
+kotlin_version = '1.2.71'
 
 rst_epilog = """
 .. |kotlin_version| replace:: {kotlin_version}
