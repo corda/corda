@@ -1,5 +1,3 @@
-.. contents::
-
 Release notes for Corda 4
 =========================
 
@@ -23,7 +21,7 @@ comes with those same guarantees. States and apps valid in Corda 3 are transpare
 
 Additionally, be aware that the data model upgrades are changes to the Corda consensus rules. To use
 apps that benefit from them, *all* nodes in a compatibility zone must be upgraded and the zone must be
-enforcing that upgrade. This may take time in large zones like the testnet. Please take this into
+enforcing that upgrade. This may take time in large zones like the TestNet. Please take this into
 account for your own schedule planning.
 
 
@@ -32,19 +30,19 @@ Important note about Corda’s compatibility, upgrade and interoperability guara
 
 The Corda platform places great emphasis on ensuring compatibility across versions and the ability to
 upgrade/migrate data from previous versions to new versions. As a CorDapp developer or operator of a node,
-it is important to understand these guarantees and how to take advantage of them. Please see xxx for
+it is important to understand these guarantees and how to take advantage of them. Please see :doc:`versioning` for
 full information on Corda’s capabilities and platform commitments.
 
 For Corda 4, these capabilities will be delivered progressively, across the 4.0 release, which is
 available now, and the 4.1 release, which will follow in the coming weeks. Here is how the capability is split:
 
   *Corda 4.0* delivers the full new suite of Platform version 4 features: Reference states, signature constraints,
-  and more. See here for a full run-down. The API is stable and you can start developing new apps with it
+  and more. These features are summarised below. The API is stable and you can start developing new apps with it
   today and upgrading existing apps to take advantage of the new features today. In addition, you can take these
   apps live for new deployments.
 
-  *Corda 4.1* will deliver the ability to support mixed networks of Corda 3.3, Corda Enterprise 3.2 and
-  Corda 4.1 nodes and the ability to upgrade such nodes, even those with pre-existing data in their vaults to Corda 4.1.
+  *Corda 4.1* will deliver the ability to support mixed networks of Corda 3.3, Corda Enterprise 3.2 and Corda 4.1
+  nodes, and the ability to upgrade such nodes, even those with pre-existing data in their vaults, to Corda 4.1.
 
   .. important:: To ensure we maintain our compatibility and data integrity commitments at all times, Corda 4.0 is configured to
     refuse to start if it detects that its vault contains any version 3.x data; for such scenarios, please wait for Corda 4.1.
