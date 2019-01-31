@@ -24,7 +24,7 @@ def internalPackagePrefixes(sourceDirs) {
 
 ext {
     // TODO: Add '../client/jfx/src/main/kotlin' and '../client/mock/src/main/kotlin' if we decide to make them into public API
-    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../finance/contracts/src/main/kotlin', '../client/jackson/src/main/kotlin',
+    dokkaSourceDirs = files('../core/src/main/kotlin', '../client/rpc/src/main/kotlin', '../finance/workflows/src/main/kotlin', '../client/jackson/src/main/kotlin',
             '../testing/test-utils/src/main/kotlin', '../testing/node-driver/src/main/kotlin')
     internalPackagePrefixes = internalPackagePrefixes(dokkaSourceDirs)
 }
@@ -66,9 +66,9 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(dependsOn: ['installDocsiteRequirements', 'makeHtmlDocs', 'makePdfDocs'])
+task makeDocs(dependsOn: ['makeHtmlDocs', 'makePdfDocs'])
 
-task makeHtmlDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+task makeHtmlDocs(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite-html.sh"
     } else {
@@ -76,7 +76,7 @@ task makeHtmlDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
     }
 }
 
-task makePdfDocs(type: Exec, dependsOn: ['installDocsiteRequirements']) {
+task makePdfDocs(type: Exec) {
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite-pdf.sh"
     } else {
