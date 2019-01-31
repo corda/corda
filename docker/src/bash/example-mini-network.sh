@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 NODE_LIST=("dockerNode1" "dockerNode2" "dockerNode3")
 NETWORK_NAME=mininet
-CORDAPP_VERSION="4.0-SNAPSHOT"
-DOCKER_IMAGE_VERSION="corda-zulu-4.0-rc02"
+CORDAPP_VERSION="5.0-SNAPSHOT"
+DOCKER_IMAGE_VERSION="corda-zulu-5.0-snapshot"
 
 mkdir cordapps
 rm -f cordapps/*
 
-wget -O cordapps/finance-contracts.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/${CORDAPP_VERSION}/corda-finance-contracts-4.0-SNAPSHOT.jar
-wget -O cordapps/finance-workflows.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/${CORDAPP_VERSION}/corda-finance-workflows-4.0-SNAPSHOT.jar
-wget -O cordapps/confidential-identities.jar    https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/${CORDAPP_VERSION}/corda-confidential-identities-4.0-SNAPSHOT.jar
+wget -O cordapps/finance-contracts.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-contracts/${CORDAPP_VERSION}/corda-finance-contracts-${CORDAPP_VERSION}.jar
+wget -O cordapps/finance-workflows.jar          https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-finance-workflows/${CORDAPP_VERSION}/corda-finance-workflows-${CORDAPP_VERSION}.jar
+wget -O cordapps/confidential-identities.jar    https://ci-artifactory.corda.r3cev.com/artifactory/list/corda-dev/net/corda/corda-confidential-identities/${CORDAPP_VERSION}/corda-confidential-identities-${CORDAPP_VERSION}.jar
 
 rm keystore
 
@@ -36,11 +36,10 @@ do
     mkdir ${NODE}/certificates
     mkdir ${NODE}/logs
     mkdir ${NODE}/persistence
-
 done
 
 docker rm -f  netmap
-docker network rm ${NETWORK_NAME}
+docker network rm -f ${NETWORK_NAME}
 
 docker network create --attachable ${NETWORK_NAME}
 docker run -d \
@@ -56,7 +55,7 @@ while [ ${EXIT_CODE} -gt 0 ]
 do
     sleep 2
     echo "Waiting for network map to start"
-    curl -s http://localhost:18080/network-map > /dev/null
+    curl --max-time 2 -s http://localhost:18080/network-map > /dev/null
     let EXIT_CODE=$?
 done
 
@@ -64,7 +63,7 @@ for NODE in ${NODE_LIST[*]}
 do
     wget -O ${NODE}/certificates/network-root-truststore.jks http://localhost:18080/truststore
     docker rm -f ${NODE}
-    docker run \
+    docker run -d \
             -e MY_LEGAL_NAME="O=${NODE},L=Berlin,C=DE"     \
             -e MY_PUBLIC_ADDRESS="${NODE}"                \
             -e NETWORKMAP_URL="http://netmap:8080"      \
@@ -76,17 +75,6 @@ do
             -v $(pwd)/${NODE}/config:/etc/corda          \
             -v $(pwd)/${NODE}/certificates:/opt/corda/certificates \
             -v $(pwd)/${NODE}/logs:/opt/corda/logs \
-            --name ${NODE} \
-            --network="${NETWORK_NAME}" \
-            corda/${DOCKER_IMAGE_VERSION}:latest config-generator --generic
-
-    docker rm -f ${NODE}
-    docker run -d \
-            --memory=2048m \
-            --cpus=2 \
-            -v $(pwd)/${NODE}/config:/etc/corda          \
-            -v $(pwd)/${NODE}/certificates:/opt/corda/certificates \
-            -v $(pwd)/${NODE}/logs:/opt/corda/logs \
             -v $(pwd)/${NODE}/persistence:/opt/corda/persistence \
             -v $(pwd)/cordapps:/opt/corda/cordapps \
             -p "1100"$(echo ${NODE} | sed 's/[^0-9]*//g'):"1100"$(echo ${NODE} | sed 's/[^0-9]*//g') \
@@ -94,5 +82,5 @@ do
             -e CORDA_ARGS="--sshd --sshd-port=222$(echo ${NODE} | sed 's/[^0-9]*//g')" \
             --name ${NODE} \
             --network="${NETWORK_NAME}" \
-            corda/${DOCKER_IMAGE_VERSION}:latest
+            corda/${DOCKER_IMAGE_VERSION}:latest config-generator --generic
 done
