@@ -1,6 +1,5 @@
 package net.corda.serialization.internal.amqp.serializers
 
-import com.google.common.reflect.TypeToken
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializationCustomSerializer
