@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
@@ -44,7 +45,8 @@ open class SerializerFactory(
     cl: ClassLoader,
     private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()
 ) {
-    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
+    @VisibleForTesting
+    internal val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
@@ -231,15 +233,17 @@ open class SerializerFactory(
      * so it should not attempt to load it all.
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
-        val interfacesPerClass = schemaAndDescriptor.schemas.schema.types.associateBy({it.name},
-                {clazz -> schemaAndDescriptor.schemas.schema.types.filter { it.name in clazz.provides }}
+        val schemaTypes = schemaAndDescriptor.schemas.schema.types
+        val interfacesPerClass = schemaTypes.associateBy({it.name},
+                {clazz -> schemaTypes.filter { it.name in clazz.provides }}
         )
+        val allInterfaceNames = interfacesPerClass.values.asSequence().flatten().map { it.name }
 
         val metaSchema = CarpenterMetaSchema.newInstance()
-        val notationByName = schemaAndDescriptor.schemas.schema.types
-                .filterNot { it.name in interfacesPerClass.values.flatten().map { it.name } }
+        val notationByNameForNonInterfaceTypes = schemaTypes
+                .filterNot { it.name in allInterfaceNames }
                 .associate { it.name to it }
-        val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
+        val noCarpentryRequired = notationByNameForNonInterfaceTypes.mapNotNull { (name, notation) ->
             try {
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
                 name to processSchemaEntry(notation)
@@ -256,14 +260,14 @@ open class SerializerFactory(
             mc.build()
         }
 
-        val carpented = notationByName.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
+        val carpented = notationByNameForNonInterfaceTypes.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
             processSchemaEntry(notation)
         }
 
         val allLocalSerializers = noCarpentryRequired + carpented
 
         allLocalSerializers.forEach { (name, serializer) ->
-            val typeNotation = notationByName[name]!!
+            val typeNotation = notationByNameForNonInterfaceTypes[name]!!
             if (serializer.typeDescriptor != typeNotation.descriptor.name ) {
                 getEvolutionSerializer(typeNotation, serializer, schemaAndDescriptor.schemas)
             }
