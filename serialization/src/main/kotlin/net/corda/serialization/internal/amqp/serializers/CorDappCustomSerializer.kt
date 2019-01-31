@@ -107,7 +107,7 @@ class CorDappCustomSerializer(
      * not support base class serializers for derivedtypes
      */
     override fun isSerializerFor(clazz: Class<*>) =
-        TypeToken.of(type.asClass()) == TypeToken.of(clazz)
+        type.asClass() == clazz
 
 }
 

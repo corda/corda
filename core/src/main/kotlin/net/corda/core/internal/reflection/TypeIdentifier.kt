@@ -1,10 +1,8 @@
 package net.corda.core.internal.reflection
 
-import com.google.common.reflect.TypeToken
 import net.corda.core.KeepForDJVM
 import java.io.NotSerializableException
 import java.lang.reflect.*
-import java.util.*
 
 /**
  * Thrown if a [TypeIdentifier] is incompatible with the local [Type] to which it refers,
@@ -175,14 +173,6 @@ sealed class TypeIdentifier {
         override fun getLocalType(classLoader: ClassLoader): Type = classLoader.loadClass(name)
     }
 
-    private class ReconstitutedGenericArrayType(private val componentType: Type) : GenericArrayType {
-        override fun getGenericComponentType(): Type = componentType
-        override fun toString() = "$componentType[]"
-        override fun equals(other: Any?): Boolean =
-                other is GenericArrayType && componentType == other.genericComponentType
-        override fun hashCode(): Int = Objects.hashCode(componentType)
-    }
-
     /**
      * Identifies a type which is an array of some other type.
      *
@@ -195,7 +185,7 @@ sealed class TypeIdentifier {
         override fun getLocalType(classLoader: ClassLoader): Type {
             val component = componentType.getLocalType(classLoader)
             return when (componentType) {
-                is Parameterised -> ReconstitutedGenericArrayType(component)
+                is Parameterised -> ArtificialGenericArrayType(component)
                 else -> java.lang.reflect.Array.newInstance(component.asClass(), 0).javaClass
             }
         }
@@ -221,60 +211,10 @@ sealed class TypeIdentifier {
                         "Class $rawType expects ${rawType.typeParameters.size} type arguments, " +
                                 "but type ${this.prettyPrint(false)} has ${parameters.size}")
             }
-            return ReconstitutedParameterizedType(
+            return ArtificialParameterizedType(
                     rawType,
                     owner?.getLocalType(classLoader),
                     parameters.map { it.getLocalType(classLoader) }.toTypedArray())
         }
     }
-}
-
-/**
- * Take all type parameters to their upper bounds, recursively resolving type variables against the provided context.
- */
-internal fun Type.resolveAgainst(context: Type): Type = when (this) {
-    is WildcardType -> this.upperBound
-    is ReconstitutedParameterizedType -> this
-    is ParameterizedType,
-    is TypeVariable<*> -> {
-        val resolved = TypeToken.of(context).resolveType(this).type.upperBound
-        if (resolved !is TypeVariable<*> || resolved == this) resolved else resolved.resolveAgainst(context)
-    }
-    else -> this
-}
-
-private val Type.upperBound: Type
-    get() = when (this) {
-        is TypeVariable<*> -> when {
-            this.bounds.isEmpty() || this.bounds.size > 1 -> this
-            else -> this.bounds[0]
-        }
-        is WildcardType -> when {
-            this.upperBounds.isEmpty() || this.upperBounds.size > 1 -> this
-            else -> this.upperBounds[0]
-        }
-        // Ignore types that we have created ourselves
-        is ReconstitutedParameterizedType -> this
-        is ParameterizedType -> ReconstitutedParameterizedType(
-                rawType,
-                ownerType,
-                actualTypeArguments.map { it.upperBound }.toTypedArray())
-        else -> this
-    }
-
-private class ReconstitutedParameterizedType(
-        private val _rawType: Type,
-        private val _ownerType: Type?,
-        private val _actualTypeArguments: Array<Type>) : ParameterizedType {
-    override fun getRawType(): Type = _rawType
-    override fun getOwnerType(): Type? = _ownerType
-    override fun getActualTypeArguments(): Array<Type> = _actualTypeArguments
-    override fun toString(): String = TypeIdentifier.forGenericType(this).prettyPrint(false)
-    override fun equals(other: Any?): Boolean =
-            other is ParameterizedType &&
-                    other.rawType == rawType &&
-                    other.ownerType == ownerType &&
-                    Arrays.equals(other.actualTypeArguments, actualTypeArguments)
-    override fun hashCode(): Int =
-            Arrays.hashCode(actualTypeArguments) xor Objects.hashCode(ownerType) xor Objects.hashCode(rawType)
 }
