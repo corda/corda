@@ -195,7 +195,7 @@ Building the example CorDapp
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
-      │   ├── corda-finance-3.2-corda.jar
+      │   ├── corda-finance-4.0-corda.jar
       │   └── cordapp-example-0.1.jar
       ├── drivers
       ├── logs
@@ -284,15 +284,15 @@ Each Spring Boot server exposes the following endpoints:
 * ``/api/example/ious``
 * ``/api/example/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
 
-There is also a web front-end served from ``/web/example``.
+There is also a web front-end served from the home directory e.g. ``localhost:50005``.
 
-.. warning:: The content in ``/web/example`` is only available for demonstration purposes and does not implement
+.. warning:: The content is only available for demonstration purposes and does not implement
    anti-XSS, anti-XSRF or other security techniques. Do not use this code in production.
 
 Creating an IOU via the endpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 An IOU can be created by sending a PUT request to the ``/api/example/create-iou`` endpoint directly, or by using the
-the web form served from ``/web/example``.
+the web form served from the home directory.
 
 To create an IOU between PartyA and PartyB, run the following command from the command line:
 
@@ -306,7 +306,7 @@ copy of the IOU. PartyC will not.
 
 Submitting an IOU via the web front-end
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To create an IOU between PartyA and PartyB, navigate to ``/web/example``, click the "create IOU" button at the top-left
+To create an IOU between PartyA and PartyB, navigate to the home directory for the node, click the "create IOU" button at the top-left
 of the page, and enter the IOU details into the web-form. The IOU must have a positive value. For example:
 
 .. sourcecode:: none
@@ -325,10 +325,10 @@ Assuming all went well, you can view the newly-created IOU by accessing the vaul
 * PartyA's vault: Navigate to http://localhost:50005/api/example/ious
 * PartyB's vault: Navigate to http://localhost:50006/api/example/ious
 
-*Via web/example:*
+*Via home page:*
 
-* PartyA: Navigate to http://localhost:50005/web/example and hit the "refresh" button
-* PartyB: Navigate to http://localhost:50006/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:50005 and hit the "refresh" button
+* PartyB: Navigate to http://localhost:50006 and hit the "refresh" button
 
 The vault and web front-end of PartyC (at ``localhost:50007``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
@@ -349,13 +349,15 @@ following list:
 
 .. sourcecode:: none
 
-   com.example.flow.ExampleFlow$Initiator
-   net.corda.core.flows.ContractUpgradeFlow$Initiator
-   net.corda.core.flows.ContractUpgradeFlow$Initiator
-   net.corda.finance.flows.CashExitFlow
-   net.corda.finance.flows.CashIssueAndPaymentFlow
-   net.corda.finance.flows.CashIssueFlow
-   net.corda.finance.flows.CashPaymentFlow
+    com.example.flow.ExampleFlow$Initiator
+    net.corda.core.flows.ContractUpgradeFlow$Authorise
+    net.corda.core.flows.ContractUpgradeFlow$Deauthorise
+    net.corda.core.flows.ContractUpgradeFlow$Initiate
+    net.corda.finance.flows.CashExitFlow
+    net.corda.finance.flows.CashIssueAndPaymentFlow
+    net.corda.finance.flows.CashIssueFlow
+    net.corda.finance.flows.CashPaymentFlow
+    net.corda.finance.internal.CashConfigDataFlow
 
 Creating an IOU via the interactive shell
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
