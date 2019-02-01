@@ -29,7 +29,7 @@ import net.corda.demobench.rpc.NodeRPC
 import net.corda.demobench.ui.PropertyLabel
 import net.corda.demobench.web.DBViewer
 import net.corda.demobench.web.WebServerController
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.workflows.getCashBalances
 import rx.Subscription
 import rx.schedulers.Schedulers
 import tornadofx.*

@@ -8,8 +8,8 @@ import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.utils.sumCashBy
+import net.corda.finance.contracts.utils.sumCashBy
+import net.corda.finance.workflows.asset.CashUtils
 import net.corda.testing.core.singleIdentityAndCert
 import java.time.Instant
 import java.util.*
@@ -108,7 +108,7 @@ class CommercialPaper : Contract {
     @Throws(InsufficientBalanceException::class)
     fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, services: ServiceHub) {
         // Add the cash movement using the states in our vault.
-        Cash.generateSpend(
+        CashUtils.generateSpend(
                 services = services,
                 tx = tx,
                 amount = paper.state.data.faceValue.withoutIssuer(),

@@ -43,15 +43,16 @@ configurations {
 }
 
 dependencies {
+    compile project(':tools:explorer')
+    compile project(':client:rpc')
+    compile project(':finance:contracts')
+    compile project(':finance:workflows')
+
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
-
-    compile project(':client:rpc')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
 
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"

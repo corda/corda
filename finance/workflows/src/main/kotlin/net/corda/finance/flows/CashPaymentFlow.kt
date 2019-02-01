@@ -10,11 +10,11 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
-import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.flows.AbstractCashFlow.Companion.FINALISING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.GENERATING_ID
 import net.corda.finance.flows.AbstractCashFlow.Companion.GENERATING_TX
 import net.corda.finance.flows.AbstractCashFlow.Companion.SIGNING_TX
+import net.corda.finance.workflows.asset.CashUtils
 import java.util.*
 
 /**
@@ -35,7 +35,8 @@ open class CashPaymentFlow(
         val anonymous: Boolean,
         progressTracker: ProgressTracker,
         val issuerConstraint: Set<Party> = emptySet(),
-        val notary: Party? = null) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
+        val notary: Party? = null
+) : AbstractCashFlow<AbstractCashFlow.Result>(progressTracker) {
     /** A straightforward constructor that constructs spends using cash states of any issuer. */
     constructor(amount: Amount<Currency>, recipient: Party) : this(amount, recipient, true, tracker())
 
@@ -61,7 +62,7 @@ open class CashPaymentFlow(
         logger.info("Generating spend for: ${builder.lockId}")
         // TODO: Have some way of restricting this to states the caller controls
         val (spendTX, keysForSigning) = try {
-            Cash.generateSpend(
+            CashUtils.generateSpend(
                     serviceHub,
                     builder,
                     amount,
