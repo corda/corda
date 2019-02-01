@@ -9,10 +9,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
-import net.corda.core.serialization.internal.SerializationEnvironment
-import net.corda.core.serialization.internal._allEnabledSerializationEnvs
-import net.corda.core.serialization.internal._contextSerializationEnv
-import net.corda.core.serialization.internal.effectiveSerializationEnv
+import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.contextLogger
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
@@ -132,13 +129,17 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
 
         private fun initialiseSerialization() {
             // Deserialise with the lenient carpenter as we only care for the AMQP field getters
-            _contextSerializationEnv.set(SerializationEnvironment.with(
+            _inheritableContextSerializationEnv.set(SerializationEnvironment.with(
                     SerializationFactoryImpl().apply {
                         registerScheme(AMQPInspectorSerializationScheme)
                     },
                     p2pContext = AMQP_P2P_CONTEXT.withLenientCarpenter(),
                     storageContext = AMQP_STORAGE_CONTEXT.withLenientCarpenter()
             ))
+        }
+
+        private fun disableSerialization() {
+            _inheritableContextSerializationEnv.set(null)
         }
     }
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
@@ -219,12 +220,28 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         private val tolerance = 10
 
         override fun compute() {
-            if (pageSize > tolerance) {
-                ForkJoinTask.invokeAll(createSubtasks())
+            withSerializationEnv {
+                if (pageSize > tolerance) {
+                    ForkJoinTask.invokeAll(createSubtasks())
+                } else {
+                    applyBlock()
+                }
+            }
+        }
+
+        private fun withSerializationEnv(block: () -> Unit) {
+            val newEnv = if (_allEnabledSerializationEnvs.isEmpty()) {
+                initialiseSerialization()
+                true
             } else {
-                applyBlock()
+                false
             }
 
+            block()
+
+            if (newEnv) {
+                disableSerialization()
+            }
         }
 
         private fun createSubtasks(): List<VaultPageTask> {
@@ -232,9 +249,6 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         }
 
         private fun applyBlock() {
-            if (_allEnabledSerializationEnvs.isEmpty()) {
-                initialiseSerialization()
-            }
             effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
                 database.transaction {
                     page.forEach { block(it) }
