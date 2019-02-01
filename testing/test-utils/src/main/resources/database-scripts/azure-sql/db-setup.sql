@@ -81,5 +81,6 @@ DROP TABLE IF EXISTS ${schema}.contract_cash_states_v1;
 DROP TABLE IF EXISTS ${schema}.cash_states_v2;
 DROP TABLE IF EXISTS ${schema}.unique_dummy_fungible_state;
 DROP TABLE IF EXISTS ${schema}.unique_dummy_linear_state;
+DROP TABLE IF EXISTS ${schema}.locktestobjects;
 DROP VIEW IF EXISTS ${schema}.v_pkey_hash_ex_id_map;
 DROP SEQUENCE IF EXISTS ${schema}.hibernate_sequence;
