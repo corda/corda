@@ -385,6 +385,15 @@ suspended into a continuation and saved to persistent storage. If the node crash
 effectively continue as if nothing had happened. Your code may remain blocked inside such a call for seconds,
 minutes, hours or even days in the case of a flow that needs human interaction!
 
+Note that if a node has flows still in a suspended state, with flow continuations written to disk, it will not be
+possible to upgrade that node to a new version of Corda, because flows must be completely "drained" before an upgrade
+can be performed, and must reach a finished state for draining to complete (see :ref:`draining_the_node` for details).
+While there are mechanisms for "evolving" serialised data held in the vault, there are no equivalent mechanisms for
+updating serialised checkpoint data. For this reason it is not a good idea to design flows with the intention that
+they should remain in a suspended state for a long period of time, as this will obstruct necessary upgrades to Corda
+itself. Any long-running business process should therefore be structured as a series of discrete transactions, written
+to the vault, rather than a single flow persisted over time through the flow checkpointing mechanism.
+
 .. note:: There are a couple of rules you need to bear in mind when writing a class that will be used as a continuation.
    The first is that anything on the stack when the function is suspended will be stored into the heap and kept alive by
    the garbage collector. So try to avoid keeping enormous data structures alive unless you really have to.  You can
