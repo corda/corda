@@ -55,6 +55,7 @@ interface ServicesForResolution {
      */
     @Throws(TransactionResolutionException::class)
     fun loadState(stateRef: StateRef): TransactionState<*>
+
     /**
      * Given a [Set] of [StateRef]'s loads the referenced transaction and looks up the specified output [ContractState].
      *
@@ -65,8 +66,11 @@ interface ServicesForResolution {
     @Throws(TransactionResolutionException::class)
     fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>>
 
+    /**
+     * Returns the [Attachment] that defines the given [StateRef], which must be in the visible subset of the ledger.
+     */
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
-    fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName? = null): Attachment
+    fun loadContractAttachment(stateRef: StateRef): Attachment
 }
 
 /**
