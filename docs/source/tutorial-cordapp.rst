@@ -195,7 +195,8 @@ Building the example CorDapp
       ├── certificates
       ├── corda.jar              // The Corda node runtime
       ├── cordapps               // The node's CorDapps
-      │   ├── corda-finance-4.0-corda.jar
+      │   ├── corda-finance-contracts-4.0-corda.jar
+      │   ├── corda-finance-workflows-4.0-corda.jar
       │   └── cordapp-example-0.1.jar
       ├── drivers
       ├── logs
@@ -284,7 +285,7 @@ Each Spring Boot server exposes the following endpoints:
 * ``/api/example/ious``
 * ``/api/example/create-iou`` with parameters ``iouValue`` and ``partyName`` which is CN name of a node
 
-There is also a web front-end served from the home directory e.g. ``localhost:50005``.
+There is also a web front-end served from the home web page e.g. ``localhost:50005``.
 
 .. warning:: The content is only available for demonstration purposes and does not implement
    anti-XSS, anti-XSRF or other security techniques. Do not use this code in production.
