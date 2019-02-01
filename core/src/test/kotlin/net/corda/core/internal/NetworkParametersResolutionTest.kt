@@ -9,7 +9,6 @@ import net.corda.core.identity.Party
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
 import net.corda.core.node.ServiceHub
-import net.corda.core.serialization.SerializationFactory
 import net.corda.core.serialization.serialize
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
@@ -68,20 +67,18 @@ class NetworkParametersResolutionTest {
     // This function is resolving and signing WireTransaction with special parameters.
     private fun TransactionBuilder.toSignedTransactionWithParameters(parameters: NetworkParameters?, services: ServiceHub): SignedTransaction {
         val wtx = toWireTransaction(services)
-        val wtxWithHash = SerializationFactory.defaultFactory.withCurrentContext(null) {
-            WireTransaction(
-                    createComponentGroups(
-                            wtx.inputs,
-                            wtx.outputs,
-                            wtx.commands,
-                            wtx.attachments,
-                            wtx.notary,
-                            wtx.timeWindow,
-                            wtx.references,
-                            parameters?.serialize()?.hash),
-                    wtx.privacySalt
-            )
-        }
+        val wtxWithHash = WireTransaction(
+                createComponentGroups(
+                        wtx.inputs,
+                        wtx.outputs,
+                        wtx.commands,
+                        wtx.attachments,
+                        wtx.notary,
+                        wtx.timeWindow,
+                        wtx.references,
+                        parameters?.serialize()?.hash),
+                wtx.privacySalt
+        )
         val publicKey = services.myInfo.singleIdentity().owningKey
         val signatureMetadata = SignatureMetadata(services.myInfo.platformVersion, Crypto.findSignatureScheme(publicKey).schemeNumberID)
         val signableData = SignableData(wtxWithHash.id, signatureMetadata)

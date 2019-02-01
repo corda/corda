@@ -199,6 +199,18 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
             "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
 
+    /**
+     * Thrown when the network parameters with hash: missingNetworkParametersHash is not available at this node. Usually all the parameters
+     * that are in the resolution chain for transaction with txId should be fetched from peer via [FetchParametersFlow] or from network map.
+     *
+     * @param txId Id of the transaction that has missing parameters hash in the resolution chain
+     * @param missingNetworkParametersHash Missing hash of the network parameters associated to this transaction
+     */
+    @KeepForDJVM
+    class MissingNetworkParametersException(txId: SecureHash, missingNetworkParametersHash: SecureHash)
+        : TransactionVerificationException(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId", null)
+
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM

@@ -79,8 +79,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
     @Suspendable
     @Throws(FetchDataFlow.HashNotFound::class, FetchDataFlow.IllegalTransactionRequest::class)
     override fun call() {
-        val counterpartyPlatformVersion = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion ?:
-                throw FlowException("Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache")
+        val counterpartyPlatformVersion = serviceHub.networkMapCache.getNodeByLegalIdentity(otherSide.counterparty)?.platformVersion
+                ?: throw FlowException("Couldn't retrieve party's ${otherSide.counterparty} platform version from NetworkMapCache")
         val newTxns = ArrayList<SignedTransaction>(txHashes.size)
         // Start fetching data.
         for (pageNumber in 0..(txHashes.size - 1) / RESOLUTION_PAGE_SIZE) {
@@ -108,24 +108,8 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             // depth-first order, we should not encounter any verification failures due to missing data. If we fail
             // half way through, it's no big deal, although it might result in us attempting to re-download data
             // redundantly next time we attempt verification.
-            it.resolveAndCheckNetworkParameters(serviceHub)
             it.verify(serviceHub)
             serviceHub.recordTransactions(usedStatesToRecord, listOf(it))
-        }
-    }
-
-    private fun SignedTransaction.resolveAndCheckNetworkParameters(services: ServiceHub) {
-        val hashOrDefault = networkParametersHash ?: services.networkParametersService.defaultHash
-        val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault)
-                ?: throw TransactionResolutionException(id)
-        val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
-        groupedInputsAndRefs.map { (txHash, stateRefList) ->
-            val tx = services.validatedTransactions.getTransaction(txHash)?.coreTransaction
-                    ?: throw TransactionResolutionException(id)
-            val paramHash = tx.networkParametersHash ?: services.networkParametersService.defaultHash
-            val params = services.networkParametersService.lookup(paramHash) ?: throw TransactionResolutionException(id)
-            if (txNetworkParameters.epoch < params.epoch)
-                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, stateRefList.first(), txNetworkParameters, params)
         }
     }
 
