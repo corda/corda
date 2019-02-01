@@ -28,7 +28,7 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoader, private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>) {
+class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
     private val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract()
@@ -207,7 +207,7 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
     }
 
     /**
-     * Verify that contract class versions of output states are not lower that versions of relevant input states.
+     * Verify that contract class versions of output states are greater than or equal to the versions of the input states.
      */
     private fun validateContractVersions() {
         contractAttachmentsByContract.forEach { contractClassName, attachments ->

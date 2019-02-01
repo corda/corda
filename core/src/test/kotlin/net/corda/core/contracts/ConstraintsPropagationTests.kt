@@ -32,7 +32,6 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.*
@@ -94,7 +93,7 @@ class ConstraintsPropagationTests {
                                 packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey),
                                 notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ) {
-            override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = servicesForResolution.loadContractAttachment(stateRef)
+            override fun loadContractAttachment(stateRef: StateRef) = servicesForResolution.loadContractAttachment(stateRef)
         }
     }
 
