@@ -23,7 +23,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.asset.test.DummyFungibleContract
+import net.corda.node.testing.DummyFungibleContract
 import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV1
 import net.corda.finance.test.SampleCashSchemaV2

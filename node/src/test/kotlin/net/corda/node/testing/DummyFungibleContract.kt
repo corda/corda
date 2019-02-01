@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.asset.test
+package net.corda.node.testing
 
 import net.corda.core.contracts.*
 import net.corda.core.crypto.toStringShort
