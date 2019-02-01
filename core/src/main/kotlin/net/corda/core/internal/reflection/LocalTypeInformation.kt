@@ -59,8 +59,8 @@ sealed class LocalTypeInformation {
          * @param typeIdentifier The [TypeIdentifier] for the [Type] to obtain [LocalTypeInformation] for.
          * @param lookup The [LocalTypeLookup] to use to find previously-constructed [LocalTypeInformation].
          */
-        fun forType(type: Type, typeIdentifier: TypeIdentifier, lookup: LocalTypeLookup): LocalTypeInformation {
-            val builder = LocalTypeInformationBuilder(lookup)
+        fun forType(type: Type, typeIdentifier: TypeIdentifier, lookup: LocalTypeLookup, suppressWarnings: Boolean): LocalTypeInformation {
+            val builder = LocalTypeInformationBuilder(lookup, warnIfNonComposable = !suppressWarnings)
             val result = builder.build(type, typeIdentifier)
 
             // Patch every cyclic reference with a `follow` property pointing to the type information it refers to.

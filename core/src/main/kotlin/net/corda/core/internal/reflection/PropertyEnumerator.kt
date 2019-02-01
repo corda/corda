@@ -23,24 +23,33 @@ class ObjectGraphTraverser private constructor(private val localTypeModel: Local
     companion object {
         fun traverse(value: Any?,
                      localTypeModel: LocalTypeModel = LocalTypeModel.unconstrained,
-                     filter: (Any) -> Boolean = { true }): Sequence<Any> =
+                     filter: (Any) -> Boolean = { false }): Sequence<Any> =
             ObjectGraphTraverser(localTypeModel).traverse(value, filter)
     }
 
     private val propertyEnumeratorCache = DefaultCacheProvider.createCache<TypeIdentifier, PropertyEnumerator>()
     private val alreadySeen: MutableSet<Any> = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
 
-    private fun traverse(value: Any?, filter: (Any) -> Boolean = { true }): Sequence<Any> {
+    private fun traverse(value: Any?, filter: (Any) -> Boolean): Sequence<Any> {
         if (value == null || value in alreadySeen) return emptySequence()
 
         alreadySeen += value
-        val typeInformation = localTypeModel.inspect(value::class.java)
+        return when(value) {
+            is Iterable<*> -> value.asSequence().flatMap { traverse(it, filter) }
+            is Map<*, *> -> value.asSequence().flatMap { (k, v) ->
+                traverse(k, filter) + traverse(v, filter)
+            }
+            else -> if (filter(value)) emptySequence() else {
+                val typeInformation = localTypeModel.inspect(value::class.java, true)
 
-        val converter = propertyEnumeratorCache.getOrPut(typeInformation.typeIdentifier) {
-            PropertyEnumerator.forType(typeInformation)
+                val converter = propertyEnumeratorCache.getOrPut(typeInformation.typeIdentifier) {
+                    PropertyEnumerator.forType(typeInformation)
+                }
+
+                return converter.enumerate(value).flatMap { (_, propertyValue) ->
+                    traverse(propertyValue, filter)
+                } + sequenceOf(value)
+            }
         }
-
-        return converter.enumerate(value).flatMap { (_, propertyValue) -> traverse(propertyValue, filter) } +
-                if (filter(value)) sequenceOf(value) else emptySequence()
     }
 }

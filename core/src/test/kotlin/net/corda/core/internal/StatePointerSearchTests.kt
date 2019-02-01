@@ -4,6 +4,7 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.NullKeys
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
+import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.utilities.OpaqueBytes
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -32,12 +33,24 @@ class StatePointerSearchTests {
         override val participants: List<AbstractParty> get() = listOf()
     }
 
+    private class StateWithCalculatedProperty : ContractState {
+        override val participants: List<AbstractParty> get() = listOf()
+        val calculated: LinearPointer<LinearState> get() = LinearPointer(UniqueIdentifier(), LinearState::class.java)
+    }
+
+    private class StateWithAnnotatedCalculatedProperty : ContractState {
+        override val participants: List<AbstractParty> get() = listOf()
+
+        @get:SerializableCalculatedProperty
+        val calculated: LinearPointer<LinearState> get() = LinearPointer(UniqueIdentifier(), LinearState::class.java)
+    }
+
     @Test
     fun `find pointer in state with generic type`() {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithGeneric(Amount(100L, Issued(partyAndRef, linearPointer)))
         val results = StatePointerSearch(testState).search()
-        assertEquals(results, setOf(linearPointer))
+        assertEquals(setOf(linearPointer), results)
     }
 
     @Test
@@ -46,7 +59,7 @@ class StatePointerSearchTests {
         val linearPointerTwo = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithList(listOf(linearPointerOne, linearPointerTwo))
         val results = StatePointerSearch(testState).search()
-        assertEquals(results, setOf(linearPointerOne, linearPointerTwo))
+        assertEquals(setOf(linearPointerOne, linearPointerTwo), results)
     }
 
     @Test
@@ -55,7 +68,7 @@ class StatePointerSearchTests {
         val linearPointerTwo = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithMap(mapOf(linearPointerOne to 1, 2 to linearPointerTwo))
         val results = StatePointerSearch(testState).search()
-        assertEquals(results, setOf(linearPointerOne, linearPointerTwo))
+        assertEquals(setOf(linearPointerOne, linearPointerTwo), results)
     }
 
     @Test
@@ -63,7 +76,7 @@ class StatePointerSearchTests {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithSet(setOf(linearPointer))
         val results = StatePointerSearch(testState).search()
-        assertEquals(results, setOf(linearPointer))
+        assertEquals(setOf(linearPointer), results)
     }
 
     @Test
@@ -71,7 +84,17 @@ class StatePointerSearchTests {
         val linearPointer = LinearPointer(UniqueIdentifier(), LinearState::class.java)
         val testState = StateWithListOfList(listOf(listOf(linearPointer)))
         val results = StatePointerSearch(testState).search()
-        assertEquals(results, setOf(linearPointer))
+        assertEquals(setOf(linearPointer), results)
+    }
+
+    @Test
+    fun `ignore calculated properties`() {
+        assertEquals(emptySet(), StatePointerSearch(StateWithCalculatedProperty()).search())
+    }
+
+    @Test
+    fun `ignore calculated properties even if they are annotated as serializable`() {
+        assertEquals(emptySet(), StatePointerSearch(StateWithAnnotatedCalculatedProperty()).search())
     }
 
 }

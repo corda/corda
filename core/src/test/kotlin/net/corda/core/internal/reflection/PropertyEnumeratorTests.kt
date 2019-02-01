@@ -1,8 +1,6 @@
 package net.corda.core.internal.reflection
 
-import net.corda.core.internal.reflection.ObjectGraphTraverser
 import org.junit.Test
-import java.lang.reflect.Type
 import kotlin.test.assertEquals
 
 class PropertyEnumeratorTests {
@@ -21,23 +19,25 @@ class PropertyEnumeratorTests {
             }
         }
 
-        data class Middle(val value: String, val bottomA: Bottom, val bottomB: Bottom)
-        data class Top(val value: String, val middleA: Middle, val middleB: Middle)
+        data class Middle(val value: String, val bottoms: List<Bottom>)
+        data class Top(val value: String, val middles: Map<String, Middle>)
 
         val bottomAA = Bottom("aa")
         val bottomAB = Bottom("ab")
         val bottomBA = Bottom("ba")
         val bottomBB = Bottom(null)
-        val middleA = Middle("middle a", bottomAA, bottomAB)
-        val middleB = Middle("middle b", bottomBA, bottomBB)
-        val top = Top("top", middleA, middleB)
+        val middleA = Middle("middle a", listOf(bottomAA, bottomAB))
+        val middleB = Middle("middle b", listOf(bottomBA, bottomBB))
+        val top = Top("top", mapOf("a" to middleA, "b" to middleB))
 
         // create a cycle
         bottomBB.value = top
 
         val objectsInGraph = ObjectGraphTraverser.traverse(top).toList()
         val expected = listOf(
-                "aa", bottomAA, "ab", bottomAB, "middle a", middleA, "ba", bottomBA, bottomBB, "middle b", middleB, "top", top)
+                "a", "aa", bottomAA, "ab", bottomAB, "middle a", middleA,
+                "b", "ba", bottomBA, bottomBB, "middle b", middleB,
+                "top", top)
 
         assertEquals(expected, objectsInGraph)
     }
