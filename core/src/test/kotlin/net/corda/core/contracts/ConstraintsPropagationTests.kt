@@ -32,8 +32,8 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
@@ -91,7 +91,6 @@ class ConstraintsPropagationTests {
                         .copy(whitelistedContractImplementations = mapOf(
                                 Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
                                 noPropagationContractClassName to listOf(SecureHash.zeroHash)),
-                                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey),
                                 notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ) {
             override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = servicesForResolution.loadContractAttachment(stateRef)
@@ -140,6 +139,10 @@ class ConstraintsPropagationTests {
         val signedAttachmentId = cordappAttachmentIds.first().second
         println("Signed: $signedAttachmentId")
 
+        // Claim the "net.corda.finance.contracts.asset" to make the transition
+        ledgerServices.networkParametersService = MockNetworkParametersStorage( ledgerServices.networkParameters.copy(
+                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey)
+        ))
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(
                     unverifiedTransaction {

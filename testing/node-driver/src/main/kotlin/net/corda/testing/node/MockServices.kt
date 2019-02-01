@@ -118,7 +118,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                     override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -312,7 +312,7 @@ open class MockServices private constructor(
         it.start()
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
-    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
+    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
