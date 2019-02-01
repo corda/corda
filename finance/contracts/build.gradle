@@ -11,9 +11,6 @@ apply plugin: 'com.jfrog.artifactory'
 description 'Corda finance module - contracts'
 
 dependencies {
-    // Note: 3rd party CorDapps should remember to include the relevant Finance CorDapp dependencies using `cordapp`
-    // cordapp project(':finance:workflows')
-    // cordapp project(':finance:contracts')
     cordaCompile project(':core')
 
     testCompile project(':test-utils')

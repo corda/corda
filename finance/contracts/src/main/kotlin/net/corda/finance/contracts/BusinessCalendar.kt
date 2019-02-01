@@ -124,4 +124,6 @@ open class BusinessCalendar(val holidayDates: SortedSet<LocalDate>) {
         }
         return retDate
     }
+
+    override fun toString(): String = "BusinessCalendar($holidayDates)"
 }
