@@ -3,6 +3,8 @@ package net.corda.testing.node.internal
 import net.corda.core.internal.div
 import java.io.File
 import java.nio.file.Path
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 object ProcessUtilities {
     inline fun <reified C : Any> startJavaProcess(
@@ -38,8 +40,11 @@ object ProcessUtilities {
             inheritIO()
             environment()["CLASSPATH"] = classPath.joinToString(File.pathSeparator)
             if (workingDirectory != null) {
-                redirectError((workingDirectory / "$className.stderr.log").toFile())
-                redirectOutput((workingDirectory / "$className.stdout.log").toFile())
+                // Timestamp may be handy if the same process started, killed and then re-started. Without timestamp
+                // StdOut and StdErr will be overwritten.
+                val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss.SSS"))
+                redirectError((workingDirectory / "$className.$timestamp.stderr.log").toFile())
+                redirectOutput((workingDirectory / "$className.$timestamp.stdout.log").toFile())
                 directory(workingDirectory.toFile())
             }
         }.start()
