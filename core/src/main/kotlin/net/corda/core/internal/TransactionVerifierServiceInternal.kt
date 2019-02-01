@@ -9,6 +9,7 @@ import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
+import java.security.PublicKey
 
 @DeleteForDJVM
 interface TransactionVerifierServiceInternal {
@@ -222,21 +223,19 @@ class Verifier(val ltx: LedgerTransaction, val transactionClassLoader: ClassLoad
 
     /**
      * Verify that for each contract the network wide package owner is respected.
-     *
-     * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
-     *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
      */
     private fun validatePackageOwnership() {
-        val contractsAndOwners = allStates.mapNotNull { transactionState ->
+        // Build a map of all owned contracts.
+        val contractsAndOwners: Map<ContractClassName, PublicKey> = allStates.mapNotNull { transactionState ->
             val contractClassName = transactionState.contract
             ltx.networkParameters!!.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
         }.toMap()
 
         contractsAndOwners.forEach { contract, owner ->
-            contractAttachmentsByContract[contract]?.filter { it.isSigned }?.forEach { attachment ->
-                if (!owner.isFulfilledBy(attachment.signerKeys))
-                    throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(ltx.id, attachment.id, contract)
-            } ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(ltx.id, ltx.id, contract)
+            // Ensure there is (at least?) one attachment for each contract signed by the rightful owner.
+            // TODO - Should there be a check somewhere that there can be only 1 signed jar?
+            contractAttachmentsByContract[contract]?.filter { it.isSigned }?.firstOrNull { attachment -> owner.isFulfilledBy(attachment.signerKeys) }
+                    ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(ltx.id, ltx.id, contract)
         }
     }
 
