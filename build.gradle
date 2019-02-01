@@ -363,7 +363,6 @@ bintrayConfig {
             'corda-deterministic-verifier',
             'corda-djvm',
             'corda',
-            'corda-finance',    // maintained for backwards compatibility only
             'corda-finance-workflows',
             'corda-finance-contracts',
             'corda-node',
