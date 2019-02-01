@@ -433,7 +433,7 @@ The nodes can be configured to communicate as a network even when distributed ac
 
 * Navigate to the build folder (``kotlin-source/build/nodes``)
 * For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
-  where the node will be run (e.g. ``p2pAddress="10.18.0.166:50005"``)
+  where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
 * These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
   (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
