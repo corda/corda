@@ -56,7 +56,16 @@ interface LocalTypeModel {
      *
      * @param type The [Type] to get [LocalTypeInformation] for.
      */
-    fun inspect(type: Type): LocalTypeInformation
+    fun inspect(type: Type): LocalTypeInformation = inspect(type, false)
+
+    /**
+     * Look for a [Type] in the registry, and return its associated [LocalTypeInformation] if found. If the [Type] is
+     * not in the registry, build [LocalTypeInformation] for that type, using this [LocalTypeModel] as the [LocalTypeLookup]
+     * for recursively resolving dependencies, place it in the registry, and return it.
+     *
+     * @param type The [Type] to get [LocalTypeInformation] for.
+     */
+    fun inspect(type: Type, suppressWarnings: Boolean): LocalTypeInformation
 }
 
 /**
@@ -101,12 +110,12 @@ private class ConfigurableLocalTypeModel(private val typeModelConfiguration: Loc
         }
     }
 
-    override fun inspect(type: Type): LocalTypeInformation {
+    override fun inspect(type: Type, suppressWarnings: Boolean): LocalTypeInformation {
         val typeIdentifier = TypeIdentifier.forGenericType(type)
 
         return typeInformationCache.getOrPut(typeIdentifier) {
             val lookup = BuilderLookup(typeInformationCache, typeModelConfiguration)
-            val result = LocalTypeInformation.forType(type, typeIdentifier, lookup)
+            val result = LocalTypeInformation.forType(type, typeIdentifier, lookup, suppressWarnings)
             lookup.merge()
             result
         }
