@@ -59,6 +59,22 @@ The example CorDapp has the following structure:
 .. sourcecode:: none
 
     .
+    ├── clients
+    │   └── src
+    │       └── main
+    │           └── kotlin
+    │               └── com.example.server
+    │                   ├── MainController.kt
+    │                   ├── NodeRPCConnection.kt
+    │                   └── Server.kt
+    │           ├── resources
+    │               ├── public
+    │                   ├── js
+    │                       └── angular-module.js
+    │                   └── index.html
+    │               └── application.properties
+    │   └── build.gradle
+    │  
     ├── config
     │   ├── dev
     │   │   └── log4j2.xml
@@ -77,32 +93,26 @@ The example CorDapp has the following structure:
     │       │           └── example
     │       │               └── DriverBasedTests.java
     │       ├── main
-    │       │   ├── java
-    │       │   │   └── com
-    │       │   │       └── example
-    │       │   │           ├── api
-    │       │   │           │   └── ExampleApi.java
-    │       │   │           ├── client
-    │       │   │           │   └── ExampleClientRPC.java
-    │       │   │           ├── contract
-    │       │   │           │   └── IOUContract.java
-    │       │   │           ├── flow
-    │       │   │           │   └── ExampleFlow.java
-    │       │   │           ├── plugin
-    │       │   │           │   └── ExamplePlugin.java
-    │       │   │           ├── schema
-    │       │   │           │   ├── IOUSchema.java
-    │       │   │           │   └── IOUSchemaV1.java
-    │       │   │           └── state
-    │       │   │               └── IOUState.java
-    │       │   └── resources
-    │       │       ├── META-INF
-    │       │       │   └── services
-    │       │       │       └── net.corda.webserver.services.WebServerPluginRegistry
-    │       │       └── exampleWeb
-    │       │           ├── index.html
-    │       │           └── js
-    │       │               └── angular-module.js
+    │       │   ── java
+    │       │      └── com
+    │       │          └── example
+    │       │              ├── api
+    │       │              │   └── ExampleApi.java
+    │       │              ├── client
+    │       │              │   └── ExampleClientRPC.java
+    │       │              ├── contract
+    │       │              │   └── IOUContract.java
+    │       │              ├── flow
+    │       │              │   └── ExampleFlow.java
+    │       │              ├── plugin
+    │       │              │   └── ExamplePlugin.java
+    │       │              ├── schema
+    │       │              │   ├── IOUSchema.java
+    │       │              │   └── IOUSchemaV1.java
+    │       │              └── state
+    │       │                  └── IOUState.java
+    │       │ 
+    │       │  
     │       └── test
     │           └── java
     │               └── com
@@ -134,11 +144,10 @@ The key files and directories are as follows:
 * **gradle** contains the gradle wrapper, which allows the use of Gradle without installing it yourself and worrying
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
+* **clients** contains the source code for spring boot integration
 * **java-source** contains the source code for the example CorDapp written in Java
 
   * **java-source/src/main/java** contains the source code for the example CorDapp
-  * **java-source/src/main/resources** contains the certificate store, some static web content to be served by the
-    nodes and the WebServerPluginRegistry file
   * **java-source/src/test/java** contains unit tests for the contracts and flows, and the driver to run the nodes
     via IntelliJ
 
@@ -185,7 +194,6 @@ Building the example CorDapp
       ├── additional-node-infos  // 
       ├── certificates
       ├── corda.jar              // The Corda node runtime
-      ├── corda-webserver.jar    // The development node webserver runtime
       ├── cordapps               // The node's CorDapps
       │   ├── corda-finance-3.2-corda.jar
       │   └── cordapp-example-0.1.jar
@@ -202,10 +210,14 @@ Building the example CorDapp
       
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
+Start the nodes and Spring Boot servers by running the following command from the root of the ``cordapp-example`` folder:
 
 * Unix/Mac OSX: ``kotlin-source/build/nodes/runnodes``
 * Windows: ``call kotlin-source\build\nodes\runnodes.bat``
+
+Each Spring Boot server needs to be started in it's own terminal, replace X with A, B and C
+* Unix/Mac OSX: ``./gradlew runPartyXServer``
+* Windows: ``gradlew.bat runPartyXServer``
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
    nodes may fail to start.
@@ -234,19 +246,11 @@ For each node, the ``runnodes`` script creates a node tab/window:
    Welcome to the Corda interactive shell.
    Useful commands include 'help' to see what is available, and 'bye' to shut down the node.
 
-   Fri Mar 02 17:34:02 GMT 2018>>> 
-
-For every node except the notary, the script also creates a webserver terminal tab/window:
-
-.. sourcecode:: none
-
-    Logs can be found in /Users/username/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs/web
-    Starting as webserver: localhost:10007
-    Webserver started up in 42.02 sec
+   Fri Mar 02 17:34:02 GMT 2018>>>
 
 It usually takes around 60 seconds for the nodes to finish starting up. To ensure that all the nodes are running, you
 can query the 'status' end-point located at ``http://localhost:[port]/api/status`` (e.g.
-``http://localhost:10007/api/status`` for ``PartyA``).
+``http://localhost:50005/api/status`` for ``PartyA``).
 
 Running the example CorDapp from IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -265,15 +269,15 @@ Interacting with the example CorDapp
 
 Via HTTP
 ~~~~~~~~
-The nodes' webservers run locally on the following ports:
+The Spring Boot servers run locally on the following ports:
 
-* PartyA: ``localhost:10007``
-* PartyB: ``localhost:10011``
-* PartyC: ``localhost:10015``
+* PartyA: ``localhost:50005``
+* PartyB: ``localhost:50006``
+* PartyC: ``localhost:50007``
 
-These ports are defined in each node's node.conf file under ``kotlin-source/build/nodes/NodeX/node.conf``.
+These ports are defined in ``clients/build.gradle``.
 
-Each node webserver exposes the following endpoints:
+Each Spring Boot server exposes the following endpoints:
 
 * ``/api/example/me``
 * ``/api/example/peers``
@@ -294,9 +298,9 @@ To create an IOU between PartyA and PartyB, run the following command from the c
 
 .. sourcecode:: bash
 
-   curl -X PUT 'http://localhost:10007/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
+   curl -X PUT 'http://localhost:50005/api/example/create-iou?iouValue=1&partyName=O=PartyB,L=New%20York,C=US'
 
-Note that both PartyA's port number (``10007``) and PartyB are referenced in the PUT request path. This command
+Note that both PartyA's port number (``50005``) and PartyB are referenced in the PUT request path. This command
 instructs PartyA to agree an IOU with PartyB. Once the process is complete, both nodes will have a signed, notarised
 copy of the IOU. PartyC will not.
 
@@ -318,15 +322,15 @@ Assuming all went well, you can view the newly-created IOU by accessing the vaul
 
 *Via the HTTP API:*
 
-* PartyA's vault: Navigate to http://localhost:10007/api/example/ious
-* PartyB's vault: Navigate to http://localhost:10011/api/example/ious
+* PartyA's vault: Navigate to http://localhost:50005/api/example/ious
+* PartyB's vault: Navigate to http://localhost:50006/api/example/ious
 
 *Via web/example:*
 
-* PartyA: Navigate to http://localhost:10007/web/example and hit the "refresh" button
-* PartyB: Navigate to http://localhost:10011/web/example and hit the "refresh" button
+* PartyA: Navigate to http://localhost:50005/web/example and hit the "refresh" button
+* PartyB: Navigate to http://localhost:50006/web/example and hit the "refresh" button
 
-The vault and web front-end of PartyC (at ``localhost:10015``) will not display any IOUs. This is because PartyC was
+The vault and web front-end of PartyC (at ``localhost:50007``) will not display any IOUs. This is because PartyC was
 not involved in this transaction.
 
 Via the interactive shell (terminal only)
@@ -427,7 +431,7 @@ The nodes can be configured to communicate as a network even when distributed ac
 
 * Navigate to the build folder (``kotlin-source/build/nodes``)
 * For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
-  where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
+  where the node will be run (e.g. ``p2pAddress="10.18.0.166:50005"``)
 * These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
   (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
