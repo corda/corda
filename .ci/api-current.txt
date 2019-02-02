@@ -479,6 +479,8 @@ public interface net.corda.core.contracts.Attachment extends net.corda.core.cont
 public interface net.corda.core.contracts.AttachmentConstraint
   public abstract boolean isSatisfiedBy(net.corda.core.contracts.Attachment)
 ##
+public final class net.corda.core.contracts.AttachmentConstraintKt extends java.lang.Object
+##
 @CordaSerializable
 public final class net.corda.core.contracts.AttachmentResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
@@ -965,10 +967,16 @@ public interface net.corda.core.contracts.TokenizableAssetInfo
   public abstract java.math.BigDecimal getDisplayTokenSize()
 ##
 @CordaSerializable
-public final class net.corda.core.contracts.TransactionResolutionException extends net.corda.core.flows.FlowException
+public class net.corda.core.contracts.TransactionResolutionException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash)
+  public <init>(net.corda.core.crypto.SecureHash, String)
+  public <init>(net.corda.core.crypto.SecureHash, String, int, kotlin.jvm.internal.DefaultConstructorMarker)
   @NotNull
   public final net.corda.core.crypto.SecureHash getHash()
+##
+@CordaSerializable
+public static final class net.corda.core.contracts.TransactionResolutionException$UnknownParametersException extends net.corda.core.contracts.TransactionResolutionException
+  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash)
 ##
 @CordaSerializable
 public final class net.corda.core.contracts.TransactionState extends java.lang.Object
@@ -1026,14 +1034,6 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   public final String getContractClass()
 ##
 @CordaSerializable
-public static final class net.corda.core.contracts.TransactionVerificationException$ContractAttachmentNotSignedByPackageOwnerException extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, String)
-  @NotNull
-  public final net.corda.core.crypto.SecureHash getAttachmentHash()
-  @NotNull
-  public final String getContractClass()
-##
-@CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$ContractConstraintRejection extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String)
   @NotNull
@@ -1087,8 +1087,18 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   public final net.corda.core.identity.Party getTxNotary()
 ##
 @CordaSerializable
-public static final class net.corda.core.contracts.TransactionVerificationException$OverlappingAttachmentsException extends java.lang.Exception
-  public <init>(String)
+public static final class net.corda.core.contracts.TransactionVerificationException$OverlappingAttachmentsException extends net.corda.core.contracts.TransactionVerificationException
+  public <init>(net.corda.core.crypto.SecureHash, String)
+##
+@CordaSerializable
+public static final class net.corda.core.contracts.TransactionVerificationException$PackageOwnershipException extends net.corda.core.contracts.TransactionVerificationException
+  public <init>(net.corda.core.crypto.SecureHash, net.corda.core.crypto.SecureHash, String, String)
+  @NotNull
+  public final net.corda.core.crypto.SecureHash getAttachmentHash()
+  @NotNull
+  public final String getContractClass()
+  @NotNull
+  public final String getPackageName()
 ##
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$SignersMissing extends net.corda.core.contracts.TransactionVerificationException
@@ -1126,6 +1136,12 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$TransactionVerificationVersionException extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, String, String, String)
+##
+@CordaSerializable
+public static final class net.corda.core.contracts.TransactionVerificationException$UntrustedAttachmentsException extends net.corda.core.contracts.TransactionVerificationException
+  public <init>(net.corda.core.crypto.SecureHash, java.util.List<? extends net.corda.core.crypto.SecureHash>)
+  @NotNull
+  public final java.util.List<net.corda.core.crypto.SecureHash> getIds()
 ##
 @CordaSerializable
 public abstract class net.corda.core.contracts.TypeOnlyCommandData extends java.lang.Object implements net.corda.core.contracts.CommandData
@@ -3537,7 +3553,7 @@ public interface net.corda.core.node.ServicesForResolution
   @NotNull
   public abstract net.corda.core.node.services.NetworkParametersService getNetworkParametersService()
   @NotNull
-  public abstract net.corda.core.contracts.Attachment loadContractAttachment(net.corda.core.contracts.StateRef, String)
+  public abstract net.corda.core.contracts.Attachment loadContractAttachment(net.corda.core.contracts.StateRef)
   @NotNull
   public abstract net.corda.core.contracts.TransactionState<?> loadState(net.corda.core.contracts.StateRef)
   @NotNull
@@ -7794,7 +7810,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   @NotNull
   public java.sql.Connection jdbcSession()
   @NotNull
-  public net.corda.core.contracts.Attachment loadContractAttachment(net.corda.core.contracts.StateRef, String)
+  public net.corda.core.contracts.Attachment loadContractAttachment(net.corda.core.contracts.StateRef)
   @NotNull
   public net.corda.core.contracts.TransactionState<?> loadState(net.corda.core.contracts.StateRef)
   @NotNull
@@ -7812,6 +7828,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public void recordTransactions(boolean, net.corda.core.transactions.SignedTransaction, net.corda.core.transactions.SignedTransaction...)
   @NotNull
   public Void registerUnloadHandler(kotlin.jvm.functions.Function0<kotlin.Unit>)
+  public void setNetworkParametersService(net.corda.core.node.services.NetworkParametersService)
   @NotNull
   public net.corda.core.transactions.SignedTransaction signInitialTransaction(net.corda.core.transactions.TransactionBuilder)
   @NotNull

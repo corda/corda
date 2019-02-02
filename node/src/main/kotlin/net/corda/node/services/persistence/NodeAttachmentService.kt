@@ -264,7 +264,7 @@ class NodeAttachmentService(
         if (content.isPresent) {
             return content.get().first
         }
-        // if no attachement has been found, we don't want to cache that - it might arrive later
+        // If no attachment has been found, we don't want to cache that - it might arrive later.
         attachmentContentCache.invalidate(key)
         return null
     }
