@@ -76,7 +76,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
-        cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
+        cordappProviderImpl.start()
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(networkParametersService).whenever(it).networkParametersService
         doReturn(networkParameters).whenever(it).networkParameters

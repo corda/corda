@@ -13,10 +13,13 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
+import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
+import java.io.InputStream
 import java.math.BigInteger
 import java.security.KeyPair
+import java.security.PublicKey
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -166,7 +169,14 @@ class TransactionTests {
         val inputs = listOf(StateAndRef(inState, StateRef(SecureHash.randomSHA256(), 0)))
         val outputs = listOf(outState)
         val commands = emptyList<CommandWithParties<CommandData>>()
-        val attachments = emptyList<Attachment>()
+        val attachments = listOf(object : Attachment {
+            override fun open(): InputStream = AttachmentsClassLoaderTests::class.java.getResource("isolated-4.0.jar").openStream()
+            @Suppress("OverridingDeprecatedMember")
+            override val signers: List<Party> = emptyList()
+            override val signerKeys: List<PublicKey> = emptyList()
+            override val size: Int = 1234
+            override val id: SecureHash = SecureHash.zeroHash
+        })
         val id = SecureHash.randomSHA256()
         val timeWindow: TimeWindow? = null
         val privacySalt = PrivacySalt()
