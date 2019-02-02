@@ -2,8 +2,10 @@ package net.corda.core.transactions
 
 import net.corda.core.CordaInternal
 import net.corda.core.KeepForDJVM
+import net.corda.core.StubOutForDJVM
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.Party
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -12,6 +14,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.utilities.contextLogger
+import java.lang.UnsupportedOperationException
 import java.util.*
 import java.util.function.Predicate
 
@@ -35,6 +38,7 @@ private constructor(
         // DOCSTART 1
         /** The resolved input states which will be consumed/invalidated by the execution of this transaction. */
         override val inputs: List<StateAndRef<ContractState>>,
+        /** The outputs created by the transaction. */
         override val outputs: List<TransactionState<ContractState>>,
         /** Arbitrary data passed to the program of each input state. */
         val commands: List<CommandWithParties<CommandData>>,
@@ -42,13 +46,24 @@ private constructor(
         val attachments: List<Attachment>,
         /** The hash of the original serialised WireTransaction. */
         override val id: SecureHash,
+        /** The notary that the tx uses, this must be the same as the notary of all the inputs, or null if there are no inputs. */
         override val notary: Party?,
+        /** The time window within which the tx is valid, will be checked against notary pool member clocks. */
         val timeWindow: TimeWindow?,
+        /** Random data used to make the transaction hash unpredictable even if the contents can be predicted; needed to avoid some obscure attacks. */
         val privacySalt: PrivacySalt,
-        /** Network parameters that were in force when the transaction was notarised. */
+        /**
+         * Network parameters that were in force when the transaction was constructed. This is nullable only for backwards
+         * compatibility for serialized transactions. In reality this field will always be set when on the normal codepaths.
+         */
         override val networkParameters: NetworkParameters?,
+        /** Referenced states, which are like inputs but won't be consumed. */
         override val references: List<StateAndRef<ContractState>>,
-        private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
+        /**
+         * The versions of the app JARs attached to the transactions that defined the inputs, grouped by contract class name.
+         * This is used to stop adversaries downgrading apps to versions that have exploitable bugs.
+         */
+        private val inputVersions: Map<ContractClassName, Version>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -80,9 +95,9 @@ private constructor(
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
                 serializedReferences: List<SerializedStateAndRef>? = null,
-                inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>
+                inputVersions: Map<ContractClassName, Version>
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputStatesContractClassNameToMaxVersion).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputVersions).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
@@ -103,7 +118,7 @@ private constructor(
     /**
      * Verifies this transaction and runs contract code. At this stage it is assumed that signatures have already been verified.
 
-     * The contract verification logic is run in a custom [AttachmentsClassLoader] created for the current transaction.
+     * The contract verification logic is run in a custom classloader created for the current transaction.
      * This classloader is only used during verification and does not leak to the client code.
      *
      * The reason for this is that classes (contract states) deserialized in this classloader would actually be a different type from what
@@ -113,21 +128,40 @@ private constructor(
      */
     @Throws(TransactionVerificationException::class)
     fun verify() {
-        if (networkParameters == null) {
-            // For backwards compatibility only.
-            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
-                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method might not be accurate.")
-        }
-        val verifier = internalPrepareVerify(emptyList())
-        verifier.verify()
+        internalPrepareVerify(emptyList()).verify()
     }
 
     /**
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun internalPrepareVerify(extraAttachments: List<Attachment>) = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments) { transactionClassLoader ->
-        Verifier(createLtxForVerification(), transactionClassLoader, inputStatesContractClassNameToMaxVersion)
+    internal fun internalPrepareVerify(extraAttachments: List<Attachment>): Verifier {
+        // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
+        // like no-overlap, package namespace ownership and (in future) deterministic Java.
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
+            Verifier(createLtxForVerification(), transactionClassLoader, inputVersions)
+        }
+    }
+
+    // Read network parameters with backwards compatibility goo.
+    private fun getParamsWithGoo(): NetworkParameters {
+        var params = networkParameters
+        if (params == null) {
+            // This path is triggered if someone used old constructors that were accidentally exposed; darn Kotlin's lack of package-private
+            // visibility! We did originally try to maintain verification codepaths that supported lack of network parameters, but, it
+            // got too convoluted and people kept just !! asserting the nullity away because on normal codepaths this is always set.
+            logger.warn("Network parameters on the LedgerTransaction with id: $id are null. Please don't use deprecated constructors of the LedgerTransaction. " +
+                    "Use WireTransaction.toLedgerTransaction instead. The result of the verify method would not be accurate.")
+            // Roll the dice - we're probably in flow context if we got here at all, which means we can fish the current params out.
+            try {
+                params = getParamsFromFlowLogic()
+            } catch (e: UnsupportedOperationException) {
+                // Inside DJVM, ignore.
+            }
+            if (params == null)
+                throw UnsupportedOperationException("Cannot verify a LedgerTransaction created using deprecated constructors outside of flow context.")
+        }
+        return params
     }
 
     @StubOutForDJVM
@@ -147,6 +181,7 @@ private constructor(
             val deserializedOutputs = deserialiseComponentGroup(componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             val deserializedCommands = deserialiseCommands(componentGroups, forceDeserialize = true)
             val authenticatedDeserializedCommands = deserializedCommands.map { cmd ->
+                @Suppress("DEPRECATION")   // Deprecated feature.
                 val parties = commands.find { it.value.javaClass.name == cmd.value.javaClass.name }!!.signingParties
                 CommandWithParties(cmd.signers, parties, cmd.value)
             }
@@ -162,7 +197,7 @@ private constructor(
                     privacySalt = this.privacySalt,
                     networkParameters = this.networkParameters,
                     references = deserializedReferences,
-                    inputStatesContractClassNameToMaxVersion = this.inputStatesContractClassNameToMaxVersion
+                    inputVersions = this.inputVersions
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -562,7 +597,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                inputStatesContractClassNameToMaxVersion = emptyMap()
+                inputVersions = emptyMap()
         )
     }
 
@@ -588,7 +623,7 @@ private constructor(
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
                 references = references,
-                inputStatesContractClassNameToMaxVersion = emptyMap()
+                inputVersions = emptyMap()
         )
     }
 }
