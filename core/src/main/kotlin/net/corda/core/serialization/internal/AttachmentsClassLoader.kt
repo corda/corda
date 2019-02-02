@@ -9,6 +9,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.sha256
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.targetPlatformVersion
+import net.corda.core.node.NetworkParameters
 import net.corda.core.serialization.*
 import net.corda.core.serialization.internal.AttachmentURLStreamHandlerFactory.toUrl
 import net.corda.core.utilities.contextLogger
@@ -23,14 +24,21 @@ import java.util.*
  * A custom ClassLoader that knows how to load classes from a set of attachments. The attachments themselves only
  * need to provide JAR streams, and so could be fetched from a database, local disk, etc. Constructing an
  * AttachmentsClassLoader is somewhat expensive, as every attachment is scanned to ensure that there are no overlapping
- * file paths.
+ * file paths. In addition, every JAR is scanned to ensure that it doesn't violate the package namespace ownership
+ * rules.
+ *
+ * @property params The network parameters fetched from the transaction for which this classloader was built.
  */
-class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
+class AttachmentsClassLoader(attachments: List<Attachment>,
+                             val params: NetworkParameters,
+                             parent: ClassLoader = ClassLoader.getSystemClassLoader()) :
         URLClassLoader(attachments.map(::toUrl).toTypedArray(), parent) {
+
+    // TODO: Use params to enforce package namespace ownership.
 
     init {
         val untrusted = attachments.mapNotNull { it as? ContractAttachment }.filterNot { isUploaderTrusted(it.uploader) }.map(ContractAttachment::id)
-        if(untrusted.isNotEmpty()) {
+        if (untrusted.isNotEmpty()) {
             throw UntrustedAttachmentsException(untrusted)
         }
         requireNoDuplicates(attachments)
@@ -201,28 +209,37 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
 }
 
 /**
- * This is just a factory that provides caches to optimise expensive construction/loading of classloaders, serializers, whitelisted classes.
+ * This is just a factory that provides caches to optimise expensive construction/loading of classloaders, serializers,
+ * whitelisted classes.
  */
 @VisibleForTesting
 internal object AttachmentsClassLoaderBuilder {
-
     private const val CACHE_SIZE = 1000
 
-    // This runs in the DJVM so it can't use caffeine.
-    private val cache: MutableMap<Set<SecureHash>, SerializationContext> = createSimpleCache<Set<SecureHash>, SerializationContext>(CACHE_SIZE).toSynchronised()
+    // We use a set here because the ordering of attachments doesn't affect code execution, due to the no
+    // overlap rule, and attachments don't have any particular ordering enforced by the builders. So we
+    // can just do unordered comparisons here. But the same attachments run with different network parameters
+    // may behave differently, so that has to be a part of the cache key.
+    private data class Key(val hashes: Set<SecureHash>, val params: NetworkParameters)
 
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, block: (ClassLoader) -> T): T {
+    // This runs in the DJVM so it can't use caffeine.
+    private val cache: MutableMap<Key, SerializationContext> = createSimpleCache<Key, SerializationContext>(CACHE_SIZE).toSynchronised()
+
+    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
-        val serializationContext = cache.computeIfAbsent(attachmentIds) {
+        val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
                     .toList()
 
-            // Create a new serializationContext for the current Transaction.
+            // Create a new serializationContext for the current transaction. In this context we will forbid
+            // deserialization of objects from the future, i.e. disable forwards compatibility. This is to ensure
+            // that app logic doesn't ignore newly added fields or accidentally downgrade data from newer state
+            // schemas to older schemas by discarding fields.
             SerializationFactory.defaultFactory.defaultContext
                     .withPreventDataLoss()
                     .withClassLoader(transactionClassLoader)

@@ -28,7 +28,8 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
  */
-class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader, private val inputStatesContractClassNameToMaxVersion: Map<ContractClassName, Version>) {
+class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader,
+               private val inputVersions: Map<ContractClassName, Version>) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
     private val contractAttachmentsByContract: Map<ContractClassName, Set<ContractAttachment>> = getContractAttachmentsByContract()
@@ -212,7 +213,7 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
     private fun validateContractVersions() {
         contractAttachmentsByContract.forEach { contractClassName, attachments ->
             val outputVersion = attachments.signed?.version ?: attachments.unsigned?.version ?: CordappImpl.DEFAULT_CORDAPP_VERSION
-            inputStatesContractClassNameToMaxVersion[contractClassName]?.let {
+            inputVersions[contractClassName]?.let {
                 if (it > outputVersion) {
                     throw TransactionVerificationException.TransactionVerificationVersionException(ltx.id, contractClassName, "$it", "$outputVersion")
                 }
@@ -270,8 +271,8 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
 
     /**
      * Enforces the validity of the actual constraints.
-     * * Constraints should be one of the valid supported ones.
-     * * Constraints should propagate correctly if not marked otherwise.
+     * - Constraints should be one of the valid supported ones.
+     * - Constraints should propagate correctly if not marked otherwise.
      *
      * Returns set of contract classes that identify hash -> signature constraint switchover
      */
@@ -293,10 +294,10 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
             if (contractClassName.contractHasAutomaticConstraintPropagation(transactionClassLoader)) {
                 // Verify that the constraints of output states have at least the same level of restriction as the constraints of the
                 // corresponding input states.
-                val inputConstraints = inputContractGroups[contractClassName]?.map { it.state.constraint }?.toSet()
-                val outputConstraints = outputContractGroups[contractClassName]?.map { it.constraint }?.toSet()
-                outputConstraints?.forEach { outputConstraint ->
-                    inputConstraints?.forEach { inputConstraint ->
+                val inputConstraints = (inputContractGroups[contractClassName] ?: emptyList()).map { it.state.constraint }.toSet()
+                val outputConstraints = (outputContractGroups[contractClassName] ?: emptyList()).map { it.constraint }.toSet()
+                outputConstraints.forEach { outputConstraint ->
+                    inputConstraints.forEach { inputConstraint ->
                         val constraintAttachment = resolveAttachment(contractClassName)
                         if (!(outputConstraint.canBeTransitionedFrom(inputConstraint, constraintAttachment))) {
                             throw TransactionVerificationException.ConstraintPropagationRejection(

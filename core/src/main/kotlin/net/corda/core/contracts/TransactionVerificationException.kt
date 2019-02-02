@@ -239,8 +239,20 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     @KeepForDJVM
     class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
 
+    /**
+     * Thrown when a transaction appears to be trying to downgrade a state to an earlier version of the app that defines it.
+     * This could be an attempt to exploit a bug in the app, so we prevent it.
+     */
     @KeepForDJVM
     class TransactionVerificationVersionException(txId: SecureHash, contractClassName: ContractClassName, inputVersion: String, outputVersion: String)
         : TransactionVerificationException(txId, " No-Downgrade Rule has been breached for contract class $contractClassName. " +
             "The output state contract version '$outputVersion' is lower that the version of the input state '$inputVersion'.", null)
+
+    /**
+     * Thrown if a transaction specifies a set of parameters that aren't stored locally yet verification is requested.
+     * This should never normally happen because before verification comes resolution, and if a peer can't provide a
+     * new set of parameters, [TransactionResolutionException] will have already been thrown beforehand.
+     */
+    class UnknownParameters(txId: SecureHash, paramsHash: SecureHash) : TransactionVerificationException(txId,
+            "Transaction specified network parameters $paramsHash but these parameters are not known.", null)
 }
