@@ -12,7 +12,7 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.days
 import net.corda.core.utilities.seconds
 import net.corda.finance.`issued by`
-import net.corda.finance.contracts.CommercialPaper
+import net.corda.finance.workflows.CommercialPaperUtils
 import java.time.Instant
 import java.util.*
 
@@ -41,7 +41,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
         progressTracker.currentStep = ISSUING
 
         val issuance: SignedTransaction = run {
-            val tx = CommercialPaper().generateIssue(ourIdentity.ref(issueRef), amount `issued by` ourIdentity.ref(issueRef),
+            val tx = CommercialPaperUtils.generateIssue(ourIdentity.ref(issueRef), amount `issued by` ourIdentity.ref(issueRef),
                     Instant.now() + 10.days, notary)
 
             // TODO: Consider moving these two steps below into generateIssue.
@@ -62,7 +62,7 @@ class CommercialPaperIssueFlow(private val amount: Amount<Currency>,
 
         return run {
             val builder = TransactionBuilder(notary)
-            CommercialPaper().generateMove(builder, issuance.tx.outRef(0), recipient)
+            CommercialPaperUtils.generateMove(builder, issuance.tx.outRef(0), recipient)
             val stx = serviceHub.signInitialTransaction(builder)
             val recipientSession = initiateFlow(recipient)
             subFlow(FinalityFlow(stx, listOf(recipientSession)))

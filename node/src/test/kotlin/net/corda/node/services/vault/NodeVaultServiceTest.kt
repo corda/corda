@@ -22,9 +22,10 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.getCashBalance
 import net.corda.finance.schemas.CashSchemaV1
-import net.corda.finance.utils.sumCash
+import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.workflows.asset.CashUtils
+import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -598,7 +599,7 @@ class NodeVaultServiceTest {
 
         database.transaction {
             val moveBuilder = TransactionBuilder(notary).apply {
-                Cash.generateSpend(services, this, Amount(1000, GBP), identity, thirdPartyIdentity)
+                CashUtils.generateSpend(services, this, Amount(1000, GBP), identity, thirdPartyIdentity)
             }
             val moveTx = moveBuilder.toWireTransaction(services)
             vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
@@ -657,7 +658,7 @@ class NodeVaultServiceTest {
         // Move cash
         val moveTxBuilder = database.transaction {
             TransactionBuilder(newNotary).apply {
-                Cash.generateSpend(services, this, Amount(amount.quantity, GBP), identity, thirdPartyIdentity.party.anonymise())
+                CashUtils.generateSpend(services, this, Amount(amount.quantity, GBP), identity, thirdPartyIdentity.party.anonymise())
             }
         }
         val moveTx = moveTxBuilder.toWireTransaction(services)

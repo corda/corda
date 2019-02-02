@@ -11,7 +11,7 @@ import java.util.List;
 
 import static net.corda.core.contracts.ContractsDSL.requireSingleCommand;
 import static net.corda.core.contracts.ContractsDSL.requireThat;
-import static net.corda.finance.utils.StateSumming.sumCashBy;
+import static net.corda.finance.contracts.utils.StateSumming.sumCashBy;
 
 @SuppressWarnings("unused")
 public class CommercialPaper implements Contract {

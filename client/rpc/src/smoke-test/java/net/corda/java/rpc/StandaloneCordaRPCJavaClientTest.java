@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 import static kotlin.test.AssertionsKt.assertEquals;
 import static kotlin.test.AssertionsKt.fail;
-import static net.corda.finance.contracts.GetBalances.getCashBalance;
+import static net.corda.finance.workflows.GetBalances.getCashBalance;
 
 public class StandaloneCordaRPCJavaClientTest {
 

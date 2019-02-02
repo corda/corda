@@ -1,6 +1,7 @@
 package net.corda.irs.api
 
 import co.paralleluniverse.fibers.Suspendable
+import loadTestCalendar
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
@@ -15,10 +16,10 @@ import net.corda.finance.contracts.BusinessCalendar
 import net.corda.finance.contracts.Fix
 import net.corda.finance.contracts.FixOf
 import net.corda.finance.contracts.Tenor
-import net.corda.finance.contracts.math.CubicSplineInterpolator
-import net.corda.finance.contracts.math.Interpolator
-import net.corda.finance.contracts.math.InterpolatorFactory
 import net.corda.irs.flows.RatesFixFlow
+import net.corda.irs.math.CubicSplineInterpolator
+import net.corda.irs.math.Interpolator
+import net.corda.irs.math.InterpolatorFactory
 import org.apache.commons.io.IOUtils
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -193,7 +194,7 @@ object NodeInterestRates {
             }
 
             // TODO: the calendar data needs to be specified for every fix type in the input string
-            val calendar = BusinessCalendar.getInstance("London", "NewYork")
+            val calendar = loadTestCalendar("London") + loadTestCalendar("NewYork")
 
             return tempContainer.mapValues { InterpolatingRateMap(it.key.second, it.value, calendar, factory) }
         }

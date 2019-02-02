@@ -12,8 +12,8 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.seconds
 import net.corda.core.utilities.unwrap
-import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.utils.sumCashBy
+import net.corda.finance.contracts.utils.sumCashBy
+import net.corda.finance.workflows.asset.CashUtils
 import java.security.PublicKey
 import java.util.*
 
@@ -224,7 +224,7 @@ object TwoPartyTradeFlow {
             val ptx = TransactionBuilder(notary)
 
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states
-            val (tx, cashSigningPubKeys) = Cash.generateSpend(serviceHub, ptx, tradeRequest.price, ourIdentityAndCert, tradeRequest.payToIdentity.party)
+            val (tx, cashSigningPubKeys) = CashUtils.generateSpend(serviceHub, ptx, tradeRequest.price, ourIdentityAndCert, tradeRequest.payToIdentity.party)
 
             // Add inputs/outputs/a command for the movement of the asset.
             tx.addInputState(assetForSale)

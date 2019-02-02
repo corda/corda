@@ -14,7 +14,7 @@ import net.corda.finance.DOLLARS
 import net.corda.finance.USD
 import net.corda.finance.contracts.CommercialPaper
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.vault.VaultSchemaV1

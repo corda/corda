@@ -5,7 +5,7 @@ import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections.observableArrayList
-import net.corda.finance.utils.CityDatabase
+import net.corda.explorer.CityDatabase
 import tornadofx.*
 import java.util.*
 
