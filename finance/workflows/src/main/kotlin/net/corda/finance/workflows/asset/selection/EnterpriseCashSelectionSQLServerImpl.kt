@@ -1,4 +1,4 @@
-package net.corda.finance.contracts.asset.cash.selection
+package net.corda.finance.workflows.asset.selection
 
 import net.corda.core.contracts.Amount
 import net.corda.core.crypto.toStringShort
@@ -6,7 +6,6 @@ import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.contextLogger
-import net.corda.finance.contracts.asset.AbstractCashSelection
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
