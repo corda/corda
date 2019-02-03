@@ -91,7 +91,8 @@ By default the Bootstrapper will whitelist all the contracts found in the unsign
 Whitelisted contracts are checked by `Zone constraints`, while contract classes from signed JARs will be checked by `Signature constraints`.
 To prevent certain contracts from unsigned JARs from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``.
 These will instead use the more restrictive ``HashAttachmentConstraint``.
-Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` files.
+To add certain contracts from signed JARs from to whitelist, add their fully qualified class name in the ``include_whitelist.txt``.
+Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` or ``include_whitelist.txt`` files.
 
 For example:
 

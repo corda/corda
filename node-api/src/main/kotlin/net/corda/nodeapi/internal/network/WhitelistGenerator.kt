@@ -1,7 +1,6 @@
 package net.corda.nodeapi.internal.network
 
 import net.corda.core.contracts.ContractClassName
-import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
@@ -16,23 +15,26 @@ private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.network
 fun generateWhitelist(networkParameters: NetworkParameters?,
                       excludeContracts: List<ContractClassName>,
                       includeContracts: List<ContractClassName>,
-                      signedJars: List<SecureHash>,
-                      cordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
+                      cordappJars: List<ContractsJar>,
+                      optionalCordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
     if (excludeContracts.isNotEmpty()) {
-        logger.info("Exclude contracts from whitelist: ${excludeContracts.joinToString()}")
+        logger.info("Exclude contracts from $INCLUDE_WHITELIST_FILE_NAME: ${excludeContracts.joinToString()}")
         existingWhitelist.keys.forEach {
             require(it !in excludeContracts) { "$it is already part of the existing whitelist and cannot be excluded." }
         }
     }
 
-    val newWhiteList = cordappJars.filter { !signedJars.contains(it.hash) }
+    val newWhiteList = cordappJars
             .flatMap { jar -> (jar.scan() - excludeContracts).map { it to jar.hash } }
             .toMultiMap()
 
-    val newSignedJarsWhiteList = cordappJars.filter { signedJars.contains(it.hash) }
-            .flatMap { jar -> (jar.scan() - excludeContracts + includeContracts).map { it to jar.hash } }
+    if (includeContracts.isNotEmpty())
+        logger.info("Include any contracts from $INCLUDE_WHITELIST_FILE_NAME: ${includeContracts.joinToString()} for signed JARs.")
+
+    val newSignedJarsWhiteList = optionalCordappJars
+            .flatMap { jar -> (jar.scan()).filter { includeContracts.contains(it) }.map { it to jar.hash } }
             .toMultiMap()
 
     return (newWhiteList.keys + existingWhitelist.keys + newSignedJarsWhiteList.keys).associateBy({ it }) {
@@ -43,12 +45,8 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
     }
 }
 
-fun readExcludeWhitelist(directory: Path): List<String> {
-    val file = directory / EXCLUDE_WHITELIST_FILE_NAME
-    return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
-}
+fun readExcludeWhitelist(directory: Path): List<String> = readAllLines(directory / EXCLUDE_WHITELIST_FILE_NAME)
 
-fun readIncludeWhitelist(directory: Path): List<String> {
-    val file = directory / INCLUDE_WHITELIST_FILE_NAME
-    return if (file.exists()) file.readAllLines().map(String::trim) else emptyList()
-}
+fun readIncludeWhitelist(directory: Path): List<String> = readAllLines(directory / INCLUDE_WHITELIST_FILE_NAME)
+
+private fun readAllLines(path: Path) : List<String> = if (path.exists()) path.readAllLines().map(String::trim) else emptyList()
