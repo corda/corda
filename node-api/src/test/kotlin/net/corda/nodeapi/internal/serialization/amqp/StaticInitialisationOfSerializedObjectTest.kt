@@ -1,15 +1,17 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.AttachmentConstraint
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.SerializedBytes
 import net.corda.nodeapi.internal.serialization.AllWhitelist
+import net.corda.nodeapi.internal.serialization.amqp.testutils.TestSerializationOutput
 import net.corda.nodeapi.internal.serialization.carpenter.ClassCarpenter
 import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.io.File
 import java.io.NotSerializableException
-import java.lang.reflect.Type
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.assertEquals
 
 class InStatic : Exception("Help!, help!, I'm being repressed")
@@ -50,14 +52,10 @@ class StaticInitialisationOfSerializedObjectTest {
 
         val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
 
-        val typeMap = sf::class.java.getDeclaredField("serializersByType")
-        typeMap.isAccessible = true
-
-        @Suppress("UNCHECKED_CAST")
-        val serialisersByType = typeMap.get(sf) as ConcurrentHashMap<Type, AMQPSerializer<Any>>
+        val serializersByType = sf.serializersByType
 
         // pre building a serializer, we shouldn't have anything registered
-        assertEquals(0, serialisersByType.size)
+        assertEquals(0, serializersByType.size)
 
         // build a serializer for type D without an instance of it to serialise, since
         // we can't actually construct one
@@ -65,7 +63,31 @@ class StaticInitialisationOfSerializedObjectTest {
 
         // post creation of the serializer we should have one element in the map, this
         // proves we didn't statically construct an instance of C when building the serializer
-        assertEquals(1, serialisersByType.size)
+        assertEquals(1, serializersByType.size)
+    }
+
+    @Test
+    fun interfacesAreNotLoadedWhenNotNeeded() {
+        data class DummyClass(val c: Int): AttachmentConstraint {
+            override fun isSatisfiedBy(attachment: Attachment): Boolean = true
+        }
+
+        val schemaForClass = TestSerializationOutput(EnumEvolvabilityTests.VERBOSE).serializeAndReturnSchema(DummyClass(2)).schema
+        val schemaTypes = schemaForClass.types
+        val classType = schemaTypes.find { it.name.contains("DummyClass") }!!
+        val interfaceType = schemaTypes.find { it.name.contains("AttachmentConstraint") }!!
+        val schemas = SerializationSchemas(schemaForClass, TransformsSchema(emptyMap()))
+
+        val factory = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+        val serializersByType = factory.serializersByType
+
+        factory.get(classType.descriptor.name!!, schemas)
+
+        // Class D is in the classpath (no need to carpent it), so the interface should not be loaded
+        val loadedTypes = serializersByType.keys().toList().map { it.typeName }
+        assertThat(loadedTypes)
+                .contains(classType.name)
+                .doesNotContain(interfaceType.name)
     }
 
 
@@ -143,4 +165,5 @@ class StaticInitialisationOfSerializedObjectTest {
             DeserializationInput(sf2).deserialize(SerializedBytes<D>(bytes))
         }.isInstanceOf(NotSerializableException::class.java)
     }
+
 }

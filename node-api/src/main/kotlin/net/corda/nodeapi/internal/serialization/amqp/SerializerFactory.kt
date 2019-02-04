@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.nodeapi.internal.serialization.carpenter.CarpenterMetaSchema
@@ -44,7 +45,8 @@ open class SerializerFactory(
     cl: ClassLoader,
     private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()
 ) {
-    private val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
+    @VisibleForTesting
+    internal val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
     private val serializersByDescriptor = ConcurrentHashMap<Any, AMQPSerializer<Any>>()
     private val customSerializers = CopyOnWriteArrayList<SerializerFor>()
     private val transformsCache = ConcurrentHashMap<String, EnumMap<TransformTypes, MutableList<Transform>>>()
@@ -216,16 +218,38 @@ open class SerializerFactory(
 
     /**
      * Iterate over an AMQP schema, for each type ascertain whether it's on ClassPath of [classloader] and,
-     * if not, use the [ClassCarpenter] to generate a class to use in it's place.
+     * if not, use the [ClassCarpenter] to generate a class to use in its place.
+     *
+     * The processing of the schema is performed in the following steps:
+     * - All the (non-interface) types are attempted to be loaded from the current classpath.
+     * - For any of those types that cannot be found in the current classpath:
+     *      - The associated interfaces are loaded from the classpath.
+     *      - These types are added to the CarpenterMetaSchema, which contains everything in need of carpenting
+     *
+     * As a result, interfaces are only loaded on-demand, according to the needs for carpenting.
+     * This is done in order to preserve backwards compatibility, in cases where 2 nodes communicate and one of the transported classes
+     * implements an interface that one of them is unaware of (i.e. introduced by a subsequent version). In this case, this node is not
+     * expected to make use of this interface anyway, since the associated CorDapps will be developed in versions that do not contain it,
+     * so it should not attempt to load it all.
      */
     private fun processSchema(schemaAndDescriptor: FactorySchemaAndDescriptor) {
+        val schemaTypes = schemaAndDescriptor.schemas.schema.types
+        val interfacesPerClass = schemaTypes.associateBy({it.name},
+                {type -> schemaTypes.filter { it.name in type.provides }}
+        )
+        val allInterfaceNames = interfacesPerClass.values.asSequence().flatten().map { it.name }
+
         val metaSchema = CarpenterMetaSchema.newInstance()
-        val notationByName = schemaAndDescriptor.schemas.schema.types.associate { it.name to it }
-        val noCarpentryRequired = notationByName.mapNotNull { (name, notation) ->
+        val notationByNameForNonInterfaceTypes = schemaTypes
+                .filterNot { it.name in allInterfaceNames }
+                .associateBy({it.name}, {it})
+        val noCarpentryRequired = notationByNameForNonInterfaceTypes.mapNotNull { (name, notation) ->
             try {
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
                 name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
+                // class missing from the classpath, so load its interfaces and add it for carpenting (see method docs).
+                interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
                 metaSchema.buildFor(notation, classloader)
                 null
             }
@@ -236,14 +260,14 @@ open class SerializerFactory(
             mc.build()
         }
 
-        val carpented = notationByName.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
+        val carpented = notationByNameForNonInterfaceTypes.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
             processSchemaEntry(notation)
         }
 
         val allLocalSerializers = noCarpentryRequired + carpented
 
         allLocalSerializers.forEach { (name, serializer) ->
-            val typeNotation = notationByName[name]!!
+            val typeNotation = notationByNameForNonInterfaceTypes[name]!!
             if (serializer.typeDescriptor != typeNotation.descriptor.name ) {
                 getEvolutionSerializer(typeNotation, serializer, schemaAndDescriptor.schemas)
             }
