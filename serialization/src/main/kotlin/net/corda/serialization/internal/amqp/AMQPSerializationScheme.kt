@@ -2,7 +2,6 @@
 
 package net.corda.serialization.internal.amqp
 
-import io.github.classgraph.ClassGraph
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
@@ -10,7 +9,6 @@ import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.*
 import net.corda.core.serialization.*
 import net.corda.core.utilities.ByteSequence
-import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.DefaultWhitelist
 import net.corda.serialization.internal.MutableClassWhitelist
@@ -60,41 +58,7 @@ abstract class AbstractAMQPSerializationScheme(
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     //       when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
-        const val SCAN_SPEC_PROP_NAME = "amqp.custom.serialization.scanSpec"
-
-        private val logger = contextLogger()
-
-        private val serializationWhitelists: List<SerializationWhitelist> by lazy {
-            ServiceLoader.load(SerializationWhitelist::class.java, this::class.java.classLoader).toList() + DefaultWhitelist
-        }
-
-        private val customSerializers: List<SerializationCustomSerializer<*, *>> by lazy {
-            val scanSpec: String? = System.getProperty(SCAN_SPEC_PROP_NAME)
-
-            if (scanSpec == null) {
-                logger.debug("scanSpec not set, not scanning for Custom Serializers")
-                emptyList()
-            } else {
-                logger.debug("scanSpec = \"$scanSpec\", scanning for Custom Serializers")
-                scanClasspathForSerializers(scanSpec)
-            }
-        }
-
-        @StubOutForDJVM
-        private fun scanClasspathForSerializers(scanSpec: String): List<SerializationCustomSerializer<*, *>> =
-                this::class.java.classLoader.let { cl ->
-                    ClassGraph()
-                            .whitelistPackages(scanSpec)
-                            .addClassLoader(cl)
-                            .enableAllInfo()
-                            .pooledScan()
-                            .use {
-                                val serializerClass = SerializationCustomSerializer::class.java
-                                it.getClassesImplementing(serializerClass.name).loadClasses(serializerClass)
-                            }
-                            .filterNot { it.isAbstractClass }
-                            .map { it.kotlin.objectOrNewInstance() }
-                }
+        private val serializationWhitelists: List<SerializationWhitelist> = listOf(DefaultWhitelist)
 
         @DeleteForDJVM
         val List<Cordapp>.customSerializers
@@ -140,26 +104,16 @@ abstract class AbstractAMQPSerializationScheme(
             registerNonDeterministicSerializers(factory)
         }
 
-        // If we're passed in an external list we trust that, otherwise revert to looking at the scan of the
-        // classpath to find custom serializers.
-        if (cordappCustomSerializers.isEmpty()) {
-            for (customSerializer in customSerializers) {
-                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
-            }
-        } else {
-            // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during transaction verification).
-            // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason is the following:
-            // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is registered dominates).
-            // As a result, when inside a context with attachments class loader, we prioritize serializers loaded on-demand from attachments to serializers that had been
-            // loaded during node initialisation, by scanning the cordapps folder.
-            context.customSerializers.forEach { customSerializer ->
-                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
-            }
-
-            logger.debug("Custom Serializer list loaded - not scanning classpath")
-            cordappCustomSerializers.forEach { customSerializer ->
-                factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
-            }
+        // This step is registering custom serializers, which have been added after node initialisation (i.e. via attachments during transaction verification).
+        // Note: the order between the registration of customSerializers and cordappCustomSerializers must be preserved as-is. The reason is the following:
+        // Currently, the serialization infrastructure does not support multiple versions of a class (the first one that is registered dominates).
+        // As a result, when inside a context with attachments class loader, we prioritize serializers loaded on-demand from attachments to serializers that had been
+        // loaded during node initialisation, by scanning the cordapps folder.
+        context.customSerializers.forEach { customSerializer ->
+            factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
+        }
+        cordappCustomSerializers.forEach { customSerializer ->
+            factory.registerExternal(CorDappCustomSerializer(customSerializer, factory))
         }
 
         context.properties[ContextPropertyKeys.SERIALIZERS]?.apply {
