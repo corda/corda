@@ -14,8 +14,8 @@ private val logger = LoggerFactory.getLogger("net.corda.nodeapi.internal.network
 
 fun generateWhitelist(networkParameters: NetworkParameters?,
                       excludeContracts: List<ContractClassName>,
-                      includeContracts: List<ContractClassName>,
                       cordappJars: List<ContractsJar>,
+                      includeContracts: List<ContractClassName>,
                       optionalCordappJars: List<ContractsJar>): Map<ContractClassName, List<AttachmentId>> {
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 

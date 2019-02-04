@@ -129,9 +129,9 @@ class WhitelistGeneratorTest {
         return generateWhitelist(
                 testNetworkParameters(whitelistedContractImplementations = existingWhitelist),
                 excludeContracts,
+                contractJars,
                 emptyList(),
-                emptyList(),
-                contractJars
+                emptyList()
         )
     }
 }

@@ -244,8 +244,8 @@ internal constructor(private val initSerEnv: Boolean,
             // Only add contracts to the whitelist from unsigned jars
             val signedJars = cordappJars.filter { isSigned(it) } // signed JARs are excluded by default, optionally include them
             val unsignedJars = cordappJars - signedJars
-            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), readIncludeWhitelist(directory),
-                    unsignedJars.map(contractsJarConverter), signedJars.map(contractsJarConverter))
+            val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), unsignedJars.map(contractsJarConverter),
+                    readIncludeWhitelist(directory), signedJars.map(contractsJarConverter))
             val newNetParams = installNetworkParameters(notaryInfos, newWhitelist, existingNetParams, nodeDirs, networkParametersOverrides)
             if (newNetParams != existingNetParams) {
                 println("${if (existingNetParams == null) "New" else "Updated"} $newNetParams")
