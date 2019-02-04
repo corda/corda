@@ -1,14 +1,11 @@
 package net.corda.bridge
 
-import co.paralleluniverse.fibers.Suspendable
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.core.flows.*
-import net.corda.core.identity.Party
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.internal.concurrent.openFuture
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.getOrThrow
-import net.corda.core.utilities.unwrap
 import net.corda.node.services.Permissions
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
@@ -17,7 +14,7 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.enclosedCordapp
+import net.corda.testing.node.internal.cordappsForPackages
 import net.corda.testing.node.internal.internalDriver
 import org.junit.ClassRule
 import org.junit.Test
@@ -26,7 +23,6 @@ import org.junit.runners.Parameterized
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
-import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
 class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
@@ -42,39 +38,10 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
         val databaseSchemas = IntegrationTestSchemas(DUMMY_BANK_A_NAME, DUMMY_BANK_B_NAME, DUMMY_NOTARY_NAME)
     }
 
-    @StartableByRPC
-    @InitiatingFlow
-    class Ping(private val pongParty: Party, val times: Int) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val pongSession = initiateFlow(pongParty)
-            pongSession.sendAndReceive<Unit>(times)
-            pingStarted.getOrPut(runId) { openFuture() }.set(Unit)
-            for (i in 1..times) {
-                logger.info("PING $i")
-                val j = pongSession.sendAndReceive<Int>(i).unwrap { it }
-                assertEquals(i, j)
-            }
-        }
-    }
-
-    @InitiatedBy(Ping::class)
-    class Pong(private val pingSession: FlowSession) : FlowLogic<Unit>() {
-        @Suspendable
-        override fun call() {
-            val times = pingSession.sendAndReceive<Int>(Unit).unwrap { it }
-            for (i in 1..times) {
-                logger.info("PONG $i")
-                val j = pingSession.sendAndReceive<Int>(i).unwrap { it }
-                assertEquals(i, j)
-            }
-        }
-    }
-
     @Test
     fun restartLongPingPongFlowRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), enableSNI = enableSNI) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
@@ -86,7 +53,6 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
                             "listeningAddress" to "0.0.0.0:$bridgePort"
                     )
             ))
-
 
             val aFuture = startNode(
                     providedName = DUMMY_BANK_A_NAME,
@@ -127,7 +93,7 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
     @Test
     fun restartSeveralPingPongFlowsRandomly() {
         val demoUser = User("demo", "demo", setOf(Permissions.startFlow<Ping>(), Permissions.all()))
-        internalDriver(startNodesInProcess = true, cordappsForAllNodes = listOf(enclosedCordapp()), enableSNI = enableSNI) {
+        internalDriver(startNodesInProcess = true, cordappsForAllNodes = cordappsForPackages("net.corda.bridge"), enableSNI = enableSNI) {
             val bFuture = startNode(providedName = DUMMY_BANK_B_NAME, rpcUsers = listOf(demoUser), customOverrides = mapOf("p2pAddress" to "localhost:40000"))
             val bridgePort = 20005
             val brokerPort = 21005
@@ -139,7 +105,6 @@ class BridgeRestartTest(private val enableSNI: Boolean) : IntegrationTest() {
                             "listeningAddress" to "0.0.0.0:$bridgePort"
                     )
             ))
-
 
             val aFuture = startNode(
                     providedName = DUMMY_BANK_A_NAME,
