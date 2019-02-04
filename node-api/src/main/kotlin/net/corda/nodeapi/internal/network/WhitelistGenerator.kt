@@ -31,7 +31,7 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
             .toMultiMap()
 
     if (includeContracts.isNotEmpty())
-        logger.info("Include any contracts from $INCLUDE_WHITELIST_FILE_NAME: ${includeContracts.joinToString()} for signed JARs.")
+        logger.info("Include any contracts from $INCLUDE_WHITELIST_FILE_NAME: ${includeContracts.joinToString()} present in JARs: $optionalCordappJars.")
 
     val newSignedJarsWhiteList = optionalCordappJars
             .flatMap { jar -> (jar.scan()).filter { includeContracts.contains(it) }.map { it to jar.hash } }
