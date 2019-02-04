@@ -191,6 +191,7 @@ open class TransactionBuilder(
         } catch (tre: TransactionResolutionException) {
         } catch (ise: IllegalStateException) {
         } catch (ise: IllegalArgumentException) {
+        } catch (ownership: PackageOwnershipException) {
         }
         return false
     }

@@ -4,7 +4,6 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
-import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
@@ -44,7 +43,6 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
         checkNoNotaryChange()
         checkEncumbrancesValid()
         validateContractVersions()
-        validatePackageOwnership()
         validateStatesAgainstContract()
         val hashToSignatureConstrainedContracts = verifyConstraintsValidity()
         verifyConstraints(hashToSignatureConstrainedContracts)
@@ -218,26 +216,6 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
                     throw TransactionVerificationException.TransactionVerificationVersionException(ltx.id, contractClassName, "$it", "$outputVersion")
                 }
             }
-        }
-    }
-
-    /**
-     * Verify that for each contract the network wide package owner is respected.
-     *
-     * TODO - revisit once transaction contains network parameters. - UPDATE: It contains them, but because of the API stability and the fact that
-     *  LedgerTransaction was data class i.e. exposed constructors that shouldn't had been exposed, we still need to keep them nullable :/
-     */
-    private fun validatePackageOwnership() {
-        val contractsAndOwners = allStates.mapNotNull { transactionState ->
-            val contractClassName = transactionState.contract
-            ltx.networkParameters!!.getPackageOwnerOf(contractClassName)?.let { contractClassName to it }
-        }.toMap()
-
-        contractsAndOwners.forEach { contract, owner ->
-            contractAttachmentsByContract[contract]?.filter { it.isSigned }?.forEach { attachment ->
-                if (!owner.isFulfilledBy(attachment.signerKeys))
-                    throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(ltx.id, attachment.id, contract)
-            } ?: throw TransactionVerificationException.ContractAttachmentNotSignedByPackageOwnerException(ltx.id, ltx.id, contract)
         }
     }
 

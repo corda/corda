@@ -30,7 +30,9 @@ interface SimpleFieldAccess {
 @DeleteForDJVM
 class CarpenterClassLoader(parentClassLoader: ClassLoader = Thread.currentThread().contextClassLoader) :
         ClassLoader(parentClassLoader) {
-    fun load(name: String, bytes: ByteArray): Class<*> = defineClass(name, bytes, 0, bytes.size)
+    fun load(name: String, bytes: ByteArray): Class<*> {
+        return defineClass(name, bytes, 0, bytes.size)
+    }
 }
 
 class InterfaceMismatchNonGetterException(val clazz: Class<*>, val method: Method) : InterfaceMismatchException(

@@ -29,6 +29,16 @@ class TransactionResolutionException(val hash: SecureHash) : FlowException("Tran
 class AttachmentResolutionException(val hash: SecureHash) : FlowException("Attachment resolution failure for $hash")
 
 /**
+ * Thrown to indicate that a contract attachment is not signed by the network-wide package owner.
+ */
+@CordaSerializable
+class PackageOwnershipException(val attachmentHash: AttachmentId, val contractClass: String, val packageName: String) : FlowException(
+        """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner of package $packageName specified in the network parameters.
+           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
+           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+
+
+/**
  * Indicates that some aspect of the transaction named by [txId] violates the platform rules. The exact type of failure
  * is expressed using a subclass. TransactionVerificationException is a [FlowException] and thus when thrown inside
  * a flow, the details of the failure will be serialised, propagated to the peer and rethrown.
@@ -223,14 +233,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     @DeleteForDJVM
     class InvalidNotaryChange(txId: SecureHash)
         : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
-
-    /**
-     * Thrown to indicate that a contract attachment is not signed by the network-wide package owner.
-     */
-    class ContractAttachmentNotSignedByPackageOwnerException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String) : TransactionVerificationException(txId,
-            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
-           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
-           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 
     /**
      * Thrown when multiple attachments provide the same file when building the AttachmentsClassloader for a transaction.
