@@ -40,7 +40,7 @@ open class SharedNodeCmdLineOptions {
             names = ["--on-unknown-config-keys"],
             description = ["How to behave on unknown node configuration. \${COMPLETION-CANDIDATES}"]
     )
-    var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.FAIL
+    var unknownConfigKeysPolicy: UnknownConfigKeysPolicy = UnknownConfigKeysPolicy.IGNORE
 
     @Option(
             names = ["-d", "--dev-mode"],
