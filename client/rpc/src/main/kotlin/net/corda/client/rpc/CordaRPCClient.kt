@@ -23,7 +23,6 @@ import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
 import java.time.Duration
 import java.util.ServiceLoader
-import java.net.URLClassLoader
 
 /**
  * This class is essentially just a wrapper for an RPCConnection<CordaRPCOps> and can be treated identically.
@@ -300,14 +299,11 @@ class CordaRPCClient private constructor(
             try {
                 val cache = Caffeine.newBuilder().maximumSize(128).build<SerializationFactoryCacheKey, SerializerFactory>().asMap()
 
-                // If the client has provided a classloader, the associated classpath is checked for available custom serializers and serialization whitelists.
-                if (classLoader != null) {
-                    val customSerializers = createInstancesOfClassesImplementing(classLoader, SerializationCustomSerializer::class.java)
-                    val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, classLoader).toSet()
-                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, customSerializers, serializationWhitelists, cache)
-                } else {
-                    AMQPClientSerializationScheme.initialiseSerialization(classLoader, serializerFactoriesForContexts =  cache)
-                }
+                // If the client has explicitly provided a classloader use this one to scan for custom serializers, otherwise use the current one.
+                val serializationClassLoader = this.classLoader ?: this.javaClass.classLoader
+                val customSerializers = createInstancesOfClassesImplementing(serializationClassLoader, SerializationCustomSerializer::class.java)
+                val serializationWhitelists = ServiceLoader.load(SerializationWhitelist::class.java, serializationClassLoader).toSet()
+                AMQPClientSerializationScheme.initialiseSerialization(serializationClassLoader, customSerializers, serializationWhitelists, cache)
             } catch (e: IllegalStateException) {
                 // Race e.g. two of these constructed in parallel, ignore.
             }
