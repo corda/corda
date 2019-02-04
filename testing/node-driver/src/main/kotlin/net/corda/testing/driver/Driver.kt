@@ -424,4 +424,39 @@ data class DriverParameters(
             notaryCustomOverrides = emptyMap(),
             cordappsForAllNodes = cordappsForAllNodes
     )
+    
+    fun copy(
+            isDebug: Boolean,
+            driverDirectory: Path,
+            portAllocation: PortAllocation,
+            debugPortAllocation: PortAllocation,
+            systemProperties: Map<String, String>,
+            useTestClock: Boolean,
+            startNodesInProcess: Boolean,
+            waitForAllNodesToFinish: Boolean,
+            notarySpecs: List<NotarySpec>,
+            extraCordappPackagesToScan: List<String>,
+            jmxPolicy: JmxPolicy,
+            networkParameters: NetworkParameters,
+            notaryCustomOverrides: Map<String, Any?>,
+            inMemoryDB: Boolean,
+            cordappsForAllNodes: Collection<TestCordapp>?
+    ) = this.copy(
+            isDebug = isDebug,
+            driverDirectory = driverDirectory,
+            portAllocation = portAllocation,
+            debugPortAllocation = debugPortAllocation,
+            systemProperties = systemProperties,
+            useTestClock = useTestClock,
+            startNodesInProcess = startNodesInProcess,
+            waitForAllNodesToFinish = waitForAllNodesToFinish,
+            notarySpecs = notarySpecs,
+            extraCordappPackagesToScan = extraCordappPackagesToScan,
+            jmxPolicy = jmxPolicy,
+            networkParameters = networkParameters,
+            notaryCustomOverrides = notaryCustomOverrides,
+            inMemoryDB = inMemoryDB,
+            cordappsForAllNodes = cordappsForAllNodes,
+            enableSNI = true
+    )
 }
