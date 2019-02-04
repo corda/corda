@@ -802,7 +802,7 @@ class DriverDSLImpl(
             )
         }
 
-        private val propertiesInScope = setOf("java.io.tmpdir", AbstractAMQPSerializationScheme.SCAN_SPEC_PROP_NAME)
+        private val propertiesInScope = setOf("java.io.tmpdir")
 
         private fun inheritFromParentProcess(): Iterable<Pair<String, String>> {
             return propertiesInScope.flatMap { propName ->
