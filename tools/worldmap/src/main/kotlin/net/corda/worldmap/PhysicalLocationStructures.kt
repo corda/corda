@@ -1,4 +1,4 @@
-package net.corda.explorer
+package net.corda.worldmap
 
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
@@ -51,7 +51,7 @@ data class WorldMapLocation(val coordinate: WorldCoordinate, val description: St
  * A simple lookup table of city names to their coordinates. Lookups are case insensitive.
  */
 object CityDatabase {
-    private val matcher = Regex("^([a-zA-Z- ]*) \\((..)\\)$")
+    private val matcher = Regex("^([a-zA-Z- ]*) \\((..)\\)\$")
     private val caseInsensitiveLookups = HashMap<String, WorldMapLocation>()
     val cityMap = HashMap<String, WorldMapLocation>()
 

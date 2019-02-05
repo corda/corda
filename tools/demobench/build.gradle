@@ -45,9 +45,9 @@ configurations {
 }
 
 dependencies {
-    compile project(':tools:explorer')
     compile project(':client:rpc')
     compile project(':finance:workflows')
+    compile project(':tools:worldmap')
 
     compile "net.corda:corda-finance-contracts:$os_corda_release_version"
 
