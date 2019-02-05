@@ -59,9 +59,7 @@ abstract class CordaMigration : CustomTaskChange {
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
         cordaDB.transaction {
-            //val myKeystore = BasicHSMKeyManagementService.createKeyMap(cacheFactory)
-            // TODO: This doesn't get all our names! Need to plumb through something from node config.
-            identityService.ourNames = setOf(ourName) //myKeystore.allPersisted().mapNotNull { identityService.certificateFromKey(it.first)?.name}.toSet()
+            identityService.ourNames = setOf(ourName)
             _dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
         }
     }
