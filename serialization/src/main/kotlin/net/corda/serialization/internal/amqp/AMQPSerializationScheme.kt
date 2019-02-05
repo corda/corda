@@ -58,7 +58,7 @@ abstract class AbstractAMQPSerializationScheme(
     // TODO: This method of initialisation for the Whitelist and plugin serializers will have to change
     //       when we have per-cordapp contexts and dynamic app reloading but for now it's the easiest way
     companion object {
-        private val serializationWhitelists: List<SerializationWhitelist> = listOf(DefaultWhitelist)
+        private val serializationWhitelists: List<SerializationWhitelist> by lazy { listOf(DefaultWhitelist) }
 
         @DeleteForDJVM
         val List<Cordapp>.customSerializers
