@@ -20,8 +20,8 @@ import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.workflows.getCashBalances
 import net.corda.node.internal.NetworkParametersReader.NetworkParametersAndSigned
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.services.config.*
@@ -37,8 +37,6 @@ import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.internal.incrementalPortAllocation
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.internal.CustomCordapp
-import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import net.corda.testing.node.internal.TestCordappInternal
 import net.corda.testing.node.internal.cordappWithPackages
 import org.apache.activemq.artemis.api.core.RoutingType
 import org.apache.activemq.artemis.api.core.client.ClientConsumer
@@ -46,7 +44,6 @@ import org.apache.activemq.artemis.api.core.client.ClientProducer
 import org.apache.activemq.artemis.api.core.client.ClientSession
 import org.junit.Rule
 import org.junit.Test
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyPair
 import java.security.cert.X509Certificate
@@ -66,7 +63,7 @@ class FlowWorkerStartStopTest {
         private val logger = contextLogger()
     }
 
-    private val financeCordapp =  cordappWithPackages("net.corda.finance").copy(name = "finance-cordapp")
+    private val financeCordapp = cordappWithPackages("net.corda.finance").copy(name = "finance-cordapp")
     private val financeCordappPath = CustomCordapp.getJarFile(financeCordapp)
 
     private val notaryKeyPair = generateKeyPair()
