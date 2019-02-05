@@ -26,6 +26,8 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
  * wrong object instance. This class helps avoid that.
+ *
+ * @param inputVersions A map linking each contract class name to the advertised version of the JAR that defines it. Used for downgrade protection.
  */
 class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader,
                private val inputVersions: Map<ContractClassName, Version>) {
