@@ -158,6 +158,11 @@ private constructor(
         return params
     }
 
+    @StubOutForDJVM
+    private fun getParamsFromFlowLogic(): NetworkParameters? {
+        return FlowLogic.currentTopLevel?.serviceHub?.networkParameters
+    }
+
     private fun createLtxForVerification(): LedgerTransaction {
         val serializedInputs = this.serializedInputs
         val serializedReferences = this.serializedReferences
