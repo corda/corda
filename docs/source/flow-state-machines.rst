@@ -400,6 +400,17 @@ minutes, hours or even days in the case of a flow that needs human interaction!
    special token that's recognised by the platform, and wired up to the right instance when the continuation is
    loaded off disk again.
 
+.. warning:: If a node has flows still in a suspended state, with flow continuations written to disk, it will not be
+             possible to upgrade that node to a new version of Corda or your app, because flows must be completely "drained"
+             before an upgrade can be performed, and must reach a finished state for draining to complete (see
+             :ref:`draining_the_node` for details). While there are mechanisms for "evolving" serialised data held
+             in the vault, there are no equivalent mechanisms for updating serialised checkpoint data. For this
+             reason it is not a good idea to design flows with the intention that they should remain in a suspended
+             state for a long period of time, as this will obstruct necessary upgrades to Corda itself. Any
+             long-running business process should therefore be structured as a series of discrete transactions,
+             written to the vault, rather than a single flow persisted over time through the flow checkpointing
+             mechanism.
+
 ``receive`` and ``sendAndReceive`` return a simple wrapper class, ``UntrustworthyData<T>``, which is
 just a marker class that reminds us that the data came from a potentially malicious external source and may have been
 tampered with or be unexpected in other ways. It doesn't add any functionality, but acts as a reminder to "scrub"
