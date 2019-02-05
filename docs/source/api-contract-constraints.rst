@@ -337,6 +337,8 @@ How to use the ``SignatureAttachmentConstraint`` if states were already created 
 1. As the original developer of the corDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
 The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
 by different parties and it will be expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
+Use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_ to sign the existing JAR.
+The signing capability of :ref:`corda-gradle-plugins <cordapp_build_system_signing_cordapp_jar_ref>` cannot be used in this context as it signs the JAR while building it from source.
 
 2. Whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
 more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
