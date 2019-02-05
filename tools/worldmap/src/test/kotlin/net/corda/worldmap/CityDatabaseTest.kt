@@ -1,4 +1,4 @@
-package net.corda.explorer
+package net.corda.worldmap
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

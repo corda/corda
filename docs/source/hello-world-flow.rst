@@ -27,6 +27,15 @@ We also need the borrower to receive the transaction and record it for itself. A
 to approve and sign IOU issuance transactions. We will be able to impose this requirement when we look at contracts in the
 next tutorial.
 
+.. warning:: The execution of a flow is distributed in space and time, as the flow crosses node boundaries and each
+             participant may have to wait for other participants to respond before it can complete its part of the
+             overall work. While a node is waiting, the state of its flow may be persistently recorded to disk as a
+             restorable checkpoint, enabling it to carry on where it left off when a counterparty responds. However,
+             before a node can be upgraded to a newer version of Corda, or of your Cordapp, all flows must have
+             completed, as there is no mechanism to upgrade a persisted flow checkpoint. It is therefore undesirable
+             to model a long-running business process as a single flow: it should rather be broken up into a series
+             of transactions, with flows used only to orchestrate the completion of each transaction.
+
 Subflows
 ^^^^^^^^
 Tasks like recording a transaction or sending a transaction to a counterparty are very common in Corda. Instead of
