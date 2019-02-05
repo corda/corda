@@ -156,7 +156,8 @@ class SchemaMigration(
                     "migration/vault-schema.changelog-pkey.xml"))
 
             if (schemas.any { schema -> schema.migrationResource == "node-notary.changelog-master" })
-                preV4Baseline.addAll(listOf("migration/node-notary.changelog-init.xml"))
+                preV4Baseline.addAll(listOf("migration/node-notary.changelog-init.xml",
+                        "migration/node-notary.changelog-v1.xml"))
 
             if (schemas.any { schema -> schema.migrationResource == "notary-raft.changelog-master" })
                 preV4Baseline.addAll(listOf("migration/notary-raft.changelog-init.xml",
