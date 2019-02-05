@@ -378,7 +378,8 @@ private data class LocalTypeInformationPrettyPrinter(private val simplifyClassNa
                             printInheritsFrom(interfaces, superclass) +
                             indentAnd { printProperties(properties) }
                 is LocalTypeInformation.AnInterface ->
-                    typeIdentifier.prettyPrint(simplifyClassNames) + printInheritsFrom(interfaces)
+                    typeIdentifier.prettyPrint(simplifyClassNames) + printInheritsFrom(interfaces) +
+                            indentAnd { printProperties(properties) }
                 is LocalTypeInformation.Composable -> typeIdentifier.prettyPrint(simplifyClassNames) +
                         printConstructor(constructor) +
                         printInheritsFrom(interfaces, superclass) +

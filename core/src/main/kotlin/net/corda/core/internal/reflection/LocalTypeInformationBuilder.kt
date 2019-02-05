@@ -164,7 +164,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             LocalTypeInformation.Abstract(
                     type,
                     typeIdentifier,
-                    buildReadOnlyProperties(type.asClass()),
+                    buildReadOnlyProperties(type.asClass(), true),
                     buildSuperclassInformation(type),
                     buildInterfaceInformation(type),
                     typeParameters)
@@ -174,7 +174,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             LocalTypeInformation.AnInterface(
                     type,
                     typeIdentifier,
-                    buildReadOnlyProperties(type.asClass()),
+                    buildReadOnlyProperties(type.asClass(), false),
                     buildInterfaceInformation(type),
                     typeParameters)
 
@@ -207,7 +207,7 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
             if (warnIfNonComposable) {
                 logger.info("No unique deserialisation constructor found for class $rawType, type is marked as non-composable")
             }
-            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType),
+            return LocalTypeInformation.NonComposable(type, typeIdentifier, null, buildReadOnlyProperties(rawType, true),
                     superclassInformation, interfaceInformation, typeParameterInformation)
         }
 
@@ -281,9 +281,9 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         return interfaces
     }
 
-    private fun buildReadOnlyProperties(rawType: Class<*>): Map<PropertyName, LocalPropertyInformation> =
+    private fun buildReadOnlyProperties(rawType: Class<*>, requireField: Boolean): Map<PropertyName, LocalPropertyInformation> =
             rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
-                if (descriptor.field == null || descriptor.getter == null) null
+                if ((descriptor.field == null && requireField)|| descriptor.getter == null) null
                 else {
                     val paramType = (descriptor.getter.genericReturnType).resolveAgainstContext()
                     // Because this parameter is read-only, we don't need to warn if its type is non-composable.
@@ -311,17 +311,13 @@ internal data class LocalTypeInformationBuilder(val lookup: LocalTypeLookup,
         }.toMap()
 
         return rawType.propertyDescriptors().asSequence().mapNotNull { (name, descriptor) ->
-            val normalisedName = when {
-                name in constructorParameterIndices -> name
-                name.decapitalize() in constructorParameterIndices -> name.decapitalize()
-                else -> return@mapNotNull null
-            }
+            val index = constructorParameterIndices[name] ?: return@mapNotNull null
 
             val property = makeConstructorPairedProperty(
-                    constructorParameterIndices[normalisedName]!!,
+                    index,
                     descriptor,
                     constructorInformation)
-            if (property == null) null else normalisedName to property
+            if (property == null) null else name to property
         }
     }
 

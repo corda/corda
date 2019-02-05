@@ -192,8 +192,7 @@ private fun EnumMap<MethodClassifier, Method>.merge(classifier: MethodClassifier
 
 // Make the property name conform to the underlying field name, if there is one.
 private fun getPropertyName(propertyName: String, fieldNames: Set<String>) =
-        if (propertyName.decapitalize() in fieldNames) propertyName.decapitalize()
-        else propertyName
+    if (propertyName in fieldNames) propertyName else propertyName.decapitalize()
 
 
 // Which of the three types of property method the method is.

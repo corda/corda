@@ -38,7 +38,12 @@ class LocalTypeModelTests {
 
     @Test
     fun `Primitives and collections`() {
-        assertInformation<CollectionHolder<UUID, LocalDateTime>>("CollectionHolder<UUID, LocalDateTime>")
+        assertInformation<CollectionHolder<UUID, LocalDateTime>>("""
+            CollectionHolder<UUID, LocalDateTime>
+              array: List<LocalDateTime>[]
+              list: List<LocalDateTime>
+              map: Map<UUID, LocalDateTime>
+        """)
 
         assertInformation<StringKeyedCollectionHolder<Int>>("""
             StringKeyedCollectionHolder<Integer>(list: List<Integer>, map: Map<String, Integer>, array: List<Integer>[]): CollectionHolder<String, Integer>
@@ -81,8 +86,15 @@ class LocalTypeModelTests {
 
     @Test
     fun `interfaces and superclasses`() {
-        assertInformation<SuperSuper<Int, Int>>("SuperSuper<Integer, Integer>")
-        assertInformation<Super<UUID>>("Super<UUID>: SuperSuper<UUID, Double>")
+        assertInformation<SuperSuper<Int, Int>>("""
+            SuperSuper<Integer, Integer>
+              a: Integer
+              b: Integer
+        """)
+        assertInformation<Super<UUID>>("""
+            Super<UUID>: SuperSuper<UUID, Double>
+              c: List<UUID>
+        """)
         assertInformation<Abstract<LocalDateTime>>("""
             Abstract<LocalDateTime>: Super<LocalDateTime[]>, SuperSuper<LocalDateTime[], Double>
               a: LocalDateTime[]

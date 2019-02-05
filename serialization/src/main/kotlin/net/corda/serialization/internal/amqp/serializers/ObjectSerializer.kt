@@ -47,7 +47,10 @@ interface ObjectSerializer : AMQPSerializer<Any> {
                                     typeInformation: LocalTypeInformation,
                                     typeDescriptor: Symbol,
                                     factory: LocalSerializerFactory): AbstractObjectSerializer {
-            val propertySerializers = makePropertySerializers(typeInformation.propertiesOrEmptyMap, factory)
+            val propertySerializers =
+                    if (typeInformation is LocalTypeInformation.AnInterface) emptyMap()
+                    else makePropertySerializers(typeInformation.propertiesOrEmptyMap, factory)
+
             val writer = ComposableObjectWriter(typeNotation, typeInformation.interfacesOrEmptyList, propertySerializers)
             return AbstractObjectSerializer(typeInformation.observedType, typeDescriptor, propertySerializers,
                     typeNotation.fields, writer)

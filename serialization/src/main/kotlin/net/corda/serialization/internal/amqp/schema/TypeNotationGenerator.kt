@@ -20,7 +20,7 @@ object TypeNotationGenerator {
     private fun LocalTypeInformation.AnInterface.getTypeNotation(typeDescriptor: Symbol): CompositeType =
             makeCompositeType(
                     (sequenceOf(this) + interfaces.asSequence()).toList(),
-                    properties,
+                    emptyMap(), // TODO: add properties to interface type notation
                     typeDescriptor)
 
     private fun LocalTypeInformation.Composable.getTypeNotation(typeDescriptor: Symbol): CompositeType =
