@@ -135,8 +135,20 @@ class SchemaMigration(
 
             val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
 
+            // When migrating between Corda versions, it's possible that changes may be made that invalidates the contents of the checkpoint
+            // table. If there are any checkpoint entries in this case, then prevent the migration occurring. Note however that this should
+            // not happen in all cases. Apps may also provide migrations, and blocking these may prevent a finalized transaction from
+            // being recovered from a checkpoint, if the migration is provided by a jar that also provides the contract for that
+            // transaction's states.
+            val shouldBlockOnCheckpoints = unRunChanges.any {
+                it.id == "modify checkpoint_value column type" || // Changes the checkpoint blob type in the database
+                it.id == "nullability" ||                         // Changes column constraint on checkpoint table
+                it.id == "column_host_name" ||                    // Node was previously running version prior to ENT3.2
+                it.id == "create-external-id-to-state-party-view" // Node was previously running a version prior to ENT4.0
+            }
+
             when {
-                (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
+                (run && !check) && (shouldBlockOnCheckpoints && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
                 run && !check -> liquibase.update(Contexts())
                 check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                 check && !run -> {} // Do nothing will be interpreted as "check succeeded"
