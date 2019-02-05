@@ -18,12 +18,12 @@ import javafx.util.StringConverter
 import net.corda.core.internal.*
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
-import net.corda.explorer.CityDatabase
-import net.corda.explorer.WorldMapLocation
 import net.corda.finance.CHF
 import net.corda.finance.EUR
 import net.corda.finance.GBP
 import net.corda.finance.USD
+import net.corda.worldmap.CityDatabase
+import net.corda.worldmap.WorldMapLocation
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path
@@ -138,7 +138,7 @@ class NodeTabView : Fragment() {
                     } else {
                         val notaryTypes = listOf(NotaryService(true), NotaryService(false))
                         val notaryTypeToggleGroup = togglegroup()
-                        notaryTypeToggleGroup.selectedValueProperty<NotaryService>().addListener { observValue, oldValue, newValue ->
+                        notaryTypeToggleGroup.selectedValueProperty<NotaryService>().addListener { _, oldValue, newValue ->
                             oldValue?.let {
                                 model.item.extraServices.removeAll(it)
                             }
