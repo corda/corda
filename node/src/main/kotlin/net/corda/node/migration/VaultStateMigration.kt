@@ -26,9 +26,13 @@ import net.corda.serialization.internal.SerializationFactoryImpl
 import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.serialization.internal.amqp.amqpMagic
 import org.hibernate.Session
+import org.hibernate.query.Query
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ForkJoinTask
 import java.util.concurrent.RecursiveAction
+import javax.persistence.criteria.Root
+import javax.persistence.criteria.Selection
+import javax.persistence.criteria.SetJoin
 
 class VaultStateMigration : CordaMigration() {
     companion object {
@@ -144,13 +148,24 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
     val numStates = getTotalStates()
 
+    private fun <T>createVaultStatesQuery(returnClass: Class<T>, selection: (Root<VaultSchemaV1.VaultStates>) -> Selection<T>): Query<T> {
+        val session = currentDBSession()
+        val criteriaQuery = criteriaBuilder.createQuery(returnClass)
+        val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
+        val subQuery = criteriaQuery.subquery(Long::class.java)
+        val subRoot = subQuery.from(VaultSchemaV1.PersistentParty::class.java)
+        subQuery.select(criteriaBuilder.count(subRoot))
+        subQuery.where(criteriaBuilder.equal(
+                subRoot.get<VaultSchemaV1.PersistentStateRefAndKey>("compositeKey").get<PersistentStateRef>("stateRef"),
+                queryRootStates.get<PersistentStateRef>("stateRef")))
+        criteriaQuery.select(selection(queryRootStates))
+        criteriaQuery.where(criteriaBuilder.equal(subQuery, 0))
+        return session.createQuery(criteriaQuery)
+    }
+
     private fun getTotalStates(): Long {
         return database.transaction {
-            val session = currentDBSession()
-            val criteriaQuery = criteriaBuilder.createQuery(Long::class.java)
-            val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-            criteriaQuery.select(criteriaBuilder.count(queryRootStates))
-            val query = session.createQuery(criteriaQuery)
+            val query = createVaultStatesQuery(Long::class.java, criteriaBuilder::count)
             val result = query.singleResult
             logger.debug("Found $result total states in the vault")
             result
@@ -176,12 +191,11 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     private fun getNextPage(): List<VaultSchemaV1.VaultStates> {
         endTransaction()
         transaction = database.newTransaction()
-        val session = currentDBSession()
-        val criteriaQuery = criteriaBuilder.createQuery(VaultSchemaV1.VaultStates::class.java)
-        val queryRootStates = criteriaQuery.from(VaultSchemaV1.VaultStates::class.java)
-        criteriaQuery.select(queryRootStates)
-        val query = session.createQuery(criteriaQuery)
-        query.firstResult = (pageNumber * pageSize)
+        val query = createVaultStatesQuery(VaultSchemaV1.VaultStates::class.java) { it }
+        // The above query excludes states that have entries in the state party table. As the iteration proceeds, each state has entries
+        // added to this table. The result is that when the next page is retrieved, any results that were in the previous page are not in
+        // the query at all! As such, the next set of states that need processing start at the first result.
+        query.firstResult = 0
         query.maxResults = pageSize
         pageNumber++
         val result = query.resultList

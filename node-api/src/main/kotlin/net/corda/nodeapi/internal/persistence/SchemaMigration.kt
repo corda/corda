@@ -8,9 +8,11 @@ import liquibase.database.Database
 import liquibase.database.DatabaseFactory
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
+import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -22,11 +24,13 @@ class SchemaMigration(
         val dataSource: DataSource,
         private val databaseConfig: DatabaseConfig,
         private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader,
-        private val currentDirectory: Path?) {
+        private val currentDirectory: Path?,
+        private val ourName: CordaX500Name? = null) {
 
     companion object {
         private val logger = contextLogger()
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
+        const val NODE_X500_NAME = "liquibase.nodeName"
     }
 
     /**
@@ -92,6 +96,9 @@ class SchemaMigration(
             val path = currentDirectory?.toString()
             if (path != null) {
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
+            }
+            if (ourName != null) {
+                System.setProperty(NODE_X500_NAME, ourName.toString())
             }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 

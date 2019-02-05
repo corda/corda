@@ -2,10 +2,7 @@ package net.corda.node.migration
 
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
-import net.corda.core.contracts.Amount
-import net.corda.core.contracts.Issued
-import net.corda.core.contracts.TransactionState
-import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.contracts.*
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
@@ -30,6 +27,8 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
+import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.internal.vault.CommodityState
@@ -88,6 +87,7 @@ class VaultStateMigrationTest {
 
     @Before
     fun setUp() {
+        System.setProperty(NODE_X500_NAME, BOB_IDENTITY.name.toString())
         val identityService = makeTestIdentityService(dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
         cordaDB = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
@@ -259,6 +259,20 @@ class VaultStateMigrationTest {
         assertEquals(expected.relevancyStatus, actual.relevancyStatus)
     }
 
+    private fun addToStatePartyTable(stateAndRef: StateAndRef<ContractState>) {
+        cordaDB.transaction {
+            val persistentStateRef = PersistentStateRef(stateAndRef.ref.txhash.toString(), stateAndRef.ref.index)
+            val session = currentDBSession()
+            stateAndRef.state.data.participants.forEach {
+                val persistentParty = VaultSchemaV1.PersistentParty(
+                        persistentStateRef,
+                        it
+                )
+                session.save(persistentParty)
+            }
+        }
+    }
+
     @Test
     fun `Check a simple migration works`() {
         addCashStates(10, BOB)
@@ -388,6 +402,19 @@ class VaultStateMigrationTest {
         migration.execute(liquibaseDB)
         val persistentState = getState(VaultSchemaV1.VaultStates::class.java)
         checkStatesEqual(expectedPersistentState, persistentState)
+    }
+
+    @Test
+    fun `State already in state party table is excluded`() {
+        val tx = createCashTransaction(Cash(), 100.DOLLARS, BOB)
+        storeTransaction(tx)
+        createVaultStatesFromTransaction(tx)
+        addToStatePartyTable(tx.coreTransaction.outRef(0))
+        addCashStates(5, BOB)
+        assertEquals(1, getStatePartyCount())
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(6, getStatePartyCount())
     }
 
     // Used to test migration performance

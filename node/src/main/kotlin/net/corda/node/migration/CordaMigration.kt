@@ -6,6 +6,7 @@ import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.PersistentIdentityService
@@ -15,6 +16,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.PublicKeyToTextConverter
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
@@ -54,11 +56,12 @@ abstract class CordaMigration : CustomTaskChange {
         _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
         cordaDB.start(dataSource)
         identityService.database = cordaDB
+        val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
         cordaDB.transaction {
-            val myKeystore = BasicHSMKeyManagementService.createKeyMap(cacheFactory)
+            //val myKeystore = BasicHSMKeyManagementService.createKeyMap(cacheFactory)
             // TODO: This doesn't get all our names! Need to plumb through something from node config.
-            identityService.ourNames = myKeystore.allPersisted().mapNotNull { identityService.certificateFromKey(it.first)?.name}.toSet()
+            identityService.ourNames = setOf(ourName) //myKeystore.allPersisted().mapNotNull { identityService.certificateFromKey(it.first)?.name}.toSet()
             _dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
         }
     }
