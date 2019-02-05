@@ -43,10 +43,10 @@ configurations {
 }
 
 dependencies {
-    compile project(':tools:explorer')
     compile project(':client:rpc')
     compile project(':finance:contracts')
     compile project(':finance:workflows')
+    compile project(':tools:worldmap')
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
