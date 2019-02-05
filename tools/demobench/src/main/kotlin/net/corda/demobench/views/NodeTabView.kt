@@ -18,12 +18,12 @@ import javafx.util.StringConverter
 import net.corda.core.internal.*
 import net.corda.demobench.model.*
 import net.corda.demobench.ui.CloseableTab
+import net.corda.explorer.CityDatabase
+import net.corda.explorer.WorldMapLocation
 import net.corda.finance.CHF
 import net.corda.finance.EUR
 import net.corda.finance.GBP
 import net.corda.finance.USD
-import net.corda.finance.utils.CityDatabase
-import net.corda.finance.utils.WorldMapLocation
 import org.controlsfx.control.CheckListView
 import tornadofx.*
 import java.nio.file.Path

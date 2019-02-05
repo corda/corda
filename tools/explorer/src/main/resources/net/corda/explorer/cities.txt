@@ -1,0 +1,1005 @@
+# name	longitude	latitude
+Tokyo (JP)	139.75	35.68
+Beijing Shi (CN)	116.38	39.92
+Shanghai (CN)	121.4	31
+Buenos Aires (AR)	-58.67	-34.58
+Bombay (IN)	72.82	18.97
+Karachi (PK)	67.03	24.87
+Constantinople (TR)	28.95	41.02
+Mexico (MX)	-99.03	19.38
+Delhi (IN)	77.22	28.67
+Manila (PH)	120.97	14.6
+Moscow (RU)	37.6	55.75
+Seoul (KR)	127	37.55
+Sao Paulo (BR)	-46.62	-23.52
+Istanbul (TR)	28.95	41.02
+Lagos (NG)	3.38	6.45
+Mexico (MX)	-99.13	19.43
+Jakarta (ID)	106.82	-6.17
+Edo (JP)	139.75	35.68
+New York (US)	-74	40.7
+Kinshasa (CD)	15.3	-4.28
+Al Qahirah (EG)	31.25	30.05
+Lima (PE)	-77.03	-12.05
+Peking (CN)	116.38	39.92
+London (GB)	-0.12	51.5
+Tehran (IR)	51.42	35.67
+Bogota (CO)	-74.07	4.58
+Hong Kong (HK)	114.15	22.27
+Dhaka (BD)	90.4	23.72
+Lahore (PK)	74.33	31.53
+Rio De Janeiro (BR)	-43.22	-22.88
+Baghdad (IQ)	44.38	33.33
+Bangkok (TH)	100.52	13.75
+Bangalore (IN)	77.57	12.97
+Santiago (CL)	-70.67	-33.45
+Calcutta (IN)	88.37	22.57
+Toronto (CA)	-79.42	43.67
+Dagon (MM)	96.17	16.77
+Sydney (AU)	151.22	-33.87
+Madras (IN)	80.27	13.07
+Abia (NG)	7.87	5.52
+Wuhan (CN)	114.27	30.57
+Ogun (NG)	3.6	7.22
+Saint Petersburg (RU)	30.25	59.88
+Chongqing (CN)	106.55	29.55
+Xian (CN)	108.93	34.25
+Chengdu (CN)	104.07	30.67
+Chittagong (BD)	91.8	22.35
+Los Angeles (US)	-118.23	34.05
+Alexandria (EG)	29.92	31.18
+Tianjin (CN)	117.17	39.13
+Melbourne (AU)	144.97	-37.82
+Ahmadabad (IN)	72.62	23.02
+Abidjan (CI)	-4.02	5.33
+Busan (KR)	129.03	35.1
+Kano (NG)	8.52	11.98
+Casablanca (MA)	-7.6	33.58
+Hyderabad (IN)	78.47	17.37
+Yokohama (JP)	139.65	35.45
+Ibadan (NG)	3.88	7.38
+Singapore (SG)	103.85	1.28
+Ankara (TR)	32.85	39.92
+Shenyang (CN)	123.42	41.78
+Riyadh (SA)	46.77	24.63
+Ho Chi Minh City (VN)	106.67	10.75
+Cape Town (ZA)	18.42	-33.92
+Berlin (DE)	13.4	52.52
+Montreal (CA)	-73.57	45.5
+Harbin (CN)	126.65	45.75
+Pyongyang (KP)	125.75	39.02
+Guangzhou (CN)	113.25	23.12
+Durban (ZA)	31.02	-29.85
+Madrid (ES)	-3.67	40.38
+Nanjing (CN)	118.77	32.05
+Kabul (AF)	69.17	34.52
+Pune (IN)	73.87	18.52
+Surat (IN)	72.9	20.97
+Chicago (US)	-87.65	41.85
+Kanpur (IN)	80.33	26.47
+Umm Durman (SD)	32.43	15.63
+Luanda (AO)	13.23	-8.83
+Addis Abeba (ET)	38.7	9.02
+Nairobi (KE)	36.82	-1.27
+Taiyuan (CN)	112.47	37.72
+Jaipur (IN)	75.82	26.92
+Salvador (BR)	-38.52	-12.97
+Dakar (SN)	-17.43	14.67
+Dar Es Salaam (TZ)	39.27	-6.78
+Rome (IT)	12.47	41.88
+Yunfu (CN)	112.02	22.92
+Changwat Nakhon Rat Sima (TH)	102.12	14.97
+Al Basrah (IQ)	47.82	30.48
+Osaka (JP)	135.5	34.67
+Mogadishu (SO)	45.37	2.07
+Taegu (KR)	128.58	35.87
+Jiddah (SA)	39.22	21.52
+Changchun (CN)	125.32	43.87
+Taipei (TW)	121.52	25.03
+Kiev (UA)	30.52	50.42
+Faisalabad (PK)	73.07	31.42
+Izmir (TR)	27.15	38.4
+Lakhnau (IN)	80.92	26.85
+Konia (TR)	32.47	37.85
+Gizeh (EG)	31.2	30
+Ceara (BR)	-38.5	-3.72
+Cali (CO)	-76.52	3.43
+Surabaya (ID)	112.75	-7.23
+Brusa (TR)	29.05	40.18
+Belo Horizonte (BR)	-43.92	-19.92
+Grand Dakar (SN)	-17.45	14.7
+Al Kuwait (KW)	47.97	29.37
+Mashhad (IR)	59.6	36.28
+Brooklyn (US)	-73.95	40.63
+Quezon (PH)	121.03	14.63
+Nagpur (IN)	79.08	21.13
+Harare (ZW)	31.03	-17.82
+Brasilia (BR)	-47.92	-15.77
+Santo Domingo (DO)	-69.9	18.47
+Nagoya (JP)	136.92	35.17
+Havana (CU)	-82.35	23.12
+Kosovo (RS)	21.08	42.63
+Aleppo (SY)	37.15	36.2
+Paris (FR)	2.32	48.87
+Changsha (CN)	113.1	28.17
+Jinan (CN)	116.98	36.67
+Al Mawsil Al Jadidah (IQ)	43.08	36.32
+Tangshan (CN)	114.7	37.32
+Dalian (CN)	121.6	38.9
+Houston (US)	-95.35	29.75
+Johannesburg (ZA)	28.07	-26.18
+Kowloon (HK)	114.17	22.32
+Al Basrah Al Qadimah (IQ)	47.82	30.48
+Zhengzhou (CN)	113.52	34.68
+Cheng (CN)	113.63	34.75
+Medellin (CO)	-75.53	6.28
+Algiers (DZ)	3.05	36.75
+Tashkent (UZ)	69.25	41.32
+Al Jazair (DZ)	3.05	36.75
+Khartoum (SD)	32.53	15.58
+Accra (GH)	-0.22	5.53
+Guayaquil (EC)	-79.9	-2.17
+Maracaibo (VE)	-71.63	10.62
+Rabat (MA)	-6.83	34.02
+Sapporo (JP)	141.35	43.05
+Jilin (CN)	126.55	43.85
+Hangzhou (CN)	120.17	30.25
+Bucuresti (RO)	26.1	44.42
+Nanchang (CN)	115.92	28.55
+Camayenne (GN)	-13.68	9.53
+Brisbane (AU)	153.02	-27.5
+Vancouver (CA)	-123.12	49.25
+Indore (IN)	75.82	22.72
+Caracas (VE)	-66.92	10.5
+Ecatepec (MX)	-99.05	19.6
+Sanaa (YE)	44.2	15.35
+Changwat Chiang Mai (TH)	98.97	18.78
+Medan (ID)	98.67	3.57
+Rawalpindi (PK)	73.07	33.6
+Minsk (BY)	27.57	53.88
+Mosul (IQ)	43.12	36.33
+Hamburg (DE)	10	53.53
+Curitiba (BR)	-49.25	-25.42
+Budapest (HU)	19.07	47.5
+Bandung (ID)	107.62	-6.9
+Soweto (ZA)	27.87	-26.27
+Edessa (TR)	38.78	37.15
+Warsaw (PL)	21	52.25
+Qingdao (CN)	120.37	36.08
+Guadalajara (MX)	-103.32	20.67
+Pretoria (ZA)	28.22	-25.7
+Alep (SY)	37.15	36.2
+Patna (IN)	85.12	25.6
+Bhopal (IN)	77.4	23.27
+New Patna (IN)	85.12	25.6
+Manaus (BR)	-60.02	-3.1
+Xinyang (CN)	114.12	32.08
+Kaduna (NG)	7.43	10.52
+Damascus (SY)	36.28	33.5
+Phnom Penh (KH)	104.92	11.55
+Barcelona (ES)	2.17	41.37
+Al-sham (SY)	36.28	33.5
+Wien (AT)	16.37	48.2
+Esfahan (IR)	51.67	32.65
+Ludhiana (IN)	75.83	30.88
+Changwat Nakhon Si Thammarat (TH)	99.97	8.42
+Kobe (JP)	135.17	34.67
+Bekasi (ID)	106.98	-6.23
+Kaohsiung (TW)	120.33	22.62
+Kaohsiung (TW)	120.3	22.62
+Ciudad Juarez (MX)	-106.47	31.72
+Urumqi (CN)	87.57	43.78
+Changwat Chiang Rai (TH)	99.75	19.87
+Changwat Surin (TH)	103.42	14.82
+Thana (IN)	72.97	19.18
+Recife (BR)	-34.88	-8.05
+Taejon (KR)	127.32	36.35
+Daejeon (KR)	127.42	36.32
+Kumasi (GH)	-1.62	6.67
+Kyoto (JP)	135.75	35
+Kuala Lumpur (MY)	101.7	3.17
+Philadelphia (US)	-75.15	39.95
+Karaj (IR)	51	35.82
+Perth (AU)	115.82	-31.92
+Cordoba (AR)	-64.17	-31.38
+Multan (PK)	71.47	30.18
+Ha Noi (VN)	105.83	21.02
+Kharkiv (UA)	36.25	50
+Agra (IN)	78.02	27.17
+Phoenix (US)	-112.07	33.43
+Tabriz (IR)	46.28	38.07
+Novosibirsk (RU)	82.93	55.03
+Lanzhou (CN)	103.78	36.05
+Kwangju (KR)	126.9	35.15
+Bursa (TR)	29.05	40.18
+Changwat Roi Et (TH)	103.67	16.05
+Vadodara (IN)	73.2	22.3
+Belem (BR)	-48.47	-1.43
+Juarez (MX)	-106.47	31.72
+Fushun (CN)	123.87	41.7
+Quito (EC)	-78.5	-0.22
+Fukuoka (JP)	130.4	33.57
+Puebla (MX)	-98.2	19.05
+Antananarivo (MG)	47.52	-18.92
+Luoyang (CN)	112.45	34.68
+Hefei (CN)	117.27	31.85
+Hyderabad (PK)	68.37	25.37
+Valencia (VE)	-68	10.17
+Gujranwala (PK)	74.17	32.13
+Barranquilla (CO)	-74.78	10.95
+Tijuana (MX)	-117.02	32.52
+Lubumbashi (CD)	27.47	-11.67
+Porto Alegre (BR)	-51.2	-30.02
+Tangerang (ID)	106.62	-6.17
+Santa Cruz De La Sierra (BO)	-63.17	-17.8
+Handan (CN)	114.52	36.57
+Kampala (UG)	32.55	0.3
+Kocaeli (TR)	29.92	40.77
+Suzhou (CN)	120.62	31.3
+Khulna (BD)	89.53	22.8
+Douala (CM)	9.68	4.05
+Shantou (CN)	116.67	23.37
+Gorakhpur (IN)	75.67	29.43
+Makasar (ID)	119.43	-5.13
+Kawasaki (JP)	139.72	35.52
+Kawasaki (JP)	139.52	35.87
+Montevideo (UY)	-56.17	-34.85
+Baotou Shi (CN)	109.82	40.65
+Medina (SA)	39.6	24.47
+Yaounde (CM)	11.52	3.87
+Bamako (ML)	-8	12.65
+Changwat Songkhla (TH)	100.52	7.12
+Nasik (IN)	73.78	19.97
+Changwat Chon Buri (TH)	100.97	13.37
+Semarang (ID)	110.42	-6.97
+Yekaterinburg (RU)	60.6	56.85
+San Diego (US)	-117.15	32.7
+Pimpri (IN)	73.78	18.62
+Nizhniy Novgorod (RU)	44	56.32
+Faridabad (IN)	77.32	28.42
+Davao City (PH)	125.6	7.07
+Amman (JO)	35.92	31.93
+Ciudad De Montevideo (UY)	-56.17	-34.85
+Lusaka (ZM)	28.27	-15.42
+Katmandu (NP)	85.32	27.72
+Kalyan (IN)	73.15	19.25
+Thane (IN)	72.97	19.18
+San Antonio (US)	-98.48	29.42
+Stockholm (SE)	18.05	59.32
+Beirut (LB)	35.5	33.87
+Shiraz (IR)	52.53	29.6
+Adana (TR)	35.32	37
+Munich (DE)	11.57	48.13
+Suwon (KR)	127.02	37.28
+Suigen (KR)	127	37.55
+Palembang (ID)	104.75	-2.92
+Port-au-prince (HT)	-72.33	18.53
+Nezahualcoyotl (MX)	-99.02	19.4
+Meerut (IN)	77.7	28.97
+Peshawar (PK)	71.57	34
+Rosario (AR)	-60.65	-32.95
+Central (PH)	125.6	7.07
+Central (PH)	125.42	6.82
+Jaizan (SA)	42.55	16.88
+Davao (PH)	125.6	7.07
+Dallas (US)	-96.78	32.77
+Mandalay (MM)	96.07	22
+Almaty (KZ)	76.95	43.25
+Spetsgorodok (KZ)	76.88	43.33
+Bronx (US)	-73.87	40.85
+Changwat Sakon Nakhon (TH)	104.03	17.07
+Omdurman (SD)	32.43	15.63
+Mecca (SA)	39.82	21.42
+Ghaziabad (IN)	77.42	28.67
+Anshan (CN)	122.98	41.12
+Xuzhou (CN)	117.18	34.27
+Depok (ID)	106.82	-6.4
+Maputo (MZ)	32.58	-25.95
+Freetown (SL)	-13.23	8.48
+Changwat Chaiyaphum (TH)	102.02	15.8
+Fuzhou (CN)	119.3	26.05
+Changwat Nakhon Sawan (TH)	100.12	15.67
+Rajkot (IN)	70.77	22.3
+Pest (HU)	19.07	47.5
+Guiyang (CN)	106.72	26.57
+Goiania (BR)	-49.27	-16.67
+Guarulhos (BR)	-46.52	-23.47
+Praha (CZ)	14.47	50.07
+Varanasi (IN)	83	25.32
+Fez (MA)	-4.97	34.05
+Milan (IT)	9.18	45.47
+Changwat Phetchabun (TH)	101.15	16.35
+Tripoli (LY)	13.17	32.88
+Port Harcourt (NG)	6.98	4.78
+Baile Atha Cliath (IE)	-6.23	53.32
+Hiroshima (JP)	132.43	34.38
+Dubayy (AE)	55.27	25.25
+Managua (NI)	-86.27	12.15
+Dubai (AE)	55.27	25.25
+Samara (RU)	50.13	53.2
+Omsk (RU)	73.4	55
+Benin (NG)	5.62	6.32
+Monterrey (MX)	-100.32	25.67
+Baku (AZ)	49.87	40.38
+Brazzaville (CG)	15.28	-4.25
+Belgrade (RS)	20.47	44.82
+Leon (MX)	-101.67	21.12
+Maiduguri (NG)	13.15	11.83
+Wuxi (CN)	120.28	31.57
+Kazan (RU)	49.12	55.75
+Al Jadida (MA)	-8.5	33.25
+Yerevan (AM)	44.5	40.17
+Amritsar (IN)	74.85	31.62
+Kaisaria (TR)	35.48	38.72
+Copenhagen (DK)	12.57	55.67
+Ouagadouga (BF)	-1.52	12.37
+Changwat Kalasin (TH)	103.5	16.37
+Taichung (TW)	120.67	24.13
+Yono (JP)	139.62	35.87
+Rostov-na-donu (RU)	39.7	47.23
+Adelaide (AU)	138.58	-34.92
+Allahabad (IN)	81.83	25.43
+Gaziantep (TR)	37.37	37.05
+Visakhapatnam (IN)	83.28	17.68
+Chelyabinsk (RU)	61.42	55.15
+Sofia (BG)	23.32	42.67
+Unguja Ukuu (TZ)	39.37	-6.32
+Datong (CN)	113.58	40.03
+Dagu (CN)	113.28	40.08
+Tbilisi (GE)	44.78	41.72
+Changwat Nonthaburi (TH)	100.47	13.82
+Changwat Samut Prakan (TH)	100.58	13.58
+Sendai (JP)	140.88	38.25
+Xianyang (CN)	108.7	34.33
+Ufa (RU)	56.03	54.77
+Songnam (KR)	127.13	37.43
+Campinas (BR)	-47.07	-22.88
+Ouagadougou (BF)	-1.52	12.37
+Jabalpur (IN)	79.95	23.17
+Haora (IN)	88.3	22.58
+Huainan (CN)	116.98	32.62
+Dublin (IE)	-6.23	53.32
+Kunming (CN)	102.72	25.03
+Brussels (BE)	4.32	50.82
+Aurangabad (IN)	75.32	19.87
+Qom (IR)	50.87	34.63
+Volgograd (RU)	44.58	48.8
+Aidin (TR)	27.83	37.83
+Shenzhen (CN)	114.12	22.52
+Nova Iguacu (BR)	-43.43	-22.75
+Rongcheng (CN)	116.35	23.52
+Odesa (UA)	30.72	46.47
+Kitakyushu (JP)	130.82	33.82
+Sholapur (IN)	75.92	17.67
+Baoding (CN)	115.48	38.85
+Changwat Surat Thani (TH)	99.32	9.12
+Napoli (IT)	14.25	40.82
+Benxi (CN)	123.75	41.28
+Zapopan (MX)	-103.4	20.72
+Birmingham (GB)	-1.92	52.47
+Perm (RU)	56.25	58
+Naples (IT)	14.25	40.82
+Erzerum (TR)	41.27	39.9
+Srinagar (IN)	74.8	34.08
+Zaria (NG)	7.7	11.07
+Guatemala (GT)	-90.52	14.62
+Mendoza (AR)	-68.82	-32.87
+Changwat Phitsanulok (TH)	100.25	16.82
+Cologne (DE)	6.95	50.92
+Calgary (CA)	-114.07	51.07
+Port Elizabeth (ZA)	25.57	-33.97
+Warab (SD)	28.62	8.12
+Fes (MA)	-4.97	34.05
+Koeln (DE)	6.95	50.92
+Coimbatore (IN)	76.95	10.98
+Maceio (BR)	-35.72	-9.67
+Cartagena (CO)	-75.5	10.38
+Settat (MA)	-7.62	33
+Changzhou (CN)	119.97	31.77
+Sultanah (SA)	39.57	24.5
+Ranchi (IN)	85.32	23.35
+Marrakesh (MA)	-8	31.62
+Changwat Nong Khai (TH)	102.73	17.87
+Sao Goncalo (BR)	-43.02	-22.8
+Maha Sarakam (TH)	103.28	16.17
+Changwat Maha Sarakham (TH)	103.22	16.17
+Monrovia (LR)	-10.8	6.3
+Irbil (IQ)	44	36.18
+Malatia (TR)	38.3	38.35
+Jodhpur (IN)	73.02	26.28
+Chiba (JP)	140.12	35.6
+Sao Luis (BR)	-44.27	-2.52
+Chandigarh (IN)	76.78	30.73
+Gampheang Phet (TH)	99.5	16.47
+Madurai (IN)	78.12	9.92
+Ad Diwaniyah (IQ)	44.92	31.98
+Krasnoyarsk (RU)	92.78	56
+Huaibei (CN)	116.78	33.97
+Cochabamba (BO)	-66.15	-17.37
+Ghom (IR)	50.87	34.63
+Abu Ghurayb (IQ)	43.98	33.28
+Abobo (CI)	-4.02	5.42
+Guwahati (IN)	91.72	26.17
+Aba (NG)	7.37	5.12
+San Jose (US)	-121.88	37.33
+Bulawayo (ZW)	28.57	-20.13
+Bishkek (KG)	74.6	42.87
+Pingdingshan (CN)	113.3	33.73
+Detroit (US)	-83.03	42.32
+Changwat Rat Buri (TH)	99.78	13.52
+Gwalior (IN)	78.17	26.22
+Qiqihar (CN)	123.97	47.33
+Klang (MY)	101.45	3.02
+Safi (MA)	-9.23	32.28
+Konya (TR)	32.47	37.85
+Mbuji-mayi (CD)	23.6	-6.15
+Vijayawada (IN)	80.62	16.52
+Ottawa (CA)	-75.7	45.42
+Maisuru (IN)	76.63	12.3
+Changwat Suphan Buri (TH)	100.12	14.47
+Wenzhou (CN)	120.65	28.02
+Torino (IT)	7.67	45.03
+Saratov (RU)	46.02	51.57
+Ahvaz (IR)	48.68	31.32
+Tegucigalpa (HN)	-87.22	14.08
+Turin (IT)	7.67	45.03
+Naucalpan (MX)	-99.23	19.47
+Da Huryee (MN)	106.92	47.92
+Arequipa (PE)	-71.53	-16.38
+Voronezh (RU)	39.17	51.65
+Padang (ID)	100.33	-0.95
+Hubli (IN)	75.17	15.33
+Marrakech (MA)	-8	31.62
+Callao (PE)	-77.15	-12.07
+Lvov (UA)	24	49.82
+Tucuman (AR)	-65.22	-26.82
+Tangier (MA)	-5.8	35.78
+Changwat Lampang (TH)	99.5	18.28
+Edmonton (CA)	-113.5	53.53
+Duque De Caxias (BR)	-43.3	-22.78
+Jos (NG)	8.9	9.92
+Sale (MA)	-6.8	34.03
+Ilorin (NG)	4.53	8.5
+La Paz (BO)	-68.15	-16.5
+Barquisimeto (VE)	-69.32	10.07
+Oslo (NO)	10.75	59.92
+Nanning (CN)	108.32	22.82
+Johor Bahru (MY)	103.75	1.47
+Bandar Lampung (ID)	105.27	-5.45
+Cebu City (PH)	123.88	10.3
+Mombasa (KE)	39.67	-4.03
+Asgabat (TM)	58.37	37.95
+Jacksonville (US)	-81.65	30.32
+Aleksandrovsk (UA)	35.17	47.82
+Lobh Buri (TH)	100.62	14.8
+Marseille (FR)	5.4	43.28
+Nagara Pathom (TH)	100.03	13.82
+Kathmandu (NP)	85.32	27.72
+Rupandehi (NP)	83.27	27.47
+Jalandhar (IN)	75.57	31.32
+Thiruvananthapuram (IN)	76.95	8.5
+Sakai (JP)	135.47	34.57
+Anyang (CN)	114.32	36.08
+San Miguel De Tucuman (AR)	-65.22	-26.82
+Changwat Phra Nakhon Si Ayutthaya (TH)	100.53	14.33
+Selam (IN)	78.17	11.65
+Taroudannt (MA)	-8.87	30.47
+Tiruchchirappalli (IN)	78.68	10.8
+Hims (SY)	36.72	34.72
+Hohhot (CN)	111.65	40.8
+Niamey (NE)	2.12	13.52
+Niamey (NE)	1.77	13.67
+Indianapolis (US)	-86.15	39.77
+Valencia (ES)	-0.37	39.47
+Changwat Nakhon Phanom (TH)	104.72	17.37
+Bogor (ID)	106.78	-6.58
+Lodz (PL)	19.47	51.75
+Ad Dammam (SA)	50.1	26.42
+Padumdhani (TH)	100.52	14.02
+Xining (CN)	101.77	36.62
+Kermanshah (IR)	47.05	34.3
+Kahriz (IR)	47.12	34.3
+Liuzhou (CN)	109.38	24.3
+Kota (IN)	75.82	25.17
+Natal (BR)	-35.22	-5.77
+Bhubaneswar (IN)	85.82	20.22
+Qinhuangdao (CN)	119.58	39.92
+Hengyang (CN)	112.6	26.88
+Antalya (TR)	30.68	36.9
+Cebu (PH)	123.88	10.3
+Adalia (TR)	30.68	36.9
+Krakow (PL)	19.92	50.07
+Aligarh (IN)	78.07	27.87
+Da Nang (VN)	108.22	16.07
+Naradhivas (TH)	101.82	6.42
+Pietermaritzburg (ZA)	30.37	-29.62
+Taian (CN)	117.12	36.18
+Trujillo (PE)	-79.02	-8.12
+Lome (TG)	1.22	6.12
+Lome (TG)	1	6.48
+Malang (ID)	112.62	-7.97
+Ciudad Guayana (VE)	-62.65	8.35
+Amsterdam (NL)	4.92	52.35
+Kigali (RW)	30.05	-1.95
+Bareli (IN)	79.42	28.35
+Kigali (RW)	29.93	-2.28
+Kigale (RW)	30.05	-1.95
+Teresina (BR)	-42.82	-5.07
+Poti (BR)	-42.82	-5.02
+Xinxiang (CN)	113.87	35.3
+Sao Bernardo Do Campo (BR)	-46.53	-23.68
+Hegang (CN)	130.37	47.38
+Riga (LV)	24.1	56.95
+Taza (MA)	-4.02	34.22
+Astrida (RW)	29.73	-2.58
+Columbus (US)	-82.98	39.95
+Oyo (NG)	3.92	7.83
+Tainan (TW)	120.2	22.98
+Quetta (PK)	67	30.18
+San Francisco (US)	-122.42	37.77
+Jhapa (NP)	87.83	26.47
+Campo Grande (BR)	-54.62	-20.43
+Athens (GR)	23.72	37.97
+Ashgabat (TM)	58.37	37.95
+Sar-e Pol (AF)	66.7	35.53
+Guadalupe (MX)	-100.25	25.67
+As Sulaymaniyah (IQ)	45.43	35.55
+Dhanukha (NP)	86.07	26.82
+Cucuta (CO)	-72.5	7.87
+Moradabad (IN)	78.77	28.82
+Langfang (CN)	116.68	39.5
+Ningbo (CN)	121.53	29.87
+Yantai (CN)	121.4	37.52
+Tolyatti (RU)	49.4	53.52
+Merida (MX)	-89.62	20.97
+Tlalnepantla (MX)	-99.22	19.52
+Jerusalem (IL)	35.22	31.77
+Chisinau (MD)	28.85	47
+Kailali (NP)	80.77	28.57
+Chonju (KR)	127.13	35.82
+Nouakchott (MR)	-15.97	18.08
+Zhuzhou (CN)	113.12	27.68
+Chihuahua (MX)	-106.07	28.62
+Bhiwandi (IN)	73.07	19.3
+Jaboatao (BR)	-35.02	-8.12
+Rajshahi (BD)	88.58	24.37
+Zagreb (HR)	16	45.78
+Agadair (MA)	-9.58	30.38
+Bosna-sarai (BA)	18.37	43.85
+Eva Peron (AR)	-57.93	-34.92
+Tunes (TN)	10.17	36.8
+Zhangjiakou (CN)	114.87	40.8
+Cluj (RO)	23.6	46.77
+Cotonou (BJ)	2.42	6.33
+Zigong (CN)	104.77	29.38
+Fuxin (CN)	121.65	42
+Enuga (NG)	7.47	6.42
+Tanger (MA)	-5.8	35.78
+Liaoyang (CN)	123.05	41.22
+Sevilla (ES)	-5.98	37.37
+Nerima (JP)	139.65	35.72
+La Plata (AR)	-57.93	-34.92
+Bangui (CF)	18.57	4.37
+Kumamoto (JP)	130.72	32.78
+Raipur (IN)	81.62	21.22
+Austin (US)	-97.73	30.27
+Adiyaman (TR)	38.27	37.75
+Osasco (BR)	-46.77	-23.57
+San Luis Potosi (MX)	-100.97	22.13
+Leui (TH)	101.72	17.47
+Changwat Loei (TH)	101.72	17.42
+Gorakhpur (IN)	83.37	26.75
+Ipoh (MY)	101.07	4.57
+Zibo (CN)	118.05	36.78
+Palermo (IT)	13.37	38.12
+Changwat Chachoengsao (TH)	101.07	13.68
+Mississauga (CA)	-79.5	43.13
+Taounate (MA)	-4.65	34.53
+Puyang (CN)	115	35.7
+Nantong (CN)	120.87	32.02
+Changwat Sukhothai (TH)	99.82	17
+Changwat Sawankhalok (TH)	99.83	17.3
+Mudanjiang (CN)	129.58	44.57
+Santo Andre (BR)	-46.52	-23.67
+Pointe-noire (CG)	11.83	-4.78
+Aguascalientes (MX)	-102.28	21.87
+Agadir (MA)	-9.58	30.38
+Hamilton (CA)	-79.82	43.25
+Enugu (NG)	7.47	6.42
+Kryvyy Rih (UA)	33.35	47.92
+Acapulco (MX)	-99.92	16.85
+Joao Pessoa (BR)	-34.87	-7.12
+Ansan (KR)	126.82	37.32
+Benghazi (LY)	20.07	32.12
+Memphis (US)	-90.13	34.92
+Frankfurt Am Main (DE)	8.67	50.12
+Krasnodar (RU)	38.97	45.02
+Shaoyang (CN)	111.25	27
+Guilin (CN)	110.27	25.27
+Sagamihara (JP)	139.35	35.55
+Zamboanga City (PH)	122.07	6.9
+Colombo (LK)	79.83	6.92
+Frankfurt (DE)	8.67	50.12
+Lilongwe (MW)	33.77	-13.97
+Wahran (DZ)	-0.63	35.68
+Mar Del Plata (AR)	-57.53	-38
+Quebec (CA)	-71.25	46.78
+Diyarbakir (TR)	40.2	37.92
+New South Memphis (US)	-90.05	35.08
+Memphis (US)	-90.03	35.13
+Ulyanovsk (RU)	48.38	54.32
+Okayama (JP)	133.92	34.63
+Zhanjiang (CN)	110.37	21.18
+Yogyakarta (ID)	110.37	-7.78
+Zaragoza (ES)	-0.87	41.62
+Wroclaw (PL)	17.02	51.1
+Anyang (KR)	126.92	37.38
+Zhenjiang (CN)	119.43	32.2
+Winnipeg (CA)	-97.17	49.87
+Dandong (CN)	124.38	40.12
+Izhevsk (RU)	53.22	56.85
+Shaoguan (CN)	113.57	24.8
+Yancheng (CN)	120.12	33.38
+Foshan (CN)	113.12	23.02
+Contagem (BR)	-44.1	-19.92
+Bhilai (IN)	81.42	21.22
+Panshan (CN)	122.03	41.18
+Jibuti (DJ)	43.13	11.58
+Saltillo (MX)	-101	25.42
+Ash Shariqah (AE)	55.38	25.35
+Fort Worth (US)	-97.32	32.72
+El-hodeidah (YE)	42.95	14.78
+Jamshedpur (IN)	86.17	22.8
+Tandjile (TD)	16.1	9.32
+Haikou (CN)	110.33	20.03
+Changwat Phichit (TH)	100.37	16.42
+Sao Jose Dos Campos (BR)	-45.87	-23.17
+Changwat Trang (TH)	99.58	7.53
+Mersin (TR)	34.63	36.72
+Taizhou (CN)	119.9	32.48
+Queretaro (MX)	-100.37	20.6
+Xingtai (CN)	114.48	37.05
+Baltimore (US)	-76.6	39.28
+Glasgow (GB)	-4.25	55.82
+Yaroslavl (RU)	39.87	57.62
+Elazig (TR)	39.22	38.67
+Benoni (ZA)	28.32	-26.17
+Hamamatsu (JP)	137.72	34.7
+Kochi (IN)	76.22	9.97
+Amravati (IN)	77.75	20.92
+Rotterdam (NL)	4.5	51.92
+Amaravati (IN)	77.75	20.92
+Abu Dhabi (AE)	54.37	24.47
+Hai Phong (VN)	106.67	20.85
+Orumiyeh (IR)	45.1	37.55
+Genova (IT)	8.93	44.42
+Islamabad (PK)	73.17	33.7
+Kirkuk (IQ)	44.38	35.47
+Barnaul (RU)	83.75	53.35
+Charlotte (US)	-80.83	35.22
+El Paso (US)	-106.48	31.75
+Luancheng (CN)	114.65	37.87
+Mexicali (MX)	-115.47	32.65
+Hermosillo (MX)	-110.97	29.07
+Rasht (IR)	49.58	37.27
+Dortmund (DE)	7.45	51.52
+Kayseri (TR)	35.48	38.72
+Abeokuta (NG)	3.35	7.15
+Caesarea (TR)	35.48	38.72
+Morelia (MX)	-101.12	19.68
+Stuttgart (DE)	9.17	48.77
+Yingkou (CN)	122.5	40.63
+Eiko (CN)	122.22	40.67
+Chimalhuacan (MX)	-98.9	19.42
+Zhangzhou (CN)	117.65	24.5
+Vladivostok (RU)	131.9	43.12
+Irkutsk (RU)	104.32	52.27
+Belfast (GB)	-5.92	54.57
+Genoa (IT)	8.93	44.42
+Blantyre (MW)	35	-15.77
+Kingston (JM)	-76.78	18
+Chiclayo (PE)	-79.83	-6.77
+Culiacan (MX)	-107.38	24.78
+Cuttack (IN)	85.82	20.5
+Hachioji (JP)	139.32	35.65
+Milwaukee (US)	-87.9	43.03
+Xiamen (CN)	118.08	24.47
+Khabarovsk (RU)	135.08	48.5
+Ussuriyskiy (RU)	135.05	48.43
+Khabarovsk Vtoroy (RU)	135.13	48.43
+Libreville (GA)	9.43	0.37
+Kerman (IR)	57.08	30.28
+Dusseldorf (DE)	6.77	51.22
+Kaifeng (CN)	114.42	34.73
+Essen (DE)	7.02	51.45
+Bengbu (CN)	117.35	32.93
+Bikaner (IN)	73.28	28.02
+Banjarmasin (ID)	114.57	-3.32
+Shihezi (CN)	86.02	44.28
+Bouake (CI)	-5.02	7.67
+Bucaramanga (CO)	-73.12	7.12
+South Boston (US)	-71.03	42.32
+Kuching (MY)	110.32	1.55
+Poznan (PL)	16.97	52.42
+Seattle (US)	-122.32	47.6
+Veracruz (MX)	-96.12	19.18
+Lisboa (PT)	-9.12	38.72
+Asmara (ER)	38.92	15.32
+Sokoto (NG)	5.22	13.05
+Uberlandia (BR)	-48.28	-18.92
+Onitsha (NG)	6.77	6.17
+Onicha (NG)	6.4	5.82
+Funabashi (JP)	139.97	35.68
+Hamhung (KP)	127.53	39.9
+Sorocaba (BR)	-47.45	-23.47
+Helsinki (FI)	24.93	60.17
+Malaga (ES)	-4.42	36.72
+Warangal (IN)	79.57	18
+Denver (US)	-104.98	39.73
+Santiago (DO)	-70.7	19.43
+Santiago De Cuba (CU)	-75.82	20.02
+Surakarta (ID)	110.82	-7.57
+Kagoshima (JP)	130.55	31.6
+Huaiyin (CN)	119.02	33.58
+Bhavnagar (IN)	72.15	21.77
+Mar De Plata (AR)	-57.53	-38
+Bahawalpur (PK)	71.67	29.38
+Washington (US)	-77.03	38.88
+Zahedan (IR)	60.87	29.48
+Changwat Prachuap Khiri Khan (TH)	99.72	11.75
+Ribeirao Preto (BR)	-47.78	-21.17
+Hamitabat (TR)	30.55	37.75
+Aden (YE)	45.03	12.77
+Chkalov (RU)	55.37	51.75
+Orenburgskiy (RU)	54.92	51.88
+Orenburg (RU)	55.08	51.78
+Jiamusi (CN)	130.33	46.82
+Antipolo (PH)	121.37	14.12
+Antipolo (PH)	121.17	14.58
+Salta (AR)	-65.42	-24.77
+Chandaburi (TH)	102.15	12.58
+Neijiang (CN)	105.05	29.58
+Bremen (DE)	8.8	53.07
+Meknes (MA)	-5.53	33.88
+Sharjah (AE)	55.38	25.35
+Matola (MZ)	32.45	-25.95
+Changwat Yasothon (TH)	104.13	15.78
+Al Sharjah (AE)	55.38	25.35
+Djuschambe (TJ)	68.77	38.55
+Sargodha (PK)	72.67	32.08
+Vilnius (LT)	25.32	54.67
+Cancun (MX)	-86.82	21.17
+Portland (US)	-122.67	45.52
+Maanshan (CN)	118.47	31.72
+Las Vegas (US)	-115.13	36.17
+Changwat Tak (TH)	99.12	16.87
+Yangzhou (CN)	119.43	32.38
+Novokuznetsk (RU)	87.08	53.75
+Kisangani (CD)	25.18	0.52
+Warri (NG)	5.75	5.52
+Yongkang (CN)	120.02	28.87
+Tanggu (CN)	117.63	39.02
+Oklahoma City (US)	-97.5	35.47
+Jiangmen (CN)	113.07	22.57
+Changwat Nan (TH)	100.7	18.68
+Nashville (US)	-86.78	36.15
+Beira (MZ)	34.83	-19.83
+Guntur (IN)	80.45	16.3
+Yueyang (CN)	113.1	29.13
+Cangzhou (CN)	116.87	38.32
+Vaucluse (FR)	5.12	43.92
+San Salvador (SV)	-89.2	13.7
+Changwat Yala (TH)	101.25	6.5
+Torreon (MX)	-103.42	25.55
+Dehra Dun (IN)	78.02	30.32
+Cuiaba (BR)	-56.07	-15.57
+Khemisset (MA)	-6.07	33.82
+Lopez Mateos (MX)	-99.25	19.55
+Petaling Jaya (MY)	101.65	3.07
+Ryazan (RU)	39.73	54.62
+Hanover (DE)	9.72	52.37
+Tyumen (RU)	65.52	57.15
+Durgapur (IN)	87.32	23.47
+Tucson (US)	-110.92	32.22
+Quilmes (AR)	-58.27	-34.72
+Ajmer (IN)	74.62	26.43
+Felicitas Julia (PT)	-9.12	38.72
+Changde (CN)	111.67	29.02
+Jiaozuo (CN)	113.22	35.23
+Ulhasnagar (IN)	73.15	19.22
+Kolhapur (IN)	74.22	16.68
+Lipetsk (RU)	39.57	52.62
+Shiliguri (IN)	88.42	26.7
+Goteborg (SE)	11.97	57.72
+Eskisehir (TR)	30.52	39.77
+Hamadan (IR)	48.5	34.78
+Azadshahr (IR)	48.53	34.78
+Penza (RU)	45	53.18
+Changwat Phatthalung (TH)	99.97	7.57
+Changwat Chumphon (TH)	99.17	10.5
+Tembisa (ZA)	28.22	-25.98
+Changwat Uttaradit (TH)	100.1	17.62
+Nikolaev (UA)	32	46.97
+Khenifra (MA)	-5.67	32.93
+Naberezhnyye Morkvashi (RU)	48.83	55.75
+Naberezhnyye Chelny (RU)	52.42	55.75
+Asuncion (PY)	-57.67	-25.27
+San Nicolas De Los Garza (MX)	-100.28	25.75
+Wuhu (CN)	118.53	31.17
+Dang (NP)	82.28	28.12
+Toluca (MX)	-99.67	19.28
+Niigata (JP)	139.05	37.92
+Duisburg (DE)	6.75	51.42
+Asansol (IN)	86.97	23.67
+Azilal (MA)	-6.57	31.97
+Asanol (IN)	86.97	23.67
+Arak (IR)	49.68	34.08
+Astrakhan (RU)	48.03	46.33
+Cagayan De Oro City (PH)	124.63	8.47
+Zhuhai (CN)	113.57	22.27
+Gold Coast (AU)	153.42	-28
+Wahren (DE)	12.32	51.37
+Bejraburi (TH)	99.95	13.08
+Oshogbo (NG)	4.57	7.77
+Las Pinas (PH)	120.97	14.45
+Shashi (CN)	112.23	30.3
+Reynosa (MX)	-98.27	26.07
+Makhachkala (RU)	47.5	42.97
+Newcastle (AU)	151.75	-32.92
+Nuremberg (DE)	11.07	49.43
+Khouribga (MA)	-6.9	32.87
+Ouarzazate (MA)	-6.92	30.92
+Chimahi (ID)	107.53	-6.87
+Tlaquepaque (MX)	-103.32	20.63
+Taguig (PH)	121.07	14.52
+Leipzig (DE)	12.32	51.28
+Jamnagar (IN)	70.07	22.47
+Panchiao (TW)	121.52	25.03
+Cibitoke (BI)	29.37	-3.33
+Aracaju (BR)	-37.07	-10.92
+San Pedro Sula (HN)	-88.02	15.5
+As Suways (EG)	32.53	29.97
+Albuquerque (US)	-106.65	35.08
+Tomsk (RU)	84.97	56.5
+Matsuyama (JP)	132.75	33.83
+Nanded (IN)	77.32	19.13
+Saharanpur (IN)	77.53	29.97
+Gulbarga (IN)	76.82	17.32
+Bhatpara (IN)	88.4	22.87
+Long Beach (US)	-118.18	33.77
+An Najaf (IQ)	44.3	31.98
+Feira De Santana (BR)	-38.95	-12.25
+Shah Alam (MY)	101.52	3.07
+Himeji (JP)	134.68	34.82
+Tuxtla Gutierrez (MX)	-93.12	16.75
+Gomel (BY)	30.97	52.43
+Dresden (DE)	13.75	51.03
+Okene (NG)	6.22	7.53
+Uijongbu (KR)	127.03	37.73
+Hargeysa (SO)	44.07	9.57
+Yazd (IR)	54.37	31.88
+Hargeisa (SO)	44.07	9.57
+Sialkot (PK)	74.52	32.5
+Kemerovo (RU)	86.07	55.32
+Yichang (CN)	111.28	30.7
+The Hague (NL)	4.28	52.07
+Tipaza (DZ)	2.43	36.58
+Cuautitlan Izcalli (MX)	-99.23	19.63
+Yinchuan (CN)	106.27	38.47
+Skopje (MK)	21.42	42
+Vereeniging (ZA)	27.92	-26.67
+Maoming (CN)	110.9	21.63
+Londrina (BR)	-51.13	-23.3
+Larache (MA)	-6.15	35.18
+Jiaojiang (CN)	121.43	28.67
+Matsudo (JP)	139.9	35.77
+Juiz De Fora (BR)	-43.35	-21.75
+San Juan (AR)	-68.53	-31.53
+Liverpool (GB)	-3	53.42
+Nishinomiya (JP)	135.32	34.72
+Tula (RU)	37.6	54.2
+Kawaguchi (JP)	139.72	35.8
+Sacramento (US)	-121.48	38.57
+Shizuoka (JP)	138.37	34.97
+Zunyi (CN)	106.82	27.53
+Jiaxing (CN)	120.73	30.75
+Belford Roxo (BR)	-43.38	-22.75
+Jammu (IN)	74.87	32.72
+Dongliao (CN)	125.13	42.9
+Fresno (US)	-119.77	36.73
+Lyon (FR)	4.83	45.75
+Kananga (CD)	22.42	-5.88
+Bloemfontein (ZA)	26.18	-29.12
+Xiangfan (CN)	112.13	32.03
+Gdansk (PL)	18.67	54.35
+Calabar (NG)	8.32	4.95
+Panzhihua (CN)	101.72	26.55
+Joinville (BR)	-48.82	-26.3
+Zamboanga (PH)	122.07	6.9
+Hamah (SY)	36.75	35.12
+Mixco (GT)	-90.6	14.62
+Antwerp (BE)	4.42	51.22
+General Santos City (PH)	125.17	6.1
+Boayan (PH)	125.23	6.1
+New Orleans (US)	-90.07	29.95
+Kanazawa (JP)	136.65	36.57
+Ichikawa (JP)	139.92	35.72
+Burleigh School (PH)	122.07	6.9
+Ujjain (IN)	75.77	23.17
+Kirov (RU)	49.65	58.58
+Kota Kinabalu (MY)	116.07	5.97
+Durango (MX)	-104.67	24.02
+Niteroi (BR)	-43.08	-22.88
+Hengshui (CN)	115.7	37.72
+Chitungwiza (ZW)	31.03	-17.98
+Santa Fe (AR)	-60.7	-31.62
+Gabouk (SA)	36.57	28.37
+Pontianak (ID)	109.32	-0.02
+Leeds (GB)	-1.57	53.78
+Bacolod City (PH)	122.95	10.65
+Sao Joao De Meriti (BR)	-43.35	-22.8
+Mansilingan (PH)	122.97	10.62
+Bacolod (PH)	122.95	10.65
+Essaouira (MA)	-9.77	31.5
+Manado (ID)	124.83	1.48
+Jining (CN)	116.57	35.4
+Constantine (DZ)	6.6	36.35
+Mesa (US)	-111.82	33.42
+Utsunomiya (JP)	139.87	36.53
+Urfa (TR)	38.78	37.15
+Cleveland (US)	-81.68	41.48
+Virginia Beach (US)	-75.97	36.85
+Chengde (CN)	118.17	40.77
+Xuchang (CN)	113.82	34.02
+Oita (JP)	131.6	33.23
+Sheffield (GB)	-1.5	53.37
+Cheboksary (RU)	47.25	56.12
+Cagayan De Oro (PH)	124.63	8.47
+Boksburg (ZA)	28.25	-26.22
+Kalat (AF)	66.9	32.1
+Rajpur (IN)	88.42	22.4
+Changwat Krabi (TH)	98.92	8.07
+Amagasaki (JP)	135.42	34.72
+Malatya (TR)	38.3	38.35
+North Kansas City (US)	-94.55	39.12
+Kansas City (US)	-94.57	39.08
+Kansas City (US)	-94.62	39.1
+Dasmarinas (PH)	120.93	14.32
+Dasmarinas (PH)	121.02	14.53
+Nangi (IN)	88.2	22.5
+Pereira (CO)	-75.68	4.8
+Calicut (IN)	75.77	11.25
+Carrefour (HT)	-72.4	18.53
+Iquitos (PE)	-73.23	-3.73
+Mawlamyine (MM)	97.62	16.48
+Baoji (CN)	107.37	34.35
+Kurashiki (JP)	133.77	34.57
+Garoua (CM)	13.4	9.3
+Mwanza (TZ)	32.88	-2.52
+Kousseri (CM)	15.02	12.07
+Tirunelveli (IN)	77.7	8.72
+Edinburgh (GB)	-3.2	55.95
+Fort Fureau (CM)	15.02	12.07
+Malegaon (IN)	74.52	20.55
+Matamoros (MX)	-97.5	25.87
+Kaliningrad (RU)	20.5	54.7
+Geneve (CH)	6.17	46.2
+Ananindeua (BR)	-48.37	-1.37
+Balikpapan (ID)	116.82	-1.27
+Brampton (CA)	-79.77	43.67
+Dadiangas (PH)	125.17	6.1
+Namangan (UZ)	71.67	40.98
+Katsina (NG)	7.58	12.98
+Welkom (ZA)	26.72	-27.97
+Santa Marta (CO)	-74.2	11.23
+El Mahalla El Kubra (EG)	31.17	30.97
+Bristol (GB)	-2.57	51.45
+Yokosuka (JP)	139.67	35.28
+Akola (IN)	77	20.72
+Belgaum (IN)	74.5	15.87
+# These have been added back by hand
+Cairo (EG)	31.25	30.06
+Zurich (CH)	8.55	47.36
+Troyan (BG)	42.89	21.71
+Vratsa (BG)	43.12	23.33
+Elena (BG)	42.56	25.53

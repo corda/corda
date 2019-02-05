@@ -68,15 +68,35 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
         }
 
         private fun requireNoDuplicates(attachments: List<Attachment>) {
-            // Avoid unnecessary duplicate checking if possible:
-            // 1. single attachment.
-            // 2. multiple attachments with non-overlapping contract classes.
-            if (attachments.size <= 1) return
-            val overlappingContractClasses = attachments.mapNotNull { it as? ContractAttachment }.flatMap { it.allContracts }.groupingBy { it }.eachCount().filter { it.value > 1 }
-            if (overlappingContractClasses.isEmpty()) return
+            require(attachments.isNotEmpty()) { "attachments list is empty" }
+            if (attachments.size == 1) return
 
-            // this logic executes only if there are overlapping contract classes
-            log.debug("Duplicate contract class checking for $overlappingContractClasses")
+            // Here is where we enforce the no-overlap rule. This rule states that a transaction which has multiple
+            // attachments defining different files for the same file path is invalid. It's an important part of the
+            // security model and blocks various sorts of attacks.
+            //
+            // Consider the case of a transaction with two attachments, A and B. Attachment B satisfies the constraint
+            // on the transaction's states, and thus should be bound by the logic imposed by the contract logic in that
+            // attachment. But if attachment A were to supply a different class file with the same file name, then the
+            // usual Java classpath semantics would apply and it'd end up being contract A that gets executed, not B.
+            // This would prevent you from reasoning about the semantics and transitional logic applied to a state; in
+            // effect the ledger would be open to arbitrary malicious changes.
+            //
+            // There are several variants of this attack that mean we must enforce the no-overlap rule on every file.
+            // For instance the attacking attachment may override an inner class of the contract class, or a dependency.
+            //
+            // We hash each file and ignore overlaps where the contents are actually identical. This is to simplify
+            // migration from hash to signature constraints. In such a migration transaction the same JAR may be
+            // attached twice, one signed and one unsigned. The signature files are ignored for the purposes of
+            // overlap checking as they are expected to have similar names and don't affect the semantics of the
+            // code, and the class files will be identical so that also doesn't affect lookup. Thus both constraints
+            // can be satisfied with different attachments that are actually behaviourally identical.
+            //
+            // It also avoids a problem where the same dependency has been fat-jarred into multiple apps. This can
+            // happen because we don't have (as of writing, Feb 2019) any infrastructure for tracking or managing
+            // dependencies between attachments, so, dependent libraries get bundled up together. Detecting duplicates
+            // avoids accidental triggering of the no-overlap rule in benign circumstances.
+
             val classLoaderEntries = mutableMapOf<String, Attachment>()
             for (attachment in attachments) {
                 attachment.openAsJAR().use { jar ->
@@ -91,26 +111,24 @@ class AttachmentsClassLoader(attachments: List<Attachment>, parent: ClassLoader 
                         // filesystem tries to be case insensitive. This may break developers who attempt to use ProGuard.
                         //
                         // Also convert to Unix path separators as all resource/class lookups will expect this.
-                        //
                         val path = entry.name.toLowerCase().replace('\\', '/')
-                        // TODO - If 2 entries are identical, it means the same file is present in both attachments, so that should be ok.
-                        if (shouldCheckForNoOverlap(path, targetPlatformVersion)) {
-                            if (path in classLoaderEntries.keys) {
-                                // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
-                                val contentHash = readAttachment(attachment, path).sha256()
-                                val originalAttachment = classLoaderEntries[path]!!
-                                val originalContentHash = readAttachment(originalAttachment, path).sha256()
-                                if (contentHash == originalContentHash) {
-                                    log.debug { "Duplicate entry $path has same content hash $contentHash" }
-                                    continue
-                                } else {
-                                    log.debug { "Content hash differs for $path" }
-                                    throw OverlappingAttachmentsException(path)
-                                }
+                        // Some files don't need overlap checking because they don't affect the way the code runs.
+                        if (!shouldCheckForNoOverlap(path, targetPlatformVersion)) continue
+                        // If 2 entries have the same content hash, it means the same file is present in both attachments, so that is ok.
+                        if (path in classLoaderEntries.keys) {
+                            val contentHash = readAttachment(attachment, path).sha256()
+                            val originalAttachment = classLoaderEntries[path]!!
+                            val originalContentHash = readAttachment(originalAttachment, path).sha256()
+                            if (contentHash == originalContentHash) {
+                                log.debug { "Duplicate entry $path has same content hash $contentHash" }
+                                continue
+                            } else {
+                                log.debug { "Content hash differs for $path" }
+                                throw OverlappingAttachmentsException(path)
                             }
-                            log.debug { "Adding new entry for $path" }
-                            classLoaderEntries[path] = attachment
                         }
+                        log.debug { "Adding new entry for $path" }
+                        classLoaderEntries[path] = attachment
                     }
                 }
                 log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }

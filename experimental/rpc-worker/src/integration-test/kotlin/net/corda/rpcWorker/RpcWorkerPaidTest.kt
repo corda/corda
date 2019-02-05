@@ -5,9 +5,9 @@ import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.GBP
 import net.corda.finance.POUNDS
-import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.workflows.getCashBalances
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.driver.DriverParameters

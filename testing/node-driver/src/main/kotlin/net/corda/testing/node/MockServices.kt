@@ -306,7 +306,7 @@ open class MockServices private constructor(
         }
     override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
-        it.start(initialNetworkParameters.whitelistedContractImplementations)
+        it.start()
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
     override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)

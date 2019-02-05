@@ -94,7 +94,6 @@ buildscript {
     ext.java8_minUpdateVersion = '171'
 
     repositories {
-        mavenLocal()
         mavenCentral()
         jcenter()
         maven {
@@ -103,6 +102,7 @@ buildscript {
         maven {
             url "$artifactory_contextUrl/corda-releases"
         }
+        mavenLocal()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -258,13 +258,13 @@ allprojects {
     version "$corda_release_version"
 
     repositories {
-        mavenLocal()
         mavenCentral()
         jcenter()
         maven { url "http://ci-artifactory.corda.r3cev.com/artifactory/corda-dev" } //access to OS snapshots
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
         maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
+        mavenLocal()
     }
 
     configurations {

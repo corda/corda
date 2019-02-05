@@ -19,8 +19,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.seconds
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
+import net.corda.finance.workflows.getCashBalances
 import net.corda.node.internal.NetworkParametersReader.NetworkParametersAndSigned
 import net.corda.node.internal.artemis.ArtemisBroker
 import net.corda.node.services.config.*

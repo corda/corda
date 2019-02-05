@@ -5,7 +5,7 @@ import net.corda.core.toFuture
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.*
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.workflows.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork

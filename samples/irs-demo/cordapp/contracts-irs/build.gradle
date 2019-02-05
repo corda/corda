@@ -7,9 +7,12 @@ dependencies {
     cordaCompile project(':core')
     cordaRuntime project(':node-api')
 
+    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
+
+    compile "com.fasterxml.jackson.core:jackson-annotations:${jackson_version}"
+
     testCompile project(':node-driver')
     testCompile "junit:junit:$junit_version"
-    cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
 }
 
 cordapp {

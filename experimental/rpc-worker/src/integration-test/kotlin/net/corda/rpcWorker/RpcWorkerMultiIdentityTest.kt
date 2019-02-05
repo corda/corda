@@ -1,15 +1,14 @@
 package net.corda.rpcWorker
 
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.RPCException
 import net.corda.core.CordaRuntimeException
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.finance.GBP
 import net.corda.finance.POUNDS
-import net.corda.finance.contracts.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
+import net.corda.finance.workflows.getCashBalances
 import net.corda.testing.core.*
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.node.User
@@ -30,7 +29,8 @@ class RpcWorkerMultiIdentityTest {
             val bankAProxy = CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, DUMMY_BANK_A_NAME).proxy
             val bankBProxy = CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, DUMMY_BANK_B_NAME).proxy
 
-            val cashIssueResult = bankAProxy.startFlow(::CashIssueFlow, 11.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity).returnValue.get()
+            val cashIssueResult = bankAProxy.startFlow(::CashIssueFlow, 11.POUNDS, OpaqueBytes.of(0x01), defaultNotaryIdentity)
+                    .returnValue.get()
             assertEquals(11.POUNDS, bankAProxy.getCashBalances()[GBP])
 
             val cashPayResult = bankAProxy.startFlow(::CashPaymentFlow, 8.POUNDS, bankC.nodeInfo.singleIdentity(), false).returnValue.get()
@@ -43,7 +43,8 @@ class RpcWorkerMultiIdentityTest {
             // assertEquals(2.POUNDS, bankBProxy.getCashBalances()[GBP]) TODO: Investigate race condition, this condition sometimes passes and sometimes not
 
             Assertions.assertThatThrownBy {
-                CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, CHARLIE_NAME).proxy }.isInstanceOf(CordaRuntimeException::class.java)
+                CordaRPCClient(combinedRpcHandle.rpcAddress).start(rpcUser.username, rpcUser.password, CHARLIE_NAME).proxy
+            }.isInstanceOf(CordaRuntimeException::class.java)
         }
     }
 }

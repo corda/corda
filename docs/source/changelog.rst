@@ -11,6 +11,22 @@ Unreleased
 
 * Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
 
+* The finance-contracts demo CorDapp has been slimmed down to contain only that which is relevant for contract verification. Everything else
+  has been moved to the finance-workflows CorDapp:
+
+  * The cash selection logic. ``AbstractCashSelection`` is now in net.corda.finance.contracts.asset so any custom implementations must now be
+    defined in ``META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection``.
+
+  * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
+    you wish to preserve the JSON format for this class.
+
+  * The various utility methods defined in ``Cash`` for creating cash transactions have been moved to ``net.corda.finance.workflows.asset.CashUtils``.
+    Similarly with ``CommercialPaperUtils`` and ``ObligationUtils``.
+
+  * Various other utilities such as ``GetBalances` and the test calendar data.
+
+  The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
+
 .. _changelog_v4.0:
 
 Version 4.0

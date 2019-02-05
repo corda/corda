@@ -424,7 +424,7 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
         database.transaction {
             identityService.loadIdentities(myInfo.legalIdentitiesAndCerts)
             attachments.start()
-            cordappProvider.start(networkParameters.whitelistedContractImplementations)
+            cordappProvider.start()
             nodeProperties.start()
             keyManagementService.start(setOf(ourKeyPair))
 

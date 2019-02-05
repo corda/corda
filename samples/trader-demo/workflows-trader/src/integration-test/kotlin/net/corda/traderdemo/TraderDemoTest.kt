@@ -6,7 +6,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.millis
 import net.corda.finance.DOLLARS
 import net.corda.finance.USD
-import net.corda.finance.contracts.getCashBalance
+import net.corda.finance.workflows.getCashBalance
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.node.services.Permissions.Companion.all

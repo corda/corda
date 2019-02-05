@@ -6,7 +6,7 @@ import net.corda.core.flows.InitiatedBy
 import net.corda.core.internal.Emoji
 import net.corda.core.transactions.SignedTransaction
 import net.corda.finance.contracts.CommercialPaper
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.workflows.getCashBalances
 import net.corda.traderdemo.TransactionGraphSearch
 
 @InitiatedBy(SellerFlow::class)
