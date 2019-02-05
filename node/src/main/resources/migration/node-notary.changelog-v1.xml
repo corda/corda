@@ -1,14 +1,11 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
-                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
-                   logicalFilePath="migration/node-services.changelog-init.xml">
-
-    <changeSet author="R3.Corda" id="1511451595465-16">
+                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3.Corda" id="rename-table-notary-commit-log">
         <renameTable newTableName="node_notary_committed_states" oldTableName="node_notary_commit_log" />
     </changeSet>
-    <changeSet author="R3.Corda" id="1521131680317-17">
+    <changeSet author="R3.Corda" id="create-notary-request-log-table">
         <createTable tableName="node_notary_request_log">
             <column name="id" type="INT">
                 <constraints nullable="false"/>
@@ -27,7 +24,7 @@
             </column>
         </createTable>
     </changeSet>
-    <changeSet author="R3.Corda" id="1521131680317-48">
+    <changeSet author="R3.Corda" id="add-primary-key-to-notary-request-log">
         <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
                        tableName="node_notary_request_log"/>
     </changeSet>
