@@ -49,7 +49,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 class VaultStateMigrationTest {
-
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
         val bankOfCorda = TestIdentity(BOC_NAME)
@@ -65,6 +64,9 @@ class VaultStateMigrationTest {
         val BOC_KEY get() = bankOfCorda.keyPair
         val CHARLIE get() = charlie.party
         val DUMMY_NOTARY get() = dummyNotary.party
+        val bob2 = TestIdentity(BOB_NAME, 40)
+        val BOB2 = bob2.party
+        val BOB2_IDENTITY = bob2.identity
 
         val clock: TestClock = TestClock(Clock.systemUTC())
 
@@ -95,8 +97,8 @@ class VaultStateMigrationTest {
         liquibaseDB = Mockito.mock(Database::class.java)
         Mockito.`when`(liquibaseDB.connection).thenReturn(liquibaseConnection)
 
-        saveOurIdentities(listOf(bob.keyPair))
-        saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity))
+        saveOurKeys(listOf(bob.keyPair, bob2.keyPair))
+        saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity, BOB2_IDENTITY))
     }
 
     @After
@@ -129,9 +131,9 @@ class VaultStateMigrationTest {
         }
     }
 
-    private fun saveOurIdentities(identities: List<KeyPair>) {
+    private fun saveOurKeys(keys: List<KeyPair>) {
         cordaDB.transaction {
-            identities.forEach {
+            keys.forEach {
                 val persistentKey = BasicHSMKeyManagementService.PersistentKey(it.public, it.private)
                 session.save(persistentKey)
             }
@@ -140,10 +142,10 @@ class VaultStateMigrationTest {
 
     private fun saveAllIdentities(identities: List<PartyAndCertificate>) {
         cordaDB.transaction {
-            identities.forEach {
-                val persistentID = PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded)
-                val persistentName = PersistentIdentityService.PersistentIdentityNames(it.name.toString(), it.owningKey.hash.toString())
-                session.save(persistentID)
+            identities.groupBy { it.name }.forEach { name, certs ->
+                val persistentIDs = certs.map { PersistentIdentityService.PersistentIdentity(it.owningKey.hash.toString(), it.certPath.encoded) }
+                val persistentName = PersistentIdentityService.PersistentIdentityNames(name.toString(), certs.first().owningKey.hash.toString())
+                persistentIDs.forEach { session.save(it) }
                 session.save(persistentName)
             }
         }
@@ -240,6 +242,23 @@ class VaultStateMigrationTest {
         }
     }
 
+    private fun <T> getState(clazz: Class<T>): T {
+        return cordaDB.transaction {
+            val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
+            val criteriaQuery = criteriaBuilder.createQuery(clazz)
+            val queryRootStates = criteriaQuery.from(clazz)
+            criteriaQuery.select(queryRootStates)
+            val query = session.createQuery(criteriaQuery)
+            query.singleResult
+        }
+    }
+
+    private fun checkStatesEqual(expected: VaultSchemaV1.VaultStates, actual: VaultSchemaV1.VaultStates) {
+        assertEquals(expected.notary, actual.notary)
+        assertEquals(expected.stateStatus, actual.stateStatus)
+        assertEquals(expected.relevancyStatus, actual.relevancyStatus)
+    }
+
     @Test
     fun `Check a simple migration works`() {
         addCashStates(10, BOB)
@@ -267,16 +286,6 @@ class VaultStateMigrationTest {
 
     @Test
     fun `Check state fields are correct`() {
-        fun <T> getState(clazz: Class<T>): T {
-            return cordaDB.transaction {
-                val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
-                val criteriaQuery = criteriaBuilder.createQuery(clazz)
-                val queryRootStates = criteriaQuery.from(clazz)
-                criteriaQuery.select(queryRootStates)
-                val query = session.createQuery(criteriaQuery)
-                query.singleResult
-            }
-        }
         val tx = createCashTransaction(Cash(), 100.DOLLARS, ALICE)
         storeTransaction(tx)
         createVaultStatesFromTransaction(tx)
@@ -300,9 +309,7 @@ class VaultStateMigrationTest {
         migration.execute(liquibaseDB)
         val persistentStateParty = getState(VaultSchemaV1.PersistentParty::class.java)
         val persistentState = getState(VaultSchemaV1.VaultStates::class.java)
-        assertEquals(expectedPersistentState.notary, persistentState.notary)
-        assertEquals(expectedPersistentState.stateStatus, persistentState.stateStatus)
-        assertEquals(expectedPersistentState.relevancyStatus, persistentState.relevancyStatus)
+        checkStatesEqual(expectedPersistentState, persistentState)
         assertEquals(expectedPersistentParty.x500Name, persistentStateParty.x500Name)
         assertEquals(expectedPersistentParty.compositeKey, persistentStateParty.compositeKey)
     }
@@ -361,6 +368,28 @@ class VaultStateMigrationTest {
         migration.execute(null)
     }
 
+    @Test
+    fun `State with non-owning key for our name marked as relevant`() {
+        val tx = createCashTransaction(Cash(), 100.DOLLARS, BOB2)
+        storeTransaction(tx)
+        createVaultStatesFromTransaction(tx)
+        val state = tx.coreTransaction.outputs.first()
+        val constraintInfo = Vault.ConstraintInfo(state.constraint)
+        val expectedPersistentState = VaultSchemaV1.VaultStates(
+                notary = state.notary,
+                contractStateClassName = state.data.javaClass.name,
+                stateStatus = Vault.StateStatus.UNCONSUMED,
+                recordedTime = clock.instant(),
+                relevancyStatus = Vault.RelevancyStatus.RELEVANT,
+                constraintType = constraintInfo.type(),
+                constraintData = constraintInfo.data()
+        )
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        val persistentState = getState(VaultSchemaV1.VaultStates::class.java)
+        checkStatesEqual(expectedPersistentState, persistentState)
+    }
+
     // Used to test migration performance
     @Test
     @Ignore
@@ -409,7 +438,7 @@ class VaultStateMigrationTest {
             addLinearStates(linearStatesToAdd, listOf(BOB, ALICE))
             addCommodityStates(commodityStatesToAdd, BOB)
         }
-        saveOurIdentities(listOf(bob.keyPair))
+        saveOurKeys(listOf(bob.keyPair))
         saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity))
         cordaDB.close()
     }

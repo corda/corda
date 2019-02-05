@@ -68,10 +68,6 @@ class VaultStateMigration : CordaMigration() {
         }
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
-        val myKeys = cordaDB.transaction {
-            identityService.ourNames.mapNotNull { identityService.wellKnownPartyFromX500Name(it)?.owningKey }.toSet()
-        }
-
         val persistentStates = VaultStateIterator(cordaDB)
         persistentStates.parallelForEach {
             val session = currentDBSession()
@@ -82,6 +78,9 @@ class VaultStateMigration : CordaMigration() {
 
                 // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
                 // state parties.
+                val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
+                    participant.owningKey
+                }).toSet()
                 if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
                     it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                 }

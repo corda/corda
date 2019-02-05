@@ -21,7 +21,6 @@ import java.sql.SQLFeatureNotSupportedException
 import java.util.logging.Logger
 import javax.sql.DataSource
 
-
 /*
  * Provide a set of node services for use when migrating items in the database.
  *
@@ -30,7 +29,6 @@ import javax.sql.DataSource
  * queries.
  */
 abstract class CordaMigration : CustomTaskChange {
-
     val identityService: PersistentIdentityService
         get() = _identityService
 
@@ -46,7 +44,6 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _dbTransactions: WritableTransactionStorage
 
-
     fun initialiseNodeServices(database: Database,
                                schema: Set<MappedSchema>) {
         val url = (database.connection as JdbcConnection).url
@@ -60,6 +57,7 @@ abstract class CordaMigration : CustomTaskChange {
 
         cordaDB.transaction {
             val myKeystore = BasicHSMKeyManagementService.createKeyMap(cacheFactory)
+            // TODO: This doesn't get all our names! Need to plumb through something from node config.
             identityService.ourNames = myKeystore.allPersisted().mapNotNull { identityService.certificateFromKey(it.first)?.name}.toSet()
             _dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
         }
