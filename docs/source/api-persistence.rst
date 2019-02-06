@@ -82,7 +82,7 @@ other ``MappedSchema``.
 Custom schema registration
 --------------------------
 Custom contract schemas are automatically registered at startup time for CorDapps. The node bootstrap process will scan for states that implement
-the Queryable state interface. Tables are then created as specified by the ``MappedSchema``s identified by each states ``supportedSchemas`` method.
+the Queryable state interface. Tables are then created as specified by the ``MappedSchema`` identified by each state's ``supportedSchemas`` method.
 
 For testing purposes it is necessary to manually register the packages containing custom schemas as follows:
 
@@ -107,8 +107,10 @@ the ``MappedTypes`` parameter. It must provide this list in order to initialise 
 Several examples of entities and mappings are provided in the codebase, including ``Cash.State`` and
 ``CommercialPaper.State``. For example, here's the first version of the cash schema.
 
-.. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/schemas/CashSchemaV1.kt
-    :language: kotlin
+.. container:: codeset
+
+    .. literalinclude:: ../../finance/contracts/src/main/kotlin/net/corda/finance/schemas/CashSchemaV1.kt
+        :language: kotlin
 
 .. note:: If Cordapp needs to be portable between Corda OS (running against H2) and Corda Enterprise (running against a standalone database),
           consider database vendors specific requirements.
@@ -124,7 +126,7 @@ You may wish to persist hierarchical relationships within state data using multi
 subclasses may be implemented. The relationship between these classes is defined using JPA annotations. It is important to note that the ``MappedSchema``
 constructor requires a list of *all* of these subclasses.
 
-An example Schema implementing hierarchical relationships with JPA annotations has been implemented below. This Schema will cause ``parent_data`` and ``child_data` tables to be
+An example Schema implementing hierarchical relationships with JPA annotations has been implemented below. This Schema will cause ``parent_data`` and ``child_data`` tables to be
 created.
 
 .. container:: codeset
