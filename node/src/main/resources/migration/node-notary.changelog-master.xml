@@ -6,6 +6,7 @@
 
     <include file="migration/node-notary.changelog-init.xml"/>
     <include file="migration/node-notary.changelog-v1.xml"/>
+    <include file="migration/node-notary.changelog-v2.xml"/>
     <include file="migration/node-notary.changelog-pkey.xml"/>
     <include file="migration/node-notary.changelog-committed-transactions-table.xml" />
 
