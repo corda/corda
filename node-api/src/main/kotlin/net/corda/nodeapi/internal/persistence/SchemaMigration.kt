@@ -19,6 +19,11 @@ import java.nio.file.Path
 import java.sql.Statement
 import javax.sql.DataSource
 
+// Migrate the database to the current version, using liquibase.
+//
+// A note on the ourName parameter: This is used by the vault state migration to establish what the node's legal identity is when setting up
+// its copy of the identity service. It is passed through using a system property. When multiple identity support is added, this will need
+// reworking so that multiple identities can be passed to the migration.
 class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,

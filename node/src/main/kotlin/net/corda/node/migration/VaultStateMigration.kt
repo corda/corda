@@ -117,7 +117,6 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
 
 
 class VaultStateIterator(private val database: CordaPersistence) : Iterator<VaultSchemaV1.VaultStates> {
-
     companion object {
         val logger = contextLogger()
 
