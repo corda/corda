@@ -87,10 +87,14 @@ class VaultStateMigrationTest {
 
     @Before
     fun setUp() {
-        System.setProperty(NODE_X500_NAME, BOB_IDENTITY.name.toString())
         val identityService = makeTestIdentityService(dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
-        cordaDB = configureDatabase(makeTestDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
+        cordaDB = configureDatabase(
+                makeTestDataSourceProperties(),
+                DatabaseConfig(),
+                notaryServices.identityService::wellKnownPartyFromX500Name,
+                notaryServices.identityService::wellKnownPartyFromAnonymous,
+                ourName = BOB_IDENTITY.name)
         val liquibaseConnection = Mockito.mock(JdbcConnection::class.java)
         Mockito.`when`(liquibaseConnection.url).thenReturn(cordaDB.jdbcUrl)
         Mockito.`when`(liquibaseConnection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)
