@@ -67,10 +67,13 @@ task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
 task makeDocs(type: Exec) {
+    // 2 volumes are mounted:
+    //  - the docs project to /opt/docs_builder, where docs building is executed
+    //  - the rest of the projects in /opt, so that code references to other projects are valid
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
     } else {
-        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder corda/docs-builder:latest bash -c make-docsite.sh"
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite.sh"
     }
 }
 

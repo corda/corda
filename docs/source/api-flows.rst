@@ -829,7 +829,7 @@ complicated).
 For example, the ``finance`` package currently uses ``FlowLogic.sleep`` to make several attempts at coin selection when 
 many states are soft locked, to wait for states to become unlocked:
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/cash/selection/AbstractCashSelection.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/workflows/asset/selection/AbstractCashSelection.kt
         :language: kotlin
         :start-after: DOCSTART CASHSELECT 1
         :end-before: DOCEND CASHSELECT 1
