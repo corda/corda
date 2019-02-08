@@ -190,7 +190,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
 
-        //keep resolvedInputs lazy and resolve the inputs separately here to get Version
+        // Keep resolvedInputs lazy and resolve the inputs separately here to get Version.
         val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map {
             it.toStateAndRef()
         }.groupBy { it.state.contract }
