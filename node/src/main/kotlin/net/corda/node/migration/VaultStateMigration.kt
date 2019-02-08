@@ -163,8 +163,9 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         val subRoot = subQuery.from(VaultSchemaV1.PersistentParty::class.java)
         subQuery.select(criteriaBuilder.count(subRoot))
         subQuery.where(criteriaBuilder.equal(
-                subRoot.get<VaultSchemaV1.PersistentStateRefAndKey>("compositeKey").get<PersistentStateRef>("stateRef"),
-                queryRootStates.get<PersistentStateRef>("stateRef")))
+                subRoot.get<VaultSchemaV1.PersistentStateRefAndKey>(VaultSchemaV1.PersistentParty::compositeKey.name)
+                        .get<PersistentStateRef>(VaultSchemaV1.PersistentStateRefAndKey::stateRef.name),
+                queryRootStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)))
         criteriaQuery.select(selection(queryRootStates))
         criteriaQuery.where(criteriaBuilder.equal(subQuery, 0))
         return session.createQuery(criteriaQuery)
@@ -206,7 +207,7 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         query.maxResults = pageSize
         pageNumber++
         val result = query.resultList
-        logger.debug("Current page has ${result.size} vault states")
+        logger.debug("Loaded page $pageNumber of ${(numStates - 1 / pageNumber.toLong()) + 1}. Current page has ${result.size} vault states")
         return result
     }
 
