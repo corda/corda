@@ -17,7 +17,6 @@ import java.time.Instant
 class MockNetworkParametersStorage(private var currentParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN)) : NetworkParametersStorage {
     private val hashToParametersMap: HashMap<SecureHash, NetworkParameters> = HashMap()
     private val hashToSignedParametersMap: HashMap<SecureHash, SignedNetworkParameters> = HashMap()
-
     init {
         storeCurrentParameters()
     }
@@ -44,8 +43,8 @@ class MockNetworkParametersStorage(private var currentParameters: NetworkParamet
             }
         }
     override val defaultHash: SecureHash get() = currentHash
-    override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
     override fun lookup(hash: SecureHash): NetworkParameters? = hashToParametersMap[hash]
+    override fun getEpochFromHash(hash: SecureHash): Int? = lookup(hash)?.epoch
     override fun saveParameters(signedNetworkParameters: SignedDataWithCert<NetworkParameters>) {
         val networkParameters = signedNetworkParameters.verified()
         val hash = signedNetworkParameters.raw.hash
