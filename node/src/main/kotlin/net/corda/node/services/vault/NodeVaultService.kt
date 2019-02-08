@@ -63,6 +63,12 @@ class NodeVaultService(
     companion object {
         private val log = contextLogger()
 
+        /**
+         * Establish whether a given state is relevant to a node, given the node's public keys.
+         *
+         * A state is relevant if any of the participants (or the owner for ownable states) has an owning key matching one of this node's
+         * public keys.
+         */
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
                 // Sometimes developers forget to add the owning key to participants for OwnableStates.

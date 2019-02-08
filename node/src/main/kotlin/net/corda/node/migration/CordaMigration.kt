@@ -23,7 +23,7 @@ import java.sql.SQLFeatureNotSupportedException
 import java.util.logging.Logger
 import javax.sql.DataSource
 
-/*
+/**
  * Provide a set of node services for use when migrating items in the database.
  *
  * For more complex migrations, information such as the transaction data may need to be extracted from the database. In order to do this,
@@ -46,6 +46,12 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _dbTransactions: WritableTransactionStorage
 
+    /**
+     * Initialise a subset of node services so that data from these can be used to perform migrations.
+     *
+     * This function should not be called unless the NODE_X500_NAME property is set (which should happen
+     * as part of running migrations via the SchemaMigration class).
+     */
     fun initialiseNodeServices(database: Database,
                                schema: Set<MappedSchema>) {
         val url = (database.connection as JdbcConnection).url
@@ -95,7 +101,7 @@ abstract class CordaMigration : CustomTaskChange {
     }
 }
 
-/*
+/**
  * Wrap the liquibase database as a DataSource, so it can be used with a CordaPersistence instance
  */
 class MigrationDataSource(val database: Database) : DataSource {

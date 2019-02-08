@@ -97,7 +97,7 @@ class VaultStateMigration : CordaMigration() {
 }
 
 
-/*
+/**
  * A minimal set of schema for retrieving data from the database.
  *
  * Note that adding an extra schema here may cause migrations to fail if it ends up creating a table before the same table
@@ -115,7 +115,15 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
         )
 )
 
-
+/**
+ * Provides a mechanism for iterating through all persistent vault states.
+ *
+ * This class ensures that changes to persistent states are periodically committed and flushed. This prevents out of memory issues when
+ * there are a large number of states.
+ *
+ * Currently, this class filters out those persistent states that have entries in the state party table. This behaviour is required for the
+ * vault state migration, as entries in this table should not be duplicated.
+ */
 class VaultStateIterator(private val database: CordaPersistence) : Iterator<VaultSchemaV1.VaultStates> {
     companion object {
         val logger = contextLogger()
@@ -277,7 +285,9 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         return nextPagePresent
     }
 
-    // Split up each page and execute the logic in parallel on each chunk.
+    /**
+     * Iterate through all states in the vault, parallelizing the work on each page of vault states.
+     */
     fun parallelForEach(block: (VaultSchemaV1.VaultStates) -> Unit) {
         pool.invoke(VaultPageTask(database, currentPage, block))
         while (hasNextPage()) {
