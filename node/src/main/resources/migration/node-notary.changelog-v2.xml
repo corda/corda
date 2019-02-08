@@ -1,0 +1,37 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                       xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+    <changeSet author="R3.Corda" id="rename-table-notary-commit-log">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="node_notary_commit_log"/>
+        </preConditions>
+        <renameTable oldTableName="node_notary_commit_log"  newTableName="node_notary_committed_states" />
+    </changeSet>
+    <changeSet author="R3.Corda" id="create-notary-request-log-table">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="node_notary_request_log"/>
+            </not>
+        </preConditions>
+        <createTable tableName="node_notary_request_log">
+            <column name="id" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="consuming_transaction_id" type="NVARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requesting_party_name" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_timestamp" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="request_signature" type="BLOB">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="id" constraintName="node_notary_request_log_pkey"
+                       tableName="node_notary_request_log"/>
+    </changeSet>
+</databaseChangeLog>
