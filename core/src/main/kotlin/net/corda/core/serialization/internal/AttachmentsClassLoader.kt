@@ -224,7 +224,16 @@ internal object AttachmentsClassLoaderBuilder {
 
             // Create a new serializationContext for the current Transaction.
             SerializationFactory.defaultFactory.defaultContext
-                    .withPreventDataLoss()
+                    // The withPreventDataLoss call enables a mode in which we would refuse to deserialise messages with
+                    // newly added fields onto old classes which don't have anywhere to store that data. The goal for
+                    // Corda 4 was to block various kinds of accidental forward compatibility bugs, by throwing exceptions
+                    // during transaction verification if the attachment is too low a version to handle the input states,
+                    // i.e. the input states were created by a peer running a newer version of the app. However we don't
+                    // currently have a way to do this check that's safe in the presence of rolling upgrades, so it's
+                    // disabled for now. We can revisit this later if we tune the check to be more accurate by ignoring
+                    // optional fields that are empty.
+                    //
+                    // .withPreventDataLoss()
                     .withClassLoader(transactionClassLoader)
                     .withWhitelist(whitelistedClasses)
                     .withCustomSerializers(serializers)
