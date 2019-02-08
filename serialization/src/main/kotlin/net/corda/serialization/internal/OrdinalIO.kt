@@ -11,7 +11,7 @@ class OrdinalBits(private val ordinal: Int) {
     @KeepForDJVM
     interface OrdinalWriter {
         val bits: OrdinalBits
-        @JvmDefault val encodedSize get() = 1
+        @JvmDefault val encodedSize: Int get() = 1
         @JvmDefault fun writeTo(stream: OutputStream) = stream.write(bits.ordinal)
         @JvmDefault fun putTo(buffer: ByteBuffer) = buffer.put(bits.ordinal.toByte())!!
     }
