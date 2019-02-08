@@ -31,6 +31,14 @@ class MockKeyManagementService(val identityService: IdentityService,
         return k.public
     }
 
+    override fun freshKey(externalId: UUID): PublicKey {
+        throw UnsupportedOperationException("")
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        throw UnsupportedOperationException("")
+    }
+
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {

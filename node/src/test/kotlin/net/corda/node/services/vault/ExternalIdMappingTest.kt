@@ -12,6 +12,7 @@ import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.node.services.api.IdentityServiceInternal
 import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.PublicKeyHashToExternalId
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
@@ -60,10 +61,11 @@ class ExternalIdMappingTest {
     }
 
     private fun freshKeyForExternalId(externalId: UUID): AnonymousParty {
-        val anonymousParty = freshKey()
+        val key = services.keyManagementService.freshKey()
+        val anonymousParty = AnonymousParty(key)
         database.transaction {
             services.withEntityManager {
-                val mapping = BasicHSMKeyManagementService.PublicKeyHashToExternalId(externalId, anonymousParty.owningKey)
+                val mapping = PublicKeyHashToExternalId(externalId, anonymousParty.owningKey)
                 persist(mapping)
                 flush()
             }
