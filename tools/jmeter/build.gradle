@@ -184,6 +184,9 @@ artifacts {
     publish jar {
         classifier ""
     }
+    publish buildReleasePackage {
+        classifier "testsuite"
+    }
 }
 
 publish {

@@ -2,7 +2,8 @@
 Obtaining and Installing the Performance Test Suite
 ===================================================
 
-As a registered user of Corda Enterprise, you can download the performance test suite at **TODO** add location https://r3-cev.atlassian.net/browse/ENT-2643.
+As a registered user of Corda Enterprise, you can get the performance test suite as a zip file from the same location where the Corda
+Enterprise artifacts are available. Look for a file called ``jmeter-corda-<version>-testsuite.zip``.
 
 File Contents
 =============
