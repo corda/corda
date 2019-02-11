@@ -103,14 +103,7 @@ class DefaultEvolutionSerializerFactory(
     private fun RemoteTypeInformation.Composable.validateEvolvability(localProperties: Map<PropertyName, LocalPropertyInformation>) {
         val remotePropertyNames = properties.keys
         val localPropertyNames = localProperties.keys
-        val deletedProperties = remotePropertyNames - localPropertyNames
         val newProperties = localPropertyNames - remotePropertyNames
-
-        // Here is where we can exercise a veto on evolutions that remove properties.
-        if (deletedProperties.isNotEmpty() && mustPreserveDataWhenEvolving)
-            throw EvolutionSerializationException(this,
-                    "Property ${deletedProperties.first()} of remote ContractState type is not present in local type, " +
-                            "and context is configured to prevent forwards-compatible deserialization.")
 
         // Check mandatory-ness of constructor-set properties.
         newProperties.forEach { propertyName ->
@@ -170,5 +163,6 @@ class DefaultEvolutionSerializerFactory(
                     this,
                     constructor,
                     properties,
-                    classLoader)
+                    classLoader,
+                    mustPreserveDataWhenEvolving)
 }
