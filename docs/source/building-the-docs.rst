@@ -7,7 +7,8 @@ is pre-generated, as well as code documentation, and this can be done automatica
 Requirements
 ------------
 
-In order to build the documentation you will need:
+In order to build the documentation you will need a development environment set up as described under :doc:`building-corda`, and additionally
+
 
 1. Docker version 17 and above
 2. (OS X and Windows Only) The drive which hosts your corda checkout must be shared with docker.
