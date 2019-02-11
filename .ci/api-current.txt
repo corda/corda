@@ -1136,12 +1136,6 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   public <init>(net.corda.core.crypto.SecureHash, String, String, String)
 ##
 @CordaSerializable
-public static final class net.corda.core.contracts.TransactionVerificationException$UntrustedAttachmentsException extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, java.util.List<? extends net.corda.core.crypto.SecureHash>)
-  @NotNull
-  public final java.util.List<net.corda.core.crypto.SecureHash> getIds()
-##
-@CordaSerializable
 public abstract class net.corda.core.contracts.TypeOnlyCommandData extends java.lang.Object implements net.corda.core.contracts.CommandData
   public <init>()
   public boolean equals(Object)

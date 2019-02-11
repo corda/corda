@@ -1,5 +1,6 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaException
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
@@ -260,13 +261,13 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
 
+    // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
     @KeepForDJVM
     @CordaSerializable
     class UntrustedAttachmentsException(txId: SecureHash, val ids: List<SecureHash>) :
-            TransactionVerificationException(txId, "Attempting to load untrusted transaction attachments: $ids. " +
+            CordaException("Attempting to load untrusted transaction attachments: $ids. " +
                     "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
                     "You will need to install that app version yourself, to whitelist it for use. " +
-                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.",
-                    null)
+                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
 }
