@@ -8,15 +8,10 @@ time during code review.
 What follows are *recommendations* and not *rules*. They are in places intentionally vague, so use your good judgement
 when interpreting them.
 
-.. note:: Parts of the codebase may not follow this style guide yet. If you see a place that doesn't, please fix it!
-
 1. General style
 ################
 
-We use the standard Java coding style from Sun, adapted for Kotlin in ways that should be fairly intuitive.
-
-Files no longer have copyright notices at the top, and license is now specified in the global README.md file.
-We do not mark classes with @author Javadoc annotations.
+We use the standard `Kotlin coding style from JetBrains <https://kotlinlang.org/docs/reference/coding-conventions.html>`_.
 
 In Kotlin code, KDoc is used rather than JavaDoc. It's very similar except it uses Markdown for formatting instead
 of HTML tags.
@@ -80,7 +75,7 @@ Don’t be afraid of redundancy, many people will start reading your code in the
 it’s about (e.g. due to a bug or a need to introduce a new feature). It’s OK to repeat basic facts or descriptions in
 different places if that increases the chance developers will see something important.
 
-API docs: all public methods, constants and classes should have doc comments in either JavaDoc or KDoc. API docs should:
+API docs: all public methods, constants and classes **must** have doc comments in either JavaDoc or KDoc. API docs should:
 
 * Explain what the method does in words different to how the code describes it.
 * Always have some text, annotation-only JavaDocs don’t render well. Write “Returns a blah blah blah” rather
@@ -165,7 +160,9 @@ accidentally being used in a multi-threaded way when it didn't expect that.
 
 We use them liberally and we use them at runtime, in production. That means we avoid the "assert" keyword in Java,
 and instead prefer to use the ``check()`` or ``require()`` functions in Kotlin (for an ``IllegalStateException`` or
-``IllegalArgumentException`` respectively), or the Guava ``Preconditions.check`` method from Java.
+``IllegalArgumentException`` respectively), or the Guava ``Preconditions.check`` method from Java. Assertions should
+always have messages associated with them describing what went wrong, even if it's just a copy of the expression (but
+ideally is more helpful).
 
 We define new exception types liberally. We prefer not to provide English language error messages in exceptions at
 the throw site, instead we define new types with any useful information as fields, with a toString() method if
@@ -220,3 +217,23 @@ Notably:
 We do not allow compiler warnings, except in the experimental module where the usual standards do not apply and warnings
 are suppressed. If a warning exists it should be either fixed or suppressed using @SuppressWarnings and if suppressed
 there must be an accompanying explanation in the code for why the warning is a false positive.
+
+7. When to update the docsite
+#############################
+
+The documentation website (this site) must be updated in any PR that adds or changes something visible to app developers,
+or people who operate a node. For the avoidance of doubt this includes the following kinds of changes:
+
+* Adding new APIs, shell commands, config file options, command line flags.
+* Altering database schemas. You'll need to write a Liquibase migration script and update the docsite to explain the
+  migration.
+* Deprecating existing APIs or design patterns.
+* Adding support for new supported backends and modules.
+* Changing the Gradle build DSL.
+
+You should additionally update the changelog if a change is risky or may in some way be of interest to users, even if
+not directly visible.
+
+Because this is a developer platform, *many* changes are user visible. That means *many* PRs will require docsite changes.
+When you review a PR that doesn't change the docsite, you should be asking yourself "why does this PR not require docs
+changes" rather than the other way around ("does this PR require changes"), which is easier to forget about.
