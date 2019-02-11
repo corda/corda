@@ -11,6 +11,7 @@ import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.ProgressTracker
 
+// DOCSTART 1
 @StartableByRPC
 class GetStringConfigFlow(private val configKey: String) : FlowLogic<String>() {
     object READING : ProgressTracker.Step("Reading config")
@@ -23,3 +24,4 @@ class GetStringConfigFlow(private val configKey: String) : FlowLogic<String>() {
         return config.getString(configKey)
     }
 }
+// DOCEND 1

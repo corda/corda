@@ -110,7 +110,44 @@ starting from 1.
 If you use the finance demo app, you should adjust your dependencies so you depend on the finance-contracts
 and finance-workflows artifacts from your own contract and workflow JAR respectively.
 
-Step 3. Security: Upgrade your use of FinalityFlow
+Step 3. Remove any custom configuration from the node.conf
+----------------------------------------------------------
+
+CorDapps can no longer access custom configuration items in the ``node.conf`` file. Any custom CorDapp configuration should be added to a
+CorDapp configuration file, and the Node's configuration will not be accessible. CorDapp configuration files should be placed in the
+`config` subdirectory of the Node's `cordapps` folder. The name of the file should match the name of the JAR of the CorDapp (eg; if your
+CorDapp is called ``hello-0.1.jar`` the configuration file needed would be ``config/hello-0.1.conf``).
+
+If you are using the ``extraConfig`` of a ``node`` in the ``deployNodes`` Gradle task to populate custom configuration for testing, you will need
+to make the following change so that:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        node {
+            name "O=Bank A,L=London,C=GB"c
+            ...
+            extraConfig = [ 'some.extra.config' : '12345' ]
+        }
+    }
+
+Would become:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        node {
+            name "O=Bank A,L=London,C=GB"c
+            ...
+            projectCordapp {
+                config "some.extra.config=12345"
+            }
+        }
+    }
+
+See :ref:`cordapp_configuration_files_ref` for more information.
+
+Step 4. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
 
 The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, so requires counterparty nodes to accept any and
@@ -224,7 +261,7 @@ You may already be using ``waitForLedgerCommit`` in your responder flow for the 
 Now that it's calling ``ReceiveFinalityFlow``, which effectively does the same thing, this is no longer necessary. The call to
 ``waitForLedgerCommit`` should be removed.
 
-Step 4. Security: Upgrade your use of SwapIdentitiesFlow
+Step 5. Security: Upgrade your use of SwapIdentitiesFlow
 --------------------------------------------------------
 
 The :ref:`confidential_identities_ref` API is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
@@ -232,7 +269,7 @@ has been adjusted in the same way as ``FinalityFlow`` above, to close problems w
 outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
 the ``SwapIdentitiesFlow``.
 
-Step 5. Possibly, adjust test code
+Step 6. Possibly, adjust test code
 ----------------------------------
 
 ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration`` object.
@@ -283,7 +320,7 @@ For instance, if you have 2 CorDapps containing the packages ``net.corda.example
 .. note:: If you have any CorDapp code (e.g. flows/contracts/states) that is only used by the tests and located in the same test module, it won't be discovered now.
     You will need to move them in the main module of one of your CorDapps or create a new, separate CorDapp for them, in case you don't want this code to live inside your production CorDapps.
 
-Step 6. Security: Add BelongsToContract annotations
+Step 7. Security: Add BelongsToContract annotations
 ---------------------------------------------------
 
 In versions of the platform prior to v4, it was the responsibility of contract and flow logic to ensure that ``TransactionState`` objects
@@ -300,7 +337,7 @@ to be governed by a contract that is either:
 Learn more by reading ":ref:`implicit_constraint_types`". If an app targets Corda 3 or lower (i.e. does not specify a target version),
 states that point to contracts outside their package will trigger a log warning but validation will proceed.
 
-Step 7. Learn about signature constraints and JAR signing
+Step 8. Learn about signature constraints and JAR signing
 ---------------------------------------------------------
 
 :doc:`design/data-model-upgrades/signature-constraints` are a new data model feature introduced in Corda 4. They make it much easier to
@@ -314,7 +351,7 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
-Step 8. Security: Package namespace handling
+Step 9. Security: Package namespace handling
 --------------------------------------------
 
 Almost no apps will be affected by these changes, but they're important to know about.
@@ -343,7 +380,7 @@ where type names may be taken "as read". You can learn more about this feature a
 ":doc:`design/data-model-upgrades/package-namespace-ownership`".
 
 
-Step 9. Consider adding extension points to your flows
+Step 10. Consider adding extension points to your flows
 ------------------------------------------------------
 
 In Corda 4 it is possible for flows in one app to subclass and take over flows from another. This allows you to create generic, shared
@@ -353,7 +390,7 @@ into shared business logic, but it makes perfect sense to put into a user-specif
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
 
-Step 10. Possibly update Vault state queries
+Step 11. Possibly update Vault state queries
 --------------------------------------------
 
 Queries made on a node's vault can filter by the relevancy of those states to the node in Corda 4. As this functionality does not exist in
@@ -362,7 +399,7 @@ states in the vault, to maintain backwards compatibility. However, it may make s
 to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
 may result in queries returning more states than expected if the node is using Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
 
-Step 10. Explore other new features that may be useful
+Step 12. Explore other new features that may be useful
 ------------------------------------------------------
 
 Corda 4 adds several new APIs that help you build applications. Why not explore:
