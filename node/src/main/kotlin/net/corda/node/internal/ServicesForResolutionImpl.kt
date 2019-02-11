@@ -40,29 +40,33 @@ data class ServicesForResolutionImpl(
     }
 
     @Throws(TransactionResolutionException::class, AttachmentResolutionException::class)
-    override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment {
-        val coreTransaction = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
-                ?: throw TransactionResolutionException(stateRef.txhash)
-        when (coreTransaction) {
-            is WireTransaction -> {
-                val transactionState = coreTransaction.outRef<ContractState>(stateRef.index).state
-                for (attachmentId in coreTransaction.attachments) {
-                    val attachment = attachments.openAttachment(attachmentId)
-                    if (attachment is ContractAttachment && (forContractClassName ?: transactionState.contract) in attachment.allContracts) {
-                        return attachment
+    override fun loadContractAttachment(stateRef: StateRef): Attachment {
+        // We may need to recursively chase transactions if there are notary changes.
+        fun inner(stateRef: StateRef, forContractClassName: String?): Attachment {
+            val ctx = validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
+                    ?: throw TransactionResolutionException(stateRef.txhash)
+            when (ctx) {
+                is WireTransaction -> {
+                    val transactionState = ctx.outRef<ContractState>(stateRef.index).state
+                    for (attachmentId in ctx.attachments) {
+                        val attachment = attachments.openAttachment(attachmentId)
+                        if (attachment is ContractAttachment && (forContractClassName ?: transactionState.contract) in attachment.allContracts) {
+                            return attachment
+                        }
                     }
+                    throw AttachmentResolutionException(stateRef.txhash)
                 }
-                throw AttachmentResolutionException(stateRef.txhash)
+                is ContractUpgradeWireTransaction -> {
+                    return attachments.openAttachment(ctx.upgradedContractAttachmentId) ?: throw AttachmentResolutionException(stateRef.txhash)
+                }
+                is NotaryChangeWireTransaction -> {
+                    val transactionState = SerializedStateAndRef(resolveStateRefBinaryComponent(stateRef, this)!!, stateRef).toStateAndRef().state
+                    // TODO: check only one (or until one is resolved successfully), max recursive invocations check?
+                    return ctx.inputs.map { inner(it, transactionState.contract) }.firstOrNull() ?: throw AttachmentResolutionException(stateRef.txhash)
+                }
+                else -> throw UnsupportedOperationException("Attempting to resolve attachment for index ${stateRef.index} of a ${ctx.javaClass} transaction. This is not supported.")
             }
-            is ContractUpgradeWireTransaction -> {
-                return attachments.openAttachment(coreTransaction.upgradedContractAttachmentId) ?: throw AttachmentResolutionException(stateRef.txhash)
-            }
-            is NotaryChangeWireTransaction -> {
-                val transactionState = SerializedStateAndRef(resolveStateRefBinaryComponent(stateRef, this)!!, stateRef).toStateAndRef().state
-                //TODO check only one (or until one is resolved successfully), max recursive invocations check?
-                return coreTransaction.inputs.map { loadContractAttachment(it, transactionState.contract) }.firstOrNull() ?: throw AttachmentResolutionException(stateRef.txhash)
-            }
-            else -> throw UnsupportedOperationException("Attempting to resolve attachment ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
         }
+        return inner(stateRef, null)
     }
 }

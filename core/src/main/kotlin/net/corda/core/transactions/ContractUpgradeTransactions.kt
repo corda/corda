@@ -38,7 +38,6 @@ data class ContractUpgradeWireTransaction(
         /** Required for hiding components in [ContractUpgradeFilteredTransaction]. */
         val privacySalt: PrivacySalt = PrivacySalt()
 ) : CoreTransaction() {
-
     companion object {
         /**
          * Runs the explicit upgrade logic.
@@ -127,8 +126,8 @@ data class ContractUpgradeWireTransaction(
     }
 
     private fun upgradedContract(className: ContractClassName, classLoader: ClassLoader): UpgradedContract<ContractState, ContractState> = try {
-        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java as Class<UpgradedContract<ContractState, ContractState>>)
-                .newInstance()
+        @Suppress("UNCHECKED_CAST")
+        classLoader.loadClass(className).asSubclass(UpgradedContract::class.java).newInstance() as UpgradedContract<ContractState, ContractState>
     } catch (e: Exception) {
         throw TransactionVerificationException.ContractCreationError(id, className, e)
     }
@@ -137,15 +136,15 @@ data class ContractUpgradeWireTransaction(
      * Creates a binary serialized component for a virtual output state serialised and executed with the attachments from the transaction.
      */
     @CordaInternal
-    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef): SerializedBytes<TransactionState<ContractState>> {
-        val binaryInput = resolveStateRefBinaryComponent(inputs[stateRef.index], services)!!
+    internal fun resolveOutputComponent(services: ServicesForResolution, stateRef: StateRef, params: NetworkParameters): SerializedBytes<TransactionState<ContractState>> {
+        val binaryInput: SerializedBytes<TransactionState<ContractState>> = resolveStateRefBinaryComponent(inputs[stateRef.index], services)!!
         val legacyAttachment = services.attachments.openAttachment(legacyContractAttachmentId)
                 ?: throw MissingContractAttachments(emptyList())
         val upgradedAttachment = services.attachments.openAttachment(upgradedContractAttachmentId)
                 ?: throw MissingContractAttachments(emptyList())
 
-        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(legacyAttachment, upgradedAttachment)) { transactionClassLoader ->
-            val resolvedInput = binaryInput.deserialize<TransactionState<ContractState>>()
+        return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(listOf(legacyAttachment, upgradedAttachment), params, id) { transactionClassLoader ->
+            val resolvedInput = binaryInput.deserialize()
             val upgradedContract = upgradedContract(upgradedContractClassName, transactionClassLoader)
             val outputState = calculateUpgradedState(resolvedInput, upgradedContract, upgradedAttachment)
             outputState.serialize()

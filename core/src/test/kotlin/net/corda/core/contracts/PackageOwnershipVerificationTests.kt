@@ -14,7 +14,6 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
 import org.junit.Rule
@@ -30,7 +29,7 @@ class PackageOwnershipVerificationTests {
         val BOB = TestIdentity(CordaX500Name("BOB", "London", "GB"))
         val BOB_PARTY get() = BOB.party
         val BOB_PUBKEY get() = BOB.publicKey
-        val dummyContract = "net.corda.core.contracts.DummyContract"
+        const val DUMMY_CONTRACT = "net.corda.core.contracts.DummyContract"
         val OWNER_KEY_PAIR = Crypto.generateKeyPair()
     }
 
@@ -46,7 +45,10 @@ class PackageOwnershipVerificationTests {
                 doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
             },
             networkParameters = testNetworkParameters(
-                    packageOwnership = mapOf("net.corda.core.contracts" to OWNER_KEY_PAIR.public),
+                    packageOwnership = mapOf(
+                            "net.corda.core.contracts" to OWNER_KEY_PAIR.public,
+                            "net.corda.isolated.workflows" to BOB_PUBKEY
+                    ),
                     notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))
             )
     )
@@ -55,8 +57,8 @@ class PackageOwnershipVerificationTests {
     fun `Happy path - Transaction validates when package signed by owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
-                attachment(dummyContract, SecureHash.allOnesHash, listOf(OWNER_KEY_PAIR.public))
-                output(dummyContract, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), DummyContractState())
+                attachment(DUMMY_CONTRACT, SecureHash.allOnesHash, listOf(OWNER_KEY_PAIR.public))
+                output(DUMMY_CONTRACT, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), DummyContractState())
                 command(ALICE_PUBKEY, DummyIssue())
                 verifies()
             }
@@ -67,10 +69,26 @@ class PackageOwnershipVerificationTests {
     fun `Transaction validation fails when the selected attachment is not signed by the owner`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             transaction {
-                attachment(dummyContract, SecureHash.allOnesHash, listOf(ALICE_PUBKEY))
-                output(dummyContract, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), DummyContractState())
+                attachment(DUMMY_CONTRACT, SecureHash.allOnesHash, listOf(ALICE_PUBKEY))
+                output(DUMMY_CONTRACT, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), DummyContractState())
                 command(ALICE_PUBKEY, DummyIssue())
-                failsWith("is not signed by the owner specified in the network parameters")
+                failsWith("is not signed by the owner")
+            }
+        }
+    }
+
+    @Test
+    fun `packages that do not have contracts in are still ownable`() {
+        // The first version of this feature was incorrectly concerned with contract classes and only contract
+        // classes, but for the feature to work it must apply to any package. This tests that by using a package
+        // in isolated.jar that doesn't include any contracts.
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            transaction {
+                attachment(DUMMY_CONTRACT, SecureHash.allOnesHash, listOf(OWNER_KEY_PAIR.public))
+                attachment(attachment(javaClass.getResourceAsStream("/isolated.jar")))
+                output(DUMMY_CONTRACT, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), DummyContractState())
+                command(ALICE_PUBKEY, DummyIssue())
+                failsWith("is not signed by the owner")
             }
         }
     }
