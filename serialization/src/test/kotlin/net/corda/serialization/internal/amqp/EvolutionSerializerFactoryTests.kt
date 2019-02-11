@@ -1,23 +1,22 @@
 package net.corda.serialization.internal.amqp
 
-import com.natpryce.hamkrest.should.shouldMatch
 import net.corda.core.serialization.SerializedBytes
-import net.corda.core.serialization.serialize
 import net.corda.serialization.internal.AllWhitelist
-import net.corda.serialization.internal.amqp.GenericsTests.Companion.localPath
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
-import net.corda.serialization.internal.model.RemoteTypeInformation
-import net.corda.serialization.internal.model.TypeIdentifier
 import org.junit.Test
-import java.io.File
 import java.io.NotSerializableException
-import java.net.URI
 import kotlin.test.*
 
 class EvolutionSerializerFactoryTests {
 
-    private val factory = SerializerFactoryBuilder.build(
+    private val nonStrictFactory = SerializerFactoryBuilder.build(
+            AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
+            mustPreserveDataWhenEvolving = false)
+
+    private val strictFactory = SerializerFactoryBuilder.build(
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
@@ -49,12 +48,16 @@ class EvolutionSerializerFactoryTests {
         val withNullUrl = javaClass.getResource(withNullResource)
 
         // We can deserialize the evolved instance where the original value of 'b' is null.
-        val withNullTarget = DeserializationInput(factory).deserialize(SerializedBytes<C>(withNullUrl.readBytes()))
+        val withNullTarget = DeserializationInput(strictFactory).deserialize(SerializedBytes<C>(withNullUrl.readBytes()))
         assertEquals(1, withNullTarget.a)
 
-        // We cannot deserialize the evolved instance where the original value of 'b' is non-null.
+        // The non-strict factory will discard the non-null original value of 'b'.
+        val withNonNullTarget = DeserializationInput(nonStrictFactory).deserialize(SerializedBytes<C>(withoutNullUrl.readBytes()))
+        assertEquals(1, withNonNullTarget.a)
+
+        // The strict factory cannot deserialize the evolved instance where the original value of 'b' is non-null.
         try {
-            DeserializationInput(factory).deserialize(SerializedBytes<C>(withoutNullUrl.readBytes()))
+            DeserializationInput(strictFactory).deserialize(SerializedBytes<C>(withoutNullUrl.readBytes()))
             fail("Expected deserialisation of object with non-null value for 'b' to fail")
         } catch (e: NotSerializableException) {
             assertTrue(e.message!!.contains(
