@@ -41,4 +41,20 @@ class PropertyEnumeratorTests {
 
         assertEquals(expected, objectsInGraph)
     }
+
+    @Test
+    fun traversesItemsInAnyIterable() {
+        data class WithIterables(val a: Set<String>, val b: List<String>)
+
+        val top = WithIterables(linkedSetOf("a", "b"), listOf("c", "d"))
+        assertEquals(listOf("a", "b", "c", "d", top), ObjectGraphTraverser.traverse(top).toList())
+    }
+
+    @Test
+    fun traversesItemsInAnyMap() {
+        data class WithMap(val a: Map<String, Int>)
+
+        val top = WithMap(mapOf("a" to 1, "b" to 2))
+        assertEquals(listOf("a", 1, "b", 2, top), ObjectGraphTraverser.traverse(top).toList())
+    }
 }
