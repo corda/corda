@@ -66,15 +66,21 @@ task dokkaJavadoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
 task buildDocs(dependsOn: ['apidocs', 'makeDocs'])
 task apidocs(dependsOn: ['dokka', 'dokkaJavadoc'])
 
-task makeDocs(type: Exec) {
-    // 2 volumes are mounted:
-    //  - the docs project to /opt/docs_builder, where docs building is executed
-    //  - the rest of the projects in /opt, so that code references to other projects are valid
+task makeHTMLDocs(type: Exec){
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-html.sh"
     } else {
-        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite.sh"
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-html.sh"
     }
 }
 
+task makePDFDocs(type: Exec){
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite-pdf.sh"
+    } else {
+        commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite-pdf.sh"
+    }
+}
+
+task makeDocs(dependsOn: [ 'makeHTMLDocs', 'makePDFDocs'])
 apidocs.shouldRunAfter makeDocs
