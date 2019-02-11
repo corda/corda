@@ -25,18 +25,29 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     private val nextKeys = LinkedList<KeyPair>()
 
+    private val keysById: MutableMap<UUID, Set<PublicKey>> = mutableMapOf()
+
     override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
         keyStore[k.public] = k.private
         return k.public
     }
 
+    private fun mapKeyToId(publicKey: PublicKey, externalId: UUID) {
+        val keysForId = keysById.getOrPut(externalId) { emptySet() }
+        keysById[externalId] = keysForId + publicKey
+    }
+
     override fun freshKey(externalId: UUID): PublicKey {
-        throw UnsupportedOperationException("")
+        val key = freshKey()
+        mapKeyToId(key, externalId)
+        return key
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        throw UnsupportedOperationException("")
+        val keyAndCert = freshKeyAndCert(identity, revocationEnabled)
+        mapKeyToId(keyAndCert.owningKey, externalId)
+        return keyAndCert
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }
