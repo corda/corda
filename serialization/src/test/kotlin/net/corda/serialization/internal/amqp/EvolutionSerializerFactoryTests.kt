@@ -1,54 +1,64 @@
 package net.corda.serialization.internal.amqp
 
-import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
-import net.corda.serialization.internal.amqp.testutils.serialize
-import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
+import com.natpryce.hamkrest.should.shouldMatch
+import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.serialize
+import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.GenericsTests.Companion.localPath
+import net.corda.serialization.internal.amqp.testutils.*
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 import net.corda.serialization.internal.model.RemoteTypeInformation
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.junit.Test
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import java.io.File
+import java.io.NotSerializableException
+import java.net.URI
+import kotlin.test.*
 
 class EvolutionSerializerFactoryTests {
 
-    private val factory = testDefaultFactory()
+    private val factory = SerializerFactoryBuilder.build(
+            AllWhitelist,
+            ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+            descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
+            mustPreserveDataWhenEvolving = true)
+
+    // Version of the class as it was serialised
+    //
+    // data class C(val a: Int, val b: Int?)
+    //
+    // Version of the class as it's used in the test
+    data class C(val a: Int)
 
     @Test
     fun preservesDataWhenFlagSet() {
-        val nonStrictEvolutionSerializerFactory = DefaultEvolutionSerializerFactory(
-                factory,
-                ClassLoader.getSystemClassLoader(),
-                false)
+        val resource = "${javaClass.simpleName}.${testName()}"
 
-        val strictEvolutionSerializerFactory = DefaultEvolutionSerializerFactory(
-                factory,
-                ClassLoader.getSystemClassLoader(),
-                true)
+        val withNullResource = "${resource}_with_null"
+        val withoutNullResource = "${resource}_without_null"
 
-        @Suppress("unused")
-        class C(val importantFieldA: Int)
-        val (_, env) = DeserializationInput(factory).deserializeAndReturnEnvelope(
-                SerializationOutput(factory).serialize(C(1)))
+        // Uncomment to re-generate test files
+        // val withNullOriginal = C(1, null)
+        // val withoutNullOriginal = C(1, 1)
+        // File(URI("$localPath/$withNullResource")).writeBytes(
+        //         SerializationOutput(factory).serialize(withNullOriginal).bytes)
+        // File(URI("$localPath/$withoutNullResource")).writeBytes(
+        //         SerializationOutput(factory).serialize(withoutNullOriginal).bytes)
 
-        val remoteTypeInformation = AMQPRemoteTypeModel().interpret(SerializationSchemas(env.schema, env.transformsSchema))
-                .values.find { it.typeIdentifier == TypeIdentifier.forClass(C::class.java) }
-                as RemoteTypeInformation.Composable
+        val withoutNullUrl = javaClass.getResource(withoutNullResource)
+        val withNullUrl = javaClass.getResource(withNullResource)
 
-        val withAddedField = remoteTypeInformation.copy(properties = remoteTypeInformation.properties.plus(
-            "importantFieldB" to remoteTypeInformation.properties["importantFieldA"]!!))
+        // We can deserialize the evolved instance where the original value of 'b' is null.
+        val withNullTarget = DeserializationInput(factory).deserialize(SerializedBytes<C>(withNullUrl.readBytes()))
+        assertEquals(1, withNullTarget.a)
 
-        val localTypeInformation = factory.getTypeInformation(C::class.java)
-
-        // No evolution required with original fields.
-        assertNull(strictEvolutionSerializerFactory.getEvolutionSerializer(remoteTypeInformation, localTypeInformation))
-
-        // Returns an evolution serializer if the fields have changed.
-        assertNotNull(nonStrictEvolutionSerializerFactory.getEvolutionSerializer(withAddedField, localTypeInformation))
-
-        // Fails in strict mode if the remote type information includes a field not included in the local type.
-        assertFailsWith<EvolutionSerializationException> {
-            strictEvolutionSerializerFactory.getEvolutionSerializer(withAddedField, localTypeInformation)
+        // We cannot deserialize the evolved instance where the original value of 'b' is non-null.
+        try {
+            DeserializationInput(factory).deserialize(SerializedBytes<C>(withoutNullUrl.readBytes()))
+            fail("Expected deserialisation of object with non-null value for 'b' to fail")
+        } catch (e: NotSerializableException) {
+            assertTrue(e.message!!.contains(
+                    "Non-null value 1 provided for property b, which is not supported in this version"))
         }
     }
 

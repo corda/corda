@@ -180,23 +180,38 @@ private class ConstructorBasedObjectBuilder(
  * An [ObjectBuilder] that wraps an underlying [ObjectBuilder], routing the property values assigned to its slots to the
  * matching slots in the underlying builder, and discarding values for which the underlying builder has no slot.
  */
-class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder, private val slotAssignments: IntArray): ObjectBuilder {
+class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder,
+                             private val slotAssignments: IntArray,
+                             private val remoteProperties: List<String>,
+                             private val mustPreserveData: Boolean): ObjectBuilder {
 
     companion object {
+
+        const val DISCARDED : Int = -1
+
         /**
          * Construct an [EvolutionObjectBuilder] for the specified type, constructor and properties, mapping the list of
          * properties defined in the remote type into the matching slots on the local type's [ObjectBuilder], and discarding
          * any for which there is no matching slot.
          */
-        fun makeProvider(typeIdentifier: TypeIdentifier, constructor: LocalConstructorInformation, localProperties: Map<String, LocalPropertyInformation>, remoteProperties: List<String>): () -> ObjectBuilder {
+        fun makeProvider(typeIdentifier: TypeIdentifier,
+                         constructor: LocalConstructorInformation,
+                         localProperties: Map<String, LocalPropertyInformation>,
+                         remoteTypeInformation: RemoteTypeInformation.Composable,
+                         mustPreserveData: Boolean): () -> ObjectBuilder {
             val localBuilderProvider = ObjectBuilder.makeProvider(typeIdentifier, constructor, localProperties)
 
-            val reroutedIndices = remoteProperties.map { propertyName ->
-                localBuilderProvider.propertySlots[propertyName] ?: -1
+            val remotePropertyNames = remoteTypeInformation.properties.keys.sorted()
+            val reroutedIndices = remotePropertyNames.map { propertyName ->
+                localBuilderProvider.propertySlots[propertyName] ?: DISCARDED
             }.toIntArray()
 
             return {
-                EvolutionObjectBuilder(localBuilderProvider(), reroutedIndices)
+                EvolutionObjectBuilder(
+                        localBuilderProvider(),
+                        reroutedIndices,
+                        remotePropertyNames,
+                        mustPreserveData)
             }
         }
     }
@@ -207,7 +222,16 @@ class EvolutionObjectBuilder(private val localBuilder: ObjectBuilder, private va
 
     override fun populate(slot: Int, value: Any?) {
         val slotAssignment = slotAssignments[slot]
-        if (slotAssignment != -1) localBuilder.populate(slotAssignment, value)
+        if (slotAssignment == DISCARDED) {
+            if (mustPreserveData && value != null) {
+                throw NotSerializableException(
+                        "Non-null value $value provided for property ${remoteProperties[slot]}, " +
+                        "which is not supported in this version"
+                )
+            }
+        } else {
+            localBuilder.populate(slotAssignment, value)
+        }
     }
 
     override fun build(): Any = localBuilder.build()
