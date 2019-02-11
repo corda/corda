@@ -258,6 +258,10 @@ class SchemaMigration(
             if (schemas.any { schema -> schema.migrationResource == "notary-raft.changelog-master" })
                 preV4Baseline.addAll(listOf("migration/notary-raft.changelog-init.xml",
                         "migration/notary-raft.changelog-v1.xml"))
+
+            if (schemas.any { schema -> schema.migrationResource == "notary-bft-smart.changelog-master" })
+                preV4Baseline.addAll(listOf("migration/notary-bft-smart.changelog-init.xml",
+                        "migration/notary-bft-smart.changelog-v1.xml"))
         }
         if (isFinanceAppWithLiquibaseNotMigrated) {
             preV4Baseline.addAll(listOf("migration/cash.changelog-init.xml",

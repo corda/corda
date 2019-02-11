@@ -157,6 +157,8 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
         } else {
             checkSignaturesAreValid()
         }
+        // We need parameters check here, because finality flow calls stx.toLedgerTransaction() and then verify.
+        resolveAndCheckNetworkParameters(services)
         return tx.toLedgerTransaction(services)
     }
 
@@ -174,10 +176,27 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     @DeleteForDJVM
     @Throws(SignatureException::class, AttachmentResolutionException::class, TransactionResolutionException::class, TransactionVerificationException::class)
     fun verify(services: ServiceHub, checkSufficientSignatures: Boolean = true) {
+        resolveAndCheckNetworkParameters(services)
         when (coreTransaction) {
             is NotaryChangeWireTransaction -> verifyNotaryChangeTransaction(services, checkSufficientSignatures)
             is ContractUpgradeWireTransaction -> verifyContractUpgradeTransaction(services, checkSufficientSignatures)
             else -> verifyRegularTransaction(services, checkSufficientSignatures)
+        }
+    }
+
+    @DeleteForDJVM
+    private fun resolveAndCheckNetworkParameters(services: ServiceHub) {
+        val hashOrDefault = networkParametersHash ?: services.networkParametersService.defaultHash
+        val txNetworkParameters = services.networkParametersService.lookup(hashOrDefault)
+                ?: throw TransactionResolutionException(id)
+        val groupedInputsAndRefs = (inputs + references).groupBy { it.txhash }
+        groupedInputsAndRefs.map { entry ->
+            val tx = services.validatedTransactions.getTransaction(entry.key)?.coreTransaction
+                    ?: throw TransactionResolutionException(id)
+            val paramHash = tx.networkParametersHash ?: services.networkParametersService.defaultHash
+            val params = services.networkParametersService.lookup(paramHash) ?: throw TransactionResolutionException(id)
+            if (txNetworkParameters.epoch < params.epoch)
+                throw TransactionVerificationException.TransactionNetworkParameterOrderingException(id, entry.value.first(), txNetworkParameters, params)
         }
     }
 

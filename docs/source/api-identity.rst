@@ -73,7 +73,7 @@ You can see an example of using ``SwapIdentitiesFlow`` in ``TwoPartyDealFlow.kt`
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyDealFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyDealFlow.kt
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
@@ -108,7 +108,7 @@ process. You can see an example of its use in ``TwoPartyTradeFlow.kt``.
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 6
         :end-before: DOCEND 6
@@ -136,7 +136,7 @@ synchronization process:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 07
         :end-before: DOCEND 07

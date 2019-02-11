@@ -507,11 +507,9 @@ open class TransactionBuilder(
     private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
 
     /**
-     * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method can be
-     * optionally called to resolve those [StatePointer]s to [StateAndRef]s. The [StateAndRef]s are then added as
-     * reference states to the transaction. The effect is that the referenced data is carried along with the
-     * transaction. This may or may not be appropriate in all circumstances, which is why calling this method is
-     * optional.
+     * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used
+     * to resolve those [StatePointer]s to [StateAndRef]s. The [StateAndRef]s are then added as reference states to
+     * the transaction. The effect is that the referenced data is carried along with the transaction.
      *
      * If this method is called outside the context of a flow, a [ServiceHub] instance must be passed to this method
      * for it to be able to resolve [StatePointer]s. Usually for a unit test, this will be an instance of mock services.

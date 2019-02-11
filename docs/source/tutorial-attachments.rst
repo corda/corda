@@ -105,85 +105,20 @@ and if so, printed out.
 
 .. container:: codeset
 
-    .. code-block:: kotlin
-
-        fun recipient(rpc: CordaRPCOps, webPort: Int) {
-            println("Waiting to receive transaction ...")
-            val stx = rpc.internalVerifiedTransactionsFeed().updates.toBlocking().first()
-            val wtx = stx.tx
-            if (wtx.attachments.isNotEmpty()) {
-                if (wtx.outputs.isNotEmpty()) {
-                    val state = wtx.outputsOfType<AttachmentContract.State>().single()
-                    require(rpc.attachmentExists(state.hash))
-
-                    // Download the attachment via the Web endpoint.
-                    val connection = URL("http://localhost:$webPort/attachments/${state.hash}").openConnection() as HttpURLConnection
-                    try {
-                        require(connection.responseCode == SC_OK) { "HTTP status code was ${connection.responseCode}" }
-                        require(connection.contentType == APPLICATION_OCTET_STREAM) { "Content-Type header was ${connection.contentType}" }
-                        require(connection.getHeaderField(CONTENT_DISPOSITION) == "attachment; filename=\"${state.hash}.zip\"") {
-                            "Content-Disposition header was ${connection.getHeaderField(CONTENT_DISPOSITION)}"
-                        }
-
-                        // Write out the entries inside this jar.
-                        println("Attachment JAR contains these entries:")
-                        JarInputStream(connection.inputStream).use { it ->
-                            while (true) {
-                                val e = it.nextJarEntry ?: break
-                                println("Entry> ${e.name}")
-                                it.closeEntry()
-                            }
-                        }
-                    } finally {
-                        connection.disconnect()
-                    }
-                    println("File received - we're happy!\n\nFinal transaction is:\n\n${Emoji.renderIfSupported(wtx)}")
-                } else {
-                    println("Error: no output state found in ${wtx.id}")
-                }
-            } else {
-                println("Error: no attachments found in ${wtx.id}")
-            }
-        }
-
+    .. literalinclude:: ../../samples/attachment-demo/workflows/src/main/kotlin/net/corda/attachmentdemo/workflows/AttachmentDemo.kt
+        :language: kotlin
+        :start-after: DOCSTART 1
+        :end-before: DOCEND 1
 
 The sender correspondingly builds a transaction with the attachment, then calls ``FinalityFlow`` to complete the
 transaction and send it to the recipient node:
 
 .. container:: codeset
 
-    .. code-block:: kotlin
-
-        fun sender(rpc: CordaRPCOps, numOfClearBytes: Int = 1024) { // default size 1K.
-            val (inputStream, hash) = InputStreamAndHash.createInMemoryTestZip(numOfClearBytes, 0)
-            val executor = Executors.newScheduledThreadPool(2)
-            try {
-                sender(rpc, inputStream, hash, executor)
-            } finally {
-                executor.shutdown()
-            }
-        }
-
-        private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.SHA256, executor: ScheduledExecutorService) {
-
-            // Get the identity key of the other side (the recipient).
-            val notaryFuture: CordaFuture<Party> = poll(executor, DUMMY_NOTARY_NAME.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_NOTARY_NAME) }
-            val otherSideFuture: CordaFuture<Party> = poll(executor, DUMMY_BANK_B_NAME.toString()) { rpc.wellKnownPartyFromX500Name(DUMMY_BANK_B_NAME) }
-            // Make sure we have the file in storage
-            if (!rpc.attachmentExists(hash)) {
-                inputStream.use {
-                    val avail = inputStream.available()
-                    val id = rpc.uploadAttachment(it)
-                    require(hash == id) { "Id was '$id' instead of '$hash'" }
-                }
-                require(rpc.attachmentExists(hash))
-            }
-
-            val flowHandle = rpc.startTrackedFlow(::AttachmentDemoFlow, otherSideFuture.get(), notaryFuture.get(), hash)
-            flowHandle.progress.subscribe(::println)
-            val stx = flowHandle.returnValue.getOrThrow()
-            println("Sent ${stx.id}")
-        }
+    .. literalinclude:: ../../samples/attachment-demo/workflows/src/main/kotlin/net/corda/attachmentdemo/workflows/AttachmentDemo.kt
+        :language: kotlin
+        :start-after: DOCSTART 2
+        :end-before: DOCEND 2
 
 This side is a bit more complex. Firstly it looks up its counterparty by name in the network map. Then, if the node
 doesn't already have the attachment in its storage, we upload it from a JAR resource and check the hash was what
