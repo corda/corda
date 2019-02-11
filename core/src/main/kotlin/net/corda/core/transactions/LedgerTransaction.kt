@@ -127,19 +127,22 @@ private constructor(
      * @throws TransactionVerificationException if anything goes wrong.
      */
     @Throws(TransactionVerificationException::class)
-    fun verify() {
-        internalPrepareVerify(emptyList()).verify()
+    fun verify(constraintsChecking: Boolean = true) {
+        internalPrepareVerify(emptyList(), constraintsChecking).verify()
     }
+
+    @Throws(TransactionVerificationException::class)
+    fun verify() = verify(true)
 
     /**
      * This method has to be called in a context where it has access to the database.
      */
     @CordaInternal
-    internal fun internalPrepareVerify(extraAttachments: List<Attachment>): Verifier {
+    internal fun internalPrepareVerify(extraAttachments: List<Attachment>, constraintsChecking: Boolean): Verifier {
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
-            Verifier(createLtxForVerification(), transactionClassLoader, inputVersions)
+            Verifier(createLtxForVerification(), transactionClassLoader, inputVersions, constraintsChecking)
         }
     }
 

@@ -132,11 +132,11 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addCommand(command)
     }
 
-    override fun verifies(): EnforceVerifyOrFail {
+    override fun verifies(constraintsChecking: Boolean): EnforceVerifyOrFail {
         // Verify on a copy of the transaction builder, so if it's then further modified it doesn't error due to
         // the existing signature
         transactionBuilder.copy().apply {
-            toWireTransaction().toLedgerTransaction(services).verify()
+            toWireTransaction().toLedgerTransaction(services).verify(constraintsChecking)
         }
         return EnforceVerifyOrFail.Token
     }
@@ -301,14 +301,14 @@ data class TestLedgerDSLInterpreter private constructor(
         return services.attachments.importAttachment(attachment, "TestDSL", null)
     }
 
-    override fun verifies(): EnforceVerifyOrFail {
+    override fun verifies(constraintsChecking: Boolean): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NULL_SIGNATURE)) })
             for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
-                ltx.verify()
+                ltx.verify(constraintsChecking)
                 val allInputs = wtx.inputs union wtx.references
                 val doubleSpend = allInputs intersect usedInputs
                 if (!doubleSpend.isEmpty()) {

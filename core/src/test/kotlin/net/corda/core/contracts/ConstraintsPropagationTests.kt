@@ -117,8 +117,23 @@ class ConstraintsPropagationTests {
     }
 
     @Test
-    @Ignore    // TODO(mike): rework
     fun `Happy path for Hash to Signature Constraint migration`() {
+        val ledgerServices = object : MockServices(
+                constraintsChecking = false,
+                cordappPackages = listOf("net.corda.finance.contracts.asset"),
+                initialIdentity = ALICE,
+                identityService = mock<IdentityServiceInternal>().also {
+                    doReturn(ALICE_PARTY).whenever(it).partyFromKey(ALICE_PUBKEY)
+                    doReturn(BOB_PARTY).whenever(it).partyFromKey(BOB_PUBKEY)
+                },
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                        .copy(whitelistedContractImplementations = mapOf(
+                                Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
+                                noPropagationContractClassName to listOf(SecureHash.zeroHash)),
+                                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey),
+                                notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
+        ) {}
+
         val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
         val cordappAttachmentIds =
             cordapps.map { cordapp ->
@@ -152,7 +167,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                verifies()
+                verifies(constraintsChecking = false)
             }
         }
     }

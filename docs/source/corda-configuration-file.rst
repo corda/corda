@@ -173,6 +173,11 @@ devModeOptions
 
     *Default:* not defined
 
+constraintsChecking
+  This flag can be used to disable contract state constraint checking upon transaction verification.
+  Disable with caution as constraints checking is an integral security control in the ledger consensus model.
+
+  *Default:* false
 
 emailAddress
   The email address responsible for node administration, used by the Compatibility Zone administrator.

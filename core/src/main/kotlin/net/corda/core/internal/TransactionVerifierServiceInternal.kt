@@ -21,7 +21,7 @@ interface TransactionVerifierServiceInternal {
 /**
  * Defined here for visibility reasons.
  */
-fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.internalPrepareVerify(extraAttachments)
+fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>, constraintsChecking: Boolean) = this.internalPrepareVerify(extraAttachments, constraintsChecking)
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
@@ -287,6 +287,9 @@ class Verifier(val ltx: LedgerTransaction,
         for (state in allStates) {
             checkConstraintValidity(state)
         }
+        // Check whether constraints checking has been disabled
+        if (!constraintsChecking)
+            logger.warnOnce("Constraints checking has been disabled by this nodes operator.")
 
         // Group the inputs and outputs by contract, and for each contract verify the constraints propagation logic.
         // This is not required for reference states as there is nothing to propagate.
