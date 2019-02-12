@@ -391,7 +391,7 @@ class ConstraintsPropagationTests {
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
     @Test
-    fun `Input state contract version is not compatible with lower version`() {
+    fun `Input state contract version may be incompatible with lower version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
@@ -404,7 +404,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-               failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
+                verifies()
             }
         }
     }
@@ -448,7 +448,7 @@ class ConstraintsPropagationTests {
     }
 
     @Test
-    fun `All input states contract version must be lower that current contract version`() {
+    fun `Input states contract version may be lower that current contract version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
@@ -467,13 +467,13 @@ class ConstraintsPropagationTests {
                 input("c2")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
+                verifies()
             }
         }
     }
 
     @Test
-    fun `Input state with contract version can not be downgraded to no version`() {
+    fun `Input state with contract version can be downgraded to no version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
@@ -486,7 +486,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
+                verifies()
             }
         }
     }

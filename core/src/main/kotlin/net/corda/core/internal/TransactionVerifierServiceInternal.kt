@@ -207,21 +207,6 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
     }
 
     /**
-     * Verify that contract class versions of output states are greater than or equal to the versions of the input states.
-     */
-    // Currently non-downgrade rule isn't enforced.
-    private fun validateContractVersions() {
-        contractAttachmentsByContract.forEach { contractClassName, attachments ->
-            val outputVersion = attachments.signed?.version ?: attachments.unsigned?.version ?: CordappImpl.DEFAULT_CORDAPP_VERSION
-            inputVersions[contractClassName]?.let {
-                if (it > outputVersion) {
-                    throw TransactionVerificationException.TransactionVerificationVersionException(ltx.id, contractClassName, "$it", "$outputVersion")
-                }
-            }
-        }
-    }
-
-    /**
      * For all input and output [TransactionState]s, validates that the wrapped [ContractState] matches up with the
      * wrapped [Contract], as declared by the [BelongsToContract] annotation on the [ContractState]'s class.
      *

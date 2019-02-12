@@ -116,7 +116,7 @@ CorDapp is 4 or greater, then transaction verification will fail with a ``Transa
 the owning ``Contract`` *can* be identified, but the ``ContractState`` has been bundled with a different contract, then
 transaction verification will fail with a ``TransactionContractConflictException``.
 
-.. _contract_non-downgrade_rule_ref:
+.. _contract_downgrade_rule_ref:
 
 App versioning with signature constraints
 -----------------------------------------
