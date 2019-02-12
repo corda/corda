@@ -87,7 +87,7 @@ interface NodeConfiguration {
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
-        internal val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
+        val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()
 
         internal val DEFAULT_FLOW_MONITOR_PERIOD_MILLIS: Duration = Duration.ofMinutes(1)
         internal val DEFAULT_FLOW_MONITOR_SUSPENSION_LOGGING_THRESHOLD_MILLIS: Duration = Duration.ofMinutes(1)

@@ -68,7 +68,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
                 : this(null, accountId, publicKey.toStringShort())
     }
 
-    private companion object {
+    companion object {
         fun createKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
