@@ -117,7 +117,7 @@ class JarScanningCordappLoaderTest {
         val jar = JarScanningCordappLoaderTest::class.java.getResource("versions/min-2-no-target.jar")!!
         val loader = JarScanningCordappLoader.fromJarUrls(listOf(jar), VersionInfo.UNKNOWN)
         // exclude the core cordapp
-        val cordapp = loader.cordapps.single { it.cordappClasses.contains("net.corda.core.internal.cordapp.CordappImpl") }
+        val cordapp = loader.cordapps.first()
         assertThat(cordapp.targetPlatformVersion).isEqualTo(2)
         assertThat(cordapp.minimumPlatformVersion).isEqualTo(2)
     }
