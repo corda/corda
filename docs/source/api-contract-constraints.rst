@@ -17,34 +17,39 @@ a back door, they would be able to do things like print money or edit states in 
 participants of a state to agree on what kind of upgrades will be allowed.
 
 Every state on the ledger contains the fully qualified class name of a ``Contract`` implementation, and also a *constraint*.
-This constraint specifies which versions of an application can be used to provide the named class. There are several types:
+This constraint specifies which versions of an application can be used to provide the named class, when the transaction is built.
+New versions released after a transaction is signed and finalised won't affect prior transactions because the old code is attached
+to it.
+
+There are several types of constraint:
 
 1. Hash constraint: exactly one version of the app can be used with this state.
 2. Zone whitelist constraint: the compatibility zone operator lists the hashes of the versions that can be used with this contract class name.
 3. Signature constraint: any version of the app signed by the given ``CompositeKey`` can be used.
 4. Always accept constraint: any app can be used at all. This is insecure but convenient for testing.
 
-The actual app version used is defined by the attachments on a transaction: the JAR containing the state and contract classes, and optionally
+The actual app version used is defined by the attachments on a transaction that consumes a state: the JAR containing the state and contract classes, and optionally
 its dependencies, are all attached to the transaction. Other nodes will download these JARs from a node if they haven't seen them before,
 so they can be used for verification. The ``TransactionBuilder`` will manage the details of constraints for you, by selecting both constraints
 and attachments to ensure they line up correctly. Therefore you only need to have a basic understanding of this topic unless you are
 doing something sophisticated.
 
 The best kind of constraint to use is the **signature constraint**. If you sign your application it will be used automatically.
-We recommend signature constraints because they let you release new versions of your application. Hash and zone
-whitelist constraints still work, but are left over from earlier Corda versions before signature constraints were
+We recommend signature constraints because they let you smoothly migrate existing data to new versions of your application.
+Hash and zone whitelist constraints are left over from earlier Corda versions before signature constraints were
 implemented. They make it harder to upgrade applications than when using signature constraints, so they're best avoided.
-Signature constraints can specify flexible policies but if you use the automatic support, then a state will require the attached app
-to be signed by every key that the first attachment was signed by. Thus if the app that was used to issue the states was signed by
-Alice and Bob, every transaction must use an attachment signed by Alice and Bob.
+Signature constraints can specify flexible threshold policies, but if you use the automatic support then a state will
+require the attached app to be signed by every key that the first attachment was signed by. Thus if the app that was used
+to issue the states was signed by Alice and Bob, every transaction must use an attachment signed by Alice and Bob.
 
 **Constraint propagation.** Constraints are picked when a state is created for the first time in an issuance transaction. Once created,
-the constraint used by the equivalent output state must match the input state, so it can't be changed and you can't combine states with
-incompatible constraints together in the same transaction.
+the constraint used by equivalent output states (i.e. output states that use the same contract class name) must match the
+input state, so it can't be changed and you can't combine states with incompatible constraints together in the same transaction.
 
-**Implicit vs explicit.** There are two ways of handling upgrades to a smart contract in Corda:
+**Implicit vs explicit.** Constraints are not the only way to manage upgrades to transactions. There are two ways of handling
+upgrades to a smart contract in Corda:
 
-1. *Implicit:* By allowing multiple implementations of the contract ahead of time, using constraints.
+1. *Implicit:* By pre-authorising multiple implementations of the contract ahead of time, using constraints.
 2. *Explicit:* By creating a special *contract upgrade transaction* and getting all participants of a state to sign it using the
    contract upgrade flows.
 
@@ -116,9 +121,9 @@ transaction verification will fail with a ``TransactionContractConflictException
 App versioning with signature constraints
 -----------------------------------------
 
-Signed apps require a version number to be provided, see :doc:`versioning`. You can't import two different JARs that claim to be the same
-version, export the same contract classes and which are both signed. At runtime the node will throw a
-``DuplicateContractClassException`` exception if this condition is violated.
+Signed apps require a version number to be provided, see :doc:`versioning`. You can't import two different
+JARs that claim to be the same version, provide the same contract classes and which are both signed. At runtime
+the node will throw a ``DuplicateContractClassException`` exception if this condition is violated.
 
 Issues when using the HashAttachmentConstraint
 ----------------------------------------------
@@ -161,8 +166,9 @@ that the output state will be spent under similar conditions as it was created.
 
 Before version 4, the constraint propagation logic was expected to be enforced in the contract verify code, as it has access to the entire Transaction.
 
-Starting with version 4 of Corda, the constraint propagation logic has been implemented and enforced directly by the platform,
-unless disabled using ``@NoConstraintPropagation`` - which reverts to the previous behavior.
+Starting with version 4 of Corda the constraint propagation logic has been implemented and enforced directly by the platform,
+unless disabled by putting ``@NoConstraintPropagation`` on the ``Contract`` class which reverts to the previous behavior of expecting
+apps to do this.
 
 For contracts that are not annotated with ``@NoConstraintPropagation``, the platform implements a fairly simple constraint transition policy
 to ensure security and also allow the possibility to transition to the new ``SignatureAttachmentConstraint``.
