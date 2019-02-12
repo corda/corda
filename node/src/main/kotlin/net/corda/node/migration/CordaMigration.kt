@@ -59,7 +59,7 @@ abstract class CordaMigration : CustomTaskChange {
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
         _cordaDB = createDatabase(url, cacheFactory, identityService, schema)
-        cordaDB.start(dataSource)
+        cordaDB.start(dataSource, url)
         identityService.database = cordaDB
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
@@ -82,7 +82,7 @@ abstract class CordaMigration : CustomTaskChange {
         )
         // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
         // migrations may fail.
-        return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+        return CordaPersistence(configDefaults, schema, cacheFactory, attributeConverters, closeConnection = false)
     }
 
     override fun validate(database: Database?): ValidationErrors? {
