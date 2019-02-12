@@ -100,6 +100,8 @@ class Verifier(val ltx: LedgerTransaction,
         if (contractWithMultipleAttachments != null) throw TransactionVerificationException.ConflictingAttachmentsRejection(ltx.id, contractWithMultipleAttachments)
 
         val result = contractAttachmentsPerContract.toMap()
+
+        // Check that there is an attachment for each contract.
         if (result.keys != contractClasses) throw TransactionVerificationException.MissingAttachmentRejection(ltx.id, contractClasses.minus(result.keys).first())
 
         return result
@@ -370,6 +372,7 @@ class Verifier(val ltx: LedgerTransaction,
             try {
                 contract.verify(ltx)
             } catch (e: Exception) {
+                logger.error("Error validating transaction ${ltx.id}.", e)
                 throw TransactionVerificationException.ContractRejection(ltx.id, contract, e)
             }
         }
