@@ -88,14 +88,15 @@ class VaultStateMigrationTest {
     fun setUp() {
         val identityService = makeTestIdentityService(dummyNotary.identity, BOB_IDENTITY, ALICE_IDENTITY)
         notaryServices = MockServices(cordappPackages, dummyNotary, identityService, dummyCashIssuer.keyPair, BOC_KEY)
+        val testDatasouceProperties = makeTestDataSourceProperties()
         cordaDB = configureDatabase(
-                makeTestDataSourceProperties(),
+                testDatasouceProperties,
                 DatabaseConfig(),
                 notaryServices.identityService::wellKnownPartyFromX500Name,
                 notaryServices.identityService::wellKnownPartyFromAnonymous,
                 ourName = BOB_IDENTITY.name)
         val liquibaseConnection = Mockito.mock(JdbcConnection::class.java)
-        Mockito.`when`(liquibaseConnection.url).thenReturn(cordaDB.jdbcUrl)
+        Mockito.`when`(liquibaseConnection.url).thenReturn(testDatasouceProperties.getProperty("dataSource.url"))
         Mockito.`when`(liquibaseConnection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)
         liquibaseDB = Mockito.mock(Database::class.java)
         Mockito.`when`(liquibaseDB.connection).thenReturn(liquibaseConnection)
@@ -485,9 +486,10 @@ class VaultStateMigrationTest {
     @Test
     @Ignore
     fun `Run on persistent DB`() {
+        val persistentDatasourceProperties = makePersistentDataSourceProperties()
         cordaDB = configureDatabase(makePersistentDataSourceProperties(), DatabaseConfig(), notaryServices.identityService::wellKnownPartyFromX500Name, notaryServices.identityService::wellKnownPartyFromAnonymous)
         val connection = (liquibaseDB.connection as JdbcConnection)
-        Mockito.`when`(connection.url).thenReturn(cordaDB.jdbcUrl)
+        Mockito.`when`(connection.url).thenReturn(persistentDatasourceProperties.getProperty("dataSource.url"))
         Mockito.`when`(connection.wrappedConnection).thenReturn(cordaDB.dataSource.connection)
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
