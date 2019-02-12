@@ -319,36 +319,21 @@ class ConstraintsPropagationTests {
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
                 packageOwnership = mapOf( "net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
-        // attachment with context (both unsigned and signed attachments representing same contract)
-        val attachmentWithContext = mock<AttachmentWithContext>()
-        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentSigned)
-        whenever(attachmentWithContext.contract).thenReturn(propagatingContractClassName)
-        whenever(attachmentWithContext.networkParameters).thenReturn(netParams)
-
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
 
         // propagation check
-        assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentWithContext))
+        // TODO - enable once the logic to transition has been added.
+        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentSigned))
     }
 
     @Test
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
         // signed attachment (for signature constraint)
-        val attachmentSigned = mock<ContractAttachment>()
-        whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
-        whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
-
-        // network parameters
-        val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
-
-        // attachment with context
-        val attachment = mock<AttachmentWithContext>()
-        whenever(attachment.networkParameters).thenReturn(netParams)
-        whenever(attachment.contractAttachment).thenReturn(attachmentSigned)
+        val attachment = mock<ContractAttachment>()
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachment.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // Exhaustive positive check
         assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
@@ -390,24 +375,6 @@ class ConstraintsPropagationTests {
                 SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
-    @Test
-    fun `Input state contract version is not compatible with lower version`() {
-        ledgerServices.ledger(DUMMY_NOTARY) {
-            ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
-                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
-            })
-            transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
-                input("c1")
-                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
-               failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
-            }
-        }
-    }
 
     @Test
     fun `Input state contract version is compatible with the same version`() {
@@ -443,50 +410,6 @@ class ConstraintsPropagationTests {
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
                 verifies()
-            }
-        }
-    }
-
-    @Test
-    fun `All input states contract version must be lower that current contract version`() {
-        ledgerServices.ledger(DUMMY_NOTARY) {
-            ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
-                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
-            })
-            ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
-                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
-            })
-            transaction {
-                input("c1")
-                input("c2")
-                output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
-            }
-        }
-    }
-
-    @Test
-    fun `Input state with contract version can not be downgraded to no version`() {
-        ledgerServices.ledger(DUMMY_NOTARY) {
-            ledgerServices.recordTransaction(transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
-                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
-            })
-            transaction {
-                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), emptyMap())
-                input("c1")
-                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
-                command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower than the version of the input state '2'.")
             }
         }
     }

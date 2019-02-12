@@ -46,14 +46,8 @@ val ContractState.requiredContractClassName: String? get() {
  *  * You can transition from the [WhitelistedByZoneAttachmentConstraint] to the [SignatureAttachmentConstraint] only if all signers of the
  *    JAR are required to sign in the future.
  *
- *  * You can transition from a [HashAttachmentConstraint] to a [SignatureAttachmentConstraint] when the following conditions are met:
- *
- *    1. Jar contents (per entry, by hashcode) of both original (unsigned) and signed contract jars are identical
- *       Note: this step is enforced in the [AttachmentsClassLoader] no overlap rule checking.
- *
- *    2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
  */
-fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: AttachmentWithContext): Boolean {
+fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: ContractAttachment): Boolean {
     val output = this
     return when {
         // These branches should not happen, as this has been already checked.
@@ -80,21 +74,9 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
         input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
             attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
-        // Transition from Hash to Signature constraint requires
-        // signer(s) of signature-constrained output state is same as signer(s) of registered package namespace
-        input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> {
-            val packageOwnerPK = attachment.networkParameters.getPackageOwnerOf(attachment.contractAttachment.allContracts)
-            if (packageOwnerPK == null) {
-                log.warn("Missing registered java package owner for ${attachment.contractAttachment.contract} in network parameters: " +
-                        "${attachment.networkParameters} (input constraint = $input, output constraint = $output)")
-                return false
-            }
-            else if (!packageOwnerPK.isFulfilledBy(output.key) ) {
-                log.warn("Java package owner keys do not match signature constrained output state keys")
-                return false
-            }
-            return true
-        }
+        // TODO Transition from Hash to Signature constraint
+        input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> false
+
         else -> false
     }
 }

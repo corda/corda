@@ -1,7 +1,9 @@
 package net.corda.core.internal
 
-import net.corda.core.contracts.*
-import net.corda.core.node.NetworkParameters
+import net.corda.core.contracts.Attachment
+import net.corda.core.contracts.ContractAttachment
+import net.corda.core.contracts.ContractClassName
+import net.corda.core.node.services.AttachmentId
 
 /**
  * Used only for passing to the Attachment constraint verification.
@@ -9,8 +11,8 @@ import net.corda.core.node.NetworkParameters
 class AttachmentWithContext(
         val contractAttachment: ContractAttachment,
         val contract: ContractClassName,
-        /** Required for verifying [WhitelistedByZoneAttachmentConstraint] and [HashAttachmentConstraint] migration to [SignatureAttachmentConstraint] */
-        val networkParameters: NetworkParameters
+        /** Required for verifying [WhitelistedByZoneAttachmentConstraint] */
+        val whitelistedContractImplementations: Map<String, List<AttachmentId>>
 ) : Attachment by contractAttachment {
     init {
         require(contract in contractAttachment.allContracts) {

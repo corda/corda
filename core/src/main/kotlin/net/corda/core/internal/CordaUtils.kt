@@ -100,17 +100,6 @@ internal fun NetworkParameters.getPackageOwnerOf(contractClassName: ContractClas
     return packageOwnership.entries.singleOrNull { owns(it.key, contractClassName) }?.value
 }
 
-/**
- * Returns the public key of the package owner if any of [contractClassNames] match, or null if not owned.
- */
-internal fun NetworkParameters.getPackageOwnerOf(contractClassNames: Set<ContractClassName>): PublicKey? {
-    for (contractClassName in contractClassNames) {
-        val owner = getPackageOwnerOf(contractClassName)
-        if (owner != null) return owner
-    }
-    return null
-}
-
 // Make sure that packages don't overlap so that ownership is clear.
 fun noPackageOverlap(packages: Collection<String>): Boolean {
     return packages.all { outer -> packages.none { inner -> inner != outer && inner.startsWith("$outer.") } }
