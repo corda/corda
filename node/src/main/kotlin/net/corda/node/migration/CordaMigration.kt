@@ -10,7 +10,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.persistence.PublicKeyToTextConverter

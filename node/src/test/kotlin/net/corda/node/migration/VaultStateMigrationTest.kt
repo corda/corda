@@ -27,7 +27,6 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
@@ -116,14 +115,14 @@ class VaultStateMigrationTest {
         return notaryServices.signInitialTransaction(tx, bankOfCorda.party.owningKey)
     }
 
-    private fun createVaultStatesFromTransaction(tx: SignedTransaction) {
+    private fun createVaultStatesFromTransaction(tx: SignedTransaction, stateStatus: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) {
         cordaDB.transaction {
             tx.coreTransaction.outputs.forEachIndexed { index, state ->
                 val constraintInfo = Vault.ConstraintInfo(state.constraint)
                 val persistentState = VaultSchemaV1.VaultStates(
                         notary = state.notary,
                         contractStateClassName = state.data.javaClass.name,
-                        stateStatus = Vault.StateStatus.UNCONSUMED,
+                        stateStatus = stateStatus,
                         recordedTime = clock.instant(),
                         relevancyStatus = Vault.RelevancyStatus.RELEVANT, //Always persist as relevant to mimic V3
                         constraintType = constraintInfo.type(),
@@ -191,12 +190,12 @@ class VaultStateMigrationTest {
         }
     }
 
-    private fun addCashStates(statesToAdd: Int, owner: AbstractParty) {
+    private fun addCashStates(statesToAdd: Int, owner: AbstractParty, stateStatus: Vault.StateStatus = Vault.StateStatus.UNCONSUMED) {
         val cash = Cash()
         cordaDB.transaction {
             (1..statesToAdd).map { createCashTransaction(cash, it.DOLLARS, owner) }.forEach {
                 storeTransaction(it)
-                createVaultStatesFromTransaction(it)
+                createVaultStatesFromTransaction(it, stateStatus)
             }
         }
     }
@@ -419,6 +418,15 @@ class VaultStateMigrationTest {
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
         assertEquals(6, getStatePartyCount())
+    }
+
+    @Test
+    fun `Consumed states are not migrated`() {
+        addCashStates(1010, BOB, Vault.StateStatus.CONSUMED)
+        assertEquals(0, getStatePartyCount())
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(0, getStatePartyCount())
     }
 
     // Used to test migration performance

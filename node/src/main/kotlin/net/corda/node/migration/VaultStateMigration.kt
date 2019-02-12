@@ -32,7 +32,6 @@ import java.util.concurrent.ForkJoinTask
 import java.util.concurrent.RecursiveAction
 import javax.persistence.criteria.Root
 import javax.persistence.criteria.Selection
-import javax.persistence.criteria.SetJoin
 
 class VaultStateMigration : CordaMigration() {
     companion object {
@@ -73,23 +72,25 @@ class VaultStateMigration : CordaMigration() {
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
         val persistentStates = VaultStateIterator(cordaDB)
-        persistentStates.parallelForEach {
-            val session = currentDBSession()
-            try {
-                val stateAndRef = getStateAndRef(it)
+        effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
+            persistentStates.forEach {
+                val session = currentDBSession()
+                try {
+                    val stateAndRef = getStateAndRef(it)
 
-                addStateParties(session, stateAndRef)
+                    addStateParties(session, stateAndRef)
 
-                // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
-                // state parties.
-                val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
-                    participant.owningKey
-                }).toSet()
-                if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
-                    it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
+                    // Can get away without checking for AbstractMethodErrors here as these will have already occurred when trying to add
+                    // state parties.
+                    val myKeys = identityService.stripNotOurKeys(stateAndRef.state.data.participants.map { participant ->
+                        participant.owningKey
+                    }).toSet()
+                    if (!NodeVaultService.isRelevant(stateAndRef.state.data, myKeys)) {
+                        it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
+                    }
+                } catch (e: VaultStateMigrationException) {
+                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
                 }
-            } catch (e: VaultStateMigrationException) {
-                logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
             }
         }
         logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
@@ -122,7 +123,7 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
  * there are a large number of states.
  *
  * Currently, this class filters out those persistent states that have entries in the state party table. This behaviour is required for the
- * vault state migration, as entries in this table should not be duplicated.
+ * vault state migration, as entries in this table should not be duplicated. Unconsumed states are also filtered out for performance.
  */
 class VaultStateIterator(private val database: CordaPersistence) : Iterator<VaultSchemaV1.VaultStates> {
     companion object {
@@ -155,6 +156,9 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
     val numStates = getTotalStates()
 
+    // Create a query on the vault states that does the following filtering:
+    // - Returns only those states without corresponding entries in the state_party table
+    // - Returns only unconsumed states (for performance reasons)
     private fun <T>createVaultStatesQuery(returnClass: Class<T>, selection: (Root<VaultSchemaV1.VaultStates>) -> Selection<T>): Query<T> {
         val session = currentDBSession()
         val criteriaQuery = criteriaBuilder.createQuery(returnClass)
@@ -167,7 +171,10 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
                         .get<PersistentStateRef>(VaultSchemaV1.PersistentStateRefAndKey::stateRef.name),
                 queryRootStates.get<PersistentStateRef>(VaultSchemaV1.VaultStates::stateRef.name)))
         criteriaQuery.select(selection(queryRootStates))
-        criteriaQuery.where(criteriaBuilder.equal(subQuery, 0))
+        criteriaQuery.where(criteriaBuilder.and(
+                criteriaBuilder.equal(subQuery, 0),
+                criteriaBuilder.equal(queryRootStates.get<Vault.StateStatus>(VaultSchemaV1.VaultStates::stateStatus.name),
+                        Vault.StateStatus.UNCONSUMED)))
         return session.createQuery(criteriaQuery)
     }
 
@@ -231,6 +238,9 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
         return stateToReturn
     }
 
+    // The rest of this class is an attempt at multithreading that was ultimately scuppered by liquibase not providing a connection pool.
+    // This may be useful as a starting point for improving performance of the migration, so is left here. To start using it, remove the
+    // serialization environment changes in the execute function in the migration, and change forEach -> parallelForEach.
     private val pool = ForkJoinPool.commonPool()
 
     private class VaultPageTask(val database: CordaPersistence,
