@@ -27,6 +27,7 @@ DROP TABLE ${schema}.vault_fungible_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_linear_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_bft_committed_states CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_raft_committed_states CASCADE CONSTRAINTS
+DROP TABLE ${schema}.node_raft_committed_txs CASCADE CONSTRAINTS
 DROP TABLE ${schema}.vault_transaction_notes CASCADE CONSTRAINTS
 DROP TABLE ${schema}.link_nodeinfo_party CASCADE CONSTRAINTS
 DROP TABLE ${schema}.node_link_nodeinfo_party CASCADE CONSTRAINTS

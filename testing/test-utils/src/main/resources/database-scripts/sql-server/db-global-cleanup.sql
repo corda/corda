@@ -28,6 +28,7 @@ DROP TABLE IF EXISTS ${schema}.vault_fungible_states;
 DROP TABLE IF EXISTS ${schema}.vault_linear_states;
 DROP TABLE IF EXISTS ${schema}.node_bft_committed_states;
 DROP TABLE IF EXISTS ${schema}.node_raft_committed_states;
+DROP TABLE IF EXISTS ${schema}.node_raft_committed_txs;
 DROP TABLE IF EXISTS ${schema}.vault_transaction_notes;
 DROP TABLE IF EXISTS ${schema}.link_nodeinfo_party;
 DROP TABLE IF EXISTS ${schema}.node_link_nodeinfo_party;
