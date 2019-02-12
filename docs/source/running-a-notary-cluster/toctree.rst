@@ -14,3 +14,4 @@ This section contains all the information required to add a HA notary service to
   installing-the-notary-service-netman
   operating-percona
   updating-the-ha-notary-service
+  notary-metrics
