@@ -25,7 +25,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     private val nextKeys = LinkedList<KeyPair>()
 
-    private val keysById: MutableMap<UUID, Set<PublicKey>> = mutableMapOf()
+    val keysById: MutableMap<UUID, Set<PublicKey>> = mutableMapOf()
 
     override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()

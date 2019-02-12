@@ -26,6 +26,10 @@ import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.keys.BasicHSMKeyManagementService
+import net.corda.node.services.keys.E2ETestKeyManagementService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
@@ -36,6 +40,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
@@ -71,7 +76,8 @@ open class MockServices private constructor(
         override val identityService: IdentityService,
         private val initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
-        private val moreKeys: Array<out KeyPair>
+        private val moreKeys: Array<out KeyPair>,
+        override val keyManagementService: KeyManagementService
 ) : ServiceHub {
 
     companion object {
@@ -116,9 +122,15 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+
+            // Create a persistent key management service and add the key pair which was created for the TestIdentity.
+            if (identityService !is PersistentIdentityService) throw IllegalArgumentException("identityService must be PersistentIdentityService.")
+            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, database)
+            database.transaction { keyManagementService.start(setOf(initialIdentity.keyPair)) }
+
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, keyManagementService) {
+                    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                     override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -175,8 +187,19 @@ open class MockServices private constructor(
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
-                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>)
-            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys)
+                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>, keyManagementService: KeyManagementService)
+            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, keyManagementService)
+
+    private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
+                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>) : this(
+            cordappLoader,
+            MockTransactionStorage(),
+            identityService,
+            networkParameters,
+            initialIdentity,
+            moreKeys,
+            MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
+    )
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -195,6 +218,14 @@ open class MockServices private constructor(
                 networkParameters: NetworkParameters,
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys)
+
+    constructor(cordappPackages: Iterable<String>,
+                initialIdentity: TestIdentity,
+                identityService: IdentityService,
+                networkParameters: NetworkParameters,
+                vararg moreKeys: KeyPair,
+                keyManagementService: KeyManagementService) :
+            this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys, keyManagementService)
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -298,7 +329,6 @@ open class MockServices private constructor(
         get() = networkParametersService.run { lookup(currentHash)!! }
 
     final override val attachments = MockAttachmentStorage()
-    override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys) }
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
