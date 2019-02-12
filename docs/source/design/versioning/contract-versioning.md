@@ -190,7 +190,7 @@ States need to follow the general serialisation rules: https://docs.corda.net/se
 These are the possible evolutions based on these general rules:
  - Adding nullable fields with default values is OK (deserialising old versions would populate the newer fields with the defaults)
  - Adding non-nullable fields with default values is OK but requires extra serialisation annotation
- - Removing fields is NotOK if that field was actually used during verification. (the removed field has to still be used by the verification logic.)
+ - Removing fields is permitted, but transactions will fail at the message deserialisation stage if a non-null value is supplied for a removed field. This means that if a nullable field is added, states received from the previous version can be transmitted back to that version, as evolution from the old version to the new version will supply a default value of null for that field, and evolution from the new version back to the old version will discard that null value. If the value is not-null, the data is assumed to have originated from the new version and to be significant for contract validation, and the old version must refuse to handle it.
  - Rename fields NOK ( will be possible in the future when the serialisation engine will support it)
  - Changing type of field NOK (Serialisation engine would most likely fail )
  - Deprecating fields OK (as long as it's not removed)
