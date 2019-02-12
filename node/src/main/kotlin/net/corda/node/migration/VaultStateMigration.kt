@@ -72,7 +72,7 @@ class VaultStateMigration : CordaMigration() {
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
 
         val persistentStates = VaultStateIterator(cordaDB)
-        effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
+        VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
                 val session = currentDBSession()
                 try {
@@ -151,6 +151,22 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
 
         private fun disableSerialization() {
             _inheritableContextSerializationEnv.set(null)
+        }
+
+        fun withSerializationEnv(block: () -> Unit) {
+            val newEnv = if (_allEnabledSerializationEnvs.isEmpty()) {
+                initialiseSerialization()
+                true
+            } else {
+                false
+            }
+            effectiveSerializationEnv.serializationFactory.withCurrentContext(effectiveSerializationEnv.storageContext.withLenientCarpenter()) {
+                block()
+            }
+
+            if (newEnv) {
+                disableSerialization()
+            }
         }
     }
     private val criteriaBuilder = database.entityManagerFactory.criteriaBuilder
@@ -257,21 +273,6 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
                 } else {
                     applyBlock()
                 }
-            }
-        }
-
-        private fun withSerializationEnv(block: () -> Unit) {
-            val newEnv = if (_allEnabledSerializationEnvs.isEmpty()) {
-                initialiseSerialization()
-                true
-            } else {
-                false
-            }
-
-            block()
-
-            if (newEnv) {
-                disableSerialization()
             }
         }
 
