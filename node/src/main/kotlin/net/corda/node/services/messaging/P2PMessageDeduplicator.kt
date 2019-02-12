@@ -11,6 +11,7 @@ import net.corda.node.services.statemachine.DeduplicationId
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
+import java.time.Clock
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import javax.persistence.Column
@@ -22,7 +23,11 @@ typealias SenderHashToSeqNo = Pair<String, Long?>
 /**
  * Encapsulate the de-duplication logic.
  */
-class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val database: CordaPersistence) {
+class P2PMessageDeduplicator(
+        cacheFactory: NamedCacheFactory,
+        private val database: CordaPersistence,
+        private val clock: Clock
+) {
     companion object {
         private val log = loggerFor<P2PMessageDeduplicator>()
 
@@ -38,7 +43,10 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
     private val processedMessages = createProcessedMessages(cacheFactory)
     // We add the peer to the key, so other peers cannot attempt malicious meddling with sequence numbers.
     // Expire after 7 days since we last touched an entry, to avoid infinite growth.
-    private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = cacheFactory.buildNamed<SenderKey, SenderHashToSeqNo>(Caffeine.newBuilder(), "P2PMessageDeduplicator_senderUUIDSeqNoHWM").asMap()
+    private val senderUUIDSeqNoHWM: MutableMap<SenderKey, SenderHashToSeqNo> = cacheFactory.buildNamed<SenderKey, SenderHashToSeqNo>(
+            Caffeine.newBuilder(),
+            "P2PMessageDeduplicator_senderUUIDSeqNoHWM"
+    ).asMap()
 
     private fun createProcessedMessages(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<DeduplicationId, MessageMeta, ProcessedMessage, String> {
         return AppendOnlyPersistentMap(
@@ -102,7 +110,13 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
             val cb1 = session.criteriaBuilder
             val cq1 = cb1.createQuery(Long::class.java)
             val root = cq1.from(ProcessedMessage::class.java)
-            session.createQuery(cq1.select(cb1.max(root.get<Long>(ProcessedMessage::seqNo.name))).where(cb1.equal(root.get<String>(ProcessedMessage::hash.name), senderHash))).singleResult
+            session.createQuery(cq1
+                    .select(
+                            cb1.max(root.get<Long>(ProcessedMessage::seqNo.name))
+                    ).where(
+                            cb1.equal(root.get<String>(ProcessedMessage::hash.name), senderHash)
+                    )
+            ).singleResult
         }
     }
 
@@ -137,9 +151,14 @@ class P2PMessageDeduplicator(cacheFactory: NamedCacheFactory, private val databa
         val receivedSenderUUID = msg.senderUUID
         val receivedSenderSeqNo = msg.senderSeqNo
         // We don't want a mix of nulls and values so we ensure that here.
-        val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) senderUUIDSeqNoHWM[SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)]?.first else null
+        val senderHash: String? = if (receivedSenderUUID != null && receivedSenderSeqNo != null) {
+            val senderKey = SenderKey(receivedSenderUUID, msg.peer, msg.isSessionInit)
+            senderUUIDSeqNoHWM[senderKey]?.first
+        } else {
+            null
+        }
         val senderSeqNo: Long? = if (senderHash != null) msg.senderSeqNo else null
-        val messageMeta = MessageMeta(Instant.now(), senderHash, senderSeqNo)
+        val messageMeta = MessageMeta(clock.instant(), senderHash, senderSeqNo)
         beingProcessedMessages[msg.uniqueMessageId] = messageMeta
         log.debug { "${formatMetaForLogging(msg.uniqueMessageId, messageMeta)} will be processed." }
     }

@@ -284,7 +284,8 @@ class FlowWorkerServiceHub(override val configuration: NodeConfiguration,
                 isDrainingModeOn = nodeProperties.flowsDrainingMode::isEnabled,
                 drainingModeWasChangedEvents = nodeProperties.flowsDrainingMode.values,
                 metricRegistry = metricRegistry,
-                cacheFactory = cacheFactory
+                cacheFactory = cacheFactory,
+                platformClock = clock
         )
     }
 

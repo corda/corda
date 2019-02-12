@@ -17,7 +17,8 @@ data class EnterpriseConfiguration(
         val tuning: PerformanceTuning = Defaults.tuning,
         val externalBridge: Boolean? = null,
         val enableCacheTracing: Boolean = Defaults.enableCacheTracing,
-        val traceTargetDirectory: Path = Defaults.traceTargetDirectory
+        val traceTargetDirectory: Path = Defaults.traceTargetDirectory,
+        val processedMessageCleanup: ProcessedMessageCleanup? = null
 ) {
     internal object Defaults {
         val messagingServerConnectionConfiguration: MessagingServerConnectionConfiguration = MessagingServerConnectionConfiguration.DEFAULT
@@ -82,3 +83,17 @@ data class PerformanceTuning(
         )
     }
 }
+
+data class ProcessedMessageCleanup(
+        /**
+         * How many processed messages to keep for every sender.
+         * If not provided will be derived from the [PerformanceTuning.p2pConfirmationWindowSize] value.
+         */
+        val retainPerSender: Int?,
+        /**
+         * For how long (days) should a processed message record be kept.
+         * If not provided will default to the event horizon duration specified in the current network parameters.
+         */
+        val retainForDays: Int?
+)
+

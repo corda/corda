@@ -106,6 +106,7 @@ import java.util.concurrent.TimeUnit.MINUTES
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.function.Consumer
 import javax.persistence.EntityManager
+import kotlin.math.max
 import net.corda.core.crypto.generateKeyPair as cryptoGenerateKeyPair
 
 /**
@@ -337,6 +338,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
+
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
@@ -415,6 +417,13 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
             createStartedNode(nodeInfo, rpcOps, notaryService).also { _started = it }
         }
+    }
+
+    private fun defaultRetainPerSender(): Int {
+        return max(
+                1000, // The minimum number of messages to retain for the default configuration
+                (configuration.enterpriseConfiguration.tuning.p2pConfirmationWindowSize / 512) + 1 // Assumed message size is 0.5 KB
+        )
     }
 
     private operator fun StaffedFlowHospital.contains(flow: FlowStateMachine<*>) = contains(flow.id)
@@ -845,6 +854,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     }
 
     open fun stop() {
+        cleanUpProcessedMessages(services.networkParameters.eventHorizon)
+
         // TODO: We need a good way of handling "nice to have" shutdown events, especially those that deal with the
         // network, including unsubscribing from updates from remote services. Possibly some sort of parameter to stop()
         // to indicate "Please shut down gracefully" vs "Shut down now".
@@ -858,6 +869,17 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         runOnStop.clear()
         shutdownExecutor.shutdown()
         _started = null
+    }
+
+    /** Removes old records from the processed message table used for deduplication. */
+    private fun cleanUpProcessedMessages(eventHorizon: Duration) {
+        val messageCleanupConfig = configuration.enterpriseConfiguration.processedMessageCleanup
+        val retainPerSender = messageCleanupConfig?.retainPerSender
+                ?: defaultRetainPerSender()
+        val retainForDays = messageCleanupConfig?.retainForDays
+                ?: eventHorizon.toDays().toInt()
+
+        NodeJanitor.cleanUpProcessedMessages(database, platformClock, retainForDays, retainPerSender)
     }
 
     protected abstract fun makeMessagingService(): MessagingService

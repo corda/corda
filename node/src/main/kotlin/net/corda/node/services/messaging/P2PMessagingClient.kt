@@ -93,7 +93,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
                          private val metricRegistry: MetricRegistry,
                          cacheFactory: NamedCacheFactory,
                          private val isDrainingModeOn: () -> Boolean,
-                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>
+                         private val drainingModeWasChangedEvents: Observable<Pair<Boolean, Boolean>>,
+                         platformClock: java.time.Clock
 ) : SingletonSerializeAsToken(), MessagingService, AddressToArtemisQueueResolver {
     companion object {
         private val log = contextLogger()
@@ -143,7 +144,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
 
     private val handlers = ConcurrentHashMap<String, MessageHandler>()
 
-    private val deduplicator = P2PMessageDeduplicator(cacheFactory, database)
+    private val deduplicator = P2PMessageDeduplicator(cacheFactory, database, platformClock)
     // Note: Public visibility for testing
     var messagingExecutor: MessagingExecutor? = null
 

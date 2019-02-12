@@ -36,6 +36,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rx.subjects.PublishSubject
 import java.net.ServerSocket
+import java.time.Clock
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.MILLISECONDS
@@ -398,7 +399,9 @@ class ArtemisMessagingTest {
                     MetricRegistry(),
                     TestingNamedCacheFactory(),
                     isDrainingModeOn = { false },
-                    drainingModeWasChangedEvents = PublishSubject.create()).apply {
+                    drainingModeWasChangedEvents = PublishSubject.create(),
+                    platformClock = Clock.systemUTC()
+            ).apply {
                 config.configureWithDevSSLCertificate()
                 messagingClient = this
             }

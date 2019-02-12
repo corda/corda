@@ -9,25 +9,7 @@ import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.core.context.AuthServiceId
 import net.corda.core.internal.notary.NotaryServiceFlow
-import net.corda.node.services.config.AuthDataSourceType
-import net.corda.node.services.config.CertChainPolicyConfig
-import net.corda.node.services.config.CertChainPolicyType
-import net.corda.node.services.config.DevModeOptions
-import net.corda.node.services.config.EnterpriseConfiguration
-import net.corda.node.services.config.FlowOverride
-import net.corda.node.services.config.FlowOverrideConfig
-import net.corda.node.services.config.FlowTimeoutConfiguration
-import net.corda.node.services.config.GraphiteOptions
-import net.corda.node.services.config.MessagingServerSslConfiguration
-import net.corda.node.services.config.MutualExclusionConfiguration
-import net.corda.node.services.config.NetworkServicesConfig
-import net.corda.node.services.config.NodeH2Settings
-import net.corda.node.services.config.NodeRpcSettings
-import net.corda.node.services.config.NotaryConfig
-import net.corda.node.services.config.PasswordEncryption
-import net.corda.node.services.config.PerformanceTuning
-import net.corda.node.services.config.RelayConfiguration
-import net.corda.node.services.config.SecurityConfiguration
+import net.corda.node.services.config.*
 import net.corda.node.services.config.SecurityConfiguration.AuthService.Companion.defaultAuthServiceId
 import net.corda.node.services.config.Valid
 import net.corda.node.services.config.schema.parsers.*
@@ -312,6 +294,7 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
     private val enableCacheTracing by boolean().optional().withDefaultValue(EnterpriseConfiguration.Defaults.enableCacheTracing)
     private val traceTargetDirectory by string().mapValid(::toPath).optional().withDefaultValue(EnterpriseConfiguration.Defaults.traceTargetDirectory)
     private val messagingServerSslConfiguration by nested(MessagingServerSslConfigurationSpec).optional()
+    private val processedMessageCleanup by nested(ProcessedMessageCleanupSpec).optional()
 
     override fun parseValid(configuration: Config): Valid<EnterpriseConfiguration> {
         return valid(EnterpriseConfiguration(
@@ -323,7 +306,8 @@ internal object EnterpriseConfigurationSpec : Configuration.Specification<Enterp
                 configuration[tuning],
                 configuration[externalBridge],
                 configuration[enableCacheTracing],
-                configuration[traceTargetDirectory])
+                configuration[traceTargetDirectory],
+                configuration[processedMessageCleanup])
         )
     }
 }
@@ -360,5 +344,14 @@ internal object PerformanceTuningSpec : Configuration.Specification<PerformanceT
 
     override fun parseValid(configuration: Config): Valid<PerformanceTuning> {
         return valid(PerformanceTuning(configuration[flowThreadPoolSize], configuration[maximumMessagingBatchSize], configuration[rpcThreadPoolSize], configuration[p2pConfirmationWindowSize], configuration[brokerConnectionTtlCheckIntervalMs]))
+    }
+}
+
+internal object ProcessedMessageCleanupSpec : Configuration.Specification<ProcessedMessageCleanup>("ProcessedMessageCleanup") {
+    private val retainPerSender by int().optional()
+    private val retainForDays by int().optional()
+
+    override fun parseValid(configuration: Config): Valid<ProcessedMessageCleanup> {
+        return valid(ProcessedMessageCleanup(configuration[retainPerSender], configuration[retainForDays]))
     }
 }
