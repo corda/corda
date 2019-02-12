@@ -129,9 +129,6 @@ Notary Configuration
 When using a simple, single node notary, it has the following configuration in addition to the above::
 
    notary {
-      className="net.corda.notary.jpa.JPANotaryService"
-      extraConfig {
-      }
       validating=false
    }
 
