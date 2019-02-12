@@ -242,7 +242,7 @@ internal constructor(private val initSerEnv: Boolean,
             val notaryInfos = gatherNotaryInfos(nodeInfoFiles, configs)
             println("Generating contract implementations whitelist")
             // Only add contracts to the whitelist from unsigned jars
-            val signedJars = cordappJars.filter { isSigned(it) } // signed JARs are excluded by default, optionally include them
+            val signedJars = cordappJars.filter { isSigned(it) } // signed JARs are excluded by default, optionally include them in order to transition states from CZ whitelist to signature constraint
             val unsignedJars = cordappJars - signedJars
             val newWhitelist = generateWhitelist(existingNetParams, readExcludeWhitelist(directory), unsignedJars.map(contractsJarConverter),
                     readIncludeWhitelist(directory), signedJars.map(contractsJarConverter))

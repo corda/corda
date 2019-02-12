@@ -20,7 +20,7 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
     val existingWhitelist = networkParameters?.whitelistedContractImplementations ?: emptyMap()
 
     if (excludeContracts.isNotEmpty()) {
-        logger.info("Exclude contracts from $INCLUDE_WHITELIST_FILE_NAME: ${excludeContracts.joinToString()}")
+        logger.info("Exclude contracts from $EXCLUDE_WHITELIST_FILE_NAME: ${excludeContracts.joinToString()}")
         existingWhitelist.keys.forEach {
             require(it !in excludeContracts) { "$it is already part of the existing whitelist and cannot be excluded." }
         }
@@ -31,7 +31,7 @@ fun generateWhitelist(networkParameters: NetworkParameters?,
             .toMultiMap()
 
     if (includeContracts.isNotEmpty())
-        logger.info("Include any contracts from $INCLUDE_WHITELIST_FILE_NAME: ${includeContracts.joinToString()} present in JARs: $optionalCordappJars.")
+        logger.info("Include contracts from $INCLUDE_WHITELIST_FILE_NAME: ${includeContracts.joinToString()} present in JARs: $optionalCordappJars.")
 
     val newSignedJarsWhiteList = optionalCordappJars
             .flatMap { jar -> (jar.scan()).filter { includeContracts.contains(it) }.map { it to jar.hash } }
