@@ -234,8 +234,12 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
             // TODO - should this be a [TransactionVerificationException]?
             val missingClass = requireNotNull(e.message) { "Transaction $ltx is incorrectly formed." }
 
-            val attachment = requireNotNull(services.attachments.internalFindTrustedAttachmentForClass(missingClass)) {
+            val attachmentId = requireNotNull(services.cordappProvider.getContractAttachmentID(missingClass)) {
                 "Transaction $ltx is incorrectly formed. Could not find local dependency for class: $missingClass."
+            }
+
+            val attachment = requireNotNull(services.attachments.openAttachment(attachmentId)) {
+                "Transaction $ltx is incorrectly formed. Could not open local dependency for class: $missingClass."
             }
 
             log.warn("""Detected that transaction ${this.id} does not contain all cordapp dependencies.
