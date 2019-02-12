@@ -60,8 +60,24 @@ class NodeVaultService(
         cacheFactory: NamedCacheFactory,
         private val appClassloader: ClassLoader
 ) : SingletonSerializeAsToken(), VaultServiceInternal {
-    private companion object {
+    companion object {
         private val log = contextLogger()
+
+        /**
+         * Establish whether a given state is relevant to a node, given the node's public keys.
+         *
+         * A state is relevant if any of the participants (or the owner for ownable states) has an owning key matching one of this node's
+         * public keys.
+         */
+        fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
+            val keysToCheck = when (state) {
+                // Sometimes developers forget to add the owning key to participants for OwnableStates.
+                // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
+                is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
+                else -> state.participants.map { it.owningKey }
+            }
+            return keysToCheck.any { it.containsAny(myKeys) }
+        }
     }
 
     private class InnerState {
@@ -543,17 +559,6 @@ class NodeVaultService(
         }
         softLockReserve(lockId, claimedStates.map { it.ref }.toNonEmptySet())
         return claimedStates
-    }
-
-    @VisibleForTesting
-    internal fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
-        val keysToCheck = when (state) {
-        // Sometimes developers forget to add the owning key to participants for OwnableStates.
-        // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
-            is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
-            else -> state.participants.map { it.owningKey }
-        }
-        return keysToCheck.any { it.containsAny(myKeys) }
     }
 
     @Throws(VaultQueryException::class)

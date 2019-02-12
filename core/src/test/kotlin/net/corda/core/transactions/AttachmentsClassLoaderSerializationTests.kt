@@ -10,6 +10,7 @@ import net.corda.core.serialization.serialize
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.isolated.contracts.DummyContractBackdoor
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
@@ -46,7 +47,7 @@ class AttachmentsClassLoaderSerializationTests {
         val att1 = storage.importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = storage.importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! }) { classLoader ->
+        val serialisedState = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(arrayOf(isolatedId, att1, att2).map { storage.openAttachment(it)!! }, testNetworkParameters(), SecureHash.zeroHash) { classLoader ->
             val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classLoader)
             val contract = contractClass.newInstance() as Contract
             assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)

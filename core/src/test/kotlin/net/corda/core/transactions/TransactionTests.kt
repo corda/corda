@@ -13,7 +13,6 @@ import net.corda.testing.core.*
 import net.corda.testing.internal.createWireTransaction
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.internal.rigorousMock
-import net.corda.testing.services.MockAttachmentStorage
 import org.junit.Rule
 import org.junit.Test
 import java.io.InputStream
@@ -140,7 +139,7 @@ class TransactionTests {
                 privacySalt,
                 testNetworkParameters(),
                 emptyList(),
-                inputStatesContractClassNameToMaxVersion = emptyMap()
+                inputVersions = emptyMap()
         )
 
         transaction.verify()
@@ -192,7 +191,7 @@ class TransactionTests {
                 privacySalt,
                 testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))),
                 emptyList(),
-                inputStatesContractClassNameToMaxVersion = emptyMap()
+                inputVersions = emptyMap()
         )
 
         assertFailsWith<TransactionVerificationException.NotaryChangeInWrongTransactionType> { buildTransaction().verify() }

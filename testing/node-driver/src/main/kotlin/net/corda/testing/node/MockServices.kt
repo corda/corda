@@ -115,7 +115,7 @@ open class MockServices private constructor(
             val database = configureDatabase(dataSourceProps, makeTestDatabaseProperties(initialIdentity.name.organisation), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService)
             val mockService = database.transaction {
                 object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                     override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                         ServiceHubInternal.recordTransactions(statesToRecord, txs,
@@ -309,7 +309,7 @@ open class MockServices private constructor(
         it.start()
     }
     override val cordappProvider: CordappProvider get() = mockCordappProvider
-    override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
+    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(initialNetworkParameters)
 
     protected val servicesForResolution: ServicesForResolution
         get() = ServicesForResolutionImpl(identityService, attachments, cordappProvider, networkParametersService, validatedTransactions)
@@ -349,7 +349,7 @@ open class MockServices private constructor(
     override fun loadStates(stateRefs: Set<StateRef>) = servicesForResolution.loadStates(stateRefs)
 
     /** Returns a dummy Attachment, in context of signature constrains non-downgrade rule this default to contract class version `1`. */
-    override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = dummyAttachment
+    override fun loadContractAttachment(stateRef: StateRef) = dummyAttachment
 }
 
 /**

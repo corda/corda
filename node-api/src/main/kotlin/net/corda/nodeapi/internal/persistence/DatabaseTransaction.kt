@@ -31,14 +31,13 @@ class DatabaseTransaction(
     private var _flushingCount = 0
 
     val connection: Connection by lazy(LazyThreadSafetyMode.NONE) {
-        database.dataSource.connection
-                .apply {
-                    _connectionCreated = true
-                    // only set the transaction isolation level if it's actually changed - setting isn't free.
-                    if (transactionIsolation != isolation) {
-                        transactionIsolation = isolation
-                    }
-                }
+        database.dataSource.connection.apply {
+            _connectionCreated = true
+            // only set the transaction isolation level if it's actually changed - setting isn't free.
+            if (transactionIsolation != isolation) {
+                transactionIsolation = isolation
+            }
+        }
     }
 
     private val sessionDelegate = lazy {
@@ -104,7 +103,8 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-        if (_connectionCreated) {
+
+        if (_connectionCreated && database.closeConnection) {
             connection.close()
         }
         contextTransactionOrNull = outerTransaction

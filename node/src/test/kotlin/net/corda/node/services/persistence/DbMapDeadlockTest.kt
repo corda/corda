@@ -8,6 +8,8 @@ import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.utilities.AppendOnlyPersistentMap
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import org.junit.Ignore
 import org.junit.Rule
@@ -112,7 +114,7 @@ class DbMapDeadlockTest {
         val dbConfig = DatabaseConfig(initialiseSchema = true, transactionIsolationLevel = TransactionIsolationLevel.READ_COMMITTED)
         val schemaService = NodeSchemaService(extraSchemas = setOf(LockDbSchemaV2))
         createCordaPersistence(dbConfig, { null }, { null }, schemaService, cacheFactory, null).apply {
-            startHikariPool(hikariProperties, dbConfig, schemaService.schemaOptions.keys)
+            startHikariPool(hikariProperties, dbConfig, schemaService.schemaOptions.keys, ourName = TestIdentity(ALICE_NAME, 70).name)
         }.use { persistence ->
 
             // First clean up any remains from previous test runs

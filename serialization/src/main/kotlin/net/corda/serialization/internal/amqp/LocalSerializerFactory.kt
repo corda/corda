@@ -39,6 +39,7 @@ interface LocalSerializerFactory {
     /**
      * Obtain an [AMQPSerializer] for the [declaredType].
      */
+    @JvmDefault
     fun get(declaredType: Type): AMQPSerializer<Any> = get(getTypeInformation(declaredType))
 
     /**
@@ -61,6 +62,7 @@ interface LocalSerializerFactory {
     /**
      * Use the [FingerPrinter] to create a type descriptor for the given [type].
      */
+    @JvmDefault
     fun createDescriptor(type: Type): Symbol = createDescriptor(getTypeInformation(type))
 
     /**

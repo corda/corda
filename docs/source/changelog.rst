@@ -27,6 +27,9 @@ Unreleased
 
   The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
 
+* Vault states are now correctly migrated when moving from V3 to V4.1. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
+  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.1.
+
 .. _changelog_v4.0:
 
 Version 4.0
