@@ -183,7 +183,7 @@ open class MockServices private constructor(
                 persistence: CordaPersistence
         ): MockServices {
             return object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toTypedArray(), keyManagementService) {
-                override val networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                 override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
                 override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
                     ServiceHubInternal.recordTransactions(statesToRecord, txs,
