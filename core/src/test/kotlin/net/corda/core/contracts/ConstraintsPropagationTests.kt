@@ -199,14 +199,14 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("are not propagated correctly")
+                fails()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c4", DUMMY_NOTARY, null, AlwaysAcceptAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("are not propagated correctly")
+                fails()
             }
         }
     }
@@ -268,7 +268,7 @@ class ConstraintsPropagationTests {
                 output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
                 // Note that it fails after the constraints propagation check, because the attachment is not signed.
-                failsWith("are not propagated correctly")
+                fails()
             }
         }
     }
@@ -319,36 +319,21 @@ class ConstraintsPropagationTests {
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
                 packageOwnership = mapOf( "net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
-        // attachment with context (both unsigned and signed attachments representing same contract)
-        val attachmentWithContext = mock<AttachmentWithContext>()
-        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentSigned)
-        whenever(attachmentWithContext.contract).thenReturn(propagatingContractClassName)
-        whenever(attachmentWithContext.networkParameters).thenReturn(netParams)
-
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
 
         // propagation check
-        assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentWithContext))
+        // TODO - enable once the logic to transition has been added.
+        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentSigned))
     }
 
     @Test
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
         // signed attachment (for signature constraint)
-        val attachmentSigned = mock<ContractAttachment>()
-        whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
-        whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
-
-        // network parameters
-        val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
-
-        // attachment with context
-        val attachment = mock<AttachmentWithContext>()
-        whenever(attachment.networkParameters).thenReturn(netParams)
-        whenever(attachment.contractAttachment).thenReturn(attachmentSigned)
+        val attachment = mock<ContractAttachment>()
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachment.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // Exhaustive positive check
         assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))

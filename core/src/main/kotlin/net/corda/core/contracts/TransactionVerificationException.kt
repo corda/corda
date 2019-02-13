@@ -108,6 +108,13 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
 
     /**
+     * Indicates that the same attachment has been added multiple times to a transaction.
+     */
+    @KeepForDJVM
+    class DuplicateAttachmentsRejection(txId: SecureHash, val attachmentId: Attachment)
+        : TransactionVerificationException(txId, "The attachment: $attachmentId was added multiple times.", null)
+
+    /**
      * A [Contract] class named by a state could not be constructed. Most likely you do not have a no-argument
      * constructor, or the class doesn't subclass [Contract].
      *
