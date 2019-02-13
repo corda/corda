@@ -175,15 +175,15 @@ open class TransactionBuilder(
             val missingClass = e.message
             requireNotNull(missingClass) { "Transaction is incorrectly formed." }
 
-            val attachmentId = services.cordappProvider.getContractAttachmentID(missingClass!!)
+            val attachment = services.attachments.internalFindTrustedAttachmentForClass(missingClass!!)
                     ?: throw IllegalArgumentException("Attempted to find dependent attachment for class $missingClass, but could not find a suitable candidate.")
 
             log.warnOnce("""The transaction currently built is missing an attachment for class: $missingClass.
-                    Automatically attaching contract dependency $attachmentId.
+                    Automatically attaching contract dependency $attachment.
                     It is strongly recommended to check that this is the desired attachment, and to manually add it to the transaction builder.
                 """.trimIndent())
 
-            addAttachment(attachmentId)
+            addAttachment(attachment.id)
             return true
             // Ignore these exceptions as they will break unit tests.
             //  The point here is only to detect missing dependencies. The other exceptions are irrelevant.
