@@ -343,9 +343,10 @@ class Verifier(val ltx: LedgerTransaction,
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, contract, ltx.networkParameters!!.whitelistedContractImplementations)
 
-            if (!constraint.isSatisfiedBy(constraintAttachment)) {
-                throw TransactionVerificationException.ContractConstraintRejection(ltx.id, contract)
-            }
+            if (disableHashConstraints && constraint is HashAttachmentConstraint)
+                logger.warn("Skipping hash constraints verification.")
+            else if (!constraint.isSatisfiedBy(constraintAttachment))
+                throw TransactionVerificationException.ContractConstraintRejection(ltx.id, state.contract)
         }
     }
 
