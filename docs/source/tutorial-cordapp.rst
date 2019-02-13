@@ -59,32 +59,72 @@ The example CorDapp has the following structure:
 .. sourcecode:: none
 
     .
+    ├── LICENCE
+    ├── README.md
+    ├── TRADEMARK
+    ├── build.gradle
     ├── clients
+    │   ├── build.gradle
     │   └── src
     │       └── main
-    │           └── kotlin
-    │               └── com.example.server
-    │                   ├── MainController.kt
-    │                   ├── NodeRPCConnection.kt
-    │                   └── Server.kt
-    │           ├── resources
-    │               ├── public
-    │                   ├── js
+    │           ├── kotlin
+    │           │   └── com
+    │           │       └── example
+    │           │           └── server
+    │           │               ├── MainController.kt
+    │           │               ├── NodeRPCConnection.kt
+    │           │               └── Server.kt
+    │           └── resources
+    │               ├── application.properties
+    │               └── public
+    │                   ├── index.html
+    │                   └── js
     │                       └── angular-module.js
-    │                   └── index.html
-    │               └── application.properties
-    │   └── build.gradle
-    │  
     ├── config
     │   ├── dev
     │   │   └── log4j2.xml
     │   └── test
     │       └── log4j2.xml
+    ├── contracts-java
+    │   ├── build.gradle
+    │   └── src
+    │       └── main
+    │           └── java
+    │               └── com
+    │                   └── example
+    │                       ├── contract
+    │                       │   └── IOUContract.java
+    │                       ├── schema
+    │                       │   ├── IOUSchema.java
+    │                       │   └── IOUSchemaV1.java
+    │                       └── state
+    │                           └── IOUState.java
+    ├── contracts-kotlin
+    │   ├── build.gradle
+    │   └── src
+    │       └── main
+    │           └── kotlin
+    │               └── com
+    │                   └── example
+    │                       ├── contract
+    │                       │   └── IOUContract.kt
+    │                       ├── schema
+    │                       │   └── IOUSchema.kt
+    │                       └── state
+    │                           └── IOUState.kt
+    ├── cordapp-example.iml
     ├── gradle
     │   └── wrapper
     │       ├── gradle-wrapper.jar
     │       └── gradle-wrapper.properties
-    ├── java-source
+    ├── gradle.properties
+    ├── gradlew
+    ├── gradlew.bat
+    ├── lib
+    │   ├── README.txt
+    │   └── quasar.jar
+    ├── settings.gradle
+    ├── workflows-java
     │   ├── build.gradle
     │   └── src
     │       ├── integrationTest
@@ -93,26 +133,11 @@ The example CorDapp has the following structure:
     │       │           └── example
     │       │               └── DriverBasedTests.java
     │       ├── main
-    │       │   ── java
-    │       │      └── com
-    │       │          └── example
-    │       │              ├── api
-    │       │              │   └── ExampleApi.java
-    │       │              ├── client
-    │       │              │   └── ExampleClientRPC.java
-    │       │              ├── contract
-    │       │              │   └── IOUContract.java
-    │       │              ├── flow
-    │       │              │   └── ExampleFlow.java
-    │       │              ├── plugin
-    │       │              │   └── ExamplePlugin.java
-    │       │              ├── schema
-    │       │              │   ├── IOUSchema.java
-    │       │              │   └── IOUSchemaV1.java
-    │       │              └── state
-    │       │                  └── IOUState.java
-    │       │ 
-    │       │  
+    │       │   └── java
+    │       │       └── com
+    │       │           └── example
+    │       │               └── flow
+    │       │                   └── ExampleFlow.java
     │       └── test
     │           └── java
     │               └── com
@@ -122,20 +147,29 @@ The example CorDapp has the following structure:
     │                       │   └── IOUContractTests.java
     │                       └── flow
     │                           └── IOUFlowTests.java
-    ├── kotlin-source
-    │   ├── ...
-    ├── lib
-    │   ├── README.txt
-    │   └── quasar.jar
-    ├── .gitignore
-    ├── LICENCE
-    ├── README.md
-    ├── TRADEMARK
-    ├── build.gradle
-    ├── gradle.properties
-    ├── gradlew
-    ├── gradlew.bat
-    └── settings.gradle
+    └── workflows-kotlin
+        ├── build.gradle
+        └── src
+            ├── integrationTest
+            │   └── kotlin
+            │       └── com
+            │           └── example
+            │               └── DriverBasedTests.kt
+            ├── main
+            │   └── kotlin
+            │       └── com
+            │           └── example
+            │               └── flow
+            │                   └── ExampleFlow.kt
+            └── test
+                └── kotlin
+                    └── com
+                        └── example
+                            ├── NodeDriver.kt
+                            ├── contract
+                            │   └── IOUContractTests.kt
+                            └── flow
+                                └── IOUFlowTests.kt
 
 The key files and directories are as follows:
 
@@ -145,13 +179,8 @@ The key files and directories are as follows:
   about which version is required
 * **lib** contains the Quasar jar which rewrites our CorDapp's flows to be checkpointable
 * **clients** contains the source code for spring boot integration
-* **java-source** contains the source code for the example CorDapp written in Java
-
-  * **java-source/src/main/java** contains the source code for the example CorDapp
-  * **java-source/src/test/java** contains unit tests for the contracts and flows, and the driver to run the nodes
-    via IntelliJ
-
-* **kotlin-source** contains the same source code, but written in Kotlin. CorDapps can be developed in either Java and Kotlin
+* **contracts-java** and **workflows-java** contain the source code for the example CorDapp written in Java
+* **contracts-kotlin** and **workflows-kotlin** contain the same source code, but written in Kotlin. CorDapps can be developed in either Java and Kotlin
 
 Running the example CorDapp
 ---------------------------
@@ -177,10 +206,10 @@ Building the example CorDapp
   * Windows: ``gradlew.bat deployNodes``
 
 .. note:: CorDapps can be written in any language targeting the JVM. In our case, we've provided the example source in
-   both Kotlin (``/kotlin-source/src``) and Java (``/java-source/src``). Since both sets of source files are
-   functionally identical, we will refer to the Kotlin version throughout the documentation.
+   both Kotlin and Java. Since both sets of source files are functionally identical, we will refer to the Kotlin version
+   throughout the documentation.
 
-* After the build finishes, you will see the following output in the ``kotlin-source/build/nodes`` folder:
+* After the build finishes, you will see the following output in the ``workflows-kotlin/build/nodes`` folder:
 
   * A folder for each generated node
   * A ``runnodes`` shell script for running all the nodes simultaneously on osX
@@ -211,12 +240,13 @@ Building the example CorDapp
       
 Running the example CorDapp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Start the nodes and Spring Boot servers by running the following command from the root of the ``cordapp-example`` folder:
+Start the nodes by running the following command from the root of the ``cordapp-example`` folder:
 
-* Unix/Mac OSX: ``kotlin-source/build/nodes/runnodes``
-* Windows: ``call kotlin-source\build\nodes\runnodes.bat``
+* Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
+* Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
-Each Spring Boot server needs to be started in it's own terminal, replace X with A, B and C
+Each Spring Boot server needs to be started in it's own terminal, replace X with A, B and C:
+
 * Unix/Mac OSX: ``./gradlew runPartyXServer``
 * Windows: ``gradlew.bat runPartyXServer``
 
@@ -236,7 +266,7 @@ For each node, the ``runnodes`` script creates a node tab/window:
    --- Corda Open Source corda-3.0 (4157c25) -----------------------------------------------
 
 
-   Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/kotlin-source/build/nodes/PartyA/logs
+   Logs can be found in                    : /Users/joeldudley/Desktop/cordapp-example/workflows-kotlin/build/nodes/PartyA/logs
    Database connection url is              : jdbc:h2:tcp://localhost:59472/node
    Incoming connection address             : localhost:10005
    Listening on port                       : 10005
@@ -432,13 +462,13 @@ The nodes can be configured to communicate as a network even when distributed ac
   * Unix/Mac OSX: ``./gradlew deployNodes``
   * Windows: ``gradlew.bat deployNodes``
 
-* Navigate to the build folder (``kotlin-source/build/nodes``)
+* Navigate to the build folder (``workflows-kotlin/build/nodes``)
 * For each node, open its ``node.conf`` file and change ``localhost`` in its ``p2pAddress`` to the IP address of the machine
   where the node will be run (e.g. ``p2pAddress="10.18.0.166:10007"``)
 * These changes require new node-info files to be distributed amongst the nodes. Use the network bootstrapper tool
   (see :doc:`network-bootstrapper`) to update the files and have them distributed locally:
 
-  ``java -jar network-bootstrapper.jar kotlin-source/build/nodes``
+  ``java -jar network-bootstrapper.jar workflows-kotlin/build/nodes``
 
 * Move the node folders to their individual machines (e.g. using a USB key). It is important that none of the
   nodes - including the notary - end up on more than one machine. Each computer should also have a copy of ``runnodes``
