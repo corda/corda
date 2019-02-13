@@ -1,6 +1,11 @@
 Node Explorer
 =============
 
+.. note:: To run Node Explorer on your machine, you will need JavaFX for Java 8. If you don't have JavaFX
+          installed, you can either download and build your own version of OpenJFK, or use a pre-existing
+          build, like the one offered by Zulu. They have community builds of OpenJFX for Window, macOS and Linux
+          available on their `website <https://www.azul.com/downloads/zulu/zulufx/>`_.
+
 The node explorer provides views into a node's vault and transaction data using Corda's RPC framework.
 The user can execute cash transaction commands to issue and move cash to other parties on the network or exit cash (eg. remove from the ledger)
 

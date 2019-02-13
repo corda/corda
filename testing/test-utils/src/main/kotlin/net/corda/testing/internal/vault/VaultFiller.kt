@@ -18,9 +18,13 @@ import net.corda.finance.contracts.DealState
 import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.Obligation
 import net.corda.finance.contracts.asset.OnLedgerAsset
+import net.corda.finance.workflows.asset.CashUtils
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
-import net.corda.testing.core.*
+import net.corda.testing.core.DummyCommandData
+import net.corda.testing.core.TestIdentity
+import net.corda.testing.core.dummyCommand
+import net.corda.testing.core.singleIdentity
 import net.corda.testing.internal.chooseIdentity
 import net.corda.testing.internal.chooseIdentityAndCert
 import java.security.PublicKey
@@ -308,7 +312,7 @@ class VaultFiller @JvmOverloads constructor(
         val update = services.vaultService.rawUpdates.toFuture()
         // A tx that spends our money.
         val builder = TransactionBuilder(altNotary).apply {
-            Cash.generateSpend(services, this, amount, ourIdentity, to)
+            CashUtils.generateSpend(services, this, amount, ourIdentity, to)
         }
         val spendTx = services.signInitialTransaction(builder, altNotary.owningKey)
         services.recordTransactions(spendTx)

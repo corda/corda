@@ -170,7 +170,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val transactionStorage = makeTransactionStorage(configuration.transactionCacheSizeBytes).tokenize()
     val networkMapClient: NetworkMapClient? = configuration.networkServices?.let { NetworkMapClient(it.networkMapURL, versionInfo) }
-    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database).tokenize()
+    val attachments = NodeAttachmentService(metricRegistry, cacheFactory, database, configuration.devMode).tokenize()
     val cryptoService = configuration.makeCryptoService()
     @Suppress("LeakingThis")
     val networkParametersStorage = makeNetworkParametersStorage()
@@ -371,7 +371,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkParametersStorage.setCurrentParameters(signedNetParams, trustRoot)
             identityService.loadIdentities(nodeInfo.legalIdentitiesAndCerts)
             attachments.start()
-            cordappProvider.start(netParams.whitelistedContractImplementations)
+            cordappProvider.start()
             nodeProperties.start()
             // Place the long term identity key in the KMS. Eventually, this is likely going to be separated again because
             // the KMS is meant for derived temporary keys used in transactions, and we're not supposed to sign things with
@@ -573,7 +573,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         val loadedServices = cordappLoader.cordapps.flatMap { it.services }
         loadedServices.forEach {
             try {
-                installCordaService(flowStarter, it)
+                installCordaService(it)
             } catch (e: NoSuchMethodException) {
                 log.error("${it.name}, as a Corda service, must have a constructor with a single parameter of type " +
                         ServiceHub::class.java.name)
@@ -637,7 +637,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         override fun hashCode() = Objects.hash(serviceHub, flowStarter, serviceInstance)
     }
 
-    private fun <T : SerializeAsToken> installCordaService(flowStarter: FlowStarter, serviceClass: Class<T>) {
+    fun <T : SerializeAsToken> installCordaService(serviceClass: Class<T>): T {
         serviceClass.requireAnnotation<CordaService>()
 
         val service = try {
@@ -659,6 +659,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
 
         service.tokenize()
         log.info("Installed ${serviceClass.name} Corda service")
+
+        return service
     }
 
     private fun registerCordappFlows() {
@@ -779,7 +781,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory)
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory, configuration.myLegalName)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1091,10 +1093,10 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null, ourName: CordaX500Name? = null) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir)
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir, ourName)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(dataSource)
     } catch (ex: Exception) {

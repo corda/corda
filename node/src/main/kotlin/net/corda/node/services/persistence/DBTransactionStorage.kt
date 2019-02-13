@@ -10,6 +10,7 @@ import net.corda.core.internal.bufferUntilSubscribed
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.serialization.*
+import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.toFuture
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
@@ -50,6 +51,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
     )
 
     private companion object {
+        private fun contextToUse(): SerializationContext {
+            return if (effectiveSerializationEnv.serializationFactory.currentContext?.useCase == SerializationContext.UseCase.Storage) {
+                effectiveSerializationEnv.serializationFactory.currentContext!!
+            } else {
+                SerializationDefaults.STORAGE_CONTEXT
+            }
+        }
+
         fun createTransactionsMap(cacheFactory: NamedCacheFactory)
                 : AppendOnlyPersistentMapBase<SecureHash, TxCacheValue, DBTransaction, String> {
             return WeightBasedAppendOnlyPersistentMap<SecureHash, TxCacheValue, DBTransaction, String>(
@@ -58,14 +67,14 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
                     toPersistentEntityKey = { it.toString() },
                     fromPersistentEntity = {
                         Pair(SecureHash.parse(it.txId),
-                                it.transaction.deserialize<SignedTransaction>(context = SerializationDefaults.STORAGE_CONTEXT)
+                                it.transaction.deserialize<SignedTransaction>(context = contextToUse())
                                         .toTxCacheValue())
                     },
                     toPersistentEntity = { key: SecureHash, value: TxCacheValue ->
                         DBTransaction().apply {
                             txId = key.toString()
                             stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id?.uuid?.toString()
-                            transaction = value.toSignedTx().serialize(context = SerializationDefaults.STORAGE_CONTEXT).bytes
+                            transaction = value.toSignedTx().serialize(context = contextToUse()).bytes
                         }
                     },
                     persistentEntityClass = DBTransaction::class.java,
@@ -79,7 +88,7 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         private const val transactionSignatureOverheadEstimate = 1024
 
         private fun weighTx(tx: AppendOnlyPersistentMapBase.Transactional<TxCacheValue>): Int {
-            val actTx = tx.valueWithoutIsolation
+            val actTx = tx.peekableValue
             if (actTx == null) {
                 return 0
             }

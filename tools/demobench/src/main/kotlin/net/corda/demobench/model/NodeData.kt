@@ -5,12 +5,12 @@ import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections.observableArrayList
-import net.corda.finance.utils.CityDatabase
+import net.corda.worldmap.CityDatabase
 import tornadofx.*
 import java.util.*
 
 object SuggestedDetails {
-    val banks = listOf(
+    private val banks = listOf(
             // Mike:  Rome? Why Rome?
             // Roger: Notaries public (also called "notaries", "notarial officers", or "public notaries") hold an office
             //        which can trace its origins back to the ancient Roman Republic, when they were called scribae ("scribes"),

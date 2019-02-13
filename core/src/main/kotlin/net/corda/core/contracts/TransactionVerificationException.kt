@@ -1,10 +1,12 @@
 package net.corda.core.contracts
 
+import net.corda.core.CordaException
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.utilities.NonEmptySet
@@ -17,7 +19,15 @@ import java.security.PublicKey
  * @property hash Merkle root of the transaction being resolved, see [net.corda.core.transactions.WireTransaction.id]
  */
 @KeepForDJVM
-class TransactionResolutionException(val hash: SecureHash) : FlowException("Transaction resolution failure for $hash")
+open class TransactionResolutionException @JvmOverloads constructor(val hash: SecureHash, message: String = "Transaction resolution failure for $hash") : FlowException(message) {
+    /**
+     * Thrown if a transaction specifies a set of parameters that aren't stored locally yet verification is requested.
+     * This should never normally happen because before verification comes resolution, and if a peer can't provide a
+     * new set of parameters, [TransactionResolutionException] will have already been thrown beforehand.
+     */
+    class UnknownParametersException(txId: SecureHash, paramsHash: SecureHash) : TransactionResolutionException(txId,
+            "Transaction specified network parameters $paramsHash but these parameters are not known.")
+}
 
 /**
  * The node asked a remote peer for the attachment identified by [hash] because it is a dependency of a transaction
@@ -189,6 +199,27 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
             For details see: https://docs.corda.net/api-contract-constraints.html#contract-state-agreement
             """.trimIndent(), null)
 
+
+    /**
+     * If the network parameters associated with an input or reference state in a transaction are more recent than the network parameters of the new transaction itself.
+     */
+    @KeepForDJVM
+    class TransactionNetworkParameterOrderingException(txId: SecureHash, inputStateRef: StateRef, txnNetworkParameters: NetworkParameters, inputNetworkParameters: NetworkParameters)
+        : TransactionVerificationException(txId, "The network parameters epoch (${txnNetworkParameters.epoch}) of this transaction " +
+            "is older than the epoch (${inputNetworkParameters.epoch}) of input state: $inputStateRef", null)
+
+    /**
+     * Thrown when the network parameters with hash: missingNetworkParametersHash is not available at this node. Usually all the parameters
+     * that are in the resolution chain for transaction with txId should be fetched from peer via [FetchParametersFlow] or from network map.
+     *
+     * @param txId Id of the transaction that has missing parameters hash in the resolution chain
+     * @param missingNetworkParametersHash Missing hash of the network parameters associated to this transaction
+     */
+    @KeepForDJVM
+    class MissingNetworkParametersException(txId: SecureHash, missingNetworkParametersHash: SecureHash)
+        : TransactionVerificationException(txId, "Couldn't find network parameters with hash: $missingNetworkParametersHash related to this transaction: $txId", null)
+
+
     /** Whether the inputs or outputs list contains an encumbrance issue, see [TransactionMissingEncumbranceException]. */
     @CordaSerializable
     @KeepForDJVM
@@ -225,22 +256,30 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Detected a notary change. Outputs must use the same notary as inputs", null)
 
     /**
-     * Thrown to indicate that a contract attachment is not signed by the network-wide package owner.
-     */
-    class ContractAttachmentNotSignedByPackageOwnerException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String) : TransactionVerificationException(txId,
-            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner specified in the network parameters.
-           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
-           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
-
-    /**
      * Thrown when multiple attachments provide the same file when building the AttachmentsClassloader for a transaction.
      */
     @CordaSerializable
     @KeepForDJVM
-    class OverlappingAttachmentsException(path: String) : Exception("Multiple attachments define a file at path `$path`.")
+    class OverlappingAttachmentsException(txId: SecureHash, path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
 
+    /**
+     * Thrown to indicate that a contract attachment is not signed by the network-wide package owner. Please note that
+     * the [txId] will always be [SecureHash.zeroHash] because package ownership is an error with a particular attachment,
+     * and because attachment classloaders are reused this is independent of any particular transaction.
+     */
+    @CordaSerializable
+    class PackageOwnershipException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String, val packageName: String) : TransactionVerificationException(txId,
+            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner of package $packageName specified in the network parameters.
+           Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
+           For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+
+    // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
+    /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */
     @KeepForDJVM
-    class TransactionVerificationVersionException(txId: SecureHash, contractClassName: ContractClassName, inputVersion: String, outputVersion: String)
-        : TransactionVerificationException(txId, " No-Downgrade Rule has been breached for contract class $contractClassName. " +
-            "The output state contract version '$outputVersion' is lower that the version of the input state '$inputVersion'.", null)
+    @CordaSerializable
+    class UntrustedAttachmentsException(txId: SecureHash, val ids: List<SecureHash>) :
+            CordaException("Attempting to load untrusted transaction attachments: $ids. " +
+                    "At this time these are not loadable because the DJVM sandbox has not yet been integrated. " +
+                    "You will need to install that app version yourself, to whitelist it for use. " +
+                    "Please follow the operational steps outlined in https://docs.corda.net/cordapp-build-systems.html#cordapp-contract-attachments to learn more and continue.")
 }

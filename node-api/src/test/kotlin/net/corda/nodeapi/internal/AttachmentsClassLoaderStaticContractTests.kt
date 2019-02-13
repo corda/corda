@@ -9,7 +9,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.NetworkParametersService
@@ -77,7 +76,7 @@ class AttachmentsClassLoaderStaticContractTests {
 
     private val serviceHub get() = rigorousMock<ServicesForResolution>().also {
         val cordappProviderImpl = CordappProviderImpl(cordappLoaderForPackages(listOf("net.corda.nodeapi.internal")), MockCordappConfigProvider(), MockAttachmentStorage())
-        cordappProviderImpl.start(testNetworkParameters().whitelistedContractImplementations)
+        cordappProviderImpl.start()
         doReturn(cordappProviderImpl).whenever(it).cordappProvider
         doReturn(networkParametersService).whenever(it).networkParametersService
         doReturn(networkParameters).whenever(it).networkParameters
@@ -90,8 +89,8 @@ class AttachmentsClassLoaderStaticContractTests {
         doReturn("app").whenever(attachment).uploader
         doReturn(emptyList<Party>()).whenever(attachment).signerKeys
         val contractAttachmentId = SecureHash.randomSHA256()
-        doReturn(contractAttachmentId).whenever(attachmentStorage)
-                .getContractAttachmentWithHighestContractVersion(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID, DEFAULT_CORDAPP_VERSION)
+        doReturn(listOf(contractAttachmentId)).whenever(attachmentStorage)
+                .getLatestContractAttachments(AttachmentDummyContract.ATTACHMENT_PROGRAM_ID)
     }
 
     @Test

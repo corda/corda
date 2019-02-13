@@ -15,7 +15,8 @@ import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.MockNetwork
 import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
-import net.corda.testing.node.internal.cordappsForPackages
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,7 +41,7 @@ class ResolveTransactionsFlowTest {
 
     @Before
     fun setup() {
-        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = cordappsForPackages("net.corda.testing.contracts", javaClass.packageName)))
+        mockNet = MockNetwork(MockNetworkParameters(cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp())))
         notaryNode = mockNet.defaultNotaryNode
         megaCorpNode = mockNet.createPartyNode(CordaX500Name("MegaCorp", "London", "GB"))
         miniCorpNode = mockNet.createPartyNode(CordaX500Name("MiniCorp", "London", "GB"))
@@ -228,7 +229,7 @@ class ResolveTransactionsFlowTest {
 
 
     @InitiatingFlow
-    private open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
+    open class TestFlow(val otherSide: Party, private val resolveTransactionsFlowFactory: (FlowSession) -> ResolveTransactionsFlow, private val txCountLimit: Int? = null) : FlowLogic<Unit>() {
         constructor(txHashes: Set<SecureHash>, otherSide: Party, txCountLimit: Int? = null) : this(otherSide, { ResolveTransactionsFlow(txHashes, it) }, txCountLimit = txCountLimit)
         constructor(stx: SignedTransaction, otherSide: Party) : this(otherSide, { ResolveTransactionsFlow(stx, it) })
 
@@ -242,7 +243,7 @@ class ResolveTransactionsFlowTest {
     }
     @Suppress("unused")
     @InitiatedBy(TestFlow::class)
-    private class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
+    class TestResponseFlow(val otherSideSession: FlowSession) : FlowLogic<Void?>() {
         @Suspendable
         override fun call() = subFlow(TestNoSecurityDataVendingFlow(otherSideSession))
     }

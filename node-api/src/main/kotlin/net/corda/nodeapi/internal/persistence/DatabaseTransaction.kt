@@ -96,7 +96,10 @@ class DatabaseTransaction(
         if (sessionDelegate.isInitialized() && session.isOpen) {
             session.close()
         }
-        connection.close()
+
+        if (database.closeConnection) {
+            connection.close()
+        }
         contextTransactionOrNull = outerTransaction
         if (outerTransaction == null) {
             synchronized(this) {

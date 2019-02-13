@@ -123,7 +123,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     /**
      * Looks up identities, attachments and dependent input states using the provided lookup functions in order to
      * construct a [LedgerTransaction]. Note that identity lookup failure does *not* cause an exception to be thrown.
-     * This invocation doesn't cheeks contact class version downgrade rule.
+     * This invocation doesn't check various rules like no-downgrade or package namespace ownership.
      *
      * @throws AttachmentResolutionException if a required attachment was not found using [resolveAttachment].
      * @throws TransactionResolutionException if an input was not found not using [resolveStateRef].
@@ -143,7 +143,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 { null },
                 // Returning a dummy `missingAttachment` Attachment allows this deprecated method to work and it disables "contract version no downgrade rule" as a dummy Attachment returns version 1
-                { it -> resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment }
         )
     }
 
@@ -159,7 +159,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolveAttachment,
                 { stateRef -> resolveStateRef(stateRef)?.serialize() },
                 resolveParameters,
-                { it -> resolveAttachment(it.txhash) ?: missingAttachment }
+                { resolveAttachment(it.txhash) ?: missingAttachment }
         )
     }
 
@@ -188,15 +188,20 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedAttachments = attachments.lazyMapped { att, _ -> resolveAttachment(att) ?: throw AttachmentResolutionException(att) }
 
-        val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException(id)
+        val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException.UnknownParametersException(id, networkParametersHash!!)
 
-        //keep resolvedInputs lazy and resolve the inputs separately here to get Version
-        val inputStateContractClassToStateRefs: Map<ContractClassName, List<StateAndRef<ContractState>>> = serializedResolvedInputs.map {
-            it.toStateAndRef()
-        }.groupBy { it.state.contract }
-        val inputStateContractClassToMaxVersion: Map<ContractClassName, Version> = inputStateContractClassToStateRefs.mapValues {
-            it.value.map { resolveContractAttachment(it.ref).contractVersion }.max() ?: DEFAULT_CORDAPP_VERSION
-        }
+        // For each contract referenced in the inputs, figure out the highest version being used. The outputs must be
+        // at least that version or higher, to prevent adversaries from downgrading the app to an old version that has
+        // known bugs they can then exploit. This is part of the version ratchet that ensures apps can only ever be
+        // upgraded, not downgraded. We don't use resolvedInputs here to keep it lazy. TODO: why?
+        // We do this resolution now instead of in LedgerTransaction because here we have the function to map
+        // StateRefs to their attachments directly.
+        val appVersionsInInputs: Map<ContractClassName, Version> = serializedResolvedInputs
+                .map { it.toStateAndRef() }
+                .groupBy { it.state.contract }
+                .mapValues { (_ , statesAndRefs) ->
+                    statesAndRefs.map { resolveContractAttachment(it.ref).contractVersion }.max() ?: DEFAULT_CORDAPP_VERSION
+                }
 
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
@@ -212,7 +217,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 componentGroups,
                 serializedResolvedInputs,
                 serializedResolvedReferences,
-                inputStateContractClassToMaxVersion
+                appVersionsInInputs
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
@@ -346,17 +351,25 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
         /**
          * This is the main logic that knows how to retrieve the binary representation of [StateRef]s.
          *
-         * For [ContractUpgradeWireTransaction] or [NotaryChangeWireTransaction] it knows how to recreate the output state in the correct classloader independent of the node's classpath.
+         * For [ContractUpgradeWireTransaction] or [NotaryChangeWireTransaction] it knows how to recreate the output state in the
+         * correct classloader independent of the node's classpath.
          */
         @CordaInternal
         fun resolveStateRefBinaryComponent(stateRef: StateRef, services: ServicesForResolution): SerializedBytes<TransactionState<ContractState>>? {
             return if (services is ServiceHub) {
                 val coreTransaction = services.validatedTransactions.getTransaction(stateRef.txhash)?.coreTransaction
                         ?: throw TransactionResolutionException(stateRef.txhash)
+                // Get the network parameters from the tx or whatever the default params are.
+                val paramsHash = coreTransaction.networkParametersHash ?: services.networkParametersService.defaultHash
+                val params = services.networkParametersService.lookup(paramsHash) ?: throw IllegalStateException("Should have been able to fetch parameters by this point: $paramsHash")
+                @Suppress("UNCHECKED_CAST")
                 when (coreTransaction) {
-                    is WireTransaction -> coreTransaction.componentGroups.firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }?.components?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
-                    is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
-                    is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef)
+                    is WireTransaction -> coreTransaction.componentGroups
+                            .firstOrNull { it.groupIndex == ComponentGroupEnum.OUTPUTS_GROUP.ordinal }
+                            ?.components
+                            ?.get(stateRef.index) as SerializedBytes<TransactionState<ContractState>>?
+                    is ContractUpgradeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
+                    is NotaryChangeWireTransaction -> coreTransaction.resolveOutputComponent(services, stateRef, params)
                     else -> throw UnsupportedOperationException("Attempting to resolve input ${stateRef.index} of a ${coreTransaction.javaClass} transaction. This is not supported.")
                 }
             } else {

@@ -13,6 +13,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.internal.*
 import net.corda.core.internal.cordapp.CordappImpl.Companion.DEFAULT_CORDAPP_VERSION
 import net.corda.core.node.ServicesForResolution
+import net.corda.core.node.services.AttachmentId
 import net.corda.core.node.services.vault.AttachmentQueryCriteria.AttachmentsQueryCriteria
 import net.corda.core.node.services.vault.AttachmentSort
 import net.corda.core.node.services.vault.Builder
@@ -43,6 +44,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.Path
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -54,6 +56,7 @@ class NodeAttachmentServiceTest {
     private lateinit var fs: FileSystem
     private lateinit var database: CordaPersistence
     private lateinit var storage: NodeAttachmentService
+    private lateinit var devModeStorage: NodeAttachmentService
     private val services = rigorousMock<ServicesForResolution>().also {
         doReturn(testNetworkParameters()).whenever(it).networkParameters
     }
@@ -72,6 +75,12 @@ class NodeAttachmentServiceTest {
             }
         }
         storage.servicesForResolution = services
+        devModeStorage = NodeAttachmentService(MetricRegistry(), TestingNamedCacheFactory(), database, true).also {
+            database.transaction {
+                it.start()
+            }
+        }
+        devModeStorage.servicesForResolution = services
     }
 
     @After
@@ -582,6 +591,134 @@ class NodeAttachmentServiceTest {
             assertThatIllegalArgumentException().isThrownBy {
                 result.getOrThrow()
             }.withMessageContaining(P2P_UPLOADER)
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - both exist at same version`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = 2)
+
+            contractJar.read { storage.privilegedImportAttachment(it, "app", "contract.jar") }
+            signedContractJar.read { storage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdV2Unsigned: AttachmentId? = null
+            contractJarV2.read { attachmentIdV2Unsigned = storage.privilegedImportAttachment(it, "app", "contract-V2.jar") }
+            var attachmentIdV2Signed: AttachmentId? = null
+            signedContractJarV2.read { attachmentIdV2Signed = storage.privilegedImportAttachment(it, "app", "contract-signed-V2.jar") }
+
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(2, latestAttachments.size)
+            assertEquals(attachmentIdV2Signed, latestAttachments[0])
+            assertEquals(attachmentIdV2Unsigned, latestAttachments[1])
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - signed is later version than unsigned`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+
+            contractJar.read { storage.privilegedImportAttachment(it, "app", "contract.jar") }
+            var attachmentIdV1Signed: AttachmentId? = null
+            signedContractJar.read { attachmentIdV1Signed = storage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdV2Unsigned: AttachmentId? = null
+            contractJarV2.read { attachmentIdV2Unsigned = storage.privilegedImportAttachment(it, "app", "contract-V2.jar") }
+
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(2, latestAttachments.size)
+            assertEquals(attachmentIdV1Signed, latestAttachments[0])
+            assertEquals(attachmentIdV2Unsigned, latestAttachments[1])
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - unsigned is later version than signed`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+
+            contractJar.read { storage.privilegedImportAttachment(it, "app", "contract.jar") }
+            var attachmentIdV1Signed: AttachmentId? = null
+            signedContractJar.read { attachmentIdV1Signed = storage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdV2Unsigned: AttachmentId? = null
+            contractJarV2.read { attachmentIdV2Unsigned = storage.privilegedImportAttachment(it, "app", "contract-V2.jar") }
+
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(2, latestAttachments.size)
+            assertEquals(attachmentIdV1Signed, latestAttachments[0])
+            assertEquals(attachmentIdV2Unsigned, latestAttachments[1])
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - only signed contracts exist in store`() {
+        SelfCleaningDir().use { file ->
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val (signedContractJarV2, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", version = 2)
+
+            signedContractJar.read { storage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdV2Signed: AttachmentId? = null
+            signedContractJarV2.read { attachmentIdV2Signed = storage.privilegedImportAttachment(it, "app", "contract-signed-V2.jar") }
+
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(1, latestAttachments.size)
+            assertEquals(attachmentIdV2Signed, latestAttachments[0])
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - only unsigned contracts exist in store`() {
+        SelfCleaningDir().use { file ->
+            val contractJar = makeTestContractJar(file.path, "com.example.MyContract")
+            val contractJarV2 = makeTestContractJar(file.path,"com.example.MyContract", version = 2)
+
+            contractJar.read { storage.privilegedImportAttachment(it, "app", "contract.jar") }
+            var attachmentIdV2Unsigned: AttachmentId? = null
+            contractJarV2.read { attachmentIdV2Unsigned = storage.privilegedImportAttachment(it, "app", "contract-V2.jar") }
+
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(1, latestAttachments.size)
+            assertEquals(attachmentIdV2Unsigned, latestAttachments[0])
+        }
+    }
+
+    @Test
+    fun `retrieve latest versions of unsigned and signed contracts - none exist in store`() {
+        SelfCleaningDir().use { _ ->
+            val latestAttachments = storage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(0, latestAttachments.size)
+        }
+    }
+
+    @Test
+    fun `development mode - retrieve latest versions of signed contracts - multiple versions of same version id exist in store`() {
+        SelfCleaningDir().use { file ->
+            val (signedContractJar, publicKey) = makeTestSignedContractJar(file.path, "com.example.MyContract")
+            val (signedContractJarSameVersion, _) = makeTestSignedContractJar(file.path,"com.example.MyContract", versionSeed = Random().nextInt())
+
+            signedContractJar.read { devModeStorage.privilegedImportAttachment(it, "app", "contract-signed.jar") }
+            var attachmentIdSameVersionLatest: AttachmentId? = null
+            signedContractJarSameVersion.read { attachmentIdSameVersionLatest = devModeStorage.privilegedImportAttachment(it, "app", "contract-signed-same-version.jar") }
+
+            // this assertion is only true in development mode
+            assertEquals(
+                    2,
+                    devModeStorage.queryAttachments(AttachmentsQueryCriteria(
+                            contractClassNamesCondition = Builder.equal(listOf("com.example.MyContract")),
+                            versionCondition = Builder.equal(1),
+                            isSignedCondition = Builder.equal(true))).size
+            )
+
+            val latestAttachments = devModeStorage.getLatestContractAttachments("com.example.MyContract")
+            assertEquals(1, latestAttachments.size)
+            // should return latest version given by insertion date
+            assertEquals(attachmentIdSameVersionLatest, latestAttachments[0])
         }
     }
 

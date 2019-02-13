@@ -31,6 +31,9 @@ dependencies {
     
     cordapp project(':confidential-identities')
     cordapp project(':finance:contracts')
+
+    // For JSON
+    compile "com.fasterxml.jackson.core:jackson-databind:${jackson_version}"
     
     testCompile project(':test-utils')
     testCompile project(path: ':core', configuration: 'testArtifacts')

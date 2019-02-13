@@ -19,7 +19,7 @@ import net.corda.core.StubOutForDJVM
 fun <T: Any> createInstancesOfClassesImplementing(classloader: ClassLoader, clazz: Class<T>): Set<T> {
     return ClassGraph().addClassLoader(classloader)
             .enableClassInfo()
-            .scan()
+            .pooledScan()
             .use {
                 it.getClassesImplementing(clazz.name)
                         .filterNot { it.isAbstract }

@@ -35,7 +35,9 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -176,9 +178,10 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
                       internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
-                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory()): CordaPersistence {
+                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, hikariProperties, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas)
+    persistence.startHikariPool(hikariProperties, databaseConfig, internalSchemas, ourName = ourName)
     return persistence
 }
 

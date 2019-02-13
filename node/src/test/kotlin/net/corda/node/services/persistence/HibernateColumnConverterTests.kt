@@ -2,8 +2,6 @@ package net.corda.node.services.persistence
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Amount
-import net.corda.core.flows.FlowLogic
-import net.corda.core.flows.StartableByRPC
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.OpaqueBytes
@@ -17,9 +15,11 @@ import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.E2ETestKeyManagementService
 import net.corda.testing.core.BOC_NAME
 import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.node.InMemoryMessagingNetwork
+import net.corda.testing.node.InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin
 import net.corda.testing.node.MockNetwork
+import net.corda.testing.node.MockNetworkParameters
 import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.internal.FINANCE_CORDAPPS
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -48,9 +48,7 @@ class HibernateColumnConverterTests {
     
     @Before
     fun start() {
-        mockNet = MockNetwork(
-                servicePeerAllocationStrategy = InMemoryMessagingNetwork.ServicePeerAllocationStrategy.RoundRobin(),
-                cordappPackages = listOf("net.corda.finance.contracts.asset", "net.corda.finance.schemas"))
+        mockNet = MockNetwork(MockNetworkParameters(servicePeerAllocationStrategy = RoundRobin(), cordappsForAllNodes = FINANCE_CORDAPPS))
         bankOfCordaNode = mockNet.createPartyNode(BOC_NAME)
         bankOfCorda = bankOfCordaNode.info.identityFromX500Name(BOC_NAME)
         notary = mockNet.defaultNotaryIdentity

@@ -118,7 +118,7 @@ class NodeMonitorModel : AutoCloseable {
                     statesSnapshot.statesMetadata[index].status == Vault.StateStatus.UNCONSUMED
                 }.toSet()
                 val consumedStates = statesSnapshot.states.toSet() - unconsumedStates
-                val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates)
+                val initialVaultUpdate = Vault.Update(consumedStates, unconsumedStates, references = emptySet())
                 vaultUpdates.startWith(initialVaultUpdate).subscribe({ vaultUpdatesSubject.onNext(it) }, {})
 
                 // Transactions

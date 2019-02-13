@@ -19,10 +19,8 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.dummyCommand
 import net.corda.testing.core.singleIdentity
-import net.corda.testing.node.MockNetwork
-import net.corda.testing.node.MockNetworkNotarySpec
-import net.corda.testing.node.MockNodeParameters
-import net.corda.testing.node.StartedMockNode
+import net.corda.testing.node.*
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.After
 import org.junit.Before
@@ -47,10 +45,10 @@ class NotaryChangeTests {
 
     @Before
     fun setUp() {
-        mockNet = MockNetwork(
+        mockNet = MockNetwork(MockNetworkParameters(
                 notarySpecs = listOf(MockNetworkNotarySpec(oldNotaryName), MockNetworkNotarySpec(newNotaryName)),
-                cordappPackages = listOf("net.corda.testing.contracts")
-        )
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP)
+        ))
         clientNodeA = mockNet.createNode(MockNodeParameters(legalName = ALICE_NAME))
         clientNodeB = mockNet.createNode(MockNodeParameters(legalName = BOB_NAME))
         clientA = clientNodeA.info.singleIdentity()

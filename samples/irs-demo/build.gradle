@@ -62,7 +62,6 @@ repositories {
 
 dependencies {
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
-    compile project(path: ":samples:irs-demo:cordapp", configuration: "demoArtifacts")
     compile project(":samples:irs-demo:web")
     compile('org.springframework.boot:spring-boot-starter-web') {
         exclude module: "spring-boot-starter-logging"

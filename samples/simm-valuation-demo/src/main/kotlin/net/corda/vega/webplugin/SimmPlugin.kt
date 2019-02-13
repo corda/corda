@@ -2,7 +2,7 @@ package net.corda.vega.webplugin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import net.corda.core.serialization.SerializationWhitelist
-import net.corda.finance.plugin.registerFinanceJSONMappers
+import net.corda.finance.workflows.plugin.registerFinanceJSONMappers
 import net.corda.vega.api.PortfolioApi
 import net.corda.webserver.services.WebServerPluginRegistry
 import java.util.function.Function

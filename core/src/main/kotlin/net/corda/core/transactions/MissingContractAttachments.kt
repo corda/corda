@@ -16,7 +16,7 @@ import net.corda.core.serialization.CordaSerializable
 @KeepForDJVM
 class MissingContractAttachments
 @JvmOverloads
-constructor(val states: List<TransactionState<ContractState>>, minimumRequiredContractClassVersion: Version? = null) : FlowException(
+constructor(val states: List<TransactionState<ContractState>>, contractsClassName: String? = null, minimumRequiredContractClassVersion: Version? = null) : FlowException(
         "Cannot find contract attachments for " +
-        "${states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}. " +
+        "${contractsClassName ?: states.map { it.contract }.distinct()}${minimumRequiredContractClassVersion?.let { ", minimum required contract class version $minimumRequiredContractClassVersion"}}. " +
         "See https://docs.corda.net/api-contract-constraints.html#debugging")

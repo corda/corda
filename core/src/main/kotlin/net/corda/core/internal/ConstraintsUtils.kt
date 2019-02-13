@@ -53,7 +53,6 @@ val ContractState.requiredContractClassName: String? get() {
  *
  *    2. Java package namespace of signed contract jar is registered in the CZ network map with same public keys (as used to sign contract jar)
  */
-// TODO - SignatureConstraint third party signers.
 fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, attachment: AttachmentWithContext): Boolean {
     val output = this
     return when {
@@ -124,7 +123,7 @@ internal fun checkConstraintValidity(state: TransactionState<*>) {
  */
 internal fun ContractClassName.contractHasAutomaticConstraintPropagation(classLoader: ClassLoader? = null): Boolean {
     return (classLoader ?: NoConstraintPropagation::class.java.classLoader)
-            .loadClass(this)
+            .run { Class.forName(this@contractHasAutomaticConstraintPropagation, false, this) }
             .getAnnotation(NoConstraintPropagation::class.java) == null
 }
 

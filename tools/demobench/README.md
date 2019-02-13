@@ -66,19 +66,14 @@ until you close this node's Explorer again.
 ### The Bank Node
 
 Click the `Add Node` button, and DemoBench will ask you to configure another
-node in a new tab.
+node in a new tab. Choose `Issuer GBP` as additional configuration.
 
 ![Configure Bank Node](demobench-configure-bank.png)
 
-When you press the `Launch Web Server` this time, your browser should open to a
-page saying:
-> ### Installed CorDapps
-> **net.corda.bank.plugin.BankOfCordaPlugin**<br/>
-> net.corda.bank.api.BankOfCordaWebApi:
-> - POST issue-asset-request
-> - GET date
+When you type in the shell `start CashConfigDataFlow` you should get the following result:
+> Flow completed with result: CashConfiguration(issuableCurrencies=[GBP], supportedCurrencies=[USD, GBP, CHF, EUR])
 
-Clicking on the `GET date` link should return today's date within a JSON document.
+The `CashIssueFlow` is enabled for the currencies listed in bank node's finance configuration file (`corda-finance.conf`), in this instance it's GBP.
 
 Launch the bank's Node Explorer, and check the network view. The Notary node
 should be displayed in Rome, whereas the Bank of Breakfast Tea should be in

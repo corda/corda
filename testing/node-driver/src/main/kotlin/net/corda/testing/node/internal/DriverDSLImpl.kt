@@ -6,7 +6,6 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigRenderOptions
 import com.typesafe.config.ConfigValueFactory
 import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.cliutils.CommonCliConstants.BASE_DIR
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.concurrent.firstOf
@@ -579,7 +578,7 @@ class DriverDSLImpl(
                 extraCustomCordapps + (cordappsForAllNodes ?: emptySet())
         )
 
-        if (parameters.startInSameProcess ?: startNodesInProcess) {
+        val nodeFuture = if (parameters.startInSameProcess ?: startNodesInProcess) {
             val nodeAndThreadFuture = startInProcessNode(executorService, config)
             shutdownManager.registerShutdown(
                     nodeAndThreadFuture.map { (node, thread) ->
@@ -603,7 +602,7 @@ class DriverDSLImpl(
                     }
                 }
             }
-            return nodeFuture
+            nodeFuture
         } else {
             val debugPort = if (isDebug) debugPortAllocation.nextPort() else null
             val process = startOutOfProcessNode(config, quasarJarPath, debugPort, systemProperties, parameters.maximumHeapSize)
@@ -624,7 +623,7 @@ class DriverDSLImpl(
             }
             val effectiveP2PAddress = config.corda.messagingServerAddress ?: config.corda.p2pAddress
             val p2pReadyFuture = addressMustBeBoundFuture(executorService, effectiveP2PAddress, process)
-            return p2pReadyFuture.flatMap {
+            p2pReadyFuture.flatMap {
                 val processDeathFuture = poll(executorService, "process death while waiting for RPC (${config.corda.myLegalName})") {
                     if (process.isAlive) null else process
                 }
@@ -644,6 +643,8 @@ class DriverDSLImpl(
                 }
             }
         }
+
+        return nodeFuture.doOnError { onNodeExit() }
     }
 
     override fun <A> pollUntilNonNull(pollName: String, pollInterval: Duration, warnCount: Int, check: () -> A?): CordaFuture<A> {
@@ -768,9 +769,10 @@ class DriverDSLImpl(
                 it += extraCmdLineFlag
             }.toList()
 
-            // This excludes the samples and the finance module from the system classpath of the out of process nodes
-            // as they will be added to the cordapps folder.
-            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock")
+            // The following dependencies are excluded from the classpath of the created JVM, so that the environment resembles a real one as close as possible.
+            // These are either classes that will be added as attachments to the node (i.e. samples, finance, opengamma etc.) or irrelevant testing libraries (test, corda-mock etc.).
+            // TODO: There is pending work to fix this issue without custom blacklisting. See: https://r3-cev.atlassian.net/browse/CORDA-2164.
+            val exclude = listOf("samples", "finance", "integrationTest", "test", "corda-mock", "com.opengamma.strata")
             val cp = ProcessUtilities.defaultClassPath.filterNot { cpEntry ->
                 exclude.any { token -> cpEntry.contains("${File.separatorChar}$token") } || cpEntry.endsWith("-tests.jar")
             }

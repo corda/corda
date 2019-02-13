@@ -52,8 +52,13 @@ import javax.persistence.*
 class NodeAttachmentService(
         metrics: MetricRegistry,
         cacheFactory: NamedCacheFactory,
-        private val database: CordaPersistence
+        private val database: CordaPersistence,
+        val devMode: Boolean
 ) : AttachmentStorageInternal, SingletonSerializeAsToken() {
+    constructor(metrics: MetricRegistry,
+                cacheFactory: NamedCacheFactory,
+                database: CordaPersistence) : this(metrics, cacheFactory, database, false)
+
     // This is to break the circular dependency.
     lateinit var servicesForResolution: ServicesForResolution
 
@@ -96,7 +101,7 @@ class NodeAttachmentService(
             @Column(name = "insertion_date", nullable = false, updatable = false)
             var insertionDate: Instant = Instant.now(),
 
-            @Column(name = "uploader", updatable = false, nullable = true)
+            @Column(name = "uploader", nullable = true)
             var uploader: String? = null,
 
             @Column(name = "filename", updatable = false, nullable = true)
@@ -259,7 +264,7 @@ class NodeAttachmentService(
         if (content.isPresent) {
             return content.get().first
         }
-        // if no attachement has been found, we don't want to cache that - it might arrive later
+        // If no attachment has been found, we don't want to cache that - it might arrive later.
         attachmentContentCache.invalidate(key)
         return null
     }
@@ -356,9 +361,8 @@ class NodeAttachmentService(
                     val jarSigners = getSigners(bytes)
                     val contractVersion = increaseDefaultVersionIfWhitelistedAttachment(contractClassNames, getVersion(bytes), id)
                     val session = currentDBSession()
-
-                    verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
-
+                    if (!devMode)
+                        verifyVersionUniquenessForSignedAttachments(contractClassNames, contractVersion, jarSigners)
                     val attachment = NodeAttachmentService.DBAttachment(
                             attId = id.toString(),
                             content = bytes,
@@ -379,9 +383,9 @@ class NodeAttachmentService(
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
-                        verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
+                        if (!devMode)
+                            verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
                         attachment.uploader = uploader
-                        session.saveOrUpdate(attachment)
                         log.info("Updated attachment $id with uploader $uploader")
                         contractClassNames.forEach { contractsCache.invalidate(it) }
                         loadAttachmentContent(id)?.let { attachmentAndContent ->
@@ -490,21 +494,24 @@ class NodeAttachmentService(
 
     private fun makeAttachmentIds(it: Map.Entry<Int, List<DBAttachment>>, contractClassName: String): Pair<Version, AttachmentIds> {
         val signed = it.value.filter { it.signers?.isNotEmpty() ?: false }.map { AttachmentId.parse(it.attId) }
-        check (signed.size <= 1) //sanity check
+        if (!devMode)
+            check (signed.size <= 1) //sanity check
+        else
+            log.warn("(Dev Mode) Multiple signed attachments ${signed.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
         val unsigned = it.value.filter { it.signers?.isEmpty() ?: true }.map { AttachmentId.parse(it.attId) }
         if (unsigned.size > 1)
             log.warn("Selecting attachment ${unsigned.first()} from duplicated, unsigned attachments ${unsigned.map { it.toString() }} for contract $contractClassName version '${it.key}'.")
-        return it.key to AttachmentIds(signed.singleOrNull(), unsigned.firstOrNull())
+        return it.key to AttachmentIds(signed.firstOrNull(), unsigned.firstOrNull())
     }
 
-    override fun getContractAttachmentWithHighestContractVersion(contractClassName: String, minContractVersion: Int): AttachmentId? {
+    override fun getLatestContractAttachments(contractClassName: String, minContractVersion: Int): List<AttachmentId> {
         val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        val newestAttachmentIds = versions.tailMap(minContractVersion, true).lastEntry()?.value
-        return newestAttachmentIds?.toList()?.first()
-    }
-
-    override fun getContractAttachments(contractClassName: String): Set<AttachmentId> {
-        val versions: NavigableMap<Version, AttachmentIds> = getContractAttachmentVersions(contractClassName)
-        return versions.values.flatMap { it.toList() }.toSet()
+        val newestAttachmentIds = versions.tailMap(minContractVersion, true)
+        val newestSignedAttachment = newestAttachmentIds.values.map { it.signed }.lastOrNull { it != null }
+        val newestUnsignedAttachment = newestAttachmentIds.values.map { it.unsigned }.lastOrNull { it != null }
+        return if (newestSignedAttachment != null || newestUnsignedAttachment != null)
+            AttachmentIds(newestSignedAttachment, newestUnsignedAttachment).toList()
+        else
+            emptyList()
     }
 }

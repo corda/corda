@@ -20,8 +20,8 @@ import net.corda.finance.POUNDS
 import net.corda.finance.SWISS_FRANCS
 import net.corda.finance.USD
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.contracts.getCashBalance
-import net.corda.finance.contracts.getCashBalances
+import net.corda.finance.workflows.getCashBalance
+import net.corda.finance.workflows.getCashBalances
 import net.corda.finance.flows.CashIssueFlow
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.java.rpc.StandaloneCordaRPCJavaClientTest

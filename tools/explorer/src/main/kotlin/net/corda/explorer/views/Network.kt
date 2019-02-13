@@ -35,9 +35,9 @@ import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.model.CordaView
-import net.corda.finance.utils.CityDatabase
-import net.corda.finance.utils.ScreenCoordinate
-import net.corda.finance.utils.WorldMapLocation
+import net.corda.worldmap.CityDatabase
+import net.corda.worldmap.ScreenCoordinate
+import net.corda.worldmap.WorldMapLocation
 import tornadofx.*
 
 class Network : CordaView() {

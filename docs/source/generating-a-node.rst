@@ -32,6 +32,15 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
 
     task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
         directory "./build/nodes"
+
+        nodeDefaults {
+                cordapps = [
+                "net.corda:corda-finance-contracts:$corda_release_version",
+                "net.corda:corda-finance-workflows:$corda_release_version",
+                "net.corda:corda-confidential-identities:$corda_release_version"
+                ]
+        }
+
         node {
             name "O=Notary,L=London,C=GB"
             // The notary will offer a validating notary service.
@@ -45,8 +54,6 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             h2Port   10004
             // Starts an internal SSH server providing a management shell on the node.
             sshdPort 2223
-            // Includes the corda-finance CorDapp on our node.
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
             extraConfig = [
                 // Setting the JMX reporter type.
                 jmxReporterType: 'JOLOKIA',
@@ -63,7 +70,6 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             }
             webPort  10007
             h2Port   10008
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 all RPC permissions.
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["ALL"]]]
         }
@@ -76,7 +82,6 @@ in the `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotli
             }
             webPort  10011
             h2Port   10012
-            cordapps = ["net.corda:corda-finance:$corda_release_version"]
             // Grants user1 the ability to start the MyFlow flow.
             rpcUsers = [[ user: "user1", "password": "test", "permissions": ["StartFlow.net.corda.flows.MyFlow"]]]
         }
@@ -268,28 +273,32 @@ Below you can find the example task from the `IRS Demo <https://github.com/corda
 
     task deployNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar']) {
 
+        nodeDefaults {
+                cordapps = [
+                "net.corda:corda-finance-contracts:$corda_release_version",
+                "net.corda:corda-finance-workflows:$corda_release_version",
+                "net.corda:corda-confidential-identities:$corda_release_version"
+                ]
+        }
+
         node {
             name "O=Notary Service,L=Zurich,C=CH"
             notary = [validating : true]
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank A,L=London,C=GB"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Bank B,L=New York,C=US"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }
         node {
             name "O=Regulator,L=Moscow,C=RU"
-            cordapps = ["$corda_release_group:corda-finance:$corda_release_version"]
             rpcUsers = rpcUsersList
             useTestClock true
         }

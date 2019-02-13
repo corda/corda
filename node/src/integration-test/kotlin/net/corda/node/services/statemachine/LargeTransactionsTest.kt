@@ -20,6 +20,8 @@ import net.corda.testing.core.dummyCommand
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
+import net.corda.testing.node.internal.DUMMY_CONTRACTS_CORDAPP
+import net.corda.testing.node.internal.enclosedCordapp
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -76,9 +78,10 @@ class LargeTransactionsTest {
         val bigFile2 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 1, "b")
         val bigFile3 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 2, "c")
         val bigFile4 = InputStreamAndHash.createInMemoryTestZip(3.MB.toInt(), 3, "d")
+
         driver(DriverParameters(
                 startNodesInProcess = true,
-                extraCordappPackagesToScan = listOf("net.corda.testing.contracts"),
+                cordappsForAllNodes = listOf(DUMMY_CONTRACTS_CORDAPP, enclosedCordapp()),
                 networkParameters = testNetworkParameters(maxMessageSize = 15.MB.toInt(), maxTransactionSize = 13.MB.toInt())
         )) {
             val rpcUser = User("admin", "admin", setOf("ALL"))

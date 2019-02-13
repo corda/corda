@@ -63,6 +63,9 @@ fun Path.copyTo(target: Path, vararg options: CopyOption): Path = Files.copy(thi
 /** @see Files.move */
 fun Path.moveTo(target: Path, vararg options: CopyOption): Path = Files.move(this, target, *options)
 
+/** @see Files.move */
+fun Path.renameTo(fileName: String, vararg options: CopyOption): Path = moveTo(parent / fileName, *options)
+
 /** See overload of [Files.copy] which takes in an [InputStream]. */
 fun Path.copyTo(out: OutputStream): Long = Files.copy(this, out)
 

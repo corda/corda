@@ -155,7 +155,7 @@ and methods. For example, here is the relatively complex definition for a state 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/contracts/asset/Cash.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/contracts/asset/Cash.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
@@ -209,7 +209,7 @@ financial instruments.
 
 Just like regular input states, the chain of provenance for reference states is resolved and all dependency transactions
 verified. This is because users of reference data must be satisfied that the data they are referring to is valid as per
-the rules of the contract which governs it and that all previous participants of teh state assented to updates of it.
+the rules of the contract which governs it and that all previous participants of the state assented to updates of it.
 
 **Known limitations:**
 
@@ -221,7 +221,7 @@ notary which the reference state uses.
 
 If two or more reference states assigned to different notaries are added to a transaction then it follows that this
 transaction cannot be committed to the ledger. This would also be the case for transactions not containing reference
-states. There is an additional complication for transaction including reference states, however. It is unlikely that the
+states. There is an additional complication for transactions including reference states, however, it is unlikely that the
 party using the reference states has the authority to change the notary for the state (in other words, the party using the
 reference state would not be listed as a participant on it). Therefore, it is likely that a transaction containing
 reference states with two different notaries cannot be committed to the ledger.
@@ -250,8 +250,11 @@ a look-up. There are two types of pointers; linear and static.
    work, the pointer will automatically point you to the latest version of a LinearState that the node performing ``resolve``
    is aware of. In effect, the pointer "moves" as the LinearState is updated.
 
-StatePointers do not enable a feature in Corda which was unavailable before. Rather, they help to formalise a pattern which was
-already possible. In that light it is worth nothing some issues which you may encounter with it:
+State pointers use ``Reference States`` to enable the functionality described above. They can be conceptualized as a mechanism to
+formalise a development pattern where one needs to refer to a specific state from another state (StaticPointer) or a particular lineage
+of states ``LinearPointer``. In other words, ``StatePointers`` do not enable a feature in Corda which was previously unavailable.
+Rather, they help to formalise a pattern which was already possible. In that light it is worth nothing some issues which you may encounter
+in its application:
 
 * If the node calling ``resolve`` has not seen any transactions containing a ``ContractState`` which the ``StatePointer``
   points to, then ``resolve`` will throw an exception. Here, the node calling ``resolve`` might be missing some crucial data.

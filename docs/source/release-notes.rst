@@ -122,9 +122,6 @@ allows tool developers to assume that if a class name appears to be owned by an 
 semantics of that class actually *were* defined by that organisation, thus eliminating edge cases that
 might otherwise cause confusion.
 
-**No downgrades.** Transaction building and verification enforces new contract attachment version non-downgrade rule.
-For a given contract class, the contract attachment of the output states must be of the same or newer version than
-the contract attachment of the input states. See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
 
 Network parameters in transactions
 ++++++++++++++++++++++++++++++++++
@@ -246,7 +243,7 @@ Errors generated in Corda are now hashed to produce a unique error code that can
 used to perform a lookup into a knowledge base. The lookup URL will be printed to the logs when an error
 occur. Here's an example::
 
-[ERROR] 2018-12-19T17:18:39,199Z [main] internal.NodeStartupLogging.invoke - Exception during node startup: The name 'O=Wawrzek Test C4, L=London, C=GB' for identity doesn't match what's in the key store: O=Wawrzek Test C4, L=Ely, C=GB [errorCode=wuxa6f, moreInformationAt=https://errors.corda.net/OS/4.0-SNAPSHOT/wuxa6f]
+[ERROR] 2018-12-19T17:18:39,199Z [main] internal.NodeStartupLogging.invoke - Exception during node startup: The name 'O=Wawrzek Test C4, L=London, C=GB' for identity doesn't match what's in the key store: O=Wawrzek Test C4, L=Ely, C=GB [errorCode=wuxa6f, moreInformationAt=https://errors.corda.net/OS/4.0/wuxa6f]
 
 The hope is that common error conditions can quickly be resolved and opaque errors explained in a more
 user friendly format to facilitate faster debugging and trouble shooting.

@@ -4,6 +4,32 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+Unreleased
+----------
+
+* Updating postgres dependency to 42.2.5
+
+* Test ``CordaService`` s can be installed on mock nodes using ``UnstartedMockNode.installCordaService``.
+
+* The finance-contracts demo CorDapp has been slimmed down to contain only that which is relevant for contract verification. Everything else
+  has been moved to the finance-workflows CorDapp:
+
+  * The cash selection logic. ``AbstractCashSelection`` is now in net.corda.finance.contracts.asset so any custom implementations must now be
+    defined in ``META-INF/services/net.corda.finance.workflows.asset.selection.AbstractCashSelection``.
+
+  * The jackson annotations on ``Expression`` have been removed. You will need to use ``FinanceJSONSupport.registerFinanceJSONMappers`` if
+    you wish to preserve the JSON format for this class.
+
+  * The various utility methods defined in ``Cash`` for creating cash transactions have been moved to ``net.corda.finance.workflows.asset.CashUtils``.
+    Similarly with ``CommercialPaperUtils`` and ``ObligationUtils``.
+
+  * Various other utilities such as ``GetBalances` and the test calendar data.
+
+  The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
+
+* Vault states are now correctly migrated when moving from V3 to V4.1. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
+  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.1.
+
 .. _changelog_v4.0:
 
 Version 4.0
@@ -23,10 +49,6 @@ Version 4.0
    complements `database.initialiseSchema` to disable DDL handling altogether.
 
 * ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
-
-* Transaction building and verification enforces new contract attachment version non-downgrade rule.
-  For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
-  See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
 
 * Standardised CorDapp version identifiers in jar manifests (aligned with associated cordapp Gradle plugin changes).
   Updated all samples to reflect new conventions.
@@ -308,11 +330,13 @@ Version 4.0
 * CorDapps built by ``corda-gradle-plugins`` are now signed and sealed JAR files.
   Signing can be configured or disabled, and it defaults to using the Corda development certificate.
 
-* Finance CorDapp is now build as a sealed and signed JAR file.
-  Custom classes can no longer be placed in the packages defined in Finance Cordapp or access it's non-public members.
+* Finance CorDapps are now built as sealed and signed JAR files.
+  Custom classes can no longer be placed in the packages defined in either finance Cordapp or access it's non-public members.
 
-* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``,
-  ``corda-finance`` is kept for backward compatibility, it is recommended to use separated jars.
+* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``. There is no longer a single cordapp which provides both.
+
+* All sample CorDapps were split into separate apps: workflows and contracts to reflect new convention. It is recommended to structure your CorDapps
+  this way, see :doc:`app-upgrade-notes` on upgrading your CorDapp.
 
 * The format of the shell commands' output can now be customized via the node shell, using the ``output-format`` command.
 

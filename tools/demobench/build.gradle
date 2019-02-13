@@ -43,15 +43,16 @@ configurations {
 }
 
 dependencies {
+    compile project(':client:rpc')
+    compile project(':finance:contracts')
+    compile project(':finance:workflows')
+    compile project(':tools:worldmap')
+
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
 
     // Controls FX: more java FX components http://fxexperience.com/controlsfx/
     compile "org.controlsfx:controlsfx:$controlsfx_version"
-
-    compile project(':client:rpc')
-    compile project(':finance:contracts')
-    compile project(':finance:workflows')
 
     compile "com.h2database:h2:$h2_version"
     compile "net.java.dev.jna:jna-platform:$jna_version"
@@ -134,6 +135,11 @@ distributions {
             }
             from(project(':finance:workflows').tasks.jar) {
                 rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
+                into 'cordapps'
+                fileMode = 0444
+            }
+            from(project(':confidential-identities').tasks.jar) {
+                rename 'corda-confidential-identities(.*)', 'corda-confidential-identities.jar'
                 into 'cordapps'
                 fileMode = 0444
             }

@@ -12,7 +12,7 @@ import net.corda.core.node.StatesToRecord
 import net.corda.core.transactions.ContractUpgradeWireTransaction
 import net.corda.core.transactions.SignedTransaction
 
-class FinalityHandler(val sender: FlowSession) : FlowLogic<Unit>() {
+class FinalityHandler(private val sender: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
         subFlow(ReceiveTransactionFlow(sender, true, StatesToRecord.ONLY_RELEVANT))

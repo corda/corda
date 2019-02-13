@@ -280,32 +280,34 @@ open class TransactionBuilder(
     ): Pair<Set<AttachmentId>, List<TransactionState<ContractState>>?> {
         val inputsAndOutputs = (inputStates ?: emptyList()) + (outputStates ?: emptyList())
 
-        // Hash to Signature constraints migration switchover
+        // Hash to Signature constraints migration switchover (only applicable from version 4 onwards)
         // identify if any input-output pairs are transitioning from hash to signature constraints:
         // 1. output states contain implicitly selected hash constraint (pre-existing from set of unconsumed states in a nodes vault) or explicitly set SignatureConstraint
         // 2. node has signed jar for associated contract class and version
-        val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
-        val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
-        if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
-            val attachmentIds = services.attachments.getContractAttachments(contractClassName)
-            // only switchover if we have both signed and unsigned attachments for the given contract class name
-            if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
-                val attachmentsToUse = attachmentIds.map {
-                    services.attachments.openAttachment(it)?.let { it as ContractAttachment }
-                            ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
+        if (services.networkParameters.minimumPlatformVersion >= 4) {
+            val inputsHashConstraints = inputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+            val outputHashConstraints = outputStates?.filter { it.constraint is HashAttachmentConstraint } ?: emptyList()
+            val outputSignatureConstraints = outputStates?.filter { it.constraint is SignatureAttachmentConstraint } ?: emptyList()
+            if (inputsHashConstraints.isNotEmpty() && (outputHashConstraints.isNotEmpty() || outputSignatureConstraints.isNotEmpty())) {
+                val attachmentIds = services.attachments.getLatestContractAttachments(contractClassName)
+                // only switchover if we have both signed and unsigned attachments for the given contract class name
+                if (attachmentIds.isNotEmpty() && attachmentIds.size == 2) {
+                    val attachmentsToUse = attachmentIds.map {
+                        services.attachments.openAttachment(it)?.let { it as ContractAttachment }
+                                ?: throw IllegalArgumentException("Contract attachment $it for $contractClassName is missing.")
+                    }
+                    val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
+                            ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
+                    val outputConstraints =
+                            if (outputHashConstraints.isNotEmpty()) {
+                                log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
+                                val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
+                                outputs.addAll(outputsSignatureConstraints)
+                                outputs.removeAll(outputHashConstraints)
+                                outputsSignatureConstraints
+                            } else outputSignatureConstraints
+                    return Pair(attachmentIds.toSet(), outputConstraints)
                 }
-                val signedAttachment = attachmentsToUse.filter { it.isSigned }.firstOrNull()
-                        ?: throw IllegalArgumentException("Signed contract attachment for $contractClassName is missing.")
-                val outputConstraints =
-                        if (outputHashConstraints.isNotEmpty()) {
-                            log.warn("Switching output states from hash to signed constraints using signers in signed contract attachment given by ${signedAttachment.id}")
-                            val outputsSignatureConstraints = outputHashConstraints.map { it.copy(constraint = SignatureAttachmentConstraint(signedAttachment.signerKeys.first())) }
-                            outputs.addAll(outputsSignatureConstraints)
-                            outputs.removeAll(outputHashConstraints)
-                            outputsSignatureConstraints
-                        } else outputSignatureConstraints
-                return Pair(attachmentIds.toSet(), outputConstraints)
             }
         }
 
@@ -465,8 +467,8 @@ open class TransactionBuilder(
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
         val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
-        return services.attachments.getContractAttachmentWithHighestContractVersion(contractClassName, minimumRequiredContractClassVersion)
-                ?: throw MissingContractAttachments(states, minimumRequiredContractClassVersion)
+        return services.attachments.getLatestContractAttachments(contractClassName, minimumRequiredContractClassVersion).firstOrNull()
+                ?: throw MissingContractAttachments(states, contractClassName, minimumRequiredContractClassVersion)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
@@ -501,11 +503,9 @@ open class TransactionBuilder(
     private fun checkReferencesUseSameNotary() = referencesWithTransactionState.map { it.notary }.toSet().size == 1
 
     /**
-     * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method can be
-     * optionally called to resolve those [StatePointer]s to [StateAndRef]s. The [StateAndRef]s are then added as
-     * reference states to the transaction. The effect is that the referenced data is carried along with the
-     * transaction. This may or may not be appropriate in all circumstances, which is why calling this method is
-     * optional.
+     * If any inputs or outputs added to the [TransactionBuilder] contain [StatePointer]s, then this method is used
+     * to resolve those [StatePointer]s to [StateAndRef]s. The [StateAndRef]s are then added as reference states to
+     * the transaction. The effect is that the referenced data is carried along with the transaction.
      *
      * If this method is called outside the context of a flow, a [ServiceHub] instance must be passed to this method
      * for it to be able to resolve [StatePointer]s. Usually for a unit test, this will be an instance of mock services.

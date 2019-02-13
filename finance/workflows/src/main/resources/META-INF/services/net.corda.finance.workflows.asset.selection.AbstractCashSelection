@@ -1,0 +1,3 @@
+net.corda.finance.workflows.asset.selection.CashSelectionH2Impl
+net.corda.finance.workflows.asset.selection.CashSelectionPostgreSQLImpl
+net.corda.finance.workflows.asset.selection.CashSelectionSQLServerImpl

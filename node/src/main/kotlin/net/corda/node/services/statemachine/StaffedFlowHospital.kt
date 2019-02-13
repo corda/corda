@@ -1,6 +1,7 @@
 package net.corda.node.services.statemachine
 
 import net.corda.core.crypto.newSecureRandom
+import net.corda.core.flows.ReceiveFinalityFlow
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
 import net.corda.core.internal.ThreadBox
@@ -298,23 +299,19 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
         }
     }
 
-    /**
-     * Parks [FinalityHandler]s for observation.
-     */
     object FinalityDoctor : Staff {
         override fun consult(flowFiber: FlowFiber, currentState: StateMachineState, newError: Throwable, history: FlowMedicalHistory): Diagnosis {
-            return if (currentState.flowLogic is FinalityHandler) {
-                warn(currentState.flowLogic, flowFiber, currentState)
+            return if (currentState.flowLogic is FinalityHandler || isFromReceiveFinalityFlow(newError)) {
+                log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
+                        "the flow by re-starting the node. State machine state: $currentState")
                 Diagnosis.OVERNIGHT_OBSERVATION
             } else {
                 Diagnosis.NOT_MY_SPECIALTY
             }
         }
 
-        private fun warn(flowLogic: FinalityHandler, flowFiber: FlowFiber, currentState: StateMachineState) {
-            log.warn("Flow ${flowFiber.id} failed to be finalised. Manual intervention may be required before retrying " +
-                    "the flow by re-starting the node. State machine state: $currentState, initiating party was: " +
-                    "${flowLogic.sender.counterparty}")
+        private fun isFromReceiveFinalityFlow(throwable: Throwable): Boolean {
+            return throwable.stackTrace.any { it.className == ReceiveFinalityFlow::class.java.name }
         }
     }
 }

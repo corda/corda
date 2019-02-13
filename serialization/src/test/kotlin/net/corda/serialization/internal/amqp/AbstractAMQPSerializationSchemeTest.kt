@@ -8,12 +8,11 @@ import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.CordaSerializationMagic
 import net.corda.serialization.internal.SerializationContextImpl
 import net.corda.serialization.internal.amqp.testutils.serializationProperties
-import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.internal.createTestSerializationEnv
 import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers
 import org.junit.Assert
-import org.junit.Rule
 import org.junit.Test
 import java.net.URLClassLoader
 import java.util.concurrent.ThreadLocalRandom
@@ -21,9 +20,7 @@ import java.util.stream.IntStream
 
 class AbstractAMQPSerializationSchemeTest {
 
-    @Rule
-    @JvmField
-    val testSerialization = SerializationEnvironmentRule()
+    private val serializationEnvironment = createTestSerializationEnv()
 
     @Test
     fun `number of cached factories must be bounded by maxFactories`() {
@@ -63,7 +60,7 @@ class AbstractAMQPSerializationSchemeTest {
             }
             val testString = "TEST${ThreadLocalRandom.current().nextInt()}"
             val serialized = scheme.serialize(testString, context)
-            val deserialized = serialized.deserialize(context = context, serializationFactory = testSerialization.serializationFactory)
+            val deserialized = serialized.deserialize(context = context, serializationFactory = serializationEnvironment.serializationFactory)
             Assert.assertThat(testString, `is`(deserialized))
             Assert.assertThat(backingMap.size, `is`(Matchers.lessThanOrEqualTo(maxFactories)))
         }

@@ -34,7 +34,8 @@ couple of resources.
 
    .. code:: bash
 
-       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance/<VERSION>-corda/corda-finance-<VERSION>-corda.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-contracts-/<VERSION>-corda/corda-finance-contracts-<VERSION>-corda.jar
+       wget https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/net/corda/corda-finance-workflows-/<VERSION>-corda/corda-finance-workflows-<VERSION>-corda.jar
 
    This is required to run some flows to check your connections, and to issue/transfer cash to counterparties. Copy it to
    the Corda installation location:

@@ -2,10 +2,8 @@ package net.corda.node.services.network
 
 import net.corda.core.crypto.random63BitValue
 import net.corda.core.internal.*
-import net.corda.core.internal.concurrent.transpose
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.NodeInfo
-import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -23,13 +21,15 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hamcrest.CoreMatchers.`is`
-import org.junit.*
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThat
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import java.lang.AssertionError
 import java.net.URL
-import java.nio.file.Files
 import java.time.Instant
 
 @RunWith(Parameterized::class)
@@ -109,7 +109,8 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
             val laterParams = networkMapServer.networkParameters.copy(
                     epoch = 4,
                     modifiedTime = Instant.ofEpochMilli(random63BitValue()),
-                    maxMessageSize = nextParams.maxMessageSize + 1)
+                    maxMessageSize = nextParams.maxMessageSize + 1
+            )
             val laterHash = laterParams.serialize().hash
             networkMapServer.scheduleParametersUpdate(laterParams, "Another update", Instant.ofEpochMilli(random63BitValue()))
             Thread.sleep(cacheTimeout.toMillis() * 2)
@@ -139,48 +140,14 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
     }
 
     @Test
-    fun `node correctly downloads and saves network parameters file on startup`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
-        ) {
-            val alice = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-            val networkParameters = (alice.baseDirectory / NETWORK_PARAMS_FILE_NAME)
-                    .readObject<SignedNetworkParameters>()
-                    .verified()
-            // We use a random modified time above to make the network parameters unqiue so that we're sure they came
-            // from the server
-            assertEquals(networkMapServer.networkParameters, networkParameters)
-        }
-    }
-
-    @Test
-    fun `nodes can see each other using the http network map`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
-        ) {
-            val (aliceNode, bobNode) = listOf(
-                    startNode(providedName = ALICE_NAME, devMode = false),
-                    startNode(providedName = BOB_NAME, devMode = false)
-            ).transpose().getOrThrow()
-
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-        }
-    }
-
-    @Test
-    fun `nodes process network map add updates correctly when adding new node to network map`() {
+    fun `nodes process additions and removals from the network map correctly (and also download the network parameters)`() {
         internalDriver(
                 portAllocation = portAllocation,
                 compatibilityZone = compatibilityZone,
                 notarySpecs = emptyList()
         ) {
             val aliceNode = startNode(providedName = ALICE_NAME, devMode = false).getOrThrow()
-
+            assertDownloadedNetworkParameters(aliceNode)
             aliceNode.onlySees(aliceNode.nodeInfo)
 
             val bobNode = startNode(providedName = BOB_NAME, devMode = false).getOrThrow()
@@ -190,23 +157,6 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
 
             bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
             aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-        }
-    }
-
-    @Test
-    fun `nodes process network map remove updates correctly`() {
-        internalDriver(
-                portAllocation = portAllocation,
-                compatibilityZone = compatibilityZone,
-                notarySpecs = emptyList()
-        ) {
-            val (aliceNode, bobNode) = listOf(
-                    startNode(providedName = ALICE_NAME, devMode = false),
-                    startNode(providedName = BOB_NAME, devMode = false)
-            ).transpose().getOrThrow()
-
-            aliceNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
-            bobNode.onlySees(aliceNode.nodeInfo, bobNode.nodeInfo)
 
             networkMapServer.removeNodeInfo(aliceNode.nodeInfo)
 
@@ -246,13 +196,21 @@ class NetworkMapTest(var initFunc: (URL, NetworkMapServer) -> CompatibilityZoneP
         }
     }
 
+    private fun assertDownloadedNetworkParameters(node: NodeHandle) {
+        val networkParameters = (node.baseDirectory / NETWORK_PARAMS_FILE_NAME)
+                .readObject<SignedNetworkParameters>()
+                .verified()
+        // We use a random modified time above to make the network parameters unqiue so that we're sure they came
+        // from the server
+        assertEquals(networkMapServer.networkParameters, networkParameters)
+    }
+
     private fun NodeHandle.onlySees(vararg nodes: NodeInfo) {
-        // Make sure the nodes aren't getting the node infos from their additional directories
+        // Make sure the nodes aren't getting the node infos from their additional-node-infos directories
         val nodeInfosDir = baseDirectory / NODE_INFO_DIRECTORY
         if (nodeInfosDir.exists()) {
-            Assert.assertThat(nodeInfosDir.list().size, `is`(1))
-            Assert.assertThat(Files.readAllBytes(nodeInfosDir.list().single()).deserialize<SignedNodeInfo>().verified().legalIdentities.first(), `is`( this.nodeInfo.legalIdentities.first()))
-
+            assertThat(nodeInfosDir.list().size, `is`(1))
+            assertThat(nodeInfosDir.list().single().readObject<SignedNodeInfo>().verified().legalIdentities.first(), `is`( this.nodeInfo.legalIdentities.first()))
         }
         assertThat(rpc.networkMapSnapshot()).containsOnly(*nodes)
     }
