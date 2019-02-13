@@ -44,7 +44,6 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
         // list, the contents of which need to be deserialized under the correct classloader.
         checkNoNotaryChange()
         checkEncumbrancesValid()
-        validateContractVersions()
         validateStatesAgainstContract()
         val hashToSignatureConstrainedContracts = verifyConstraintsValidity()
         verifyConstraints(hashToSignatureConstrainedContracts)
@@ -203,20 +202,6 @@ class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: C
                 )
             } else {
                 checkNotary(encumbranceIndex, indicesAlreadyChecked)
-            }
-        }
-    }
-
-    /**
-     * Verify that contract class versions of output states are greater than or equal to the versions of the input states.
-     */
-    private fun validateContractVersions() {
-        contractAttachmentsByContract.forEach { contractClassName, attachments ->
-            val outputVersion = attachments.signed?.version ?: attachments.unsigned?.version ?: CordappImpl.DEFAULT_CORDAPP_VERSION
-            inputVersions[contractClassName]?.let {
-                if (it > outputVersion) {
-                    throw TransactionVerificationException.TransactionVerificationVersionException(ltx.id, contractClassName, "$it", "$outputVersion")
-                }
             }
         }
     }
