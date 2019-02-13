@@ -70,7 +70,7 @@ class MockCordappProvider(
     private val attachmentsCache = mutableMapOf<String, ByteArray>()
     private fun fakeAttachmentCached(contractClass: String, manifestAttributes: Map<String,String> = emptyMap()): ByteArray {
         return attachmentsCache.computeIfAbsent(contractClass + manifestAttributes.toSortedMap()) {
-            fakeAttachment(contractClass, contractClass, manifestAttributes)
+            fakeAttachment(contractClass.replace('.', '/') + ".class", "fake class file for $contractClass", manifestAttributes)
         }
     }
 }

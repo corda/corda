@@ -72,7 +72,7 @@ class TransactionSerializationTests {
 
     val megaCorpServices = object : MockServices(listOf("net.corda.core.serialization"), MEGA_CORP.name, mock(), testNetworkParameters(notaries = listOf(NotaryInfo(DUMMY_NOTARY, true))), MEGA_CORP_KEY) {
         //override mock implementation with a real one
-        override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment = servicesForResolution.loadContractAttachment(stateRef, forContractClassName)
+        override fun loadContractAttachment(stateRef: StateRef): Attachment = servicesForResolution.loadContractAttachment(stateRef)
     }
     val notaryServices = MockServices(listOf("net.corda.core.serialization"), DUMMY_NOTARY.name, rigorousMock(), DUMMY_NOTARY_KEY)
     lateinit var tx: TransactionBuilder

@@ -3,10 +3,13 @@ package net.corda.core.transactions
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.TransactionVerificationException
+import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.declaredField
 import net.corda.core.internal.inputStream
+import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.AttachmentId
 import net.corda.core.serialization.internal.AttachmentsClassLoader
+import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.internal.ContractJarTestUtils.signContractJar
 import net.corda.testing.internal.fakeAttachment
 import net.corda.testing.node.internal.FINANCE_CONTRACTS_CORDAPP
@@ -14,13 +17,10 @@ import net.corda.testing.services.MockAttachmentStorage
 import org.apache.commons.io.IOUtils
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.InputStream
 import java.net.URL
-import java.nio.file.Paths
 import kotlin.test.assertFailsWith
 
 class AttachmentsClassLoaderTests {
@@ -39,6 +39,9 @@ class AttachmentsClassLoaderTests {
     }
 
     private val storage = MockAttachmentStorage()
+    private val networkParameters = testNetworkParameters()
+    private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash)
+
 
     @Test
     fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
@@ -51,7 +54,7 @@ class AttachmentsClassLoaderTests {
     fun `Dynamically load AnotherDummyContract from isolated contracts jar using the AttachmentsClassLoader`() {
         val isolatedId = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", "isolated.jar")
 
-        val classloader = AttachmentsClassLoader(listOf(storage.openAttachment(isolatedId)!!))
+        val classloader = make(listOf(storage.openAttachment(isolatedId)!!))
         val contractClass = Class.forName(ISOLATED_CONTRACT_CLASS_NAME, true, classloader)
         val contract = contractClass.newInstance() as Contract
         assertEquals("helloworld", contract.declaredField<Any?>("magicString").value)
@@ -63,7 +66,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH_V4.openStream(), "app", "isolated-4.0.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 
@@ -74,7 +77,7 @@ class AttachmentsClassLoaderTests {
         val isolatedSignedId = importAttachment(signedJar.first.toUri().toURL().openStream(), "app", "isolated-signed.jar")
 
         // does not throw OverlappingAttachments exception
-        AttachmentsClassLoader(arrayOf(isolatedId, isolatedSignedId).map { storage.openAttachment(it)!! })
+        make(arrayOf(isolatedId, isolatedSignedId).map { storage.openAttachment(it)!! })
     }
 
     @Test
@@ -83,7 +86,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(FINANCE_CONTRACTS_CORDAPP.jarFile.inputStream(), "app", "finance.jar")
 
         // does not throw OverlappingAttachments exception
-        AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
 
     @Test
@@ -91,7 +94,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file2.txt", "some other data").inputStream(), "app", "file2.jar")
 
-        val cl = AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        val cl = make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
         assertEquals("some data", txt)
 
@@ -104,7 +107,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("file1.txt", "same data").inputStream(), "app", "file2.jar")
 
-        val cl = AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        val cl = make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         val txt = IOUtils.toString(cl.getResourceAsStream("file1.txt"), Charsets.UTF_8.name())
         assertEquals("same data", txt)
     }
@@ -115,7 +118,7 @@ class AttachmentsClassLoaderTests {
             val att1 = importAttachment(fakeAttachment(path, "some data").inputStream(), "app", "file1.jar")
             val att2 = importAttachment(fakeAttachment(path, "some other data").inputStream(), "app", "file2.jar")
 
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 
@@ -124,7 +127,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some data").inputStream(), "app", "file1.jar")
         val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some other data").inputStream(), "app", "file2.jar")
 
-        AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+        make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
 
     @Test
@@ -133,7 +136,7 @@ class AttachmentsClassLoaderTests {
         val att2 = importAttachment(fakeAttachment("meta-inf/services/com.example.something", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 
@@ -143,7 +146,7 @@ class AttachmentsClassLoaderTests {
         val att2 = storage.importAttachment(fakeAttachment("file1.txt", "some other data").inputStream(), "app", "file2.jar")
 
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 
@@ -154,7 +157,7 @@ class AttachmentsClassLoaderTests {
         val att1 = importAttachment(ISOLATED_CONTRACTS_JAR_PATH.openStream(), "app", ISOLATED_CONTRACTS_JAR_PATH.file)
         val att2 = importAttachment(fakeAttachment("net/corda/finance/contracts/isolated/AnotherDummyContract\$State.class", "some attackdata").inputStream(), "app", "file2.jar")
         assertFailsWith(TransactionVerificationException.OverlappingAttachmentsException::class) {
-            AttachmentsClassLoader(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
+            make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
         }
     }
 

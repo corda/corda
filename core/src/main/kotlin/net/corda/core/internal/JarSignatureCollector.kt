@@ -20,7 +20,7 @@ object JarSignatureCollector {
     private val unsignableEntryName = "META-INF/(?:(?:.*[.](?:SF|DSA|RSA|EC)|SIG-.*)|INDEX\\.LIST)".toRegex()
 
     /**
-     * Returns an ordered list of every [Party] which has signed every signable item in the given [JarInputStream].
+     * Returns an ordered list of every [PublicKey] which has signed every signable item in the given [JarInputStream].
      *
      * @param jar The open [JarInputStream] to collect signing parties from.
      * @throws InvalidJarSignersException If the signer sets for any two signable items are different from each other.

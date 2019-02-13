@@ -189,8 +189,8 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
         this.runOnStop += runOnStop
     }
 
-    override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?): Attachment {
-        return servicesForResolution.loadContractAttachment(stateRef, forContractClassName)
+    override fun loadContractAttachment(stateRef: StateRef): Attachment {
+        return servicesForResolution.loadContractAttachment(stateRef)
     }
 
     private fun getVersionInfo(): VersionInfo {

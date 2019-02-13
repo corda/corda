@@ -35,7 +35,9 @@ import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.isH2Database
 import net.corda.nodeapi.internal.registerDevP2pCertificates
 import net.corda.serialization.internal.amqp.AMQP_ENABLED
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.SerializationEnvironmentRule
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.stubs.CertificateStoreStubs
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
@@ -175,11 +177,12 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
-                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory()): CordaPersistence {
+                      cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
+                      ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
     val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
     val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory, null)
-    persistence.startHikariPool(hikariProperties, databaseConfig, schemas)
+    persistence.startHikariPool(hikariProperties, databaseConfig, schemas, ourName = ourName)
     return persistence
 }
 
