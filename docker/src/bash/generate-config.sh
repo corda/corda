@@ -1,21 +1,19 @@
 #!/usr/bin/env bash
 
-
 die() {
     printf '%s\n' "$1" >&2
     exit 1
 }
 
 show_help(){
-
     echo "usage: generate-config <--testnet>|<--generic>"
     echo -e "\t --testnet is used to generate config and certificates for joining TestNet"
     echo -e "\t --generic is used to generate config and certificates for joining an existing Corda Compatibility Zone"
-
 }
 
 function generateTestnetConfig() {
-    RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
+    : ${RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)}
+    RPC_PASSWORD=${RPC_PASSWORD} \
     DB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
     MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS} \
     MY_P2P_PORT=${MY_P2P_PORT} \
@@ -27,30 +25,38 @@ function generateTestnetConfig() {
 }
 
 function generateGenericCZConfig(){
-    : ${NETWORKMAP_URL:? '$NETWORKMAP_URL, the Compatibility Zone to join must be set as environment variable'}
-    : ${DOORMAN_URL:? '$DOORMAN_URL, the Doorman to use when joining must be set as environment variable'}
-    : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
-    : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
-    : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
 
-    if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
-        die "Network Trust Root file not found"
+    if [[ -f /etc/corda/node.conf ]] ; then
+        echo  'WARN: existing config detected, launching corda'
+        run-corda
+    else
+        : ${NETWORKMAP_URL:? '$NETWORKMAP_URL, the Compatibility Zone to join must be set as environment variable'}
+        : ${DOORMAN_URL:? '$DOORMAN_URL, the Doorman to use when joining must be set as environment variable'}
+        : ${MY_LEGAL_NAME:? '$MY_LEGAL_NAME, the X500 name to use when joining must be set as environment variable'}
+        : ${MY_EMAIL_ADDRESS:? '$MY_EMAIL_ADDRESS, the email to use when joining must be set as an environment variable'}
+        : ${NETWORK_TRUST_PASSWORD=:? '$NETWORK_TRUST_PASSWORD, the password to the network store to use when joining must be set as environment variable'}
+
+        if [[ ! -f ${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} ]]; then
+            die "Network Trust Root file not found"
+        fi
+        : ${RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)}
+        RPC_PASSWORD=${RPC_PASSWORD} \
+        DB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
+        MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS} \
+        MY_P2P_PORT=${MY_P2P_PORT} \
+        MY_RPC_PORT=${MY_RPC_PORT} \
+        MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
+        java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
+
+        java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
+                initial-registration \
+                --base-directory=/opt/corda \
+                --config-file=/etc/corda/node.conf \
+                --network-root-truststore-password=${NETWORK_TRUST_PASSWORD} \
+                --network-root-truststore=${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME} &&\
+        echo "Succesfully registered with ${DOORMAN_URL}, starting corda" && \
+        run-corda
     fi
-
-    RPC_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
-    DB_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1) \
-    MY_PUBLIC_ADDRESS=${MY_PUBLIC_ADDRESS} \
-    MY_P2P_PORT=${MY_P2P_PORT} \
-    MY_RPC_PORT=${MY_RPC_PORT} \
-    MY_RPC_ADMIN_PORT=${MY_RPC_ADMIN_PORT} \
-    java -jar config-exporter.jar "GENERIC-CZ" "/opt/corda/starting-node.conf" "${CONFIG_FOLDER}/node.conf"
-
-    java -Djava.security.egd=file:/dev/./urandom -Dcapsule.jvm.args="${JVM_ARGS}" -jar /opt/corda/bin/corda.jar \
-            initial-registration \
-            --base-directory=/opt/corda \
-            --config-file=/etc/corda/node.conf \
-            --network-root-truststore-password=${NETWORK_TRUST_PASSWORD} \
-            --network-root-truststore=${CERTIFICATES_FOLDER}/${TRUST_STORE_NAME}
 }
 
 function downloadTestnetCerts() {

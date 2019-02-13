@@ -32,8 +32,8 @@ import net.corda.testing.core.internal.ContractJarTestUtils
 import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
@@ -91,10 +91,9 @@ class ConstraintsPropagationTests {
                         .copy(whitelistedContractImplementations = mapOf(
                                 Cash.PROGRAM_ID to listOf(SecureHash.zeroHash, SecureHash.allOnesHash),
                                 noPropagationContractClassName to listOf(SecureHash.zeroHash)),
-                                packageOwnership = mapOf("net.corda.finance.contracts.asset" to hashToSignatureConstraintsKey),
                                 notaries = listOf(NotaryInfo(DUMMY_NOTARY, true)))
         ) {
-            override fun loadContractAttachment(stateRef: StateRef, forContractClassName: ContractClassName?) = servicesForResolution.loadContractAttachment(stateRef)
+            override fun loadContractAttachment(stateRef: StateRef) = servicesForResolution.loadContractAttachment(stateRef)
         }
     }
 
@@ -118,6 +117,7 @@ class ConstraintsPropagationTests {
     }
 
     @Test
+    @Ignore    // TODO(mike): rework
     fun `Happy path for Hash to Signature Constraint migration`() {
         val cordapps = (ledgerServices.cordappProvider as MockCordappProvider).cordapps
         val cordappAttachmentIds =
@@ -199,14 +199,14 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("are not propagated correctly")
+                fails()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c4", DUMMY_NOTARY, null, AlwaysAcceptAttachmentConstraint, Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("are not propagated correctly")
+                fails()
             }
         }
     }
@@ -268,7 +268,7 @@ class ConstraintsPropagationTests {
                 output(Cash.PROGRAM_ID, "w2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(ALICE_PUBKEY), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
                 // Note that it fails after the constraints propagation check, because the attachment is not signed.
-                failsWith("are not propagated correctly")
+                fails()
             }
         }
     }
@@ -319,36 +319,21 @@ class ConstraintsPropagationTests {
         val netParams = testNetworkParameters(minimumPlatformVersion = 4,
                 packageOwnership = mapOf( "net.corda.core.contracts" to ALICE_PARTY.owningKey))
 
-        // attachment with context (both unsigned and signed attachments representing same contract)
-        val attachmentWithContext = mock<AttachmentWithContext>()
-        whenever(attachmentWithContext.contractAttachment).thenReturn(attachmentSigned)
-        whenever(attachmentWithContext.contract).thenReturn(propagatingContractClassName)
-        whenever(attachmentWithContext.networkParameters).thenReturn(netParams)
-
         ledgerServices.attachments.importContractAttachment(attachmentIdSigned, attachmentSigned)
         ledgerServices.attachments.importContractAttachment(attachmentIdUnsigned, attachmentUnsigned)
 
         // propagation check
-        assertTrue(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentWithContext))
+        // TODO - enable once the logic to transition has been added.
+        assertFalse(SignatureAttachmentConstraint(ALICE_PUBKEY).canBeTransitionedFrom(HashAttachmentConstraint(allOnesHash), attachmentSigned))
     }
 
     @Test
     fun `Attachment canBeTransitionedFrom behaves as expected`() {
 
         // signed attachment (for signature constraint)
-        val attachmentSigned = mock<ContractAttachment>()
-        whenever(attachmentSigned.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
-        whenever(attachmentSigned.allContracts).thenReturn(setOf(propagatingContractClassName))
-
-        // network parameters
-        val netParams = testNetworkParameters(minimumPlatformVersion = 4,
-                packageOwnership = mapOf(propagatingContractClassName to ALICE_PARTY.owningKey))
-
-        // attachment with context
-        val attachment = mock<AttachmentWithContext>()
-        whenever(attachment.networkParameters).thenReturn(netParams)
-        whenever(attachment.contractAttachment).thenReturn(attachmentSigned)
+        val attachment = mock<ContractAttachment>()
         whenever(attachment.signerKeys).thenReturn(listOf(ALICE_PARTY.owningKey))
+        whenever(attachment.allContracts).thenReturn(setOf(propagatingContractClassName))
 
         // Exhaustive positive check
         assertTrue(HashAttachmentConstraint(SecureHash.randomSHA256()).canBeTransitionedFrom(SignatureAttachmentConstraint(ALICE_PUBKEY), attachment))
@@ -391,7 +376,7 @@ class ConstraintsPropagationTests {
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
     @Test
-    fun `Input state contract version is not compatible with lower version`() {
+    fun `Input state contract version may be incompatible with lower version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
@@ -404,7 +389,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-               failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
+                verifies()
             }
         }
     }
@@ -448,7 +433,7 @@ class ConstraintsPropagationTests {
     }
 
     @Test
-    fun `All input states contract version must be lower that current contract version`() {
+    fun `Input states contract version may be lower that current contract version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
@@ -467,13 +452,13 @@ class ConstraintsPropagationTests {
                 input("c2")
                 output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
+                verifies()
             }
         }
     }
 
     @Test
-    fun `Input state with contract version can not be downgraded to no version`() {
+    fun `Input state with contract version can be downgraded to no version`() {
         ledgerServices.ledger(DUMMY_NOTARY) {
             ledgerServices.recordTransaction(transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
@@ -486,7 +471,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                failsWith("No-Downgrade Rule has been breached for contract class net.corda.finance.contracts.asset.Cash. The output state contract version '1' is lower that the version of the input state '2'.")
+                verifies()
             }
         }
     }

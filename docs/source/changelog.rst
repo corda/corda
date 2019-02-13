@@ -27,6 +27,9 @@ Unreleased
 
   The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
 
+* Vault states are now correctly migrated when moving from V3 to V4.1. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
+  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.1.
+
 .. _changelog_v4.0:
 
 Version 4.0
@@ -46,10 +49,6 @@ Version 4.0
    complements `database.initialiseSchema` to disable DDL handling altogether.
 
 * ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
-
-* Transaction building and verification enforces new contract attachment version non-downgrade rule.
-  For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
-  See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
 
 * Standardised CorDapp version identifiers in jar manifests (aligned with associated cordapp Gradle plugin changes).
   Updated all samples to reflect new conventions.

@@ -236,7 +236,7 @@ you either need to run from the command line:
 
 .. code-block:: shell
 
-    java -jar corda.jar --clear-network-map-cache
+    java -jar corda.jar clear-network-cache
 
 or call RPC method `clearNetworkMapCache` (it can be invoked through the node's shell as `run clearNetworkMapCache`, for more information on
 how to log into node's shell see :doc:`shell`). As we are testing and hardening the implementation this step shouldn't be required.
