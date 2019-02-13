@@ -74,9 +74,6 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
         input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
             attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)
 
-        // TODO Transition from Hash to Signature constraint
-        input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> false
-
         else -> false
     }
 }

@@ -108,6 +108,19 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
 
     /**
+     * Indicates this transaction violates the "no overlap" rule: two attachments are trying to provide the same file
+     * path. Whereas Java classpaths would normally allow that with the first class taking precedence, this is not
+     * allowed in transactions for security reasons. This usually indicates that two separate apps share a dependency,
+     * in which case you could try 'shading the fat jars' to rename classes of dependencies. Or you could manually
+     * attach dependency JARs when building the transaction.
+     *
+     * @property contractClass The fully qualified class name of the failing contract.
+     */
+    @KeepForDJVM
+    class DuplicateAttachmentsRejection(txId: SecureHash, val attachmentId: Attachment)
+        : TransactionVerificationException(txId, "The attachment: $attachmentId was added multiple times.", null)
+
+    /**
      * A [Contract] class named by a state could not be constructed. Most likely you do not have a no-argument
      * constructor, or the class doesn't subclass [Contract].
      *

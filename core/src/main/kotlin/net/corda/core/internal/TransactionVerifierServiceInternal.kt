@@ -63,7 +63,7 @@ class Verifier(val ltx: LedgerTransaction,
         // 2. Check that the attachments satisfy the constraints of the states. (The contract verification code is correct.)
         verifyConstraints(contractAttachmentsByContract)
 
-        // 3. Check that the actual state constraints are correct. This is necessary because transactions can be build by potentially malicious nodes
+        // 3. Check that the actual state constraints are correct. This is necessary because transactions can be built by potentially malicious nodes
         // who can create output states with a weaker constraint which can be exploited in a future transaction.
         verifyConstraintsValidity(contractAttachmentsByContract)
 
@@ -82,21 +82,25 @@ class Verifier(val ltx: LedgerTransaction,
     private fun getUniqueContractAttachmentsByContract(): Map<ContractClassName, ContractAttachment> {
         val contractClasses = allStates.map { it.contract }.toSet()
 
+        // Check that there are no duplicate attachments added.
+        if (ltx.attachments.size != ltx.attachments.toSet().size) throw TransactionVerificationException.DuplicateAttachmentsRejection(ltx.id, ltx.attachments.groupBy { it }.filterValues { it.size > 1 }.keys.first())
+
         // For each attachment this finds all the relevant state contracts that it provides.
         // And then maps them to the attachment.
         val contractAttachmentsPerContract: List<Pair<ContractClassName, ContractAttachment>> = ltx.attachments
-                .mapNotNull { it as? ContractAttachment }
-                .distinctBy { it.id }
+                .mapNotNull { it as? ContractAttachment } // only contract attachments are relevant.
                 .flatMap { attachment ->
-                    contractClasses.filter { it in attachment.allContracts }.map { it to attachment }
+                    // Find which relevant contracts are present in the current attachment and return them as a list
+                    contractClasses
+                            .filter { it in attachment.allContracts }
+                            .map { it to attachment }
                 }
 
         // It is forbidden to add multiple attachments for the same contract.
         val contractWithMultipleAttachments = contractAttachmentsPerContract
-                .groupBy { it.first }
-                .filter { (_, attachments) -> attachments.size > 1 }
-                .keys
-                .firstOrNull()
+                .groupBy { it.first }  // Group by contract.
+                .filter { (_, attachments) -> attachments.size > 1 } // And only keep contracts that are in multiple attachments. It's guaranteed that attachments were unique by a previous check.
+                .keys.firstOrNull() // keep the first one - if any - to throw a meaningful exception.
         if (contractWithMultipleAttachments != null) throw TransactionVerificationException.ConflictingAttachmentsRejection(ltx.id, contractWithMultipleAttachments)
 
         val result = contractAttachmentsPerContract.toMap()
