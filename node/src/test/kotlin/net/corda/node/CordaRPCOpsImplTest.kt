@@ -15,6 +15,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StartableByRPC
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.Party
+import net.corda.core.internal.RPC_UPLOADER
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.messaging.*
 import net.corda.core.node.services.StatesNotAvailableException
@@ -330,6 +331,15 @@ class CordaRPCOpsImplTest {
                     ), null
                 ).size, 1
             )
+        }
+    }
+
+    @Test
+    fun `attachment uploaded with metadata can be from a privileged user`() {
+        withPermissions(invokeRpc(CordaRPCOps::uploadAttachmentWithMetadata), invokeRpc(CordaRPCOps::attachmentExists)) {
+            val inputJar = Thread.currentThread().contextClassLoader.getResourceAsStream(testJar)
+            val secureHash = rpc.uploadAttachmentWithMetadata(inputJar, RPC_UPLOADER, "Season 1")
+            assertTrue(rpc.attachmentExists(secureHash))
         }
     }
 
