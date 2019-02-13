@@ -191,7 +191,8 @@ The signing capability of :ref:`corda-gradle-plugins <cordapp_build_system_signi
 more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
 
 3. Any flows that build transactions using this Cordapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
- This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
+This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
+In the near future we will make this transition automatic if we detect that the previous 2 steps were executed.
 
 4. As a node operator you need to add the new signed version of the cordapp to the "cordapps" folder together with the latest version of the flows jar
 that will contain code like:
@@ -205,25 +206,22 @@ that will contain code like:
         val signers = this.serviceHub.attachments.openAttachment(attachment!!)!!.signerKeys
 
         // Create the key that will have to pass for all future versions.
-        // Could be as simple as: val ownersKey = signers.first()
-        val ownersKey = CompositeKey.Builder().addKeys(signers).build()
+        val ownersKey = signers.first()
 
         val txBuilder = TransactionBuilder(notary)
-                // Set the Signature constraint on the cordapp.
+                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
                 .addOutputState(outputState, constraint = SignatureAttachmentConstraint(ownersKey))
                 ...
 
     .. sourcecode:: java
 
         // This will read the signers for the deployed cordapp.
-        SecureHash attachment = this.getServiceHub().getCordappProvider().getContractAttachmentID(IOUContract.ID);
+        SecureHash attachment = this.getServiceHub().getCordappProvider().getContractAttachmentID(contractClass);
         List<PublicKey> signers = this.getServiceHub().getAttachments().openAttachment(attachment).getSignerKeys();
 
         // Create the key that will have to pass for all future versions.
-        // Could be as simple as: PublicKey ownersKey = signers.get(0) .
-        PublicKey ownersKey = new CompositeKey.Builder().addKeys(signers).build(null);
+        PublicKey ownersKey = signers.get(0);
 
-        PublicKey ownerPublicKey = fetchPublicKey() // Read the public key from
         TransactionBuilder txBuilder = new TransactionBuilder(notary)
                 // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
                 .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
