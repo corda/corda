@@ -437,13 +437,14 @@ It is down to client code in this case handle those duplicate items as appropria
 
 Wire security
 -------------
-``CordaRPCClient`` has an optional constructor parameter of type ``ClientRpcSslOptions``, defaulted to ``null``, which allows
-communication with the node using SSL. Default ``null`` value means no SSL used in the context of RPC.
+If TLS communications to the RPC endpoint are required the node should be configured with ``rpcSettings.useSSL=true`` see :doc:`corda-configuration-file`.
+The node admin should then create a node specific RPC certificate and key, by running the node once with ``generate-rpc-ssl-settings`` command specified (see :doc:`node-commandline`).
+The generated RPC TLS trust root certificate will be exported to a ``certificates/export/rpcssltruststore.jks`` file which should be distributed to the authorised RPC clients.
 
-In order for this to work, the client needs to provide a truststore containing a certificate received from the node admin.
-(The Node does not expect the RPC client to present a certificate, as the client already authenticates using the mechanism described above.)
+The connecting ``CordaRPCClient`` code must then use one of the constructors with a parameter of type ``ClientRpcSslOptions`` (`JavaDoc <api/javadoc/net/corda/client/rpc/CordaRPCClient.html>`_) and set this constructor
+argument with the appropriate path for the ``rpcssltruststore.jks`` file. The client connection will then use this to validate the RPC server handshake.
 
-For the communication to be secure, we recommend using the standard SSL best practices for key management.
+Note that RPC TLS does not use mutual authentication, and delegates fine grained user authentication and authorisation to the RPC security features detailed above.
 
 Whitelisting classes with the Corda node
 ----------------------------------------
