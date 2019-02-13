@@ -118,7 +118,7 @@ class ConstraintsPropagationTests {
     @Test
     fun `Happy path for Hash to Signature Constraint migration`() {
         val ledgerServices = object : MockServices(
-                disableHashConstraints = false,
+                disableHashConstraints = true,
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
                 identityService = mock<IdentityServiceInternal>().also {
@@ -166,7 +166,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                verifies(disableHashConstraints = false)
+                verifies(disableHashConstraints = true)
             }
         }
     }
