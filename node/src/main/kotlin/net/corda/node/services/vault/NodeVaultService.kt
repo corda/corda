@@ -381,22 +381,11 @@ class NodeVaultService(
         val netUpdate = updates.reduce { update1, update2 -> update1 + update2 }
         if (!netUpdate.isEmpty()) {
             recordUpdate(netUpdate)
+            persistentStateService.persist(netUpdate.produced + netUpdate.references)
+            // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
+            val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
+            val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
             concurrentBox.concurrent {
-                // flowId was required by SoftLockManager to perform auto-registration of soft locks for new states
-                val uuid = (Strand.currentStrand() as? FlowStateMachineImpl<*>)?.id?.uuid
-                val vaultUpdate = if (uuid != null) netUpdate.copy(flowId = uuid) else netUpdate
-                if (uuid != null) {
-                    val fungible = netUpdate.produced.filter { stateAndRef ->
-                        val state = stateAndRef.state.data
-                        state is FungibleAsset<*> || state is FungibleState<*>
-                    }
-                    if (fungible.isNotEmpty()) {
-                        val stateRefs = fungible.map { it.ref }.toNonEmptySet()
-                        log.trace { "Reserving soft locks for flow id $uuid and states $stateRefs" }
-                        softLockReserve(uuid, stateRefs)
-                    }
-                }
-                persistentStateService.persist(vaultUpdate.produced + vaultUpdate.references)
                 updatesPublisher.onNext(vaultUpdate)
             }
         }
