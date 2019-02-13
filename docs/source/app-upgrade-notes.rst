@@ -100,10 +100,7 @@ properly for future releases.
    future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
-It is used to block state downgrades: when a state constraint can be satisfied
-by multiple attachments, the version is tracked in the ledger and cannot decrement. This ensures security
-fixes in CorDapps stick and can't be reversed by downgrading states to an earlier version. See
-":ref:`contract_non-downgrade_rule_ref`" for more information.
+It is used to informative purposes only. See ":ref:`contract_downgrade_rule_ref`" for more information.
 
 **Split your app into contract and workflow JARs.** The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one

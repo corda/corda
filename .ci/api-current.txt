@@ -1132,10 +1132,6 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>)
 ##
 @CordaSerializable
-public static final class net.corda.core.contracts.TransactionVerificationException$TransactionVerificationVersionException extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, String, String, String)
-##
-@CordaSerializable
 public abstract class net.corda.core.contracts.TypeOnlyCommandData extends java.lang.Object implements net.corda.core.contracts.CommandData
   public <init>()
   public boolean equals(Object)

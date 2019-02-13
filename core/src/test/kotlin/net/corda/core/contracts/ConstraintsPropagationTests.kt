@@ -375,6 +375,24 @@ class ConstraintsPropagationTests {
                 SignableData(wireTransaction.id, SignatureMetadata(4, Crypto.findSignatureScheme(nodeKey).schemeNumberID)), nodeKey))
         recordTransactions(SignedTransaction(wireTransaction, sigs))
     }
+    @Test
+    fun `Input state contract version may be incompatible with lower version`() {
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            ledgerServices.recordTransaction(transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                verifies()
+            })
+            transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
+                input("c1")
+                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                verifies()
+            }
+        }
+    }
 
     @Test
     fun `Input state contract version is compatible with the same version`() {
@@ -406,6 +424,50 @@ class ConstraintsPropagationTests {
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                input("c1")
+                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Input states contract version may be lower that current contract version`() {
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            ledgerServices.recordTransaction(transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "1"))
+                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                verifies()
+            })
+            ledgerServices.recordTransaction(transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                verifies()
+            })
+            transaction {
+                input("c1")
+                input("c2")
+                output(Cash.PROGRAM_ID, "c3", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(2000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Move())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Input state with contract version can be downgraded to no version`() {
+        ledgerServices.ledger(DUMMY_NOTARY) {
+            ledgerServices.recordTransaction(transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash, listOf(hashToSignatureConstraintsKey), mapOf(Attributes.Name.IMPLEMENTATION_VERSION.toString() to  "2"))
+                output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
+                command(ALICE_PUBKEY, Cash.Commands.Issue())
+                verifies()
+            })
+            transaction {
+                attachment(Cash.PROGRAM_ID, SecureHash.zeroHash, listOf(hashToSignatureConstraintsKey), emptyMap())
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())

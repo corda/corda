@@ -276,15 +276,6 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class OverlappingAttachmentsException(txId: SecureHash, path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
 
     /**
-     * Thrown when a transaction appears to be trying to downgrade a state to an earlier version of the app that defines it.
-     * This could be an attempt to exploit a bug in the app, so we prevent it.
-     */
-    @KeepForDJVM
-    class TransactionVerificationVersionException(txId: SecureHash, contractClassName: ContractClassName, inputVersion: String, outputVersion: String)
-        : TransactionVerificationException(txId, "No-Downgrade Rule has been breached for contract class $contractClassName. " +
-            "The output state contract version '$outputVersion' is lower than the version of the input state '$inputVersion'.", null)
-
-    /**
      * Thrown to indicate that a contract attachment is not signed by the network-wide package owner. Please note that
      * the [txId] will always be [SecureHash.zeroHash] because package ownership is an error with a particular attachment,
      * and because attachment classloaders are reused this is independent of any particular transaction.
