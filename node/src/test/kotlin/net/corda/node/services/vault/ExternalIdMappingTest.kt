@@ -1,8 +1,5 @@
 package net.corda.node.services.vault
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -10,31 +7,17 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.VersionInfo
-import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.keys.BasicHSMKeyManagementService
-import net.corda.node.services.keys.PublicKeyHashToExternalId
-import net.corda.node.services.persistence.ExposeJpaToFlowsTests
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.DEV_ROOT_CA
-import net.corda.testing.internal.TestingNamedCacheFactory
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.*
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.security.PublicKey
 import java.util.*
-import javax.persistence.criteria.CriteriaQuery
-import javax.persistence.criteria.Root
 import kotlin.test.assertEquals
 
 class ExternalIdMappingTest {
@@ -56,20 +39,15 @@ class ExternalIdMappingTest {
 
     @Before
     fun setUp() {
-        val persistentIdentityService = PersistentIdentityService(TestingNamedCacheFactory())
-        val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
+        val (db, mockServices) = MockServices.makeTestDatabaseAndPersistentServices(
                 cordappPackages = cordapps,
-                identityService = persistentIdentityService,
                 initialIdentity = myself,
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                moreIdentities = setOf(notary.identity),
+                moreKeys = emptySet()
         )
         services = mockServices
         database = db
-        persistentIdentityService.database = database
-        persistentIdentityService.ourNames = setOf(myself.name)
-        persistentIdentityService.start(DEV_ROOT_CA.certificate)
-        database.transaction { persistentIdentityService.loadIdentities(listOf(myself.identity, notary.identity)) }
-        services.keyManagementService
     }
 
     private fun createDummyState(participants: List<AbstractParty>): DummyState {
