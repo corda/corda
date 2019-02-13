@@ -62,7 +62,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService, private 
     }
 
     override fun freshKey(externalId: UUID): PublicKey {
-        throw UnsupportedOperationException("")
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
@@ -70,7 +70,7 @@ class E2ETestKeyManagementService(val identityService: IdentityService, private 
     }
 
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
-        throw UnsupportedOperationException("")
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))
