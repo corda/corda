@@ -10,10 +10,14 @@ import net.corda.node.internal.createCordaPersistence
 import net.corda.node.internal.startHikariPool
 import net.corda.node.services.persistence.MigrationExporter
 import net.corda.node.services.schema.NodeSchemaService
+import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
+import net.corda.testing.core.ALICE_NAME
+import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.node.MockServices
 import org.apache.commons.io.FileUtils
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Before
 import org.junit.Test
 import java.lang.reflect.Method
 import java.math.BigInteger
@@ -32,6 +36,11 @@ class SchemaMigrationTest {
         return createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(), null).apply {
             startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys)
         }
+    }
+
+    @Before
+    fun setUpEnvironment() {
+        System.setProperty(NODE_X500_NAME, TestIdentity(ALICE_NAME, 70).name.toString())
     }
 
     @Test
