@@ -114,9 +114,9 @@ Step 3. Remove any custom configuration from the node.conf
 ----------------------------------------------------------
 
 CorDapps can no longer access custom configuration items in the ``node.conf`` file. Any custom CorDapp configuration should be added to a
-CorDapp configuration file, and the Node's configuration will not be accessible. CorDapp configuration files should be placed in the
+CorDapp configuration file. The Node's configuration will not be accessible. CorDapp configuration files should be placed in the
 `config` subdirectory of the Node's `cordapps` folder. The name of the file should match the name of the JAR of the CorDapp (eg; if your
-CorDapp is called ``hello-0.1.jar`` the configuration file needed would be ``config/hello-0.1.conf``).
+CorDapp is called ``hello-0.1.jar`` the configuration file needed would be ``cordapps/config/hello-0.1.conf``).
 
 If you are using the ``extraConfig`` of a ``node`` in the ``deployNodes`` Gradle task to populate custom configuration for testing, you will need
 to make the following change so that:

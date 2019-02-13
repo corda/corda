@@ -71,8 +71,6 @@ task makeDocs(type: Exec) {
     //  - the docs project to /opt/docs_builder, where docs building is executed
     //  - the rest of the projects in /opt, so that code references to other projects are valid
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-        // Windows users: If this task fails because docker can't find make-docsite.sh, go to Settings > Shared Drives in the Docker system tray
-        // agent, make sure the relevant drive is shared, and click 'Reset credentials'
         commandLine "docker", "run", "--rm", "-v", "${project.projectDir}:/opt/docs_builder", "-v", "${project.projectDir}/..:/opt", "corda/docs-builder:latest", "bash", "-c", "make-docsite.sh"
     } else {
         commandLine "bash", "-c",  "docker run --rm --user \$(id -u):\$(id -g) -v ${project.projectDir}:/opt/docs_builder -v ${project.projectDir}/..:/opt corda/docs-builder:latest bash -c make-docsite.sh"
