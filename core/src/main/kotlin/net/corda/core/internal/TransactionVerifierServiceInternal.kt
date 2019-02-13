@@ -252,6 +252,8 @@ class Verifier(val ltx: LedgerTransaction,
      *
      * If the target platform version of the current CorDapp is lower than 4.0, a warning will be written to the log
      * if any mismatch is detected. If it is 4.0 or later, then [TransactionContractConflictException] will be thrown.
+     *
+     * Note: It should be enough to run this check only on the output states. Even more, it could be run only on distinct output contractClass/stateClass pairs.
      */
     private fun validateStatesAgainstContract() = allStates.forEach(::validateStateAgainstContract)
 
