@@ -177,6 +177,57 @@ During transaction building the ``AutomaticPlaceholderConstraint`` for output st
 will be selected based on a variety of factors so that the above holds true. If it can't find attachments in storage or there are no
 possible constraints, the ``TransactionBuilder`` will throw an exception.
 
+
+How to use the ``SignatureAttachmentConstraint`` if states were already created on the network with the ``WhitelistedByZoneAttachmentConstraint``
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. As the original developer of the corDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
+The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
+by different parties and it will be expressed as a ``CompositeKey`` in the ``SignatureAttachmentConstraint`` (See :doc:`api-core-types`).
+Use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_ to sign the existing JAR.
+The signing capability of :ref:`corda-gradle-plugins <cordapp_build_system_signing_cordapp_jar_ref>` cannot be used in this context as it signs the JAR while building it from source.
+
+2. Whitelist this newly signed JAR with the Zone operator. The Zone operator should check that the JAR is signed and not allow any
+more versions of it to be whitelisted in the future. From now on the developer(s) who signed the JAR are responsible for new versions.
+
+3. Any flows that build transactions using this Cordapp will have the responsibility of transitioning states to the ``SignatureAttachmentConstraint``.
+This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
+In the near future we will make this transition automatic if we detect that the previous 2 steps were executed.
+
+4. As a node operator you need to add the new signed version of the contracts cordapp to the "cordapps" folder together with the latest version of the flows jar
+that will contain code like:
+
+.. container:: codeset
+
+    .. sourcecode:: kotlin
+
+        // This will read the signers for the deployed cordapp.
+        val attachment = this.serviceHub.cordappProvider.getContractAttachmentID(contractClass)
+        val signers = this.serviceHub.attachments.openAttachment(attachment!!)!!.signerKeys
+
+        // Create the key that will have to pass for all future versions.
+        val ownersKey = signers.first()
+
+        val txBuilder = TransactionBuilder(notary)
+                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
+                .addOutputState(outputState, constraint = SignatureAttachmentConstraint(ownersKey))
+                ...
+
+    .. sourcecode:: java
+
+        // This will read the signers for the deployed cordapp.
+        SecureHash attachment = this.getServiceHub().getCordappProvider().getContractAttachmentID(contractClass);
+        List<PublicKey> signers = this.getServiceHub().getAttachments().openAttachment(attachment).getSignerKeys();
+
+        // Create the key that will have to pass for all future versions.
+        PublicKey ownersKey = signers.get(0);
+
+        TransactionBuilder txBuilder = new TransactionBuilder(notary)
+                // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
+                .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
+                ...
+
+
 Debugging
 ---------
 If an attachment constraint cannot be resolved, a ``MissingContractAttachments`` exception is thrown. There are three common sources of
