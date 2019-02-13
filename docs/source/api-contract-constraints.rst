@@ -194,7 +194,7 @@ more versions of it to be whitelisted in the future. From now on the developer(s
 This is done explicitly in the code by setting the constraint of the output states to signers of the latest version of the whitelisted jar.
 In the near future we will make this transition automatic if we detect that the previous 2 steps were executed.
 
-4. As a node operator you need to add the new signed version of the cordapp to the "cordapps" folder together with the latest version of the flows jar
+4. As a node operator you need to add the new signed version of the contracts cordapp to the "cordapps" folder together with the latest version of the flows jar
 that will contain code like:
 
 .. container:: codeset
