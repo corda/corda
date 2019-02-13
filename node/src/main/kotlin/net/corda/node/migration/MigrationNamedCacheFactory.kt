@@ -30,6 +30,10 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
             "PersistentIdentityService_partyByKey" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_partyByName" -> caffeine.maximumSize(defaultCacheSize)
             "BasicHSMKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)
+            "NodeAttachmentService_attachmentContent" -> caffeine.maximumWeight(defaultCacheSize)
+            "NodeAttachmentService_attachmentPresence" -> caffeine.maximumSize(defaultCacheSize)
+            "NodeAttachmentService_contractAttachmentVersions" -> caffeine.maximumSize(defaultCacheSize)
+            "NodeParametersStorage_networkParametersByHash" -> caffeine.maximumSize(defaultCacheSize)
             else -> throw IllegalArgumentException("Unexpected cache name $name.")
         }
     }

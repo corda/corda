@@ -1,19 +1,21 @@
 package net.corda.node.migration
 
 import liquibase.database.Database
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.*
+import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -52,13 +54,25 @@ class VaultStateMigration : CordaMigration() {
         }
     }
 
+    private fun extractStateFromTx(tx: SignedTransaction, stateIndex: Int): TransactionState<ContractState> {
+        return try {
+            val attachments = tx.tx.attachments.mapNotNull { attachmentsService.openAttachment(it)}
+            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, latestNetworkParams, tx.id) {
+                deserialiseComponentGroup(tx.tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
+            }
+            states[stateIndex]
+        } catch (e: Exception) {
+            tx.tx.outputs[stateIndex]
+        }
+    }
+
     private fun getStateAndRef(persistentState: VaultSchemaV1.VaultStates): StateAndRef<ContractState> {
         val persistentStateRef = persistentState.stateRef ?:
                 throw VaultStateMigrationException("Persistent state ref missing from state")
         val txHash = SecureHash.parse(persistentStateRef.txId)
         val tx = dbTransactions.getTransaction(txHash) ?:
                 throw VaultStateMigrationException("Transaction $txHash not present in vault")
-        val state = tx.coreTransaction.outputs[persistentStateRef.index]
+        val state = extractStateFromTx(tx, persistentStateRef.index)
         val stateRef = StateRef(txHash, persistentStateRef.index)
         return StateAndRef(state, stateRef)
     }
@@ -70,7 +84,7 @@ class VaultStateMigration : CordaMigration() {
             return
         }
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
-
+        var statesSkipped = 0
         val persistentStates = VaultStateIterator(cordaDB)
         VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
@@ -90,8 +104,12 @@ class VaultStateMigration : CordaMigration() {
                     }
                 } catch (e: VaultStateMigrationException) {
                     logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
+                    statesSkipped++
                 }
             }
+        }
+        if (statesSkipped > 0) {
+            logger.error("$statesSkipped states could not be migrated as there was no class available for them.")
         }
         logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
     }
@@ -112,7 +130,9 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentIdentity::class.java,
                 PersistentIdentityService.PersistentIdentityNames::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java
+                BasicHSMKeyManagementService.PersistentKey::class.java,
+                NodeAttachmentService.DBAttachment::class.java,
+                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
         )
 )
 

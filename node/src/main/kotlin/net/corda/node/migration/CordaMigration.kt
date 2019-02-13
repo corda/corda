@@ -7,18 +7,20 @@ import liquibase.database.jvm.JdbcConnection
 import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.node.NetworkParameters
 import net.corda.core.schemas.MappedSchema
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.PublicKeyToTextConverter
+import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
+import java.time.Clock
+import java.time.Duration
 import java.util.logging.Logger
 import javax.sql.DataSource
 
@@ -45,6 +47,16 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _dbTransactions: WritableTransactionStorage
 
+    val attachmentsService: AttachmentStorageInternal
+        get() = _attachmentsService
+
+    private lateinit var _attachmentsService: AttachmentStorageInternal
+
+    val latestNetworkParams: NetworkParameters
+        get() = _latestNetworkParams
+
+    private lateinit var _latestNetworkParams: NetworkParameters
+
     /**
      * Initialise a subset of node services so that data from these can be used to perform migrations.
      *
@@ -66,6 +78,10 @@ abstract class CordaMigration : CustomTaskChange {
         cordaDB.transaction {
             identityService.ourNames = setOf(ourName)
             _dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
+            _attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
+            _latestNetworkParams = DBNetworkParametersStorage.createParametersMap(cacheFactory).allPersisted()
+                    .map { it.second.verified() }
+                    .maxBy { it.epoch } ?: defaultNetworkParameters()
         }
     }
 
@@ -83,6 +99,21 @@ abstract class CordaMigration : CustomTaskChange {
         // Liquibase handles closing the database connection when migrations are finished. If the connection is closed here, then further
         // migrations may fail.
         return CordaPersistence(configDefaults, schema, jdbcUrl, cacheFactory, attributeConverters, closeConnection = false)
+    }
+
+    private fun defaultNetworkParameters(): NetworkParameters {
+        val clock = Clock.systemUTC()
+        return NetworkParameters(
+                1,
+                listOf(),
+                1,
+                1,
+                 clock.instant(),
+                1,
+                mapOf(),
+                Duration.ZERO,
+                mapOf()
+        )
     }
 
     override fun validate(database: Database?): ValidationErrors? {
