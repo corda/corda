@@ -72,7 +72,7 @@ open class MockServices private constructor(
         private val initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
         private val moreKeys: Array<out KeyPair>,
-        private val constraintsChecking: Boolean
+        private val disableHashConstraints: Boolean
 ) : ServiceHub {
 
     companion object {
@@ -112,14 +112,14 @@ open class MockServices private constructor(
                                             initialIdentity: TestIdentity,
                                             networkParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN),
                                             vararg moreKeys: KeyPair,
-                                            constraintsChecking: Boolean = true): Pair<CordaPersistence, MockServices> {
+                                            disableHashConstraints: Boolean = false): Pair<CordaPersistence, MockServices> {
 
             val cordappLoader = cordappLoaderForPackages(cordappPackages)
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, constraintsChecking) {
+                object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, disableHashConstraints) {
                     override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
                     override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
                     override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
@@ -178,11 +178,11 @@ open class MockServices private constructor(
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
                         initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>)
-            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, true)
+            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, false)
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
-                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>, constraintsChecking: Boolean)
-            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, constraintsChecking)
+                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>, disableHashConstraints: Boolean)
+            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, disableHashConstraints)
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -207,16 +207,16 @@ open class MockServices private constructor(
                 initialIdentity: TestIdentity,
                 identityService: IdentityService = makeTestIdentityService(),
                 vararg moreKeys: KeyPair,
-                constraintsChecking: Boolean) :
-            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(modifiedTime = Instant.MIN), initialIdentity, moreKeys, constraintsChecking)
+                disableHashConstraints: Boolean) :
+            this(cordappLoaderForPackages(cordappPackages), identityService, testNetworkParameters(modifiedTime = Instant.MIN), initialIdentity, moreKeys, disableHashConstraints)
 
     constructor(cordappPackages: Iterable<String>,
                 initialIdentity: TestIdentity,
                 identityService: IdentityService,
                 networkParameters: NetworkParameters,
                 vararg moreKeys: KeyPair,
-                constraintsChecking: Boolean) :
-            this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys, constraintsChecking)
+                disableHashConstraints: Boolean) :
+            this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys, disableHashConstraints)
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -329,7 +329,7 @@ open class MockServices private constructor(
         get() {
             return NodeInfo(listOf(NetworkHostAndPort("mock.node.services", 10000)), listOf(initialIdentity.identity), 1, serial = 1L)
         }
-    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2, constraintsChecking)
+    override val transactionVerifierService: TransactionVerifierService get() = InMemoryTransactionVerifierService(2, disableHashConstraints)
     private val mockCordappProvider: MockCordappProvider = MockCordappProvider(cordappLoader, attachments).also {
         it.start()
     }

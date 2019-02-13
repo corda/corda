@@ -199,7 +199,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             networkParametersStorage
     ).closeOnStop()
     @Suppress("LeakingThis")
-    val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount, configuration.constraintsChecking).tokenize()
+    val transactionVerifierService = InMemoryTransactionVerifierService(transactionVerifierWorkerCount, configuration.disableHashConstraints).tokenize()
     val contractUpgradeService = ContractUpgradeServiceImpl(cacheFactory).tokenize()
     val auditService = DummyAuditService().tokenize()
     @Suppress("LeakingThis")

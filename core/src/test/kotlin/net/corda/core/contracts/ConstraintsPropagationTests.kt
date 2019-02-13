@@ -33,7 +33,6 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.node.MockServices
-import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
@@ -119,7 +118,7 @@ class ConstraintsPropagationTests {
     @Test
     fun `Happy path for Hash to Signature Constraint migration`() {
         val ledgerServices = object : MockServices(
-                constraintsChecking = false,
+                disableHashConstraints = false,
                 cordappPackages = listOf("net.corda.finance.contracts.asset"),
                 initialIdentity = ALICE,
                 identityService = mock<IdentityServiceInternal>().also {
@@ -167,7 +166,7 @@ class ConstraintsPropagationTests {
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, SignatureAttachmentConstraint(hashToSignatureConstraintsKey), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                verifies(constraintsChecking = false)
+                verifies(disableHashConstraints = false)
             }
         }
     }

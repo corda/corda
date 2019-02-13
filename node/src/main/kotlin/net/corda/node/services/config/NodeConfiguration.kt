@@ -85,7 +85,7 @@ interface NodeConfiguration {
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
-    val constraintsChecking: Boolean get() = true
+    val disableHashConstraints: Boolean get() = false
 
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes

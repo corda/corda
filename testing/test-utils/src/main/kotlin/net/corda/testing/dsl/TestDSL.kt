@@ -7,7 +7,6 @@ import net.corda.core.crypto.NullKeys.NULL_SIGNATURE
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.FlowException
 import net.corda.core.identity.Party
-import net.corda.core.internal.UNKNOWN_UPLOADER
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.ServicesForResolution
@@ -132,11 +131,11 @@ data class TestTransactionDSLInterpreter private constructor(
         transactionBuilder.addCommand(command)
     }
 
-    override fun verifies(constraintsChecking: Boolean): EnforceVerifyOrFail {
+    override fun verifies(disableHashConstraints: Boolean): EnforceVerifyOrFail {
         // Verify on a copy of the transaction builder, so if it's then further modified it doesn't error due to
         // the existing signature
         transactionBuilder.copy().apply {
-            toWireTransaction().toLedgerTransaction(services).verify(constraintsChecking)
+            toWireTransaction().toLedgerTransaction(services).verify(disableHashConstraints)
         }
         return EnforceVerifyOrFail.Token
     }
@@ -301,14 +300,14 @@ data class TestLedgerDSLInterpreter private constructor(
         return services.attachments.importAttachment(attachment, "TestDSL", null)
     }
 
-    override fun verifies(constraintsChecking: Boolean): EnforceVerifyOrFail {
+    override fun verifies(disableHashConstraints: Boolean): EnforceVerifyOrFail {
         try {
             val usedInputs = mutableSetOf<StateRef>()
             services.recordTransactions(transactionsUnverified.map { SignedTransaction(it, listOf(NULL_SIGNATURE)) })
             for ((_, value) in transactionWithLocations) {
                 val wtx = value.transaction
                 val ltx = wtx.toLedgerTransaction(services)
-                ltx.verify(constraintsChecking)
+                ltx.verify(disableHashConstraints)
                 val allInputs = wtx.inputs union wtx.references
                 val doubleSpend = allInputs intersect usedInputs
                 if (!doubleSpend.isEmpty()) {
