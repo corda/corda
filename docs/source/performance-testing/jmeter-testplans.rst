@@ -71,6 +71,8 @@ Listeners
     Aggregate Graph
         Like the Aggregate Report, but also offers to tools to plot the results.
 
+.. _included_testplans:
+
 Included Testplans
 ==================
 

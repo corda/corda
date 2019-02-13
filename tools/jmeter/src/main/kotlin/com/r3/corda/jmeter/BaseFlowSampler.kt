@@ -124,5 +124,12 @@ abstract class BaseFlowSampler : AbstractJavaSamplerClient() {
     abstract fun createFlowInvoke(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext): FlowInvoke<*>
     abstract fun teardownTest(rpcProxy: CordaRPCOps, testContext: JavaSamplerContext)
 
+    /**
+     * Container class to encapsulate the information required to start a flow for a test run. Each sampler
+     * needs to return the flow class to run with all the required arguments as a FlowInvoke.
+     * @param flowLogicClass Class of the flow logic to invoke for this test.
+     * @param args List of of arguments for the constructor of the flow logic. These need to be in the order
+     *              the constructor expects them and of the correct type.
+     */
     class FlowInvoke<T : FlowLogic<*>>(val flowLogicClass: Class<out T>, val args: Array<Any?>)
 }
