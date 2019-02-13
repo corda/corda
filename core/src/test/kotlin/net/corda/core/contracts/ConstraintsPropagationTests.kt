@@ -103,14 +103,14 @@ class ConstraintsPropagationTests {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies()
+                verifies(true)
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                verifies()
+                verifies(true)
             }
         }
     }

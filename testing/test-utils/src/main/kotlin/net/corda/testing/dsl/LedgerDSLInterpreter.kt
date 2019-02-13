@@ -36,7 +36,7 @@ interface Verifies {
      */
     fun verifies(disableHashConstraints: Boolean = false): EnforceVerifyOrFail
 
-    fun verifies() = verifies(true)
+    fun verifies() = verifies(false)
 
     /**
      * Asserts that verifies() throws.
