@@ -24,7 +24,7 @@ from the new features in the latest release.
    :depth: 3
 
 Step 1. Switch any RPC clients to use the new RPC library
-----------------------------------------------------------
+---------------------------------------------------------
 
 Although the RPC API is backwards compatible with Corda 3, the RPC wire protocol isn't. Therefore RPC clients like web servers need to be
 updated in lockstep with the node to use the new version of the RPC library. Corda 4 delivers RPC wire stability and therefore in future you
@@ -359,7 +359,7 @@ with developer certificates is deployed to a production node, the node will refu
 to production you will need to generate signing keys and integrate them with the build process.
 
 Step 10. Security: Package namespace handling
---------------------------------------------
+---------------------------------------------
 
 Almost no apps will be affected by these changes, but they're important to know about.
 
