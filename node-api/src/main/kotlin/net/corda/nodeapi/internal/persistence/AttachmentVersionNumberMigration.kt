@@ -35,7 +35,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
                 } else {
-                    logger.warn("$msg skipped, network parameters not found in $path.")
+                    logger.info("$msg skipped, network parameters not found in $path.")
                     return
                 }
             } else {
@@ -84,8 +84,13 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     }
 
     private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
-        val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
-        return networkParametersBytes?.raw?.deserialize()
+        return try {
+            val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
+            networkParametersBytes?.raw?.deserialize()
+        } catch (e: Exception) {
+            // This condition is logged in the calling function, so no need to do that here.
+            null
+        }
     }
 
     private fun getAttachmentsWithDefaultVersion(connection: JdbcConnection): List<String> =
