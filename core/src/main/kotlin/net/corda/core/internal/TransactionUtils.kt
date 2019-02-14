@@ -79,10 +79,16 @@ fun <T : Any> deserialiseComponentGroup(componentGroups: List<ComponentGroup>,
         } catch (e: MissingAttachmentsException) {
             throw e
         } catch (e: Exception) {
-            throw Exception("Malformed transaction, $groupEnum at index $internalIndex cannot be deserialised", e)
+            throw TransactionDeserialisationException(groupEnum, internalIndex, e)
         }
     }
 }
+
+/**
+ * Exception raised if an error was encountered while attempting to deserialise a component group in a transaction.
+ */
+class TransactionDeserialisationException(groupEnum: ComponentGroupEnum, index: Int, cause: Exception):
+        Exception("Failed to deserialise group $groupEnum at index $index in transaction: ${cause.message}", cause)
 
 /**
  * Method to deserialise Commands from its two groups:

@@ -11,6 +11,7 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
+import net.corda.core.internal.TransactionDeserialisationException
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.AttachmentId
@@ -121,6 +122,7 @@ interface CordaRPCOps : RPCOps {
      *
      * @throws VaultQueryException if the query cannot be executed for any reason
      *        (missing criteria or parsing error, paging errors, unsupported query, underlying database error)
+     * @throws TransactionDeserialisationException if a transaction that created a requested state cannot be deserialised.
      *
      * Notes
      *   If no [PageSpecification] is provided, a maximum of [DEFAULT_PAGE_SIZE] results will be returned.
@@ -130,6 +132,7 @@ interface CordaRPCOps : RPCOps {
      */
     // DOCSTART VaultQueryByAPI
     @RPCReturnsObservables
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultQueryBy(criteria: QueryCriteria,
                                          paging: PageSpecification,
                                          sorting: Sort,
@@ -140,12 +143,16 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultQueryAPIHelpers
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultQuery(contractStateType: Class<out T>): Vault.Page<T>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultQueryByCriteria(criteria: QueryCriteria, contractStateType: Class<out T>): Vault.Page<T>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultQueryByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): Vault.Page<T>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultQueryByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): Vault.Page<T>
     // DOCEND VaultQueryAPIHelpers
 
@@ -163,6 +170,7 @@ interface CordaRPCOps : RPCOps {
      */
     // DOCSTART VaultTrackByAPI
     @RPCReturnsObservables
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultTrackBy(criteria: QueryCriteria,
                                          paging: PageSpecification,
                                          sorting: Sort,
@@ -173,12 +181,16 @@ interface CordaRPCOps : RPCOps {
     // Java Helpers
 
     // DOCSTART VaultTrackAPIHelpers
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultTrack(contractStateType: Class<out T>): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultTrackByCriteria(contractStateType: Class<out T>, criteria: QueryCriteria): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultTrackByWithPagingSpec(contractStateType: Class<out T>, criteria: QueryCriteria, paging: PageSpecification): DataFeed<Vault.Page<T>, Vault.Update<T>>
 
+    @Throws(VaultQueryException::class, TransactionDeserialisationException::class)
     fun <T : ContractState> vaultTrackByWithSorting(contractStateType: Class<out T>, criteria: QueryCriteria, sorting: Sort): DataFeed<Vault.Page<T>, Vault.Update<T>>
     // DOCEND VaultTrackAPIHelpers
 
