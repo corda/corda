@@ -7,6 +7,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
+import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
@@ -53,7 +54,7 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return when {
             disableHashConstraints -> {
-                log.warn("Skipping hash constraints verification.")
+                log.warnOnce("Skipping hash constraints verification.")
                 true
             }
             attachment is AttachmentWithContext -> {
