@@ -70,6 +70,9 @@ fun AttachmentConstraint.canBeTransitionedFrom(input: AttachmentConstraint, atta
         // TODO - we don't support currently third party signers. When we do, the output key will have to be stronger then the input key.
         input is SignatureAttachmentConstraint && output is SignatureAttachmentConstraint -> input.key == output.key
 
+        // HashAttachmentConstraint can be transformed to a SignatureAttachmentConstraint when hash constraint verification checking disabled.
+        HashAttachmentConstraint.disableHashConstraints && input is HashAttachmentConstraint && output is SignatureAttachmentConstraint -> true
+
         // You can transition from the WhitelistConstraint to the SignatureConstraint only if all signers of the JAR are required to sign in the future.
         input is WhitelistedByZoneAttachmentConstraint && output is SignatureAttachmentConstraint ->
             attachment.signerKeys.isNotEmpty() && output.key.keys.containsAll(attachment.signerKeys)

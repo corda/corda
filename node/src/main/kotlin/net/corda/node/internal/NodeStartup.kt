@@ -5,6 +5,7 @@ import net.corda.cliutils.CliWrapperBase
 import net.corda.cliutils.CordaCliWrapper
 import net.corda.cliutils.CordaVersionProvider
 import net.corda.cliutils.ExitCodes
+import net.corda.core.contracts.HashAttachmentConstraint
 import net.corda.core.crypto.Crypto
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.thenMatch
@@ -177,8 +178,7 @@ open class NodeStartup : NodeStartupLogging {
             logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
 
-        val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
-        if (disableHashConstraints) {
+        if (HashAttachmentConstraint.disableHashConstraints) {
             Node.printWarning("Hash constraints checking has been disabled by the node operator.")
         }
 

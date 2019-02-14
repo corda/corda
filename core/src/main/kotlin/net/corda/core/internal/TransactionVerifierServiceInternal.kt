@@ -36,7 +36,6 @@ class Verifier(val ltx: LedgerTransaction,
 
     companion object {
         private val logger = contextLogger()
-        private val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
     }
 
     /**
@@ -339,10 +338,9 @@ class Verifier(val ltx: LedgerTransaction,
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, contract, ltx.networkParameters!!.whitelistedContractImplementations)
 
-            if (disableHashConstraints && constraint is HashAttachmentConstraint)
-                logger.warn("Skipping hash constraints verification.")
-            else if (!constraint.isSatisfiedBy(constraintAttachment))
+            if (!constraint.isSatisfiedBy(constraintAttachment)) {
                 throw TransactionVerificationException.ContractConstraintRejection(ltx.id, contract)
+            }
         }
     }
 
