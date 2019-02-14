@@ -7,7 +7,6 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.internal.AttachmentWithContext
 import net.corda.core.internal.isUploaderTrusted
-import net.corda.core.internal.warnOnce
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.loggerFor
@@ -52,19 +51,12 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
         val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
     }
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
-        return when {
-            disableHashConstraints -> {
-                log.warnOnce("Skipping hash constraints verification.")
-                true
-            }
-            attachment is AttachmentWithContext -> {
-                log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
-                attachment.id == attachmentId && isUploaderTrusted(attachment.contractAttachment.uploader)
-            }
-            else -> {
-                log.warn("Hash constraint check failed: $attachmentId does not match contract attachment JAR ${attachment.id} or contract attachment JAR is untrusted")
-                false
-            }
+        return if (attachment is AttachmentWithContext) {
+            log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
+            attachment.id == attachmentId && isUploaderTrusted(attachment.contractAttachment.uploader)
+        } else {
+            log.warn("Hash constraint check failed: $attachmentId does not match contract attachment JAR ${attachment.id} or contract attachment JAR is untrusted")
+            false
         }
     }
 }
