@@ -134,6 +134,7 @@ Corda uses `Hikari Pool <https://github.com/brettwooldridge/HikariCP>`_ for crea
 To configure the connection pool any custom properties can be set in the `dataSourceProperties` section.
 
 For example:
+
 .. sourcecode:: groovy
 
     dataSourceProperties = {
@@ -142,4 +143,3 @@ For example:
         maximumPoolSize = 10
         connectionTimeout = 50000
     }
-
