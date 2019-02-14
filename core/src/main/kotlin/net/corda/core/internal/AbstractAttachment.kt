@@ -20,13 +20,14 @@ const val DEPLOYED_CORDAPP_UPLOADER = "app"
 const val RPC_UPLOADER = "rpc"
 const val P2P_UPLOADER = "p2p"
 const val UNKNOWN_UPLOADER = "unknown"
+const val WHITELISTED_P2P_UPLOADER = "whitelisted_jar_p2p"
 
 // We whitelist sources of transaction JARs for now as a temporary state until the DJVM and other security sandboxes
 // have been integrated, at which point we'll be able to run untrusted code downloaded over the network and this mechanism
 // can be removed. Because we ARE downloading attachments over the P2P network in anticipation of this upgrade, we
 // track the source of each attachment in our store. TestDSL is used by LedgerDSLInterpreter when custom attachments
 // are added in unit test code.
-val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, "TestDSL")
+val TRUSTED_UPLOADERS = listOf(DEPLOYED_CORDAPP_UPLOADER, RPC_UPLOADER, WHITELISTED_P2P_UPLOADER, "TestDSL")
 
 fun isUploaderTrusted(uploader: String?): Boolean = uploader in TRUSTED_UPLOADERS
 

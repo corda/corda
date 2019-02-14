@@ -1,0 +1,18 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd"
+                   logicalFilePath="migration/node-services.changelog-init.xml">
+
+    <changeSet author="R3.Corda" id="create-attachments-whitelist">
+        <createTable tableName="node_attachments_whitelist">
+            <column name="att_id" type="NVARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="insertion_date" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey columnNames="att_id" constraintName="node_attachments_whitel_pkey" tableName="node_attachments_whitelist"/>
+    </changeSet>
+</databaseChangeLog>

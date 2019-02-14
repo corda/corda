@@ -44,6 +44,7 @@ import java.util.*
 import java.util.jar.JarInputStream
 import javax.annotation.concurrent.ThreadSafe
 import javax.persistence.*
+import javax.persistence.criteria.CriteriaQuery
 
 /**
  * Stores attachments using Hibernate to database.
@@ -122,6 +123,17 @@ class NodeAttachmentService(
             // Assumption: only Contract Attachments are versioned, version unknown or value for other attachments other than Contract Attachment defaults to 1
             @Column(name = "version", nullable = false)
             var version: Int = DEFAULT_CORDAPP_VERSION
+    )
+
+    @Entity
+    @Table(name = "${NODE_DATABASE_PREFIX}attachments_whitelist")
+    class WhitelistedAttachment(
+            @Id
+            @Column(name = "att_id", nullable = false)
+            var attId: String,
+
+            @Column(name = "insertion_date", nullable = false)
+            var insertionDate: Instant = Instant.now()
     )
 
     @VisibleForTesting
@@ -342,8 +354,32 @@ class NodeAttachmentService(
         }
         else contractVersionFromFile
 
+    override fun whitelistAttachment(id: SecureHash) {
+        return database.transaction {
+            if (currentDBSession().find(NodeAttachmentService.WhitelistedAttachment::class.java, id.toString()) == null) {
+                val attachment = NodeAttachmentService.WhitelistedAttachment(attId = id.toString())
+                session.save(attachment)
+            }
+            //node already has this attachment as untrusted p2p, then make it trusted
+            val attachment =  currentDBSession().find(NodeAttachmentService.DBAttachment::class.java, id.toString())
+            if (attachment != null && attachment.uploader?.startsWith(P2P_UPLOADER) ?: false) {
+                updateUploader(id, attachment, WHITELISTED_P2P_UPLOADER,  attachment.contractClassNames ?: emptyList())
+            }
+        }
+    }
+
+    override fun listWhitelistedAttachments(): List<String> = database.transaction {
+            val criteria : CriteriaQuery<WhitelistedAttachment> = session.criteriaBuilder.createQuery(NodeAttachmentService.WhitelistedAttachment::class.java)
+            criteria.from(NodeAttachmentService.WhitelistedAttachment::class.java)
+            session.createQuery(criteria).resultList.map { it.attId }
+        }
+
+    private fun isWhitelistAttachment(id: SecureHash) = database.transaction {
+            currentDBSession().find(NodeAttachmentService.WhitelistedAttachment::class.java, id.toString()) != null
+         }
+
     // TODO: PLT-147: The attachment should be randomised to prevent brute force guessing and thus privacy leaks.
-    private fun import(jar: InputStream, uploader: String?, filename: String?): AttachmentId {
+    private fun import(jar: InputStream, originalUploader: String?, filename: String?): AttachmentId {
         return database.transaction {
             withContractsInJar(jar) { contractClassNames, inputStream ->
                 require(inputStream !is JarInputStream) { "Input stream must not be a JarInputStream" }
@@ -356,6 +392,7 @@ class NodeAttachmentService(
 
                 val bytes = inputStream.readFully()
                 val id = bytes.sha256()
+                val uploader = if (originalUploader?.startsWith(P2P_UPLOADER) ?: false && isWhitelistAttachment(id)) WHITELISTED_P2P_UPLOADER else originalUploader
                 if (!hasAttachment(id)) {
                     checkIsAValidJAR(bytes.inputStream())
                     val jarSigners = getSigners(bytes)
@@ -381,24 +418,28 @@ class NodeAttachmentService(
                 if (isUploaderTrusted(uploader)) {
                     val session = currentDBSession()
                     val attachment = session.get(NodeAttachmentService.DBAttachment::class.java, id.toString())
-                    // update the `uploader` field (as the existing attachment may have been resolved from a peer)
                     if (attachment.uploader != uploader) {
-                        if (!devMode)
-                            verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
-                        attachment.uploader = uploader
-                        log.info("Updated attachment $id with uploader $uploader")
-                        contractClassNames.forEach { contractsCache.invalidate(it) }
-                        loadAttachmentContent(id)?.let { attachmentAndContent ->
-                            // TODO: this is racey. ENT-2870
-                            attachmentContentCache.put(id, Optional.of(attachmentAndContent))
-                            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
-                        }
+                        updateUploader(id, attachment, uploader, contractClassNames)
                         return@withContractsInJar id
                     }
                     // If the uploader is the same, throw the exception because the attachment cannot be overridden by the same uploader.
                 }
                 throw DuplicateAttachmentException(id.toString())
             }
+        }
+    }
+
+    // update the `uploader` field (as the existing attachment may have been resolved from a peer)
+    private fun updateUploader(id: SecureHash, attachment: DBAttachment, uploader: String?, contractClassNames: List<ContractClassName>){
+        if (!devMode)
+            verifyVersionUniquenessForSignedAttachments(contractClassNames, attachment.version, attachment.signers)
+        attachment.uploader = uploader
+        log.info("Updated attachment $id with uploader $uploader")
+        contractClassNames.forEach { contractsCache.invalidate(it) }
+        loadAttachmentContent(id)?.let { attachmentAndContent ->
+            // TODO: this is racey. ENT-2870
+            attachmentContentCache.put(id, Optional.of(attachmentAndContent))
+            attachmentCache.put(id, Optional.of(attachmentAndContent.first))
         }
     }
 

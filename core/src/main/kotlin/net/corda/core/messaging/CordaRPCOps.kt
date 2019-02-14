@@ -308,6 +308,13 @@ interface CordaRPCOps : RPCOps {
     /** Queries attachments metadata */
     fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId>
 
+    /** Whitelist a jar hash, a jar received via P2P which is whitelisted can be used for transaction versification.
+     * The jar may be yet not received or already be present it the node. */
+    fun whitelistAttachment(id: SecureHash)
+
+    /** List whitelisted jar hash, the actual jar may be not present in the node. */
+    fun listWhitelistedAttachments(): List<String>
+
     /** Returns the node's current time. */
     fun currentNodeTime(): Instant
 

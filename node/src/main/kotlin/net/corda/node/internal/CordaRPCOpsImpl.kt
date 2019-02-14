@@ -217,6 +217,14 @@ internal class CordaRPCOpsImpl(
         return services.attachments.queryAttachments(query, sorting)
     }
 
+    override fun whitelistAttachment(id: SecureHash) {
+        return services.attachments.whitelistAttachment(id)
+    }
+
+    override fun listWhitelistedAttachments(): List<String> {
+        return services.attachments.listWhitelistedAttachments()
+    }
+
     override fun currentNodeTime(): Instant = Instant.now(services.clock)
 
     override fun waitUntilNetworkReady(): CordaFuture<Void?> = services.networkMapCache.nodeReady

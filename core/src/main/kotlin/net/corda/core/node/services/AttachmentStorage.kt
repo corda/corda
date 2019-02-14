@@ -64,6 +64,17 @@ interface AttachmentStorage {
      */
     fun queryAttachments(criteria: AttachmentQueryCriteria, sorting: AttachmentSort? = null): List<AttachmentId>
 
+    /** Whitelist a jar hash, a jar received via P2P which is whitelisted can be used for transaction versification.
+     * The jar may be yet not received or already be present it the node.
+     * @param id The Jar file hash
+     */
+    fun whitelistAttachment(id: SecureHash)
+
+    /**
+     * List whitelisted jar hash, the actual jar may be not present in the node.
+     * @param List of whitelisted Jar hashes, the present on the list doesn't indicate it the actual Jar is stored in the node.
+     */
+    fun listWhitelistedAttachments(): List<String>
     /**
      * Searches for an attachment already in the store
      * @param attachmentId The attachment Id

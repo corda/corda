@@ -87,6 +87,14 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readFully().let { bytes -> Pair(bytes.sha256(), bytes) }
 
+    override fun whitelistAttachment(id: SecureHash) {
+        TODO("not implemented")
+    }
+
+    override fun listWhitelistedAttachments(): List<String> {
+        TODO("not implemented")
+    }
+
     private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash, override val signerKeys: List<PublicKey>) : AbstractAttachment(dataLoader)
 
     private fun importAttachmentInternal(jar: InputStream, uploader: String, contractClassNames: List<ContractClassName>? = null, attachmentId: AttachmentId? = null, signers: List<PublicKey> = emptyList()): AttachmentId {
