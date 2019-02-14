@@ -177,7 +177,7 @@ open class NodeStartup : NodeStartupLogging {
             logger.info("The Corda node is running in production mode. If this is a developer environment you can set 'devMode=true' in the node.conf file.")
         }
 
-        val disableHashConstraints = System.getProperty("net.corda.node.internal.Verifier.disableHashConstraints")?.toBoolean() ?: false
+        val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
         if (disableHashConstraints) {
             Node.printWarning("Hash constraints checking has been disabled by the node operator.")
         }

@@ -36,7 +36,7 @@ class Verifier(val ltx: LedgerTransaction,
 
     companion object {
         private val logger = contextLogger()
-        private val disableHashConstraints = System.getProperty("net.corda.node.internal.Verifier.disableHashConstraints")?.toBoolean() ?: false
+        private val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
     }
 
     /**
