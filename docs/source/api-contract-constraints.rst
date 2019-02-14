@@ -136,6 +136,20 @@ From there it's suspended waiting to be retried on node restart.
 This gives the node operator the opportunity to recover from those errors, which in the case of constraint violations means
 adding the right cordapp jar to the ``cordapps`` folder.
 
+Hash constrained states in private networks
+-------------------------------------------
+
+Where private networks started life using CorDapps with hash constrained states, we have introduced a mechanism to relax the checking of
+these hash constrained states when upgrading to signed CorDapps using signature constraints.
+
+The following java system property may be set to relax the hash constraint checking behaviour:
+
+   -Dnet.corda.node.disableHashConstraints="true"
+
+This mode should only be used upon "out of band" agreement by all participants in a network.
+
+Please also beware that this flag should remain enabled until every hash constrained state is exited from the ledger.
+
 CorDapps as attachments
 -----------------------
 
