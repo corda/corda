@@ -46,6 +46,16 @@ import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
+/**
+ * These tests aim to verify that migrating vault states from V3 to later versions works correctly. While these unit tests verify the
+ * migrating behaviour is correct (tables populated, columns updated for the right states), it comes with a caveat: they do not test that
+ * deserialising states with the attachment classloader works correctly.
+ *
+ * The reason for this is that it is impossible to do so. There is no real way of writing a unit or integration test to upgrade from one
+ * version to another (at the time of writing). These tests simulate a small part of the upgrade process by directly using hibernate to
+ * populate a database as a V3 node would, then running the migration class. However, it is impossible to do this for attachments as there
+ * is no contract state jar to serialise.
+ */
 class VaultStateMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)

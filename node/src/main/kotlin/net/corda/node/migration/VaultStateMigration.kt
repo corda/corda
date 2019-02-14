@@ -49,6 +49,9 @@ class VaultStateMigration : CordaMigration() {
                 session.persist(persistentParty)
             }
         } catch (e: AbstractMethodError) {
+            // This should only happen if there was no attachment that could be used to deserialise the output states, and the state was
+            // serialised such that the participants list cannot be accessed (participants is calculated and not marked as a
+            // SerializableCalculatedProperty.
             throw VaultStateMigrationException("Cannot add state parties as state class is not on the classpath " +
                     "and participants cannot be synthesised")
         }
@@ -62,6 +65,8 @@ class VaultStateMigration : CordaMigration() {
             }
             states[stateIndex]
         } catch (e: Exception) {
+            // If there is no attachment that allows the state class to be deserialised correctly, then carpent a state class anyway. It
+            // might still be possible to access the participants depending on how the state class was serialised.
             tx.tx.outputs[stateIndex]
         }
     }
@@ -111,7 +116,7 @@ class VaultStateMigration : CordaMigration() {
         if (statesSkipped > 0) {
             logger.error("$statesSkipped states could not be migrated as there was no class available for them.")
         }
-        logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
+        logger.info("Finished performing vault state data migration for ${persistentStates.numStates - statesSkipped} states")
     }
 }
 
