@@ -67,6 +67,7 @@ class VaultStateMigration : CordaMigration() {
         } catch (e: Exception) {
             // If there is no attachment that allows the state class to be deserialised correctly, then carpent a state class anyway. It
             // might still be possible to access the participants depending on how the state class was serialised.
+            logger.debug("Could not use attachments to deserialise transaction output states for transaction ${tx.id}")
             tx.tx.outputs[stateIndex]
         }
     }
