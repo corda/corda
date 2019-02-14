@@ -441,9 +441,8 @@ open class TransactionBuilder(
         require(constraints.none { it in automaticConstraints })
         require(isReference || constraints.none { it is HashAttachmentConstraint })
 
-        val minimumRequiredContractClassVersion = stateRefs?.map { services.loadContractAttachment(it).contractVersion }?.max() ?: DEFAULT_CORDAPP_VERSION
-        return services.attachments.getLatestContractAttachments(contractClassName, minimumRequiredContractClassVersion).firstOrNull()
-                ?: throw MissingContractAttachments(states, contractClassName, minimumRequiredContractClassVersion)
+        return services.cordappProvider.getContractAttachmentID(contractClassName)
+                ?: throw MissingContractAttachments(states, contractClassName)
     }
 
     private fun useWhitelistedByZoneAttachmentConstraint(contractClassName: ContractClassName, networkParameters: NetworkParameters) = contractClassName in networkParameters.whitelistedContractImplementations.keys
