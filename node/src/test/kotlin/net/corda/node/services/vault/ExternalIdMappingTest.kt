@@ -1,8 +1,5 @@
 package net.corda.node.services.vault
 
-import com.nhaarman.mockito_kotlin.doReturn
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.whenever
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.CordaX500Name
@@ -10,15 +7,12 @@ import net.corda.core.node.services.queryBy
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.TransactionBuilder
-import net.corda.node.services.api.IdentityServiceInternal
-import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyState
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.TestIdentity
-import net.corda.testing.internal.rigorousMock
 import net.corda.testing.node.MockServices
 import org.junit.Before
 import org.junit.Rule
@@ -45,39 +39,15 @@ class ExternalIdMappingTest {
 
     @Before
     fun setUp() {
-        val (db, mockServices) = MockServices.makeTestDatabaseAndMockServices(
+        val (db, mockServices) = MockServices.makeTestDatabaseAndPersistentServices(
                 cordappPackages = cordapps,
-                identityService = mock<IdentityServiceInternal>().also {
-                    doReturn(notary.party).whenever(it).partyFromKey(notary.publicKey)
-                    doReturn(notary.party).whenever(it).wellKnownPartyFromAnonymous(notary.party)
-                    doReturn(notary.party).whenever(it).wellKnownPartyFromX500Name(notary.name)
-                },
                 initialIdentity = myself,
-                networkParameters = testNetworkParameters(minimumPlatformVersion = 4)
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                moreIdentities = setOf(notary.identity),
+                moreKeys = emptySet()
         )
         services = mockServices
         database = db
-    }
-
-    private fun freshKeyForExternalId(externalId: UUID): AnonymousParty {
-        val anonymousParty = freshKey()
-        database.transaction {
-            services.withEntityManager {
-                val mapping = BasicHSMKeyManagementService.PublicKeyHashToExternalId(externalId, anonymousParty.owningKey)
-                persist(mapping)
-                flush()
-            }
-        }
-        return anonymousParty
-    }
-
-    private fun freshKey(): AnonymousParty {
-        val key = services.keyManagementService.freshKey()
-        val anonymousParty = AnonymousParty(key)
-        // Add behaviour to the mock identity management service for dealing with the new key.
-        // It won't be able to resolve it as it's just an anonymous key that is not linked to an identity.
-        services.identityService.also { doReturn(null).whenever(it).wellKnownPartyFromAnonymous(anonymousParty) }
-        return anonymousParty
     }
 
     private fun createDummyState(participants: List<AbstractParty>): DummyState {
@@ -95,11 +65,11 @@ class ExternalIdMappingTest {
         val vaultService = services.vaultService
         // Create new external ID and two keys mapped to it.
         val id = UUID.randomUUID()
-        val keyOne = freshKeyForExternalId(id)
-        val keyTwo = freshKeyForExternalId(id)
+        val keyOne = services.keyManagementService.freshKeyAndCert(myself.identity, false, id)
+        val keyTwo = services.keyManagementService.freshKeyAndCert(myself.identity, false, id)
         // Create states with a public key assigned to the new external ID.
-        val dummyStateOne = createDummyState(listOf(keyOne))
-        val dummyStateTwo = createDummyState(listOf(keyTwo))
+        val dummyStateOne = createDummyState(listOf(AnonymousParty(keyOne.owningKey)))
+        val dummyStateTwo = createDummyState(listOf(AnonymousParty(keyTwo.owningKey)))
         // This query should return two states!
         val result = database.transaction {
             val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(id)) }
@@ -122,11 +92,11 @@ class ExternalIdMappingTest {
         val vaultService = services.vaultService
         // Create new external ID.
         val idOne = UUID.randomUUID()
-        val keyOne = freshKeyForExternalId(idOne)
+        val keyOne = services.keyManagementService.freshKeyAndCert(myself.identity, false, idOne)
         val idTwo = UUID.randomUUID()
-        val keyTwo = freshKeyForExternalId(idTwo)
+        val keyTwo = services.keyManagementService.freshKeyAndCert(myself.identity, false, idTwo)
         // Create state with a public key assigned to the new external ID.
-        val dummyState = createDummyState(listOf(keyOne, keyTwo))
+        val dummyState = createDummyState(listOf(AnonymousParty(keyOne.owningKey), AnonymousParty(keyTwo.owningKey)))
         // This query should return one state!
         val result = database.transaction {
             val externalId = builder { VaultSchemaV1.StateToExternalId::externalId.`in`(listOf(idOne, idTwo)) }

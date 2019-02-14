@@ -61,8 +61,16 @@ class E2ETestKeyManagementService(val identityService: IdentityService, private 
         return keyPair.public
     }
 
+    override fun freshKey(externalId: UUID): PublicKey {
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
+    }
+
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        throw UnsupportedOperationException("This operation is only supported by persistent key management service variants.")
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))

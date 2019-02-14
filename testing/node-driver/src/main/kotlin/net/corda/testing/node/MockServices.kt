@@ -26,6 +26,8 @@ import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
 import net.corda.node.services.identity.InMemoryIdentityService
+import net.corda.node.services.identity.PersistentIdentityService
+import net.corda.node.services.keys.PersistentKeyManagementService
 import net.corda.node.services.schema.NodeSchemaService
 import net.corda.node.services.transactions.InMemoryTransactionVerifierService
 import net.corda.node.services.vault.NodeVaultService
@@ -36,6 +38,7 @@ import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.internal.DEV_ROOT_CA
 import net.corda.testing.internal.MockCordappProvider
+import net.corda.testing.internal.TestingNamedCacheFactory
 import net.corda.testing.internal.configureDatabase
 import net.corda.testing.node.internal.*
 import net.corda.testing.services.MockAttachmentStorage
@@ -71,7 +74,8 @@ open class MockServices private constructor(
         override val identityService: IdentityService,
         private val initialNetworkParameters: NetworkParameters,
         private val initialIdentity: TestIdentity,
-        private val moreKeys: Array<out KeyPair>
+        private val moreKeys: Array<out KeyPair>,
+        override val keyManagementService: KeyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
 ) : ServiceHub {
 
     companion object {
@@ -116,30 +120,89 @@ open class MockServices private constructor(
             val dataSourceProps = makeTestDataSourceProperties()
             val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
             val database = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+            val keyManagementService = MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys)
             val mockService = database.transaction {
-                object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys) {
-                    override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
-                    override val vaultService: VaultService = makeVaultService(schemaService, database, cordappLoader)
-                    override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
-                        ServiceHubInternal.recordTransactions(statesToRecord, txs,
-                                validatedTransactions as WritableTransactionStorage,
-                                mockStateMachineRecordedTransactionMappingStorage,
-                                vaultService as VaultServiceInternal,
-                                database)
-                    }
-
-                    override fun jdbcSession(): Connection = database.createSession()
-
-                    override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
-                        return block(contextTransaction.restrictedEntityManager)
-                    }
-
-                    override fun withEntityManager(block: Consumer<EntityManager>) {
-                        return block.accept(contextTransaction.restrictedEntityManager)
-                    }
-                }
+                makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toSet(), keyManagementService, schemaService, database)
             }
             return Pair(database, mockService)
+        }
+
+        /**
+         * Makes database and persistent services appropriate for unit tests which require persistence across the vault, identity service
+         * and key managment service.
+         *
+         * @param cordappPackages A [List] of cordapp packages to scan for any cordapp code, e.g. contract verification code, flows and services.
+         * @param initialIdentity The first (typically sole) identity the services will represent.
+         * @param moreKeys A list of additional [KeyPair] instances to be used by [MockServices].
+         * @param moreIdentities A list of additional [KeyPair] instances to be used by [MockServices].
+         * @return A pair where the first element is the instance of [CordaPersistence] and the second is [MockServices].
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun makeTestDatabaseAndPersistentServices(
+                cordappPackages: List<String>,
+                initialIdentity: TestIdentity,
+                networkParameters: NetworkParameters = testNetworkParameters(modifiedTime = Instant.MIN),
+                moreKeys: Set<KeyPair>,
+                moreIdentities: Set<PartyAndCertificate>
+        ): Pair<CordaPersistence, MockServices> {
+            val cordappLoader = cordappLoaderForPackages(cordappPackages)
+            val dataSourceProps = makeTestDataSourceProperties()
+            val schemaService = NodeSchemaService(cordappLoader.cordappSchemas)
+            val identityService = PersistentIdentityService(TestingNamedCacheFactory())
+            val persistence = configureDatabase(dataSourceProps, DatabaseConfig(), identityService::wellKnownPartyFromX500Name, identityService::wellKnownPartyFromAnonymous, schemaService, schemaService.internalSchemas())
+
+            // Create a persistent identity service and add all the supplied identities.
+            identityService.apply {
+                ourNames = setOf(initialIdentity.name)
+                database = persistence
+                start(DEV_ROOT_CA.certificate)
+                persistence.transaction { identityService.loadIdentities(moreIdentities + initialIdentity.identity) }
+            }
+
+            // Create a persistent key management service and add the key pair which was created for the TestIdentity.
+            // We only add the keypair for the initial identity and any other keys which this node may control. Note: We don't add the keys
+            // for the other identities.
+            val keyManagementService = PersistentKeyManagementService(TestingNamedCacheFactory(), identityService, persistence)
+            persistence.transaction { keyManagementService.start(moreKeys + initialIdentity.keyPair) }
+
+            val mockService = persistence.transaction {
+                makeMockMockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys, keyManagementService, schemaService, persistence)
+            }
+            return Pair(persistence, mockService)
+        }
+
+        private fun makeMockMockServices(
+                cordappLoader: CordappLoader,
+                identityService: IdentityService,
+                networkParameters: NetworkParameters,
+                initialIdentity: TestIdentity,
+                moreKeys: Set<KeyPair>,
+                keyManagementService: KeyManagementService,
+                schemaService: SchemaService,
+                persistence: CordaPersistence
+        ): MockServices {
+            return object : MockServices(cordappLoader, identityService, networkParameters, initialIdentity, moreKeys.toTypedArray(), keyManagementService) {
+                override var networkParametersService: NetworkParametersService = MockNetworkParametersStorage(networkParameters)
+                override val vaultService: VaultService = makeVaultService(schemaService, persistence, cordappLoader)
+                override fun recordTransactions(statesToRecord: StatesToRecord, txs: Iterable<SignedTransaction>) {
+                    ServiceHubInternal.recordTransactions(statesToRecord, txs,
+                            validatedTransactions as WritableTransactionStorage,
+                            mockStateMachineRecordedTransactionMappingStorage,
+                            vaultService as VaultServiceInternal,
+                            persistence)
+                }
+
+                override fun jdbcSession(): Connection = persistence.createSession()
+
+                override fun <T : Any> withEntityManager(block: EntityManager.() -> T): T {
+                    return block(contextTransaction.restrictedEntityManager)
+                }
+
+                override fun withEntityManager(block: Consumer<EntityManager>) {
+                    return block.accept(contextTransaction.restrictedEntityManager)
+                }
+            }
         }
 
         // Because Kotlin is dumb and makes not publicly visible objects public, thus changing the public API.
@@ -175,8 +238,18 @@ open class MockServices private constructor(
     }
 
     private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
-                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>)
-            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys)
+                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>, keyManagementService: KeyManagementService)
+            : this(cordappLoader, MockTransactionStorage(), identityService, networkParameters, initialIdentity, moreKeys, keyManagementService)
+
+    private constructor(cordappLoader: CordappLoader, identityService: IdentityService, networkParameters: NetworkParameters,
+                        initialIdentity: TestIdentity, moreKeys: Array<out KeyPair>) : this(
+            cordappLoader,
+            MockTransactionStorage(),
+            identityService,
+            networkParameters,
+            initialIdentity,
+            moreKeys
+    )
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -195,6 +268,14 @@ open class MockServices private constructor(
                 networkParameters: NetworkParameters,
                 vararg moreKeys: KeyPair) :
             this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys)
+
+    constructor(cordappPackages: Iterable<String>,
+                initialIdentity: TestIdentity,
+                identityService: IdentityService,
+                networkParameters: NetworkParameters,
+                vararg moreKeys: KeyPair,
+                keyManagementService: KeyManagementService) :
+            this(cordappLoaderForPackages(cordappPackages), identityService, networkParameters, initialIdentity, moreKeys, keyManagementService)
 
     /**
      * Create a mock [ServiceHub] that looks for app code in the given package names, uses the provided identity service
@@ -298,7 +379,6 @@ open class MockServices private constructor(
         get() = networkParametersService.run { lookup(currentHash)!! }
 
     final override val attachments = MockAttachmentStorage()
-    override val keyManagementService: KeyManagementService by lazy { MockKeyManagementService(identityService, *arrayOf(initialIdentity.keyPair) + moreKeys) }
     override val vaultService: VaultService get() = throw UnsupportedOperationException()
     override val contractUpgradeService: ContractUpgradeService get() = throw UnsupportedOperationException()
     override val networkMapCache: NetworkMapCache get() = throw UnsupportedOperationException()
