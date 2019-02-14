@@ -4,7 +4,6 @@ import net.corda.core.DeleteForDJVM
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.*
 import net.corda.core.contracts.TransactionVerificationException.TransactionContractConflictException
-import net.corda.core.internal.cordapp.CordappImpl
 import net.corda.core.internal.rules.StateContractValidationEnforcementRule
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.utilities.contextLogger
@@ -37,6 +36,7 @@ class Verifier(val ltx: LedgerTransaction,
 
     companion object {
         private val logger = contextLogger()
+        private val disableHashConstraints = System.getProperty("net.corda.node.internal.Verifier.disableHashConstraints")?.toBoolean() ?: false
     }
 
     /**
@@ -339,9 +339,10 @@ class Verifier(val ltx: LedgerTransaction,
 
             val constraintAttachment = AttachmentWithContext(contractAttachment, contract, ltx.networkParameters!!.whitelistedContractImplementations)
 
-            if (!constraint.isSatisfiedBy(constraintAttachment)) {
+            if (disableHashConstraints && constraint is HashAttachmentConstraint)
+                logger.warn("Skipping hash constraints verification.")
+            else if (!constraint.isSatisfiedBy(constraintAttachment))
                 throw TransactionVerificationException.ContractConstraintRejection(ltx.id, contract)
-            }
         }
     }
 
