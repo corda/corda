@@ -148,16 +148,18 @@ sealed class FetchDataFlow<T : NamedByHash, in W : Any>(
 class FetchAttachmentsFlow(requests: Set<SecureHash>,
                            otherSide: FlowSession) : FetchDataFlow<Attachment, ByteArray>(requests, otherSide, DataType.ATTACHMENT) {
 
+    private val uploader = "$P2P_UPLOADER:${otherSideSession.counterparty.name}"
+
     override fun load(txid: SecureHash): Attachment? = serviceHub.attachments.openAttachment(txid)
 
-    override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire })
+    override fun convert(wire: ByteArray): Attachment = FetchedAttachment({ wire }, uploader)
 
     override fun maybeWriteToDisk(downloaded: List<Attachment>) {
         for (attachment in downloaded) {
             with(serviceHub.attachments) {
                 if (!hasAttachment(attachment.id)) {
                     try {
-                        importAttachment(attachment.open(), "$P2P_UPLOADER:${otherSideSession.counterparty.name}", null)
+                        importAttachment(attachment.open(), uploader, null)
                     } catch (e: FileAlreadyExistsException) {
                         // This can happen when another transaction will insert the same attachment during this transaction.
                         // The outcome is the same (the attachment is imported), so we can ignore this exception.
@@ -170,14 +172,14 @@ class FetchAttachmentsFlow(requests: Set<SecureHash>,
         }
     }
 
-    private class FetchedAttachment(dataLoader: () -> ByteArray) : AbstractAttachment(dataLoader), SerializeAsToken {
+    private class FetchedAttachment(dataLoader: () -> ByteArray, uploader: String?) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
         override val id: SecureHash by lazy { attachmentData.sha256() }
 
-        private class Token(private val id: SecureHash) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id))
+        private class Token(private val id: SecureHash, private val uploader: String?) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = FetchedAttachment(context.attachmentDataLoader(id), uploader)
         }
 
-        override fun toToken(context: SerializeAsTokenContext) = Token(id)
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, uploader)
     }
 }
 

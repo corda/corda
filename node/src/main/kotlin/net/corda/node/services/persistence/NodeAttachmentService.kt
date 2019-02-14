@@ -204,18 +204,18 @@ class NodeAttachmentService(
             }
     }
 
-    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean) : AbstractAttachment(dataLoader), SerializeAsToken {
+    private class AttachmentImpl(override val id: SecureHash, dataLoader: () -> ByteArray, private val checkOnLoad: Boolean, uploader: String?) : AbstractAttachment(dataLoader, uploader), SerializeAsToken {
         override fun open(): InputStream {
             val stream = super.open()
             // This is just an optional safety check. If it slows things down too much it can be disabled.
             return if (checkOnLoad && id is SecureHash.SHA256) HashCheckingStream(id, attachmentData.size, stream) else stream
         }
 
-        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean) : SerializationToken {
-            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentDataLoader(id), checkOnLoad)
+        private class Token(private val id: SecureHash, private val checkOnLoad: Boolean, private val uploader: String?) : SerializationToken {
+            override fun fromToken(context: SerializeAsTokenContext) = AttachmentImpl(id, context.attachmentDataLoader(id), checkOnLoad, uploader)
         }
 
-        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad)
+        override fun toToken(context: SerializeAsTokenContext) = Token(id, checkOnLoad, uploader)
     }
 
     // slightly complex 2 level approach to attachment caching:
@@ -241,7 +241,7 @@ class NodeAttachmentService(
         return database.transaction {
             val attachment = currentDBSession().get(NodeAttachmentService.DBAttachment::class.java, id.toString())
                     ?: return@transaction null
-            val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad).let {
+            val attachmentImpl = AttachmentImpl(id, { attachment.content }, checkAttachmentsOnLoad, attachment.uploader).let {
                 val contracts = attachment.contractClassNames
                 if (contracts != null && contracts.isNotEmpty()) {
                     ContractAttachment.create(it, contracts.first(), contracts.drop(1).toSet(), attachment.uploader, attachment.signers?.toList()

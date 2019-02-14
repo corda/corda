@@ -1094,7 +1094,7 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   @NotNull
   public final net.corda.core.crypto.SecureHash getAttachmentHash()
   @NotNull
-  public final String getContractClass()
+  public final String getInvalidClassName()
   @NotNull
   public final String getPackageName()
 ##
