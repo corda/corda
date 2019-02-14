@@ -85,8 +85,6 @@ interface NodeConfiguration {
 
     val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings
 
-    val disableHashConstraints: Boolean get() = false
-
     companion object {
         // default to at least 8MB and a bit extra for larger heap sizes
         val defaultTransactionCacheSize: Long = 8.MB + getAdditionalCacheMemory()

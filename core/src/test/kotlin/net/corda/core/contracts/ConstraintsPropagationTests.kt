@@ -33,6 +33,7 @@ import net.corda.testing.core.internal.JarSignatureTestUtils.generateKey
 import net.corda.testing.core.internal.SelfCleaningDir
 import net.corda.testing.internal.MockCordappProvider
 import net.corda.testing.node.MockServices
+import net.corda.testing.node.internal.MockNetworkParametersStorage
 import net.corda.testing.node.ledger
 import org.junit.*
 import java.security.PublicKey
@@ -103,14 +104,14 @@ class ConstraintsPropagationTests {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 output(Cash.PROGRAM_ID, "c1", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), ALICE_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Issue())
-                verifies(true)
+                verifies()
             })
             transaction {
                 attachment(Cash.PROGRAM_ID, SecureHash.allOnesHash)
                 input("c1")
                 output(Cash.PROGRAM_ID, "c2", DUMMY_NOTARY, null, HashAttachmentConstraint(SecureHash.allOnesHash), Cash.State(1000.POUNDS `issued by` ALICE_PARTY.ref(1), BOB_PARTY))
                 command(ALICE_PUBKEY, Cash.Commands.Move())
-                verifies(true)
+                verifies()
             }
         }
     }

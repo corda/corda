@@ -73,7 +73,6 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val jarDirs by string().list().optional().withDefaultValue(Defaults.jarDirs)
     private val cordappDirectories by string().mapValid(::toPath).list().optional()
     private val cordappSignerKeyFingerprintBlacklist by string().list().optional().withDefaultValue(Defaults.cordappSignerKeyFingerprintBlacklist)
-    private val disableHashConstraints by boolean().optional().withDefaultValue(Defaults.disableHashConstraints)
     @Suppress("unused")
     private val custom by nestedObject().optional()
 
@@ -129,8 +128,7 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
                     h2port = configuration[h2port],
                     jarDirs = configuration[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
-                    disableHashConstraints = configuration[disableHashConstraints]
+                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist]
             ))
         } catch (e: Exception) {
             return when (e) {

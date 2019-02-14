@@ -249,6 +249,109 @@ class CordappConstraintsTests {
         }
     }
 
+    @Test
+    @Ignore    // TODO(mike): rework
+    fun `issue cash and transfer using hash to signature constraints migration`() {
+        // signing key setup
+        val keyStoreDir = SelfCleaningDir()
+        val packageOwnerKey = keyStoreDir.path.generateKey()
+
+        driver(DriverParameters(
+                cordappsForAllNodes = listOf(UNSIGNED_FINANCE_CORDAPP),
+                notarySpecs = listOf(NotarySpec(DUMMY_NOTARY_NAME, validating = false)),
+                networkParameters = testNetworkParameters(minimumPlatformVersion = 4),
+                inMemoryDB = false
+        )) {
+            val (alice, bob) = listOf(
+                    startNode(providedName = ALICE_NAME, rpcUsers = listOf(user)),
+                    startNode(providedName = BOB_NAME, rpcUsers = listOf(user))
+            ).map { it.getOrThrow() }
+
+            val notary = defaultNotaryHandle.nodeHandles.get().first()
+
+            // Issue Cash
+            val issueTx = alice.rpc.startFlow(::CashIssueFlow, 1000.DOLLARS, OpaqueBytes.of(1), defaultNotaryIdentity)
+                    .returnValue.getOrThrow()
+            println("Issued transaction: $issueTx")
+
+            // Query vault
+            val states = alice.rpc.vaultQueryBy<Cash.State>().states
+            printVault(alice, states)
+
+            // Claim the package, publish the new network parameters , and restart all nodes.
+            val parameters = NetworkParametersReader(DEV_ROOT_CA.certificate, null, notary.baseDirectory).read().networkParameters
+
+            val newParams = parameters.copy(
+                    packageOwnership = mapOf("net.corda.finance.contracts.asset" to packageOwnerKey)
+            )
+            listOf(alice, bob, notary).forEach { node ->
+                println("Shutting down the node for ${node} ... ")
+                (node as OutOfProcess).process.destroyForcibly()
+                node.stop()
+                NetworkParametersCopier(newParams, overwriteFile = true).install(node.baseDirectory)
+            }
+
+            startNode(providedName = defaultNotaryIdentity.name)
+
+            println("Restarting the node for $ALICE_NAME ...")
+            (baseDirectory(ALICE_NAME) / "cordapps").deleteRecursively()
+            val restartedAlice = startNode(NodeParameters(
+                    providedName = ALICE_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed(keyStoreDir.path))
+            )).getOrThrow()
+
+            println("Restarting the node for $BOB_NAME ...")
+            (baseDirectory(BOB_NAME) / "cordapps").deleteRecursively()
+            val restartedBob = startNode(NodeParameters(
+                    providedName = BOB_NAME,
+                    additionalCordapps = listOf(UNSIGNED_FINANCE_CORDAPP.signed(keyStoreDir.path))
+            )).getOrThrow()
+
+            // Register for Bob vault updates
+            val vaultUpdatesBob = restartedBob.rpc.vaultTrackByCriteria(Cash.State::class.java, QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL)).updates
+
+            // Transfer Cash
+            val bobParty = restartedBob.rpc.wellKnownPartyFromX500Name(BOB_NAME)!!
+            val transferTxn = restartedAlice.rpc.startFlow(::CashPaymentFlow, 1000.DOLLARS, bobParty, true, defaultNotaryIdentity).returnValue.getOrThrow()
+            println("Payment transaction: $transferTxn")
+
+            // Query vault
+            println("Vault query for ALICE after cash transfer ...")
+            val aliceQuery = restartedAlice.rpc.vaultQueryBy<Cash.State>(QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.CONSUMED))
+            val aliceStates = aliceQuery.states
+            printVault(alice, aliceStates)
+
+            assertThat(aliceStates).hasSize(1)
+            assertThat(aliceStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(aliceQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.CONSUMED)
+            assertThat(aliceQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.HASH)
+
+            // Check Bob Vault Updates
+            vaultUpdatesBob.expectEvents {
+                sequence(
+                        // MOVE
+                        expect { (consumed, produced) ->
+                            require(consumed.isEmpty()) { consumed.size }
+                            require(produced.size == 1) { produced.size }
+                        }
+                )
+            }
+
+            println("Vault query for BOB after cash transfer ...")
+            val bobQuery = restartedBob.rpc.vaultQueryBy<Cash.State>()
+            val bobStates = bobQuery.states
+            printVault(bob, bobStates)
+
+            assertThat(bobStates).hasSize(1)
+            assertThat(bobStates[0].state.data.amount.withoutIssuer()).isEqualTo(1000.DOLLARS)
+            assertThat(bobQuery.statesMetadata[0].status).isEqualTo(Vault.StateStatus.UNCONSUMED)
+            assertThat(bobQuery.statesMetadata[0].constraintInfo!!.type()).isEqualTo(Vault.ConstraintInfo.Type.SIGNATURE)
+
+            // clean-up
+            keyStoreDir.close()
+        }
+    }
+
     private fun printVault(node: NodeHandle, states: List<StateAndRef<Cash.State>>) {
         println("Vault query for ${node.nodeInfo.singleIdentity()} returned ${states.size} records")
         states.forEach {

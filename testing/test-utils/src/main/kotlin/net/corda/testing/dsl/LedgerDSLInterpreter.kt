@@ -34,9 +34,7 @@ interface Verifies {
     /**
      * Verifies the ledger/transaction, throws if the verification fails.
      */
-    fun verifies(disableHashConstraints: Boolean = false): EnforceVerifyOrFail
-
-    fun verifies() = verifies(false)
+    fun verifies(): EnforceVerifyOrFail
 
     /**
      * Asserts that verifies() throws.

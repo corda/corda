@@ -20,7 +20,7 @@ interface TransactionVerifierServiceInternal {
 /**
  * Defined here for visibility reasons.
  */
-fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>, disableHashConstraints: Boolean) = this.internalPrepareVerify(extraAttachments, disableHashConstraints)
+fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.internalPrepareVerify(extraAttachments)
 
 /**
  * Because we create a separate [LedgerTransaction] onto which we need to perform verification, it becomes important we don't verify the
@@ -30,13 +30,13 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>, disableH
  */
 class Verifier(val ltx: LedgerTransaction,
                private val transactionClassLoader: ClassLoader,
-               private val inputVersions: Map<ContractClassName, Version>,
-               private val disableHashConstraints: Boolean) {
+               private val inputVersions: Map<ContractClassName, Version>) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 
     companion object {
         private val logger = contextLogger()
+        private val disableHashConstraints = System.getProperty("net.corda.node.internal.Verifier.disableHashConstraints")?.toBoolean() ?: false
     }
 
     /**
@@ -287,9 +287,6 @@ class Verifier(val ltx: LedgerTransaction,
         for (state in allStates) {
             checkConstraintValidity(state)
         }
-        // Check whether constraints checking has been disabled
-        if (disableHashConstraints)
-            logger.warnOnce("Hash constraints checking has been disabled by the node operator.")
 
         // Group the inputs and outputs by contract, and for each contract verify the constraints propagation logic.
         // This is not required for reference states as there is nothing to propagate.
