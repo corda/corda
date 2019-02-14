@@ -113,7 +113,6 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         return newKeyWithCert
     }
 
-
     private fun getSigner(publicKey: PublicKey): ContentSigner {
         val signingPublicKey = getSigningPublicKey(publicKey)
         return if (signingPublicKey in originalKeysMap) {

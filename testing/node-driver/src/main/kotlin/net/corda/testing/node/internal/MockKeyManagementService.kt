@@ -11,6 +11,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A class which provides an implementation of [KeyManagementService] which is used in [MockServices]
@@ -25,7 +26,7 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     private val nextKeys = LinkedList<KeyPair>()
 
-    val keysById: MutableMap<UUID, Set<PublicKey>> = mutableMapOf()
+    val keysById: MutableMap<UUID, Set<PublicKey>> = ConcurrentHashMap()
 
     override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
