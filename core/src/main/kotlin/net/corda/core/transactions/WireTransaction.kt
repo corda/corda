@@ -115,7 +115,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
     // Helper for deprecated toLedgerTransaction
     // TODO: revisit once Deterministic JVM code updated
     private val missingAttachment: Attachment by lazy {
-        object : AbstractAttachment({ byteArrayOf() }) {
+        object : AbstractAttachment({ byteArrayOf() }, DEPLOYED_CORDAPP_UPLOADER ) {
             override val id: SecureHash get() = throw UnsupportedOperationException()
         }
     }
