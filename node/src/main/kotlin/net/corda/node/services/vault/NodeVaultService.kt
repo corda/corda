@@ -511,7 +511,13 @@ class NodeVaultService(
 
     @Throws(VaultQueryException::class)
     override fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>): Vault.Page<T> {
-        return _queryBy(criteria, paging, sorting, contractStateType, false)
+        try {
+            return _queryBy(criteria, paging, sorting, contractStateType, false)
+        } catch (e: VaultQueryException) {
+            throw e
+        } catch (e: Exception) {
+            throw VaultQueryException("An error occurred while attempting to query the vault: ${e.message}", e)
+        }
     }
 
     @Throws(VaultQueryException::class)
