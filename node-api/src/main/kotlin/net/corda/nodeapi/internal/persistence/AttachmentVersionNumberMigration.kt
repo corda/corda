@@ -35,7 +35,7 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
-                } else if (!availableAttachments.isEmpty()){
+                } else if (availableAttachments.isEmpty()){
                     logger.info("$msg skipped, network parameters not found in $path, but there are no available attachments to migrate.")
                     return
                 } else {
