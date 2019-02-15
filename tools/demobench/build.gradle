@@ -41,15 +41,22 @@ configurations {
         // We don't need Hibernate just for its @Type annotation.
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }
-    bundle.extendsFrom compile
+    bundle {
+        transitive = false
+    }
+    
+    all {
+        resolutionStrategy {
+            force "net.corda:corda-finance-contracts:$os_corda_release_version"
+        }
+    }
 }
 
 dependencies {
     compile project(':client:rpc')
     compile project(':finance:workflows')
     compile project(':tools:worldmap')
-
-    compile "net.corda:corda-finance-contracts:$os_corda_release_version"
+    bundle "net.corda:corda-finance-contracts:$os_corda_release_version"
 
     // TornadoFX: A lightweight Kotlin framework for working with JavaFX UI's.
     compile "no.tornado:tornadofx:$tornadofx_version"
@@ -80,9 +87,6 @@ dependencies {
     testCompile "junit:junit:$junit_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
-
-    bundle "net.corda:corda-finance-contracts:$os_corda_release_version"
-    bundle project(':finance:workflows')
 }
 
 tasks.withType(JavaCompile) {
@@ -137,6 +141,12 @@ distributions {
                 fileMode = 0444
             }
             from(configurations.bundle) {
+                rename 'corda-finance-contracts(.*)', 'corda-finance-contracts.jar'
+                into 'cordapps'
+                fileMode = 0444
+            }
+            from(project(':finance:workflows').tasks.jar) {
+                rename 'corda-finance-workflows(.*)', 'corda-finance-workflows.jar'
                 into 'cordapps'
                 fileMode = 0444
             }
