@@ -1,7 +1,7 @@
 HSM support for legal identity keys
 ===================================
 
-By default, the private key that belongs to the node's legal identity is stored in a key store file in the node's certificates directory. Users may wish to instead store this key in a hardware security module (HSM) or similar. For this purpose, Corda Enterprise supports HSMs by `Utimaco <https://hsm.utimaco.com>`_, and `Azure KeyVault <https://azure.microsoft.com/en-gb/services/key-vault>`_.
+By default, the private keys that belong to the node CA and legal identity are stored in a key store file in the node's certificates directory. Users may wish to instead store this key in a hardware security module (HSM) or similar. For this purpose, Corda Enterprise supports HSMs by `Utimaco <https://hsm.utimaco.com>`_, `Gemalto <https://www.gemalto.com>`_, and `Azure KeyVault <https://azure.microsoft.com/en-gb/services/key-vault>`_.
 
 Note that only the private and public key of the legal identity are stored this way. The certificate chain is still stored in a file-based key store.
 
@@ -72,6 +72,34 @@ Example configuration file:
       password: "my-password"
 
 In addition to the configuration, the node needs to access binaries provided by Utimaco. The ``CryptoServerJCE.jar`` for release 4.21.1, which can be obtained from Utimaco, needs to be placed in the node's drivers folder.
+
+Gemalto Luna
+------------
+
+Corda Enterprise nodes can be configured to store their legal identity keys in `Gemalto Luna <
+https://safenet.gemalto.com/data-encryption/hardware-security-modules-hsms/safenet-network-hsm>`_ HSMs running firmware version 7.3.
+
+In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "GEMALTO_LUNA", and ``cryptoServiceConf`` should contain the path to a configuration file, the content of which is explained further down.
+
+.. parsed-literal::
+
+    cryptoServiceName : "GEMALTO_LUNA"
+    cryptoServiceConf : "gemalto_conf.yml"
+
+The configuration file for Gemalto Luna has two fields. The ``keyStore`` field needs to specify a slot or partition. The ``password`` field contains the password associated with the slot or partition.
+
+:keyStore: specify the slot or partition.
+
+:password: the password associated with the slot or partition.
+
+Example configuration file:
+
+.. parsed-literal::
+
+      keyStore: "tokenlabel:my-partition"
+      password: "my-password"
+
+Note that the Gemalto's JCA provider has to be installed as described in the documentation for the Gemalto Luna.
 
 Azure KeyVault
 --------------

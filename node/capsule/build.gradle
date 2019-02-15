@@ -53,6 +53,8 @@ task buildCordaJAR(type: FatCapsule, dependsOn: project(':node').tasks.jar) {
 
     // Exclude the binaries for the Utimaco HSM as we cannot distribute them.
     exclude('**/CryptoServer*.jar')
+    // Exclude the binaries for the Gemalto Luna HSM as we cannot distribute them.
+    exclude('**/LunaProvider.jar')
 
     capsuleManifest {
         applicationVersion = corda_release_version
