@@ -9,7 +9,6 @@ import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.identity.PartyAndCertificate
 import net.corda.core.internal.*
 import net.corda.core.node.NetworkParameters
@@ -18,8 +17,6 @@ import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults
 import net.corda.core.serialization.serialize
-import net.corda.core.transactions.ContractUpgradeWireTransaction
-import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.contextLogger
@@ -33,10 +30,8 @@ import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.crypto.X509Utilities
-import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
@@ -57,7 +52,6 @@ import java.security.KeyPair
 import java.time.Clock
 import java.time.Duration
 import java.util.*
-import javax.annotation.Signed
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
@@ -324,27 +318,6 @@ class VaultStateMigrationTest {
                 session.save(persistentState)
             }
         }
-    }
-
-    class CashV2 : UpgradedContractWithLegacyConstraint<Cash.State, CashV2.State> {
-        override val legacyContract = Cash.PROGRAM_ID
-        override val legacyContractConstraint: AttachmentConstraint
-            get() = AlwaysAcceptAttachmentConstraint
-
-        @BelongsToContract(CashV2::class)
-        data class State(override val amount: Amount<Issued<Currency>>, val owners: List<AbstractParty>) : FungibleAsset<Currency> {
-            override val owner: AbstractParty = owners.first()
-            override val exitKeys = (owners + amount.token.issuer.party).map { it.owningKey }.toSet()
-            override val participants = owners
-
-            override fun withNewOwnerAndAmount(newAmount: Amount<Issued<Currency>>, newOwner: AbstractParty) = copy(amount = amount.copy(newAmount.quantity), owners = listOf(newOwner))
-            override fun toString() = "${Emoji.bagOfCash}New Cash($amount at ${amount.token.issuer} owned by $owner)"
-            override fun withNewOwner(newOwner: AbstractParty) = CommandAndState(Cash.Commands.Move(), copy(owners = listOf(newOwner)))
-        }
-
-        override fun upgrade(state: Cash.State) = CashV2.State(state.amount.times(1000), listOf(state.owner))
-
-        override fun verify(tx: LedgerTransaction) {}
     }
 
     private fun <T> getState(clazz: Class<T>): T {

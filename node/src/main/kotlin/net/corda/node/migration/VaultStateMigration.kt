@@ -3,14 +3,11 @@ package net.corda.node.migration
 import liquibase.database.Database
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.deserialiseComponentGroup
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.*
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService

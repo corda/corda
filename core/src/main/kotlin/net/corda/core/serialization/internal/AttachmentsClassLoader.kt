@@ -1,8 +1,5 @@
 package net.corda.core.serialization.internal
 
-import net.corda.core.CordaException
-import net.corda.core.CordaInternal
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
