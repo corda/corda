@@ -511,7 +511,7 @@ class NodeVaultService(
         } catch (e: VaultQueryException) {
             throw e
         } catch (e: Exception) {
-            throw VaultQueryException("An error occurred while attempting to query the vault: ${e.message}")
+            throw VaultQueryException("An error occurred while attempting to query the vault: ${e.message}", e)
         }
     }
 
