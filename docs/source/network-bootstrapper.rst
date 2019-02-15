@@ -105,7 +105,7 @@ Modifying a bootstrapped network
 
 The Network Bootstrapper is provided as a development tool for setting up Corda networks for development and testing.
 There is some limited functionality which can be used to make changes to a network, but for anything more complicated consider
-using a :doc:`network-map</network-map>` server.
+using a :doc:`Network Map</network-map>` server.
 
 When running the Network Bootstrapper, each ``node-info`` file needs to be gathered together in one directory. If
 the nodes are being run on different machines you need to do the following:
