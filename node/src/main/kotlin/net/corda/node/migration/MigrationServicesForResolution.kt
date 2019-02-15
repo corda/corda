@@ -35,8 +35,7 @@ class MigrationServicesForResolution(
         get() = throw NotImplementedError()
 
     private fun defaultNetworkParameters(): NetworkParameters {
-        logger.warn("Using a dummy set of network parameters for migration. This is expected if the database was created by a node started"
-            + " in dev mode.")
+        logger.warn("Using a dummy set of network parameters for migration.")
         val clock = Clock.systemUTC()
         return NetworkParameters(
                 1,
