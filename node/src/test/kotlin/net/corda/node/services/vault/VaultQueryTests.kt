@@ -825,7 +825,7 @@ abstract class VaultQueryTestsBase : VaultQueryParties {
             assertThat(resultsUnlockedAndByLockIds.states).hasSize(5)
 
             // missing lockId
-            expectedEx.expect(IllegalArgumentException::class.java)
+            expectedEx.expect(VaultQueryException::class.java)
             expectedEx.expectMessage("Must specify one or more lockIds")
             val criteriaMissingLockId = VaultQueryCriteria(softLockingCondition = SoftLockingCondition(SoftLockingType.UNLOCKED_AND_SPECIFIED))
             vaultService.queryBy<ContractState>(criteriaMissingLockId)
