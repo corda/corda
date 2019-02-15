@@ -272,14 +272,10 @@ data class ContractUpgradeLedgerTransaction(
             "Legacy contract constraint does not satisfy the constraint of the input states"
         }
 
-        val constraintCheck = if (upgradedContract is UpgradedContractWithLegacyConstraint) {
-            upgradedContract.legacyContractConstraint.isSatisfiedBy(attachmentForConstraintVerification)
-        } else {
-            // If legacy constraint not specified, defaulting to WhitelistedByZoneAttachmentConstraint
-            WhitelistedByZoneAttachmentConstraint.isSatisfiedBy(attachmentForConstraintVerification)
-        }
-        check(constraintCheck) {
-            "Legacy contract does not satisfy the upgraded contract's constraint"
+        if (upgradedContract is UpgradedContractWithLegacyConstraint) {
+            check(upgradedContract.legacyContractConstraint.isSatisfiedBy(attachmentForConstraintVerification)) {
+                "Legacy contract does not satisfy the upgraded contract's constraint"
+            }
         }
     }
 

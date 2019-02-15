@@ -306,8 +306,8 @@ upgraded contracts must implement the ``UpgradedContract`` interface. This inter
 The ``upgrade`` method describes how the old state type is upgraded to the new state type. When the state isn't being
 upgraded, the same state type can be used for both the old and new state type parameters.
 
-By default this new contract will only be able to upgrade legacy states which are constrained by the zone whitelist (see :doc:`api-contract-constraints`).
-If hash or other constraint types are used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
+By default this new contract will preserve and verify the original contract constraints.
+If hash, CZ whitelist or other constraint types are used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
 instead, and specify the constraint explicitly:
 
 .. sourcecode:: kotlin

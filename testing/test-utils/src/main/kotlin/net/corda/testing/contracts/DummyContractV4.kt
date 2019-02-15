@@ -9,13 +9,13 @@ import net.corda.core.transactions.LedgerTransaction
 /**
  * Dummy contract state for testing of the upgrade process.
  */
-// DOCSTART 1
-class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.State> {
+class DummyContractV4 : UpgradedContractWithLegacyConstraint<DummyContract.State, DummyContractV4.State> {
     companion object {
-        const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContractV2"
+        const val PROGRAM_ID: ContractClassName = "net.corda.testing.contracts.DummyContractV4"
     }
 
-    override val legacyContract: String = DummyContract::class.java.name
+    override val legacyContract: String = DummyContract.PROGRAM_ID
+    override val legacyContractConstraint: AttachmentConstraint = WhitelistedByZoneAttachmentConstraint
 
     data class State(val magicNumber: Int = 0, val owners: List<AbstractParty>) : ContractState {
         override val participants: List<AbstractParty> = owners
@@ -34,4 +34,3 @@ class DummyContractV2 : UpgradedContract<DummyContract.State, DummyContractV2.St
         // Other verifications.
     }
 }
-// DOCEND 1

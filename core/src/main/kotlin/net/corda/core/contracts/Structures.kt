@@ -300,8 +300,7 @@ interface UpgradedContract<in OldState : ContractState, out NewState : ContractS
 }
 
 /**
- * This interface allows specifying a custom legacy contract constraint for upgraded contracts. The default for [UpgradedContract]
- * is [WhitelistedByZoneAttachmentConstraint].
+ * This interface allows specifying a custom legacy contract constraint for upgraded contracts.
  */
 @KeepForDJVM
 interface UpgradedContractWithLegacyConstraint<in OldState : ContractState, out NewState : ContractState> : UpgradedContract<OldState, NewState> {

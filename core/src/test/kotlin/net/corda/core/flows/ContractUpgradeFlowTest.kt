@@ -18,6 +18,7 @@ import net.corda.finance.flows.CashIssueFlow
 import net.corda.testing.contracts.DummyContract
 import net.corda.testing.contracts.DummyContractV2
 import net.corda.testing.contracts.DummyContractV3
+import net.corda.testing.contracts.DummyContractV4
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
@@ -94,6 +95,26 @@ class ContractUpgradeFlowTest : WithContracts, WithFinality {
                 willReturn(
                         aliceNode.hasContractUpgradeTransaction<DummyContractV2.State, DummyContractV3.State>()
                                 and bobNode.hasContractUpgradeTransaction<DummyContractV2.State, DummyContractV3.State>()))
+    }
+
+    @Test
+    fun `contract upgrade with legacy constraints failure`() {
+        // Create dummy contract.
+        val signedByA = aliceNode.signDummyContract(alice.ref(1), 0, bob.ref(1))
+        val stx = bobNode.addSignatureTo(signedByA)
+
+        aliceNode.finalise(stx, bob)
+
+        val aliceTx = aliceNode.getValidatedTransaction(stx)
+        val bobTx = bobNode.getValidatedTransaction(stx)
+
+        // Party B authorises the contract state upgrade.
+        assert.that(bobNode.authoriseContractUpgrade(bobTx, DummyContractV4::class), willReturn())
+
+        // Party A initiates contract upgrade flow, expected to be rejected because DummyContractV4 has specified a CZ whitelisted constraint but the contract hasn't been whitelisted
+        assert.that(
+                aliceNode.initiateContractUpgrade(aliceTx, DummyContractV4::class),
+                willThrow<IllegalStateException>(errorMessage("Legacy contract does not satisfy the upgraded contract's constraint")))
     }
 
     private fun TestStartedNode.issueCash(amount: Amount<Currency> = Amount(1000, USD)) =
