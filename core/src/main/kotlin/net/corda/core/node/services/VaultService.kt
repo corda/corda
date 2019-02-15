@@ -518,7 +518,9 @@ inline fun <reified T : ContractState> VaultService.trackBy(criteria: QueryCrite
     return _trackBy(criteria, paging, sorting, T::class.java)
 }
 
-class VaultQueryException(description: String, cause: Exception? = null) : FlowException(description, cause)
+class VaultQueryException(description: String, cause: Exception? = null) : FlowException(description, cause) {
+    constructor(description: String) : this(description, null)
+}
 
 class StatesNotAvailableException(override val message: String?, override val cause: Throwable? = null) : FlowException(message, cause) {
     override fun toString() = "Soft locking error: $message"
