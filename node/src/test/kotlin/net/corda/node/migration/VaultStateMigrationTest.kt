@@ -27,6 +27,7 @@ import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
@@ -116,6 +117,7 @@ class VaultStateMigrationTest {
 
     @After
     fun close() {
+        contextTransactionOrNull?.close()
         cordaDB.close()
     }
 

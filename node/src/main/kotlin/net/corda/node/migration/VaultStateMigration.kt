@@ -10,6 +10,7 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.*
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
@@ -57,29 +58,16 @@ class VaultStateMigration : CordaMigration() {
         }
     }
 
-    private fun extractStateFromTx(tx: SignedTransaction, stateIndex: Int): TransactionState<ContractState> {
-        return try {
-            val attachments = tx.tx.attachments.mapNotNull { attachmentsService.openAttachment(it)}
-            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, latestNetworkParams, tx.id) {
-                deserialiseComponentGroup(tx.tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
-            }
-            states[stateIndex]
-        } catch (e: Exception) {
-            // If there is no attachment that allows the state class to be deserialised correctly, then carpent a state class anyway. It
-            // might still be possible to access the participants depending on how the state class was serialised.
-            logger.debug("Could not use attachments to deserialise transaction output states for transaction ${tx.id}")
-            tx.tx.outputs[stateIndex]
-        }
-    }
-
     private fun getStateAndRef(persistentState: VaultSchemaV1.VaultStates): StateAndRef<ContractState> {
         val persistentStateRef = persistentState.stateRef ?:
                 throw VaultStateMigrationException("Persistent state ref missing from state")
         val txHash = SecureHash.parse(persistentStateRef.txId)
-        val tx = dbTransactions.getTransaction(txHash) ?:
-                throw VaultStateMigrationException("Transaction $txHash not present in vault")
-        val state = extractStateFromTx(tx, persistentStateRef.index)
         val stateRef = StateRef(txHash, persistentStateRef.index)
+        val state = try {
+            servicesForResolution.loadState(stateRef)
+        } catch (e: MigrationException) {
+            throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}")
+        }
         return StateAndRef(state, stateRef)
     }
 
