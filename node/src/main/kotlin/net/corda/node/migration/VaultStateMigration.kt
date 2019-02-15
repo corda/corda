@@ -65,7 +65,7 @@ class VaultStateMigration : CordaMigration() {
         val stateRef = StateRef(txHash, persistentStateRef.index)
         val state = try {
             servicesForResolution.loadState(stateRef)
-        } catch (e: MigrationException) {
+        } catch (e: Exception) {
             throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}")
         }
         return StateAndRef(state, stateRef)

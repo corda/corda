@@ -82,8 +82,8 @@ class MigrationServicesForResolution(
     }
 
     override fun loadState(stateRef: StateRef): TransactionState<*> {
-        val stx = transactions.getTransaction(stateRef.txhash) ?:
-        throw MigrationException("Could not get transaction with hash ${stateRef.txhash} out of vault")
+        val stx = transactions.getTransaction(stateRef.txhash)
+                ?: throw MigrationException("Could not get transaction with hash ${stateRef.txhash} out of vault")
         val baseTx = stx.resolveBaseTransaction(this)
         return when (baseTx) {
             is NotaryChangeLedgerTransaction -> baseTx.outputs[stateRef.index]
@@ -95,8 +95,8 @@ class MigrationServicesForResolution(
 
     override fun loadStates(stateRefs: Set<StateRef>): Set<StateAndRef<ContractState>> {
         return stateRefs.groupBy { it.txhash }.flatMap {
-            val stx = transactions.getTransaction(it.key) ?:
-            throw MigrationException("Could not get transaction with hash ${it.key} out of vault")
+            val stx = transactions.getTransaction(it.key)
+                    ?: throw MigrationException("Could not get transaction with hash ${it.key} out of vault")
             val baseTx = stx.resolveBaseTransaction(this)
             val stateList = when (baseTx) {
                 is NotaryChangeLedgerTransaction -> it.value.map { stateRef -> StateAndRef(baseTx.outputs[stateRef.index], stateRef) }
