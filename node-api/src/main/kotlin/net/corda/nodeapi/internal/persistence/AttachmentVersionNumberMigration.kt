@@ -29,13 +29,17 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
             logger.info("Start executing...")
             var networkParameters: NetworkParameters?
             val baseDir = System.getProperty(SchemaMigration.NODE_BASE_DIR_KEY)
+            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (baseDir != null) {
                 val path = Paths.get(baseDir) / NETWORK_PARAMS_FILE_NAME
                 networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                } else if (!availableAttachments.isEmpty()){
+                    logger.info("$msg skipped, network parameters not found in $path, but there are no available attachments to migrate.")
+                    return
                 } else {
-                    logger.info("$msg skipped, network parameters not found in $path.")
+                    logger.warn("$msg skipped, network parameters not found in $path.")
                     return
                 }
             } else {
@@ -43,7 +47,6 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 return
             }
 
-            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (availableAttachments.isEmpty()) {
                 logger.info("$msg skipped, no attachments not found.")
                 return
