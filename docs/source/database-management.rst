@@ -9,6 +9,8 @@ Database management
 
 .. contents::
 
+.. note:: For details on how to connect your node to a database see :doc:`here <node-database>`.
+
 Corda - the platform, and the installed third-party CorDapps store their data in a relational database (see
 :doc:`api-persistence`). When Corda is first installed, or when a new CorDapp is installed, associated tables, indexes,
 foreign-keys, etc. must be created. Similarly, when Corda is upgraded, or when a new version of a CorDapp is installed,

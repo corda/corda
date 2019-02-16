@@ -24,7 +24,9 @@ The Corda configuration file uses the HOCON format which is a superset of JSON. 
 Please do NOT use double quotes (``"``) in configuration keys.
 
 Node setup will log ``Config files should not contain " in property names. Please fix: [key]`` as an error when it finds double quotes around keys.
-This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property ``"dataSourceProperties.dataSourceClassName" = "val"`` in :ref:`reference.conf` would be not overwritten by the property ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
+This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property
+``"dataSourceProperties.dataSourceClassName" = "val"`` in `Reference.conf`_ would be not overwritten by the property
+``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
 
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
@@ -49,16 +51,16 @@ Configuration file fields
 
 .. note :: The available configuration fields are listed below in alphabetic order.
 
+.. _corda-configuration-file-fields:
+
+Fields
+------
+
 additionalP2PAddresses
   An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the :ref:`p2pAddress <corda_configuration_file_p2pAddress>`.
   Nodes can use this configuration option to advertise HA endpoints and aliases to external parties.
 
   *Default:* empty list
-
-.. _corda-configuration-file-fields:
-
-Fields
-------
 
 attachmentContentCacheSizeMegaBytes
   Optionally specify how much memory should be used to cache attachment contents in memory.
@@ -95,6 +97,14 @@ crlCheckSoftFail
 
   *Default:* true
 
+cryptoServiceName
+  Optional name of the CryptoService implementation. This only needs to be set if you intend to use a different provider than the default one
+  (see :doc:`cryptoservice-configuration`).
+
+cryptoServiceConf
+  Optional path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider
+  than the default one (see :doc:`cryptoservice-configuration`).
+
 custom
   Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 
@@ -106,41 +116,18 @@ custom
 
 .. _database_properties_ref:
 
-:database:  This section is used to configure JDBC and Hibernate related properties:
+database
+  Database configuration
 
-        :transactionIsolationLevel: Transaction isolation level as defined by the ``TRANSACTION_`` constants in
-            ``java.sql.Connection``, but without the "TRANSACTION_" prefix. Defaults to ``REPEATABLE_READ``.
+  transactionIsolationLevel:
+    Transaction isolation level as defined by the ``TRANSACTION_`` constants in ``java.sql.Connection``, but without the ``TRANSACTION_`` prefix.
 
-        :exportHibernateJMXStatistics: Whether to export Hibernate JMX statistics (caution: expensive run-time overhead)
-
-        :runMigration: Boolean on whether to run the database migration scripts at startup. Defaults to false.
-                       In production please keep it false. For more information please check :doc:`database-management`
-                       If migration is not run, on startup, the node will check if it's running on the correct database version.
-
-        :schema: (optional) some database providers require a schema name when generating DDL and SQL statements.
-                     (the value is passed to Hibernate property 'hibernate.default_schema').
-
-        :hibernateDialect: (optional) for explicit definition of ``hibernate.dialect`` property, for most cases Hibernate properly detect
-                           the correct value
-
-        :initialiseSchema: Boolean on whether to update database schema at startup (or create when node starts for the first time).
-            Defaults to ``true``. If set to ``false`` on startup, the node will validate if it's running against the compatible database schema.
+    *Default:* ``REPEATABLE_READ``
 
   exportHibernateJMXStatistics:
     Whether to export Hibernate JMX statistics.
 
     **Caution: enabling this option causes expensive run-time overhead**
-
-:dataSourceProperties: This section is used to configure the JDBC connection and database driver used for the nodes persistence.
-    By default the node starts with an embedded H2 database instance.
-    The configuration defaults are as shown in the example above.
-    :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
-    To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
-
-    :dataSourceClassName: JDBC Data Source class name.
-    :dataSource.url:      JDBC database URL.
-    :dataSource.user:     Database user.
-    :dataSource.password: Database password.
 
     *Default:* false
 
@@ -157,10 +144,35 @@ custom
 
     *Default:* CorDapp schema creation is controlled with ``initialiseSchema``.
 
+  runMigration
+    Boolean on whether to run the database migration scripts at startup. In production please keep it false. For more information please
+    check :doc:`database-management`. If migration is not run, on startup, the node will check if it's running on the correct database version.
+
+    *Default:* false
+
+  schema
+    Some database providers require a schema name when generating DDL and SQL statements. The value is passed to the Hibernate
+    property 'hibernate.default_schema'. This is optional.
+
+  hibernateDialect
+    Optionally specify the ``hibernate.dialect`` property. For most cases Hibernate properly detects the correct value.
+
 dataSourceProperties
-  This section is used to configure the jdbc connection and database driver used for the nodes persistence.
-  This is currently the only configuration that has been tested, although in the future full support for other storage layers will be validated.
-  Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the Reference.conf_ below.
+  This section is used to configure the JDBC connection and database driver used for the node's persistence.
+  :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
+  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
+
+  dataSourceClassName
+    JDBC Data Source class name.
+
+  dataSource.url
+    JDBC database URL.
+
+  dataSource.user
+    Database user.
+
+  dataSource.password
+    Database password.
 
   *Default:*
 
@@ -169,7 +181,7 @@ dataSourceProperties
     dataSourceClassName = org.h2.jdbcx.JdbcDataSource
     dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
     dataSource.user = sa
-    dataSource.password = ""```
+    dataSource.password = ""
 
 detectPublicIp
   This flag toggles the auto IP detection behaviour.
@@ -206,6 +218,48 @@ emailAddress
 
   *Default:* company@example.com
 
+enterpriseConfiguration
+  Allows fine-grained controls of various features only available in the enterprise version of Corda.
+
+.. _enterprise_config_tuning:
+
+  tuning
+    Performance tuning parameters for Corda Enterprise
+
+    flowThreadPoolSize
+      The number of threads available to handle flows in parallel. This is the number of flows
+      that can run in parallel doing something and/or holding resources like database connections.
+      A larger number of flows can be suspended, e.g. waiting for reply from a counterparty.
+      When a response arrives, a suspended flow will be woken up if there are any available threads in the thread pool.
+      Otherwise, a currently active flow must be finished or suspended before the suspended flow can be woken
+      up to handle the event. This can have serious performance implications if the flow thread pool is too small,
+      as a flow cannot be suspended while in a database transaction, or without checkpointing its state first.
+      Corda Enterprise allows the node operators to configure the number of threads the state machine manager can use to execute flows in
+      parallel, allowing more than one flow to be active and/or use resources at the same time.
+
+      The default value is 2 times the number of cores available which was found to be working efficiently in
+      performance testing.
+      The ideal value for this parameter depends on a number of factors.
+      The main ones are the hardware the node is running on, the performance profile of the
+      flows, and the database instance backing the node as datastore. Every thread will open a database connection,
+      so for n threads, the database system must have at least n+1 connections available. Also, the database
+      must be able to actually cope with the level of parallelism to make the number of threads worthwhile - if
+      using e.g. H2, any number beyond 8 does not add any substantial benefit due to limitations with its internal
+      architecture. For these reasons, the default size for the flow framework thread pool is the minimum between two times the available number of processors and 30. Overriding this value in the configuration allows to specify any number.
+
+    rpcThreadPoolSize
+      The number of threads handling RPC calls - this defines how many RPC requests can be handled
+      in parallel without queueing. The default value is set to the number of available processor cores.
+      Incoming RPC calls are queued until a thread from this
+      pool is available to handle the connection, prepare any required data and start the requested flow. As this
+      might be a non-trivial amount of work, the size of this pool can be configured in Corda Enterprise.
+      On a multicore machine with a large ``flowThreadPoolSize``, this might need to be increased, to avoid flow
+      threads being idle while the payload is being deserialized and the flow invocation run.
+
+      If there are idling flow threads while RPC calls are queued, it might be worthwhile increasing this number slightly.
+      Valid values for this property are between 4 (that is the number used for the single threaded state machine in
+      open source) and the number of flow threads.
+
 extraNetworkMapKeys
   An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on these keys.
   Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
@@ -213,13 +267,6 @@ extraNetworkMapKeys
   **Important: This is a temporary feature for onboarding network participants that limits their visibility for privacy reasons.**
 
   *Default:* not defined
-:jarDirs: An optional list of file system directories containing JARs to include in the classpath when launching via ``corda.jar`` only.
-    Each should be a string.  Only the JARs in the directories are added, not the directories themselves.  This is useful
-    for including JDBC drivers and the like. e.g. ``jarDirs = [ '${baseDirectory}/lib' ]`` (Note that you have to use the ``baseDirectory``
-    substitution value when pointing to a relative path).
-
-    .. note:: This property is only available for Corda distributed with Capsule. For the Corda tarball distribution this option is unavailable.
-              It's advisable to copy any required JAR files to the 'drivers' subdirectory of the node base directory.
 
 
 flowMonitorPeriodMillis
@@ -253,6 +300,21 @@ flowTimeout
 
     *Default:* 1.8
 
+graphiteOptions
+  Optionally export metrics to a Graphite server. When specified, the node will push out all JMX metrics to the specified Graphite server at regular intervals.
+
+  server
+    Server name or IP address of the Graphite instance.
+
+  port
+    Port the Graphite instance is listening at.
+
+  prefix
+    Optional prefix string to identify metrics from this node, will default to a string made up from Organisation Name and IP address.
+
+  sampleIntervalSeconds
+    Optional wait time between pushing metrics. This will default to 60 seconds.
+
 h2Port (deprecated)
   Defines port for h2 DB.
 
@@ -274,22 +336,12 @@ jarDirs
 
   *Default:* not defined
 
+  .. note:: This property is only available for Corda distributed with Capsule. For the Corda tarball distribution this option is unavailable.
+              It's advisable to copy any required JAR files to the 'drivers' subdirectory of the node base directory.
+
 jmxMonitoringHttpPort
   If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
   Default Jolokia access url is http://127.0.0.1:port/jolokia/
-:relay: If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
-    advertised to the network map service instead of the provided ``p2pAddress``.
-
-        :relayHost: Hostname of the relay machine
-        :remoteInboundPort: A port on the relay machine that accepts incoming TCP connections. Traffic will be forwarded
-            from this port to the local port specified in ``p2pAddress``.
-        :username: Username for establishing a SSH connection with the relay.
-        :privateKeyFile: Path to the private key file for SSH authentication. The private key must not have a passphrase.
-        :publicKeyFile: Path to the public key file for SSH authentication.
-        :sshPort: Port to be used for SSH connection, default ``22``.
-
-:jmxMonitoringHttpPort: If set, will enable JMX metrics reporting via the Jolokia HTTP/JSON agent on the corresponding port.
-    Default Jolokia access url is http://127.0.0.1:port/jolokia/
 
   *Default:* not defined
 
@@ -297,93 +349,15 @@ jmxReporterType
   Provides an option for registering an alternative JMX reporter.
   Available options are ``JOLOKIA`` and ``NEW_RELIC``.
 
-:graphiteOptions: Optionally export metrics to a graphite server. When specified, the node will push out all JMX
-                metrics to the specified Graphite server at regular intervals.
-
-            :server: Server name or ip address of the graphite instance.
-            :port: Port the graphite instance is listening at.
-            :prefix: Optional prefix string to identify metrics from this node, will default to a string made up
-                    from Organisation Name and ip address.
-            :sampleIntervalSeconds: optional wait time between pushing metrics. This will default to 60 seconds.
-
-:extraNetworkMapKeys: An optional list of private network map UUIDs. Your node will fetch the public network and private network maps based on
-                these keys. Private network UUID should be provided by network operator and lets you see nodes not visible on public network.
   The Jolokia configuration is provided by default.
   The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution.
   See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
 
-                .. note:: This is temporary feature for onboarding network participants that limits their visibility for privacy reasons.
-
-:tlsCertCrlDistPoint: CRL distribution point (i.e. URL) for the TLS certificate. Default value is NULL, which indicates no CRL availability for the TLS certificate.
-
-                      .. note:: This needs to be set if crlCheckSoftFail is false (i.e. strict CRL checking is on).
-
-:tlsCertCrlIssuer: CRL issuer (given in the X500 name format) for the TLS certificate. Default value is NULL,
-                   which indicates that the issuer of the TLS certificate is also the issuer of the CRL.
-
-                   .. note:: If this parameter is set then `tlsCertCrlDistPoint` needs to be set as well.
-
-:flowMonitorPeriodMillis: ``Duration`` of the period suspended flows waiting for IO are logged. Default value is ``60 seconds``.
-
-:flowMonitorSuspensionLoggingThresholdMillis: Threshold ``Duration`` suspended flows waiting for IO need to exceed before they are logged. Default value is ``60 seconds``.
-
-:jmxReporterType:  Provides an option for registering an alternative JMX reporter. Available options are ``JOLOKIA`` and ``NEW_RELIC``. If no value is provided, ``JOLOKIA`` will be used.
-
-                    .. note:: The Jolokia configuration is provided by default.  The New Relic configuration leverages the Dropwizard_ NewRelicReporter solution. See `Introduction to New Relic for Java`_ for details on how to get started and how to install the New Relic Java agent.
   *Default:* ``JOLOKIA``
 
   .. _Dropwizard: https://metrics.dropwizard.io/3.2.3/manual/third-party.html
   .. _Introduction to New Relic for Java: https://docs.newrelic.com/docs/agents/java-agent/getting-started/introduction-new-relic-java
 
-:useOpenSsl:    If set to true, the node will use a native SSL implementation for TLS rather than the JVM SSL. The native SSL library currently
-                shipped with Corda Enterprise is BoringSsl. The default is to use JVM SSL, i.e. the flag being set to ``false``.
-
-:enterpriseConfiguration: Allows fine-grained controls of various features only available in the enterprise version of Corda.
-
-.. _enterprise_config_tuning:
-
-    :tuning: Performance tuning parameters for Corda Enterprise
-
-        :flowThreadPoolSize: The number of threads available to handle flows in parallel. This is the number of flows
-            that can run in parallel doing something and/or holding resources like database connections.
-            A larger number of flows can be suspended, e.g. waiting for reply from a counterparty.
-            When a response arrives, a suspended flow will be woken up if there are any available threads in the thread pool.
-            Otherwise, a currently active flow must be finished or suspended before the suspended flow can be woken
-            up to handle the event. This can have serious performance implications if the flow thread pool is too small,
-            as a flow cannot be suspended while in a database transaction, or without checkpointing its state first.
-            Corda Enterprise allows the node operators to configure the number of threads the state machine manager can use to execute flows in
-            parallel, allowing more than one flow to be active and/or use resources at the same time.
-
-            The default value is 2 times the number of cores available which was found to be working efficiently in
-            performance testing.
-            The ideal value for this parameter depends on a number of factors.
-            The main ones are the hardware the node is running on, the performance profile of the
-            flows, and the database instance backing the node as datastore. Every thread will open a database connection,
-            so for n threads, the database system must have at least n+1 connections available. Also, the database
-            must be able to actually cope with the level of parallelism to make the number of threads worthwhile - if
-            using e.g. H2, any number beyond 8 does not add any substantial benefit due to limitations with its internal
-            architecture. For these reasons, the default size for the flow framework thread pool is the minimum between two times the available number of processors and 30. Overriding this value in the configuration allows to specify any number.
-
-        :rpcThreadPoolSize: The number of threads handling RPC calls - this defines how many RPC requests can be handled
-            in parallel without queueing. The default value is set to the number of available processor cores.
-            Incoming RPC calls are queued until a thread from this
-            pool is available to handle the connection, prepare any required data and start the requested flow. As this
-            might be a non-trivial amount of work, the size of this pool can be configured in Corda Enterprise.
-            On a multicore machine with a large ``flowThreadPoolSize``, this might need to be increased, to avoid flow
-            threads being idle while the payload is being deserialized and the flow invocation run.
-
-            If there are idling flow threads while rpc calls are queued, it might be worthwhile increasing this number slightly.
-            Valid values for this property are between 4 (that is the number used for the single threaded state machine in
-            open source) and the number of flow threads.
-
-        .. note:: The following parameters are currently for R3 internal use only. Advice for changing these settings will be
-                  subject of a future update.
-
-        :maximumMessagingBatchSize: R3 internal only
-        :p2pConfirmationWindowSize: R3 internal only
-        :brokerConnectionTtlCheckIntervalMs: R3 internal only
-
-.. _corda_configuration_file_signer_blacklist:
 keyStorePassword
   The password to unlock the KeyStore file (``<workspace>/certificates/sslkeystore.jks``) containing the node certificate and private key.
 
@@ -520,6 +494,28 @@ p2pAddress
 
   *Default:* not defined
 
+relay
+  If provided, the node will attempt to tunnel inbound connections via an external relay. The relay's address will be
+  advertised to the network map service instead of the provided ``p2pAddress``.
+
+  relayHost
+    Hostname of the relay machine
+
+  remoteInboundPort
+    A port on the relay machine that accepts incoming TCP connections. Traffic will be forwarded from this port to the local port specified in ``p2pAddress``.
+
+  username
+    Username for establishing an SSH connection with the relay.
+
+  privateKeyFile
+    Path to the private key file for SSH authentication. The private key must not have a passphrase.
+
+  publicKeyFile
+    Path to the public key file for SSH authentication.
+
+  sshPort
+    Port to be used for SSH connection, default ``22``.
+
 rpcAddress (deprecated)
   The address of the RPC system on which RPC requests can be made to the node.
   If not provided then the node will run without RPC.
@@ -528,11 +524,6 @@ rpcAddress (deprecated)
 
   *Default:* not defined
 
-:cryptoServiceName: (optional) name of the CryptoService implementation. This only needs to be set if you intend to use a different provider than the default one (see :doc:`cryptoservice-configuration`).
-
-:cryptoServiceConf: (optional) path to the configuration file for the CryptoService provider. This may have to be present if you use a different CryptoService provider than the default one (see :doc:`cryptoservice-configuration`).
-
-:custom: Set custom command line attributes (e.g. Java system properties) on the node process via the capsule launcher
 rpcSettings
   Options for the RPC server exposed by the Node.
 
@@ -642,6 +633,9 @@ trustStorePassword
 
   *Default:* trustpass
 
+useOpenSsl
+  If set to true, the node will use a native SSL implementation for TLS rather than the JVM SSL. The native SSL library currently shipped with
+  Corda Enterprise is BoringSsl. The default is to use JVM SSL, i.e. the flag being set to ``false``.
 
 useTestClock
   Internal option.
@@ -696,7 +690,6 @@ Simple notary configuration file
     notary {
         validating = false
     }
-    devMode : false
     compatibilityZoneURL : "https://cz.corda.net"
     enterprise : {
         tuning : {
