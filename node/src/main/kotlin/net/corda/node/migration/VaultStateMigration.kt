@@ -77,6 +77,10 @@ class VaultStateMigration : CordaMigration() {
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
         var statesSkipped = 0
         val persistentStates = VaultStateIterator(cordaDB)
+        if (persistentStates.numStates > 0) {
+            logger.warn("Found ${persistentStates.numStates} states to update from a previous version. This may take a while for large "
+            + "volumes of data.")
+        }
         VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
                 val session = currentDBSession()

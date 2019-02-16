@@ -272,6 +272,8 @@ We have open sourced the Liquibase schema upgrade feature from Corda Enterprise.
 bootstrap and update itself automatically. This is a transparent change with pre Corda 4 nodes seamlessly
 upgrading to operate as if they'd been bootstrapped in this way. This also applies to the finance CorDapp module.
 
+.. important:: If you're upgrading a node from Corda 3 to Corda 4 and there is old data in the vault, this upgrade may take some time, depending on the number of unconsumed states in the vault.
+
 Ability to pre-validate configuration files
 +++++++++++++++++++++++++++++++++++++++++++
 
