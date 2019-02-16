@@ -43,11 +43,24 @@ SQL Azure and SQL Server
 ````````````````````````
 Corda has been tested with SQL Server 2017 (14.0.3006.16) and Azure SQL (12.0.2000.8), using Microsoft JDBC Driver 6.2.
 
-To set up a database schema with administrative permissions, run the following SQL:
+To set up a database schema with administrative permissions on Azure SQL, run the following SQL:
 
 .. sourcecode:: sql
 
-    --for Azure SQL, a login needs to be created on the master database and not on a user database
+    -- run against the master database (a login needs to be created on the master database and not on a user database):
+    CREATE LOGIN [LOGIN] WITH PASSWORD = [PASSWORD];
+    CREATE USER [USER] FOR LOGIN [LOGIN];
+    -- run against a user database:
+    CREATE SCHEMA [SCHEMA];
+    CREATE USER [USER] FOR LOGIN [LOGIN] WITH DEFAULT_SCHEMA = [SCHEMA];
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::[SCHEMA] TO [USER];
+    GRANT CREATE TABLE TO [USER];
+    GRANT CREATE VIEW TO [USER];
+
+To set up a database schema with administrative permissions on SQL Server, run the following SQL:
+
+.. sourcecode:: sql
+
     CREATE LOGIN [LOGIN] WITH PASSWORD = [PASSWORD];
     CREATE SCHEMA [SCHEMA];
     CREATE USER [USER] FOR LOGIN [LOGIN] WITH DEFAULT_SCHEMA = [SCHEMA];
@@ -55,11 +68,22 @@ To set up a database schema with administrative permissions, run the following S
     GRANT CREATE TABLE TO [USER];
     GRANT CREATE VIEW TO [USER];
 
-To set up a database schema with normal operation permissions, run the following SQL:
+To set up a database schema with normal operation permissions on Azure SQL, run the following SQL:
 
 .. sourcecode:: sql
 
-    --for Azure SQL, a login needs to be created on the master database and not on a user database
+    -- run against the master database (a login needs to be created on the master database and not on a user database):
+    CREATE LOGIN [LOGIN] WITH PASSWORD = '[PASSWORD]';
+    CREATE USER [USER] FOR LOGIN [LOGIN];
+    -- run against a user database:
+    CREATE SCHEMA [SCHEMA];
+    CREATE USER [USER] FOR LOGIN [LOGIN] WITH DEFAULT_SCHEMA = [SCHEMA];
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::[SCHEMA] TO [USER];
+
+To set up a database schema with normal operation permissions on SQL Server, run the following SQL:
+
+.. sourcecode:: sql
+
     CREATE LOGIN [LOGIN] WITH PASSWORD = '[PASSWORD]';
     CREATE SCHEMA [SCHEMA];
     CREATE USER [USER] FOR LOGIN [LOGIN] WITH DEFAULT_SCHEMA = [SCHEMA];
@@ -133,6 +157,7 @@ To delete existing data from the database, run the following SQL:
     DROP TABLE [SCHEMA].NODE_CONTRACT_UPGRADES;
     DROP TABLE [SCHEMA].NODE_IDENTITIES;
     DROP TABLE [SCHEMA].NODE_NAMED_IDENTITIES;
+    DROP TABLE [SCHEMA].NODE_NETWORK_PARAMETERS;
     DROP TABLE [SCHEMA].NODE_PROPERTIES;
     DROP TABLE [SCHEMA].CONTRACT_CASH_STATES;
     DROP TABLE [SCHEMA].NODE_MUTUAL_EXCLUSION;
@@ -193,6 +218,7 @@ Corda node accesses the schema created by the administrator via a user with read
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_LINK_NODEINFO_PARTY TO [RESTRICTED_USER];
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_MESSAGE_IDS TO [RESTRICTED_USER];
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_NAMED_IDENTITIES TO [RESTRICTED_USER];
+    GRANT SELECT, INSERT, UPDATE, DELETE ON [USER]NODE_NETWORK_PARAMETERS TO [RESTRICTED_USER];
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_OUR_KEY_PAIRS TO [RESTRICTED_USER];
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_PROPERTIES TO [RESTRICTED_USER];
     GRANT SELECT, INSERT, UPDATE, DELETE ON [USER].NODE_SCHEDULED_STATES TO [RESTRICTED_USER];
@@ -289,6 +315,7 @@ To delete existing data from the database, run the following SQL:
     DROP TABLE [USER].NODE_CONTRACT_UPGRADES CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_IDENTITIES CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_NAMED_IDENTITIES CASCADE CONSTRAINTS;
+    DROP TABLE [USER].NODE_NETWORK_PARAMETERS CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_PROPERTIES CASCADE CONSTRAINTS;
     DROP TABLE [USER].CONTRACT_CASH_STATES CASCADE CONSTRAINTS;
     DROP TABLE [USER].NODE_MUTUAL_EXCLUSION CASCADE CONSTRAINTS;
@@ -510,6 +537,7 @@ Corda uses `Hikari Pool <https://github.com/brettwooldridge/HikariCP>`_ for crea
 To configure the connection pool any custom properties can be set in the `dataSourceProperties` section.
 
 For example:
+
 .. sourcecode:: groovy
 
     dataSourceProperties = {
