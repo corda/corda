@@ -103,5 +103,9 @@ Add a node to an existing production network
 --------------------------------------------
 
 +---------------------------------------------------------------------------------------------------------+
-| Contact R3 Solutions Engineering at support@r3.com                                                      |
+| Corda Network is a global production network of Corda nodes, operated by the independent                |
+| Corda Network Foundation. You can learn more here: https://corda.network/                               |
++---------------------------------------------------------------------------------------------------------+
+| Corda Testnet is a test network, operated for the community by R3. You can learn                        |
+| more here: https://testnet.corda.network                                                                |
 +---------------------------------------------------------------------------------------------------------+
