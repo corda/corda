@@ -3,7 +3,7 @@ Release notes for Corda 4
 
 .. _release_notes_v4_0:
 
-Here we are, 9 months and 1500 plus commits later... and it's a bouncing baby software release!
+Here we are, 11 months and 1500 plus commits later... and it's a bouncing baby software release!
 
 We are really proud to release Corda 4 to the open source community today. It's been a long time in
 the making, but we think you'll agree worth the wait.
@@ -29,9 +29,9 @@ Reference states
 ++++++++++++++++
 
 With Corda 4 we are introducing the concept of "reference input states". These allow smart contracts
-to read data from the ledger without simultaneously updating it. They're useful not only for any kind of
-reference data such as rates, healthcare codes, geographical information etc, but for anywhere
-you might have used a SELECT JOIN in a SQL based app.
+to reference data from the ledger in a transaction without simultaneously updating it. They're useful
+not only for any kind of reference data such as rates, healthcare codes, geographical information etc,
+but for anywhere you might have used a SELECT JOIN in a SQL based app.
 
 A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts
 of input and output states but, significantly, whose contract is not executed as part of the transaction
@@ -297,4 +297,4 @@ Miscellaneous changes
 
 To learn more about smaller changes, please read the :doc:`changelog`.
 
-Finally, we have added some new jokes. Thankyou and good night!
+Finally, we have added some new jokes. Thank you and good night!
