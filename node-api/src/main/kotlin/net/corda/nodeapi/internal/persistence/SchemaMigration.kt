@@ -14,7 +14,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
-import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -229,7 +228,7 @@ class SchemaMigration(
                 true
         }
 
-        val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated) = dataSource.connection.use {
+        val (isExistingDBWithoutLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3_2) = dataSource.connection.use {
 
             val existingDatabase = it.metaData.getTables(null, null, "NODE%", null).next()
 
@@ -238,9 +237,12 @@ class SchemaMigration(
             val isFinanceAppWithLiquibaseNotMigrated = isFinanceAppWithLiquibase // If Finance App is pre v4.0 then no need to migrate it so no need to check.
                     && existingDatabase
                     && (!hasLiquibase // Migrate as other tables.
-                         || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
+                    || (hasLiquibase && it.createStatement().use { noLiquibaseEntryLogForFinanceApp(it) })) // If Liquibase is already in the database check if Finance App schema log is missing.
 
-            Pair(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated)
+            // Enterprise only: the patch v3.2 baseline differs from v3.0 release
+            val migrationFromV3_2 = existingDatabase && !hasLiquibase && it.metaData.getColumns(null, null, "NODE_INFO_HOSTS", "HOST_NAME").next()
+
+            Triple(existingDatabase && !hasLiquibase, isFinanceAppWithLiquibaseNotMigrated, migrationFromV3_2)
         }
 
         if (isExistingDBWithoutLiquibase && existingCheckpoints)
@@ -252,12 +254,24 @@ class SchemaMigration(
             preV4Baseline.addAll(listOf("migration/common.changelog-init.xml",
                     "migration/node-info.changelog-init.xml",
                     "migration/node-info.changelog-v1.xml",
-                    "migration/node-info.changelog-v2.xml",
+                    "migration/node-info.changelog-v2.xml"))
+
+            // Enterprise only: the migration was already run as part of v3.2
+            if (migrationFromV3_2)
+                    preV4Baseline.addAll(listOf("migration/node-info.changelog-v3.xml"))
+
+            preV4Baseline.addAll(listOf(
                     "migration/node-core.changelog-init.xml",
                     "migration/node-core.changelog-v3.xml",
                     "migration/node-core.changelog-v4.xml",
                     "migration/node-core.changelog-v5.xml",
-                    "migration/node-core.changelog-pkey.xml",
+                    "migration/node-core.changelog-pkey.xml"))
+
+            // Enterprise only: the migration was already run as part of v3.2
+            if (migrationFromV3_2)
+                    preV4Baseline.addAll(listOf("migration/node-core.changelog-postgres-blob.xml"))
+
+            preV4Baseline.addAll(listOf(
                     "migration/vault-schema.changelog-init.xml",
                     "migration/vault-schema.changelog-v3.xml",
                     "migration/vault-schema.changelog-v4.xml",
