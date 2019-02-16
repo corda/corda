@@ -506,6 +506,8 @@ class VaultStateMigrationTest {
 
     @Test
     fun `State created with notary change transaction can be migrated`() {
+        // This test is a little bit of a hack - it checks that these states are migrated correctly by looking at params in the database,
+        // but these will not be there for V3 nodes. Handling for this must be tested manually.
         val cashTx = createCashTransaction(Cash(), 5.DOLLARS, BOB)
         val cashTx2 = createCashTransaction(Cash(), 10.DOLLARS, BOB)
         val notaryTx = createNotaryChangeTransaction(listOf(StateRef(cashTx.id, 0), StateRef(cashTx2.id, 0)), SecureHash.allOnesHash)

@@ -4,19 +4,26 @@ import net.corda.core.contracts.*
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
+import net.corda.core.internal.div
+import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.services.AttachmentStorage
 import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.NetworkParametersService
 import net.corda.core.node.services.TransactionStorage
+import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
 import net.corda.core.transactions.NotaryChangeLedgerTransaction
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.contextLogger
 import net.corda.node.internal.DBNetworkParametersStorage
+import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
+import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.SchemaMigration
+import java.nio.file.Paths
 import java.time.Clock
 import java.time.Duration
 
@@ -50,21 +57,40 @@ class MigrationServicesForResolution(
         )
     }
 
+    private fun getNetworkParametersFromFile(): SignedNetworkParameters? {
+        return try {
+            val dir = System.getProperty(SchemaMigration.NODE_BASE_DIR_KEY)
+            val path = Paths.get(dir) / NETWORK_PARAMS_FILE_NAME
+            path.readObject()
+        } catch (e: Exception) {
+            logger.info("Couldn't find network parameters file: ${e.message}. This is expected if the node is starting for the first time.")
+            null
+        }
+    }
+
     override val networkParametersService: NetworkParametersService = object : NetworkParametersService {
 
         private val storage = DBNetworkParametersStorage.createParametersMap(cacheFactory)
 
-        override val defaultHash: SecureHash = SecureHash.getZeroHash()
+        private val filedParams = getNetworkParametersFromFile()
+
+        override val defaultHash: SecureHash = filedParams?.raw?.hash ?: SecureHash.getZeroHash()
         override val currentHash: SecureHash =  cordaDB.transaction {
             storage.allPersisted().maxBy { it.second.verified().epoch }?.first ?: defaultHash
         }
 
         override fun lookup(hash: SecureHash): NetworkParameters? {
-            return cordaDB.transaction { storage[hash]?.verified() }
+            // Note that the parameters in any file shouldn't be put into the database - this will be done by the node on startup.
+            return if (hash == filedParams?.raw?.hash) {
+                filedParams.raw.deserialize()
+            } else {
+                cordaDB.transaction { storage[hash]?.verified() }
+            }
         }
     }
 
     override val networkParameters: NetworkParameters = networkParametersService.lookup(networkParametersService.currentHash)
+            ?: getNetworkParametersFromFile()?.raw?.deserialize()
             ?: defaultNetworkParameters()
 
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {

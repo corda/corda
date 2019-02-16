@@ -63,7 +63,7 @@ class VaultStateMigration : CordaMigration() {
         val state = try {
             servicesForResolution.loadState(stateRef)
         } catch (e: Exception) {
-            throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}")
+            throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}", e)
         }
         return StateAndRef(state, stateRef)
     }
@@ -94,7 +94,7 @@ class VaultStateMigration : CordaMigration() {
                         it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                     }
                 } catch (e: VaultStateMigrationException) {
-                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
+                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping", e)
                     statesSkipped++
                 }
             }
@@ -320,4 +320,4 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     }
 }
 
-class VaultStateMigrationException(msg: String) : Exception(msg)
+class VaultStateMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)
