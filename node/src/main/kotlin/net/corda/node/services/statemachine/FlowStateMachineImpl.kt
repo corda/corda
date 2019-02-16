@@ -156,7 +156,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
                 }
                 val continuation = processEvent(transitionExecutor, nextEvent)
                 when (continuation) {
-                    is FlowContinuation.Resume -> return continuation.result
+                    is FlowContinuation.Resume -> {
+                        openThreadLocalWormhole()
+                        return continuation.result
+                    }
                     is FlowContinuation.Throw -> {
                         continuation.throwable.fillInStackTrace()
                         throw continuation.throwable
@@ -208,13 +211,19 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         MDC.put("thread-id", Thread.currentThread().id.toString())
     }
 
+    private fun openThreadLocalWormhole() {
+        val threadLocal = getTransientField(TransientValues::database).hikariPoolThreadLocal
+        val valueFromThread = swappedOutThreadLocalValue(threadLocal)
+        if (valueFromThread != null) threadLocal.set(valueFromThread)
+    }
+
     @Suspendable
     override fun run() {
         logic.progressTracker?.currentStep = ProgressTracker.STARTING
         logic.stateMachine = this
 
+        openThreadLocalWormhole()
         setLoggingContext()
-
         initialiseFlow()
 
         logger.debug { "Calling flow: $logic" }
