@@ -104,7 +104,7 @@ Add a node to an existing production network
 
 +---------------------------------------------------------------------------------------------------------+
 | Corda Network is a global production network of Corda nodes, operated by the independent                |
-| Corda Network Foundation. You can learn more here: https://corda.network/                               |
+| Corda Network Foundation. You can learn more here: https://corda.network/participation/index.html       |
 +---------------------------------------------------------------------------------------------------------+
 | Corda Testnet is a test network, operated for the community by R3. You can learn                        |
 | more here: https://testnet.corda.network                                                                |
