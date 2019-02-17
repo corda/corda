@@ -24,7 +24,9 @@ The Corda configuration file uses the HOCON format which is a superset of JSON. 
 Please do NOT use double quotes (``"``) in configuration keys.
 
 Node setup will log ``Config files should not contain " in property names. Please fix: [key]`` as an error when it finds double quotes around keys.
-This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property ``"dataSourceProperties.dataSourceClassName" = "val"`` in :ref:`reference.conf` would be not overwritten by the property ``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
+This prevents configuration errors when mixing keys containing ``.`` wrapped with double quotes and without them e.g.: The property
+``"dataSourceProperties.dataSourceClassName" = "val"`` in `Reference.conf`_ would be not overwritten by the property
+``dataSourceProperties.dataSourceClassName = "val2"`` in *node.conf*.
 
 By default the node will fail to start in presence of unknown property keys.
 To alter this behaviour, the ``on-unknown-config-keys`` command-line argument can be set to ``IGNORE`` (default is ``FAIL``).
@@ -49,12 +51,13 @@ Configuration file fields
 
 .. note :: The available configuration fields are listed below in alphabetic order.
 
+.. _corda-configuration-file-fields:
+
 additionalP2PAddresses
   An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the :ref:`p2pAddress <corda_configuration_file_p2pAddress>`.
   Nodes can use this configuration option to advertise HA endpoints and aliases to external parties.
 
   *Default:* empty list
-
 
 attachmentContentCacheSizeMegaBytes
   Optionally specify how much memory should be used to cache attachment contents in memory.
@@ -100,7 +103,7 @@ custom
 
       *Default:* not defined
 
-.. _databaseConfiguration:
+.. _database_properties_ref:
 
 database
   Database configuration
@@ -131,9 +134,21 @@ database
     *Default:* CorDapp schema creation is controlled with ``initialiseSchema``.
 
 dataSourceProperties
-  This section is used to configure the jdbc connection and database driver used for the nodes persistence.
-  This is currently the only configuration that has been tested, although in the future full support for other storage layers will be validated.
-  Currently the defaults in ``/node/src/main/resources/reference.conf`` are as shown in the Reference.conf_ below.
+  This section is used to configure the JDBC connection and database driver used for the node's persistence.
+  :ref:`Node database <standalone_database_config_examples_ref>` contains example configurations for other database providers.
+  To add additional data source properties (for a specific JDBC driver) use the ``dataSource.`` prefix with the property name (e.g. `dataSource.customProperty = value`).
+
+  dataSourceClassName
+    JDBC Data Source class name.
+
+  dataSource.url
+    JDBC database URL.
+
+  dataSource.user
+    Database user.
+
+  dataSource.password
+    Database password.
 
   *Default:*
 
@@ -142,7 +157,7 @@ dataSourceProperties
     dataSourceClassName = org.h2.jdbcx.JdbcDataSource
     dataSource.url = "jdbc:h2:file:"${baseDirectory}"/persistence;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0;LOCK_TIMEOUT=10000"
     dataSource.user = sa
-    dataSource.password = ""```
+    dataSource.password = ""
 
 detectPublicIp
   This flag toggles the auto IP detection behaviour.
