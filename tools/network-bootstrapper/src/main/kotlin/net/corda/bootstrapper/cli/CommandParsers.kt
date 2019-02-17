@@ -17,12 +17,14 @@ open class CliParser {
     @Option(names = ["-d", "--nodes-directory"], description = ["The directory to search for nodes in"])
     var baseDirectory = File(System.getProperty("user.dir"))
 
-    @Option(names = ["-b", "--backend"], description = ["The backend to use when instantiating nodes"])
+    @Option(names = ["-b", "--backend"], description = ["The backend to use when instantiating nodes. Valid values: LOCAL_DOCKER and AZURE."])
     var backendType: Backend.BackendType = Backend.BackendType.LOCAL_DOCKER
-
 
     @Option(names = ["--add"], split = ":", description = ["The node to add. Format is <Name>:<X500>. Eg; \"Node1:O=Bank A, L=New York, C=US, OU=Org Unit, CN=Service Name\""])
     var nodesToAdd: MutableMap<String, String> = hashMapOf()
+
+    @Option(names = ["-h", "--help"], usageHelp = true, description = ["Display this help message"])
+    var usageHelpRequested: Boolean = false
 
     fun isNew(): Boolean {
         return nodesToAdd.isEmpty()
