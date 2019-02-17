@@ -109,7 +109,9 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         // Replace any existing alias. There can be only one.
         bashSettingsFile.addOrReplaceIfStartsWith("alias ${parent.alias}", command)
         val completionFileCommand = "for bcfile in ~/.completion/* ; do . \$bcfile; done"
-        bashSettingsFile.addIfNotExists(completionFileCommand)
+        if (generateAutoCompleteFile) {
+            bashSettingsFile.addIfNotExists(completionFileCommand)
+        }
         bashSettingsFile.updateAndBackupIfNecessary()
 
         // Get zsh settings file
@@ -117,7 +119,9 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         zshSettingsFile.addIfNotExists("autoload -U +X compinit && compinit")
         zshSettingsFile.addIfNotExists("autoload -U +X bashcompinit && bashcompinit")
         zshSettingsFile.addOrReplaceIfStartsWith("alias ${parent.alias}", command)
-        zshSettingsFile.addIfNotExists(completionFileCommand)
+        if (generateAutoCompleteFile) {
+            zshSettingsFile.addIfNotExists(completionFileCommand)
+        }
         zshSettingsFile.updateAndBackupIfNecessary()
 
         if (generateAutoCompleteFile) {
