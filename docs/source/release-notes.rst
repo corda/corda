@@ -292,12 +292,6 @@ The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the li
 as it is a legacy cipher family not supported by all native SSL/TLS implementations. We anticipate that this
 will have no impact on any deployed configurations.
 
-Confidential identities
-+++++++++++++++++++++++
-
-If any of your CorDapps use the experimental confidential-identities module then it also needs to be loaded as a separate CorDapp jar. This
-includes the demo finance CorDapp.
-
 Miscellaneous changes
 ~~~~~~~~~~~~~~~~~~~~~
 

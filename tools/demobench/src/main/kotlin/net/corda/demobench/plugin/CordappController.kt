@@ -22,8 +22,7 @@ class CordappController : Controller() {
     private val cordappDir: Path = jvm.applicationDir / NodeConfig.CORDAPP_DIR_NAME
     private val cordappJars = setOf(
             cordappDir / "$FINANCE_CONTRACTS_CORDAPP_FILENAME.jar",
-            cordappDir / "$FINANCE_WORKFLOWS_CORDAPP_FILENAME.jar",
-            cordappDir / "corda-confidential-identities.jar"
+            cordappDir / "$FINANCE_WORKFLOWS_CORDAPP_FILENAME.jar"
     )
 
     /**

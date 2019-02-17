@@ -138,11 +138,6 @@ distributions {
                 into 'cordapps'
                 fileMode = 0444
             }
-            from(project(':confidential-identities').tasks.jar) {
-                rename 'corda-confidential-identities(.*)', 'corda-confidential-identities.jar'
-                into 'cordapps'
-                fileMode = 0444
-            }
         }
     }
 }
