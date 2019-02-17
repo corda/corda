@@ -11,7 +11,6 @@ dependencies {
     // The bank of corda CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    cordapp project(':confidential-identities')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -35,7 +34,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
     nodeDefaults {
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
-        cordapp project(':confidential-identities')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"

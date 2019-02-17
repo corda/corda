@@ -9,7 +9,6 @@ dependencies {
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    cordapp project(':confidential-identities')
     cordapp project(':samples:bank-of-corda-demo')
     cordapp project(':samples:trader-demo:workflows-trader')
 
@@ -32,7 +31,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         }
         cordapp project(':finance:workflows')
         cordapp project(':finance:contracts')
-        cordapp project(':confidential-identities')
         cordapp project(':samples:trader-demo:workflows-trader')
     }
     directory "./build/nodes"

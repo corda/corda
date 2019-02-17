@@ -125,13 +125,3 @@ private constructor(private val otherSideSession: FlowSession?,
 data class CertificateOwnershipAssertion(val x500Name: CordaX500Name, val publicKey: PublicKey)
 
 open class SwapIdentitiesException @JvmOverloads constructor(message: String, cause: Throwable? = null) : FlowException(message, cause)
-
-// This only exists for backwards compatibility
-@InitiatedBy(SwapIdentitiesFlow::class)
-private class SwapIdentitiesHandler(private val otherSide: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        subFlow(SwapIdentitiesFlow(otherSide))
-        logger.warnOnce("Insecure API to swap anonymous identities was used by ${otherSide.counterparty} (${otherSide.getCounterpartyFlowInfo()})")
-    }
-}

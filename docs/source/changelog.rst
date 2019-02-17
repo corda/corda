@@ -74,9 +74,6 @@ Version 4.0
 
 * Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
 
-* The experimental confidential-identities is now a separate CorDapp and must now be loaded onto the node alongside any CorDapp that needs it.
-  This also means your gradle dependency for it should be ``cordapp`` and not ``cordaCompile``.
-
 * Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
 * Improved exception thrown by `AttachmentsClassLoader` when an attachment cannot be used because its uploader is not trusted.
