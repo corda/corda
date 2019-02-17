@@ -19,7 +19,6 @@ import net.corda.testing.core.BOB_NAME
 import net.corda.testing.core.singleIdentity
 import net.corda.testing.node.internal.*
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Test
 import rx.Observable
@@ -59,37 +58,6 @@ class FinalityHandlerTest {
         // again on restart
         bob.assertFlowSentForObservationDueToConstraintError(finalityHandlerId)
         assertThat(bob.getTransaction(stx.id)).isNull()
-    }
-
-    @Test
-    fun `disabled if there are no old CorDapps loaded`() {
-        val alice = mockNet.createNode(InternalMockNodeParameters(legalName = ALICE_NAME, additionalCordapps = FINANCE_CORDAPPS))
-
-        val bob = mockNet.createNode(InternalMockNodeParameters(
-                legalName = BOB_NAME,
-                // Make sure the target version is 4, and not the current platform version which may be greater
-                additionalCordapps = setOf(cordappWithPackages("net.corda.finance").copy(targetPlatformVersion = 4))
-        ))
-
-        val stx = alice.issueCashTo(bob)
-        val finalityFuture = alice.finaliseWithOldApi(stx)
-
-        val record = bob.medicalRecordsOfType<MedicalRecord.SessionInit>()
-                .toBlocking()
-                .first()
-        assertThat(record.outcome).isEqualTo(Outcome.OVERNIGHT_OBSERVATION)
-        assertThat(record.sender).isEqualTo(alice.info.singleIdentity())
-        assertThat(record.initiatorFlowClassName).isEqualTo(FinalityFlow::class.java.name)
-
-        assertThat(bob.getTransaction(stx.id)).isNull()
-
-        // Drop the session-init so that Alice gets the error message
-        assertThat(finalityFuture).isNotDone()
-        bob.smm.flowHospital.dropSessionInit(record.id)
-        mockNet.runNetwork()
-        assertThatThrownBy {
-            finalityFuture.getOrThrow()
-        }.hasMessageContaining("Counterparty attempting to use the old insecure API of FinalityFlow")
     }
 
     private fun TestStartedNode.issueCashTo(recipient: TestStartedNode): SignedTransaction {

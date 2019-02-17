@@ -47,9 +47,6 @@ class StaffedFlowHospital(private val flowMessaging: FlowMessaging, private val 
             // installed on restart, at which point the message will be able proceed as normal. If not then it will need
             // to be dropped manually.
             Outcome.OVERNIGHT_OBSERVATION
-        } else if (error is SessionRejectException.FinalityHandlerDisabled) {
-            // TODO We need a way to be able to give the green light to such a session-init message
-            Outcome.OVERNIGHT_OBSERVATION
         } else {
             Outcome.UNTREATABLE
         }
