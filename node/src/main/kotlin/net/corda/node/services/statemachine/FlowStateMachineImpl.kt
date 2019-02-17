@@ -213,8 +213,10 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
 
     private fun openThreadLocalWormhole() {
         val threadLocal = getTransientField(TransientValues::database).hikariPoolThreadLocal
-        val valueFromThread = swappedOutThreadLocalValue(threadLocal)
-        if (valueFromThread != null) threadLocal.set(valueFromThread)
+        if (threadLocal != null) {
+            val valueFromThread = swappedOutThreadLocalValue(threadLocal)
+            if (valueFromThread != null) threadLocal!!.set(valueFromThread)
+        }
     }
 
     @Suspendable

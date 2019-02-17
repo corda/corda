@@ -8,6 +8,7 @@ private val fiberThreadLocalsField: Field = Fiber::class.java.getDeclaredField("
 
 private fun <V> Fiber<V>.swappedOutThreadLocals(): Any = fiberThreadLocalsField.get(this)
 
+// TODO: This method uses a built-in Quasar function to make a map of all ThreadLocals. This is probably inefficient, but the only API readily available.
 fun <V, T> Fiber<V>.swappedOutThreadLocalValue(threadLocal: ThreadLocal<T>): T? {
     val threadLocals = swappedOutThreadLocals()
     return ThreadAccess.toMap(threadLocals)[threadLocal] as T?

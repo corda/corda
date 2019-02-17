@@ -259,18 +259,22 @@ class CordaPersistence(
         (_dataSource as? AutoCloseable)?.close()
     }
 
-    val hikariPoolThreadLocal: ThreadLocal<List<Object>> by lazy(LazyThreadSafetyMode.PUBLICATION) {
-        val hikariDataSource = dataSource as HikariDataSource
-        val poolField: Field = HikariDataSource::class.java.getDeclaredField("pool")
-        poolField.isAccessible = true
-        val pool: HikariPool = poolField.get(hikariDataSource) as HikariPool
-        val connectionBagField: Field = HikariPool::class.java.getDeclaredField("connectionBag")
-        connectionBagField.isAccessible = true
-        val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
-        val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadList")
-        threadListField.isAccessible = true
-        val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
-        threadList
+    val hikariPoolThreadLocal: ThreadLocal<List<Object>>? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val hikariDataSource = dataSource as? HikariDataSource
+        if (hikariDataSource == null) {
+            null
+        } else {
+            val poolField: Field = HikariDataSource::class.java.getDeclaredField("pool")
+            poolField.isAccessible = true
+            val pool: HikariPool = poolField.get(hikariDataSource) as HikariPool
+            val connectionBagField: Field = HikariPool::class.java.getDeclaredField("connectionBag")
+            connectionBagField.isAccessible = true
+            val connectionBag: ConcurrentBag<ConcurrentBag.IConcurrentBagEntry> = connectionBagField.get(pool) as ConcurrentBag<ConcurrentBag.IConcurrentBagEntry>
+            val threadListField: Field = ConcurrentBag::class.java.getDeclaredField("threadList")
+            threadListField.isAccessible = true
+            val threadList: ThreadLocal<List<Object>> = threadListField.get(connectionBag) as ThreadLocal<List<Object>>
+            threadList
+        }
     }
 }
 
