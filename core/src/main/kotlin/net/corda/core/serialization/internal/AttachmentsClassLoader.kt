@@ -1,7 +1,5 @@
 package net.corda.core.serialization.internal
 
-import net.corda.core.CordaException
-import net.corda.core.KeepForDJVM
 import net.corda.core.contracts.Attachment
 import net.corda.core.contracts.ContractAttachment
 import net.corda.core.contracts.TransactionVerificationException
@@ -292,7 +290,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
  * whitelisted classes.
  */
 @VisibleForTesting
-internal object AttachmentsClassLoaderBuilder {
+object AttachmentsClassLoaderBuilder {
     private const val CACHE_SIZE = 1000
 
     // We use a set here because the ordering of attachments doesn't affect code execution, due to the no

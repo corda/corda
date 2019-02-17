@@ -8,11 +8,8 @@ import liquibase.exception.ValidationErrors
 import liquibase.resource.ResourceAccessor
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.schemas.MappedSchema
-import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.identity.PersistentIdentityService
-import net.corda.node.services.persistence.AbstractPartyToX500NameAsStringConverter
-import net.corda.node.services.persistence.DBTransactionStorage
-import net.corda.node.services.persistence.PublicKeyToTextConverter
+import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
@@ -40,10 +37,10 @@ abstract class CordaMigration : CustomTaskChange {
 
     private lateinit var _cordaDB: CordaPersistence
 
-    val dbTransactions: WritableTransactionStorage
-        get() = _dbTransactions
+    val servicesForResolution: MigrationServicesForResolution
+        get() = _servicesForResolution
 
-    private lateinit var _dbTransactions: WritableTransactionStorage
+    private lateinit var _servicesForResolution: MigrationServicesForResolution
 
     /**
      * Initialise a subset of node services so that data from these can be used to perform migrations.
@@ -65,7 +62,9 @@ abstract class CordaMigration : CustomTaskChange {
 
         cordaDB.transaction {
             identityService.ourNames = setOf(ourName)
-            _dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
+             val dbTransactions = DBTransactionStorage(cordaDB, cacheFactory)
+             val attachmentsService = NodeAttachmentService(metricRegistry, cacheFactory, cordaDB)
+            _servicesForResolution = MigrationServicesForResolution(identityService, attachmentsService, dbTransactions, cordaDB, cacheFactory)
         }
     }
 
@@ -143,3 +142,5 @@ class MigrationDataSource(val database: Database) : DataSource {
         throw SQLFeatureNotSupportedException()
     }
 }
+
+class MigrationException(msg: String?, cause: Exception? = null): Exception(msg, cause)
