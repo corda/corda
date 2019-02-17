@@ -86,7 +86,6 @@ We look forward to seeing what you can do with Corda!
    :if_tag: htmlmode
 
    contributing-index.rst
-   corda-repo-layout.rst
    deterministic-modules.rst
    changelog
 
