@@ -1,6 +1,7 @@
 package net.corda.cliutils
 
 import net.corda.core.internal.*
+import net.corda.core.utilities.loggerFor
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang.SystemUtils
 import picocli.CommandLine
@@ -129,10 +130,10 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         return ExitCodes.SUCCESS
     }
 
-    private fun declaredBashVersion(): String = execCommand("bash -c 'echo \$BASH_VERSION'")
+    private fun declaredBashVersion(): String = execCommand("bash", "-c", "echo \$BASH_VERSION")
 
     private fun installedShell(): ShellType {
-        val path = execCommand("bash -c 'echo \$SHELL'")
+        val path = execCommand("bash", "-c", "echo \$SHELL").trim()
         return when {
             path.endsWith("/zsh") -> ShellType.ZSH
             path.endsWith("/bash") -> ShellType.BASH
@@ -144,9 +145,14 @@ private class ShellExtensionsGenerator(val parent: CordaCliWrapper) {
         ZSH, BASH, OTHER
     }
 
-    private fun execCommand(command: String): String {
-        val process = ProcessBuilder(command)
-        return IOUtils.toString(process.start().inputStream, Charsets.UTF_8)
+    private fun execCommand(vararg commandAndArgs: String): String {
+        return try {
+            val process = ProcessBuilder(*commandAndArgs)
+            IOUtils.toString(process.start().inputStream, Charsets.UTF_8)
+        } catch (exception: Exception) {
+            loggerFor<InstallShellExtensionsParser>().warn("Failed to run command: ${commandAndArgs.joinToString(" ")}; $exception")
+            ""
+        }
     }
 
     fun checkForAutoCompleteUpdate() {
