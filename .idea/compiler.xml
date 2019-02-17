@@ -291,6 +291,8 @@
       <module name="workflows_integrationTest" target="1.8" />
       <module name="workflows_main" target="1.8" />
       <module name="workflows_test" target="1.8" />
+      <module name="worldmap_main" target="1.8" />
+      <module name="worldmap_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
