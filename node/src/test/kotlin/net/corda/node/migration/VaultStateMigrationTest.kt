@@ -430,7 +430,7 @@ class VaultStateMigrationTest {
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
-    @Test
+    @Test(expected = VaultStateMigrationException::class)
     fun `State with corresponding transaction missing is skipped`() {
         val cash = Cash()
         val unknownTx = createCashTransaction(cash, 100.DOLLARS, BOB)
@@ -439,7 +439,6 @@ class VaultStateMigrationTest {
         addCashStates(10, BOB)
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
-        assertEquals(10, getStatePartyCount())
     }
 
     @Test
@@ -453,8 +452,8 @@ class VaultStateMigrationTest {
         assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
     }
 
-    @Test
-    fun `Null database causes migration to be ignored`() {
+    @Test(expected = VaultStateMigrationException::class)
+    fun `Null database causes migration to fail`() {
         val migration = VaultStateMigration()
         // Just check this does not throw an exception
         migration.execute(null)

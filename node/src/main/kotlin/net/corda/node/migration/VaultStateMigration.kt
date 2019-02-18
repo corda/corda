@@ -50,8 +50,8 @@ class VaultStateMigration : CordaMigration() {
             // This should only happen if there was no attachment that could be used to deserialise the output states, and the state was
             // serialised such that the participants list cannot be accessed (participants is calculated and not marked as a
             // SerializableCalculatedProperty.
-            throw VaultStateMigrationException("Cannot add state parties as state class is not on the classpath " +
-                    "and participants cannot be synthesised")
+            throw VaultStateMigrationException("Cannot add state parties for state ${stateAndRef.ref} as state class is not on the " +
+                    "classpath and participants cannot be synthesised")
         }
     }
 
@@ -71,8 +71,8 @@ class VaultStateMigration : CordaMigration() {
     override fun execute(database: Database?) {
         logger.info("Migrating vault state data to V4 tables")
         if (database == null) {
-            logger.warn("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
-            return
+            logger.error("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
+            throw VaultStateMigrationException("Cannot migrate vault states as liquibase failed to provide a suitable database connection")
         }
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
         var statesSkipped = 0
@@ -98,13 +98,16 @@ class VaultStateMigration : CordaMigration() {
                         it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                     }
                 } catch (e: VaultStateMigrationException) {
-                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping", e)
+                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping. This will cause the " +
+                            "migration to fail.", e)
                     statesSkipped++
                 }
             }
         }
         if (statesSkipped > 0) {
             logger.error("$statesSkipped states could not be migrated as there was no class available for them.")
+            throw VaultStateMigrationException("Failed to migrate $statesSkipped states in the vault. Check the logs for details of the " +
+                "error for each state.")
         }
         logger.info("Finished performing vault state data migration for ${persistentStates.numStates - statesSkipped} states")
     }
