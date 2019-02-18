@@ -34,7 +34,7 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
@@ -762,7 +762,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     protected open fun startDatabase() {
         val props = configuration.dataSourceProperties
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
-        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, configuration.database, schemaService.internalSchemas(), metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1074,10 +1074,10 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, jdbcUrl, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null, ourName: CordaX500Name) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir, ourName)
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L })
         start(dataSource)
     } catch (ex: Exception) {

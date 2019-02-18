@@ -21,7 +21,7 @@ import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.ServicesForResolutionImpl
 import net.corda.node.internal.cordapp.JarScanningCordappLoader
 import net.corda.node.services.api.*
