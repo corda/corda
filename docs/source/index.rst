@@ -69,7 +69,7 @@ We look forward to seeing what you can do with Corda!
    :if_tag: htmlmode
 
    corda-network/index.md
-   corda-network/uat.md
+   corda-network/UAT.md
 
 .. conditional-toctree::
    :caption: Contents
