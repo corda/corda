@@ -49,7 +49,7 @@ open class SharedNodeCmdLineOptions {
     var devMode: Boolean? = null
 
     open fun parseConfiguration(configuration: Config): Valid<NodeConfiguration> {
-        val option = Configuration.Validation.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
+        val option = Configuration.Options(strict = unknownConfigKeysPolicy == UnknownConfigKeysPolicy.FAIL)
         return configuration.parseAsNodeConfiguration(option)
     }
 

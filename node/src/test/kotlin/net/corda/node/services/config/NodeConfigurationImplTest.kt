@@ -1,10 +1,8 @@
 package net.corda.node.services.config
 
-import com.typesafe.config.Config
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.ConfigParseOptions
-import com.typesafe.config.ConfigValueFactory
+import com.typesafe.config.*
 import com.zaxxer.hikari.HikariConfig
+import net.corda.common.configuration.parsing.internal.ConfigObfuscator
 import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.internal.toPath
 import net.corda.core.utilities.NetworkHostAndPort
@@ -179,7 +177,7 @@ class NodeConfigurationImplTest {
 
     @Test
     fun `mutual exclusion machineName set to default if not explicitly set`() {
-        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(options = Configuration.Validation.Options(strict = false)).value()
+        val config = getConfig("test-config-mutualExclusion-noMachineName.conf").parseAsNodeConfiguration(options = Configuration.Options(strict = false)).value()
         assertEquals(InetAddress.getLocalHost().hostName, config.enterpriseConfiguration.mutualExclusionConfiguration.machineName)
     }
 
@@ -295,6 +293,27 @@ class NodeConfigurationImplTest {
         rawConfig = rawConfig.withValue("jmxReporterType", ConfigValueFactory.fromAnyRef("JOLOKIA"))
         val nodeConfig = rawConfig.parseAsNodeConfiguration().value()
         assertEquals(JmxReporterType.JOLOKIA.toString(), nodeConfig.jmxReporterType.toString())
+    }
+
+    @Test
+    fun `can deobfuscate config fields`() {
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("emailAddress" to "<{7JW92M2zxMtf8LVhHA3B1Q==:nGBvd90AdSs7psEJqabBURvbpggPLBqQIFqTPthoU3il}>")))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration(Configuration.Options(strict = true, hardwareAddress = byteArrayOf(0, 0, 0, 0, 0, 0), seed = byteArrayOf(0))).value()
+        assertEquals("admin@company.com", nodeConfig.emailAddress)
+    }
+
+    @Test(expected = ConfigObfuscator.DeobfuscationFailedForPathException::class)
+    fun `cannot deobfuscate config fields without the right hardware address`() {
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("emailAddress" to "<{7JW92M2zxMtf8LVhHA3B1Q==:nGBvd90AdSs7psEJqabBURvbpggPLBqQIFqTPthoU3il}>")))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration(Configuration.Options(strict = true, hardwareAddress = byteArrayOf(1, 2, 3, 4, 5, 6), seed = byteArrayOf(0))).value()
+        assertEquals("admin@company.com", nodeConfig.emailAddress)
+    }
+
+    @Test
+    fun `can deobfuscate config fields in nested objects`() {
+        val rawConfig = getConfig("working-config.conf", ConfigFactory.parseMap(mapOf("dataSourceProperties.dataSource.password" to "<{I+/c+bIYfIrhxjyP0ANK6Q==:7f46ICS1hogaB3Vfaz47xCH6zgI=}>")))
+        val nodeConfig = rawConfig.parseAsNodeConfiguration(Configuration.Options(strict = true, hardwareAddress = byteArrayOf(0, 0, 0, 0, 0, 0), seed = byteArrayOf(0))).value()
+        assertEquals("demo", nodeConfig.dataSourceProperties["dataSource.password"])
     }
 
     private fun configDebugOptions(devMode: Boolean, devModeOptions: DevModeOptions?): NodeConfigurationImpl {

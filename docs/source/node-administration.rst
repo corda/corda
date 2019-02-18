@@ -195,7 +195,7 @@ Take a simple node config that wishes to protect the node cryptographic stores:
     trustStorePassword = ${TRUST_PASS}
     p2pAddress = "localhost:12345"
     devMode = false
-     networkServices {
+    networkServices {
         doormanURL = "https://cz.example.com"
         networkMapURL = "https://cz.example.com"
     }
@@ -205,7 +205,7 @@ The below examples are of loading Corda with the KEY_PASS and TRUST_PASS variabl
 
 
 Bash
-~~~~
+++++
 
 .. sourcecode:: shell
 
@@ -215,7 +215,7 @@ Bash
 
 
 Windows PowerShell
-~~~~~~~~~~~~~~~~~~
+++++++++++++++++++
 
 .. sourcecode:: shell
 
@@ -229,6 +229,27 @@ For launching on Windows without PowerShell, it is not possible to perform comma
     SET KEY_PASS=mypassword & SET TRUST_PASS=mypassword & java -jar corda.jar
 
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
+
+
+Obfuscating sensitive data
+--------------------------
+
+Instead of hiding sensitive data using environment variables, another option is to use configuration obfuscation. Corda ships with a :doc:`tools-config-obfuscator` which allows the user to censor string properties in the configuration file. The config would look something like this:
+
+.. parsed-literal::
+
+    keyStorePassword = "<{Kwby0G9c/+jxJM+c7Vaiow==:pdy+UaakdFSmmh8WWuBOoQ==}>"
+    trustStorePassword = "<{Kwby0G9c/+jxJM+c7Vaiow==:pdy+UaakdFSmmh8WWuBOoQ==}>"
+    p2pAddress = "localhost:12345"
+    devMode = false
+
+The values for ``keyStorePassword`` and ``trustStorePassword`` in the above example are encrypted, using a key that is tied to the hosting machine's primary hardware address. The implications of this is that:
+
+ * The configuration file is rendered unusable on other machines without manually decrypting obfuscated fields beforehand (since the hardware address would be different).
+ * Sensitive data is unreadable without additional processing.
+ * It becomes harder for adversaries to trawl for passwords and sensitive data on disk.
+
+.. warning:: This method does not offer full protection. An adversary who knows the intrinsics of the obfuscation method used, can still decipher the sensitive bits.
 
 
 Backup recommendations

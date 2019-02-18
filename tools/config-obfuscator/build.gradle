@@ -1,0 +1,58 @@
+apply plugin: 'kotlin'
+apply plugin: 'application'
+
+mainClassName = 'net.corda.configobfuscator.ProgramKt'
+
+apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'net.corda.plugins.publish-utils'
+apply plugin: 'com.jfrog.artifactory'
+
+description 'Configuration obfuscation tool for Corda installations'
+
+ext.commons_logging_version = '1.2'
+ext.commons_cli_version = '1.4'
+
+configurations {
+    runtimeDependency
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "commons-cli:commons-cli:$commons_cli_version"
+    compile project(':common-configuration-parsing')
+    compile project(':tools:cliutils')
+
+    compile group: "org.bouncycastle", name: "bcprov-jdk15on", version: bouncycastle_version
+    compile group: "org.bouncycastle", name: "bcpkix-jdk15on", version: bouncycastle_version
+
+    runtimeDependency "commons-logging:commons-logging:$commons_logging_version"
+}
+
+processResources {
+    from file("$rootDir/config/dev/log4j2.xml")
+}
+
+shadowJar.configurations = [configurations.compile, configurations.runtimeDependency]
+
+shadowJar {
+    baseName = 'corda-tools-config-obfuscator'
+}
+
+task buildConfigTool(dependsOn: shadowJar)
+assemble.dependsOn buildConfigTool
+
+artifacts {
+    publish shadowJar {
+        classifier = ''
+    }
+}
+
+jar {
+    classifier 'ignore'
+    enabled = false
+}
+
+publish {
+    disableDefaultJar = true
+    name 'corda-tools-config-obfuscator'
+}

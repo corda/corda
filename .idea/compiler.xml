@@ -58,6 +58,8 @@
       <module name="common-validation_test" target="1.8" />
       <module name="confidential-identities_main" target="1.8" />
       <module name="confidential-identities_test" target="1.8" />
+      <module name="config-obfuscator_main" target="1.8" />
+      <module name="config-obfuscator_test" target="1.8" />
       <module name="consensus-benchmark_main" target="1.8" />
       <module name="consensus-benchmark_test" target="1.8" />
       <module name="contract_main" target="1.8" />
@@ -378,6 +380,8 @@
       <module name="workflows_integrationTest" target="1.8" />
       <module name="workflows_main" target="1.8" />
       <module name="workflows_test" target="1.8" />
+      <module name="worldmap_main" target="1.8" />
+      <module name="worldmap_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

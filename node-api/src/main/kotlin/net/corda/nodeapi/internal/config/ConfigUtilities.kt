@@ -3,6 +3,7 @@
 package net.corda.nodeapi.internal.config
 
 import com.typesafe.config.*
+import net.corda.common.configuration.parsing.internal.Configuration
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.isStatic
 import net.corda.core.internal.noneOrSingle
@@ -111,7 +112,7 @@ fun Config.toProperties(): Properties {
     return entrySet().associateByTo(
             Properties(),
             { ConfigUtil.splitPath(it.key).joinToString(".") },
-            { it.value.unwrapped().toString() })
+            { Configuration.deobfuscate(it.value.unwrapped().toString(), null, null, it.key) })
 }
 
 private fun <T : Any> Config.getValueInternal(path: String, type: KType, onUnknownKeys: ((Set<String>, logger: Logger) -> Unit), nestedPath: String? = null): T {
@@ -123,7 +124,7 @@ private fun Config.getSingleValue(path: String, type: KType, onUnknownKeys: (Set
     val typeClass = type.jvmErasure
     return try {
         when (typeClass) {
-            String::class -> getString(path)
+            String::class -> Configuration.deobfuscate(getString(path), null, null, path)
             Int::class -> getInt(path)
             Long::class -> getLong(path)
             Double::class -> getDouble(path)
@@ -171,7 +172,7 @@ private fun Config.getCollectionValue(path: String, type: KType, onUnknownKeys: 
     }
     val values: List<Any> = try {
         when (elementClass) {
-            String::class -> getStringList(path)
+            String::class -> getStringList(path).map { Configuration.deobfuscate(it, null, null, path) }
             Int::class -> getIntList(path)
             Long::class -> getLongList(path)
             Double::class -> getDoubleList(path)

@@ -16,7 +16,7 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
         }
     }
 
-    override fun validate(target: Config, options: Configuration.Validation.Options): Valid<Config> {
+    override fun validate(target: Config, options: Configuration.Options): Valid<Config> {
 
         val propertyErrors = properties.flatMap { property ->
             property.validate(target, options).errors
@@ -47,9 +47,9 @@ internal class Schema(override val name: String?, unorderedProperties: Iterable<
         return description.toString()
     }
 
-    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue): ConfigValue {
+    override fun describe(configuration: Config, serialiseValue: (Any?) -> ConfigValue, options: Configuration.Options): ConfigValue {
 
-        return properties.asSequence().map { it.key to it.describe(configuration, serialiseValue) }.filter { it.second != null }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
+        return properties.asSequence().map { it.key to it.describe(configuration, serialiseValue, options) }.filter { it.second != null }.fold(configObject()) { config, (key, value) -> config.withValue(key, value) }
     }
 
     override fun equals(other: Any?): Boolean {

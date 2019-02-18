@@ -13,4 +13,5 @@ wish to try the :doc:`blob-inspector`.
    demobench
    node-explorer
    ha-utilities
+   tools-config-obfuscator
 

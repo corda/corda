@@ -421,6 +421,7 @@ bintrayConfig {
             'corda-tools-explorer',
             'corda-tools-network-bootstrapper',
             'corda-tools-health-survey',
+            'corda-tools-config-obfuscator',
             'corda-tools-ha-utilities',
             'corda-firewall',
             'corda-ptflows',

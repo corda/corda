@@ -2,13 +2,7 @@ package net.corda.node.services.config.schema.v1
 
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigException
-import net.corda.common.configuration.parsing.internal.Configuration
-import net.corda.common.configuration.parsing.internal.get
-import net.corda.common.configuration.parsing.internal.listOrEmpty
-import net.corda.common.configuration.parsing.internal.map
-import net.corda.common.configuration.parsing.internal.mapValid
-import net.corda.common.configuration.parsing.internal.nested
-import net.corda.common.configuration.parsing.internal.toValidationError
+import net.corda.common.configuration.parsing.internal.*
 import net.corda.common.validation.internal.Validated.Companion.invalid
 import net.corda.common.validation.internal.Validated.Companion.valid
 import net.corda.node.services.config.JmxReporterType
@@ -84,66 +78,66 @@ internal object V1NodeConfigurationSpec : Configuration.Specification<NodeConfig
     private val graphiteOptions by nested(GraphiteOptionsSpec).optional()
     private val enterpriseConfiguration by nested(EnterpriseConfigurationSpec)
 
-    override fun parseValid(configuration: Config): Valid<NodeConfiguration> {
-
-        val messagingServerExternal = configuration[messagingServerExternal] ?: Defaults.messagingServerExternal(configuration[messagingServerAddress])
-        val database = configuration[database] ?: Defaults.database(configuration[devMode])
-        val cordappDirectories = configuration[cordappDirectories] ?: Defaults.cordappsDirectories(configuration[baseDirectory])
+    override fun parseValid(configuration: Config, options: Configuration.Options): Valid<NodeConfiguration> {
+        val config = configuration.withOptions(options)
+        val messagingServerExternal = config[messagingServerExternal] ?: Defaults.messagingServerExternal(config[messagingServerAddress])
+        val database = config[database] ?: Defaults.database(config[devMode])
+        val cordappDirectories = config[cordappDirectories] ?: Defaults.cordappsDirectories(config[baseDirectory])
         val result = try {
             valid<NodeConfigurationImpl, Configuration.Validation.Error>(NodeConfigurationImpl(
-                    baseDirectory = configuration[baseDirectory],
-                    myLegalName = configuration[myLegalName],
-                    emailAddress = configuration[emailAddress],
-                    p2pAddress = configuration[p2pAddress],
-                    keyStorePassword = configuration[keyStorePassword],
-                    trustStorePassword = configuration[trustStorePassword],
-                    crlCheckSoftFail = configuration[crlCheckSoftFail],
-                    dataSourceProperties = configuration[dataSourceProperties],
-                    rpcUsers = configuration[rpcUsers],
-                    verifierType = configuration[verifierType],
-                    flowTimeout = configuration[flowTimeout],
-                    rpcSettings = configuration[rpcSettings],
-                    messagingServerAddress = configuration[messagingServerAddress],
-                    notary = configuration[notary],
-                    flowOverrides = configuration[flowOverrides],
-                    additionalP2PAddresses = configuration[additionalP2PAddresses],
-                    additionalNodeInfoPollingFrequencyMsec = configuration[additionalNodeInfoPollingFrequencyMsec],
-                    jmxMonitoringHttpPort = configuration[jmxMonitoringHttpPort],
-                    security = configuration[security],
-                    devMode = configuration[devMode],
-                    devModeOptions = configuration[devModeOptions],
-                    compatibilityZoneURL = configuration[compatibilityZoneURL],
-                    networkServices = configuration[networkServices],
-                    certificateChainCheckPolicies = configuration[certificateChainCheckPolicies],
+                    baseDirectory = config[baseDirectory],
+                    myLegalName = config[myLegalName],
+                    emailAddress = config[emailAddress],
+                    p2pAddress = config[p2pAddress],
+                    keyStorePassword = config[keyStorePassword],
+                    trustStorePassword = config[trustStorePassword],
+                    crlCheckSoftFail = config[crlCheckSoftFail],
+                    dataSourceProperties = config[dataSourceProperties],
+                    rpcUsers = config[rpcUsers],
+                    verifierType = config[verifierType],
+                    flowTimeout = config[flowTimeout],
+                    rpcSettings = config[rpcSettings],
+                    messagingServerAddress = config[messagingServerAddress],
+                    notary = config[notary],
+                    flowOverrides = config[flowOverrides],
+                    additionalP2PAddresses = config[additionalP2PAddresses],
+                    additionalNodeInfoPollingFrequencyMsec = config[additionalNodeInfoPollingFrequencyMsec],
+                    jmxMonitoringHttpPort = config[jmxMonitoringHttpPort],
+                    security = config[security],
+                    devMode = config[devMode],
+                    devModeOptions = config[devModeOptions],
+                    compatibilityZoneURL = config[compatibilityZoneURL],
+                    networkServices = config[networkServices],
+                    certificateChainCheckPolicies = config[certificateChainCheckPolicies],
                     messagingServerExternal = messagingServerExternal,
-                    useTestClock = configuration[useTestClock],
-                    lazyBridgeStart = configuration[lazyBridgeStart],
-                    detectPublicIp = configuration[detectPublicIp],
-                    sshd = configuration[sshd],
+                    useTestClock = config[useTestClock],
+                    lazyBridgeStart = config[lazyBridgeStart],
+                    detectPublicIp = config[detectPublicIp],
+                    sshd = config[sshd],
                     database = database,
-                    noLocalShell = configuration[noLocalShell],
-                    attachmentCacheBound = configuration[attachmentCacheBound],
-                    extraNetworkMapKeys = configuration[extraNetworkMapKeys],
-                    tlsCertCrlDistPoint = configuration[tlsCertCrlDistPoint],
-                    tlsCertCrlIssuer = configuration[tlsCertCrlIssuer],
-                    h2Settings = configuration[h2Settings],
-                    flowMonitorPeriodMillis = configuration[flowMonitorPeriodMillis],
-                    flowMonitorSuspensionLoggingThresholdMillis = configuration[flowMonitorSuspensionLoggingThresholdMillis],
-                    jmxReporterType = configuration[jmxReporterType],
-                    rpcAddress = configuration[rpcAddress],
-                    transactionCacheSizeMegaBytes = configuration[transactionCacheSizeMegaBytes],
-                    attachmentContentCacheSizeMegaBytes = configuration[attachmentContentCacheSizeMegaBytes],
-                    h2port = configuration[h2port],
-                    jarDirs = configuration[jarDirs],
+                    noLocalShell = config[noLocalShell],
+                    attachmentCacheBound = config[attachmentCacheBound],
+                    extraNetworkMapKeys = config[extraNetworkMapKeys],
+                    tlsCertCrlDistPoint = config[tlsCertCrlDistPoint],
+                    tlsCertCrlIssuer = config[tlsCertCrlIssuer],
+                    h2Settings = config[h2Settings],
+                    flowMonitorPeriodMillis = config[flowMonitorPeriodMillis],
+                    flowMonitorSuspensionLoggingThresholdMillis = config[flowMonitorSuspensionLoggingThresholdMillis],
+                    jmxReporterType = config[jmxReporterType],
+                    rpcAddress = config[rpcAddress],
+                    transactionCacheSizeMegaBytes = config[transactionCacheSizeMegaBytes],
+                    attachmentContentCacheSizeMegaBytes = config[attachmentContentCacheSizeMegaBytes],
+                    h2port = config[h2port],
+                    jarDirs = config[jarDirs],
                     cordappDirectories = cordappDirectories,
-                    cordappSignerKeyFingerprintBlacklist = configuration[cordappSignerKeyFingerprintBlacklist],
-                    cryptoServiceName = configuration[cryptoServiceName],
-                    cryptoServiceConf = configuration[cryptoServiceConf],
-                    relay = configuration[relay],
-                    enableSNI = configuration[enableSNI],
-                    useOpenSsl = configuration[useOpenSsl],
-                    graphiteOptions = configuration[graphiteOptions],
-                    enterpriseConfiguration = configuration[enterpriseConfiguration]
+                    cordappSignerKeyFingerprintBlacklist = config[cordappSignerKeyFingerprintBlacklist],
+                    cryptoServiceName = config[cryptoServiceName],
+                    cryptoServiceConf = config[cryptoServiceConf],
+                    relay = config[relay],
+                    enableSNI = config[enableSNI],
+                    useOpenSsl = config[useOpenSsl],
+                    graphiteOptions = config[graphiteOptions],
+                    enterpriseConfiguration = config[enterpriseConfiguration]
             ))
         } catch (e: Exception) {
             return when (e) {

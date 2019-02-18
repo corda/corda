@@ -14,6 +14,8 @@ class PropertyTest {
         val key = "a.b.c"
         val value = 1L
         val configuration = configObject(key to value).toConfig()
+        val options = Configuration.Options.defaults
+        val config = configuration.withOptions(options)
 
         val property = Configuration.Property.Definition.long(key)
         println(property)
@@ -21,8 +23,8 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value)
-        assertThat(configuration[property]).isEqualTo(value)
+        assertThat(property.valueIn(configuration, options)).isEqualTo(value)
+        assertThat(config[property]).isEqualTo(value)
     }
 
     @Test
@@ -38,7 +40,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
+        assertThatThrownBy { property.valueIn(configuration, Configuration.Options.defaults) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
 
     @Test
@@ -54,7 +56,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(value)
     }
 
     @Test
@@ -70,7 +72,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value.max())
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(value.max())
     }
 
     @Test
@@ -85,7 +87,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isEqualTo(null)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(null)
     }
 
     @Test
@@ -101,7 +103,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value.max())
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(value.max())
     }
 
     @Test
@@ -116,7 +118,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isEqualTo(null)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(null)
     }
 
     @Test
@@ -132,7 +134,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(value)
     }
 
     @Test
@@ -147,7 +149,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isNull()
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isNull()
 
     }
 
@@ -164,7 +166,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(defaultValue)
     }
 
     @Test
@@ -179,7 +181,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isTrue()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.Missing::class.java)
+        assertThatThrownBy { property.valueIn(configuration, Configuration.Options.defaults) }.isInstanceOf(ConfigException.Missing::class.java)
     }
 
     @Test
@@ -195,7 +197,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThat(property.valueIn(configuration)).isEqualTo(value)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(value)
     }
 
     @Test
@@ -211,7 +213,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isTrue()
-        assertThatThrownBy { property.valueIn(configuration) }.isInstanceOf(ConfigException.WrongType::class.java)
+        assertThatThrownBy { property.valueIn(configuration, Configuration.Options.defaults) }.isInstanceOf(ConfigException.WrongType::class.java)
     }
 
     @Test
@@ -226,7 +228,7 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isNull()
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isNull()
     }
 
     @Test
@@ -242,6 +244,6 @@ class PropertyTest {
         assertThat(property.key).isEqualTo(key)
         assertThat(property.isMandatory).isFalse()
         assertThat(property.isSpecifiedBy(configuration)).isFalse()
-        assertThat(property.valueIn(configuration)).isEqualTo(defaultValue)
+        assertThat(property.valueIn(configuration, Configuration.Options.defaults)).isEqualTo(defaultValue)
     }
 }

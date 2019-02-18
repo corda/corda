@@ -14,6 +14,9 @@ dependencies {
     testCompile group: "org.jetbrains.kotlin", name: "kotlin-test", version: kotlin_version
     testCompile group: "junit", name: "junit", version: junit_version
     testCompile group: "org.assertj", name: "assertj-core", version: assertj_version
+
+    testCompile group: "org.bouncycastle", name: "bcprov-jdk15on", version: bouncycastle_version
+    testCompile group: "org.bouncycastle", name: "bcpkix-jdk15on", version: bouncycastle_version
 }
 
 jar {

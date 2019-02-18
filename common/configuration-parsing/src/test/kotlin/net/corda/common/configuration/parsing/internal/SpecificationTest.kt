@@ -16,10 +16,9 @@ class SpecificationTest {
             val principal by string().mapValid(::parseAddress)
             val admin by string().mapValid(::parseAddress)
 
-            override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal], configuration[admin]))
+            override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid(Addresses(it[principal], it[admin])) }
 
             private fun parseAddress(rawValue: String): Valid<Address> {
-
                 return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(error) }
             }
         }
@@ -27,7 +26,7 @@ class SpecificationTest {
         val useSsl by boolean()
         val addresses by nested(AddressesSpec)
 
-        override fun parseValid(configuration: Config) = valid<RpcSettings>(RpcSettingsImpl(configuration[addresses], configuration[useSsl]))
+        override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid<RpcSettings>(RpcSettingsImpl(it[addresses], it[useSsl])) }
     }
 
     @Test
@@ -57,12 +56,11 @@ class SpecificationTest {
     fun parse_list_aggregation() {
 
         val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {
-
             private val maxElement by long("elements").list().map { elements -> elements.max() }
 
-            override fun parseValid(configuration: Config): Valid<AtomicLong> {
-
-                return valid(AtomicLong(configuration[maxElement]!!))
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<AtomicLong> {
+                val config = configuration.withOptions(options)
+                return valid(AtomicLong(config[maxElement]!!))
             }
         }
 
@@ -77,7 +75,6 @@ class SpecificationTest {
 
     @Test
     fun validate() {
-
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
         val addressesValue = configObject("principal" to "${principalAddressValue.host}:${principalAddressValue.port}", "admin" to "${adminAddressValue.host}:${adminAddressValue.port}")
@@ -95,7 +92,6 @@ class SpecificationTest {
 
     @Test
     fun validate_list_aggregation() {
-
         fun parseMax(elements: List<Long>): Valid<Long> {
 
             if (elements.isEmpty()) {
@@ -108,12 +104,11 @@ class SpecificationTest {
         }
 
         val spec = object : Configuration.Specification<AtomicLong>("AtomicLong") {
-
             private val maxElement by long("elements").list().mapValid(::parseMax)
 
-            override fun parseValid(configuration: Config): Valid<AtomicLong> {
-
-                return valid(AtomicLong(configuration[maxElement]))
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<AtomicLong> {
+                val config = configuration.withOptions(options)
+                return valid(AtomicLong(config[maxElement]))
             }
         }
 
@@ -132,7 +127,6 @@ class SpecificationTest {
 
     @Test
     fun validate_with_domain_specific_errors() {
-
         val useSslValue = true
         val principalAddressValue = Address("localhost", 8080)
         val adminAddressValue = Address("127.0.0.1", 8081)
@@ -144,7 +138,6 @@ class SpecificationTest {
 
         assertThat(rpcSettings.errors).hasSize(1)
         assertThat(rpcSettings.errors.first()).isInstanceOfSatisfying(Configuration.Validation.Error.BadValue::class.java) { error ->
-
             assertThat(error.path).containsExactly("addresses", "principal")
             assertThat(error.keyName).isEqualTo("principal")
             assertThat(error.typeName).isEqualTo(Address::class.java.simpleName)
@@ -153,13 +146,11 @@ class SpecificationTest {
 
     @Test
     fun chained_delegated_properties_are_not_added_multiple_times() {
-
         val spec = object : Configuration.Specification<List<String>?>("Test") {
-
             @Suppress("unused")
             val myProp by string().list().optional()
 
-            override fun parseValid(configuration: Config) = valid(configuration[myProp])
+            override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid(it[myProp]) }
         }
 
         assertThat(spec.properties).hasSize(1)

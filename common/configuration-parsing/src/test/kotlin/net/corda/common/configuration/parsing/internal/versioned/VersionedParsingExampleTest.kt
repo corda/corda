@@ -82,13 +82,14 @@ class VersionedParsingExampleTest {
             private val adminHost by string()
             private val adminPort by int()
 
-            override fun parseValid(configuration: Config): Valid<RpcSettings> {
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RpcSettings> {
+                val config = configuration.withOptions(options)
 
-                val principalHost = configuration[principalHost]
-                val principalPort = configuration[principalPort]
+                val principalHost = config[principalHost]
+                val principalPort = config[principalPort]
 
-                val adminHost = configuration[adminHost]
-                val adminPort = configuration[adminPort]
+                val adminHost = config[adminHost]
+                val adminPort = config[adminPort]
 
                 val principalAddress = addressFor(principalHost, principalPort)
                 val adminAddress = addressFor(adminHost, adminPort)
@@ -109,23 +110,22 @@ class VersionedParsingExampleTest {
 
                 val admin by string().mapValid(::parseAddress)
 
-                override fun parseValid(configuration: Config) = valid(Addresses(configuration[principal],configuration[admin]))
+                override fun parseValid(configuration: Config, options: Configuration.Options) = configuration.withOptions(options).let { valid(Addresses(it[principal],it[admin])) }
 
                 private fun parseAddress(rawValue: String): Valid<Address> {
-
                     return Address.validFromRawValue(rawValue) { error -> Configuration.Validation.Error.BadValue.of(error) }
                 }
             }
 
             private val addresses by nested(AddressesSpec)
 
-            override fun parseValid(configuration: Config): Valid<RpcSettings> {
-
-                val addresses = configuration[addresses]
+            override fun parseValid(configuration: Config, options: Configuration.Options): Valid<RpcSettings> {
+                val config = configuration.withOptions(options)
+                val addresses = config[addresses]
                 return valid(RpcSettings(addresses.principal, addresses.admin))
             }
         }
     }
 }
 
-private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Validation.Options = Configuration.Validation.Options.defaults) = parse(config, options).map { it }
+private fun Configuration.Version.Extractor.parseRequired(config: Config, options: Configuration.Options = Configuration.Options.defaults) = parse(config, options).map { it }

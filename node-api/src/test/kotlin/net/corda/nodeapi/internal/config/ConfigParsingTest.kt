@@ -5,6 +5,7 @@ import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory.empty
 import com.typesafe.config.ConfigRenderOptions.defaults
 import com.typesafe.config.ConfigValueFactory
+import net.corda.common.configuration.parsing.internal.ConfigObfuscator
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
@@ -22,6 +23,33 @@ class ConfigParsingTest {
     @Test
     fun String() {
         testPropertyType<StringData, StringListData, String>("hello world!", "bye")
+    }
+
+    @Test
+    fun ObfuscatedString() {
+        val config1 = config(
+                "value" to ConfigObfuscator.obfuscateConfiguration("<encrypt{hello world}>").content
+        )
+        val result1 = config1.parseAs<StringData>()
+        assertThat(config1.getString("value")).isNotEqualTo("hello world")
+        assertThat(result1.value).isEqualTo("hello world")
+
+        val config2 = config(
+                "value" to ConfigObfuscator.obfuscateConfiguration("hello <encrypt{world}>").content
+        )
+        val result2 = config2.parseAs<StringData>()
+        assertThat(config2.getString("value")).isNotEqualTo("hello world")
+        assertThat(result2.value).isEqualTo("hello world")
+    }
+
+    @Test
+    fun ObfuscatedListOfString() {
+        val config = config(
+                "values" to listOf("foo", ConfigObfuscator.obfuscateConfiguration("<encrypt{hello world}>").content)
+        )
+        val result = config.parseAs<StringListData>()
+        assertThat(config.getStringList("values").last()).isNotEqualTo("hello world")
+        assertThat(result.values.last()).isEqualTo("hello world")
     }
 
     @Test
@@ -126,6 +154,14 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun `obfuscated properties`() {
+        val config = config("value" to mapOf("key" to ConfigObfuscator.obfuscateConfiguration("<encrypt{prop}>").content))
+        val data = PropertiesData(Properties().apply { this["key"] = "prop" })
+        assertThat(config.parseAs<PropertiesData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isNotEqualTo(config)
+    }
+
+    @Test
     fun `Properties key with dot`() {
         val config = config("value" to mapOf("key.key2" to "prop"))
         val data = PropertiesData(Properties().apply { this["key.key2"] = "prop" })
@@ -182,6 +218,16 @@ class ConfigParsingTest {
     }
 
     @Test
+    fun `obfuscated nested data classes`() {
+        val config = config(
+                "first" to mapOf(
+                        "value" to ConfigObfuscator.obfuscateConfiguration("<encrypt{hello world}>").content))
+        val data = NestedData(StringData("hello world"))
+        assertThat(config.parseAs<NestedData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isNotEqualTo(config)
+    }
+
+    @Test
     fun `List of data classes`() {
         val config = config(
                 "list" to listOf(
@@ -190,6 +236,17 @@ class ConfigParsingTest {
         val data = DataListData(listOf(StringData("1"), StringData("2")))
         assertThat(config.parseAs<DataListData>()).isEqualTo(data)
         assertThat(data.toConfig()).isEqualTo(config)
+    }
+
+    @Test
+    fun `obfuscated list of data classes`() {
+        val config = config(
+                "list" to listOf(
+                        mapOf("value" to ConfigObfuscator.obfuscateConfiguration("<encrypt{hello world}>").content),
+                        mapOf("value" to ConfigObfuscator.obfuscateConfiguration("<encrypt{hello universe}>").content)))
+        val data = DataListData(listOf(StringData("hello world"), StringData("hello universe")))
+        assertThat(config.parseAs<DataListData>()).isEqualTo(data)
+        assertThat(data.toConfig()).isNotEqualTo(config)
     }
 
     @Test

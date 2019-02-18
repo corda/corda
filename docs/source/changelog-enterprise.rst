@@ -60,6 +60,8 @@ Changelog entries in this unreleased section refer to Enterprise-only changes.
   The number of required connections has been increased by 2 + the number of RPC worker threads (typically the number of CPU cores, unless
   configured otherwise).  The total is now 3 + the number of flow worker threads + the number of RPC worker threads.
 
+* Added support for obfuscation of node configuration content, allowing the user to mask passwords and sensitive details in configuration files.
+
 .. _changelog_v3.1:
 
 Version 3.1
