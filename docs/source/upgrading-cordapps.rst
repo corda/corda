@@ -14,6 +14,8 @@ Release new CorDapp versions
 
 CorDapp versioning
 ------------------
+.. UPDATE - This is no longer accurate! Needs to talk about the different types of artifacts ( kernel, workflows) each versioned independently
+
 The Corda platform does not mandate a version number on a per-CorDapp basis. Different elements of a CorDapp are
 allowed to evolve separately. Sometimes, however, a change to one element will require changes to other elements. For
 example, changing a shared data structure may require flow changes that are not backwards-compatible.
@@ -279,25 +281,25 @@ Performing explicit contract and state upgrades
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In an explicit upgrade, contracts and states can be changed in arbitrary ways, if and only if all of the state's
-participants agree to the proposed upgrade. The following combinations of upgrades are possible:
+participants agree to the proposed upgrade. To ensure the continuity of the chain the upgraded contract needs to declare the contract and
+constraint of the states it's allowed to replace.
 
-* A contract is upgraded while the state definition remains the same
-* A state is upgraded while the contract stays the same
-* The state and the contract are updated simultaneously
+.. warning:: In Corda 4 we've introduced the Signature Constraint (see :doc:`api-contract-constraints`). States created or migrated to
+            the Signature Constraint can't be explicitly upgraded using the Contract upgrade transaction. This feature might be added in a future version.
+            Given the nature of the Signature constraint there should be little need to create a brand new contract to fix issues in the old contract.
 
 1. Preserve the existing state and contract definitions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Currently, all nodes must **permanently** keep **all** old state and contract definitions on their node's classpath
+Currently, all nodes must **permanently** keep **all** old state and contract definitions on their node's classpath if the explicit upgrade
+process was used on them.
 
-.. note:: Once the contract-code-as-an-attachment feature has been implemented, nodes will only be required to keep the
-   old state and contract definitions on their node's classpath for the duration of the upgrade
+.. note:: This requirement will go away in a future version of Corda. In Corda 4, the contract-code-as-attachment feature was implemented
+          only for "normal" transactions. `Contract Upgrade` and `Notary Change` transactions will still be executed withing the node classpath.
 
-Changing a state or contract's package constitutes a definition change. If you want to move a state or contract
-definition to a new package, you must also preserve the definition in the old package
 
 2. Write the new state and contract definitions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Update the contract and/or state definitions. There are no restrictions on how states are updated. However,
+Update the contract and state definitions. There are no restrictions on how states are updated. However,
 upgraded contracts must implement the ``UpgradedContract`` interface. This interface is defined as:
 
 .. sourcecode:: kotlin
@@ -307,11 +309,20 @@ upgraded contracts must implement the ``UpgradedContract`` interface. This inter
         fun upgrade(state: OldState): NewState
     }
 
-The ``upgrade`` method describes how the old state type is upgraded to the new state type. When the state isn't being
-upgraded, the same state type can be used for both the old and new state type parameters.
+The ``upgrade`` method describes how the old state type is upgraded to the new state type.
 
 By default this new contract will only be able to upgrade legacy states which are constrained by the zone whitelist (see :doc:`api-contract-constraints`).
-If hash or other constraint types are used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
+
+
+.. note:: The requirement for a `legacyContractConstraint` arises from the fact that when a transaction chain is verified and a `Contract Upgrade` is
+          encountered on the back chain, the verifier wants to know that a legitimate state was transformed into the new contract. The `legacyContractConstraint` is
+          the mechanism by which this is enforced. Using it, the new contract is able to narrow down what constraint the states it is upgrading should have.
+          If a malicious party would create a fake `com.megacorp.MegaToken` state, he would not be able to use the usual `MegaToken` code as his
+          fake token will not validate because the constraints will not match. The `com.megacorp.SuperMegaToken` would know that it is a fake state and thus refuse to upgrade it.
+          It is safe to omit the `legacyContractConstraint` for the zone whitelist constraint, because the chain of trust is ensured by the Zone operator
+          who would have whitelisted both contracts and checked them.
+
+If the hash constraint is used, the new contract should implement ``UpgradedContractWithLegacyConstraint``
 instead, and specify the constraint explicitly:
 
 .. sourcecode:: kotlin
@@ -342,8 +353,8 @@ Have each node operator stop their node. If you are also changing flow definitio
 :ref:`node drain <draining_the_node>` first to avoid the definition of states or contracts changing whilst a flow is 
 in progress.
 
-6. Re-run the network bootstrapper
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6. Re-run the network bootstrapper (only if you want to whitelist the new contract)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you're using the network bootstrapper instead of a network map server and have defined any new contracts, you need to 
 re-run the network bootstrapper to whitelist the new contracts. See :doc:`network-bootstrapper`.
 
@@ -378,28 +389,21 @@ contract upgrade.
 One the flow ends successfully, all the participants of the old state object should have the upgraded state object
 which references the new contract code.
 
+10. Migrate the new upgraded state to the Signature Constraint from the zone constraint
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Follow the guide in :doc:`api-contract-constraints`.
+
 Points to note
 ~~~~~~~~~~~~~~
 
 Capabilities of the contract upgrade flows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Despite its name, the ``ContractUpgradeFlow`` also handles the update of state object definitions
+* Despite its name, the ``ContractUpgradeFlow`` handles the update of both state object definitions and contract logic
 * The state can completely change as part of an upgrade! For example, it is possible to transmute a ``Cat`` state into
   a ``Dog`` state, provided that all participants in the ``Cat`` state agree to the change
-* Equally, the state doesn't have to change at all
 * If a node has not yet run the contract upgrade authorisation flow, they will not be able to upgrade the contract
   and/or state objects
 * State schema changes are handled separately
-
-Writing new states and contracts
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* If a property is removed from a state, any references to it must be removed from the contract code. Otherwise, you
-  will not be able to compile your contract code. It is generally not advisable to remove properties from states. Mark
-  them as deprecated instead
-* When adding properties to a state, consider how the new properties will affect transaction validation involving this
-  state. If the contract is not updated to add constraints over the new properties, they will be able to take on any
-  value
-* Updated state objects can use the old contract code as long as there is no requirement to update it
 
 Logistics
 ^^^^^^^^^
