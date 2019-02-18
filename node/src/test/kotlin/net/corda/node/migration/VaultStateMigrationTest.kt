@@ -53,6 +53,7 @@ import java.time.Clock
 import java.time.Duration
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 /**
@@ -430,15 +431,21 @@ class VaultStateMigrationTest {
         assertEquals(0, getVaultStateCount(Vault.RelevancyStatus.NOT_RELEVANT))
     }
 
-    @Test(expected = VaultStateMigrationException::class)
-    fun `State with corresponding transaction missing is skipped`() {
+    @Test
+    fun `State with corresponding transaction missing fails migration`() {
         val cash = Cash()
         val unknownTx = createCashTransaction(cash, 100.DOLLARS, BOB)
         createVaultStatesFromTransaction(unknownTx)
 
         addCashStates(10, BOB)
         val migration = VaultStateMigration()
+        assertFailsWith<VaultStateMigrationException> { migration.execute(liquibaseDB) }
+        assertEquals(10, getStatePartyCount())
+
+        // Now add the missing transaction and ensure that the migration succeeds
+        storeTransaction(unknownTx)
         migration.execute(liquibaseDB)
+        assertEquals(11, getStatePartyCount())
     }
 
     @Test
