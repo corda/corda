@@ -19,7 +19,6 @@ import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
 import net.corda.nodeapi.internal.config.parseAs
-import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier

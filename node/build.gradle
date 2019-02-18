@@ -232,7 +232,7 @@ dependencies {
     compile "com.palominolabs.metrics:metrics-new-relic:${metrics_new_relic_version}"
 
     // Azure KeyVault
-    compile 'com.microsoft.azure:azure-keyvault-complete:1.1.1'
+    compile 'com.microsoft.azure:azure-keyvault:1.1.1'
     compile 'com.microsoft.azure:adal4j:1.6.3'
     
     // Allow access to simple SOCKS Server for integration testing

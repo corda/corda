@@ -21,7 +21,7 @@ import kotlin.test.assertNull
  * Refer to https://docs.microsoft.com/en-gb/azure/key-vault/
  */
 @Ignore
-class AzureKeyVaultCryptoServiceIntegrationTest {
+class AzureKeyVaultCryptoServiceTest {
 
     // you need to change these values to point to your KeyVault
     private val clientId = "a3d73987-c666-4bc2-9cba-b0b27c63800e"
