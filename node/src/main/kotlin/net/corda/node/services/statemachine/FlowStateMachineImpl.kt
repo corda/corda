@@ -215,7 +215,7 @@ class FlowStateMachineImpl<R>(override val id: StateMachineRunId,
         val threadLocal = getTransientField(TransientValues::database).hikariPoolThreadLocal
         if (threadLocal != null) {
             val valueFromThread = swappedOutThreadLocalValue(threadLocal)
-            if (valueFromThread != null) threadLocal!!.set(valueFromThread)
+            if (valueFromThread != null) threadLocal.set(valueFromThread)
         }
     }
 
