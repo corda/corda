@@ -58,12 +58,7 @@ private constructor(
          */
         override val networkParameters: NetworkParameters?,
         /** Referenced states, which are like inputs but won't be consumed. */
-        override val references: List<StateAndRef<ContractState>>,
-        /**
-         * The versions of the app JARs attached to the transactions that defined the inputs, grouped by contract class name.
-         * This is used to stop adversaries downgrading apps to versions that have exploitable bugs.
-         */
-        private val inputVersions: Map<ContractClassName, Version>
+        override val references: List<StateAndRef<ContractState>>
         //DOCEND 1
 ) : FullTransaction() {
     // These are not part of the c'tor above as that defines LedgerTransaction's serialisation format
@@ -94,10 +89,9 @@ private constructor(
                 references: List<StateAndRef<ContractState>>,
                 componentGroups: List<ComponentGroup>? = null,
                 serializedInputs: List<SerializedStateAndRef>? = null,
-                serializedReferences: List<SerializedStateAndRef>? = null,
-                inputVersions: Map<ContractClassName, Version>
+                serializedReferences: List<SerializedStateAndRef>? = null
         ): LedgerTransaction {
-            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references, inputVersions).apply {
+            return LedgerTransaction(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, references).apply {
                 this.componentGroups = componentGroups
                 this.serializedInputs = serializedInputs
                 this.serializedReferences = serializedReferences
@@ -139,7 +133,7 @@ private constructor(
         // Switch thread local deserialization context to using a cached attachments classloader. This classloader enforces various rules
         // like no-overlap, package namespace ownership and (in future) deterministic Java.
         return AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(this.attachments + extraAttachments, getParamsWithGoo(), id) { transactionClassLoader ->
-            Verifier(createLtxForVerification(), transactionClassLoader, inputVersions)
+            Verifier(createLtxForVerification(), transactionClassLoader)
         }
     }
 
@@ -196,8 +190,7 @@ private constructor(
                     timeWindow = this.timeWindow,
                     privacySalt = this.privacySalt,
                     networkParameters = this.networkParameters,
-                    references = deserializedReferences,
-                    inputVersions = this.inputVersions
+                    references = deserializedReferences
             )
         } else {
             // This branch is only present for backwards compatibility.
@@ -560,7 +553,7 @@ private constructor(
             notary: Party?,
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList(), emptyMap())
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, null, emptyList())
 
     @Deprecated("LedgerTransaction should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     @DeprecatedConstructorForDeserialization(1)
@@ -574,7 +567,7 @@ private constructor(
             timeWindow: TimeWindow?,
             privacySalt: PrivacySalt,
             networkParameters: NetworkParameters
-    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList(), emptyMap())
+    ) : this(inputs, outputs, commands, attachments, id, notary, timeWindow, privacySalt, networkParameters, emptyList())
 
     @Deprecated("LedgerTransactions should not be created directly, use WireTransaction.toLedgerTransaction instead.")
     fun copy(inputs: List<StateAndRef<ContractState>>,
@@ -596,8 +589,7 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references,
-                inputVersions = emptyMap()
+                references = references
         )
     }
 
@@ -622,8 +614,7 @@ private constructor(
                 timeWindow = timeWindow,
                 privacySalt = privacySalt,
                 networkParameters = networkParameters,
-                references = references,
-                inputVersions = emptyMap()
+                references = references
         )
     }
 }

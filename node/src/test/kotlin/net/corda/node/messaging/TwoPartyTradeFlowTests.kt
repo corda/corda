@@ -461,11 +461,9 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
 
             // We need to declare this here, if we do it inside [expectEvents] kotlin throws an internal compiler error(!).
             val aliceTxExpectations = sequence(
-                    //TODO investigate missing event after introduction of signature constraints non-downgrade rule
-                    /*
                     expect { tx: SignedTransaction ->
                         require(tx.id == bobsFakeCash[0].id)
-                    },*/
+                    },
                     expect { tx: SignedTransaction ->
                         require(tx.id == bobsFakeCash[2].id)
                     },
@@ -475,12 +473,10 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             )
             aliceTxStream.expectEvents { aliceTxExpectations }
             val aliceMappingExpectations = sequence(
-                    //TODO investigate missing event after introduction of signature constraints non-downgrade rule
-                    /*
                     expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[0].id)
-                    },*/
+                    },
                     expect<StateMachineTransactionMapping> { (stateMachineRunId, transactionId) ->
                         require(stateMachineRunId == aliceSmId)
                         require(transactionId == bobsFakeCash[2].id)

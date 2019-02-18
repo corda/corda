@@ -190,19 +190,6 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
 
         val resolvedNetworkParameters = resolveParameters(networkParametersHash) ?: throw TransactionResolutionException.UnknownParametersException(id, networkParametersHash!!)
 
-        // For each contract referenced in the inputs, figure out the highest version being used. The outputs must be
-        // at least that version or higher, to prevent adversaries from downgrading the app to an old version that has
-        // known bugs they can then exploit. This is part of the version ratchet that ensures apps can only ever be
-        // upgraded, not downgraded. We don't use resolvedInputs here to keep it lazy. TODO: why?
-        // We do this resolution now instead of in LedgerTransaction because here we have the function to map
-        // StateRefs to their attachments directly.
-        val appVersionsInInputs: Map<ContractClassName, Version> = serializedResolvedInputs
-                .map { it.toStateAndRef() }
-                .groupBy { it.state.contract }
-                .mapValues { (_ , statesAndRefs) ->
-                    statesAndRefs.map { resolveContractAttachment(it.ref).contractVersion }.max() ?: DEFAULT_CORDAPP_VERSION
-                }
-
         val ltx = LedgerTransaction.create(
                 resolvedInputs,
                 outputs,
@@ -216,8 +203,7 @@ class WireTransaction(componentGroups: List<ComponentGroup>, val privacySalt: Pr
                 resolvedReferences,
                 componentGroups,
                 serializedResolvedInputs,
-                serializedResolvedReferences,
-                appVersionsInInputs
+                serializedResolvedReferences
         )
 
         checkTransactionSize(ltx, resolvedNetworkParameters.maxTransactionSize, serializedResolvedInputs, serializedResolvedReferences)
