@@ -13,6 +13,7 @@ import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.cordapp.set
 import net.corda.core.internal.createComponentGroups
 import net.corda.core.node.NodeInfo
+import net.corda.core.schemas.MappedSchema
 import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.loggerFor
@@ -177,10 +178,11 @@ fun configureDatabase(hikariProperties: Properties,
                       wellKnownPartyFromX500Name: (CordaX500Name) -> Party?,
                       wellKnownPartyFromAnonymous: (AbstractParty) -> Party?,
                       schemaService: SchemaService = NodeSchemaService(),
+                      internalSchemas: Set<MappedSchema> = NodeSchemaService().internalSchemas(),
                       cacheFactory: NamedCacheFactory = TestingNamedCacheFactory(),
                       ourName: CordaX500Name = TestIdentity(ALICE_NAME, 70).name): CordaPersistence {
     val isH2Database = isH2Database(hikariProperties.getProperty("dataSource.url", ""))
-    val schemas = if (isH2Database) NodeSchemaService().internalSchemas() else schemaService.schemaOptions.keys
+    val schemas = if (isH2Database) internalSchemas else schemaService.schemaOptions.keys
     val persistence = createCordaPersistence(databaseConfig, wellKnownPartyFromX500Name, wellKnownPartyFromAnonymous, schemaService, cacheFactory, null)
     persistence.startHikariPool(hikariProperties, databaseConfig, schemas, ourName = ourName)
     return persistence

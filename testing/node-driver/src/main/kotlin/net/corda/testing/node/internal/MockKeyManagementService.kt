@@ -12,6 +12,7 @@ import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A class which provides an implementation of [KeyManagementService] which is used in [MockServices]
@@ -26,10 +27,29 @@ class MockKeyManagementService(val identityService: IdentityService,
 
     private val nextKeys = LinkedList<KeyPair>()
 
+    val keysById: MutableMap<UUID, Set<PublicKey>> = ConcurrentHashMap()
+
     override fun freshKey(): PublicKey {
         val k = nextKeys.poll() ?: generateKeyPair()
         keyStore[k.public] = k.private
         return k.public
+    }
+
+    private fun mapKeyToId(publicKey: PublicKey, externalId: UUID) {
+        val keysForId = keysById.getOrPut(externalId) { emptySet() }
+        keysById[externalId] = keysForId + publicKey
+    }
+
+    override fun freshKey(externalId: UUID): PublicKey {
+        val key = freshKey()
+        mapKeyToId(key, externalId)
+        return key
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        val keyAndCert = freshKeyAndCert(identity, revocationEnabled)
+        mapKeyToId(keyAndCert.owningKey, externalId)
+        return keyAndCert
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = candidateKeys.filter { it in this.keys }

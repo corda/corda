@@ -1094,7 +1094,7 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
   @NotNull
   public final net.corda.core.crypto.SecureHash getAttachmentHash()
   @NotNull
-  public final String getContractClass()
+  public final String getInvalidClassName()
   @NotNull
   public final String getPackageName()
 ##
@@ -1130,10 +1130,6 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$TransactionRequiredContractUnspecifiedException extends net.corda.core.contracts.TransactionVerificationException
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.contracts.TransactionState<? extends net.corda.core.contracts.ContractState>)
-##
-@CordaSerializable
-public static final class net.corda.core.contracts.TransactionVerificationException$TransactionVerificationVersionException extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, String, String, String)
 ##
 @CordaSerializable
 public abstract class net.corda.core.contracts.TypeOnlyCommandData extends java.lang.Object implements net.corda.core.contracts.CommandData
@@ -7749,7 +7745,7 @@ public class net.corda.testing.node.MockServices extends java.lang.Object implem
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair...)
-  public <init>(net.corda.core.identity.CordaX500Name, net.corda.core.node.services.IdentityService, java.security.KeyPair, java.security.KeyPair[], int, kotlin.jvm.internal.DefaultConstructorMarker)
+  public <init>(net.corda.node.cordapp.CordappLoader, net.corda.core.node.services.IdentityService, net.corda.core.node.NetworkParameters, net.corda.testing.core.TestIdentity, java.security.KeyPair[], net.corda.core.node.services.KeyManagementService, kotlin.jvm.internal.DefaultConstructorMarker)
   public <init>(net.corda.testing.core.TestIdentity, net.corda.core.node.NetworkParameters, net.corda.testing.core.TestIdentity...)
   public <init>(net.corda.testing.core.TestIdentity, net.corda.testing.core.TestIdentity...)
   public final void addMockCordapp(String)

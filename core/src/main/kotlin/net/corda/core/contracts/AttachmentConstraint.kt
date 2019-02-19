@@ -47,6 +47,9 @@ object AlwaysAcceptAttachmentConstraint : AttachmentConstraint {
  */
 @KeepForDJVM
 data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentConstraint {
+    companion object {
+        val disableHashConstraints = System.getProperty("net.corda.node.disableHashConstraints")?.toBoolean() ?: false
+    }
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
             log.debug("Checking attachment uploader ${attachment.contractAttachment.uploader} is trusted")
@@ -67,7 +70,7 @@ data class HashAttachmentConstraint(val attachmentId: SecureHash) : AttachmentCo
 object WhitelistedByZoneAttachmentConstraint : AttachmentConstraint {
     override fun isSatisfiedBy(attachment: Attachment): Boolean {
         return if (attachment is AttachmentWithContext) {
-            val whitelist = attachment.networkParameters.whitelistedContractImplementations
+            val whitelist = attachment.whitelistedContractImplementations
             log.debug("Checking ${attachment.contract} is in CZ whitelist $whitelist")
             attachment.id in (whitelist[attachment.contract] ?: emptyList())
         } else {

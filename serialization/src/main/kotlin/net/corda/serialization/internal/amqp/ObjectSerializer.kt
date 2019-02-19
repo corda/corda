@@ -167,13 +167,21 @@ class EvolutionObjectSerializer(
         private val reader: ComposableObjectReader): ObjectSerializer {
 
     companion object {
-        fun make(localTypeInformation: LocalTypeInformation.Composable, remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
-                 properties: Map<String, LocalPropertyInformation>, classLoader: ClassLoader): EvolutionObjectSerializer {
+        fun make(localTypeInformation: LocalTypeInformation.Composable,
+                 remoteTypeInformation: RemoteTypeInformation.Composable, constructor: LocalConstructorInformation,
+                 properties: Map<String, LocalPropertyInformation>,
+                 classLoader: ClassLoader,
+                 mustPreserveData: Boolean): EvolutionObjectSerializer {
             val propertySerializers = makePropertySerializers(properties, remoteTypeInformation.properties, classLoader)
             val reader = ComposableObjectReader(
                     localTypeInformation.typeIdentifier,
                     propertySerializers,
-                    EvolutionObjectBuilder.makeProvider(localTypeInformation.typeIdentifier, constructor, properties, remoteTypeInformation.properties.keys.sorted()))
+                    EvolutionObjectBuilder.makeProvider(
+                            localTypeInformation.typeIdentifier,
+                            constructor,
+                            properties,
+                            remoteTypeInformation,
+                            mustPreserveData))
 
             return EvolutionObjectSerializer(
                     localTypeInformation.observedType,

@@ -28,7 +28,7 @@ For a validating notary service specify:
 See :ref:`key_concepts_notaries_validation` for more details about validating versus non-validating notaries.
 
 For clients to be able to use the notary service, its identity must be added to the network parameters. This will be
-done automatically when creating the network, if using :doc:`network-bootstrapper`. See :doc:`setting-up-a-corda-network`
+done automatically when creating the network, if using :doc:`network-bootstrapper`. See :doc:`corda-networks-index`
 for more details.
 
 Crash fault-tolerant

@@ -108,6 +108,13 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
         : TransactionVerificationException(txId, "Contract constraints failed for: $contractClass, because multiple attachments providing this contract were attached.", null)
 
     /**
+     * Indicates that the same attachment has been added multiple times to a transaction.
+     */
+    @KeepForDJVM
+    class DuplicateAttachmentsRejection(txId: SecureHash, val attachmentId: Attachment)
+        : TransactionVerificationException(txId, "The attachment: $attachmentId was added multiple times.", null)
+
+    /**
      * A [Contract] class named by a state could not be constructed. Most likely you do not have a no-argument
      * constructor, or the class doesn't subclass [Contract].
      *
@@ -263,24 +270,19 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
     class OverlappingAttachmentsException(txId: SecureHash, path: String) : TransactionVerificationException(txId, "Multiple attachments define a file at $path.", null)
 
     /**
-     * Thrown when a transaction appears to be trying to downgrade a state to an earlier version of the app that defines it.
-     * This could be an attempt to exploit a bug in the app, so we prevent it.
-     */
-    @KeepForDJVM
-    class TransactionVerificationVersionException(txId: SecureHash, contractClassName: ContractClassName, inputVersion: String, outputVersion: String)
-        : TransactionVerificationException(txId, "No-Downgrade Rule has been breached for contract class $contractClassName. " +
-            "The output state contract version '$outputVersion' is lower than the version of the input state '$inputVersion'.", null)
-
-    /**
      * Thrown to indicate that a contract attachment is not signed by the network-wide package owner. Please note that
      * the [txId] will always be [SecureHash.zeroHash] because package ownership is an error with a particular attachment,
      * and because attachment classloaders are reused this is independent of any particular transaction.
      */
     @CordaSerializable
-    class PackageOwnershipException(txId: SecureHash, val attachmentHash: AttachmentId, val contractClass: String, val packageName: String) : TransactionVerificationException(txId,
-            """The Contract attachment JAR: $attachmentHash containing the contract: $contractClass is not signed by the owner of package $packageName specified in the network parameters.
+    class PackageOwnershipException(txId: SecureHash, val attachmentHash: AttachmentId, val invalidClassName: String, val packageName: String) : TransactionVerificationException(txId,
+            """The attachment JAR: $attachmentHash containing the class: $invalidClassName is not signed by the owner of package $packageName specified in the network parameters.
            Please check the source of this attachment and if it is malicious contact your zone operator to report this incident.
            For details see: https://docs.corda.net/network-map.html#network-parameters""".trimIndent(), null)
+
+    @CordaSerializable
+    class InvalidAttachmentException(txId: SecureHash, attachmentHash: AttachmentId) : TransactionVerificationException(txId,
+            "The attachment $attachmentHash is not a valid ZIP or JAR file.".trimIndent(), null)
 
     // TODO: Make this descend from TransactionVerificationException so that untrusted attachments cause flows to be hospitalized.
     /** Thrown during classloading upon encountering an untrusted attachment (eg. not in the [TRUSTED_UPLOADERS] list) */

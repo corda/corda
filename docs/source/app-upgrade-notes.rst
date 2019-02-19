@@ -53,10 +53,20 @@ However, there are usually new features and other opt-in changes that may improv
 application that are worth considering for any actively maintained software. This guide shows you how to upgrade your app to benefit
 from the new features in the latest release.
 
+.. warning:: The sample apps found in the Corda repository and the Corda samples repository are not intended to be used in production.
+   If you are using them you should re-namespace them to a package namespace you control, and sign/version them yourself.
+
 .. contents::
    :depth: 3
 
-Step 1. Adjust the version numbers in your Gradle build files
+Step 1. Switch any RPC clients to use the new RPC library
+---------------------------------------------------------
+
+Although the RPC API is backwards compatible with Corda 3, the RPC wire protocol isn't. Therefore RPC clients like web servers need to be
+updated in lockstep with the node to use the new version of the RPC library. Corda 4 delivers RPC wire stability and therefore in future you
+will be able to update the node and apps without updating RPC clients.
+
+Step 2. Adjust the version numbers in your Gradle build files
 -------------------------------------------------------------
 
 Alter the versions you depend on in your Gradle file like so:
@@ -79,7 +89,7 @@ You should also ensure you're using Gradle 4.10 (but not 5). If you use the Grad
 
 Otherwise just upgrade your installed copy in the usual manner for your operating system.
 
-Step 2. Update your Gradle build file
+Step 3. Update your Gradle build file
 -------------------------------------
 
 There are several adjustments that are beneficial to make to your Gradle build file, beyond simply incrementing the versions
@@ -126,10 +136,7 @@ properly for future releases.
    future not hold true. You should know the platform version of the node releases you want to target.
 
 The new ``versionId`` number is a version code for **your** app, and is unrelated to Corda's own versions.
-It is used to block state downgrades: when a state constraint can be satisfied
-by multiple attachments, the version is tracked in the ledger and cannot decrement. This ensures security
-fixes in CorDapps stick and can't be reversed by downgrading states to an earlier version. See
-":ref:`contract_non-downgrade_rule_ref`" for more information.
+It is used to informative purposes only. See ":ref:`contract_downgrade_rule_ref`" for more information.
 
 **Split your app into contract and workflow JARs.** The duplication between ``contract`` and ``workflow`` blocks exists because you should split your app into
 two separate JARs/modules, one that contains on-ledger validation code like states and contracts, and one
@@ -146,7 +153,44 @@ starting from 1.
 If you use the finance demo app, you should adjust your dependencies so you depend on the finance-contracts
 and finance-workflows artifacts from your own contract and workflow JAR respectively.
 
-Step 3. Security: Upgrade your use of FinalityFlow
+Step 4. Remove any custom configuration from the node.conf
+----------------------------------------------------------
+
+CorDapps can no longer access custom configuration items in the ``node.conf`` file. Any custom CorDapp configuration should be added to a
+CorDapp configuration file. The Node's configuration will not be accessible. CorDapp configuration files should be placed in the
+`config` subdirectory of the Node's `cordapps` folder. The name of the file should match the name of the JAR of the CorDapp (eg; if your
+CorDapp is called ``hello-0.1.jar`` the configuration file needed would be ``cordapps/config/hello-0.1.conf``).
+
+If you are using the ``extraConfig`` of a ``node`` in the ``deployNodes`` Gradle task to populate custom configuration for testing, you will need
+to make the following change so that:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        node {
+            name "O=Bank A,L=London,C=GB"c
+            ...
+            extraConfig = [ 'some.extra.config' : '12345' ]
+        }
+    }
+
+Would become:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        node {
+            name "O=Bank A,L=London,C=GB"c
+            ...
+            projectCordapp {
+                config "some.extra.config=12345"
+            }
+        }
+    }
+
+See :ref:`cordapp_configuration_files_ref` for more information.
+
+Step 5. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
 
 The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, so requires counterparty nodes to accept any and
@@ -260,7 +304,7 @@ You may already be using ``waitForLedgerCommit`` in your responder flow for the 
 Now that it's calling ``ReceiveFinalityFlow``, which effectively does the same thing, this is no longer necessary. The call to
 ``waitForLedgerCommit`` should be removed.
 
-Step 4. Security: Upgrade your use of SwapIdentitiesFlow
+Step 6. Security: Upgrade your use of SwapIdentitiesFlow
 --------------------------------------------------------
 
 The :ref:`confidential_identities_ref` API is experimental in Corda 3 and remains so in Corda 4. In this release, the ``SwapIdentitiesFlow``
@@ -268,7 +312,7 @@ has been adjusted in the same way as ``FinalityFlow`` above, to close problems w
 outside of other flow context. Old code will still work, but it is recommended to adjust your call sites so a session is passed into
 the ``SwapIdentitiesFlow``.
 
-Step 5. Possibly, adjust test code
+Step 7. Possibly, adjust test code
 ----------------------------------
 
 ``MockNodeParameters`` and functions creating it no longer use a lambda expecting a ``NodeConfiguration`` object.
@@ -319,7 +363,7 @@ For instance, if you have 2 CorDapps containing the packages ``net.corda.example
 .. note:: If you have any CorDapp code (e.g. flows/contracts/states) that is only used by the tests and located in the same test module, it won't be discovered now.
     You will need to move them in the main module of one of your CorDapps or create a new, separate CorDapp for them, in case you don't want this code to live inside your production CorDapps.
 
-Step 6. Security: Add BelongsToContract annotations
+Step 8. Security: Add BelongsToContract annotations
 ---------------------------------------------------
 
 In versions of the platform prior to v4, it was the responsibility of contract and flow logic to ensure that ``TransactionState`` objects
@@ -336,7 +380,7 @@ to be governed by a contract that is either:
 Learn more by reading ":ref:`implicit_constraint_types`". If an app targets Corda 3 or lower (i.e. does not specify a target version),
 states that point to contracts outside their package will trigger a log warning but validation will proceed.
 
-Step 7. Learn about signature constraints and JAR signing
+Step 9. Learn about signature constraints and JAR signing
 ---------------------------------------------------------
 
 :doc:`design/data-model-upgrades/signature-constraints` are a new data model feature introduced in Corda 4. They make it much easier to
@@ -353,8 +397,8 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
-Step 8. Security: Package namespace handling
---------------------------------------------
+Step 10. Security: Package namespace handling
+---------------------------------------------
 
 Almost no apps will be affected by these changes, but they're important to know about.
 
@@ -370,7 +414,7 @@ In the unlikely event that you were injecting code into ``net.corda.finance.*`` 
 into a new package, e.g. ``net/corda/finance/flows/MyClass.java`` can be moved to ``com/company/corda/finance/flows/MyClass.java``.
 As a consequence your classes are no longer able to access non-public members of finance CorDapp classes.
 
-When recompiling your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
+When signing your JARs for Corda 4, your own apps will also become sealed, meaning other JARs cannot place classes into your own packages.
 This is a security upgrade that ensures package-private visibility in Java code works correctly. If other apps could define classes in your own
 packages, they could call package-private methods, which may not be expected by the developers.
 
@@ -381,9 +425,8 @@ Whilst this feature is optional and not strictly required, it may be helpful to 
 where type names may be taken "as read". You can learn more about this feature and the motivation for it by reading
 ":doc:`design/data-model-upgrades/package-namespace-ownership`".
 
-
-Step 9. Consider adding extension points to your flows
-------------------------------------------------------
+Step 11. Consider adding extension points to your flows
+-------------------------------------------------------
 
 In Corda 4 it is possible for flows in one app to subclass and take over flows from another. This allows you to create generic, shared
 flow logic that individual users can customise at pre-agreed points (protected methods). For example, a site-specific app could be developed
@@ -392,16 +435,15 @@ into shared business logic, but it makes perfect sense to put into a user-specif
 
 If your flows could benefit from being extended in this way, read ":doc:`flow-overriding`" to learn more.
 
-Step 10. Possibly update Vault state queries
+Step 12. Possibly update vault state queries
 --------------------------------------------
 
-Queries made on a node's vault can filter by the relevancy of those states to the node in Corda 4. As this functionality does not exist in
-Corda 3, apps targeting that release will continue to receive all states in any vault queries. In Corda 4, the default is to return all
-states in the vault, to maintain backwards compatibility. However, it may make sense to migrate queries expecting just those states relevant
+In Corda 4 queries made on a node's vault can filter by the relevancy of those states to the node. As this functionality does not exist in
+Corda 3, apps will continue to receive all states in any vault queries. However, it may make sense to migrate queries expecting just those states relevant
 to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
-may result in queries returning more states than expected if the node is using Observer node functionality (see ":doc:`tutorial-observer-nodes.rst`").
+may result in queries returning more states than expected if the node is using observer functionality (see ":doc:`tutorial-observer-nodes.rst`").
 
-Step 10. Explore other new features that may be useful
+Step 13. Explore other new features that may be useful
 ------------------------------------------------------
 
 Corda 4 adds several new APIs that help you build applications. Why not explore:

@@ -215,7 +215,7 @@ internal class CordaRPCOpsImpl(
     }
 
     override fun uploadAttachmentWithMetadata(jar: InputStream, uploader: String, filename: String): SecureHash {
-        return services.attachments.importAttachment(jar, uploader, filename)
+        return services.attachments.privilegedImportAttachment(jar, uploader, filename)
     }
 
     override fun queryAttachments(query: AttachmentQueryCriteria, sorting: AttachmentSort?): List<AttachmentId> {

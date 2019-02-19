@@ -221,7 +221,7 @@ notary which the reference state uses.
 
 If two or more reference states assigned to different notaries are added to a transaction then it follows that this
 transaction cannot be committed to the ledger. This would also be the case for transactions not containing reference
-states. There is an additional complication for transactions including reference states, however, it is unlikely that the
+states. There is an additional complication for transactions including reference states; it is however, unlikely that the
 party using the reference states has the authority to change the notary for the state (in other words, the party using the
 reference state would not be listed as a participant on it). Therefore, it is likely that a transaction containing
 reference states with two different notaries cannot be committed to the ledger.
@@ -251,9 +251,9 @@ a look-up. There are two types of pointers; linear and static.
    is aware of. In effect, the pointer "moves" as the LinearState is updated.
 
 State pointers use ``Reference States`` to enable the functionality described above. They can be conceptualized as a mechanism to
-formalise a development pattern where one needs to refer to a specific state from another state (StaticPointer) or a particular lineage
-of states ``LinearPointer``. In other words, ``StatePointers`` do not enable a feature in Corda which was previously unavailable.
-Rather, they help to formalise a pattern which was already possible. In that light it is worth nothing some issues which you may encounter
+formalise a development pattern where one needs to refer to a specific state from another transaction (StaticPointer) or a particular lineage
+of states (LinearPointer). In other words, ``StatePointers`` do not enable a feature in Corda which was previously unavailable.
+Rather, they help to formalise a pattern which was already possible. In that light, it is worth noting some issues which you may encounter
 in its application:
 
 * If the node calling ``resolve`` has not seen any transactions containing a ``ContractState`` which the ``StatePointer``

@@ -86,7 +86,7 @@ class JacksonSupportTest(@Suppress("unused") private val name: String, factory: 
 
     @Before
     fun setup() {
-        val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }) {
+        val unsignedAttachment = object : AbstractAttachment({ byteArrayOf() }, "test") {
             override val id: SecureHash get() = throw UnsupportedOperationException()
         }
 

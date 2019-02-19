@@ -50,10 +50,6 @@ Version 4.0
 
 * ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
 
-* Transaction building and verification enforces new contract attachment version non-downgrade rule.
-  For a given contract class, the contract attachment of the output states must be of the same or newer version than the contract attachment of the input states.
-  See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
-
 * Standardised CorDapp version identifiers in jar manifests (aligned with associated cordapp Gradle plugin changes).
   Updated all samples to reflect new conventions.
 
@@ -102,8 +98,8 @@ Version 4.0
 * Introduced new optional network bootstrapper command line options (--register-package-owner, --unregister-package-owner)
   to register/unregister a java package namespace with an associated owner in the network parameter packageOwnership whitelist.
 
-* BFT-Smart and Raft notary implementations have been move to the ``net.corda.notary.experimental`` package to emphasise
-  their experimental nature. Note that it not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
+* BFT-Smart and Raft notary implementations have been moved to the ``net.corda.notary.experimental`` package to emphasise
+  their experimental nature. Note that it is not possible to preserve the state for both types of notaries when upgrading from V3 or an earlier Corda version.
 
 * New "validate-configuration" sub-command to `corda.jar`, allowing to validate the actual node configuration without starting the node.
 

@@ -158,13 +158,13 @@ class TransactionBuilderTest {
         assertThat(wtx.outputs).containsOnly(outputState.copy(constraint = expectedConstraint))
     }
 
-    private val unsignedAttachment = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }) {
+    private val unsignedAttachment = ContractAttachment(object : AbstractAttachment({ byteArrayOf() }, "test") {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
         override val signerKeys: List<PublicKey> get() = emptyList()
     }, DummyContract.PROGRAM_ID)
 
-    private fun signedAttachment(vararg parties: Party) = ContractAttachment.create(object : AbstractAttachment({ byteArrayOf() }) {
+    private fun signedAttachment(vararg parties: Party) = ContractAttachment.create(object : AbstractAttachment({ byteArrayOf() }, "test") {
         override val id: SecureHash get() = throw UnsupportedOperationException()
 
         override val signerKeys: List<PublicKey> get() = parties.map { it.owningKey }
