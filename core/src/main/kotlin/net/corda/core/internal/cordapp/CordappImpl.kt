@@ -34,14 +34,15 @@ data class CordappImpl(
         override val targetPlatformVersion: Int,
         val notaryService: Class<out NotaryService>? = null,
         /** Indicates whether the CorDapp is loaded from external sources, or generated on node startup (virtual). */
-        val isLoaded: Boolean = true
+        val isLoaded: Boolean = true,
+        private val explicitCordappClasses: List<String> = emptyList()
 ) : Cordapp {
     override val name: String = jarName(jarPath)
 
     // TODO: Also add [SchedulableFlow] as a Cordapp class
     override val cordappClasses: List<String> = run {
         val classList = rpcFlows + initiatedFlows + services + serializationWhitelists.map { javaClass } + notaryService
-        classList.mapNotNull { it?.name } + contractClassNames
+        classList.mapNotNull { it?.name } + contractClassNames + explicitCordappClasses
     }
 
     companion object {

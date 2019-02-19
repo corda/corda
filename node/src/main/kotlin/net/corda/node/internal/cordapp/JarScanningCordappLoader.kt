@@ -151,7 +151,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 getJarHash(url.url),
                 minPlatformVersion,
                 targetPlatformVersion,
-                findNotaryService(this)
+                findNotaryService(this),
+                explicitCordappClasses = findAllCordappClasses(this)
         )
     }
 
@@ -248,6 +249,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
     private fun findAllFlows(scanResult: RestrictedScanResult): List<Class<out FlowLogic<*>>> {
         return scanResult.getConcreteClassesOfType(FlowLogic::class)
+    }
+
+    private fun findAllCordappClasses(scanResult: RestrictedScanResult): List<String> {
+        return scanResult.getAllStandardClasses() + scanResult.getAllInterfaces()
     }
 
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
@@ -348,6 +353,20 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { it.isAbstractClass }
+        }
+
+        fun getAllStandardClasses(): List<String> {
+            return scanResult
+                    .getAllStandardClasses()
+                    .names
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+        }
+
+        fun getAllInterfaces(): List<String> {
+            return scanResult
+                    .getAllInterfaces()
+                    .names
+                    .filter { it.startsWith(qualifiedNamePrefix) }
         }
 
         override fun close() = scanResult.close()
