@@ -245,10 +245,12 @@ Start the nodes by running the following command from the root of the ``cordapp-
 * Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
-Each Spring Boot server needs to be started in it's own terminal, replace X with A, B and C:
+Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
 
 * Unix/Mac OSX: ``./gradlew runPartyXServer``
 * Windows: ``gradlew.bat runPartyXServer``
+
+Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
    nodes may fail to start.
