@@ -12,16 +12,16 @@ Version 4.0
 
 Please refer to :doc:`changelog` for all Open Source changes which automatically also apply to Enterprise.
 
-Changelog entries in this unreleased section refer to Enterprise-only changes.
+Changelog entries below refer to Enterprise-only changes.
 
-* WARNING the ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
+.. warning:: WARNING the ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
   with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``.
   Within that configuration file the ``bridgeMode`` property has been modified to ``firewallMode`` for overall consistency.
   Furthermore, under ``outboundConfig`` - ``socksProxyConfig`` been renamed into ``proxyConfig``.
   This will not be a breaking change for early adopters and their deployments, as new version of software can still consume
   old style configs and produce a meaningful warning.
 
-* Introduced a hierarchy of ``DatabaseMigrationException``s, allowing ``NodeStartup`` to gracefully inform users of problems
+* Introduced a hierarchy of ``DatabaseMigrationException``'s, allowing ``NodeStartup`` to gracefully inform users of problems
   related to database migrations before exiting with a non-zero code.
 
 * Introduced a grace period before the initial node registration fails if the node cannot connect to the Doorman.

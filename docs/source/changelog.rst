@@ -23,7 +23,7 @@ Unreleased
   * The various utility methods defined in ``Cash`` for creating cash transactions have been moved to ``net.corda.finance.workflows.asset.CashUtils``.
     Similarly with ``CommercialPaperUtils`` and ``ObligationUtils``.
 
-  * Various other utilities such as ``GetBalances` and the test calendar data.
+  * Various other utilities such as ``GetBalances`` and the test calendar data.
 
   The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
 

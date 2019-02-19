@@ -116,7 +116,7 @@ application development please continue to refer to `the main project documentat
 
    deterministic-modules.rst
    release-notes.rst
-   changelog.rst
+   changelog-enterprise.rst
 
 .. conditional-toctree::
    :caption: Participate
@@ -126,7 +126,7 @@ application development please continue to refer to `the main project documentat
    contributing-index.rst
    corda-repo-layout.rst
    deterministic-modules.rst
-   changelog
+   changelog-enterprise.rst
 
 .. conditional-toctree::
    :caption: Design docs
