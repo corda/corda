@@ -271,6 +271,8 @@ We have open sourced the Liquibase schema upgrade feature from Corda Enterprise.
 bootstrap and update itself automatically. This is a transparent change with pre Corda 4 nodes seamlessly
 upgrading to operate as if they'd been bootstrapped in this way. This also applies to the finance CorDapp module.
 
+.. important:: If you're upgrading a node from Corda 3 to Corda 4 and there is old data in the vault, this upgrade may take some time, depending on the number of unconsumed states in the vault.
+
 Ability to pre-validate configuration files
 +++++++++++++++++++++++++++++++++++++++++++
 
@@ -291,12 +293,6 @@ Retirement of non-elliptic Diffie-Hellman for TLS
 The TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 family of ciphers is retired from the list of allowed ciphers for TLS
 as it is a legacy cipher family not supported by all native SSL/TLS implementations. We anticipate that this
 will have no impact on any deployed configurations.
-
-Confidential identities
-+++++++++++++++++++++++
-
-If any of your CorDapps use the experimental confidential-identities module then it also needs to be loaded as a separate CorDapp jar. This
-includes the demo finance CorDapp.
 
 Miscellaneous changes
 ~~~~~~~~~~~~~~~~~~~~~

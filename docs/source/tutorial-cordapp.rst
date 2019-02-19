@@ -245,10 +245,12 @@ Start the nodes by running the following command from the root of the ``cordapp-
 * Unix/Mac OSX: ``workflows-kotlin/build/nodes/runnodes``
 * Windows: ``call workflows-kotlin\build\nodes\runnodes.bat``
 
-Each Spring Boot server needs to be started in it's own terminal, replace X with A, B and C:
+Each Spring Boot server needs to be started in its own terminal/command prompt, replace X with A, B and C:
 
 * Unix/Mac OSX: ``./gradlew runPartyXServer``
 * Windows: ``gradlew.bat runPartyXServer``
+
+Look for the Started ServerKt in X seconds message, don't rely on the % indicator.
 
 .. warning:: On Unix/Mac OSX, do not click/change focus until all seven additional terminal windows have opened, or some
    nodes may fail to start.
@@ -426,32 +428,6 @@ Via the h2 web console
 ~~~~~~~~~~~~~~~~~~~~~~
 You can connect directly to your node's database to see its stored states, transactions and attachments. To do so,
 please follow the instructions in :doc:`node-database`.
-
-Using the example RPC client
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-``/src/main/kotlin/com/example/client/ExampleClientRPC.kt`` defines a simple RPC client that connects to a node,
-logs any existing IOUs and listens for any future IOUs. If you haven't created
-any IOUs when you first connect to one of the nodes, the client will simply log any future IOUs that are agreed.
-
-Running the client via IntelliJ
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Run the 'Run Example RPC Client' run configuration. By default, this run configuration is configured to connect to
-PartyA. You can edit the run configuration to connect on a different port.
-
-Running the client via the command line
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Run the following gradle task:
-
-``./gradlew runExampleClientRPCKotlin``
-
-This will connect the RPC client to PartyA and log their past and future IOU activity.
-
-You can close the application using ``ctrl+C``.
-
-For more information on the client RPC interface and how to build an RPC client application, see:
-
-* :doc:`Client RPC documentation <clientrpc>`
-* :doc:`Client RPC tutorial <tutorial-clientrpc-api>`
 
 Running nodes across machines
 -----------------------------

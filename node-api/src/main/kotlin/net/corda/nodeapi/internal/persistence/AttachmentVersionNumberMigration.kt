@@ -29,11 +29,15 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
             logger.info("Start executing...")
             var networkParameters: NetworkParameters?
             val baseDir = System.getProperty(SchemaMigration.NODE_BASE_DIR_KEY)
+            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (baseDir != null) {
                 val path = Paths.get(baseDir) / NETWORK_PARAMS_FILE_NAME
                 networkParameters = getNetworkParametersFromFile(path)
                 if (networkParameters != null) {
                     logger.info("$msg using network parameters from $path, whitelistedContractImplementations: ${networkParameters.whitelistedContractImplementations}.")
+                } else if (availableAttachments.isEmpty()){
+                    logger.info("$msg skipped, network parameters not found in $path, but there are no available attachments to migrate.")
+                    return
                 } else {
                     logger.warn("$msg skipped, network parameters not found in $path.")
                     return
@@ -43,7 +47,6 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
                 return
             }
 
-            val availableAttachments = getAttachmentsWithDefaultVersion(connection)
             if (availableAttachments.isEmpty()) {
                 logger.info("$msg skipped, no attachments not found.")
                 return
@@ -84,8 +87,13 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
     }
 
     private fun getNetworkParametersFromFile(path: Path): NetworkParameters? {
-        val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
-        return networkParametersBytes?.raw?.deserialize()
+        return try {
+            val networkParametersBytes = path?.readObject<SignedNetworkParameters>()
+            networkParametersBytes?.raw?.deserialize()
+        } catch (e: Exception) {
+            // This condition is logged in the calling function, so no need to do that here.
+            null
+        }
     }
 
     private fun getAttachmentsWithDefaultVersion(connection: JdbcConnection): List<String> =

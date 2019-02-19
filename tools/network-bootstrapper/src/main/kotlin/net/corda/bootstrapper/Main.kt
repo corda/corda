@@ -22,6 +22,11 @@ fun main(args: Array<String>) {
     CommandLine(baseArgs).parse(*args)
     testDockerConnectivity()
 
+    if (baseArgs.usageHelpRequested) {
+        CommandLine.usage(CliParser(), System.out)
+        return
+    }
+
     if (baseArgs.gui) {
         Application.launch(Gui::class.java)
         return

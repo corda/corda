@@ -27,8 +27,8 @@ Unreleased
 
   The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
 
-* Vault states are now correctly migrated when moving from V3 to V4.1. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
-  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.1.
+* Vault states are now correctly migrated when moving from V3 to V4. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
+  Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.
 
 .. _changelog_v4.0:
 
@@ -73,9 +73,6 @@ Version 4.0
 * Fixed a problem with IRS demo not being able to simulate future dates as expected (https://github.com/corda/corda/issues/3851).
 
 * Fixed a problem that was preventing `Cash.generateSpend` to be used more than once per transaction (https://github.com/corda/corda/issues/4110).
-
-* The experimental confidential-identities is now a separate CorDapp and must now be loaded onto the node alongside any CorDapp that needs it.
-  This also means your gradle dependency for it should be ``cordapp`` and not ``cordaCompile``.
 
 * Fixed a bug resulting in poor vault query performance and incorrect results when sorting.
 
@@ -255,6 +252,7 @@ Version 4.0
   * Introduced a placeholder for custom properties within ``node.conf``; the property key is "custom".
   * The deprecated web server now has its own ``web-server.conf`` file, separate from ``node.conf``.
   * Property keys with double quotes (e.g. "key") in ``node.conf`` are no longer allowed, for rationale refer to :doc:`corda-configuration-file`.
+  * The ``issuableCurrencies`` property is no longer valid for ``node.conf``. Instead, it has been moved to the finance workflows CorDapp configuration.
 
 * Added public support for creating ``CordaRPCClient`` using SSL. For this to work the node needs to provide client applications
   a certificate to be added to a truststore. See :doc:`tutorial-clientrpc-api`

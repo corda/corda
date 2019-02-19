@@ -12,8 +12,4 @@ open class SessionRejectException(message: String) : CordaException(message) {
     class NotAFlow(val initiatorClass: Class<*>) : SessionRejectException("${initiatorClass.name} is not a flow")
 
     class NotRegistered(val initiatorFlowClass: Class<out FlowLogic<*>>) : SessionRejectException("${initiatorFlowClass.name} is not registered")
-
-    class FinalityHandlerDisabled : SessionRejectException("Counterparty attempting to use the old insecure API of FinalityFlow. However this " +
-            "API is disabled on this node since there no CorDapps installed that require it. It may be that the counterparty is running an " +
-            "older verison of a CorDapp.")
 }

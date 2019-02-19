@@ -28,9 +28,7 @@ fun LedgerTransaction.prepareVerify(extraAttachments: List<Attachment>) = this.i
  *
  * @param inputVersions A map linking each contract class name to the advertised version of the JAR that defines it. Used for downgrade protection.
  */
-class Verifier(val ltx: LedgerTransaction,
-               private val transactionClassLoader: ClassLoader,
-               private val inputVersions: Map<ContractClassName, Version>) {
+class Verifier(val ltx: LedgerTransaction, private val transactionClassLoader: ClassLoader) {
     private val inputStates: List<TransactionState<*>> = ltx.inputs.map { it.state }
     private val allStates: List<TransactionState<*>> = inputStates + ltx.references.map { it.state } + ltx.outputs
 

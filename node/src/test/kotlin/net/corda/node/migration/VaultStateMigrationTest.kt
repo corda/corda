@@ -3,11 +3,16 @@ package net.corda.node.migration
 import liquibase.database.Database
 import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.*
+import net.corda.core.crypto.Crypto
+import net.corda.core.crypto.SecureHash
+import net.corda.core.crypto.SignableData
+import net.corda.core.crypto.SignatureMetadata
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.PartyAndCertificate
-import net.corda.core.internal.hash
-import net.corda.core.internal.packageName
+import net.corda.core.internal.*
+import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NotaryInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationDefaults
@@ -21,12 +26,15 @@ import net.corda.finance.contracts.asset.Cash
 import net.corda.finance.contracts.asset.Obligation
 import net.corda.finance.contracts.asset.OnLedgerAsset
 import net.corda.finance.schemas.CashSchemaV1
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.vault.VaultSchemaV1
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
+import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.testing.core.*
 import net.corda.testing.internal.configureDatabase
@@ -42,10 +50,22 @@ import org.junit.*
 import org.mockito.Mockito
 import java.security.KeyPair
 import java.time.Clock
+import java.time.Duration
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
+/**
+ * These tests aim to verify that migrating vault states from V3 to later versions works correctly. While these unit tests verify the
+ * migrating behaviour is correct (tables populated, columns updated for the right states), it comes with a caveat: they do not test that
+ * deserialising states with the attachment classloader works correctly.
+ *
+ * The reason for this is that it is impossible to do so. There is no real way of writing a unit or integration test to upgrade from one
+ * version to another (at the time of writing). These tests simulate a small part of the upgrade process by directly using hibernate to
+ * populate a database as a V3 node would, then running the migration class. However, it is impossible to do this for attachments as there
+ * is no contract state jar to serialise.
+ */
 class VaultStateMigrationTest {
     companion object {
         val alice = TestIdentity(ALICE_NAME, 70)
@@ -103,11 +123,40 @@ class VaultStateMigrationTest {
 
         saveOurKeys(listOf(bob.keyPair, bob2.keyPair))
         saveAllIdentities(listOf(BOB_IDENTITY, ALICE_IDENTITY, BOC_IDENTITY, dummyNotary.identity, BOB2_IDENTITY))
+        addNetworkParameters()
     }
 
     @After
     fun close() {
+        contextTransactionOrNull?.close()
         cordaDB.close()
+    }
+
+    private fun addNetworkParameters() {
+        cordaDB.transaction {
+            val clock = Clock.systemUTC()
+            val params = NetworkParameters(
+                    1,
+                    listOf(NotaryInfo(DUMMY_NOTARY, false), NotaryInfo(CHARLIE, false)),
+                    1,
+                    1,
+                    clock.instant(),
+                    1,
+                    mapOf(),
+                    Duration.ZERO,
+                    mapOf()
+            )
+            val signedParams = params.signWithCert(bob.keyPair.private, BOB_IDENTITY.certificate)
+            val persistentParams = DBNetworkParametersStorage.PersistentNetworkParameters(
+                    SecureHash.allOnesHash.toString(),
+                    params.epoch,
+                    signedParams.raw.bytes,
+                    signedParams.sig.bytes,
+                    signedParams.sig.by.encoded,
+                    X509Utilities.buildCertPath(signedParams.sig.parentCertsChain).encoded
+            )
+            session.save(persistentParams)
+        }
     }
 
     private fun createCashTransaction(cash: Cash, value: Amount<Currency>, owner: AbstractParty): SignedTransaction {
@@ -246,6 +295,33 @@ class VaultStateMigrationTest {
         }
     }
 
+    private fun createNotaryChangeTransaction(inputs: List<StateRef>, paramsHash: SecureHash): SignedTransaction {
+        val notaryTx = NotaryChangeTransactionBuilder(inputs, DUMMY_NOTARY, CHARLIE, paramsHash).build()
+        val notaryKey = DUMMY_NOTARY.owningKey
+        val signableData = SignableData(notaryTx.id, SignatureMetadata(3, Crypto.findSignatureScheme(notaryKey).schemeNumberID))
+        val notarySignature = notaryServices.keyManagementService.sign(signableData, notaryKey)
+        return SignedTransaction(notaryTx, listOf(notarySignature))
+    }
+
+    private fun createVaultStatesFromNotaryChangeTransaction(tx: SignedTransaction, inputs: List<TransactionState<ContractState>>) {
+        cordaDB.transaction {
+            inputs.forEachIndexed { index, state ->
+                val constraintInfo = Vault.ConstraintInfo(state.constraint)
+                val persistentState = VaultSchemaV1.VaultStates(
+                        notary = tx.notary!!,
+                        contractStateClassName = state.data.javaClass.name,
+                        stateStatus = Vault.StateStatus.UNCONSUMED,
+                        recordedTime = clock.instant(),
+                        relevancyStatus = Vault.RelevancyStatus.RELEVANT, //Always persist as relevant to mimic V3
+                        constraintType = constraintInfo.type(),
+                        constraintData = constraintInfo.data()
+                )
+                persistentState.stateRef = PersistentStateRef(tx.id.toString(), index)
+                session.save(persistentState)
+            }
+        }
+    }
+
     private fun <T> getState(clazz: Class<T>): T {
         return cordaDB.transaction {
             val criteriaBuilder = cordaDB.entityManagerFactory.criteriaBuilder
@@ -357,15 +433,20 @@ class VaultStateMigrationTest {
     }
 
     @Test
-    fun `State with corresponding transaction missing is skipped`() {
+    fun `State with corresponding transaction missing fails migration`() {
         val cash = Cash()
         val unknownTx = createCashTransaction(cash, 100.DOLLARS, BOB)
         createVaultStatesFromTransaction(unknownTx)
 
         addCashStates(10, BOB)
         val migration = VaultStateMigration()
-        migration.execute(liquibaseDB)
+        assertFailsWith<VaultStateMigrationException> { migration.execute(liquibaseDB) }
         assertEquals(10, getStatePartyCount())
+
+        // Now add the missing transaction and ensure that the migration succeeds
+        storeTransaction(unknownTx)
+        migration.execute(liquibaseDB)
+        assertEquals(11, getStatePartyCount())
     }
 
     @Test
@@ -379,8 +460,8 @@ class VaultStateMigrationTest {
         assertEquals(10, getVaultStateCount(Vault.RelevancyStatus.RELEVANT))
     }
 
-    @Test
-    fun `Null database causes migration to be ignored`() {
+    @Test(expected = VaultStateMigrationException::class)
+    fun `Null database causes migration to fail`() {
         val migration = VaultStateMigration()
         // Just check this does not throw an exception
         migration.execute(null)
@@ -428,6 +509,24 @@ class VaultStateMigrationTest {
         val migration = VaultStateMigration()
         migration.execute(liquibaseDB)
         assertEquals(0, getStatePartyCount())
+    }
+
+    @Test
+    fun `State created with notary change transaction can be migrated`() {
+        // This test is a little bit of a hack - it checks that these states are migrated correctly by looking at params in the database,
+        // but these will not be there for V3 nodes. Handling for this must be tested manually.
+        val cashTx = createCashTransaction(Cash(), 5.DOLLARS, BOB)
+        val cashTx2 = createCashTransaction(Cash(), 10.DOLLARS, BOB)
+        val notaryTx = createNotaryChangeTransaction(listOf(StateRef(cashTx.id, 0), StateRef(cashTx2.id, 0)), SecureHash.allOnesHash)
+        createVaultStatesFromTransaction(cashTx, stateStatus = Vault.StateStatus.CONSUMED)
+        createVaultStatesFromTransaction(cashTx2, stateStatus = Vault.StateStatus.CONSUMED)
+        createVaultStatesFromNotaryChangeTransaction(notaryTx, cashTx.coreTransaction.outputs + cashTx2.coreTransaction.outputs)
+        storeTransaction(cashTx)
+        storeTransaction(cashTx2)
+        storeTransaction(notaryTx)
+        val migration = VaultStateMigration()
+        migration.execute(liquibaseDB)
+        assertEquals(2, getStatePartyCount())
     }
 
     // Used to test migration performance
