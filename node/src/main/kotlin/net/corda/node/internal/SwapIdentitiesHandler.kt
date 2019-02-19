@@ -12,7 +12,7 @@ import net.corda.core.internal.warnOnce
  * but it is a complex versioning problem because we don't know which peers we might interact with. Disabling it will probably have to be
  * gated on a minPlatformVersion bump.
  */
-@InitiatedBy(SwapIdentitiesFlow::class)
+//@InitiatedBy(SwapIdentitiesFlow::class)
 class SwapIdentitiesHandler(private val otherSide: FlowSession) : FlowLogic<Unit>() {
     @Suspendable
     override fun call() {
