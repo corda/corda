@@ -38,11 +38,6 @@ class SchemaMigrationTest {
         }
     }
 
-//    @Before
-//    fun setUpEnvironment() {
-//        System.setProperty(NODE_X500_NAME, TestIdentity(ALICE_NAME, 70).name.toString())
-//    }
-
     @Test
     fun `Ensure that runMigration is disabled by default`() {
         assertThat(DatabaseConfig().runMigration).isFalse()
