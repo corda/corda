@@ -239,7 +239,7 @@ class RpcWorkerServiceHub(override val configuration: NodeConfiguration,
         val isH2Database = isH2Database(configuration.dataSourceProperties.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
 
-        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas)
+        database.startHikariPool(configuration.dataSourceProperties, configuration.database, schemas, ourName = myInfo.legalIdentities.first().name)
         identityService.start(trustRoot, listOf(myInfo.legalIdentitiesAndCerts.first().certificate, nodeCa))
 
         // networkParametersService needs the database started

@@ -55,7 +55,7 @@ abstract class CordaMigration : CustomTaskChange {
         val metricRegistry = MetricRegistry()
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
-        _cordaDB = createDatabase(url, cacheFactory, identityService, schema, database.defaultSchemaName)
+        _cordaDB = createDatabase(cacheFactory, identityService, schema, database.defaultSchemaName)
         cordaDB.start(dataSource, url)
         identityService.database = cordaDB
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
@@ -68,8 +68,7 @@ abstract class CordaMigration : CustomTaskChange {
         }
     }
 
-    private fun createDatabase(jdbcUrl: String,
-                               cacheFactory: MigrationNamedCacheFactory,
+    private fun createDatabase(cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>,
                                databaseSchemaName: String?): CordaPersistence {

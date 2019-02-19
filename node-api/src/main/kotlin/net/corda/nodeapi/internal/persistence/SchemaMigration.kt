@@ -37,7 +37,7 @@ class SchemaMigration(
         private val databaseConfig: DatabaseConfig,
         cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
-        private val ourName: CordaX500Name) {
+        private val ourName: CordaX500Name? = null) {
 
     companion object {
         private val logger = contextLogger()
@@ -131,7 +131,9 @@ class SchemaMigration(
             if (path != null) {
                 System.setProperty(NODE_BASE_DIR_KEY, path) // base dir for any custom change set which may need to load a file (currently AttachmentVersionNumberMigration)
             }
-            System.setProperty(NODE_X500_NAME, ourName.toString())
+            if (ourName != null) {
+                System.setProperty(NODE_X500_NAME, ourName.toString())
+            }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
             val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))

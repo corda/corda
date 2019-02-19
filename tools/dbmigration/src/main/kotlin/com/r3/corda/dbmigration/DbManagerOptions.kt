@@ -43,6 +43,7 @@ class DoormanDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : Db
         }
         fatJarPath
     }
+    override val cordappLoader = null
 
     override val parsedConfig: Config by lazy {
         ConfigFactory.parseFile(configFile.toFile()).resolve()
@@ -61,8 +62,8 @@ class DoormanDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : Db
 class NodeDbManagerConfiguration(cmdLineOptions: SharedDbManagerOptions) : DbManagerConfiguration(cmdLineOptions) {
     private val cordappsFolder by lazy { baseDirectory / "cordapps" }
     private val cordappSchemas by lazy { cordappLoader.cordappSchemas }
-    private val cordappLoader by lazy { JarScanningCordappLoader.fromDirectories(setOf(baseDirectory, cordappsFolder)) }
 
+    override val cordappLoader by lazy { JarScanningCordappLoader.fromDirectories(setOf(baseDirectory, cordappsFolder)) }
     override val defaultConfigFileName get() = "node.conf"
     override val classLoader by lazy { cordappLoader.appClassLoader }
     override val schemas: Set<MappedSchema> by lazy { NodeSchemaService(extraSchemas = cordappSchemas).schemaOptions.keys }
