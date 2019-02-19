@@ -14,6 +14,7 @@ import org.bouncycastle.operator.ContentSigner
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.util.*
 import javax.persistence.*
 
 /**
@@ -82,8 +83,20 @@ class PersistentKeyManagementService(cacheFactory: NamedCacheFactory, val identi
         return keyPair.public
     }
 
+    override fun freshKey(externalId: UUID): PublicKey {
+        val newKey = freshKey()
+        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
+        return newKey
+    }
+
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
+        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
+        return newKeyWithCert
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner = getSigner(getSigningKeyPair(publicKey))

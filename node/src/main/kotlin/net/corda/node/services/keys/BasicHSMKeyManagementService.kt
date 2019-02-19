@@ -49,26 +49,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
             : this(publicKey.toStringShort(), publicKey.encoded, privateKey.encoded)
     }
 
-    @Entity
-    @Table(name = "pk_hash_to_ext_id_map", indexes = [Index(name = "pk_hash_to_xid_idx", columnList = "public_key_hash")])
-    class PublicKeyHashToExternalId(
-            @Id
-            @GeneratedValue
-            @Column(name = "id", unique = true, nullable = false)
-            val key: Long?,
-
-            @Column(name = "external_id", nullable = false)
-            @Type(type = "uuid-char")
-            val externalId: UUID,
-
-            @Column(name = "public_key_hash", nullable = false)
-            val publicKeyHash: String
-    ) {
-        constructor(accountId: UUID, publicKey: PublicKey)
-                : this(null, accountId, publicKey.toStringShort())
-    }
-
-    companion object {
+    private companion object {
         fun createKeyMap(cacheFactory: NamedCacheFactory): AppendOnlyPersistentMap<PublicKey, PrivateKey, PersistentKey, String> {
             return AppendOnlyPersistentMap(
                     cacheFactory = cacheFactory,
@@ -116,8 +97,20 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
         return keyPair.public
     }
 
+    override fun freshKey(externalId: UUID): PublicKey {
+        val newKey = freshKey()
+        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKey)) }
+        return newKey
+    }
+
     override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate {
         return freshCertificate(identityService, freshKey(), identity, getSigner(identity.owningKey))
+    }
+
+    override fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate {
+        val newKeyWithCert = freshKeyAndCert(identity, revocationEnabled)
+        database.transaction { session.persist(PublicKeyHashToExternalId(externalId, newKeyWithCert.owningKey)) }
+        return newKeyWithCert
     }
 
     private fun getSigner(publicKey: PublicKey): ContentSigner {

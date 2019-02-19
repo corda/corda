@@ -11,7 +11,6 @@ import net.corda.core.internal.div
 import net.corda.core.internal.packageName
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.LedgerTransaction
-import net.corda.core.transactions.MissingContractAttachments
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.getOrThrow
@@ -33,9 +32,7 @@ import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.ClassRule
 import org.junit.Test
-import java.sql.DriverManager
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class SignatureConstraintVersioningTests : IntegrationTest() {
@@ -91,58 +88,6 @@ class SignatureConstraintVersioningTests : IntegrationTest() {
         }
         assertNotNull(stateAndRef)
         assertEquals(transformetMessage, stateAndRef!!.state.data.message)
-    }
-
-    @Test
-    fun `cannot evolve from higher contract class version to lower one`() {
-        assumeFalse(System.getProperty("os.name").toLowerCase().startsWith("win")) // See NodeStatePersistenceTests.kt.
-        assumeTrue(!isRemoteDatabaseMode()) // Enterprise only - disable test where running against remote database, as it uses H2 specific JDBC URL
-
-        val port = incrementalPortAllocation(21_000).nextPort()
-
-        val stateAndRef: StateAndRef<MessageState>? = internalDriver(inMemoryDB = false,
-                startNodesInProcess = isQuasarAgentSpecified(),
-                networkParameters = testNetworkParameters(notaries = emptyList(), minimumPlatformVersion = 4)) {
-            val nodeName = {
-                val nodeHandle = startNode(NodeParameters(rpcUsers = listOf(user), additionalCordapps = listOf(newCordapp)),
-                        customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
-                val nodeName = nodeHandle.nodeInfo.singleIdentity().name
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    it.proxy.startFlow(::CreateMessage, message, defaultNotaryIdentity).returnValue.getOrThrow()
-                }
-                nodeHandle.stop()
-                nodeName
-            }()
-            val result = {
-                (baseDirectory(nodeName) / "cordapps").deleteRecursively()
-                val nodeHandle = startNode(NodeParameters(providedName = nodeName, rpcUsers = listOf(user), additionalCordapps = listOf(oldCordapp)),
-                        customOverrides = mapOf("h2Settings.address" to "localhost:$port")).getOrThrow()
-
-                //set the attachment with newer version (3) as untrusted one so the node can use only the older attachment with version 2
-                DriverManager.getConnection("jdbc:h2:tcp://localhost:$port/node", "sa", "").use {
-                    it.createStatement().execute("UPDATE NODE_ATTACHMENTS SET UPLOADER = 'p2p' WHERE VERSION = 3")
-                }
-                var result: StateAndRef<MessageState>? = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-
-                CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    assertFailsWith(MissingContractAttachments::class) {
-                        it.proxy.startFlow(::ConsumeMessage, result!!, defaultNotaryIdentity).returnValue.getOrThrow()
-                    }
-                }
-                result = CordaRPCClient(nodeHandle.rpcAddress).start(user.username, user.password).use {
-                    val page = it.proxy.vaultQuery(MessageState::class.java)
-                    page.states.singleOrNull()
-                }
-                nodeHandle.stop()
-                result
-            }()
-            result
-        }
-        assertNotNull(stateAndRef)
-        assertEquals(message, stateAndRef!!.state.data.message)
     }
 }
 

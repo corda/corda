@@ -7,10 +7,12 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SignableData
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.PartyAndCertificate
+import net.corda.core.node.ServiceHub
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.cert.X509Certificate
+import java.util.*
 
 /**
  * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
@@ -31,8 +33,15 @@ interface KeyManagementService {
     fun freshKey(): PublicKey
 
     /**
-     * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding
-     * [X509Certificate] and adds it to the identity service.
+     * Generates a new random [KeyPair] and adds it to the internal key storage. Associates the public key to an external ID. Returns the
+     * public key part of the pair.
+     */
+    @Suspendable
+    fun freshKey(externalId: UUID): PublicKey
+
+    /**
+     * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding [X509Certificate] and adds it
+     * to the identity service. Associates the public key to an external ID. Returns the public part of the pair.
      *
      * @param identity identity to generate a key and certificate for. Must be an identity this node has CA privileges for.
      * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
@@ -40,6 +49,18 @@ interface KeyManagementService {
      */
     @Suspendable
     fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean): PartyAndCertificate
+
+    /**
+     * Generates a new random [KeyPair], adds it to the internal key storage, then generates a corresponding
+     * [X509Certificate] and adds it to the identity service.
+     *
+     * @param identity identity to generate a key and certificate for. Must be an identity this node has CA privileges for.
+     * @param revocationEnabled whether to check revocation status of certificates in the certificate path.
+     * @param externalId ID to associate the newly created [PublicKey] with.
+     * @return X.509 certificate and path to the trust root.
+     */
+    @Suspendable
+    fun freshKeyAndCert(identity: PartyAndCertificate, revocationEnabled: Boolean, externalId: UUID): PartyAndCertificate
 
     /**
      * Filter some keys down to the set that this node owns (has private keys for).

@@ -124,9 +124,6 @@ allows tool developers to assume that if a class name appears to be owned by an 
 semantics of that class actually *were* defined by that organisation, thus eliminating edge cases that
 might otherwise cause confusion.
 
-**No downgrades.** Transaction building and verification enforces new contract attachment version non-downgrade rule.
-For a given contract class, the contract attachment of the output states must be of the same or newer version than
-the contract attachment of the input states. See :ref:`Contract attachment non-downgrade rule <contract_non-downgrade_rule_ref>` for further information.
 
 Network parameters in transactions
 ++++++++++++++++++++++++++++++++++

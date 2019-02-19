@@ -42,7 +42,6 @@ class AttachmentsClassLoaderTests {
     private val networkParameters = testNetworkParameters()
     private fun make(attachments: List<Attachment>, params: NetworkParameters = networkParameters) = AttachmentsClassLoader(attachments, params, SecureHash.zeroHash)
 
-
     @Test
     fun `Loading AnotherDummyContract without using the AttachmentsClassLoader fails`() {
         assertFailsWith<ClassNotFoundException> {
@@ -123,9 +122,9 @@ class AttachmentsClassLoaderTests {
     }
 
     @Test
-    fun `Overlapping rules for META-INF serializationwhitelist files`() {
-        val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some data").inputStream(), "app", "file1.jar")
-        val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.serializationwhitelist", "some other data").inputStream(), "app", "file2.jar")
+    fun `Overlapping rules for META-INF SerializationWhitelist files`() {
+        val att1 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some data").inputStream(), "app", "file1.jar")
+        val att2 = importAttachment(fakeAttachment("meta-inf/services/net.corda.core.serialization.SerializationWhitelist", "some other data").inputStream(), "app", "file2.jar")
 
         make(arrayOf(att1, att2).map { storage.openAttachment(it)!! })
     }
@@ -177,6 +176,20 @@ class AttachmentsClassLoaderTests {
 
         val data2b = readAttachment(storage.openAttachment(att2)!!, "/folder1/folderb/file2.txt")
         assertArrayEquals("some other data".toByteArray(), data2b)
+    }
+
+    @Test
+    fun `Allow loading untrusted resource jars but only trusted jars that contain class files`() {
+        val trustedResourceJar = importAttachment(fakeAttachment("file1.txt", "some data").inputStream(), "app", "file0.jar")
+        val untrustedResourceJar = importAttachment(fakeAttachment("file2.txt", "some malicious data").inputStream(), "untrusted", "file1.jar")
+        val untrustedClassJar = importAttachment(fakeAttachment("/com/example/something/MaliciousClass.class", "some malicious data").inputStream(), "untrusted", "file2.jar")
+        val trustedClassJar = importAttachment(fakeAttachment("/com/example/something/VirtuousClass.class", "some other data").inputStream(), "app", "file3.jar")
+
+        make(arrayOf(trustedResourceJar, untrustedResourceJar, trustedClassJar).map { storage.openAttachment(it)!! })
+
+        assertFailsWith(TransactionVerificationException.UntrustedAttachmentsException::class) {
+            make(arrayOf(trustedResourceJar, untrustedResourceJar, trustedClassJar, untrustedClassJar).map { storage.openAttachment(it)!! })
+        }
     }
 
     private fun importAttachment(jar: InputStream, uploader: String, filename: String?): AttachmentId {

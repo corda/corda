@@ -87,7 +87,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
     fun getAttachmentIdAndBytes(jar: InputStream): Pair<AttachmentId, ByteArray> = jar.readFully().let { bytes -> Pair(bytes.sha256(), bytes) }
 
-    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash, override val signerKeys: List<PublicKey>) : AbstractAttachment(dataLoader)
+    private class MockAttachment(dataLoader: () -> ByteArray, override val id: SecureHash, override val signerKeys: List<PublicKey>, uploader: String) : AbstractAttachment(dataLoader, uploader)
 
     private fun importAttachmentInternal(jar: InputStream, uploader: String, contractClassNames: List<ContractClassName>? = null, attachmentId: AttachmentId? = null, signers: List<PublicKey> = emptyList()): AttachmentId {
         // JIS makes read()/readBytes() return bytes of the current file, but we want to hash the entire container here.
@@ -97,7 +97,7 @@ class MockAttachmentStorage : AttachmentStorage, SingletonSerializeAsToken() {
 
         val sha256 = attachmentId ?: bytes.sha256()
         if (sha256 !in files.keys) {
-            val baseAttachment = MockAttachment({ bytes }, sha256, signers)
+            val baseAttachment = MockAttachment({ bytes }, sha256, signers, uploader)
             val version = try { Integer.parseInt(baseAttachment.openAsJAR().manifest?.mainAttributes?.getValue(Attributes.Name.IMPLEMENTATION_VERSION)) } catch (e: Exception) { DEFAULT_CORDAPP_VERSION }
             val attachment =
                     if (contractClassNames == null || contractClassNames.isEmpty()) baseAttachment

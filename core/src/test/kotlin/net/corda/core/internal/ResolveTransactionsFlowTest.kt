@@ -155,7 +155,7 @@ class ResolveTransactionsFlowTest {
         }
         // TODO: this operation should not require an explicit transaction
         val id = megaCorpNode.transaction {
-            megaCorpNode.services.attachments.importAttachment(makeJar(), "test", null)
+            megaCorpNode.services.attachments.importAttachment(makeJar(), TESTDSL_UPLOADER, null)
         }
         val stx2 = makeTransactions(withAttachment = id).second
         val p = TestFlow(stx2, megaCorp)

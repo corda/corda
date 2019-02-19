@@ -107,11 +107,45 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
     }
 
     init {
-        val untrusted = attachments.mapNotNull { it as? ContractAttachment }.filterNot { isUploaderTrusted(it.uploader) }
-                .map(ContractAttachment::id)
+
+        // Make some preliminary checks to ensure that we're not loading invalid attachments.
+
+        // All attachments need to be valid JAR or ZIP files.
+        for (attachment in attachments) {
+            if (!isZipOrJar(attachment)) throw TransactionVerificationException.InvalidAttachmentException(sampleTxId, attachment.id)
+        }
+
+        // Until we have a sandbox to run untrusted code we need to make sure that any loaded class file was whitelisted by the node administrator.
+        val untrusted = attachments
+                .filter(::containsClasses)
+                .filterNot { attachment ->
+                    when (attachment) {
+                        is ContractAttachment -> isUploaderTrusted(attachment.uploader)
+                        is AbstractAttachment -> isUploaderTrusted(attachment.uploader)
+                        else -> false // This should not happen on normal code paths.
+                    }
+                }
+                .map(Attachment::id)
+
         if (untrusted.isNotEmpty())
             throw TransactionVerificationException.UntrustedAttachmentsException(sampleTxId, untrusted)
+
+        // Enforce the no-overlap and package ownership rules.
         checkAttachments(attachments)
+    }
+
+    private fun isZipOrJar(attachment: Attachment) = attachment.openAsJAR().use { jar ->
+        jar.nextEntry != null
+    }
+
+    private fun containsClasses(attachment: Attachment): Boolean {
+        attachment.openAsJAR().use { jar ->
+            while (true) {
+                val entry = jar.nextJarEntry ?: return false
+                if(entry.name.endsWith(".class", ignoreCase = true)) return true
+            }
+        }
+        return false
     }
 
     // This function attempts to strike a balance between security and usability when it comes to the no-overlap rule.
@@ -199,7 +233,7 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
                     if (path.endsWith(".class")) {
                         // Get the package name from the file name. Inner classes separate their names with $ not /
                         // in file names so they are not a problem.
-                        val pkgName= path
+                        val pkgName = path
                                 .dropLast(".class".length)
                                 .replace('/', '.')
                                 .split('.')
@@ -240,7 +274,6 @@ class AttachmentsClassLoader(attachments: List<Attachment>,
             log.debug { "${classLoaderEntries.size} classloaded entries for $attachment" }
         }
     }
-
 
     /**
      * Required to prevent classes that were excluded from the no-overlap check from being loaded by contract code.

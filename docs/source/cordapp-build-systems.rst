@@ -289,10 +289,9 @@ Also the best practice is to disable signing by the ``cordapp`` plugin as shown 
 
 Example
 ^^^^^^^
-Below is a sample of what a CorDapp's Gradle dependencies block might look like. When building your own CorDapp, you
-should base yourself on the ``build.gradle`` file of the
+Below is a sample CorDapp Gradle dependencies block. When building your own CorDapp, use the ``build.gradle`` file of the
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ or the
-`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
+`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_ as a starting point.
 
 .. container:: codeset
 
@@ -358,6 +357,8 @@ At start-up, nodes will load any CorDapps present in their ``cordapps`` folder. 
 CorDapp JAR must be added to the ``<node_dir>/cordapps/`` folder (where ``node_dir`` is the folder in which the node's JAR 
 and configuration files are stored) and the node restarted.
 
+.. _cordapp_configuration_files_ref:
+
 CorDapp configuration files
 ---------------------------
 
@@ -367,11 +368,57 @@ name of the JAR of the CorDapp (eg; if your CorDapp is called ``hello-0.1.jar`` 
 Config files are currently only available in the `Typesafe/Lightbend <https://github.com/lightbend/config>`_ config format.
 These files are loaded when a CorDapp context is created and so can change during runtime.
 
-CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available.
+CorDapp configuration can be accessed from ``CordappContext::config`` whenever a ``CordappContext`` is available. For example:
 
-There is an example project that demonstrates in ``samples`` called ``cordapp-configuration`` and API documentation in
-`<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
+.. literalinclude:: ../../samples/cordapp-configuration/workflows/src/main/kotlin/net/corda/configsample/GetStringConfigFlow.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
+Using CorDapp configuration with the deployNodes task
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you want to generate CorDapp configuration when using the ``deployNodes`` Gradle task, then you can use the ``cordapp`` or ``projectCordapp``
+properties on the node. For example:
+
+.. sourcecode:: groovy
+
+    task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar']) {
+        nodeDefaults {
+            // this external CorDapp will be included in each project
+            cordapp("$corda_release_group:corda-finance-contracts:$corda_release_version")
+            // this external CorDapp will be included in each project with the given config
+            cordapp("$corda_release_group:corda-finance-workflows:$corda_release_version") {
+                config "issuableCurrencies = [ USD ]"
+            }
+        }
+        node {
+            name "O=Bank A,L=London,C=GB"c
+            ...
+            // This adds configuration for another CorDapp project within the build
+            cordapp (project(':my-project:workflow-cordapp')) {
+                config "someStringValue=test"
+            }
+            cordapp(project(':my-project:another-cordapp')) {
+                // Use a multiline string for complex configuration
+                config '''
+                    someStringValue=test
+                    anotherStringValue=10
+                 '''
+            }
+        }
+        node {
+            name "O=Bank B,L=New York,C=US"
+            ...
+            // This adds configuration for the default CorDapp for this project
+            projectCordapp {
+                config project.file("src/config.conf")
+            }
+        }
+    }
+
+There is an example project that demonstrates this in the ``samples`` folder of the Corda Git repository, called ``cordapp-configuration`` .
+API documentation can be found at `<api/kotlin/corda/net.corda.core.cordapp/index.html>`_.
 
 Minimum and target platform version
 -----------------------------------

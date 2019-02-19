@@ -1304,7 +1304,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory2))
 
-        val obj = ContractAttachment(GeneratedAttachment("test".toByteArray()), DummyContract.PROGRAM_ID)
+        val obj = ContractAttachment(GeneratedAttachment("test".toByteArray(), "test"), DummyContract.PROGRAM_ID)
         val obj2 = serdes(obj, factory, factory2, expectedEqual = false, expectDeserializedEqual = false)
         assertEquals(obj.id, obj2.attachment.id)
         assertEquals(obj.contract, obj2.contract)
@@ -1324,7 +1324,7 @@ class SerializationOutputTests(private val compression: CordaSerializationEncodi
         )
         factory2.register(net.corda.serialization.internal.amqp.custom.ContractAttachmentSerializer(factory2))
 
-        val obj = ContractAttachment(object : AbstractAttachment({ throw Exception() }) {
+        val obj = ContractAttachment(object : AbstractAttachment({ throw Exception() }, "test") {
             override val id = SecureHash.zeroHash
         }, DummyContract.PROGRAM_ID)
 
