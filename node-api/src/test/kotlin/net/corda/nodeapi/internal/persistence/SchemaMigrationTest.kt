@@ -34,14 +34,14 @@ class SchemaMigrationTest {
                                   databaseConfig: DatabaseConfig,
                                   schemaService: NodeSchemaService = NodeSchemaService()): CordaPersistence {
         return createCordaPersistence(databaseConfig, { null }, { null }, schemaService, TestingNamedCacheFactory(), null).apply {
-            startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys)
+            startHikariPool(hikariProperties, databaseConfig, schemaService.schemaOptions.keys, ourName = TestIdentity(ALICE_NAME, 70).name)
         }
     }
 
-    @Before
-    fun setUpEnvironment() {
-        System.setProperty(NODE_X500_NAME, TestIdentity(ALICE_NAME, 70).name.toString())
-    }
+//    @Before
+//    fun setUpEnvironment() {
+//        System.setProperty(NODE_X500_NAME, TestIdentity(ALICE_NAME, 70).name.toString())
+//    }
 
     @Test
     fun `Ensure that runMigration is disabled by default`() {
