@@ -33,7 +33,6 @@ dependencies {
     cordapp project(':finance:workflows')
     cordapp project(path: ':samples:simm-valuation-demo:contracts-states', configuration: 'shrinkArtifacts')
     cordapp project(':samples:simm-valuation-demo:flows')
-    cordapp project(':confidential-identities')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
@@ -72,7 +71,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
         cordapp project(':finance:workflows')
         cordapp project(':samples:simm-valuation-demo:contracts-states')
         cordapp project(':samples:simm-valuation-demo:flows')
-        cordapp project(':confidential-identities')
         rpcUsers = [['username': "default", 'password': "default", 'permissions': [ 'ALL' ]]]
     }
     node {

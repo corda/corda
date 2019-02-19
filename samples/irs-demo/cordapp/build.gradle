@@ -20,7 +20,7 @@ sourceSets {
 dependencies {
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
-    cordapp project(':confidential-identities')
+
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
     cordaCompile project(':core')
@@ -52,7 +52,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask])
         }
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
-        cordapp project(':confidential-identities')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
@@ -111,7 +110,6 @@ task prepareDockerNodes(type: net.corda.plugins.Dockerform, dependsOn: ['jar', n
     nodeDefaults{
         cordapp project(':samples:irs-demo:cordapp:contracts-irs')
         cordapp project(':samples:irs-demo:cordapp:workflows-irs')
-        cordapp project(':confidential-identities')
     }
     node {
         name "O=Notary Service,L=Zurich,C=CH"
