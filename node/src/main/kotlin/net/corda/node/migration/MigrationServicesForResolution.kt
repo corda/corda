@@ -1,6 +1,7 @@
 package net.corda.node.migration
 
 import net.corda.core.contracts.*
+import net.corda.core.cordapp.CordappContext
 import net.corda.core.cordapp.CordappProvider
 import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.deserialiseComponentGroup
@@ -8,10 +9,7 @@ import net.corda.core.internal.div
 import net.corda.core.internal.readObject
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.ServicesForResolution
-import net.corda.core.node.services.AttachmentStorage
-import net.corda.core.node.services.IdentityService
-import net.corda.core.node.services.NetworkParametersService
-import net.corda.core.node.services.TransactionStorage
+import net.corda.core.node.services.*
 import net.corda.core.serialization.deserialize
 import net.corda.core.serialization.internal.AttachmentsClassLoaderBuilder
 import net.corda.core.transactions.ContractUpgradeLedgerTransaction
@@ -23,6 +21,7 @@ import net.corda.nodeapi.internal.network.NETWORK_PARAMS_FILE_NAME
 import net.corda.nodeapi.internal.network.SignedNetworkParameters
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.SchemaMigration
+import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import java.nio.file.Paths
 import java.time.Clock
 import java.time.Duration
@@ -39,7 +38,19 @@ class MigrationServicesForResolution(
         val logger = contextLogger()
     }
     override val cordappProvider: CordappProvider
-        get() = throw NotImplementedError()
+        get() = object : CordappProvider {
+
+            val cordappLoader = SchemaMigration.loader.get()
+
+            override fun getAppContext(): CordappContext {
+                throw NotImplementedException()
+            }
+
+            override fun getContractAttachmentID(contractClassName: ContractClassName): AttachmentId? {
+                throw NotImplementedException()
+            }
+        }
+    private val cordappLoader = SchemaMigration.loader.get()
 
     private fun defaultNetworkParameters(): NetworkParameters {
         logger.warn("Using a dummy set of network parameters for migration.")
@@ -96,7 +107,7 @@ class MigrationServicesForResolution(
     private fun extractStateFromTx(tx: WireTransaction, stateIndices: Collection<Int>): List<TransactionState<ContractState>> {
         return try {
             val attachments = tx.attachments.mapNotNull { attachments.openAttachment(it)}
-            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id) {
+            val states = AttachmentsClassLoaderBuilder.withAttachmentsClassloaderContext(attachments, networkParameters, tx.id, cordappLoader.appClassLoader) {
                 deserialiseComponentGroup(tx.componentGroups, TransactionState::class, ComponentGroupEnum.OUTPUTS_GROUP, forceDeserialize = true)
             }
             states.filterIndexed {index, _ -> stateIndices.contains(index)}.toList()

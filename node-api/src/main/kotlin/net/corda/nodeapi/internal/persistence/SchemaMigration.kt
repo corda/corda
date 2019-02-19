@@ -12,6 +12,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -28,7 +29,7 @@ class SchemaMigration(
         val schemas: Set<MappedSchema>,
         val dataSource: DataSource,
         private val databaseConfig: DatabaseConfig,
-        private val classLoader: ClassLoader = Thread.currentThread().contextClassLoader,
+        cordappLoader: CordappLoader? = null,
         private val currentDirectory: Path?,
         private val ourName: CordaX500Name) {
 
@@ -36,7 +37,14 @@ class SchemaMigration(
         private val logger = contextLogger()
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
+        val loader = ThreadLocal<CordappLoader>()
     }
+
+    init {
+        loader.set(cordappLoader)
+    }
+
+    private val classLoader = cordappLoader?.appClassLoader ?: Thread.currentThread().contextClassLoader
 
     /**
      * Main entry point to the schema migration.

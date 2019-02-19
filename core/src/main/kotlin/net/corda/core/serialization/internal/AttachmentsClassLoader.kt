@@ -307,12 +307,12 @@ object AttachmentsClassLoaderBuilder {
      *
      * @param txId The transaction ID that triggered this request; it's unused except for error messages and exceptions that can occur during setup.
      */
-    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, txId: SecureHash, block: (ClassLoader) -> T): T {
+    fun <T> withAttachmentsClassloaderContext(attachments: List<Attachment>, params: NetworkParameters, txId: SecureHash, parent: ClassLoader = ClassLoader.getSystemClassLoader(), block: (ClassLoader) -> T): T {
         val attachmentIds = attachments.map { it.id }.toSet()
 
         val serializationContext = cache.computeIfAbsent(Key(attachmentIds, params)) {
             // Create classloader and load serializers, whitelisted classes
-            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId)
+            val transactionClassLoader = AttachmentsClassLoader(attachments, params, txId, parent)
             val serializers = createInstancesOfClassesImplementing(transactionClassLoader, SerializationCustomSerializer::class.java)
             val whitelistedClasses = ServiceLoader.load(SerializationWhitelist::class.java, transactionClassLoader)
                     .flatMap { it.whitelist }
