@@ -537,7 +537,7 @@ The untrusted attachment JAR will be stored in the nodes local attachment store 
 
 ``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
 
-Should the node operator deem the attachment trustworthy, they may then install the CorDapp JAR in the node see :ref:`Installing the CorDapp JAR <cordapp_install_ref>`
+Should the node operator deem the attachment trustworthy, they may then install the CorDapp JAR in the node (see :ref:`Installing the CorDapp JAR <cordapp_install_ref>`)
 and subsequently retry the failed flow (currently this requires a node re-start).
 
 .. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
