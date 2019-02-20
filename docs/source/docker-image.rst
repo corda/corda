@@ -73,22 +73,34 @@ Joining TestNet
 
 .. code-block:: shell
 
-    docker run -ti \
-            -e MY_PUBLIC_ADDRESS="corda-node.example.com" \
-            -e ONE_TIME_DOWNLOAD_KEY="bbcb189e-9e4f-4b27-96db-134e8f592785" \
-            -e LOCALITY="London" -e COUNTRY="GB" \
-            -v /home/user/docker/config:/etc/corda \
-            -v /home/user/docker/certificates:/opt/corda/certificates \
-            corda/corda-4.0-snapshot:latest config-generator --testnet
+    MY_PUBLIC_ADDRESS=corda-node.example.com
+    ONE_TIME_DOWNLOAD_KEY=2e247846-f2c7-4407-93ce-0d404d6f3f35
+    LOCALITY=London
+    COUNTRY=GB
+    FOLDER=/home/user/docker
+    CORDA_DOCKER_IMAGE=corda/corda-4.0-snapshot:latest
 
-``$MY_PUBLIC_ADDRESS`` will be the public address that this node will be advertised on.
-``$ONE_TIME_DOWNLOAD_KEY`` is the one-time code provided for joining TestNet.
-``$LOCALITY`` and ``$COUNTRY`` must be set to the values provided when joining TestNet.
+    docker run -ti \
+            -e MY_PUBLIC_ADDRESS="${MY_PUBLIC_ADDRESS}" \
+            -e ONE_TIME_DOWNLOAD_KEY="${ONE_TIME_DOWNLOAD_KEY}" \
+            -e LOCALITY="${LOCALITY}" \
+            -e COUNTRY="${COUNTRY}" \
+            -u $(id -u $USER):$(id -u $USER) \
+            -v ${FOLDER}/config:/etc/corda \
+            -v ${FOLDER}/certificates:/opt/corda/certificates \
+            ${CORDA_DOCKER_IMAGE} config-generator --testnet
+
+``${MY_PUBLIC_ADDRESS}`` will be the public address that this node will be advertised on.
+
+``${ONE_TIME_DOWNLOAD_KEY}`` is the one-time code provided for joining TestNet.
+
+``${LOCALITY}`` and ``${COUNTRY}`` must be set to the values provided when joining TestNet.
+
 
 When the container has finished executing ``config-generator`` the following will be true
 
-1. A skeleton, but sensible minimum node.conf is present in ``/home/user/docker/config``
-2. A set of certificates signed by TestNet in ``/home/user/docker/certificates``
+1. A skeleton, but sensible minimum node.conf is present in ``${FOLDER}/config``
+2. A set of certificates signed by TestNet in ``${FOLDER}/certificates``
 
 It is now possible to start the node using the generated config and certificates
 
@@ -97,14 +109,15 @@ It is now possible to start the node using the generated config and certificates
     docker run -ti \
             --memory=2048m \
             --cpus=2 \
-            -v /home/user/docker/config:/etc/corda \
-            -v /home/user/docker/certificates:/opt/corda/certificates \
-            -v /home/user/docker/persistence:/opt/corda/persistence \
-            -v /home/user/docker/logs:/opt/corda/logs \
+            -u $(id -u $USER):$(id -u $USER) \
+            -v ${FOLDER}/config:/etc/corda \
+            -v ${FOLDER}/certificates:/opt/corda/certificates \
+            -v ${FOLDER}/persistence:/opt/corda/persistence \
+            -v ${FOLDER}/logs:/opt/corda/logs \
             -v /home/user/corda/samples/bank-of-corda-demo/build/nodes/BankOfCorda/cordapps:/opt/corda/cordapps \
             -p 10200:10200 \
             -p 10201:10201 \
-            corda/corda-4.0-snapshot:latest
+            ${CORDA_DOCKER_IMAGE}
 
 
 Joining an existing Compatibility Zone
