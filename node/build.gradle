@@ -73,6 +73,10 @@ dependencies {
     compile project(':tools:cliutils')
     compile project(':common-validation')
     compile project(':common-configuration-parsing')
+    
+    // Backwards compatibility goo: Apps expect confidential-identities to be loaded by default.
+    // We could eventually gate this on a target-version check.
+    compile project(':confidential-identities')
 
     // Utimaco HSM
     compileOnly fileTree(dir: 'lib', include: 'CryptoServer*.jar')

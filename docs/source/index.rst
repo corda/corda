@@ -125,7 +125,6 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    contributing-index.rst
-   corda-repo-layout.rst
    deterministic-modules.rst
    changelog-enterprise.rst
 

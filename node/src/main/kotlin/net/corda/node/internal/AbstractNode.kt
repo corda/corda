@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricRegistry
 import com.google.common.collect.MutableClassToInstanceMap
 import com.google.common.util.concurrent.MoreExecutors
 import com.zaxxer.hikari.pool.HikariPool
+import net.corda.confidential.SwapIdentitiesFlow
 import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.context.InvocationContext
@@ -32,7 +33,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
@@ -338,7 +339,6 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         networkMapCache.start(netParams.notaries)
 
         startDatabase()
-
         val (identity, identityKeyPair) = obtainIdentity()
         X509Utilities.validateCertPath(trustRoot, identity.certPath)
 
@@ -707,32 +707,14 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         installFinalityHandler()
         flowManager.registerInitiatedCoreFlowFactory(NotaryChangeFlow::class, NotaryChangeHandler::class, ::NotaryChangeHandler)
         flowManager.registerInitiatedCoreFlowFactory(ContractUpgradeFlow.Initiate::class, NotaryChangeHandler::class, ::ContractUpgradeHandler)
+        flowManager.registerInitiatedCoreFlowFactory(SwapIdentitiesFlow::class, SwapIdentitiesHandler::class, ::SwapIdentitiesHandler)
     }
 
-    // The FinalityHandler is insecure as it blindly accepts any and all transactions into the node's local vault without doing any checks.
-    // To plug this hole, the sending-side FinalityFlow has been made inlined with an inlined ReceiveFinalityFlow counterpart. The old
-    // FinalityFlow API is gated to only work with old CorDapps (those whose target platform version < 4), and the FinalityHandler will only
-    // work if there is at least one old CorDapp loaded (to preserve backwards compatibility).
-    //
-    // If an attempt is made to send us a transaction via FinalityHandler, and it's disabled, we will reject the request at the session-init
-    // level by throwing a FinalityHandlerDisabled exception. This is picked up by the flow hospital which will not send the error back
-    // (immediately) and instead pause the request by keeping it un-acknowledged in the message broker. This means the request isn't lost
-    // across node restarts and allows the node operator time to accept or reject the request.
-    // TODO Add public API to allow the node operator to accept or reject
+    // Ideally we should be disabling the FinalityHandler if it's not needed, to prevent any party from submitting transactions to us without
+    // us checking. Previously this was gated on app target version and if there were no apps with target version <= 3 then the handler would
+    // be disabled. However this prevents seemless rolling-upgrades and so it was removed until a better solution comes along.
     private fun installFinalityHandler() {
-        // Disable the insecure FinalityHandler if none of the loaded CorDapps are old enough to require it.
-        val cordappsNeedingFinalityHandler = cordappLoader.cordapps.filter { it.targetPlatformVersion < 4 }
-        if (cordappsNeedingFinalityHandler.isEmpty()) {
-            log.info("FinalityHandler is disabled as there are no CorDapps loaded which require it")
-        } else {
-            log.warn("FinalityHandler is enabled as there are CorDapps that require it: ${cordappsNeedingFinalityHandler.map { it.info }}. " +
-                    "This is insecure and it is strongly recommended that newer versions of these CorDapps be used instead.")
-        }
-        val disabled = cordappsNeedingFinalityHandler.isEmpty()
-        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class) {
-            if (disabled) throw SessionRejectException.FinalityHandlerDisabled()
-            FinalityHandler(it)
-        }
+        flowManager.registerInitiatedCoreFlowFactory(FinalityFlow::class, FinalityHandler::class, ::FinalityHandler)
     }
 
     protected open fun makeTransactionStorage(transactionCacheSizeBytes: Long): WritableTransactionStorage {
@@ -826,7 +808,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         if (props.isEmpty) throw DatabaseConfigurationException("There must be a database configured.")
         val isH2Database = isH2Database(props.getProperty("dataSource.url", ""))
         val schemas = if (isH2Database) schemaService.internalSchemas() else schemaService.schemaOptions.keys
-        database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader.appClassLoader, configuration.baseDirectory, configuration.myLegalName)
+        database.startHikariPool(props, configuration.database, schemas, metricRegistry, this.cordappLoader, configuration.baseDirectory, configuration.myLegalName)
         // Now log the vendor string as this will also cause a connection to be tested eagerly.
         logVendorString(database, log)
     }
@@ -1157,11 +1139,11 @@ fun createCordaPersistence(databaseConfig: DatabaseConfig,
     return CordaPersistence(databaseConfig, schemaService.schemaOptions.keys, cacheFactory, attributeConverters, customClassLoader)
 }
 
-fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, classloader: ClassLoader = Thread.currentThread().contextClassLoader, currentDir: Path? = null, ourName: CordaX500Name? = null) {
+fun CordaPersistence.startHikariPool(hikariProperties: Properties, databaseConfig: DatabaseConfig, schemas: Set<MappedSchema>, metricRegistry: MetricRegistry? = null, cordappLoader: CordappLoader? = null, currentDir: Path? = null, ourName: CordaX500Name) {
     try {
         val dataSource = DataSourceFactory.createDataSource(hikariProperties, metricRegistry = metricRegistry)
         val jdbcUrl = hikariProperties.getProperty("dataSource.url", "")
-        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, classloader, currentDir, ourName)
+        val schemaMigration = SchemaMigration(schemas, dataSource, databaseConfig, cordappLoader, currentDir, ourName)
         schemaMigration.nodeStartup(dataSource.connection.use { DBCheckpointStorage().getCheckpointCount(it) != 0L }, isH2Database(jdbcUrl))
         start(dataSource, jdbcUrl)
     } catch (ex: Exception) {

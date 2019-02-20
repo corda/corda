@@ -53,9 +53,6 @@ Configuration file fields
 
 .. _corda-configuration-file-fields:
 
-Fields
-------
-
 additionalP2PAddresses
   An array of additional host:port values, which will be included in the advertised NodeInfo in the network map in addition to the :ref:`p2pAddress <corda_configuration_file_p2pAddress>`.
   Nodes can use this configuration option to advertise HA endpoints and aliases to external parties.

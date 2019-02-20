@@ -4,6 +4,7 @@ package com.r3.corda.dbmigration
 
 import com.typesafe.config.Config
 import net.corda.cliutils.*
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.div
 import net.corda.core.internal.exists
@@ -11,6 +12,7 @@ import net.corda.core.schemas.MappedSchema
 import net.corda.node.internal.DataSourceFactory.createDatasourceFromDriverJarFolders
 import net.corda.nodeapi.internal.config.UnknownConfigKeysPolicy
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.persistence.CheckpointsException
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration
@@ -94,12 +96,13 @@ private class DbManagementTool : CordaCliWrapper("database-manager", "The Corda 
     }
 }
 
-data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList())
+data class Configuration(val dataSourceProperties: Properties, val database: DatabaseConfig, val jarDirs: List<String> = emptyList(), val myLegalName: CordaX500Name)
 
 abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManagerOptions) {
     protected abstract val defaultConfigFileName: String
     abstract val schemas: Set<MappedSchema>
     abstract val classLoader: ClassLoader
+    abstract val cordappLoader: CordappLoader?
     abstract val parsedConfig: Config
     val config by lazy { parsedConfig.parseAs(Configuration::class, UnknownConfigKeysPolicy.IGNORE::handle) }
     val baseDirectory: Path by lazy {
@@ -133,7 +136,7 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
     }
 
     fun runMigrationCommand(schemas: Set<MappedSchema>, withMigration: (SchemaMigration, DataSource) -> Unit): Unit = this.runWithDataSource { dataSource ->
-        withMigration(SchemaMigration(schemas, dataSource, config.database, classLoader, baseDirectory), dataSource)
+        withMigration(SchemaMigration(schemas, dataSource, config.database, cordappLoader, baseDirectory, ourName = config.myLegalName), dataSource)
     }
 }
 

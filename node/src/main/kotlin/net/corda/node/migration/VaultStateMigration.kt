@@ -1,9 +1,7 @@
 package net.corda.node.migration
 
 import liquibase.database.Database
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.schemas.MappedSchema
@@ -11,9 +9,11 @@ import net.corda.core.schemas.PersistentStateRef
 import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.internal.*
 import net.corda.core.utilities.contextLogger
+import net.corda.node.internal.DBNetworkParametersStorage
 import net.corda.node.services.identity.PersistentIdentityService
 import net.corda.node.services.keys.BasicHSMKeyManagementService
 import net.corda.node.services.persistence.DBTransactionStorage
+import net.corda.node.services.persistence.NodeAttachmentService
 import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
@@ -47,8 +47,11 @@ class VaultStateMigration : CordaMigration() {
                 session.persist(persistentParty)
             }
         } catch (e: AbstractMethodError) {
-            throw VaultStateMigrationException("Cannot add state parties as state class is not on the classpath " +
-                    "and participants cannot be synthesised")
+            // This should only happen if there was no attachment that could be used to deserialise the output states, and the state was
+            // serialised such that the participants list cannot be accessed (participants is calculated and not marked as a
+            // SerializableCalculatedProperty.
+            throw VaultStateMigrationException("Cannot add state parties for state ${stateAndRef.ref} as state class is not on the " +
+                    "classpath and participants cannot be synthesised")
         }
     }
 
@@ -56,22 +59,28 @@ class VaultStateMigration : CordaMigration() {
         val persistentStateRef = persistentState.stateRef ?:
                 throw VaultStateMigrationException("Persistent state ref missing from state")
         val txHash = SecureHash.parse(persistentStateRef.txId)
-        val tx = dbTransactions.getTransaction(txHash) ?:
-                throw VaultStateMigrationException("Transaction $txHash not present in vault")
-        val state = tx.coreTransaction.outputs[persistentStateRef.index]
         val stateRef = StateRef(txHash, persistentStateRef.index)
+        val state = try {
+            servicesForResolution.loadState(stateRef)
+        } catch (e: Exception) {
+            throw VaultStateMigrationException("Could not load state for stateRef $stateRef : ${e.message}", e)
+        }
         return StateAndRef(state, stateRef)
     }
 
     override fun execute(database: Database?) {
         logger.info("Migrating vault state data to V4 tables")
         if (database == null) {
-            logger.warn("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
-            return
+            logger.error("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
+            throw VaultStateMigrationException("Cannot migrate vault states as liquibase failed to provide a suitable database connection")
         }
         initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
-
+        var statesSkipped = 0
         val persistentStates = VaultStateIterator(cordaDB)
+        if (persistentStates.numStates > 0) {
+            logger.warn("Found ${persistentStates.numStates} states to update from a previous version. This may take a while for large "
+            + "volumes of data.")
+        }
         VaultStateIterator.withSerializationEnv {
             persistentStates.forEach {
                 val session = currentDBSession()
@@ -89,11 +98,18 @@ class VaultStateMigration : CordaMigration() {
                         it.relevancyStatus = Vault.RelevancyStatus.NOT_RELEVANT
                     }
                 } catch (e: VaultStateMigrationException) {
-                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping")
+                    logger.warn("An error occurred while migrating a vault state: ${e.message}. Skipping. This will cause the " +
+                            "migration to fail.", e)
+                    statesSkipped++
                 }
             }
         }
-        logger.info("Finished performing vault state data migration for ${persistentStates.numStates} states")
+        if (statesSkipped > 0) {
+            logger.error("$statesSkipped states could not be migrated as there was no class available for them.")
+            throw VaultStateMigrationException("Failed to migrate $statesSkipped states in the vault. Check the logs for details of the " +
+                "error for each state.")
+        }
+        logger.info("Finished performing vault state data migration for ${persistentStates.numStates - statesSkipped} states")
     }
 }
 
@@ -112,7 +128,9 @@ object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema
                 DBTransactionStorage.DBTransaction::class.java,
                 PersistentIdentityService.PersistentIdentity::class.java,
                 PersistentIdentityService.PersistentIdentityNames::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java
+                BasicHSMKeyManagementService.PersistentKey::class.java,
+                NodeAttachmentService.DBAttachment::class.java,
+                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
         )
 )
 
@@ -309,4 +327,4 @@ class VaultStateIterator(private val database: CordaPersistence) : Iterator<Vaul
     }
 }
 
-class VaultStateMigrationException(msg: String) : Exception(msg)
+class VaultStateMigrationException(msg: String, cause: Exception? = null) : Exception(msg, cause)

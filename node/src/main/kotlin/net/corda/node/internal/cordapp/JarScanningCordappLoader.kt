@@ -20,7 +20,7 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.serialization.SerializeAsToken
 import net.corda.core.utilities.contextLogger
 import net.corda.node.VersionInfo
-import net.corda.node.cordapp.CordappLoader
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.coreContractClasses
 import net.corda.serialization.internal.DefaultWhitelist
 import org.apache.commons.collections4.map.LRUMap
@@ -153,7 +153,8 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 getJarHash(url.url),
                 minPlatformVersion,
                 targetPlatformVersion,
-                findNotaryService(this)
+                findNotaryService(this),
+                explicitCordappClasses = findAllCordappClasses(this)
         )
     }
 
@@ -252,6 +253,10 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return scanResult.getConcreteClassesOfType(FlowLogic::class)
     }
 
+    private fun findAllCordappClasses(scanResult: RestrictedScanResult): List<String> {
+        return scanResult.getAllStandardClasses() + scanResult.getAllInterfaces()
+    }
+
     private fun findContractClassNames(scanResult: RestrictedScanResult): List<String> {
         val contractClasses = coreContractClasses.flatMap { scanResult.getNamesOfClassesImplementing(it) }.distinct()
         for (contractClass in contractClasses) {
@@ -348,6 +353,20 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                     .filter { it.startsWith(qualifiedNamePrefix) }
                     .mapNotNull { loadClass(it, type) }
                     .filterNot { it.isAbstractClass }
+        }
+
+        fun getAllStandardClasses(): List<String> {
+            return scanResult
+                    .getAllStandardClasses()
+                    .names
+                    .filter { it.startsWith(qualifiedNamePrefix) }
+        }
+
+        fun getAllInterfaces(): List<String> {
+            return scanResult
+                    .getAllInterfaces()
+                    .names
+                    .filter { it.startsWith(qualifiedNamePrefix) }
         }
 
         override fun close() = scanResult.close()

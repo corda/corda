@@ -24,7 +24,6 @@ dependencies {
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp ("net.corda:corda-finance-contracts:$os_corda_release_version")
     cordapp project(':finance:workflows')
-    cordapp project(':confidential-identities')
     cordapp project(':samples:bank-of-corda-demo')
 
     // Corda integration dependencies

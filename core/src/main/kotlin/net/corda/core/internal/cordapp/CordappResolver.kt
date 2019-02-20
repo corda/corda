@@ -55,10 +55,10 @@ object CordappResolver {
     val currentCordapp: Cordapp? get() = cordappResolver()
 
     /**
-     * Returns the target version of the current calling CorDapp. Defaults to the current platform version if there isn't one.
+     * Returns the target version of the current calling CorDapp. Defaults to platform version 1 if there isn't one,
+     * assuming only basic platform capabilities.
      */
-    // TODO It may be the default is wrong and this should be Int? instead
-    val currentTargetVersion: Int get() = currentCordapp?.targetPlatformVersion ?: PLATFORM_VERSION
+    val currentTargetVersion: Int get() = currentCordapp?.targetPlatformVersion ?: 1
 
     /**
      * Temporarily apply a fake CorDapp with the given parameters. For use in testing.
