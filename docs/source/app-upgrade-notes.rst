@@ -154,6 +154,8 @@ Would become:
 
 See :ref:`cordapp_configuration_files_ref` for more information.
 
+.. _cordapp_upgrade_finality_flow_ref:
+
 Step 5. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
 

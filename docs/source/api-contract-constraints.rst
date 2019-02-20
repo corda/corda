@@ -192,6 +192,8 @@ will be selected based on a variety of factors so that the above holds true. If 
 possible constraints, the ``TransactionBuilder`` will throw an exception.
 
 
+.. _constraints_whitelist_to_signature_ref:
+
 How to use the ``SignatureAttachmentConstraint`` if states were already created on the network with the ``WhitelistedByZoneAttachmentConstraint``
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
