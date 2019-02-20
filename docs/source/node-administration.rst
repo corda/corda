@@ -128,7 +128,7 @@ due to expensive run-time costs. They can be turned on and off explicitly regard
 When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
 **Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
 
-When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
+When starting Corda nodes using the 'driver DSL', you should see a startup message in the logs similar to the following:
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
 
 
@@ -202,6 +202,8 @@ For launching on Windows without PowerShell, it is not possible to perform comma
 
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
 
+
+.. _ref-backup-recommendations:
 
 Backup recommendations
 ----------------------
