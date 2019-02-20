@@ -1,6 +1,7 @@
 package net.corda.node.migration
 
 import liquibase.database.Database
+import liquibase.database.jvm.JdbcConnection
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
@@ -18,6 +19,7 @@ import net.corda.node.services.vault.NodeVaultService
 import net.corda.node.services.vault.VaultSchemaV1
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseTransaction
+import net.corda.nodeapi.internal.persistence.SchemaMigration
 import net.corda.nodeapi.internal.persistence.currentDBSession
 import net.corda.serialization.internal.AMQP_P2P_CONTEXT
 import net.corda.serialization.internal.AMQP_STORAGE_CONTEXT
@@ -74,7 +76,12 @@ class VaultStateMigration : CordaMigration() {
             logger.error("Cannot migrate vault states: Liquibase failed to provide a suitable database connection")
             throw VaultStateMigrationException("Cannot migrate vault states as liquibase failed to provide a suitable database connection")
         }
-        initialiseNodeServices(database, setOf(VaultMigrationSchemaV1, VaultSchemaV1))
+        val dryRun: String? = System.getProperty(SchemaMigration.DRY_RUN)
+        if (dryRun.equals("true", true)) {
+            logger.info("Vault states migration in 'dry-run' mode not supported.")
+            return
+        }
+        initialiseNodeServices(database, setOf(VaultMigrationSchemaBuilder.getMappedSchema(), VaultSchemaV1))
         var statesSkipped = 0
         val persistentStates = VaultStateIterator(cordaDB)
         if (persistentStates.numStates > 0) {
@@ -123,16 +130,18 @@ class VaultStateMigration : CordaMigration() {
  */
 object VaultMigrationSchema
 
-object VaultMigrationSchemaV1 : MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
-        mappedTypes = listOf(
-                DBTransactionStorage.DBTransaction::class.java,
-                PersistentIdentityService.PersistentIdentity::class.java,
-                PersistentIdentityService.PersistentIdentityNames::class.java,
-                BasicHSMKeyManagementService.PersistentKey::class.java,
-                NodeAttachmentService.DBAttachment::class.java,
-                DBNetworkParametersStorage.PersistentNetworkParameters::class.java
-        )
-)
+object VaultMigrationSchemaBuilder {
+    fun getMappedSchema() =
+            MappedSchema(schemaFamily = VaultMigrationSchema.javaClass, version = 1,
+                mappedTypes = listOf(
+                        DBTransactionStorage.DBTransaction::class.java,
+                        PersistentIdentityService.PersistentIdentity::class.java,
+                        PersistentIdentityService.PersistentIdentityNames::class.java,
+                        BasicHSMKeyManagementService.PersistentKey::class.java,
+                        NodeAttachmentService.DBAttachment::class.java,
+                        DBNetworkParametersStorage.PersistentNetworkParameters::class.java
+                ))
+}
 
 /**
  * Provides a mechanism for iterating through all persistent vault states.

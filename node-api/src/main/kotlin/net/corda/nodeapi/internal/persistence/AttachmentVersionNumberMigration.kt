@@ -25,6 +25,12 @@ class AttachmentVersionNumberMigration : CustomTaskChange {
         val connection = database?.connection as JdbcConnection
         val msg = "Attachment version creation from whitelisted JARs"
 
+        val dryRun: String? = System.getProperty(SchemaMigration.DRY_RUN)
+        if (dryRun.equals("true", true)) {
+            logger.info("$msg in 'dry-run' mode not supported.")
+            return
+        }
+
         try {
             logger.info("Start executing...")
             var networkParameters: NetworkParameters?

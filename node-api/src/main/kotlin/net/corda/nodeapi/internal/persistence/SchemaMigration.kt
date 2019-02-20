@@ -43,6 +43,7 @@ class SchemaMigration(
         private val logger = contextLogger()
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
+        const val DRY_RUN = "liquibase.dryRun"
         val loader = ThreadLocal<CordappLoader>()
     }
 
@@ -172,7 +173,10 @@ class SchemaMigration(
                 run && !check -> liquibase.update(Contexts())
                 check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
                 check && !run -> {} // Do nothing will be interpreted as "check succeeded"
-                (outputWriter != null) && !check && !run -> liquibase.update(Contexts(), outputWriter)
+                (outputWriter != null) && !check && !run ->  {
+                    System.setProperty(DRY_RUN, "true") // Enterprise only: disable VaultSchemaMigration for dry-run
+                    liquibase.update(Contexts(), outputWriter)
+                }
                 else -> throw IllegalStateException("Invalid usage.")
             }
         }
