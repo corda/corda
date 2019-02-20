@@ -5,7 +5,7 @@ Software requirements
 ---------------------
 Corda uses industry-standard tools:
 
-* **Oracle JDK 8 JVM** - minimum supported version **8u171**
+* **Oracle JDK 8 JVM** - minimum supported version **|java_version|** (please note that
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
 * **Git**
 
@@ -26,7 +26,7 @@ Please note:
   `getting started guide <https://kotlinlang.org/docs/tutorials/>`_, and a series of
   `Kotlin Koans <https://kotlinlang.org/docs/tutorials/koans.html>`_
 
-* IntelliJ IDEA is recommended due to the strength of its Kotlin integration
+* IntelliJ IDEA is recommended due to the strength of its Kotlin integration.
 
 Following these software recommendations will minimize the number of errors you encounter, and make it easier for
 others to provide support. However, if you do use other tools, we'd be interested to hear about any issues that arise.

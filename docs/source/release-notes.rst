@@ -211,9 +211,9 @@ version requirement if they start using new features and APIs.
 Dependency upgrades
 +++++++++++++++++++
 
-We've raised the minimum JDK to 8u171, needed to get fixes for certain ZIP compression bugs.
+We've raised the minimum JDK to |java_version|, needed to get fixes for certain ZIP compression bugs.
 
-We've upgraded to Kotlin 1.2.71 so your apps can now benefit from the new features in this language release.
+We've upgraded to Kotlin |kotlin_version| so your apps can now benefit from the new features in this language release.
 
 We've upgraded to Gradle 4.10.1.
 
