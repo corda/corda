@@ -527,7 +527,7 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
 CorDapp Contract Attachments
 ----------------------------
 
-As of Corda 4, because there is no Sandbox to run the verification code - we require that any jar with code that is downloaded from a peer to be
+As of Corda 4, because there is no Sandbox to run the verification code we require that any jar with code that is downloaded from a peer to be
 checked and explicitly whitelisted by the node operator. CorDapp contract JARs must be installed on a node by a trusted uploader, by
 
 - installing manually as per :ref:`Installing the CorDapp JAR <cordapp_install_ref>` and re-starting the node.
