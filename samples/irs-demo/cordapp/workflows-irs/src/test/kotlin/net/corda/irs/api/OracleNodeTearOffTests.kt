@@ -68,7 +68,7 @@ class OracleNodeTearOffTests {
         mockNet.stopNodes()
     }
 
-    // DOCSTART 1
+    // DOCSTART 2
     @Test
     fun `verify that the oracle signs the transaction if the interest rate within allowed limit`() {
         // Create a partial transaction
@@ -93,7 +93,7 @@ class OracleNodeTearOffTests {
         // Check that the transaction has been signed by the oracle
         assertContains(fix.signers, oracle.owningKey)
     }
-    // DOCEND 1
+    // DOCEND 2
 
     @Test
     fun `verify that the oracle rejects the transaction if the interest rate is outside the allowed limit`() {

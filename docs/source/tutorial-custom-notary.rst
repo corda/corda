@@ -11,7 +11,7 @@ This will ensure that it is recognised as a notary service.
 The custom notary service class should provide a constructor with two parameters of types ``ServiceHubInternal`` and ``PublicKey``.
 Note that ``ServiceHubInternal`` does not provide any API stability guarantees.
 
-.. literalinclude:: ../../samples/notary-demo/src/main/kotlin/net/corda/notarydemo/MyCustomNotaryService.kt
+.. literalinclude:: ../../samples/notary-demo/workflows/src/main/kotlin/net/corda/notarydemo/MyCustomNotaryService.kt
    :language: kotlin
    :start-after: START 1
    :end-before: END 1
@@ -20,7 +20,7 @@ The next step is to write a notary service flow. You are free to copy and modify
 as ``ValidatingNotaryFlow``, ``NonValidatingNotaryFlow``, or implement your own from scratch (following the
 ``NotaryFlow.Service`` template). Below is an example of a custom flow for a *validating* notary service:
 
-.. literalinclude:: ../../samples/notary-demo/src/main/kotlin/net/corda/notarydemo/MyCustomNotaryService.kt
+.. literalinclude:: ../../samples/notary-demo/workflows/src/main/kotlin/net/corda/notarydemo/MyCustomNotaryService.kt
    :language: kotlin
    :start-after: START 2
    :end-before: END 2
