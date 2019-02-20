@@ -401,8 +401,8 @@ Step 12. Possibly update vault state queries
 
 In Corda 4 queries made on a node's vault can filter by the relevancy of those states to the node. As this functionality does not exist in
 Corda 3, apps will continue to receive all states in any vault queries. However, it may make sense to migrate queries expecting just those states relevant
-to the node in question to query for only relevant states. See :doc:`api-vault-query.rst` for more details on how to do this. Not doing this
-may result in queries returning more states than expected if the node is using observer functionality (see ":doc:`tutorial-observer-nodes.rst`").
+to the node in question to query for only relevant states. See :doc:`api-vault-query` for more details on how to do this. Not doing this
+may result in queries returning more states than expected if the node is using observer functionality (see ":doc:`tutorial-observer-nodes`").
 
 Step 13. Explore other new features that may be useful
 ------------------------------------------------------

@@ -17,7 +17,7 @@ Just define a new flow that wraps the SendTransactionFlow/ReceiveTransactionFlow
 
 .. container:: codeset
 
-    .. literalinclude:: ../../samples/irs-demo/cordapp/src/main/kotlin/net/corda/irs/flows/AutoOfferFlow.kt
+    .. literalinclude:: ../../samples/irs-demo/cordapp/workflows-irs/src/main/kotlin/net.corda.irs/flows/AutoOfferFlow.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1
