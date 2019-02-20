@@ -556,7 +556,7 @@ Installing Contract Attachments for Older Versions of CorDapps
 
 If you need to install older versions of a CorDapp in order to verify chains of states created with older versions of a contract, you can upload the
 older CorDapp to the attachment store. Placing the older CorDapp in the ``cordapps`` directory will not work in this case,
-as you can only have one CorDapp loaded per contract.
+as you can only have one CorDapp loaded per contract. The latest version of the CorDapp should be the one installed in the ``cordapps`` folder.
 
 As above, the untrusted attachment JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for
 viewing using the following CRaSH shell command:
