@@ -73,6 +73,19 @@ class P2PMessageDeduplicatorTest {
     }
 
     @Test
+    fun `correctly deduplicates a message with a different sending peer`() {
+        val receivedMessage = generateMessage()
+        assertFalse(deduplicator.isDuplicate(receivedMessage))
+
+        processMessage(receivedMessage)
+
+        assertTrue(deduplicator.isDuplicate(receivedMessage))
+
+        val receivedFromDifferentPeer = generateMessage(uniqueMessageId = receivedMessage.uniqueMessageId, senderUUID = receivedMessage.senderUUID, senderSeqNo = receivedMessage.senderSeqNo)
+        assertTrue(deduplicator.isDuplicate(receivedFromDifferentPeer))
+    }
+
+    @Test
     fun `cleanup handles empty table`() {
         NodeJanitor.cleanUpProcessedMessages(database, testClock, retainForDays, retainPerSender)
     }

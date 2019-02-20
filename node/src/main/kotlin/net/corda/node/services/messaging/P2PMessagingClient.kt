@@ -435,7 +435,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         override val data: ByteSequence by lazy { OpaqueBytes(ByteArray(message.bodySize).apply { message.bodyBuffer.readBytes(this) }) }
         override val debugTimestamp: Instant get() = Instant.ofEpochMilli(message.timestamp)
         override val additionalHeaders: Map<String, String> = emptyMap()
-        override fun toString() = "$topic#$data"
+        override fun toString() = "ArtemisReceivedMessage(size=${message.bodySize}, message=$message)"
     }
 
     private val receiverDurationTimer = metricRegistry.timer("P2P.ReceiveDuration")

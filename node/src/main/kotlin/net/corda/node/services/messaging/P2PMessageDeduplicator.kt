@@ -31,7 +31,7 @@ class P2PMessageDeduplicator(
     companion object {
         private val log = loggerFor<P2PMessageDeduplicator>()
 
-        private fun formatMessageForLogging(msg: ReceivedMessage): String = "${msg.uniqueMessageId} sender=${msg.senderUUID} senderSequenceNumber=${msg.senderSeqNo}"
+        private fun formatMessageForLogging(msg: ReceivedMessage): String = "${msg.uniqueMessageId} sender=${msg.senderUUID} senderSequenceNumber=${msg.senderSeqNo} msg=$msg"
         private fun formatMetaForLogging(deduplicationId: DeduplicationId, messageMeta: MessageMeta?): String = "$deduplicationId senderHash=${messageMeta?.senderHash} senderSequenceNumber=${messageMeta?.senderSeqNo}"
     }
 
@@ -93,9 +93,14 @@ class P2PMessageDeduplicator(
         log.trace { "${formatMessageForLogging(msg)} senderHash=$senderHash high water mark is $existingSeqNoHWM" }
         val isNewHWM = (existingSeqNoHWM == null || existingSeqNoHWM < receivedSenderSeqNo)
         return if (isNewHWM) {
-            log.trace { "${formatMessageForLogging(msg)} senderHash=$senderHash is new high water mark vs. $existingSeqNoHWM" }
-            senderUUIDSeqNoHWM[senderKey] = senderHash to receivedSenderSeqNo
-            false
+            if (existingSeqNoHWM == null && isDuplicateInDatabase(msg)) {
+                log.debug { "${formatMessageForLogging(msg)} is a duplicate in the database but senderHash=$senderHash differs from the original. The identity changed." }
+                true
+            } else {
+                log.trace { "${formatMessageForLogging(msg)} senderHash=$senderHash is new high water mark vs. $existingSeqNoHWM" }
+                senderUUIDSeqNoHWM[senderKey] = senderHash to receivedSenderSeqNo
+                false
+            }
         } else isDuplicateInDatabase(msg)
     }
 
