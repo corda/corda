@@ -531,17 +531,38 @@ As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted up
 
 - installing manually as per :ref:`Installing the CorDapp JAR <cordapp_install_ref>` and re-starting the node.
 
-Contract attachments that are received from a peer over the p2p network are considered **untrusted** and will throw a `UntrustedAttachmentsException` exception
+- uploading the attachment JAR to the node via RPC, either programmatically (see :ref:`Connecting to a node via RPC <clientrpc_connect_ref>`)
+
+Installing Contract Attachments for Previously Unknown CorDapps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When you are processing a transaction that contains states that need to be verified by contracts in CorDapps not currently installed on the node, the
+Contract attachment will be received from a peer over the p2p network. CorDapps received this way are considered **untrusted** and will throw an `UntrustedAttachmentsException`
 when processed by a listening flow that cannot resolve that attachment from its local attachment storage. The flow will be aborted and sent to the nodes flow hospital for recovery and retry.
 The untrusted attachment JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for viewing using the following CRaSH shell command:
 
 ``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
 
 Should the node operator deem the attachment trustworthy, they may then install the CorDapp JAR in the node (see :ref:`Installing the CorDapp JAR <cordapp_install_ref>`)
-and subsequently retry the failed flow (currently this requires a node re-start).
+and subsequently retry the failed flow. Currently this requires a node-restart which will automatically retry the failed flows.
 
 .. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
    Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
 
+Installing Contract Attachments for Older Versions of CorDapps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+If you need to install older versions of a CorDapp in order to verify chains of states created with older versions of a contract, you can upload the
+older CorDapp to the attachment store. Placing the older CorDapp in the ``cordapps`` directory will not work in this case,
+as you can only have one CorDapp loaded per contract.
 
+As above, the untrusted attachment JAR will be stored in the nodes local attachment store for review by a node operator. It can be downloaded for
+viewing using the following CRaSH shell command:
+
+``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
+
+Should the node operator deem the attachment trustworthy, they may then issue the following CRaSH shell command to reload it as trusted:
+
+ ``>>> run uploadAttachment jar: path/to/the/trusted-file.jar``
+
+and subsequently retry the failed flow. Currently this requires a node-restart which will automatically retry the failed flows.
