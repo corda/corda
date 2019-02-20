@@ -55,13 +55,13 @@ class NewCommand : CommandBase() {
     companion object {
 
         val TEMPLATE = """
-            |package net.corda.djvm;
+            |package net.corda.sandbox;
             |
-            |import net.corda.djvm.execution.SandboxedRunnable;
+            |import java.util.function.Function;
             |
-            |public class [NAME] implements SandboxedRunnable<[FROM], [TO]> {
+            |public class [NAME] implements Function<[FROM], [TO]> {
             |    @Override
-            |    public [TO] run([FROM] input) {
+            |    public [TO] apply([FROM] input) {
             |        return [RETURN];
             |    }
             |}

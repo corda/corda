@@ -59,8 +59,8 @@ Abstraction
 ~~~~~~~~~~~
 
 The sandbox is abstracted away as an executor which takes as input an implementation of the interface
-``SandboxedRunnable<in Input, out Output>``, dereferenced by a ``ClassSource``. This interface has a single method that
-needs implementing, namely ``run(Input): Output``.
+``Function<in Input, out Output>``, dereferenced by a ``ClassSource``. This interface has a single method that
+needs implementing, namely ``apply(Input): Output``.
 
 A ``ClassSource`` object referencing such an implementation can be passed into the ``SandboxExecutor<in Input, out
 Output>`` together with an input of type ``Input``. The executor has operations for both execution and static
@@ -68,7 +68,7 @@ validation, namely ``run()`` and ``validate()``. These methods both return a sum
 
  * In the case of execution, this summary object has information about:
     * Whether or not the runnable was successfully executed.
-    * If successful, the return value of ``SandboxedRunnable.run()``.
+    * If successful, the return value of ``Function.apply()``.
     * If failed, the exception that was raised.
     * And in both cases, a summary of all accrued costs during execution.
 
@@ -351,7 +351,7 @@ This run will produce some output similar to this:
 
 The output should be pretty self-explanatory, but just to summarise:
 
- * It prints out the return value from the ``SandboxedRunnable<Object, Object>.run()`` method implemented in
+ * It prints out the return value from the ``Function<Object, Object>.apply()`` method implemented in
    ``net.corda.sandbox.Hello``.
 
  * It also prints out the aggregated costs for allocations, invocations, jumps and throws.

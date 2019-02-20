@@ -60,7 +60,7 @@ fun openOptions(force: Boolean) = if (force) {
  * Get the path of where any generated code will be placed. Create the directory if it does not exist.
  */
 fun createCodePath(): Path {
-    return Paths.get("tmp", "net", "corda", "djvm").let {
+    return Paths.get("tmp", "net", "corda", "sandbox").let {
         Files.createDirectories(it)
     }
 }
@@ -92,7 +92,7 @@ val userClassPath: String = System.getProperty("java.class.path")
 /**
  * Get a reference of each concrete class that implements interface or class [T].
  */
-inline fun <reified T> find(scanSpec: String = "net/corda/djvm"): List<Class<*>> {
+inline fun <reified T> find(scanSpec: String = "net/corda/sandbox"): List<Class<*>> {
     return ClassGraph()
             .whitelistPaths(scanSpec)
             .enableAllInfo()
