@@ -527,13 +527,18 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
 CorDapp Contract Attachments
 ----------------------------
 
-As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted uploader, by
+As of Corda 4, because there is no Sandbox to run the verification code - we require that any jar with code that is downloaded from a peer to be
+checked and explicitly whitelisted by the node operator. CorDapp contract JARs must be installed on a node by a trusted uploader, by
 
 - installing manually as per :ref:`Installing the CorDapp JAR <cordapp_install_ref>` and re-starting the node.
 
 - uploading the attachment JAR to the node via RPC, either programmatically (see :ref:`Connecting to a node via RPC <clientrpc_connect_ref>`)
 
 Which method to use depends on the reason for installing the CorDapp and is detailed below.
+
+.. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
+   Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
+
 
 Installing Contract Attachments for Previously Unknown CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -548,8 +553,7 @@ The untrusted attachment JAR will be stored in the nodes local attachment store 
 Should the node operator deem the attachment trustworthy, they may then install the CorDapp JAR in the node (see :ref:`Installing the CorDapp JAR <cordapp_install_ref>`)
 and subsequently retry the failed flow. Currently this requires a node-restart which will automatically retry the failed flows.
 
-.. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
-   Deterministic JVM is integrated into Corda whereby execution takes place in a sandboxed environment which protects the node from malicious code.
+.. note:: from Corda 4.1 you will also be able to upload the attachment to the store, as described below.
 
 Installing Contract Attachments for Older Versions of CorDapps
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
