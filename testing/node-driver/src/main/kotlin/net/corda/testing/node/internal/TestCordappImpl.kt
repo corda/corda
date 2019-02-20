@@ -79,7 +79,7 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
             return projectRootToBuiltJar.computeIfAbsent(projectRoot) {
                 val gradlew = findGradlewDir(projectRoot) / (if (SystemUtils.IS_OS_WINDOWS) "gradlew.bat" else "gradlew")
                 log.info("Generating CorDapp jar from local project in $projectRoot ...")
-                // The inner gradle process has to be run with daemon disabled as it interferes with main Gradle process that's running the tests
+                // The inner Gradle process has to be run with daemon disabled as it might reuse the same Gradle daemon as the main process running the tests, which leads to JVM crashing.
                 val exitCode = ProcessBuilder(gradlew.toString(), "-Dorg.gradle.daemon=false jar").directory(projectRoot.toFile()).inheritIO().start().waitFor()
                 check(exitCode == 0) { "Unable to generate CorDapp jar from local project in $projectRoot (exit=$exitCode)" }
                 val libs = projectRoot / "build" / "libs"
