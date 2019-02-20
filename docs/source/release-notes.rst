@@ -3,19 +3,19 @@ Release notes for Corda 4
 
 .. _release_notes_v4_0:
 
-Here we are, 11 months and 1500 plus commits later... and it's a bouncing baby software release!
+Welcome to the Corda 4 release notes. Please read these carefully to understand what's new in this
+release and how the changes can help you. Just as prior releases have brought with them commitments
+to wire and API stability, Corda 4 comes with those same guarantees. States and apps valid in
+Corda 3 are transparently usable in Corda 4.
 
-We are really proud to release Corda 4 to the open source community today. It's been a long time in
-the making, but we think you'll agree worth the wait.
+For app developers, we strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade
+procedure, along with how you can adjust your app to opt-in to new features making your app more secure and
+easier to upgrade in future.
 
-Just as prior releases have brought with them commitments to wire and API stability, Corda 4
-comes with those same guarantees. States and apps valid in Corda 3 are transparently usable in Corda 4.
+For node operators, we recommend reading ":doc:`node-upgrade-notes`". The upgrade procedure is simple but
+it can't hurt to read the instructions anyway.
 
-We strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade procedure,
-along with how you can adjust your app to opt-in to new features making your app more secure and
-easier to upgrade.
-
-Additionally, be aware that the data model upgrades are changes to the Corda consensus rules. To use
+Additionally, be aware that the data model improvements are changes to the Corda consensus rules. To use
 apps that benefit from them, *all* nodes in a compatibility zone must be upgraded and the zone must be
 enforcing that upgrade. This may take time in large zones like the testnet. Please take this into
 account for your own schedule planning.
