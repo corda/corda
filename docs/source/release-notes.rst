@@ -11,14 +11,18 @@ the making, but we think you'll agree worth the wait.
 Just as prior releases have brought with them commitments to wire and API stability, Corda 4
 comes with those same guarantees. States and apps valid in Corda 3 are transparently usable in Corda 4.
 
-.. important:: We strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade procedure,
-   along with how you can adjust your app to opt-in to new features making your app more secure and
-   easier to upgrade.
+We strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade procedure,
+along with how you can adjust your app to opt-in to new features making your app more secure and
+easier to upgrade.
 
 Additionally, be aware that the data model upgrades are changes to the Corda consensus rules. To use
 apps that benefit from them, *all* nodes in a compatibility zone must be upgraded and the zone must be
 enforcing that upgrade. This may take time in large zones like the testnet. Please take this into
 account for your own schedule planning.
+
+.. warning:: There is a bug in Corda 3.3 that causes problems when receiving a ``FungibleState`` created
+   by Corda 4. There will shortly be a followup Corda 3.4 release that corrects this error. Interop between
+   Corda 3 and Corda 4 will require that Corda 3 users are on the latest patchlevel release.
 
 .. contents::
 
