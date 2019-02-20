@@ -3,7 +3,7 @@ HSM support for legal identity keys
 
 By default, the private keys that belong to the node CA and legal identity are stored in a key store file in the node's certificates directory. Users may wish to instead store this key in a hardware security module (HSM) or similar. For this purpose, Corda Enterprise supports HSMs by `Utimaco <https://hsm.utimaco.com>`_, `Gemalto <https://www.gemalto.com>`_, and `Azure KeyVault <https://azure.microsoft.com/en-gb/services/key-vault>`_.
 
-Note that only the private and public key of the legal identity are stored this way. The certificate chain is still stored in a file-based key store.
+Note that only the private and public key of node CA and the legal identity are stored this way. The certificate chain is still stored in a file-based key store.
 
 .. contents::
 
@@ -60,7 +60,6 @@ Example configuration file:
       host: "127.0.0.1"
       port: 3001
       connectionTimeout: 60000
-      endSessionOnShutdown: true
       keepSessionAlive: true
       keyGroup: "*"
       keySpecifier: 2
@@ -113,7 +112,7 @@ In the ``node.conf``, the ``cryptoServiceName`` needs to be set to "AZURE_KEY_VA
 
 The configuration file for Azure KeyVault contains the fields listed below. For details refer to the `Azure KeyVault documentation <https://docs.microsoft.com/en-gb/azure/key-vault>`_.
 
-:path: path to the key store for login.
+:path: path to the key store for login. Note that the .pem file that belongs to your service principal needs to be created to pkcs12. One way of doing this is by using openssl: ``openssl pkcs12 -export -in /home/username/tmpdav8oje3.pem -out keyvault_login.p12``.
 
 :alias: alias of the key used for login.
 
@@ -129,7 +128,7 @@ Example configuration file:
 
 .. parsed-literal::
 
-    path: keyvault_login.pkcs12
+    path: keyvault_login.p12
     alias: "my-alias"
     password: "my-password"
     keyVaultURL: "https://<mykeyvault>.vault.azure.net/"
