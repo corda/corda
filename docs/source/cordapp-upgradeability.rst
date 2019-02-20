@@ -9,14 +9,16 @@ trust checking and classloader isolation of contract attachments for transaction
 
 The following guarantees are made for CorDapps running on Corda 4.0
 
-- CorDapps compiled with previous versions of Corda (from 1.0) will execute without change on Corda 4.0
+- Compliant CorDapps compiled with previous versions of Corda (from 3.0) will execute without change on Corda 4.0
+
+  .. note:: by "compliant", we mean CorDapps that do not utilise Corda internal, non-stable or other non-committed public Corda APIs.
 
   Recommendation: security hardening changes in flow processing, specifically the ``FinalityFlow``, recommend upgrading existing CorDapp
   receiver flows to use the new APIs. See :ref:`cordapp_upgrade_finality_flow_ref` for more information.
 
 - CorDapp Contract states generated on ledger using Hash constraints (introduced in Corda 1.0) and CZ Whitelisted constraints (introduced in Corda 3.0)
   are consumable by CorDapps built on Corda 4 (by default these will use Signature constraints) but may not be combined as inputs into the
-  same transaction. A transaction may consume multiple states of the same constraint type but not combined.
+  same transaction. However a single transaction may combine multiple states of the same constraint type.
 
 - CorDapp Contract states generated on ledger using Hash constraints are not migratable to Signature constraints in this release.
 
@@ -33,25 +35,26 @@ The following guarantees are made for CorDapps running on Corda 4.0
 
 - CorDapp contract attachment classloader isolation has some important side-effects and edge cases to consider:
 
-  1. Contract attachments should include all 3rd party library dependencies in the same packaged JAR.
+  1. Contract attachments should include all 3rd party library dependencies in the same packaged JAR - we call this a "Fat JAR",
+     meaning that all dependencies are resolvable by the classloader by only loading a single Jar.
   2. Contract attachments that depend on other Contract attachments are currently supported in so far as the Attachments Classloader
-     will attempt to resolve any external dependencies from the Nodes application classloader. It is thus paramount that dependent Contract
+     will attempt to resolve any external dependencies from the node's application classloader. It is thus paramount that dependent Contract
      Attachments are loaded upon node startup from the respective /cordapps directory.
 
 - Rolling upgrades are partially supported.
-  A Node operator may choose to manually upload a later version of a Contract Attachment than the version their node is currently using
-  for the purposes of transaction verification (from remote peers). They will only be able to build new transactions with the version
-  that is currently loaded in their node (as installed from the nodes /cordapps directory)
+  A Node operator may choose to manually upload (via the RPC attachments uploader mechanism) a later version of a Contract Attachment than
+  the version their node is currently using for the purposes of transaction verification (received from remote peers). However, they will only
+  be able to build new transactions with the version that is currently loaded (installed from the nodes /cordapps directory) in their node.
 
-- Finance CorDapp
-  Whilst experimental, we guarantee that states generated with the Finance CorDapp are interchangeable across Open Source and Enterprise
-  distributions. This has been made possible by releasing a single version of the Finance Contracts CorDapp.
+- Finance CorDapp (v4)
+  Whilst experimental, our test coverage has confirmed that states generated with the Finance CorDapp are interchangeable across Open Source
+  and Enterprise distributions. This has been made possible by releasing a single 4.0 version of the Finance Contracts CorDapp.
   Please note the Finance application will be superseded shortly by the new Tokens SDK (https://github.com/corda/token-sdk)
 
 Corda 4.1
 ---------
 
-The following guarantees will be delivered in a close follow-up release to Corda 4.0:
+The following additional capabilities are under consideration for delivery in a follow-up release to Corda 4.0:
 
 - CorDapp contract states issued with different constraint types will be consumable within the same transaction.
   eg. no longer need to consume hash, CZ whitelist and signature constraints in isolation.
@@ -66,6 +69,7 @@ The following guarantees will be delivered in a close follow-up release to Corda
 
 - Contract attachments will be able to explicitly declare their dependencies on other Contract attachments such that these are automatically
   loaded by the Attachments Classloader (rendering the 4.0 fallback to application classloader mechanism redundant).
+  This improved modularity removes the need to "Fat JAR" all dependencies together in a single jar.
 
 - Rolling upgrades will be fully supported.
   A Node operator will be able to pre-register (by hash or code signing public key) versions of CorDapps they are not yet ready to install locally,
@@ -76,8 +80,8 @@ The following guarantees will be delivered in a close follow-up release to Corda
 Corda Enterprise concerns
 -------------------------
 
-- CorDapps compiled with the OS version of Corda 4.0 will execute without change on Enterprise Corda 4.0
-  The reverse is not guaranteed. Whilst the Public API's are currently identical, R3 may introduce Enterprise-specific Public API's for
+- CorDapps compiled with the OS version of Corda 4.0 will execute without change on Enterprise Corda 4.0.
+  The reverse is not guaranteed. Whilst the Public APIs are currently identical, R3 may introduce Enterprise-specific Public APIs for
   advanced CorDapp functionality, therefore invalidating the ability to execute on Open Source nodes.
   Wire-compatibility and ABI stability is maintained.
 
