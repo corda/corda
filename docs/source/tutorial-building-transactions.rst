@@ -48,11 +48,7 @@ Transactions in Corda contain a number of elements:
    period during which the proposed transaction can be committed to the
    ledger
 
-A transaction is built by populating a ``TransactionBuilder``. Typically,
-the ``TransactionBuilder`` will need to be exchanged back and forth between
-parties before it is fully populated. This is an immediate consequence of
-the Corda privacy model, in which the input states are likely to be unknown
-to the other node.
+A transaction is built by populating a ``TransactionBuilder``.
 
 Once the builder is fully populated, the flow should freeze the ``TransactionBuilder`` by signing it to create a
 ``SignedTransaction``. This is key to the ledger agreement process - once a flow has attached a node’s signature to a
