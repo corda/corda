@@ -14,7 +14,7 @@ Please refer to :doc:`changelog` for all Open Source changes which automatically
 
 Changelog entries below refer to Enterprise-only changes.
 
-.. warning:: WARNING the ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
+.. warning:: The ``corda-bridgserver.jar`` has been renamed to ``corda-firewall.jar`` to be more consistent
   with marketing materials and purpose of the jar. Further to this we have also renamed ``bridge.conf`` to ``firewall.conf``.
   Within that configuration file the ``bridgeMode`` property has been modified to ``firewallMode`` for overall consistency.
   Furthermore, under ``outboundConfig`` - ``socksProxyConfig`` been renamed into ``proxyConfig``.
