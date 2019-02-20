@@ -527,14 +527,9 @@ For a CorDapp that contains flows and/or services we specify the `workflow` tag:
 CorDapp Contract Attachments
 ----------------------------
 
-As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted uploader, either by
+As of Corda 4, CorDapp Contract JARs must be installed on a node by a trusted uploader, by
 
 - installing manually as per :ref:`Installing the CorDapp JAR <cordapp_install_ref>` and re-starting the node.
-
-- uploading the attachment JAR to the node via RPC, either programmatically (see :ref:`Connecting to a node via RPC <clientrpc_connect_ref>`)
-  or via the :doc:`shell` by issuing the following command:
-
-``>>> run uploadAttachment jar: path/to/the/file.jar``
 
 Contract attachments that are received from a peer over the p2p network are considered **untrusted** and will throw a `UntrustedAttachmentsException` exception
 when processed by a listening flow that cannot resolve that attachment from its local attachment storage. The flow will be aborted and sent to the nodes flow hospital for recovery and retry.
@@ -542,10 +537,7 @@ The untrusted attachment JAR will be stored in the nodes local attachment store 
 
 ``>>> run openAttachment id: <hash of untrusted attachment given by `UntrustedAttachmentsException` exception``
 
-Should the node operator deem the attachment trustworthy, they may then issue the following CRaSH shell command to reload it as trusted:
-
-``>>> run uploadAttachment jar: path/to/the/trusted-file.jar``
-
+Should the node operator deem the attachment trustworthy, they may then install the CorDapp JAR in the node see :ref:`Installing the CorDapp JAR <cordapp_install_ref>`
 and subsequently retry the failed flow (currently this requires a node re-start).
 
 .. note:: this behaviour is to protect the node from executing contract code that was not vetted. It is a temporary precaution until the
