@@ -11,8 +11,8 @@ import java.nio.file.Path
  * @property origin The origin of the class source, if any.
  */
 class ClassSource private constructor(
-        val qualifiedClassName: String = "",
-        val origin: String? = null
+        val qualifiedClassName: String,
+        val origin: String?
 ) {
     val internalClassName: String = qualifiedClassName.asResourcePath
 

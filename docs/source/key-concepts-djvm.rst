@@ -59,8 +59,8 @@ Abstraction
 ~~~~~~~~~~~
 
 The sandbox is abstracted away as an executor which takes as input an implementation of the interface
-``SandboxedRunnable<in Input, out Output>``, dereferenced by a ``ClassSource``. This interface has a single method that
-needs implementing, namely ``run(Input): Output``.
+``Function<in Input, out Output>``, dereferenced by a ``ClassSource``. This interface has a single method that
+needs implementing, namely ``apply(Input): Output``.
 
 A ``ClassSource`` object referencing such an implementation can be passed into the ``SandboxExecutor<in Input, out
 Output>`` together with an input of type ``Input``. The executor has operations for both execution and static
@@ -68,7 +68,7 @@ validation, namely ``run()`` and ``validate()``. These methods both return a sum
 
  * In the case of execution, this summary object has information about:
     * Whether or not the runnable was successfully executed.
-    * If successful, the return value of ``SandboxedRunnable.run()``.
+    * If successful, the return value of ``Function.apply()``.
     * If failed, the exception that was raised.
     * And in both cases, a summary of all accrued costs during execution.
 
@@ -80,7 +80,7 @@ validation, namely ``run()`` and ``validate()``. These methods both return a sum
       severity ``ERROR`` will prevent execution.
 
 The sandbox has a configuration that applies to the execution of a specific runnable. This configuration, on a higher
-level, contains a set of rules, definition providers, emitters and a whitelist.
+level, contains a set of rules, definition providers and emitters.
 
 .. image:: resources/djvm-overview.png
 
@@ -107,7 +107,7 @@ work may well introduce additional constraints that we would want to place on th
 
 .. note::
     It is worth noting that not only smart contract code is instrumented by the sandbox, but all code that it can
-    transitively reach. In particular this means that the Java runtime classes (that have not been whitelisted) and any
+    transitively reach. In particular this means that the Java runtime classes and any
     other library code used in the program are also instrumented and persisted ahead of time.
 
 
@@ -129,15 +129,6 @@ tries to catch such exceptions, as doing so would allow the user to bypass the t
 profile.
 
 
-Only Allow Explicitly Whitelisted Runtime API
-.............................................
-
-Ensures that constant pool references are mapped against a verified subset of the Java runtime libraries. Said subset
-excludes functionality that contract code should not have access to, such as native code. This whitelist has been
-trimmed down to the bare minimum needed, a few classes in ``java.lang``, so that also the Java runtime libraries
-themselves are subjected to the same amount of scrutiny that the rest of the code is.
-
-
 Disallow Dynamic Invocation
 ...........................
 
@@ -153,9 +144,6 @@ Forbids native methods as these provide the user access into operating system fu
 network requests, general hardware interaction, threading, *etc.* These all constitute sources of non-determinism, and
 allowing such code to be called arbitrarily from the JVM would require deterministic guarantees on the native machine
 code level. This falls out of scope for the DJVM.
-
-Java runtime classes that call into native code and that are needed from within the sandbox environment, can be
-whitelisted explicitly.
 
 
 Disallow Finalizer Methods
@@ -278,9 +266,8 @@ The loaded classes are further rewritten in two ways:
 Disable Synchronised Methods and Blocks
 .......................................
 
-Since Java's multi-threading API has been excluded from the whitelist, synchronised methods and code blocks have little
-use in sandboxed code. Consequently, we log informational messages about occurrences of this in your sandboxed code and
-automatically transform them into ordinary methods and code blocks instead.
+The DJVM doesn't support multi-threading and so synchronised methods and code blocks have little
+use in sandboxed code. Consequently, we automatically transform them into ordinary methods and code blocks instead.
 
 
 Future Work
@@ -289,9 +276,6 @@ Future Work
 Further work is planned:
 
  * To enable controlled use of reflection APIs.
-
- * Strip out the dependency on the extensive whitelist of underlying Java
-   runtime classes.
 
  * Currently, dynamic invocation is disallowed. Allow specific lambda and
    string concatenation meta-factories used by Java code itself.
@@ -351,7 +335,7 @@ This run will produce some output similar to this:
 
 The output should be pretty self-explanatory, but just to summarise:
 
- * It prints out the return value from the ``SandboxedRunnable<Object, Object>.run()`` method implemented in
+ * It prints out the return value from the ``Function<Object, Object>.apply()`` method implemented in
    ``net.corda.sandbox.Hello``.
 
  * It also prints out the aggregated costs for allocations, invocations, jumps and throws.
@@ -363,5 +347,3 @@ Other commands to be aware of are:
  * ``djvm inspect`` which allows you to inspect what byte code modifications will be applied to a class.
 
  * ``djvm show`` which displays the transformed byte code of a class, *i.e.*, the end result and not the difference.
-
- * ``djvm whitelist`` which displays the content of the whitelist in use.

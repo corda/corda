@@ -131,7 +131,7 @@ class SandboxClassLoader private constructor(
 
             if (!isSandboxClass || parent is SandboxClassLoader) {
                 try {
-                    clazz = super.loadClass(name, resolve)
+                    clazz = super.loadClass(name, false)
                 } catch (e: ClassNotFoundException) {
                 } catch (e: SandboxClassLoadingException) {
                     e.messages.clearProvisional()
