@@ -17,11 +17,11 @@ The following guarantees are made for CorDapps running on Corda 4.0
   receiver flows to use the new APIs. See :ref:`cordapp_upgrade_finality_flow_ref` for more information.
 
 - CorDapp Contract states generated on ledger using hash constraints (introduced in Corda 1.0) and CZ whitelisted constraints (introduced in Corda 3.0)
-  are consumable by CorDapps built on Corda 4 (by default these will use signature constraints). However, you may not combine inputs constrained by different
-  types (eg. cannot mix hash and CZ whitelist and signature constrained states) in the same transaction. Note you can combine multiple inputs
-  constrained by the same type (many of hash or CZ whitelist or signature) in the same transaction.
-  An exception to this rule is whre you may have subsequently CZ whitelisted a Jar previously used to issue hash constrained states (eg. the original hash-constrained states
-  and new CZ-whitelisted constrainted states may be combined in a new transaction in this scenario because they resolve to the same original hash).
+  are consumable by CorDapps built on Corda 4. However, you may not combine inputs constrained by different types (eg. cannot mix hash and CZ whitelist
+  and signature constrained states) in the same transaction. Note you can combine multiple inputs constrained by the same type (many of hash or
+  CZ whitelist or signature) in the same transaction.
+  An exception to this rule is where you may have subsequently CZ whitelisted a Jar previously used to issue hash constrained states (eg. the original hash-constrained states
+  and new CZ-whitelisted constrained states may be combined in a new transaction in this scenario because they resolve to the same original hash).
 
 - CorDapp Contract states generated on ledger using hash constraints are not migratable to signature constraints in this release.
 
@@ -61,9 +61,11 @@ The following additional capabilities are under consideration for delivery in a 
 - CorDapp contract states issued with different constraint types will be consumable within the same transaction.
   eg. no longer need to consume hash, CZ whitelist and signature constraints in isolation.
 
-- CorDapp Contract states generated on ledger using hash constraints will be automatically migrated to signature constraints when building new transactions.
+- CorDapp Contract states generated on ledger using hash constraints will be automatically migrated to signature constraints when building new transactions
+  where the latest installed contract Jar is signed as per :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>`.
 
-- CorDapp Contract states generated on ledger using CZ whitelisted constraints will be automatically migrated to signature constraints when building new transactions.
+- CorDapp Contract states generated on ledger using CZ whitelisted constraints will be automatically migrated to signature constraints when building new transactions
+  where the latest installed contract Jar is signed as per :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>`.
 
 - Explicit Contract Upgrades will be supported for all constraint types: hash, CZ whitelisted and signature.
   In practice, it should only be necessary to upgrade from hash or CZ whitelisted to new signature constrained contract types.
