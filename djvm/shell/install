@@ -10,7 +10,7 @@ cd "$base_dir/.."
 
 # Generate auto-completion file for Bash and ZSH
 cd "$base_dir"
-java -cp "$base_dir/../cli/build/libs/corda-djvm-$version-all.jar" \
+java -cp "$base_dir/../cli/build/libs/corda-djvm-$version-cli.jar" \
     picocli.AutoComplete -n djvm net.corda.djvm.tools.cli.Commands -f
 
 # Create a symbolic link to the `djvm` utility
