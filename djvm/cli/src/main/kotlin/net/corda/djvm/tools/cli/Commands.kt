@@ -15,8 +15,7 @@ import picocli.CommandLine.Command
             NewCommand::class,
             RunCommand::class,
             ShowCommand::class,
-            TreeCommand::class,
-            WhitelistCommand::class
+            TreeCommand::class
         ]
 )
 @Suppress("KDocMissingDocumentation")

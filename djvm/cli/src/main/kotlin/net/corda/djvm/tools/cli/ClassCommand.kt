@@ -32,14 +32,6 @@ abstract class ClassCommand : CommandBase() {
     @Option(names = ["--ignore-definition-providers"], description = ["Disable all definition providers."])
     var ignoreDefinitionProviders: Boolean = false
 
-    @Option(
-            names = ["-w", "--whitelist"],
-            description = ["Override the default whitelist. Use provided whitelist instead. If NONE is provided, the " +
-                    "whitelist will be ignored. If ALL is provided, all references will be whitelisted. LANG can be " +
-                    "used to only whitelist select classes and their members from the java.lang package."]
-    )
-    var whitelist: Path? = null
-
     @Option(names = ["-c", "--classpath"], description = ["Additions to the default class path."], split = ":")
     var classPath: Array<Path> = emptyArray()
 
@@ -65,8 +57,6 @@ abstract class ClassCommand : CommandBase() {
 
     protected var executor = SandboxExecutor<Any, Any>(SandboxConfiguration.DEFAULT)
 
-    private var derivedWhitelist: Whitelist = Whitelist.MINIMAL
-
     abstract fun processClasses(classes: List<Class<*>>)
 
     open fun printSuccess(classes: List<Class<*>>) {}
@@ -74,8 +64,7 @@ abstract class ClassCommand : CommandBase() {
     override fun validateArguments() = filters.isNotEmpty()
 
     override fun handleCommand(): Boolean {
-        derivedWhitelist = whitelistFromPath(whitelist)
-        val configuration = getConfiguration(derivedWhitelist)
+        val configuration = getConfiguration(Whitelist.MINIMAL)
         classLoader = SourceClassLoader(getClasspath(), configuration.analysisConfiguration.classResolver)
         createExecutor(configuration)
 
