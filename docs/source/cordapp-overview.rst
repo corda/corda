@@ -58,12 +58,17 @@ To make this work in practice you should follow these steps:
    The former - the **CorDapp kernel** - is the Jar that will be attached to transactions creating/consuming your states and is the Jar
    that any node on the network verifying the transaction must execute.
 
+.. note:: It is also important to understand how to manage any dependencies a CorDapp may have on 3rd party libraries and other CorDapps.
+   Please read :ref:`Setting your dependencies <cordapp_dependencies_ref>` to understand the options and recommendations with regards to correctly Jar'ing CorDapp dependencies.
+
 2. Compile this **CorDapp kernel** Jar once, and then depend on it from your workflows Jar (or Jars - see below). Importantly, if
    you want your app to work on both Corda and Corda Enterprise, you must compile this Jar against Corda, not Corda Enterprise.
    This is because, in future, we may add additional functionality to Corda Enterprise that is not in Corda and you may inadvertently create a
    CorDapp kernel that does not work on Corda open source. Compiling against Corda open source as a matter of course prevents this risk, as well
    as preventing the risk that you inadvertently create two different versions of the Jar, which will have different hashes and hence break compatibility
    and interoperability.
+
+.. note:: As of Corda 4 it is recommended to use :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>` to leverage the new signature constraints functionality.
 
 3. Your workflow Jar(s) should depend on the **CorDapp kernel** (contract, states and dependencies). Importantly, you can create different workflow
    Jars for Corda and Corda Enterprise, because the workflows Jar is not consensus critical. For example, you may wish to add additional features
