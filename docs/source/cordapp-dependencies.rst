@@ -2,8 +2,8 @@ CorDapp dependency handling
 ===========================
 
 
-A bit of context around how transactions are verified and what changed between Corda version 3 and 4
-----------------------------------------------------------------------------------------------------
+Some context around how corda transactions are verified
+-------------------------------------------------------
 
 Corda transactions evolve input states into output states. A state is a data structure containing: the actual data fact (that is expressed as a
 strong typed serialized java object) and a reference to the logic (contract) that needs to verify a transition to and from this state. The logic is expressed
@@ -60,8 +60,8 @@ There are a couple of caveats to this approach as well:
 * CorDapp depending on other CorDapps. This is a more advanced scenario and requires care.
 
 
-CorDapp depending on other CorDapps
------------------------------------
+CorDapp depending on other CorDapp(s)
+-------------------------------------
 
 Let's take as an example the finance CorDapp that is shipped with Corda as a sample. 
 
@@ -114,8 +114,8 @@ Given the above there are 4 possible solutions for reusable CorDapps:
 The preferred approach can be selected by the developers of the CorDapp, but the recommended to go for 4 - manually attaching and checking.
 
 
-Changes from version 3 to version 4 of Corda
---------------------------------------------
+Changes between version 3 to version 4 of Corda
+-----------------------------------------------
 
 In Corda 3 transactions were verified inside the System Classloader that contained all the installed CorDapps.
 If we consider the example from above with the `Apples` contract that depends on finance, the `Apples` developer could have just released
@@ -167,11 +167,3 @@ Or, even better, if you sign your CorDapp, you can distribute your public key, w
 
 Q: If I am developing a CorDapp that depends on an external library do I need to do anything special?
 A: Same as before just add a `compile` dependency to the library, which will bundle it with your cordapp.
-
-
-
-
-
-
-
-
