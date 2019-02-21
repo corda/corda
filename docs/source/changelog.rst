@@ -19,7 +19,7 @@ Version 4.0
 
 * New configuration property ``database.initialiseAppSchema`` with values ``UPDATE``, ``VALIDATE`` and ``NONE``.
   The property controls the behavior of the Hibernate DDL generation. ``UPDATE`` performs an update of CorDapp schemas, while
-  ``VALID`` only verifies their integrity.  The property does not affect the node-specific DDL handling and
+  ``VALIDATE`` only verifies their integrity.  The property does not affect the node-specific DDL handling and
    complements ``database.initialiseSchema`` to disable DDL handling altogether.
 
 * ``JacksonSupport.createInMemoryMapper`` was incorrectly marked as deprecated and is no longer so.
@@ -305,7 +305,9 @@ Version 4.0
 * Finance CorDapps are now built as sealed and signed JAR files.
   Custom classes can no longer be placed in the packages defined in either finance Cordapp or access it's non-public members.
 
-* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``. There is no longer a single cordapp which provides both.
+* Finance CorDapp was split into two separate apps: ``corda-finance-contracts`` and ``corda-finance-workflows``. There is
+  no longer a single cordapp which provides both. You need to have both JARs installed in the node simultaneously for the
+  app to work however.
 
 * All sample CorDapps were split into separate apps: workflows and contracts to reflect new convention. It is recommended to structure your CorDapps
   this way, see :doc:`app-upgrade-notes` on upgrading your CorDapp.
@@ -339,5 +341,5 @@ Version 4.0
 
   The only exception to this is ``Interpolator`` and related classes. These are now in the `IRS demo workflows CorDapp <https://github.com/corda/corda/tree/master/samples/irs-demo/cordapp/workflows-irs>`_.
 
-* Vault states are now correctly migrated when moving from V3 to V4. In particular, this means the relevancy column is correctly filled, and the state party table is populated.
+* Vault states are migrated when moving from V3 to V4: the relevancy column is correctly filled, and the state party table is populated.
   Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.

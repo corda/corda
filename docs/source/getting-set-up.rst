@@ -3,19 +3,16 @@ Getting set up for CorDapp development
 
 Software requirements
 ---------------------
+
 Corda uses industry-standard tools:
 
-* **Oracle JDK 8 JVM** - minimum supported version **|java_version|** (please note that
+* **Java 8 JVM** - we require at least version **|java_version|**, but do not currently support Java 9 or higher.
+  We have tested with Oracle JDK, Amazon Corretto, and Red Hat's OpenJDK builds. Please note that OpenJDK builds
+  usually exclude JavaFX, which our GUI tools require.
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
-* **Git**
-
-We also use Gradle and Kotlin, but you do not need to install them. A standalone Gradle wrapper is provided, and it
-will download the correct version of Kotlin.
+* **Gradle** - we use 4.10 and the ``gradlew`` script in the project / samples directories will download it for you.
 
 Please note:
-
-* Corda runs in a JVM. JVM implementations other than Oracle JDK 8 are not actively supported. However, if you do
-  choose to use OpenJDK, you will also need to install OpenJFX
 
 * Applications on Corda (CorDapps) can be written in any language targeting the JVM. However, Corda itself and most of
   the samples are written in Kotlin. Kotlin is an
@@ -131,7 +128,7 @@ Jetbrains offers a pre-built snap package that allows for easy, one-step install
 .. _fedora-label:
 
 Fedora
--------------
+------
 
 .. warning:: If you are using a Mac, Windows or Debian/Ubuntu machine, please follow the :ref:`mac-label`, :ref:`windows-label` or :ref:`deb-ubuntu-label` instructions instead.
 
