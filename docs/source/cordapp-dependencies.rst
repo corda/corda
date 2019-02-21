@@ -108,7 +108,8 @@ Or, if you sign your cordapp, you can distribute your public key, which users wo
     }
 ```
 
-
+Q: If I am developing a cordapp that depends on an external library do I need to do anything special?
+A: Same as before just add a `compile` dependency to the library, which will bundle it with your cordapp.
 
 
 
