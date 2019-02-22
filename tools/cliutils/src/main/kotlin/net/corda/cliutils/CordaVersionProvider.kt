@@ -11,7 +11,7 @@ class CordaVersionProvider : CommandLine.IVersionProvider {
     companion object {
         private const val UNKNOWN = "Unknown"
         const val current_major_release = "4.0-SNAPSHOT"
-        const val platformEditionCode = "OS"
+        const val platformEditionCode = "ENT"
 
         private fun manifestValue(name: String): String? = if (Manifests.exists(name)) Manifests.read(name) else null
 
