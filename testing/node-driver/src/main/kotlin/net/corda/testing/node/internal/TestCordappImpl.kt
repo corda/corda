@@ -94,15 +94,16 @@ data class TestCordappImpl(val scanPackage: String, override val config: Map<Str
             }
 
             val projectConnection = gradleConnector.connect()
-            val build = projectConnection.newBuild().apply {
-                forTasks("jar")
-                addProgressListener { event: ProgressEvent ->
-                    log.info(event.description)
+            projectConnection.use {
+                val build = projectConnection.newBuild().apply {
+                    forTasks("jar")
+                    addProgressListener { event: ProgressEvent ->
+                        log.info(event.description)
+                    }
                 }
+                // Blocks until the build is complete
+                build.run()
             }
-            // Blocks until the build is complete
-            build.run()
-            projectConnection.close()
         }
     }
 }
