@@ -233,6 +233,7 @@ allprojects {
         jcenter()
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
+        maven { url 'https://repo.gradle.org/gradle/libs-releases' }
     }
 
     configurations {
