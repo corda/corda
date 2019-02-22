@@ -19,15 +19,17 @@ object ConfigObfuscator {
     class DeobfuscationFailedForPathException(val path: String, message: String? = null)
         : IllegalArgumentException(message?.let { "$it for configuration '$path'" } ?: "Unable to decrypt obfuscated content for configuration '$path'")
 
+    private val primaryHardwareAddress = getPrimaryHardwareAddress()
+
     /**
      * Obfuscate tagged fields in the provided configuration string.
      */
     fun obfuscateConfiguration(config: String, hardwareAddress: ByteArray? = null, seed: ByteArray? = null, inputDelegate: ((String) -> String)? = null): ObfuscationResult {
         val commandBlobRegex = "^(.*?)<encrypt\\{(.*)\\}>".toRegex(setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE))
-        val aesKey = aesKeyFromHardwareAddress(seed, hardwareAddress ?: getPrimaryHardwareAddress())
         val rawFields = mutableListOf<String>()
         var fieldCount = 0
         val content = commandBlobRegex.replace(config) { match ->
+            val aesKey = aesKeyFromHardwareAddress(seed, hardwareAddress ?: primaryHardwareAddress)
             val fieldName = match.groupValues[1].trim().replace("[:=\"' \t]".toRegex(), "").split(',').last().let {
                 if (it.isEmpty()) { "<unknown>" } else { it }
             }
@@ -51,9 +53,9 @@ object ConfigObfuscator {
     @Throws(DeobfuscationFailedException::class)
     fun deobfuscateConfiguration(config: String, hardwareAddress: ByteArray? = null, seed: ByteArray? = null): DeobfuscationResult {
         val commandBlobRegex = Regex("<\\{([^:]+):([^\\}]+)\\}>", RegexOption.IGNORE_CASE)
-        val aesKey = aesKeyFromHardwareAddress(seed, hardwareAddress ?: getPrimaryHardwareAddress())
         var fieldCount = 0
         val content = commandBlobRegex.replace(config) { match ->
+            val aesKey = aesKeyFromHardwareAddress(seed, hardwareAddress ?: primaryHardwareAddress)
             val iv = match.groupValues[1].fromBase64()
             val value = match.groupValues[2].fromBase64()
             val decryptedValue = CipherText(value, iv).decrypt(aesKey)
