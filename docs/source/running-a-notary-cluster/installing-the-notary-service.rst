@@ -20,6 +20,10 @@ Put the IP address or host name of the nearest Percona server first in the JDBC
 URL. When running a Percona and a Notary replica on a single machine, list the
 local IP first.
 
+In addition to the connection to the shared Percona DB holding the notary state,
+each notary worker needs to have access to its own local node DB. See the
+`dataSourceProperties` section in the configuration file.
+
 .. literalinclude:: resources/node.conf
   :caption: node.conf
   :name: node-conf

@@ -12,8 +12,13 @@ you don't require the doorman and network map, and you don't want to join an
 existing network, the bootstrapper allows you to set up a cluster of nodes from
 a set of configuration files.
 
-The HA notary relies on a Percona/XtraDB (Percona) cluster. How to set up Percona
-is described below.
+The HA notary relies on a Percona/XtraDB (Percona) cluster for the notary state
+shared among the notary workers. How to set up Percona is described below.
+
+In addition to the shared Percona DB for the notary state, each notary worker
+requires its own database for the node state, since the notary workers are
+Corda nodes with extra notary capabilities that use the flow framework for
+communication.
 
 This guide assumes you're running a Debian-based Linux OS.
 
@@ -62,6 +67,7 @@ Summary
 
 * Client nodes communicate with the notary cluster via P2P messaging, the messaging layer handles selecting an appropriate notary worker node by the service legal name.
 * Client nodes connect to the notary cluster members round-robin.
+* The notary worker nodes access their individual node databases.
 * The notary worker nodes communicate with the underlying Percona cluster via JDBC.
 * The Percona nodes communicate with each other via group communication (GComm).
 * The Percona replicas should only be reachable from each other and from the worker nodes.
