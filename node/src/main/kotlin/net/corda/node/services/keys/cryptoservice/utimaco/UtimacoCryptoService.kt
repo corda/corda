@@ -2,9 +2,11 @@ package net.corda.node.services.keys.cryptoservice.utimaco
 
 import CryptoServerCXI.CryptoServerCXI
 import CryptoServerJCE.CryptoServerProvider
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
@@ -239,8 +241,15 @@ class UtimacoCryptoService(private val cryptoServerProvider: CryptoServerProvide
         )
 
         fun parseConfigFile(configFile: Path): UtimacoConfig {
-            val config = ConfigFactory.parseFile(configFile.toFile()).resolve()
-            return config.parseAs(UtimacoConfig::class)
+            try {
+                val config = ConfigFactory.parseFile(configFile.toFile()).resolve()
+                return config.parseAs(UtimacoConfig::class)
+            } catch (e: Exception) {
+                when(e) {
+                    is ConfigException, is UnknownConfigurationKeysException -> throw Exception("Error in ${configFile.toFile().absolutePath} : ${e.message}")
+                    else -> throw e
+                }
+            }
         }
 
         /**

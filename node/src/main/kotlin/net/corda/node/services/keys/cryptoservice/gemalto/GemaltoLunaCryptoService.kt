@@ -2,10 +2,12 @@ package net.corda.node.services.keys.cryptoservice.gemalto
 
 import com.safenetinc.luna.LunaSlotManager
 import com.safenetinc.luna.provider.LunaProvider
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SignatureScheme
 import net.corda.node.services.keys.cryptoservice.JCACryptoService
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import java.nio.file.Path
@@ -56,8 +58,15 @@ class GemaltoLunaCryptoService(keyStore: KeyStore, provider: Provider, x500Princ
         }
 
         private fun parseConfigFile(cryptoServiceConf: Path): GemaltoLunaConfiguration {
-            val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
-            return config.parseAs(GemaltoLunaConfiguration::class)
+            try {
+                val config = ConfigFactory.parseFile(cryptoServiceConf.toFile()).resolve()
+                return config.parseAs(GemaltoLunaConfiguration::class)
+            } catch (e: Exception) {
+                when(e) {
+                    is ConfigException, is UnknownConfigurationKeysException -> throw Exception("Error in ${cryptoServiceConf.toFile().absolutePath} : ${e.message}")
+                    else -> throw e
+                }
+            }
         }
 
         val DEFAULT_IDENTITY_SIGNATURE_SCHEME = Crypto.ECDSA_SECP256R1_SHA256

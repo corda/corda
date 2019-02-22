@@ -12,12 +12,14 @@ import com.microsoft.azure.keyvault.webkey.JsonWebKeyCurveName.P_256K
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyOperation
 import com.microsoft.azure.keyvault.webkey.JsonWebKeySignatureAlgorithm
 import com.microsoft.azure.keyvault.webkey.JsonWebKeyType
+import com.typesafe.config.ConfigException
 import com.typesafe.config.ConfigFactory
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.Crypto.ECDSA_SECP256K1_SHA256
 import net.corda.core.crypto.Crypto.ECDSA_SECP256R1_SHA256
 import net.corda.core.crypto.Crypto.RSA_SHA256
 import net.corda.core.crypto.SignatureScheme
+import net.corda.nodeapi.internal.config.UnknownConfigurationKeysException
 import net.corda.nodeapi.internal.config.parseAs
 import net.corda.nodeapi.internal.cryptoservice.CryptoService
 import net.corda.nodeapi.internal.cryptoservice.CryptoServiceException
@@ -102,6 +104,7 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
             init {
                 checkAlias(alias)
             }
+
             private val publicKey: PublicKey = getPublicKey(alias) ?: throw CryptoServiceException("No key found for alias $alias")
             private val sigAlgID: AlgorithmIdentifier = Crypto.findSignatureScheme(publicKey).signatureOID
 
@@ -111,7 +114,6 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
             override fun getSignature(): ByteArray = sign(alias, baos.toByteArray())
         }
     }
-
 
     override fun defaultIdentitySignatureScheme(): SignatureScheme {
         return DEFAULT_IDENTITY_SIGNATURE_SCHEME
@@ -234,13 +236,21 @@ class AzureKeyVaultCryptoService(private val keyVaultClient: KeyVaultClient, pri
         }
 
         internal fun parseConfigFile(configFile: Path): AzureKeyVaultConfig {
-            val config = ConfigFactory.parseFile(configFile.toFile())
-            return config.parseAs(AzureKeyVaultConfig::class)
+            try {
+                val config = ConfigFactory.parseFile(configFile.toFile())
+                return config.parseAs(AzureKeyVaultConfig::class)
+            } catch (e: Exception) {
+                when(e) {
+                    is ConfigException, is UnknownConfigurationKeysException -> throw Exception("Error in ${configFile.toFile().absolutePath} : ${e.message}")
+                    else -> throw e
+                }
+            }
         }
 
         private fun checkAlias(alias: String) {
-            require(alias.matches("^[0-9a-zA-Z-]{1,127}$".toRegex())) { "Alias $alias is not valid. Alias must conform to the following pattern: ^[0-9a-zA-Z-]{1,127}\$"}
+            require(alias.matches("^[0-9a-zA-Z-]{1,127}$".toRegex())) { "Alias $alias is not valid. Alias must conform to the following pattern: ^[0-9a-zA-Z-]{1,127}\$" }
         }
+
         /*
          * Configuration for Azure KeyVault.
          * @param path path to the keystore for login.
