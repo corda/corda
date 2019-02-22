@@ -26,7 +26,7 @@ Implementation details:
   For this mechanism to work effectively, it is necessary that each state is able to identify the attachment that is controlling it.
 * Now that it's validated that the transaction was correctly formed, the smart contract code for each state can be executed to validate the transitions.
   This is done by creating an `AttachmentsClassloader` from all the attachments listed by the transaction, deserialising the binary representation of the transaction,
-   and running the contract verification code against the transaction in that classloader. (In the future, this step will run in a deterministic sandbox - the DJVM)
+  and running the contract verification code against the transaction in that classloader. (In the future, this step will run in a deterministic sandbox - the DJVM)
 
 
 In the simplest case, a transaction swapping `Apples` for `Oranges` would contain 2 attachments: one for the Apples contract and one for the Oranges contract.
@@ -50,14 +50,16 @@ But it is really up to the CorDapp developers who can choose what they prefer.
 There are a couple of caveats to this approach as well:
 
 * If multiple CorDapp developers independently bundle some popular library (like `guava`) into their contract, this can cause problems when building
- the `AttachmentsClassloader`. (see no-overlap rule doc -once created -TODO)
- The obvious workaround is for developers to shade dependencies under their own namespace, which would avoid clashes. This comes with some drawbacks though,
- because sometimes it's desired to be able to cast to some common superclass.
- The problem could also be mitigated if collectively developers agree that when bundling some popular library they need to release a new version of their
- CorDapp from time to time to keep up with each other.  The node will then be able to select compatible versions of "apples" and "oranges".
- This works because the no-overlap rule allows a class file to live in multiple attachments if all the versions are equal.
+  the `AttachmentsClassloader` (see no-overlap rule doc -once created -TODO).
+  The obvious workaround is for developers to shade dependencies under their own namespace, which would avoid clashes. This comes with some drawbacks though,
+  because sometimes it's desired to be able to cast to some common superclass.
+  The problem could also be mitigated if collectively developers agree that when bundling some popular library they need to release a new version of their
+  CorDapp from time to time to keep up with each other.  The node will then be able to select compatible versions of "apples" and "oranges".
+  This works because the no-overlap rule allows a class file to live in multiple attachments if all the versions are equal.
 
 * CorDapp depending on other CorDapps. This is a more advanced scenario and requires care.
+
+.. note:: Currently the `cordapp` gradle plugin that ships with Corda only supports bundling a dependency fully unshaded, by declaring it as a `compile` dependency.
 
 
 CorDapp depending on other CorDapp(s)
@@ -141,18 +143,20 @@ This fix is in the spirit of the original transaction and is secure because the 
 
 The transition to the `AttachmentsClassloader` is one more step towards the full design of Corda.
 
+This change also affects testing as the test classloader no longer contains the CorDapps.
 
-Troubleshooting
----------------
+
+FAQ
+---
 
 Q: Will my transactions created in Corda V3 still verify in Corda V4 even if my CorDapp depends on another CorDapp and I haven't bundled it nor added it to the attachments?
 
-A: Yes. Corda 4 maintains backwards compatibility for existing data. There should be no special steps that node operators need to make.
+* A: Yes. Corda 4 maintains backwards compatibility for existing data. There should be no special steps that node operators need to make.
 
 
-Q: If my CorDapp depends on the finance app how should I proceed when I release a new version of my code and want to benefit from all the Corda 4 features.
+Q: If my CorDapp depends on the finance app how should I proceed when I release a new version of my code and want to benefit from all the Corda 4 features?
 
-A: Make sure that your users install or whitelist the unsigned finance contracts JAR.  (If they actually install the contracts JAR they also need to install the workflows JAR.)
+* A: Make sure that your users install or whitelist the unsigned finance contracts JAR.  (If they actually install the contracts JAR they also need to install the workflows JAR.)
  In your build file, you need to depend on finance contracts as a `cordapp` dependency.
  In your flow, when building the transaction, just add this line: `builder.addAttachment(hash_of_finance_v4_contracts_jar)`.
  And in your contract just verify that:
@@ -166,7 +170,7 @@ A: Make sure that your users install or whitelist the unsigned finance contracts
 
 Q: If I am developing a reusable CorDapp that contains both contracts and utilities, how would my clients use it?
 
-A: Same as for finance ( see previous question)
+* A: Same as for finance ( see previous question)
 Or, even better, if you sign your CorDapp, you can distribute your public key, which users would embed in their contract and then check the attachment like this:
 
 .. sourcecode:: kotlin
@@ -176,6 +180,13 @@ Or, even better, if you sign your CorDapp, you can distribute your public key, w
     }
 
 
+
 Q: If I am developing a CorDapp that depends on an external library do I need to do anything special?
 
-A: Same as before just add a `compile` dependency to the library, which will bundle it with your cordapp.
+* A: Same as before just add a `compile` dependency to the library, which will bundle it with your cordapp.
+
+
+
+Troubleshooting
+---------------
+
