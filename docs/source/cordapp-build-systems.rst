@@ -38,6 +38,8 @@ the following folder and files from the `Kotlin CorDapp Template <https://github
 * ``gradlew``
 * ``gradlew.bat``
 
+.. _cordapp_dependencies_ref:
+
 Setting your dependencies
 -------------------------
 
