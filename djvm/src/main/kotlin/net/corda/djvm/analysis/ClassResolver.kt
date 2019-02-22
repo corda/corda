@@ -84,23 +84,25 @@ class ClassResolver(
      * Reverse the resolution of a class name.
      */
     fun reverse(resolvedClassName: String): String {
-        if (resolvedClassName in pinnedClasses || resolvedClassName in templateClasses) {
-            return resolvedClassName
+        return if (resolvedClassName in pinnedClasses || resolvedClassName in templateClasses) {
+            resolvedClassName
+        } else {
+            removeSandboxPrefix(resolvedClassName)
         }
-        if (resolvedClassName.startsWith(sandboxPrefix)) {
-            val nameWithoutPrefix = resolvedClassName.drop(sandboxPrefix.length)
-            if (resolve(nameWithoutPrefix) == resolvedClassName) {
-                return nameWithoutPrefix
-            }
-        }
-        return resolvedClassName
     }
 
     /**
      * Reverse the resolution of a class name from a fully qualified normalized name.
      */
-    fun reverseNormalized(name: String): String {
-        return reverse(name.asResourcePath).asPackagePath
+    fun reverseNormalized(className: String): String {
+        return reverse(className.asResourcePath).asPackagePath
+    }
+
+    /**
+     * Generates the equivalent class name outside the sandbox from a fully qualified normalized name.
+     */
+    fun toSourceNormalized(className: String): String {
+        return toSource(className.asResourcePath).asPackagePath
     }
 
     /**
@@ -112,6 +114,28 @@ class ClassResolver(
         } else {
             "$sandboxPrefix$name"
         }
+    }
+
+    /**
+     * Maps a class name to its equivalent class outside the sandbox.
+     * Needed by [net.corda.djvm.source.AbstractSourceClassLoader].
+     */
+    private fun toSource(className: String): String {
+        return if (className in pinnedClasses) {
+            className
+        } else {
+            removeSandboxPrefix(className)
+        }
+    }
+
+    private fun removeSandboxPrefix(className: String): String {
+        if (className.startsWith(sandboxPrefix)) {
+            val nameWithoutPrefix = className.drop(sandboxPrefix.length)
+            if (resolve(nameWithoutPrefix) == className) {
+                return nameWithoutPrefix
+            }
+        }
+        return className
     }
 
     /**

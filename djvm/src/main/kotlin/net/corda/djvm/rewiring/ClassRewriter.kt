@@ -7,6 +7,7 @@ import net.corda.djvm.code.ClassMutator
 import net.corda.djvm.code.EmitterModule
 import net.corda.djvm.code.emptyAsNull
 import net.corda.djvm.references.Member
+import net.corda.djvm.source.AbstractSourceClassLoader
 import net.corda.djvm.utilities.loggerFor
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -17,11 +18,11 @@ import org.objectweb.asm.MethodVisitor
  * Functionality for rewriting parts of a class as it is being loaded.
  *
  * @property configuration The configuration of the sandbox.
- * @property classLoader The class loader used to load the classes that are to be rewritten.
+ * @property classLoader The class loader used to load the source classes that are to be rewritten.
  */
 open class ClassRewriter(
         private val configuration: SandboxConfiguration,
-        private val classLoader: ClassLoader
+        private val classLoader: AbstractSourceClassLoader
 ) {
     private val analysisConfig = configuration.analysisConfiguration
 
