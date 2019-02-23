@@ -72,7 +72,6 @@ abstract class CordaMigration : CustomTaskChange {
     private val JdbcConnection.transactionIsolationEnum: TransactionIsolationLevel
         get() =
             when (this.transactionIsolation) {
-                Connection.TRANSACTION_NONE -> TransactionIsolationLevel.NONE
                 Connection.TRANSACTION_READ_UNCOMMITTED -> TransactionIsolationLevel.READ_UNCOMMITTED
                 Connection.TRANSACTION_REPEATABLE_READ -> TransactionIsolationLevel.REPEATABLE_READ
                 Connection.TRANSACTION_SERIALIZABLE -> TransactionIsolationLevel.SERIALIZABLE
