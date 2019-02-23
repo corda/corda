@@ -56,8 +56,7 @@ abstract class CordaMigration : CustomTaskChange {
         val metricRegistry = MetricRegistry()
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
-        val transactionIsolationLevel = toEnumTransactionIsolationLevel(jdbcConnection.transactionIsolation)
-        _cordaDB = createDatabase(cacheFactory, identityService, schema, database.defaultSchemaName, transactionIsolationLevel)
+        _cordaDB = createDatabase(cacheFactory, identityService, schema, database.defaultSchemaName, jdbcConnection.transactionIsolationEnum)
         cordaDB.start(dataSource, jdbcConnection.url)
         identityService.database = cordaDB
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
@@ -70,15 +69,15 @@ abstract class CordaMigration : CustomTaskChange {
         }
     }
 
-    private fun toEnumTransactionIsolationLevel(version: Int) =
-        when (version) {
-            Connection.TRANSACTION_READ_COMMITTED -> TransactionIsolationLevel.READ_COMMITTED
-            Connection.TRANSACTION_READ_UNCOMMITTED -> TransactionIsolationLevel.READ_UNCOMMITTED
-            Connection.TRANSACTION_READ_COMMITTED -> TransactionIsolationLevel.READ_COMMITTED
-            Connection.TRANSACTION_REPEATABLE_READ -> TransactionIsolationLevel.REPEATABLE_READ
-            Connection.TRANSACTION_SERIALIZABLE -> TransactionIsolationLevel.SERIALIZABLE
-            else -> TransactionIsolationLevel.READ_COMMITTED
-        }
+    private val JdbcConnection.transactionIsolationEnum: TransactionIsolationLevel
+        get() =
+            when (this.transactionIsolation) {
+                Connection.TRANSACTION_NONE -> TransactionIsolationLevel.NONE
+                Connection.TRANSACTION_READ_UNCOMMITTED -> TransactionIsolationLevel.READ_UNCOMMITTED
+                Connection.TRANSACTION_REPEATABLE_READ -> TransactionIsolationLevel.REPEATABLE_READ
+                Connection.TRANSACTION_SERIALIZABLE -> TransactionIsolationLevel.SERIALIZABLE
+                else -> TransactionIsolationLevel.READ_COMMITTED
+            }
 
     private fun createDatabase(cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
