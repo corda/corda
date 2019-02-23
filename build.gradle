@@ -264,6 +264,7 @@ allprojects {
         maven { url "$artifactory_contextUrl/corda-dependencies" }
         maven { url 'https://jitpack.io' }
         maven { url "$artifactory_contextUrl/corda-releases" } // cordform-common
+        maven { url 'https://repo.gradle.org/gradle/libs-releases' }
         mavenLocal()
     }
 

@@ -47,29 +47,21 @@ abstract class AbstractSourceClassLoader(
 
         return try {
             logger.trace("Opening ClassReader for class {}...", originalName)
-            getResourceAsStream("$originalName.class")?.use {
-                ClassReader(it)
-            } ?: run(::throwClassLoadingError)
+            getResourceAsStream("$originalName.class")?.use(::ClassReader) ?: run(::throwClassLoadingError)
         } catch (exception: IOException) {
             throwClassLoadingError()
         }
     }
 
     /**
-     * Find and load the class with the specified name from the search path.
-     */
-    override fun findClass(name: String): Class<*> {
-        logger.trace("Finding class {}...", name)
-        val originalName = classResolver.reverseNormalized(name)
-        return super.findClass(originalName)
-    }
-
-    /**
      * Load the class with the specified binary name.
      */
-    override fun loadClass(name: String, resolve: Boolean): Class<*> {
-        logger.trace("Loading class {}, resolve={}...", name, resolve)
-        val originalName = classResolver.reverseNormalized(name).let { n ->
+    @Throws(ClassNotFoundException::class)
+    fun loadSourceClass(name: String): Class<*> {
+        logger.trace("Loading source class {}...", name)
+        // We need the name of the equivalent class outside of the sandbox.
+        // This class is expected to belong to the application classloader.
+        val originalName = classResolver.toSourceNormalized(name).let { n ->
             // A synthetic exception should be mapped back to its
             // corresponding exception in the original hierarchy.
             if (isDJVMException(n)) {
@@ -78,7 +70,7 @@ abstract class AbstractSourceClassLoader(
                 n
             }
         }
-        return super.loadClass(originalName, resolve)
+        return loadClass(originalName)
     }
 
     protected companion object {

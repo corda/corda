@@ -51,7 +51,7 @@ shadowJar {
     baseName 'corda-djvm'
     classifier ''
     relocate 'org.objectweb.asm', 'djvm.org.objectweb.asm'
-    
+
     // These particular classes are only needed to "bootstrap"
     // the compilation of the other sandbox classes. At runtime,
     // we will generate better versions from deterministic-rt.jar.

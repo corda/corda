@@ -108,7 +108,7 @@ application development please continue to refer to `the main project documentat
    :if_tag: htmlmode
 
    corda-network/index.md
-   corda-network/uat.md
+   corda-network/UAT.md
 
 .. conditional-toctree::
    :caption: Contents

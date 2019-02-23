@@ -155,7 +155,7 @@ and methods. For example, here is the relatively complex definition for a state 
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/contracts/asset/Cash.kt
+    .. literalinclude:: ../../finance/contracts/src/main/kotlin/net/corda/finance/contracts/asset/Cash.kt
         :language: kotlin
         :start-after: DOCSTART 1
         :end-before: DOCEND 1

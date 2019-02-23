@@ -81,11 +81,13 @@ The node also has several CorDapps installed by default to handle common tasks s
 * Upgrading contracts
 * Broadcasting agreed ledger updates for recording by counterparties
 
+.. _draining-mode:
+
 Draining mode
-^^^^^^^^^^^^^
+-------------
 
 In order to operate a clean shutdown of a node, it is important than no flows are in-flight, meaning no checkpoints should
-be persisted. The node is able to be put in a Flows Draining Mode, during which:
+be persisted. The node is able to be put in draining mode, during which:
 
 * Commands requiring to start new flows through RPC will be rejected.
 * Scheduled flows due will be ignored.
@@ -94,3 +96,5 @@ be persisted. The node is able to be put in a Flows Draining Mode, during which:
 
 As their number - which can be monitored through RPC - reaches zero, it is safe to shut the node down.
 This property is durable, meaning that restarting the node will not reset it to its default value and that a RPC command is required.
+
+The node can be safely shut down via a drain using the shell.
