@@ -36,7 +36,6 @@ import net.corda.node.services.rpc.context
 import net.corda.node.services.statemachine.StateMachineManager
 import net.corda.nodeapi.exceptions.NonRpcFlowException
 import net.corda.nodeapi.exceptions.RejectedCommandException
-import net.corda.nodeapi.internal.pendingFlowsCount
 import rx.Observable
 import rx.Subscription
 import java.io.InputStream

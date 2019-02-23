@@ -3147,6 +3147,8 @@ public interface net.corda.core.messaging.CordaRPCOps extends net.corda.core.mes
   public abstract net.corda.core.identity.Party wellKnownPartyFromX500Name(net.corda.core.identity.CordaX500Name)
 ##
 public final class net.corda.core.messaging.CordaRPCOpsKt extends java.lang.Object
+  @NotNull
+  public static final net.corda.core.messaging.DataFeed<Integer, kotlin.Pair<Integer, Integer>> pendingFlowsCount(net.corda.core.messaging.CordaRPCOps)
 ##
 @CordaSerializable
 public final class net.corda.core.messaging.DataFeed extends java.lang.Object
