@@ -1,26 +1,30 @@
 Release notes for Corda 4
 =========================
 
-.. _release_notes_v4_0:
-
-Here we are, 9 months and 1500 plus commits later... and it's a bouncing baby software release!
-
 .. TODO: need to update these notes for Enterprise
 
-We are really proud to release Corda 4 to the open source community today. It's been a long time in
-the making, but we think you'll agree worth the wait.
+.. _release_notes_v4_0:
 
-Just as prior releases have brought with them commitments to wire and API stability, Corda 4
-comes with those same guarantees. States and apps valid in Corda 3 are transparently usable in Corda 4.
+Welcome to the Corda 4 release notes. Please read these carefully to understand what's new in this
+release and how the changes can help you. Just as prior releases have brought with them commitments
+to wire and API stability, Corda 4 comes with those same guarantees. States and apps valid in
+Corda 3 are transparently usable in Corda 4.
 
-.. important:: We strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade procedure,
-   along with how you can adjust your app to opt-in to new features making your app more secure and
-   easier to upgrade.
+For app developers, we strongly recommend reading ":doc:`app-upgrade-notes`". This covers the upgrade
+procedure, along with how you can adjust your app to opt-in to new features making your app more secure and
+easier to upgrade in future.
 
-Additionally, be aware that the data model upgrades are changes to the Corda consensus rules. To use
+For node operators, we recommend reading ":doc:`node-upgrade-notes`". The upgrade procedure is simple but
+it can't hurt to read the instructions anyway.
+
+Additionally, be aware that the data model improvements are changes to the Corda consensus rules. To use
 apps that benefit from them, *all* nodes in a compatibility zone must be upgraded and the zone must be
 enforcing that upgrade. This may take time in large zones like the testnet. Please take this into
 account for your own schedule planning.
+
+.. warning:: There is a bug in Corda 3.3 that causes problems when receiving a ``FungibleState`` created
+   by Corda 4. There will shortly be a followup Corda 3.4 release that corrects this error. Interop between
+   Corda 3 and Corda 4 will require that Corda 3 users are on the latest patchlevel release.
 
 .. contents::
 
@@ -31,9 +35,9 @@ Reference states
 ++++++++++++++++
 
 With Corda 4 we are introducing the concept of "reference input states". These allow smart contracts
-to read data from the ledger without simultaneously updating it. They're useful not only for any kind of
-reference data such as rates, healthcare codes, geographical information etc, but for anywhere
-you might have used a SELECT JOIN in a SQL based app.
+to reference data from the ledger in a transaction without simultaneously updating it. They're useful
+not only for any kind of reference data such as rates, healthcare codes, geographical information etc,
+but for anywhere you might have used a SELECT JOIN in a SQL based app.
 
 A reference input state is a ``ContractState`` which can be referred to in a transaction by the contracts
 of input and output states but, significantly, whose contract is not executed as part of the transaction
@@ -213,9 +217,9 @@ version requirement if they start using new features and APIs.
 Dependency upgrades
 +++++++++++++++++++
 
-We've raised the minimum JDK to 8u171, needed to get fixes for certain ZIP compression bugs.
+We've raised the minimum JDK to |java_version|, needed to get fixes for certain ZIP compression bugs.
 
-We've upgraded to Kotlin 1.2.71 so your apps can now benefit from the new features in this language release.
+We've upgraded to Kotlin |kotlin_version| so your apps can now benefit from the new features in this language release.
 
 We've upgraded to Gradle 4.10.1.
 
@@ -299,4 +303,4 @@ Miscellaneous changes
 
 To learn more about smaller changes, please read the :doc:`changelog`.
 
-Finally, we have added some new jokes. Thankyou and good night!
+Finally, we have added some new jokes. Thank you and good night!

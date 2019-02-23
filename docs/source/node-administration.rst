@@ -118,20 +118,18 @@ The following JMX statistics are exported:
 * JVM statistics: classloading, garbage collection, memory, runtime, threading, operating system
 
 Notes for production use
-~~~~~~~~~~~~~~~~~~~~~~~~
+++++++++++++++++++++++++
 
 When using Jolokia monitoring in production, it is recommended to use a Jolokia agent that reads the metrics from the node
 and pushes them to the metrics storage, rather than exposing a port on the production machine/process to the internet.
 
 Also ensure to have restrictive Jolokia access policy in place for access to production nodes. The Jolokia access is controlled
-via a file called ``jolokia-access.xml``. For a production node, the following should be a good starting point, limiting
-access to reads from localhost:
+via a file called ``jolokia-access.xml``.
+Several Jolokia policy based security configuration files (``jolokia-access.xml``) are available for dev, test, and prod
+environments under ``/config/<env>``.
 
-    .. literalinclude:: ../../config/prod/jolokia-access.xml
-          :language: xml
-
-Notes for development/test use
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes for development use
++++++++++++++++++++++++++
 
 When running in dev mode, Hibernate statistics are also available via the Jolkia interface. These are disabled otherwise
 due to expensive run-time costs. They can be turned on and off explicitly regardless of dev mode via the
@@ -140,8 +138,9 @@ due to expensive run-time costs. They can be turned on and off explicitly regard
 When starting Corda nodes using Cordformation runner (see :doc:`running-a-node`), you should see a startup message similar to the following:
 **Jolokia: Agent started with URL http://127.0.0.1:7005/jolokia/**
 
-When starting Corda nodes using the `DriverDSL`, you should see a startup message in the logs similar to the following:
+When starting Corda nodes using the 'driver DSL', you should see a startup message in the logs similar to the following:
 **Starting out-of-process Node USA Bank Corp, debug port is not enabled, jolokia monitoring port is 7005 {}**
+
 
 The following diagram illustrates Corda flow metrics visualized using `hawtio <https://hawt.io>`_ :
 
@@ -251,6 +250,8 @@ The values for ``keyStorePassword`` and ``trustStorePassword`` in the above exam
 
 .. warning:: This method does not offer full protection. An adversary who knows the intrinsics of the obfuscation method used, can still decipher the sensitive bits.
 
+
+.. _ref-backup-recommendations:
 
 Backup recommendations
 ----------------------
