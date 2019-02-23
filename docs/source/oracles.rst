@@ -101,15 +101,15 @@ class that binds it to the network layer.
 
 Here is an extract from the ``NodeInterestRates.Oracle`` class and supporting types:
 
-.. sourcecode:: kotlin
+.. literalinclude:: ../../finance/contracts/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
+    :language: kotlin
+    :start-after: DOCSTART 1
+    :end-before: DOCEND 1
 
-    @CordaSerializable
-    data class FixOf(val name: String, val forDay: LocalDate, val ofTenor: Tenor)
-
-.. sourcecode:: kotlin
-
-    /** A [Fix] represents a named interest rate, on a given day, for a given duration. It can be embedded in a tx. */
-    data class Fix(val of: FixOf, val value: BigDecimal) : CommandData
+.. literalinclude:: ../../finance/contracts/src/main/kotlin/net/corda/finance/contracts/FinanceTypes.kt
+    :language: kotlin
+    :start-after: DOCSTART 2
+    :end-before: DOCEND 2
 
 .. sourcecode:: kotlin
 
