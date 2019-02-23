@@ -13,6 +13,7 @@ import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
+import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLFeatureNotSupportedException
@@ -50,13 +51,14 @@ abstract class CordaMigration : CustomTaskChange {
      */
     fun initialiseNodeServices(database: Database,
                                schema: Set<MappedSchema>) {
-        val url = (database.connection as JdbcConnection).url
+        val jdbcConnection = database.connection as JdbcConnection
         val dataSource = MigrationDataSource(database)
         val metricRegistry = MetricRegistry()
         val cacheFactory = MigrationNamedCacheFactory(metricRegistry, null)
         _identityService = PersistentIdentityService(cacheFactory)
-        _cordaDB = createDatabase(cacheFactory, identityService, schema, database.defaultSchemaName)
-        cordaDB.start(dataSource, url)
+        val transactionIsolationLevel = toEnumTransactionIsolationLevel(jdbcConnection.transactionIsolation)
+        _cordaDB = createDatabase(cacheFactory, identityService, schema, database.defaultSchemaName, transactionIsolationLevel)
+        cordaDB.start(dataSource, jdbcConnection.url)
         identityService.database = cordaDB
         val ourName = CordaX500Name.parse(System.getProperty(NODE_X500_NAME))
 
@@ -68,11 +70,22 @@ abstract class CordaMigration : CustomTaskChange {
         }
     }
 
+    private fun toEnumTransactionIsolationLevel(version: Int) =
+        when (version) {
+            Connection.TRANSACTION_READ_COMMITTED -> TransactionIsolationLevel.READ_COMMITTED
+            Connection.TRANSACTION_READ_UNCOMMITTED -> TransactionIsolationLevel.READ_UNCOMMITTED
+            Connection.TRANSACTION_READ_COMMITTED -> TransactionIsolationLevel.READ_COMMITTED
+            Connection.TRANSACTION_REPEATABLE_READ -> TransactionIsolationLevel.REPEATABLE_READ
+            Connection.TRANSACTION_SERIALIZABLE -> TransactionIsolationLevel.SERIALIZABLE
+            else -> TransactionIsolationLevel.READ_COMMITTED
+        }
+
     private fun createDatabase(cacheFactory: MigrationNamedCacheFactory,
                                identityService: PersistentIdentityService,
                                schema: Set<MappedSchema>,
-                               databaseSchemaName: String?): CordaPersistence {
-        val configDefaults = DatabaseConfig(schema = databaseSchemaName)
+                               databaseSchemaName: String?,
+                               transactionIsolationLevel: TransactionIsolationLevel): CordaPersistence {
+        val configDefaults = DatabaseConfig(schema = databaseSchemaName, transactionIsolationLevel = transactionIsolationLevel)
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
                 AbstractPartyToX500NameAsStringConverter(
