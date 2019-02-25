@@ -367,7 +367,7 @@ class NodeVaultService(
                     states.addAll(it.value.map {
                         outputsBitSet[it.index] = true
                         StateRef(secureHash, it.index)
-                    })
+                    }.filter { it in refs })
                     // Cache the result for future lookups.
                     producedStatesMapping.put(secureHash, outputsBitSet)
                 }
