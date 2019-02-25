@@ -19,7 +19,7 @@ repositories {
 }
 
 configurations {
-    testCompile.extendsFrom shadow
+    testImplementation.extendsFrom shadow
     jdkRt.resolutionStrategy {
         // Always check the repository for a newer SNAPSHOT.
         cacheChangingModulesFor 0, 'seconds'
@@ -32,16 +32,16 @@ dependencies {
     shadow "org.slf4j:slf4j-api:$slf4j_version"
 
     // ASM: byte code manipulation library
-    compile "org.ow2.asm:asm:$asm_version"
-    compile "org.ow2.asm:asm-commons:$asm_version"
+    implementation "org.ow2.asm:asm:$asm_version"
+    implementation "org.ow2.asm:asm-commons:$asm_version"
 
     // ClassGraph: classpath scanning
     shadow "io.github.classgraph:classgraph:$class_graph_version"
 
     // Test utilities
-    testCompile "junit:junit:$junit_version"
-    testCompile "org.assertj:assertj-core:$assertj_version"
-    testCompile "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
+    testImplementation "junit:junit:$junit_version"
+    testImplementation "org.assertj:assertj-core:$assertj_version"
+    testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:$log4j_version"
     jdkRt "net.corda:deterministic-rt:latest.integration"
 }
 
