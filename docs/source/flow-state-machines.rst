@@ -93,7 +93,7 @@ Our flow has two parties (B and S for buyer and seller) and will proceed as foll
    transaction in B's local vault, and then sending it on to S who also checks it and commits the transaction to S's
    local vault.
 
-You can find the implementation of this flow in the file ``finance/src/main/kotlin/net/corda/finance/TwoPartyTradeFlow.kt``.
+You can find the implementation of this flow in the file ``finance/workflows/src/main/kotlin/net/corda/finance/TwoPartyTradeFlow.kt``.
 
 Assuming no malicious termination, they both end the flow being in possession of a valid, signed transaction that
 represents an atomic asset swap.
@@ -201,7 +201,7 @@ Let's implement the ``Seller.call`` method that will be run when the flow is inv
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 4
         :end-before: DOCEND 4
@@ -237,7 +237,7 @@ OK, let's do the same for the buyer side:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
          :language: kotlin
          :start-after: DOCSTART 1
          :end-before: DOCEND 1
@@ -367,7 +367,7 @@ override ``checkTransaction()`` to add our own custom validation logic:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 5
         :end-before: DOCEND 5
@@ -454,7 +454,7 @@ A flow might declare some steps with code inside the flow class like this:
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 2
         :end-before: DOCEND 2
@@ -478,7 +478,7 @@ is a good idea, as that will help the users see what is coming up. You can pre-c
 
 .. container:: codeset
 
-    .. literalinclude:: ../../finance/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
+    .. literalinclude:: ../../finance/workflows/src/main/kotlin/net/corda/finance/flows/TwoPartyTradeFlow.kt
         :language: kotlin
         :start-after: DOCSTART 3
         :end-before: DOCEND 3

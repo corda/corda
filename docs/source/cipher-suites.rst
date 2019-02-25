@@ -15,9 +15,9 @@ carefully selected based on various factors, such as provided security-level and
 with various HSM vendors, algorithm standardisation, variety of cryptographic primitives, business demand, option for
 post-quantum resistance, side channel security, efficiency and rigorous testing.
 
-Before we present the pool of supported schemes it is useful to be familiar with :doc:`key-concepts-identity`,
-:doc:`permissioning` and :doc:`api-identity`. An important design decision in Corda is its shared hierarchy
-between the TLS and Node Identity certificates.
+Before we present the pool of supported schemes it is useful to be familiar with :doc:`permissioning`
+and :doc:`api-identity`. An important design decision in Corda is its shared hierarchy between the
+TLS and Node Identity certificates.
 
 Certificate hierarchy
 ---------------------
