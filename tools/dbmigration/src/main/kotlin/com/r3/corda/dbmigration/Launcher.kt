@@ -125,8 +125,6 @@ abstract class DbManagerConfiguration(private val cmdLineOptions: SharedDbManage
             withDatasource(createDatasourceFromDriverJarFolders(config.dataSourceProperties, classLoader, driversFolder + jarDirs))
         } catch (e: CheckpointsException) {
             error(e)
-        } catch (e: ClassNotFoundException) {
-            wrappedError("Class not found in CorDapp", e)
         } catch (e: Exception) {
             wrappedError("""Failed to create datasource.
                 |Please check that the correct JDBC driver is installed in one of the following folders:

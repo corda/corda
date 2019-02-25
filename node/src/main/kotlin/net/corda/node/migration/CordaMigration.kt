@@ -13,6 +13,7 @@ import net.corda.node.services.persistence.*
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
 import net.corda.nodeapi.internal.persistence.SchemaMigration.Companion.NODE_X500_NAME
+import org.hibernate.type.descriptor.java.JavaTypeDescriptorRegistry
 import net.corda.nodeapi.internal.persistence.TransactionIsolationLevel
 import java.io.PrintWriter
 import java.sql.Connection
@@ -84,6 +85,12 @@ abstract class CordaMigration : CustomTaskChange {
                                databaseSchemaName: String?,
                                transactionIsolationLevel: TransactionIsolationLevel): CordaPersistence {
         val configDefaults = DatabaseConfig(schema = databaseSchemaName, transactionIsolationLevel = transactionIsolationLevel)
+        // This is necessary to prevent a bug when running as part of the Database Migration Tool, where hibernate treats party instances
+        // as mutable and attempts to look up the party in the database when copying it, which eventually results in a flush within a
+        // persist call.
+        JavaTypeDescriptorRegistry.INSTANCE.addDescriptor(AbstractPartyDescriptor(
+                identityService::wellKnownPartyFromX500Name,
+                identityService::wellKnownPartyFromAnonymous))
         val attributeConverters = listOf(
                 PublicKeyToTextConverter(),
                 AbstractPartyToX500NameAsStringConverter(
