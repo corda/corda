@@ -13,6 +13,20 @@ The user can execute cash transaction commands to issue and move cash to other p
 
     ./gradlew tools:explorer:run
     
+## Running Demo Nodes
+
+Node Explorer is included with the [DemoBench](https://docs.corda.net/demobench.html) application,
+which allows you to create local Corda networks on your desktop. For example:
+
+    * Notary
+    * Bank of Breakfast Tea    (*Issuer node* for GBP)
+    * Bank of Big Apples       (*Issuer node* for USD)
+    * Alice
+    * Bob
+
+DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and allow you to launch an
+instance of Node Explorer for each.
+
 ## TODOs:
 - Shows more useful information in the dashboard.
 - Improve Network View, display other nodes in the world map and show transactions between them.
