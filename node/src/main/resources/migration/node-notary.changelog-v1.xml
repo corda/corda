@@ -6,6 +6,8 @@
                    logicalFilePath="migration/node-services.changelog-init.xml">
 
     <changeSet author="R3.Corda" id="nullability">
+        <validCheckSum>7:1618e5ca54fbb187344ab50007e0961e</validCheckSum> <!--Hash of the v3.X changeset, it has extra DDL for Raft anf Bft Smart notaries, but it's compatible with the current one. -->
+        <validCheckSum>7:f2b07131ea0ba42aa96c891ee02b9216</validCheckSum> <!--Hash of this changeset code. -->
         <addNotNullConstraint tableName="node_notary_committed_states" columnName="consuming_transaction_id" columnDataType="NVARCHAR(64)"/>
     </changeSet>
 </databaseChangeLog>
