@@ -14,16 +14,13 @@ The following guarantees are made for CorDapps running on Corda 4.0
   .. note:: by "compliant", we mean CorDapps that do not utilise Corda internal, non-stable or other non-committed public Corda APIs.
 
   Recommendation: security hardening changes in flow processing, specifically the ``FinalityFlow``, recommend upgrading existing CorDapp
-  receiver flows to use the new APIs. See :ref:`cordapp_upgrade_finality_flow_ref` for more information.
+  receiver flows to use the new APIs and thus opting in to platform version 4. See :ref:`cordapp_upgrade_finality_flow_ref` for more information.
 
-- CorDapp Contract states generated on ledger using hash constraints (introduced in Corda 1.0) and CZ whitelisted constraints (introduced in Corda 3.0)
-  are consumable by CorDapps built on Corda 4. However, you may not combine inputs constrained by different types (eg. cannot mix hash and CZ whitelist
-  and signature constrained states) in the same transaction. Note you can combine multiple inputs constrained by the same type (many of hash or
-  CZ whitelist or signature) in the same transaction.
-  An exception to this rule is where you may have subsequently CZ whitelisted a Jar previously used to issue hash constrained states (eg. the original hash-constrained states
-  and new CZ-whitelisted constrained states may be combined in a new transaction in this scenario because they resolve to the same original hash).
+- All constraint types (hash, CZ whitelisted, signature) are consumable within the same transaction if there is an associated contract attachment that satisfies all of them.
 
-- CorDapp Contract states generated on ledger using hash constraints are not migratable to signature constraints in this release.
+- CorDapp Contract states generated on ledger using hash constraints are not directly migratable to signature constraints in this release.
+  You may have CZ whitelisted a Jar previously used to issue hash constrained states, and then follow the manual process described in the paragraph
+  below to migrate these to signature constraints.
 
 - CorDapp Contract states generated on ledger using CZ whitelisted constraints are migratable to signature constraints using a manual process
   that requires programmatic code changes. See :ref:`constraints_whitelist_to_signature_ref` for more information.
@@ -53,13 +50,10 @@ The following guarantees are made for CorDapps running on Corda 4.0
   and Enterprise distributions. This has been made possible by releasing a single 4.0 version of the Finance Contracts CorDapp.
   Please note the Finance application will be superseded shortly by the new Tokens SDK (https://github.com/corda/token-sdk)
 
-Corda 4.1
----------
+Later releases
+--------------
 
-The following additional capabilities are under consideration for delivery in a follow-up release to Corda 4.0:
-
-- CorDapp contract states issued with different constraint types will be consumable within the same transaction.
-  eg. no longer need to consume hash, CZ whitelist and signature constraints in isolation.
+The following additional capabilities are under consideration for delivery in follow-up releases to Corda 4.0:
 
 - CorDapp Contract states generated on ledger using hash constraints will be automatically migrated to signature constraints when building new transactions
   where the latest installed contract Jar is signed as per :ref:`CorDapp Jar signing <cordapp_build_system_signing_cordapp_jar_ref>`.
@@ -79,7 +73,7 @@ The following additional capabilities are under consideration for delivery in a 
   A Node operator will be able to pre-register (by hash or code signing public key) versions of CorDapps they are not yet ready to install locally,
   but wish to use for the purposes of transaction verification with peers running later versions of a CorDapp.
 
-.. note:: Trusted downloading of contract attachments from remote peers will not be integrated until secure JVM sand-boxing is available.
+.. note:: Trusted downloading and execution of contract attachments from remote peers will not be integrated until secure JVM sand-boxing is available.
 
 Corda Enterprise concerns
 -------------------------
@@ -88,7 +82,3 @@ Corda Enterprise concerns
   The reverse is not guaranteed. Whilst the Public APIs are currently identical, R3 may introduce Enterprise-specific Public APIs for
   advanced CorDapp functionality, therefore invalidating the ability to execute on Open Source nodes.
   Wire-compatibility and ABI stability is maintained.
-
-- The Finance Contract CorDapp is only available in the Open Source distribution to ensure uniqueness and singularity of JAR "hash".
-  This is necessary to ensure there is only one unique version of the Finance Contract JAR such that Open Source and Enterprise nodes
-  can transact finance contract states interchangeably without classloading and constraints failures.
