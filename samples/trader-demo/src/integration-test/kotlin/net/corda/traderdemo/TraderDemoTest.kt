@@ -39,7 +39,7 @@ class TraderDemoTest {
         driver(DriverParameters(
                 startNodesInProcess = true,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo.flow")
         )) {
             val (nodeA, nodeB, bankNode) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME, rpcUsers = listOf(demoUser)),
@@ -71,11 +71,14 @@ class TraderDemoTest {
             assertThat(clientB.cashCount).isEqualTo(expectedBCash)
             // Wait until A receives the commercial paper
             val executor = Executors.newScheduledThreadPool(1)
-            poll(executor, "A to be notified of the commercial paper", pollInterval = 100.millis) {
-                val actualPaper = listOf(clientA.commercialPaperCount, clientB.commercialPaperCount)
-                if (actualPaper == expectedPaper) Unit else null
-            }.getOrThrow()
-            executor.shutdown()
+            try {
+                poll(executor, "A to be notified of the commercial paper", pollInterval = 100.millis) {
+                    val actualPaper = listOf(clientA.commercialPaperCount, clientB.commercialPaperCount)
+                    if (actualPaper == expectedPaper) Unit else null
+                }.getOrThrow()
+            } finally {
+                executor.shutdownNow()
+            }
             assertThat(clientA.dollarCashBalance).isEqualTo(95.DOLLARS)
             assertThat(clientB.dollarCashBalance).isEqualTo(5.DOLLARS)
         }
@@ -86,7 +89,7 @@ class TraderDemoTest {
         driver(DriverParameters(
                 startNodesInProcess = false,
                 inMemoryDB = false,
-                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo")
+                cordappsForAllNodes = FINANCE_CORDAPPS + TestCordapp.findCordapp("net.corda.traderdemo.flow")
         )) {
             val (buyer, seller, bank) = listOf(
                     startNode(providedName = DUMMY_BANK_A_NAME),

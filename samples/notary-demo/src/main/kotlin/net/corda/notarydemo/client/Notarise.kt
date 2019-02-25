@@ -1,4 +1,4 @@
-package net.corda.notarydemo
+package net.corda.notarydemo.client
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.CompositeKey

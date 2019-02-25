@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="info">
+<Configuration status="info" shutdownHook="disable">
+
+    <!-- Configure Log4J2 for the Network Bootstrapper. -->
 
     <Properties>
-        <Property name="log-path">logs</Property>
-        <Property name="log-name">node-${hostName}</Property>
+        <Property name="log-path">build/logs</Property>
+        <Property name="log-name">cordapp-${hostName}</Property>
         <Property name="archive">${log-path}/archive</Property>
     </Properties>
 

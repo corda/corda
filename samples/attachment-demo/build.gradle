@@ -25,7 +25,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                                                                              "InvokeRpc.internalVerifiedTransactionsFeed",
                                                                              "InvokeRpc.startTrackedFlowDynamic"]]]
 
-    directory "./build/nodes"
     nodeDefaults {
         projectCordapp {
             deploy = false

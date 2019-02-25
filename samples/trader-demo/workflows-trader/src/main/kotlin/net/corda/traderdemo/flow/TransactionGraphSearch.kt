@@ -1,4 +1,4 @@
-package net.corda.traderdemo
+package net.corda.traderdemo.flow
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.ContractState
