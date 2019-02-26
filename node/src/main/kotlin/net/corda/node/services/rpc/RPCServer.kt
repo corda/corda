@@ -255,7 +255,7 @@ class RPCServer(
         val notificationType = artemisMessage.getStringProperty(ManagementHelper.HDR_NOTIFICATION_TYPE)
         require(notificationType == CoreNotificationType.BINDING_REMOVED.name){"Message contained notification type of $notificationType instead of expected ${CoreNotificationType.BINDING_REMOVED.name}"}
         val clientAddress = artemisMessage.getStringProperty(ManagementHelper.HDR_ROUTING_NAME)
-        log.warn("Detected RPC client disconnect on address $clientAddress, scheduling for reaping")
+        log.info("Detected RPC client disconnect on address $clientAddress, scheduling for reaping")
         invalidateClient(SimpleString(clientAddress))
     }
 
