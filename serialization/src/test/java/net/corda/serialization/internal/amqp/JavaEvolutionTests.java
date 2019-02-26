@@ -97,4 +97,53 @@ public class JavaEvolutionTests {
                 N2.class,
                 TestSerializationContext.testSerializationContext);
     }
+
+    // Class as it was when it was serialized and written to disk. Uncomment
+    // if the test referencing the object needs regenerating.
+    /*
+    @SuppressWarnings("unused")
+    static class POJOWithInteger {
+        private Integer id;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+    }
+    */
+
+    public interface ForceEvolution { }
+
+    // Class as it exists now with the newly added element
+    @SuppressWarnings("unused")
+    static class POJOWithInteger implements ForceEvolution {
+        private Integer id;
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+    }
+
+    @Test
+    public void testNullableInteger() throws IOException {
+        // Uncomment to regenerate the base state of the test
+        //POJOWithInteger n = new POJOWithInteger();
+        //n.setId(100);
+        //AMQPTestUtilsKt.writeTestResource(this, new SerializationOutput(factory).serialize(
+        //        n, TestSerializationContext.testSerializationContext));
+
+        POJOWithInteger n2 = new DeserializationInput(factory).deserialize(
+                new SerializedBytes<>(AMQPTestUtilsKt.readTestResource(this)),
+                POJOWithInteger.class,
+                TestSerializationContext.testSerializationContext);
+
+        assertEquals(Integer.valueOf(100), n2.getId());
+    }
 }
