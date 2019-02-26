@@ -34,6 +34,7 @@ We look forward to seeing what you can do with Corda!
    release-notes
    app-upgrade-notes
    node-upgrade-notes
+   cordapp-upgradeability
 
 .. toctree::
    :caption: Development
