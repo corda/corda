@@ -4,6 +4,14 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`app-upgrade-notes`.
 
+Version 4.1
+-----------
+
+* In 4.0 the relevancy check of ``OwnableState`` s was expanded to include the state's participants, in addition to the owner. However, this
+  had the unintended consequence of breaking existing CorDapps (or clients to those apps) which assume only the owner of the ``OwnableState``
+  is used to decide whether a state is recorded to the node's vault. This is now an opt-in change to make sure existing CorDapps don't break.
+  Setting a target version of 4 or higher will re-nable the new relevancy check.
+
 .. _changelog_v4.0:
 
 Version 4.0
@@ -317,6 +325,9 @@ Version 4.0
 * The ``node_transaction_mapping`` database table has been folded into the ``node_transactions`` database table as an additional column.
 
 * Logging for P2P and RPC has been separated, to make it easier to enable all P2P or RPC logging without hand-picking loggers for individual classes.
+
+* The relevancy check of ``OwnableState`` s has expanded to include the state's participants, in addition to the owner. This means the node
+  will now consider such states as relevant, and thus record them in its vault, if any of the participant keys belong to it.
 
 * Vault Query Criteria have been enhanced to allow filtering by state relevancy. Queries can request all states, just relevant ones, or just non relevant ones. The default is to return all states, to maintain backwards compatibility.
   Note that this means apps running on nodes using Observer node functionality should update their queries to request only relevant states if they are only expecting to see states in which they participate.
