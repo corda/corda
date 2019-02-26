@@ -2,7 +2,6 @@ package net.corda.node.services.vault
 
 import co.paralleluniverse.fibers.Suspendable
 import co.paralleluniverse.strands.Strand
-import com.github.benmanes.caffeine.cache.Caffeine
 import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
@@ -24,6 +23,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
+import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
@@ -103,7 +103,7 @@ class NodeVaultService(
      * This caches what states are in the vault for a particular transaction.
      */
     @VisibleForTesting
-    val producedStatesMapping = cacheFactory.buildNamed<SecureHash, BitSet>(Caffeine.newBuilder(), "NodeVaultService_producedStates")
+    internal val producedStatesMapping = InfrequentlyMutatedCache<SecureHash, BitSet>("NodeVaultService_producedStates", cacheFactory)
 
     override fun start() {
         bootstrapContractStateTypes()
@@ -197,6 +197,8 @@ class NodeVaultService(
 
             // Persist the reference states.
             saveStates(session, referenceStateRefsMap, now, false)
+            // Invalidate the cached vault states for any newly produced reference states.
+            referenceStateRefsMap.keys.map { it.txhash }.distinct().map { producedStatesMapping.invalidate(it) }
 
             // Persist the consumed inputs.
                 if (consumedStateRefs.isNotEmpty()) {
@@ -227,7 +229,7 @@ class NodeVaultService(
     /** Groups adjacent transactions into batches to generate separate net updates per transaction type. */
     override fun notifyAll(statesToRecord: StatesToRecord, txns: Iterable<CoreTransaction>) {
         if (statesToRecord == StatesToRecord.NONE || !txns.any()) {
-            txns.forEach { producedStatesMapping.put(it.id, BitSet(0)) }
+            txns.forEach { producedStatesMapping.get(it.id) { BitSet(0) } }
             return
         }
         val batch = mutableListOf<CoreTransaction>()
@@ -260,7 +262,12 @@ class NodeVaultService(
                 outputsBitSet[it.index] = true
                 tx.outRef<ContractState>(it.index)
             }
-            producedStatesMapping.put(tx.id, outputsBitSet)
+            val cachedBitSet = producedStatesMapping.get(tx.id) { outputsBitSet }
+            // If any outputBitSet bits are not set in the cached value, invalidate.
+            if (!outputsBitSet.and(cachedBitSet).equals(outputsBitSet)) {
+                // For some reason, we cached the vault entries for this transaction previously.
+                producedStatesMapping.invalidate(tx.id)
+            }
 
             // Retrieve all unconsumed states for this transaction's inputs
             val consumedStates = loadStatesWithVaultFilter(tx.inputs)
@@ -370,7 +377,7 @@ class NodeVaultService(
                         StateRef(secureHash, it.index)
                     }.filter { it in refs })
                     // Cache the result for future lookups.
-                    producedStatesMapping.put(secureHash, outputsBitSet)
+                    producedStatesMapping.get(secureHash) { outputsBitSet }
                 }
             }
         }

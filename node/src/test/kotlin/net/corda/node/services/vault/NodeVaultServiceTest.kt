@@ -22,8 +22,8 @@ import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.toNonEmptySet
 import net.corda.finance.*
 import net.corda.finance.contracts.asset.Cash
-import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.contracts.utils.sumCash
+import net.corda.finance.schemas.CashSchemaV1
 import net.corda.finance.workflows.asset.CashUtils
 import net.corda.finance.workflows.getCashBalance
 import net.corda.node.services.api.IdentityServiceInternal
@@ -646,7 +646,7 @@ class NodeVaultServiceTest {
         val states = vaultService.queryBy(Cash.State::class.java).states
         assertThat(states).hasSize(2)
 
-        vaultService.producedStatesMapping.invalidateAll()
+        vaultService.producedStatesMapping.flushCache()
 
         database.transaction {
             val moveBuilder = TransactionBuilder(notary).apply {

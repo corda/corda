@@ -11,6 +11,7 @@ import org.junit.Test
 import java.util.concurrent.Phaser
 import kotlin.concurrent.thread
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class InfrequentlyMutatedCacheTest {
     private val cache = InfrequentlyMutatedCache<String, Int>("foo", TestingNamedCacheFactory())
@@ -32,6 +33,14 @@ class InfrequentlyMutatedCacheTest {
                 1
             }
             assertEquals(1, result)
+        }
+    }
+
+    @Test
+    fun `getIfPresent from empty cache returns null`() {
+        database.transaction {
+            val result = cache.getIfPresent("foo")
+            assertNull(result)
         }
     }
 
@@ -64,6 +73,18 @@ class InfrequentlyMutatedCacheTest {
     }
 
     @Test
+    fun `getIfPresent after get from empty cache returns result of first loader`() {
+        database.transaction {
+            // This will cache "2"
+            cache.get("foo") {
+                2
+            }
+            val result = cache.getIfPresent("foo")
+            assertEquals(2, result)
+        }
+    }
+
+    @Test
     fun `second get from empty cache with invalidate in the middle returns result of second loader`() {
         database.transaction {
             // This will cache "2"
@@ -71,6 +92,38 @@ class InfrequentlyMutatedCacheTest {
                 2
             }
             cache.invalidate("foo")
+            val result = cache.get("foo") {
+                1
+            }
+            assertEquals(1, result)
+        }
+    }
+
+    @Test
+    fun `getIfPresent after get from empty cache with invalidate in the middle returns null`() {
+        database.transaction {
+            // This will cache "2"
+            cache.get("foo") {
+                2
+            }
+            cache.invalidate("foo")
+            val result = cache.getIfPresent("foo")
+            assertNull(result)
+        }
+    }
+
+    @Test
+    fun `second get from empty cache with invalidate and flush in the middle returns result of third loader`() {
+        database.transaction {
+            // This will cache "2"
+            cache.get("foo") {
+                3
+            }
+            cache.invalidate("foo")
+            cache.flushCache()
+            cache.get("foo") {
+                2
+            }
             val result = cache.get("foo") {
                 1
             }
@@ -115,6 +168,26 @@ class InfrequentlyMutatedCacheTest {
                 3
             }
             assertEquals(3, result)
+        }
+    }
+
+    @Test
+    fun `getIfPresent outside first transaction from empty cache with invalidate in the middle returns result of third loader`() {
+        database.transaction {
+            // This will cache "2"
+            cache.get("foo") {
+                2
+            }
+            cache.invalidate("foo")
+            // This should not get cached, as the transaction that invalidated is still in-flight.
+            val result = cache.get("foo") {
+                1
+            }
+            assertEquals(1, result)
+        }
+        database.transaction {
+            val result = cache.getIfPresent("foo")
+            assertNull(result)
         }
     }
 
