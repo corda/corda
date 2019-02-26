@@ -26,8 +26,6 @@ import net.corda.finance.flows.CashIssueAndPaymentFlow.IssueAndPaymentRequest
 import net.corda.finance.flows.CashPaymentFlow
 import net.corda.finance.internal.CashConfigDataFlow
 import net.corda.node.services.Permissions.Companion.startFlow
-import net.corda.sample.businessnetwork.iou.IOUFlow
-import net.corda.sample.businessnetwork.membership.flow.ObtainMembershipListContentFlow
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.BOB_NAME
 import net.corda.testing.driver.*
@@ -42,9 +40,7 @@ import java.util.*
 class ExplorerSimulation(private val options: OptionSet) {
     private val user = User("user1", "test", permissions = setOf(
             startFlow<CashPaymentFlow>(),
-            startFlow<CashConfigDataFlow>(),
-            startFlow<IOUFlow>(),
-            startFlow<ObtainMembershipListContentFlow>())
+            startFlow<CashConfigDataFlow>())
     )
     private val manager = User("manager", "test", permissions = setOf(
             startFlow<CashIssueAndPaymentFlow>(),
@@ -58,7 +54,6 @@ class ExplorerSimulation(private val options: OptionSet) {
     private lateinit var bobNode: NodeHandle
     private lateinit var issuerNodeGBP: NodeHandle
     private lateinit var issuerNodeUSD: NodeHandle
-    private lateinit var bnoNode: NodeHandle
     private lateinit var notary: Party
 
     private val RPCConnections = ArrayList<CordaRPCConnection>()
@@ -97,16 +92,14 @@ class ExplorerSimulation(private val options: OptionSet) {
                     rpcUsers = listOf(manager),
                     additionalCordapps = listOf(FINANCE_WORKFLOWS_CORDAPP.copy(config = mapOf("issuableCurrencies" to listOf("USD"))))
             ))
-            val bno = startNode(providedName = IOUFlow.allowedMembershipName, rpcUsers = listOf(user))
 
             notaryNode = defaultNotaryNode.get()
             aliceNode = alice.get()
             bobNode = bob.get()
             issuerNodeGBP = issuerGBP.get()
             issuerNodeUSD = issuerUSD.get()
-            bnoNode = bno.get()
 
-            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD, bnoNode).forEach {
+            arrayOf(notaryNode, aliceNode, bobNode, issuerNodeGBP, issuerNodeUSD).forEach {
                 println("${it.nodeInfo.legalIdentities.first()} started on ${it.rpcAddress}")
             }
 

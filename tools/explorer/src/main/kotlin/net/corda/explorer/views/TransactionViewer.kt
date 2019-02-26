@@ -27,11 +27,9 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.transactions.WireTransaction
 import net.corda.core.utilities.toBase58String
-import net.corda.sample.businessnetwork.iou.IOUState
 import net.corda.explorer.AmountDiff
 import net.corda.explorer.formatters.AmountFormatter
 import net.corda.explorer.formatters.Formatter
-import net.corda.explorer.formatters.NumberFormatter
 import net.corda.explorer.formatters.PartyNameFormatter
 import net.corda.explorer.identicon.identicon
 import net.corda.explorer.identicon.identiconToolTip
@@ -314,25 +312,6 @@ class TransactionViewer : CordaView("Transactions") {
                                 }
                             }
                         }
-                     is IOUState -> {
-                         fun Pane.partyLabel(party: Party) = label(party.nameOrNull().let { PartyNameFormatter.short.format(it) }) {
-                             tooltip(party.owningKey.toBase58String())
-                         }
-                         row {
-                             label("Amount :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                             label(NumberFormatter.boring.format(data.value))
-                         }
-                         row {
-                             label("Borrower :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                             val party = data.borrower
-                             partyLabel(party)
-                         }
-                         row {
-                             label("Lender :") { gridpaneConstraints { hAlignment = HPos.RIGHT } }
-                             val party = data.lender
-                             partyLabel(party)
-                         }
-                     }
                     // TODO : Generic view using reflection?
                         else -> label {}
                     }
@@ -353,12 +332,10 @@ private fun calculateTotalEquiv(myIdentity: Party?,
                                 outputs: List<ContractState>): AmountDiff<Currency> {
     val (reportingCurrency, exchange) = reportingCurrencyExchange
     fun List<ContractState>.sum(): Long {
-        val cashSum: Long  = mapNotNull { it as? Cash.State }
+        return mapNotNull { it as? Cash.State }
                 .filter { it.owner.owningKey.toKnownParty().value == myIdentity }
                 .map { exchange(it.amount.withoutIssuer()).quantity }
                 .sum()
-        val iouSum: Int = mapNotNull {it as? IOUState }.map { it.value }.sum() * 100
-        return cashSum + iouSum
     }
 
     // For issuing cash, if I am the issuer and not the owner (e.g. issuing cash to other party), count it as negative.

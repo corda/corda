@@ -17,7 +17,6 @@ import net.corda.explorer.model.CordaViewModel
 import net.corda.explorer.model.SettingsModel
 import net.corda.explorer.views.*
 import net.corda.explorer.views.cordapps.cash.CashViewer
-import net.corda.explorer.views.cordapps.iou.IOUViewer
 import org.apache.commons.lang.SystemUtils
 import org.controlsfx.dialog.ExceptionDialog
 import tornadofx.App
@@ -72,18 +71,8 @@ class Main : App(MainView::class) {
             stage.hide()
             nodeModel = loginView.login()
         }
-        addOptionalViews()
         (find(primaryView) as MainView).initializeControls()
         stage.show()
-    }
-
-    private fun addOptionalViews() {
-        val iouView = find<IOUViewer>()
-        Models.get<CordaViewModel>(Main::class).apply {
-            if (iouView.isEnabledForNode()) {
-                registerView(iouView)
-            }
-        }
     }
 
     private fun asInteger(s: String?): Int? {

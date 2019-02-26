@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<?import javafx.geometry.*?>
-<?import javafx.scene.layout.*?>
-<BorderPane stylesheets="@../../../css/corda.css" xmlns="http://javafx.com/javafx/8.0.76-ea">
-    <padding>
-        <Insets right="5" left="5" bottom="5" top="5"/>
-    </padding>
-</BorderPane>
