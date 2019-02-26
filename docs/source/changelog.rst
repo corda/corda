@@ -343,3 +343,5 @@ Version 4.0
 
 * Vault states are migrated when moving from V3 to V4: the relevancy column is correctly filled, and the state party table is populated.
   Note: This means Corda can be slow to start up for the first time after upgrading from V3 to V4.
+
+End of changelog.
