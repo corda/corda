@@ -49,6 +49,9 @@ As a database migration framework, we use the open source library `Liquibase <ht
     The reason for this is that this part of the database schema constitutes part of the CorDapp API, and third-party systems can integrate at the database level with Corda.
     If you need to break compatibility, you have the option of creating a new version of the ``MappedSchema`` with new tables, but you would then have to write to both the old and the new version.
 
+
+.. _liquibase_ref:
+
 About Liquibase
 ---------------
 

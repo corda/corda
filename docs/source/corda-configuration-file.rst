@@ -152,7 +152,8 @@ database
     property 'hibernate.default_schema'. This is optional.
 
   hibernateDialect
-    Optionally specify the ``hibernate.dialect`` property. For most cases Hibernate properly detects the correct value.
+    Optional property for testing/development against an unsupported database. The value is passed to Hibernate ``hibernate.dialect`` option.
+    All supported databases don't require this option, as Hibernate sets the correct dialect value out of box.
 
 dataSourceProperties
   This section is used to configure the JDBC connection and database driver used for the node's persistence.
