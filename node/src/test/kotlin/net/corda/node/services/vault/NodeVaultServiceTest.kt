@@ -614,6 +614,55 @@ class NodeVaultServiceTest {
     }
 
     @Test
+    fun `correct txs are marked as consumed`() {
+        val notary = identity.party
+        val ourIdentity = services.myInfo.singleIdentityAndCert()
+        val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
+        // We use a random key pair to pay to here, as we don't actually use the cash once sent
+        val amount = Amount(1000, Issued(BOC.ref(1), GBP))
+
+        // Issue then move some cash
+        val issueBuilder = TransactionBuilder(notary).apply {
+            Cash().generateIssue(this, amount, anonymousIdentity.party.anonymise(), identity.party)
+        }
+        val issueTx = issueBuilder.toWireTransaction(bocServices)
+
+        // ensure transaction contract state is persisted in DBStorage
+        val signedIssuedTx = services.signInitialTransaction(issueBuilder)
+        (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedIssuedTx)
+
+        database.transaction { vaultService.notify(StatesToRecord.ONLY_RELEVANT, issueTx) }
+
+        database.transaction {
+            val moveBuilder = TransactionBuilder(notary).apply {
+                CashUtils.generateSpend(services, this, Amount(10, GBP), ourIdentity, identity.party)
+            }
+            val signedMoveTx = services.signInitialTransaction(moveBuilder)
+            (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedMoveTx)
+            val moveTx = moveBuilder.toWireTransaction(services)
+            vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
+        }
+
+        val states = vaultService.queryBy(Cash.State::class.java).states
+        assertThat(states).hasSize(2)
+
+        vaultService.producedStatesMapping.invalidateAll()
+
+        database.transaction {
+            val moveBuilder = TransactionBuilder(notary).apply {
+                CashUtils.generateSpend(services, this, Amount(10, GBP), ourIdentity, identity.party)
+            }
+            val signedMoveTx = services.signInitialTransaction(moveBuilder)
+            (services.validatedTransactions as WritableTransactionStorage).addTransaction(signedMoveTx)
+            val moveTx = moveBuilder.toWireTransaction(services)
+            vaultService.notify(StatesToRecord.ONLY_RELEVANT, moveTx)
+        }
+
+        val states2 = vaultService.queryBy(Cash.State::class.java).states
+        assertThat(states2).hasSize(2)
+    }
+
+    @Test
     fun `correct updates are generated when changing notaries`() {
         val service = vaultService
         val notary = identity.party

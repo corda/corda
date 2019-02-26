@@ -102,7 +102,8 @@ class NodeVaultService(
     /**
      * This caches what states are in the vault for a particular transaction.
      */
-    private val producedStatesMapping = cacheFactory.buildNamed<SecureHash, BitSet>(Caffeine.newBuilder(), "NodeVaultService_producedStates")
+    @VisibleForTesting
+    val producedStatesMapping = cacheFactory.buildNamed<SecureHash, BitSet>(Caffeine.newBuilder(), "NodeVaultService_producedStates")
 
     override fun start() {
         bootstrapContractStateTypes()
