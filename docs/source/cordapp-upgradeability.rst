@@ -19,8 +19,8 @@ The following guarantees are made for CorDapps running on Corda 4.0
 - All constraint types (hash, CZ whitelisted, signature) are consumable within the same transaction if there is an associated contract attachment that satisfies all of them.
 
 - CorDapp Contract states generated on ledger using hash constraints are not directly migratable to signature constraints in this release.
-  You may have CZ whitelisted a Jar previously used to issue hash constrained states, and then follow the manual process described in the paragraph
-  below to migrate these to signature constraints.
+  Your compatibility zone operator may whitelist a JAR previously used to issue hash constrained states, and then you can follow the manual
+  process described in the paragraph below to migrate these to signature constraints.
 
 - CorDapp Contract states generated on ledger using CZ whitelisted constraints are migratable to signature constraints using a manual process
   that requires programmatic code changes. See :ref:`constraints_whitelist_to_signature_ref` for more information.
@@ -35,8 +35,8 @@ The following guarantees are made for CorDapps running on Corda 4.0
 - CorDapp contract attachment classloader isolation has some important side-effects and edge cases to consider:
 
   1. Contract attachments should include all 3rd party library dependencies in the same packaged JAR - we call this a "Fat JAR",
-     meaning that all dependencies are resolvable by the classloader by only loading a single Jar.
-  2. Contract attachments that depend on other Contract attachments are currently supported in so far as the Attachments Classloader
+     meaning that all dependencies are resolvable by the classloader by only loading a single JAR.
+  2. Contract attachments that depend on other Contract attachments from a different packaged JAR are currently supported in so far as the Attachments Classloader
      will attempt to resolve any external dependencies from the node's application classloader. It is thus paramount that dependent Contract
      Attachments are loaded upon node startup from the respective /cordapps directory.
 
@@ -75,10 +75,3 @@ The following additional capabilities are under consideration for delivery in fo
 
 .. note:: Trusted downloading and execution of contract attachments from remote peers will not be integrated until secure JVM sand-boxing is available.
 
-Corda Enterprise concerns
--------------------------
-
-- CorDapps compiled with the OS version of Corda 4.0 will execute without change on Enterprise Corda 4.0.
-  The reverse is not guaranteed. Whilst the Public APIs are currently identical, R3 may introduce Enterprise-specific Public APIs for
-  advanced CorDapp functionality, therefore invalidating the ability to execute on Open Source nodes.
-  Wire-compatibility and ABI stability is maintained.
