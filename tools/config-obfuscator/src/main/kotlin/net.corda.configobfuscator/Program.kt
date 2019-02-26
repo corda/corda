@@ -92,6 +92,7 @@ class ConfigObfuscatorCli : CordaCliWrapper(
             try {
                 args[1].split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
             } catch (_: Exception) {
+                System.err.println("Warning: Unable to parse the manually provided hardware address '$hardwareAddress'; reverting to using the default")
                 null
             }
         } else {
@@ -107,6 +108,7 @@ class ConfigObfuscatorCli : CordaCliWrapper(
             try {
                 args[2].split(':').map { Integer.parseInt(it, 16).toByte() }.toByteArray()
             } catch (_: Exception) {
+                System.err.println("Warning: Unable to parse the manually provided seed '$seed'; reverting to using the default")
                 null
             }
         } else {
