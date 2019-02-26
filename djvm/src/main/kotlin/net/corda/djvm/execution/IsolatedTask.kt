@@ -38,12 +38,7 @@ class IsolatedTask(
                     exception = (ex as? LinkageError)?.cause ?: ex
                     null
                 }
-                costs = CostSummary(
-                        runtimeCosts.allocationCost.value,
-                        runtimeCosts.invocationCost.value,
-                        runtimeCosts.jumpCost.value,
-                        runtimeCosts.throwCost.value
-                )
+                costs = CostSummary(runtimeCosts)
             }
             logger.trace("Exiting isolated runtime environment...")
             completionLatch.countDown()

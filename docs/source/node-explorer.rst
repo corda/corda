@@ -29,6 +29,27 @@ Running the UI
           By default, it only has access to the finance CorDapp.
           All other CorDapps present on the node must be copied to a ``cordapps`` directory located within the directory from which the node explorer is run.
 
+Running demo nodes
+------------------
+
+Node Explorer is included with the :doc:`demobench` application, which allows
+you to create local Corda networks on your desktop. For example:
+
+    * Notary
+    * Bank of Breakfast Tea    (*Issuer node* for GBP)
+    * Bank of Big Apples       (*Issuer node* for USD)
+    * Alice                    (Participant node, for user Alice)
+    * Bob                      (Participant node, for user Bob)
+
+DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and
+allow you to launch an instance of Node Explorer for each. You will be logged
+into the Node Explorer automatically.
+
+When connected to an *Issuer* node, a user can execute cash transaction commands to issue and move cash to itself or other
+parties on the network or to exit cash (for itself only).
+
+When connected to a *Participant* node a user can only execute cash transaction commands to move cash to other parties on the network.
+
 Interface
 ---------
 Login
