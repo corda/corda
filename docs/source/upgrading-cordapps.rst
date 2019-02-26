@@ -259,6 +259,8 @@ a drain is complete there should be no outstanding checkpoints or running flows.
 A node can be drained or undrained via RPC using the ``setFlowsDrainingModeEnabled`` method, and via the shell using
 the standard ``run`` command to invoke the RPC. See :doc:`shell` to learn more.
 
+.. _explicit_contract_upgrades_ref:
+
 Contract and state versioning
 -----------------------------
 

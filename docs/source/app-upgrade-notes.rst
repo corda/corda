@@ -154,6 +154,8 @@ Would become:
 
 See :ref:`cordapp_configuration_files_ref` for more information.
 
+.. _cordapp_upgrade_finality_flow_ref:
+
 Step 5. Security: Upgrade your use of FinalityFlow
 --------------------------------------------------
 
@@ -412,3 +414,5 @@ Corda 4 adds several new APIs that help you build applications. Why not explore:
 * The `new withEntityManager API <api/javadoc/net/corda/core/node/ServiceHub.html#withEntityManager-block->`_ for using JPA inside your flows and services.
 * :ref:`reference_states`, that let you use an input state without consuming it.
 * :ref:`state_pointers`, that make it easier to 'point' to one state from another and follow the latest version of a linear state.
+
+Please also read the :doc:`CorDapp Upgradeability Guarantees <cordapp-upgradeability>` associated with CorDapp upgrading.
