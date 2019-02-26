@@ -41,6 +41,9 @@ fun checkMinimumPlatformVersion(minimumPlatformVersion: Int, requiredMinPlatform
     }
 }
 
+@Throws(NumberFormatException::class)
+fun getJavaUpdateVersion(javaVersion: String): Long = javaVersion.substringAfter("_").substringBefore("-").toLong()
+
 /** Provide access to internal method for AttachmentClassLoaderTests. */
 @DeleteForDJVM
 fun TransactionBuilder.toWireTransaction(services: ServicesForResolution, serializationContext: SerializationContext): WireTransaction {
