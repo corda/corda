@@ -115,9 +115,15 @@ public class JavaEvolutionTests {
     }
     */
 
+    /*
+     We want to force the evolution serializer factory to check that the property types of the local and
+     remote types match up, which only happens if both types have the same set of property names (i.e.
+     this might be a spurious evolution candidate). We do this by adding a marker interface to the type,
+     which will change its fingerprint but have no effect on its serialisation behaviour.
+    */
     public interface ForceEvolution { }
 
-    // Class as it exists now with the newly added element
+    // Class as it exists now with the newly added interface
     @SuppressWarnings("unused")
     static class POJOWithInteger implements ForceEvolution {
         private Integer id;
