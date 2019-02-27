@@ -203,7 +203,7 @@ For launching on Windows without PowerShell, it is not possible to perform comma
 .. warning:: If this approach is taken, the passwords will appear in the windows command prompt history.
 
 
-.. _ref-backup-recommendations:
+.. _backup-recommendations:
 
 Backup recommendations
 ----------------------
