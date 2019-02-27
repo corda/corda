@@ -605,7 +605,7 @@ Permissions for database user and schema namespace
 
   .. sourcecode:: sql
 
-    CREATE USER "my_user" WITH LOGIN password "my_password";
+    CREATE USER "my_user" WITH LOGIN PASSWORD 'my_password';
     CREATE SCHEMA "my_schema";
     GRANT USAGE, CREATE ON SCHEMA "my_schema" TO "my_user";
     GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON ALL tables IN SCHEMA "my_schema" TO "my_user";
@@ -619,7 +619,7 @@ Permissions for database user and schema namespace
 
  .. sourcecode:: sql
 
-    CREATE USER "my_user" WITH LOGIN password "my_password";
+    CREATE USER "my_user" WITH LOGIN PASSWORD 'my_password';
     CREATE SCHEMA "my_schema";
     GRANT USAGE ON SCHEMA "my_schema" TO "my_user";
     GRANT SELECT, INSERT, UPDATE, DELETE, REFERENCES ON ALL tables IN SCHEMA "my_schema" TO "my_user";
