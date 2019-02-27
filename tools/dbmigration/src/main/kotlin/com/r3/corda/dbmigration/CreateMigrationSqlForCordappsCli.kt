@@ -5,6 +5,7 @@ import net.corda.cliutils.ExitCodes
 import net.corda.core.internal.copyTo
 import net.corda.core.internal.div
 import net.corda.node.services.persistence.MigrationExporter
+import net.corda.node.services.schema.NodeSchemaService
 import net.corda.nodeapi.internal.MigrationHelpers
 import picocli.CommandLine.*
 import java.io.File
@@ -53,9 +54,14 @@ class CreateMigrationSqlForCordappsCli : CliWrapperBase(CREATE_MIGRATION_CORDAPP
         if (schemaClass != "") {
             generateMigrationFileForSchema(schemaClass)?.let { outputSchemaMigrations.add(it) }
         } else {
-            outputSchemaMigrations.addAll(db.schemas.asSequence().filter { MigrationHelpers.getMigrationResource(it, db.classLoader) == null }.mapNotNull {
-                generateMigrationFileForSchema(it.javaClass.name)
-            }.toList())
+            val cordappsSchemas = db.schemas.minus(NodeSchemaService().internalSchemas())
+            val (withoutMigration, withMigration) = cordappsSchemas.partition {
+                MigrationHelpers.getMigrationResource(it, db.classLoader) == null
+            }
+            withMigration.forEach {
+                migrationLogger.info("Schema: ${it.javaClass.name} already contains the database migration script, the file creation skipped.")
+            }
+            outputSchemaMigrations.addAll(withoutMigration.mapNotNull { generateMigrationFileForSchema(it.javaClass.name) }.toList())
         }
 
         if (cmdLineOptions.jarOutput) {
