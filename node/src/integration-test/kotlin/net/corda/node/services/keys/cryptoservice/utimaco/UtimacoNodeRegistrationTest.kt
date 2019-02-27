@@ -3,6 +3,7 @@ package net.corda.node.services.keys.cryptoservice.utimaco
 import com.typesafe.config.ConfigFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
@@ -10,7 +11,10 @@ import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.node.hsm.HsmSimulator
+import net.corda.node.services.keys.cryptoservice.ensurePrivateKeyIsNotInKeyStoreFile
 import net.corda.node.utilities.registration.TestDoorman
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
@@ -93,6 +97,9 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
                     ))
             ).transpose().getOrThrow()
 
+            ensurePrivateKeyIsNotInKeyStoreFile(CORDA_CLIENT_CA, alice.baseDirectory / "certificates" / "nodekeystore.jks")
+            ensurePrivateKeyIsNotInKeyStoreFile("${X509Utilities.NODE_IDENTITY_ALIAS_PREFIX}-private-key", alice.baseDirectory / "certificates" / "nodekeystore.jks")
+
             val anonymous = false
             val result = alice.rpc.startFlow(
                     ::CashIssueAndPaymentFlow,
@@ -105,7 +112,7 @@ class UtimacoNodeRegistrationTest : IntegrationTest() {
 
             // make sure the transaction was actually signed by the key in the hsm
             val utimacoCryptoService = UtimacoCryptoService.fromConfigurationFile(File(tmpUtimacoConfig).toPath())
-            val alicePubKey = utimacoCryptoService.getPublicKey("identity-private-key")
+            val alicePubKey = utimacoCryptoService.getPublicKey("${X509Utilities.NODE_IDENTITY_ALIAS_PREFIX}-private-key")
             assertThat(alicePubKey).isNotNull()
             assertThat(result.stx.sigs.map { it.by.encoded!! }.filter { it.contentEquals(alicePubKey!!.encoded) }).hasSize(1)
             assertThat(result.stx.sigs.single { it.by.encoded!!.contentEquals(alicePubKey!!.encoded) }.isValid(result.stx.id))

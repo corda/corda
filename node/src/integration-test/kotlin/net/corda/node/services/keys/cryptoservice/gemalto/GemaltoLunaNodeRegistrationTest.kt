@@ -4,14 +4,17 @@ import com.safenetinc.luna.provider.LunaProvider
 import com.typesafe.config.ConfigFactory
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.concurrent.transpose
+import net.corda.core.internal.div
 import net.corda.core.internal.toPath
 import net.corda.core.messaging.startFlow
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.getOrThrow
 import net.corda.finance.DOLLARS
 import net.corda.finance.flows.CashIssueAndPaymentFlow
+import net.corda.node.services.keys.cryptoservice.ensurePrivateKeyIsNotInKeyStoreFile
 import net.corda.node.utilities.registration.TestDoorman
 import net.corda.nodeapi.internal.config.parseAs
+import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.core.SerializationEnvironmentRule
 import net.corda.testing.core.singleIdentity
@@ -99,6 +102,9 @@ class GemaltoLunaNodeRegistrationTest : IntegrationTest() {
                     anonymous,
                     defaultNotaryIdentity
             ).returnValue.getOrThrow()
+
+            ensurePrivateKeyIsNotInKeyStoreFile(X509Utilities.CORDA_CLIENT_CA, alice.baseDirectory / "certificates" / "nodekeystore.jks")
+            ensurePrivateKeyIsNotInKeyStoreFile("${X509Utilities.NODE_IDENTITY_ALIAS_PREFIX}-private-key", alice.baseDirectory / "certificates" / "nodekeystore.jks")
 
             // make sure the transaction was actually signed by the key in the hsm
             val gemaltoLunaCryptoService = GemaltoLunaCryptoService.fromConfigurationFile(aliceName.x500Principal, configPath)
