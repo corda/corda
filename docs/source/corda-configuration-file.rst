@@ -394,8 +394,8 @@ myLegalName
   *Default:* not defined
 
 notary
-  Optional configuration object which if present configures the node to run as a notary. If part of a Raft or BFT-SMaRt
-  cluster then specify ``raft`` or ``bftSMaRt`` respectively as described below. If a single node notary then omit both.
+  Optional configuration object which if present configures the node to run as a notary. If running as part of a HA notary cluster, please
+  specify the ``serviceLegalName`` and ``mysql`` configuration as described below. For a single-node notary only the ``validating`` property is required.
 
   validating
     Boolean to determine whether the notary is a validating or non-validating one.
@@ -408,8 +408,58 @@ notary
 
     *Default:* not defined
 
+  mysql
+    If part of a HA cluster, specify this configuration section with the settings below. For more details refer to :doc:`running-a-notary-cluster/installing-the-notary-service`.
+
+      connectionRetries
+        The number of times to retry connection to the MySQL database. This should be based on the number of database servers in the replicated
+        setup.
+
+        *Default:* 2, for a 3 server cluster.
+
+      dataSource
+        This section is used to configure the JDBC connection to the database cluster. For example:
+
+        autoCommit
+          JDBC operation mode where every update to the database is immediately made permanent. For HA notary it has to be disabled, i.e. set to ``"false"``.
+
+          *Default:* not defined
+
+        jdbcUrl
+          The JDBC connection string. Has to contain a comma-separated list of IPs for all database servers. For example, if we have a 3-node cluster with addresses 10.18.1.1, 10.18.1.2 and 10.18.1.3,
+          and the database name is ``corda``:
+
+          .. parsed-literal::
+
+             "jdbc:mysql://10.18.1.1,10.18.1.2,10.18.1.3/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false"
+
+          *Default:* not defined
+
+        username
+          Database user.
+
+          *Default:* not defined
+
+        password
+          Database password.
+
+          *Default:* not defined
+
+    Example configuration:
+
+    .. parsed-literal::
+      mysql {
+        connectionRetries=2
+        dataSource {
+          autoCommit="false"
+          jdbcUrl="jdbc:mysql://10.18.1.1,10.18.1.2,10.18.1.3/corda?rewriteBatchedStatements=true&useSSL=false&failOverReadOnly=false"
+          username="CordaUser"
+          password="myStrongPassword"
+        }
+      }
+
   raft
-    *(Experimental)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
+    *(Deprecated)* If part of a distributed Raft cluster, specify this configuration object with the following settings:
 
       nodeAddress
         The host and port to which to bind the embedded Raft server. Note that the Raft cluster uses a
@@ -425,7 +475,7 @@ notary
         *Default:* not defined
 
   bftSMaRt
-    *(Experimental)* If part of a distributed BFT-SMaRt cluster, specify this configuration object with the following settings:
+    *(Deprecated)* If part of a distributed BFT-SMaRt cluster, specify this configuration object with the following settings:
 
       replicaId
         The zero-based index of the current replica. All replicas must specify a unique replica id.

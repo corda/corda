@@ -21,6 +21,10 @@ Changelog entries below refer to Enterprise-only changes.
   This will not be a breaking change for early adopters and their deployments, as new version of software can still consume
   old style configs and produce a meaningful warning.
 
+* The experimental BFT-Smart notary implementation has been deprecated – a fully supported BFT implementation is under development.
+
+* The experimental Raft notary implementation has been deprecated in favour of the MySQL-based HA notary implementation (see :doc:`running-a-notary-cluster/toctree`).
+
 * Introduced a hierarchy of ``DatabaseMigrationException``'s, allowing ``NodeStartup`` to gracefully inform users of problems
   related to database migrations before exiting with a non-zero code.
 
