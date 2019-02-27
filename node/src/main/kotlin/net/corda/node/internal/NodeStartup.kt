@@ -36,6 +36,7 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
+import java.nio.channels.UnresolvedAddressException
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.ZonedDateTime
@@ -428,6 +429,8 @@ interface NodeStartupLogging {
             error.isExpectedWhenStartingNode() -> error.logAsExpected()
             error is CouldNotCreateDataSourceException -> error.logAsUnexpected()
             error is Errors.NativeIoException && error.message?.contains("Address already in use") == true -> error.logAsExpected("One of the ports required by the Corda node is already in use.")
+            error is Errors.NativeIoException && error.message?.contains("Can't assign requested address") == true -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
+            error is UnresolvedAddressException -> error.logAsExpected("Exception during node startup. Check that addresses in node config resolve correctly.")
             error.isOpenJdkKnownIssue() -> error.logAsExpected("Exception during node startup - ${error.message}. This is a known OpenJDK issue on some Linux distributions, please use OpenJDK from zulu.org or Oracle JDK.")
             else -> error.logAsUnexpected("Exception during node startup")
         }
