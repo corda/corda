@@ -21,8 +21,8 @@ which allows you to create local Corda networks on your desktop. For example:
     * Notary
     * Bank of Breakfast Tea    (*Issuer node* for GBP)
     * Bank of Big Apples       (*Issuer node* for USD)
-    * Alice
-    * Bob
+    * Alice                    (*Participant node* for user Alice)
+    * Bob                      (*Participant node* for user Bob)
 
 DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and allow you to launch an
 instance of Node Explorer for each.
