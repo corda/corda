@@ -6,7 +6,6 @@ import net.corda.core.contracts.*
 import net.corda.core.crypto.SecureHash
 import net.corda.core.crypto.containsAny
 import net.corda.core.internal.*
-import net.corda.core.internal.cordapp.CordappResolver
 import net.corda.core.messaging.DataFeed
 import net.corda.core.node.ServicesForResolution
 import net.corda.core.node.StatesToRecord
@@ -21,11 +20,7 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.currentDBSession
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
-import net.corda.nodeapi.internal.persistence.contextTransactionOrNull
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -70,19 +65,9 @@ class NodeVaultService(
          * A state is relevant if any of the participants (or the owner for ownable states) has an owning key matching one of this node's
          * public keys.
          */
-        // TODO This could benefit from a small performance tweak by not using temporary collections
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
-                // Sometimes developers forget to add the owning key to participants for OwnableStates.
-                // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
-                is OwnableState -> {
-                    if (CordappResolver.currentTargetVersion >= 4) {
-                        (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
-                    } else {
-                        // Preserve the old definition of relevancy for old CorDapps as they (or their client apps) may well be relying on it
-                        listOf(state.owner.owningKey)
-                    }
-                }
+                is OwnableState -> listOf(state.owner.owningKey)
                 else -> state.participants.map { it.owningKey }
             }
             return keysToCheck.any { it.containsAny(myKeys) }

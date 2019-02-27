@@ -553,8 +553,7 @@ class NodeVaultServiceTest {
     }
 
     @Test
-    fun `OwnableState relevancy under target version 3`() {
-        CordappResolver.withCordapp(targetPlatformVersion = 3) {
+    fun `is ownable state relevant`() {
             val myAnonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
             val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, myAnonymousIdentity.owningKey)).toSet()
 
@@ -566,28 +565,6 @@ class NodeVaultServiceTest {
             assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
             // Under target version 3 only the owner is relevant. This is to preserve backwards compatibility
             assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
-        }
-    }
-
-    @Test
-    fun `OwnableState relevancy under target version 4`() {
-        CordappResolver.withCordapp(targetPlatformVersion = 4) {
-            val anonymousIdentity = services.keyManagementService.freshKeyAndCert(identity, false)
-            val myKeys = services.keyManagementService.filterMyKeys(listOf(identity.owningKey, anonymousIdentity.owningKey)).toSet()
-
-            // Well-known owner
-            assertTrue { myKeys.isOwnableStateRelevant(identity.party, participants = emptyList()) }
-            // Anonymous owner
-            assertTrue { myKeys.isOwnableStateRelevant(anonymousIdentity.party, participants = emptyList()) }
-            // Unknown owner
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = emptyList()) }
-            // Unknown owner, self as single participant
-            assertTrue { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party)) }
-            // Unknown owner, unknown participant
-            assertFalse { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(createUnknownIdentity())) }
-            // Unknown owner, self and unknown as participants
-            assertTrue { myKeys.isOwnableStateRelevant(createUnknownIdentity(), participants = listOf(identity.party, createUnknownIdentity())) }
-        }
     }
 
     private fun createUnknownIdentity() = AnonymousParty(generateKeyPair().public)
