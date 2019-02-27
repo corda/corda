@@ -38,11 +38,11 @@ you to create local Corda networks on your desktop. For example:
     * Notary
     * Bank of Breakfast Tea    (*Issuer node* for GBP)
     * Bank of Big Apples       (*Issuer node* for USD)
-    * Alice                    (Participant node, for user Alice)
-    * Bob                      (Participant node, for user Bob)
+    * Alice                    (*Participant node*, for user Alice)
+    * Bob                      (*Participant node*, for user Bob)
 
 DemoBench will deploy all nodes with Corda's Finance CorDapp automatically, and
-allow you to launch an instance of Node Explorer for each. You will be logged
+allow you to launch an instance of Node Explorer for each. You will also be logged
 into the Node Explorer automatically.
 
 When connected to an *Issuer* node, a user can execute cash transaction commands to issue and move cash to itself or other
@@ -53,8 +53,8 @@ When connected to a *Participant* node a user can only execute cash transaction 
 Interface
 ---------
 Login
-  User can login to any Corda node using the explorer. Alternatively, ``gradlew explorer:runDemoNodes`` can be used to start up demo nodes for testing.
-  Corda node address, username and password are required for login, the address is defaulted to ``localhost:0`` if left blank.
+  User can login to any Corda node using the explorer.
+  Corda node address, username and password are required for login, the address is defaulted to localhost:0 if left blank.
   Username and password can be configured via the ``rpcUsers`` field in node's configuration file.
 
 .. image:: resources/explorer/login.png
