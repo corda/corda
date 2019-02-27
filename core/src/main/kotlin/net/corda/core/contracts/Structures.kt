@@ -79,6 +79,7 @@ data class CommandAndState(val command: CommandData, val ownableState: OwnableSt
  * A contract state that can have a single owner.
  */
 @KeepForDJVM
+@Deprecated("From now on, please 'roll your own'")
 interface OwnableState : ContractState {
     /** There must be a MoveCommand signed by this key to claim the amount. */
     val owner: AbstractParty
