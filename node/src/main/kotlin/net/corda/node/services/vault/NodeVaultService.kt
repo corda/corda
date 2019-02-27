@@ -23,8 +23,8 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.node.utilities.InfrequentlyMutatedCache
 import net.corda.nodeapi.internal.persistence.*
+import net.corda.node.utilities.InfrequentlyMutatedCache
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -71,9 +71,7 @@ class NodeVaultService(
          */
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
-                // Sometimes developers forget to add the owning key to participants for OwnableStates.
-                // TODO: This logic should probably be moved to OwnableState so we can just do a simple intersection here.
-                is OwnableState -> (state.participants.map { it.owningKey } + state.owner.owningKey).toSet()
+                is OwnableState -> listOf(state.owner.owningKey)
                 else -> state.participants.map { it.owningKey }
             }
             return keysToCheck.any { it.containsAny(myKeys) }
