@@ -5,12 +5,12 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
 
     <changeSet author="R3.Corda" id="conditional_attchments_rename">
-        <preConditions onFail="MARK_RAN"><tableExists tableName="NODE_ATTCHMENTS_CONTRACTS"/></preConditions>
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST"><tableExists tableName="NODE_ATTCHMENTS_CONTRACTS"/></preConditions>
         <renameTable oldTableName="NODE_ATTCHMENTS_CONTRACTS" newTableName="NODE_ATTACHMENTS_CONTRACTS" />
     </changeSet>
 
     <changeSet author="R3.Corda" id="conditional_attchments_contracts">
-        <preConditions onFail="MARK_RAN"><tableExists tableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"/></preConditions>
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST"><tableExists tableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME"/></preConditions>
         <renameTable oldTableName="NODE_ATTACHMENTS_CONTRACT_CLASS_NAME" newTableName="NODE_ATTACHMENTS_CONTRACTS" />
     </changeSet>
 

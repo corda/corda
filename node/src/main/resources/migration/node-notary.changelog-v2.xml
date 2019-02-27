@@ -3,13 +3,13 @@
                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
     <changeSet author="R3.Corda" id="rename-table-notary-commit-log">
-        <preConditions onFail="MARK_RAN">
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
             <tableExists tableName="node_notary_commit_log"/>
         </preConditions>
         <renameTable oldTableName="node_notary_commit_log"  newTableName="node_notary_committed_states" />
     </changeSet>
     <changeSet author="R3.Corda" id="create-notary-request-log-table">
-        <preConditions onFail="MARK_RAN">
+        <preConditions onFail="MARK_RAN" onSqlOutput="TEST">
             <not>
                 <tableExists tableName="node_notary_request_log"/>
             </not>
