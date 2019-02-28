@@ -36,6 +36,10 @@ dependencies {
     compile "javax.servlet:javax.servlet-api:3.1.0"
     compile "javax.ws.rs:javax.ws.rs-api:2.0.1"
     cordaCompile project(':client:rpc')
+
+    // Cordformation needs a SLF4J implementation when executing the Network
+    // Bootstrapper, but Log4J doesn't shutdown completely from within Gradle.
+    // Use a much simpler SLF4J implementation here instead.
     runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     // Corda integration dependencies
@@ -45,10 +49,14 @@ dependencies {
     cordapp project(':samples:attachment-demo:contracts')
     cordapp project(':samples:attachment-demo:workflows')
 
-    testCompile project(':node-driver')
+    testCompile(project(':node-driver')) {
+        // We already have a SLF4J implementation on our runtime classpath,
+        // and we don't need another one.
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
-    
+
     integrationTestCompile project(':webserver')
 }
 

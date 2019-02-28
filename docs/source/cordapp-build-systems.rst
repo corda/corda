@@ -25,7 +25,7 @@ JAR will contain:
 
 Build tools
 -----------
-In the instructions that follow, we assume you are using Gradle and the ``cordformation`` plugin to build your
+In the instructions that follow, we assume you are using Gradle and the ``cordapp`` plugin to build your
 CorDapp. You can find examples of building a CorDapp using these tools in the 
 `Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the 
 `Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
@@ -66,14 +66,17 @@ In certain cases, you may also wish to build against the unstable Master branch.
 
 Corda dependencies
 ^^^^^^^^^^^^^^^^^^
-The ``cordformation`` plugin adds two new gradle configurations:
+The ``cordapp`` plugin adds three new gradle configurations:
 
 * ``cordaCompile``, which extends ``compile``
 * ``cordaRuntime``, which extends ``runtime``
+* ``cordapp``, which extends ``compile``
 
 ``cordaCompile`` and ``cordaRuntime`` indicate dependencies that should not be included in the CorDapp JAR. These
 configurations should be used for any Corda dependency (e.g. ``corda-core``, ``corda-node``) in order to prevent a
-dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs).
+dependency from being included twice (once in the CorDapp JAR and once in the Corda JARs). The ``cordapp`` dependency
+is for declaring a compile-time dependency on a "semi-fat" CorDapp JAR in the same way as ``cordaCompile``, except
+that ``Cordformation`` will only deploy CorDapps contained within the ``cordapp`` configuration.
 
 Here are some guidelines for Corda dependencies:
 
@@ -81,15 +84,17 @@ Here are some guidelines for Corda dependencies:
   ``cordaCompile`` dependency, and ``net.corda:corda:$corda_release_version`` as a ``cordaRuntime`` dependency
 
 * When building an RPC client that communicates with a node (e.g. a webserver), you should include
-  ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency
+  ``net.corda:corda-rpc:$corda_release_version`` as a ``cordaCompile`` dependency.
 
 * When you need to use the network bootstrapper to bootstrap a local network (e.g. when using ``Cordformation``), you
-  should include ``net.corda:corda-node-api:$corda_release_version`` as a ``cordaCompile`` dependency
+  should include ``net.corda:corda-node-api:$corda_release_version`` as either a ``cordaRuntime`` or a ``runtimeOnly``
+  dependency. You may also wish to include an implementation of SLF4J as a ``runtimeOnly`` dependency for the network
+  bootstrapper to use.
 
 * To use Corda's test frameworks, add ``net.corda:corda-test-utils:$corda_release_version`` as a ``testCompile``
-  dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency
+  dependency. Never include ``corda-test-utils`` as a ``compile`` or ``cordaCompile`` dependency.
 
-* Any other Corda dependencies you need should be included as ``cordaCompile`` dependencies
+* Any other Corda dependencies you need should be included as ``cordaCompile`` dependencies.
 
 Here is an overview of the various Corda dependencies:
 
@@ -107,7 +112,8 @@ Here is an overview of the various Corda dependencies:
 * ``corda-jfx`` - JavaFX utilities with some Corda-specific models and utilities. Only use with JavaFX apps
 * ``corda-mock`` - A small library of useful mocks. Use if the classes are useful to you
 * ``corda-node`` - The Corda node. Do not depend on. Used only by the Corda fat JAR and indirectly in testing
-  frameworks
+  frameworks. (If your CorDapp _must_ depend on this for some reason then it should use the ``compileOnly``
+  configuration here - but please _don't_ do this if you can possibly avoid it!)
 * ``corda-node-api`` - The node API. Required to bootstrap a local network
 * ``corda-node-driver`` - Testing utility for programmatically starting nodes from JVM languages. Use for tests
 * ``corda-rpc`` - The Corda RPC client library. Used when writing an RPC client
@@ -312,7 +318,7 @@ Below is a sample CorDapp Gradle dependencies block. When building your own CorD
             cordapp "net.corda:bank-of-corda-demo:1.0"
 
             // Some other dependencies
-            compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+            compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
             testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
             testCompile "junit:junit:$junit_version"
 
