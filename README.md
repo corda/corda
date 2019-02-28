@@ -9,7 +9,7 @@
 Corda Enterprise is R3's closed source patch set on top of Corda Open Source. It adds features and improvements that we
 plan to charge for.
 
-Corda is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
+Corda Open Source is an open source blockchain project, designed for business from the start. Only Corda allows you to build interoperable blockchain networks that transact in strict privacy. Corda's smart contract technology allows businesses to transact directly, with value.
 
 ## Features
 
@@ -45,16 +45,6 @@ Corda is an open source blockchain project, designed for business from the start
 * [Twitter](https://twitter.com/cordadlt)
 * [Meetups](https://www.meetup.com/pro/corda/)
 * [Training Courses](https://www.corda.net/corda-training/)
-
-## Contributing
-
-Corda is an open-source project and contributions are welcome!
-
-To find out how to contribute, please see our [contributing docs](https://docs.corda.net/head/contributing-index.html).
-
-## License
-
-[Apache 2.0](./LICENSE)
 
 ## Acknowledgements
 
