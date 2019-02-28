@@ -251,7 +251,7 @@ The values for ``keyStorePassword`` and ``trustStorePassword`` in the above exam
 .. warning:: This method does not offer full protection. An adversary who knows the intrinsics of the obfuscation method used, can still decipher the sensitive bits.
 
 
-.. _ref-backup-recommendations:
+.. _backup-recommendations:
 
 Backup recommendations
 ----------------------
