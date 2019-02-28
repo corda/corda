@@ -1,28 +1,19 @@
-package net.corda.attachmentdemo.workflows
+package net.corda.attachmentdemo
 
-import co.paralleluniverse.fibers.Suspendable
 import joptsimple.OptionParser
-import net.corda.attachmentdemo.contracts.ATTACHMENT_PROGRAM_ID
 import net.corda.attachmentdemo.contracts.AttachmentContract
+import net.corda.attachmentdemo.workflows.AttachmentDemoFlow
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.*
-import net.corda.core.identity.Party
 import net.corda.core.internal.Emoji
 import net.corda.core.internal.InputStreamAndHash
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
-import net.corda.core.node.StatesToRecord
-import net.corda.core.transactions.SignedTransaction
-import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.getOrThrow
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
 import java.util.jar.JarInputStream
 import javax.servlet.http.HttpServletResponse.SC_OK
 import javax.ws.rs.core.HttpHeaders.CONTENT_DISPOSITION
@@ -92,51 +83,6 @@ private fun sender(rpc: CordaRPCOps, inputStream: InputStream, hash: SecureHash.
 }
 // DOCEND 2
 
-@InitiatingFlow
-@StartableByRPC
-class AttachmentDemoFlow(private val otherSide: Party,
-                         private val notary: Party,
-                         private val attachId: SecureHash.SHA256) : FlowLogic<SignedTransaction>() {
-
-    object SIGNING : ProgressTracker.Step("Signing transaction")
-
-    override val progressTracker: ProgressTracker = ProgressTracker(SIGNING)
-
-    @Suspendable
-    override fun call(): SignedTransaction {
-        // Create a trivial transaction with an output that describes the attachment, and the attachment itself
-        val ptx = TransactionBuilder(notary)
-                .addOutputState(AttachmentContract.State(attachId), ATTACHMENT_PROGRAM_ID)
-                .addCommand(AttachmentContract.Command, ourIdentity.owningKey)
-                .addAttachment(attachId)
-
-        progressTracker.currentStep = SIGNING
-
-        val stx = serviceHub.signInitialTransaction(ptx)
-
-        // Send the transaction to the other recipient
-        return subFlow(FinalityFlow(stx, initiateFlow(otherSide)))
-    }
-}
-
-@InitiatedBy(AttachmentDemoFlow::class)
-class StoreAttachmentFlow(private val otherSide: FlowSession) : FlowLogic<Unit>() {
-    @Suspendable
-    override fun call() {
-        // As a non-participant to the transaction we need to record all states
-        subFlow(ReceiveFinalityFlow(otherSide, statesToRecord = StatesToRecord.ALL_VISIBLE))
-    }
-}
-
-@StartableByRPC
-@StartableByService
-class NoProgressTrackerShellDemo : FlowLogic<String>() {
-    @Suspendable
-    override fun call(): String {
-        return "You Called me!"
-    }
-}
-
 @Suppress("DEPRECATION")
 // DOCSTART 1
 fun recipient(rpc: CordaRPCOps, webPort: Int) {
@@ -159,7 +105,7 @@ fun recipient(rpc: CordaRPCOps, webPort: Int) {
 
                 // Write out the entries inside this jar.
                 println("Attachment JAR contains these entries:")
-                JarInputStream(connection.inputStream).use { it ->
+                JarInputStream(connection.inputStream).use {
                     while (true) {
                         val e = it.nextJarEntry ?: break
                         println("Entry> ${e.name}")

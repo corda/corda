@@ -1,7 +1,5 @@
 package net.corda.attachmentdemo
 
-import net.corda.attachmentdemo.workflows.recipient
-import net.corda.attachmentdemo.workflows.sender
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.core.utilities.getOrThrow
 import net.corda.node.services.Permissions.Companion.all
