@@ -62,7 +62,8 @@ class LazyPool<A>(
      */
     fun close(): Iterable<A> {
         lifeCycle.justTransition(State.FINISHED)
-        val elements = poolQueue.toList()
+        // Does not use kotlin toList() as it currently is not safe to use on concurrent data structures.
+        val elements = ArrayList(poolQueue)
         poolQueue.clear()
         return elements
     }
