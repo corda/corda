@@ -248,9 +248,9 @@ open class SerializerFactory(
                 logger.debug { "descriptor=${schemaAndDescriptor.typeDescriptor}, typeNotation=$name" }
                 name to processSchemaEntry(notation)
             } catch (e: ClassNotFoundException) {
-                // class missing from the classpath, so load its interfaces and add it for carpenting (see method docs).
-                // This should only be carried out for non-collections. These are detected by looking for types that are
-                // not composites (RestrictedTypes), and not enums (have no choices).
+                // Class missing from the classpath, so load its interfaces and add it for carpenting (see method docs).
+                // This carpenting should only be carried out for non-collections. These are detected by looking for
+                // types that are not composites (RestrictedTypes), and not enums (have no choices).
                 if (!(notation is RestrictedType && notation.choices.isEmpty())) {
                     interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
                     metaSchema.buildFor(notation, classloader)

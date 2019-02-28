@@ -90,6 +90,47 @@ class StaticInitialisationOfSerializedObjectTest {
                 .doesNotContain(interfaceType.name)
     }
 
+//    enum class MyEnum {
+//        Foo,
+//        Bar,
+//        Baz
+//    }
+
+    // This test checks that if a known class name is received with an additional property of type
+    // Collection<UnknownType>, UnknownType is carpented correctly and a usable known type is produced.
+    //
+    // To regenerate the serialized data for this test:
+    //  - Uncomment the enum above
+    //  - Uncomment the definition of DummyClass with the additional set and comment out the current definition
+    //  - Uncomment the generation code and comment out all code underneath it in the test
+    //  - Run the test. This will print a path to a new file; copy this to the test resources directory
+    @Test
+    fun collectionsOfUnknownTypesAreHandledCorrectly() {
+//        data class DummyClass(val a: String, val b: List<MyEnum>)
+        data class DummyClass(val a: String)
+
+        val path = EvolvabilityTests::class.java.getResource("StaticInitialisationOfSerializedObjectTest.unknownCollection")
+        val f = File(path.toURI())
+
+//        val sf = SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader())
+//        val sc = SerializationOutput(sf).serialize(DummyClass("foo", listOf(MyEnum.Foo)))
+//        f.writeBytes(sc.bytes)
+//        println(path)
+
+        class WL : ClassWhitelist {
+            override fun hasListed(type: Class<*>): Boolean =
+                type.name == "net.corda.nodeapi.internal.serialization.amqp" +
+                        ".StaticInitialisationOfSerializedObjectTest\$collectionsOfUnknownTypesAreHandledCorrectly\$DummyClass"
+                        || type.name == "net.corda.nodeapi.internal.serialization.amqp" +
+                        ".StaticInitialisationOfSerializedObjectTest\$MyEnum"
+        }
+
+        val sf2 = SerializerFactory(WL(), ClassLoader.getSystemClassLoader())
+        val bytes = f.readBytes()
+        val output = DeserializationInput(sf2).deserialize(SerializedBytes<DummyClass>(bytes))
+        assertEquals(output.a, "foo")
+    }
+
 
     @Test
     fun deserializeTest() {
