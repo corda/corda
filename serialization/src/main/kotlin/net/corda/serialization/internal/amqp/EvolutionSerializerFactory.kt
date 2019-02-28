@@ -109,8 +109,9 @@ class DefaultEvolutionSerializerFactory(
         newProperties.forEach { propertyName ->
             if (localProperties[propertyName]!!.mustBeProvided) throw EvolutionSerializationException(
                     this,
-                    "Mandatory property $propertyName of local type is not present in remote type - " +
-                    "did someone remove a property from the schema without considering old clients?")
+                    "Mandatory property $propertyName of local type is not present in remote type. " +
+                    "This implies the type has not evolved in a backwards compatible way. " +
+                    "Consider making $propertyName nullable in the newer version of this type.")
         }
     }
 
