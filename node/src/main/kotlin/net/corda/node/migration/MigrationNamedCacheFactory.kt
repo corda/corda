@@ -9,7 +9,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.BindableNamedCacheFactory
 import net.corda.nodeapi.internal.persistence.DatabaseConfig
-import java.lang.IllegalArgumentException
 
 // A cache factory suitable for use while migrating the database to a new version. This version does not need node configuration in order to
 // construct a cache.
@@ -27,6 +26,7 @@ class MigrationNamedCacheFactory(private val metricRegistry: MetricRegistry?,
             "DBTransactionStorage_transactions" -> caffeine.maximumWeight(
                     nodeConfiguration?.transactionCacheSizeBytes ?: NodeConfiguration.defaultTransactionCacheSize
             )
+            "DBTransactionStorage_locks" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_partyByKey" -> caffeine.maximumSize(defaultCacheSize)
             "PersistentIdentityService_partyByName" -> caffeine.maximumSize(defaultCacheSize)
             "BasicHSMKeyManagementService_keys" -> caffeine.maximumSize(defaultCacheSize)

@@ -7,6 +7,7 @@ import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.FlowStateMachine
 import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.ResolveTransactionsFlow
 import net.corda.core.internal.concurrent.OpenFuture
 import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.StateMachineTransactionMapping
@@ -27,6 +28,7 @@ import net.corda.node.services.persistence.AttachmentStorageInternal
 import net.corda.node.services.statemachine.ExternalEvent
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import java.security.PublicKey
 
 interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
@@ -59,7 +61,11 @@ interface ServiceHubInternal : ServiceHub {
 
             database.transaction {
                 require(txs.any()) { "No transactions passed in for recording" }
-                val recordedTransactions = txs.filter { validatedTransactions.addTransaction(it) }
+                // Ensure we record dependencies first
+                val orderedTxs = ResolveTransactionsFlow.topologicalSort(txs.toList())
+                // Mark all txs as being written
+                validatedTransactions.lockObjectsForWrite(orderedTxs.map { it.coreTransaction.id }, this)
+                val recordedTransactions = orderedTxs.filter { validatedTransactions.addTransaction(it) }
                 val stateMachineRunId = FlowStateMachineImpl.currentStateMachine()?.id
                 if (stateMachineRunId != null) {
                     recordedTransactions.forEach {
@@ -178,6 +184,21 @@ interface WritableTransactionStorage : TransactionStorage {
      */
     // TODO: Throw an exception if trying to add a transaction with fewer signatures than an existing entry.
     fun addTransaction(transaction: SignedTransaction): Boolean
+
+    /**
+     * This will create a read/write lock for each of the listed ids if it doesn't exist yet and
+     * lock a write lock for any of them until the dbTx is either committed or rolled back.
+     * @param ids list of (Corda transaction) ids we potentially want to write.
+     * @param dbTx database transaction the write will happen under
+     */
+    fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction)
+
+    /**
+     * This will create or get a read/write lock for the id and run the block under the read lock
+     * @param id Corda transaction id we will try to read
+     * @param block Block to execute to read the transaction
+     */
+    fun <T> intentToRead(id: SecureHash, block: () -> T): T
 }
 
 /**

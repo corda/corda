@@ -33,6 +33,10 @@
       <module name="bridgecapsule_main" target="1.6" />
       <module name="bridgecapsule_smokeTest" target="1.6" />
       <module name="bridgecapsule_test" target="1.6" />
+      <module name="buildSrc-com.r3.corda_buildSrc_main" target="1.8" />
+      <module name="buildSrc-com.r3.corda_buildSrc_test" target="1.8" />
+      <module name="buildSrc-com.r3.corda_canonicalizer_main" target="1.8" />
+      <module name="buildSrc-com.r3.corda_canonicalizer_test" target="1.8" />
       <module name="buildSrc_main" target="1.8" />
       <module name="buildSrc_test" target="1.8" />
       <module name="business-network-demo_integrationTest" target="1.8" />
@@ -143,6 +147,8 @@
       <module name="docs_source_example-code_main" target="1.8" />
       <module name="docs_source_example-code_test" target="1.8" />
       <module name="docs_test" target="1.8" />
+      <module name="enterprise-isolated_main" target="1.8" />
+      <module name="enterprise-isolated_test" target="1.8" />
       <module name="example-code_integrationTest" target="1.8" />
       <module name="example-code_main" target="1.8" />
       <module name="example-code_test" target="1.8" />

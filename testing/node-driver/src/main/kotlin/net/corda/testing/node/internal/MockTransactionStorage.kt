@@ -8,6 +8,7 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.toFuture
 import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import rx.Observable
 import rx.subjects.PublishSubject
 import java.util.*
@@ -16,6 +17,13 @@ import java.util.*
  * A class which provides an implementation of [WritableTransactionStorage] which is used in [MockServices]
  */
 open class MockTransactionStorage : WritableTransactionStorage, SingletonSerializeAsToken() {
+    override fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction) {
+    }
+
+    override fun <T> intentToRead(id: SecureHash, block: () -> T): T {
+        return block()
+    }
+
     override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
         return txns[id]?.let { doneFuture(it) } ?: _updatesPublisher.filter { it.id == id }.toFuture()
     }

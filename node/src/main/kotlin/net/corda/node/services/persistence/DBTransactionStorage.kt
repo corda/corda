@@ -17,16 +17,16 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.statemachine.FlowStateMachineImpl
 import net.corda.node.utilities.AppendOnlyPersistentMapBase
+import net.corda.node.utilities.NonInvalidatingCache
 import net.corda.node.utilities.WeightBasedAppendOnlyPersistentMap
-import net.corda.nodeapi.internal.persistence.CordaPersistence
-import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
-import net.corda.nodeapi.internal.persistence.bufferUntilDatabaseCommit
-import net.corda.nodeapi.internal.persistence.wrapWithDatabaseTransaction
+import net.corda.nodeapi.internal.persistence.*
 import net.corda.serialization.internal.CordaSerializationEncoding.SNAPPY
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import rx.Observable
 import rx.subjects.PublishSubject
+import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.persistence.*
+import kotlin.concurrent.read
 
 // cache value type to just store the immutable bits of a signed transaction plus conversion helpers
 typealias TxCacheValue = Pair<SerializedBytes<CoreTransaction>, List<TransactionSignature>>
@@ -35,6 +35,22 @@ fun TxCacheValue.toSignedTx() = SignedTransaction(this.first, this.second)
 fun SignedTransaction.toTxCacheValue() = TxCacheValue(this.txBits, this.sigs)
 
 class DBTransactionStorage(private val database: CordaPersistence, cacheFactory: NamedCacheFactory) : WritableTransactionStorage, SingletonSerializeAsToken() {
+
+    private val txLocks = NonInvalidatingCache<SecureHash, ReentrantReadWriteLock>(cacheFactory, "DBTransactionStorage_locks") { ReentrantReadWriteLock() }
+
+    override fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction) {
+        ids.forEach {
+            val wLock = txLocks[it]!!.writeLock()
+            wLock.lock()
+            dbTx.onClose { wLock.unlock() }
+        }
+    }
+
+    override fun <T> intentToRead(id: SecureHash, block: () -> T): T {
+        txLocks[id]!!.read {
+            return block()
+        }
+    }
 
     @Entity
     @Table(name = "${NODE_DATABASE_PREFIX}transactions")
@@ -115,7 +131,9 @@ class DBTransactionStorage(private val database: CordaPersistence, cacheFactory:
         }
     }
 
-    override fun getTransaction(id: SecureHash): SignedTransaction? = database.transaction { txStorage.content[id]?.toSignedTx() }
+    override fun getTransaction(id: SecureHash): SignedTransaction? = intentToRead(id) {
+        database.transaction { txStorage.content[id]?.toSignedTx() }
+    }
 
     private val updatesPublisher = PublishSubject.create<SignedTransaction>().toSerialized()
     override val updates: Observable<SignedTransaction> = updatesPublisher.wrapWithDatabaseTransaction()

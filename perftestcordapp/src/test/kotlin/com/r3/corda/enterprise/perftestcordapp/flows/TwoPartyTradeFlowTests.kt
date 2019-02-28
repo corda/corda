@@ -42,6 +42,7 @@ import net.corda.node.services.api.WritableTransactionStorage
 import net.corda.node.services.persistence.DBTransactionStorage
 import net.corda.node.services.statemachine.Checkpoint
 import net.corda.nodeapi.internal.persistence.CordaPersistence
+import net.corda.nodeapi.internal.persistence.DatabaseTransaction
 import net.corda.testing.core.*
 import net.corda.testing.dsl.LedgerDSL
 import net.corda.testing.dsl.TestLedgerDSLInterpreter
@@ -735,6 +736,13 @@ class TwoPartyTradeFlowTests(private val anonymous: Boolean) {
             private val database: CordaPersistence,
             private val delegate: WritableTransactionStorage
     ) : WritableTransactionStorage, SingletonSerializeAsToken() {
+        override fun lockObjectsForWrite(ids: Collection<SecureHash>, dbTx: DatabaseTransaction) {
+        }
+
+        override fun <T> intentToRead(id: SecureHash, block: () -> T): T {
+            return block()
+        }
+
         override fun trackTransaction(id: SecureHash): CordaFuture<SignedTransaction> {
             return database.transaction {
                 delegate.trackTransaction(id)
