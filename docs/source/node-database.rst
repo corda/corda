@@ -367,7 +367,7 @@ Revise these settings depending on your nodes sizing requirements.
 
   .. sourcecode:: sql
 
-     CREATE USER my_user IDENTIFIED BY my_password QUOTA unlimited ON users;
+     CREATE USER my_user IDENTIFIED BY my_password DEFAULT TABLESPACE users QUOTA unlimited ON users;
      GRANT CREATE SESSION TO my_user;
      GRANT CREATE TABLE TO my_user;
      GRANT CREATE VIEW TO my_user;
@@ -384,7 +384,7 @@ Revise these settings depending on your nodes sizing requirements.
 
   .. sourcecode:: sql
 
-     CREATE USER my_admin_user IDENTIFIED BY my_password QUOTA unlimited ON users;
+     CREATE USER my_admin_user IDENTIFIED BY my_password DEFAULT TABLESPACE users QUOTA unlimited ON users;
      GRANT CREATE SESSION TO my_admin_user;
      GRANT CREATE TABLE TO my_admin_user;
      GRANT CREATE VIEW TO my_admin_user;
