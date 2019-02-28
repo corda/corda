@@ -30,7 +30,13 @@ configurations {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    cordaCompile project(':samples:bank-of-corda-demo')
+    compile "net.sf.jopt-simple:jopt-simple:$jopt_simple_version"
+    cordaCompile project(':client:rpc')
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
+
+    // We only need this for its DUMMY_BANK constants, and
+    // DO NOT want it added to Gradle's runtime classpath.
+    compileOnly project(':test-utils')
 
     // The trader demo CorDapp depends upon Cash CorDapp features
     cordapp project(':finance:contracts')
@@ -39,9 +45,11 @@ dependencies {
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    integrationTestCompileOnly project(":node")
 
-    testCompile project(':test-utils')
+    testCompile(project(':node-driver')) {
+        // Don't try to implement SLF4J with Log4J2 in any of the test classes
+        exclude group: 'org.apache.logging.log4j'
+    }
     testCompile "junit:junit:$junit_version"
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
