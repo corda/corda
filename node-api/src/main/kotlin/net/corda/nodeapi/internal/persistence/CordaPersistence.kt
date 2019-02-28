@@ -163,7 +163,8 @@ class CordaPersistence(
     }
 
     fun onAllOpenTransactionsClosed(callback: () -> Unit) {
-        val allOpen = liveTransactions.values.toList()
+        // Does not use kotlin toList() as that is not safe to use on concurrent collections.
+        val allOpen = ArrayList(liveTransactions.values)
         if (allOpen.isEmpty()) {
             callback()
         } else {
