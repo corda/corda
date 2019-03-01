@@ -17,5 +17,4 @@ interface NetworkRegistrationService {
 
 data class CertificateResponse(val pollInterval: Duration, val certificates: List<X509Certificate>?)
 
-@CordaSerializable
 class CertificateRequestException(message: String) : CordaException(message)

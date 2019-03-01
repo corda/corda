@@ -88,7 +88,6 @@ public final class net.corda.core.concurrent.ConcurrencyUtils extends java.lang.
   @NotNull
   public static final String shortCircuitedTaskFailedMessage = "Short-circuited task failed:"
 ##
-@CordaSerializable
 public interface net.corda.core.concurrent.CordaFuture extends java.util.concurrent.Future
   public abstract void then(kotlin.jvm.functions.Function1<? super net.corda.core.concurrent.CordaFuture<V>, ? extends W>)
   @NotNull
@@ -571,7 +570,6 @@ public interface net.corda.core.contracts.Contract
   public abstract void verify(net.corda.core.transactions.LedgerTransaction)
 ##
 @DoNotImplement
-@CordaSerializable
 public final class net.corda.core.contracts.ContractAttachment extends java.lang.Object implements net.corda.core.contracts.Attachment
   public <init>(net.corda.core.contracts.Attachment, String)
   public <init>(net.corda.core.contracts.Attachment, String, java.util.Set<String>)
@@ -1013,7 +1011,6 @@ public final class net.corda.core.contracts.TransactionState extends java.lang.O
 ##
 public final class net.corda.core.contracts.TransactionStateKt extends java.lang.Object
 ##
-@CordaSerializable
 public abstract class net.corda.core.contracts.TransactionVerificationException extends net.corda.core.flows.FlowException
   public <init>(net.corda.core.crypto.SecureHash, String, Throwable)
   @NotNull
@@ -1390,7 +1387,6 @@ public class net.corda.core.crypto.Base58 extends java.lang.Object
   public static java.math.BigInteger decodeToBigInteger(String)
   public static String encode(byte[])
 ##
-@CordaSerializable
 public final class net.corda.core.crypto.CompositeKey extends java.lang.Object implements java.security.PublicKey
   public <init>(int, java.util.List, kotlin.jvm.internal.DefaultConstructorMarker)
   public final void checkValidity()
@@ -1746,7 +1742,6 @@ public final class net.corda.core.crypto.NullKeys extends java.lang.Object
   public final net.corda.core.crypto.TransactionSignature getNULL_SIGNATURE()
   public static final net.corda.core.crypto.NullKeys INSTANCE
 ##
-@CordaSerializable
 public static final class net.corda.core.crypto.NullKeys$NullPublicKey extends java.lang.Object implements java.security.PublicKey, java.lang.Comparable
   public int compareTo(java.security.PublicKey)
   @NotNull
@@ -6225,7 +6220,6 @@ public final class net.corda.core.transactions.SignedTransaction extends java.la
   public final net.corda.core.transactions.SignedTransaction withAdditionalSignatures(Iterable<net.corda.core.crypto.TransactionSignature>)
   public static final net.corda.core.transactions.SignedTransaction$Companion Companion
 ##
-@CordaSerializable
 public static final class net.corda.core.transactions.SignedTransaction$SignaturesMissingException extends java.security.SignatureException implements net.corda.core.CordaThrowable, net.corda.core.contracts.NamedByHash
   public <init>(java.util.Set<? extends java.security.PublicKey>, java.util.List<String>, net.corda.core.crypto.SecureHash)
   public void addSuppressed(Throwable[])
@@ -6412,7 +6406,6 @@ public final class net.corda.core.utilities.ByteArrays extends java.lang.Object
   @NotNull
   public static final String toHexString(byte[])
 ##
-@CordaSerializable
 public abstract class net.corda.core.utilities.ByteSequence extends java.lang.Object implements java.lang.Comparable
   public <init>(byte[], int, int, kotlin.jvm.internal.DefaultConstructorMarker)
   public int compareTo(net.corda.core.utilities.ByteSequence)
@@ -6628,7 +6621,6 @@ public static final class net.corda.core.utilities.OpaqueBytes$Companion extends
   @NotNull
   public final net.corda.core.utilities.OpaqueBytes of(byte...)
 ##
-@CordaSerializable
 public final class net.corda.core.utilities.OpaqueBytesSubSequence extends net.corda.core.utilities.ByteSequence
   public <init>(byte[], int, int)
   @NotNull

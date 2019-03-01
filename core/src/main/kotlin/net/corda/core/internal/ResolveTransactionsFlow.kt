@@ -64,8 +64,7 @@ class ResolveTransactionsFlow(txHashesArg: Set<SecureHash>,
             return sort.complete()
         }
     }
-
-    @CordaSerializable
+    
     class ExcessivelyLargeTransactionGraph : FlowException()
 
     // TODO: Figure out a more appropriate DOS limit here, 5000 is simply a very bad guess.

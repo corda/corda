@@ -1,8 +1,6 @@
 @file:KeepForDJVM
 package net.corda.core.serialization
 
-import co.paralleluniverse.io.serialization.Serialization
-import net.corda.core.CordaInternal
 import net.corda.core.DeleteForDJVM
 import net.corda.core.DoNotImplement
 import net.corda.core.KeepForDJVM
@@ -317,6 +315,7 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  */
 @Suppress("unused")
 @KeepForDJVM
+@CordaSerializable
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     companion object {
         /**
