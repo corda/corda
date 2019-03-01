@@ -19,6 +19,8 @@ import java.io.InputStream
 import java.nio.file.Path
 import java.sql.Statement
 import javax.sql.DataSource
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 // Migrate the database to the current version, using liquibase.
 //
@@ -38,6 +40,7 @@ class SchemaMigration(
         const val NODE_BASE_DIR_KEY = "liquibase.nodeDaseDir"
         const val NODE_X500_NAME = "liquibase.nodeName"
         val loader = ThreadLocal<CordappLoader>()
+        private val mutex = ReentrantLock()
     }
 
     init {
@@ -113,16 +116,21 @@ class SchemaMigration(
             System.setProperty(NODE_X500_NAME, ourName.toString())
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
-            val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+            // current version of Liquibase appears to be non-threadsafe
+            // this is apparent when multiple in-process nodes are all running migrations simultaneously
+            mutex.withLock {
+                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
-            val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
+                val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
 
-            when {
-                (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
-                run && !check -> liquibase.update(Contexts())
-                check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
-                check && !run -> {} // Do nothing will be interpreted as "check succeeded"
-                else -> throw IllegalStateException("Invalid usage.")
+                when {
+                    (run && !check) && (unRunChanges.isNotEmpty() && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
+                    run && !check -> liquibase.update(Contexts())
+                    check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
+                    check && !run -> {
+                    } // Do nothing will be interpreted as "check succeeded"
+                    else -> throw IllegalStateException("Invalid usage.")
+                }
             }
         }
     }
