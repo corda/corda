@@ -482,6 +482,51 @@ class BridgeIntegrationTest {
         }
     }
 
+    @Test(timeout = 60000)
+    fun `Test tunneling control message won't fail on small max message size`() {
+        val bridgeFolder = tempFolder.root.toPath()
+        val bridgeConfigResource = "/net/corda/bridge/withfloat/bridge/firewall.conf"
+        val bridgeConfig = createAndLoadConfigFromResource(bridgeFolder, bridgeConfigResource)
+        bridgeConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(bridgeFolder, maxMessageSize = 1024)
+        val floatFolder = tempFolder.root.toPath() / "float"
+        val floatConfigResource = "/net/corda/bridge/withfloat/float/firewall.conf"
+        val floatConfig = createAndLoadConfigFromResource(floatFolder, floatConfigResource)
+        floatConfig.createBridgeKeyStores(DUMMY_BANK_A_NAME)
+        createNetworkParams(floatFolder)
+        val (artemisServer, artemisClient) = createArtemis()
+        try {
+            installBridgeControlResponder(artemisClient)
+            val bridge = FirewallInstance(bridgeConfig, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val bridgeStateFollower = bridge.activeChange.toBlocking().iterator
+            val float = FirewallInstance(floatConfig, FirewallVersionInfo(1, "1.1", "Dummy", "Test"))
+            val floatStateFollower = float.activeChange.toBlocking().iterator
+            assertEquals(false, floatStateFollower.next())
+            float.start()
+            assertEquals(true, floatStateFollower.next())
+            assertEquals(true, float.active) // float is running
+            assertEquals(false, serverListening("localhost", 10005)) // but not activated
+            assertEquals(false, bridgeStateFollower.next())
+            bridge.start()
+            assertEquals(true, bridgeStateFollower.next())
+            assertEquals(true, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(true, serverListening("localhost", 10005)) // now activated
+            bridge.stop()
+            assertEquals(false, bridgeStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(true, float.active)
+            assertEquals(false, serverListening("localhost", 10005)) // now de-activated
+            float.stop()
+            assertEquals(false, floatStateFollower.next())
+            assertEquals(false, bridge.active)
+            assertEquals(false, float.active)
+        } finally {
+            artemisClient.stop()
+            artemisServer.stop()
+        }
+    }
+
 
     private fun createArtemis(): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDirectory = tempFolder.root.toPath()

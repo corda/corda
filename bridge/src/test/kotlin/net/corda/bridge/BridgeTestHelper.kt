@@ -8,9 +8,14 @@ import net.corda.core.internal.div
 import net.corda.core.internal.exists
 import net.corda.core.node.NetworkParameters
 import net.corda.core.node.NotaryInfo
-import net.corda.nodeapi.internal.*
+import net.corda.nodeapi.internal.DEV_INTERMEDIATE_CA
+import net.corda.nodeapi.internal.DEV_ROOT_CA
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
-import net.corda.nodeapi.internal.crypto.*
+import net.corda.nodeapi.internal.createDevNodeCa
+import net.corda.nodeapi.internal.crypto.CertificateAndKeyPair
+import net.corda.nodeapi.internal.crypto.CertificateType
+import net.corda.nodeapi.internal.crypto.X509Utilities
+import net.corda.nodeapi.internal.loadDevCaTrustStore
 import net.corda.nodeapi.internal.network.NetworkParametersCopier
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.core.TestIdentity
@@ -23,14 +28,14 @@ import java.nio.file.Path
 import java.security.cert.X509Certificate
 import java.time.Instant
 
-fun createNetworkParams(baseDirectory: Path): Int {
+fun createNetworkParams(baseDirectory: Path, maxMessageSize: Int = 10485760): Int {
     val dummyNotaryParty = TestIdentity(DUMMY_NOTARY_NAME)
     val notaryInfo = NotaryInfo(dummyNotaryParty.party, false)
     val networkParameters = NetworkParameters(
             minimumPlatformVersion = 1,
             notaries = listOf(notaryInfo),
             modifiedTime = Instant.now(),
-            maxMessageSize = 10485760,
+            maxMessageSize = maxMessageSize,
             maxTransactionSize = 40000,
             epoch = 1,
             whitelistedContractImplementations = emptyMap()
@@ -39,7 +44,6 @@ fun createNetworkParams(baseDirectory: Path): Int {
     copier.install(baseDirectory)
     return networkParameters.maxMessageSize
 }
-
 
 fun createAndLoadConfigFromResource(baseDirectory: Path, configResource: String): FirewallConfiguration {
     val workspaceFolder = baseDirectory.normalize().toAbsolutePath()
@@ -80,7 +84,6 @@ fun MutualSslConfiguration.createBridgeKeyStores(legalName: CordaX500Name,
                 sslKeyStore.entryPassword)
     }
 }
-
 
 fun serverListening(host: String, port: Int): Boolean {
     var s: Socket? = null

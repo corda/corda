@@ -67,7 +67,7 @@ class TunnelControlTest {
         val bridgeAuditService = TestAuditService()
         val haService = SingleInstanceMasterService(bridgeConfig, bridgeAuditService)
         val filterService = createPartialMock<TestIncomingMessageFilterService>()
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, filterService)
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         assertEquals(false, bridgeStateFollower.next())
@@ -152,7 +152,7 @@ class TunnelControlTest {
                 Unit
             }.whenever(it).sendMessageToLocalBroker(any())
         }
-        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, maxMessageSize, bridgeAuditService, haService, filterService)
+        val bridgeProxiedReceiverService = TunnelingBridgeReceiverService(bridgeConfig, bridgeAuditService, haService, filterService)
         val bridgeStateFollower = bridgeProxiedReceiverService.activeChange.toBlocking().iterator
         bridgeProxiedReceiverService.start()
         bridgeAuditService.start()
