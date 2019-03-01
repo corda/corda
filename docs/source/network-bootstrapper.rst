@@ -76,6 +76,8 @@ alongside the config files. For example, if your directory has this structure:
 The ``cordapp-a.jar`` and ``cordapp-b.jar`` will be installed in each node directory, and any contracts within them will be
 added to the Contract Whitelist (see below).
 
+.. _bootstrapper_whitelisting_contracts:
+
 Whitelisting contracts
 ----------------------
 
@@ -189,6 +191,8 @@ such a generated keys, will be unaffected.
 .. note:: The Network Bootstrapper is provided for test deployments and can only generate information for nodes collected on
     the same machine. If a network needs to be updated using the Bootstrapper once deployed, the nodes will need
     collecting back together.
+
+.. _bootstrapper_updating_whitelisted_contracts:
 
 Updating the contract whitelist for bootstrapped networks
 ---------------------------------------------------------

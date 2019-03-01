@@ -20,10 +20,10 @@ The following guarantees are made for CorDapps running on Corda 4.0
 
 - CorDapp Contract states generated on ledger using hash constraints are not directly migratable to signature constraints in this release.
   Your compatibility zone operator may whitelist a JAR previously used to issue hash constrained states, and then you can follow the manual
-  process described in the paragraph below to migrate these to signature constraints.
+  process described in the paragraph below to migrate these to signature constraints. See :doc:`cordapp-constraint-migration` for more information.
 
 - CorDapp Contract states generated on ledger using CZ whitelisted constraints are migratable to signature constraints using a manual process
-  that requires programmatic code changes. See :ref:`constraints_whitelist_to_signature_ref` for more information.
+  that requires programmatic code changes. See :ref:`cz_whitelisted_constraint_migration` for more information.
 
 - Explicit Contract Upgrades are only supported for hash and CZ whitelisted constraint types. See :ref:`explicit_contract_upgrades_ref` for more information.
 
