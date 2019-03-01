@@ -330,6 +330,7 @@ fun <T : Any> T.serialize(serializationFactory: SerializationFactory = Serializa
  */
 @Suppress("unused")
 @KeepForDJVM
+@CordaSerializable
 class SerializedBytes<T : Any>(bytes: ByteArray) : OpaqueBytes(bytes) {
     companion object {
         /**

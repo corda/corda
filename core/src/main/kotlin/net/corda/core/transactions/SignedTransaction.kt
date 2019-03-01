@@ -347,7 +347,6 @@ data class SignedTransaction(val txBits: SerializedBytes<CoreTransaction>,
     }
 
     @KeepForDJVM
-    @CordaSerializable
     class SignaturesMissingException(val missing: Set<PublicKey>, val descriptions: List<String>, override val id: SecureHash)
         : NamedByHash, SignatureException(missingSignatureMsg(missing, descriptions, id)), CordaThrowable by CordaException(missingSignatureMsg(missing, descriptions, id))
 

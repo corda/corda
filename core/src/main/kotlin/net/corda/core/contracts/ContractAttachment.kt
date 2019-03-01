@@ -14,7 +14,6 @@ import java.security.PublicKey
  * @property additionalContracts Additional contract names contained within the JAR.
  */
 @KeepForDJVM
-@CordaSerializable
 class ContractAttachment private constructor(
         val attachment: Attachment,
         val contract: ContractClassName,
