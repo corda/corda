@@ -12,10 +12,10 @@ import java.nio.file.Path
 import java.security.KeyStore
 import kotlin.test.assertTrue
 
-internal fun ensurePrivateKeyIsNotInKeyStoreFile(alias: String, nodeKeyStore: Path) {
+internal fun ensurePrivateKeyIsNotInKeyStoreFile(alias: String, nodeKeyStore: Path, keyStorePassword: String = DEV_CA_KEY_STORE_PASS) {
     val keyStore = KeyStore.getInstance(KEYSTORE_TYPE)
-    keyStore.load(nodeKeyStore.inputStream(), DEV_CA_KEY_STORE_PASS.toCharArray())
-    val privateKey = keyStore.getKey(alias, DEV_CA_KEY_STORE_PASS.toCharArray())
+    keyStore.load(nodeKeyStore.inputStream(), keyStorePassword.toCharArray())
+    val privateKey = keyStore.getKey(alias, keyStorePassword.toCharArray())
     Assertions.assertThat(privateKey is AliasPrivateKey)
     val aliasPrivateKey = PKCS8Key.parseKey(DerValue(AliasPrivateKey(alias).encoded))
     assertTrue(aliasPrivateKey.encoded.contentEquals(privateKey.encoded))
