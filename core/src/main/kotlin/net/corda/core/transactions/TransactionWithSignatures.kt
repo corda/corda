@@ -88,9 +88,7 @@ interface TransactionWithSignatures : NamedByHash {
     @JvmDefault
     @Throws(InvalidKeyException::class, SignatureException::class)
     fun checkSignaturesAreValid() {
-        for (sig in sigs) {
-            sig.verify(id)
-        }
+        sigs.parallelStream().filter{sig -> sig.verify(id)}
     }
 
     /**
