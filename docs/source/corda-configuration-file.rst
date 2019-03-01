@@ -219,6 +219,64 @@ emailAddress
 enterpriseConfiguration
   Allows fine-grained controls of various features only available in the enterprise version of Corda.
 
+.. _enterprise_config_mutual_exclusion:
+
+  mutualExclusion
+    Enable the protective heartbeat logic so that only one node instance is ever running (hot-cold deployment).
+
+    on
+      Enables the logic. Values can be either true or false.
+
+      *Default:* false
+
+    updateInterval
+      Interval in milliseconds used by the node to update the lock on the database.
+
+      *Default:* not defined
+
+    waitInterval
+      Interval in milliseconds used by the node to try and acquire the lock on the database.
+
+      *Default:* not defined
+
+  externalBridge
+    Enables P2P communication to pass through the Corda Firewall.
+
+    *Default:* false
+
+  messagingServerSslConfiguration
+
+    sslKeystore
+      The path to the KeyStore file to use in Artemis connections.
+
+      *Default:* not defined
+
+    keyStorePassword
+      The password for the TLS KeyStore.
+
+      *Default:* not defined
+
+    trustStoreFile
+      The path to the TrustStore file to use in Artemis connections.
+
+      *Default:* not defined
+
+    trustStorePassword
+      The password for TLS TrustStore.
+
+      *Default:* not defined
+
+  messagingServerConnectionConfiguration
+    Mode used when setting up the Artemis client. Supported modes are: DEFAULT (5 initial connect attempts, 5 reconnect attempts in case of failure, starting retry interval of 5 seconds with an exponential back-off multiplier of 1.5 for up to 3 minutes retry interval),
+    FAIL_FAST (no initial attempts, no reconnect attempts), CONTINUOUS_RETRY (infinite initial and reconnect attempts, starting retry interval of 5 seconds with an exponential back-of multiplier of 1.5 up for up to 5 minutes retry interval).
+
+    *Default:* DEFAULT
+
+  messagingServerBackupAddresses
+    List of Artemis Server back-up addresses. If any back-ups are specified, the client will be configured to automatically failover to the first server it can connect to.
+
+    *Default:* empty list
+
 .. _enterprise_config_tuning:
 
   tuning
