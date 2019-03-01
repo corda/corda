@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
-                                     val maximumMessageSize: Int,
                                      val auditService: FirewallAuditService,
                                      haService: BridgeMasterService,
                                      private val filterService: IncomingMessageFilterService,
@@ -57,7 +56,7 @@ class TunnelingBridgeReceiverService(val conf: FirewallConfiguration,
                     override val keyStore = controlLinkKeyStore
                     override val trustStore = controlLinkTrustStore
                     override val crlCheckSoftFail: Boolean = conf.crlCheckSoftFail
-                    override val maxMessageSize: Int = maximumMessageSize
+                    override val maxMessageSize: Int = Int.MAX_VALUE
                     override val trace: Boolean = conf.enableAMQPPacketTrace
                     override val enableSNI: Boolean = conf.bridgeInnerConfig!!.enableSNI
                     override val healthCheckPhrase = conf.healthCheckPhrase

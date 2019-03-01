@@ -46,7 +46,7 @@ class BridgeSupervisorServiceImpl(conf: FirewallConfiguration,
             InProcessBridgeReceiverService(conf, auditService, haService, inProcessAMQPListenerService!!, filterService)
         } else {
             require(inProcessAMQPListenerService == null) { "Should not have an in process instance of the AMQPListenerService" }
-            TunnelingBridgeReceiverService(conf, maxMessageSize, auditService, haService, filterService)
+            TunnelingBridgeReceiverService(conf, auditService, haService, filterService)
         }
         statusFollower = ServiceStateCombiner(listOf(haService, senderService, receiverService, filterService))
         activeChange.subscribe({
