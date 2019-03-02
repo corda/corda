@@ -218,7 +218,7 @@ class EnumEvolveTests {
     }
 
     // The origional version of the enum, what we'll be eventually deserialising into
-    //  enum class MultiOperations { A, B, C }
+    // enum class MultiOperations { A, B, C }
     //
     // First alteration, add D
     // @CordaSerializationTransformEnumDefault(old = "C", new = "D")
@@ -279,7 +279,7 @@ class EnumEvolveTests {
         data class C(val e: MultiOperations)
 
         // Uncomment to re-generate test files, needs to be done in three stages
-         val so = SerializationOutput(sf)
+        // val so = SerializationOutput(sf)
         // First change
         // File(URI("$localPath/$resource.1.A")).writeBytes(so.serialize(C(MultiOperations.A)).bytes)
         // File(URI("$localPath/$resource.1.B")).writeBytes(so.serialize(C(MultiOperations.B)).bytes)
