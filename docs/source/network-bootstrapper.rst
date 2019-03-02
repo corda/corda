@@ -26,7 +26,7 @@ Bootstrapping a test network
 
 The Corda Network Bootstrapper can be downloaded from `here <https://corda.net/resources>`_.
 
-Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
+Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. "devMode" must be set to true. Then run the
 following command:
 
 ``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
