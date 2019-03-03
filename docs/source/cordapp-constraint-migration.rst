@@ -20,8 +20,21 @@ Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, y
 
    If you have existing **CZ whitelisted** constrained states see :ref:`Migrating CZ whitelisted constraints<cz_whitelisted_constraint_migration>`.
 
-   If you have existing **always accept** constrained states these are automatically consumable as they offer no security and should only
+   If you have existing **always accept** constrained states these are not consumable nor evolvable as they offer no security and should only
    be used in test environments.
+
+* What type of contract states does my CorDapp use?
+
+   **Linear states** typically evolve over an extended period of time (defined by the lifecycle of the associated business use case), and
+   thus are prime candidates for constraints migration.
+
+   **Fungible states** are created by an issuer and transferred around a Corda network until explicitly exited (by the same issuer).
+   They do not evolve as linear states, but are transferred between participants on a network. Their consumption may produce additional new
+   output states to represent adjustments to the original state (e.g. change when spending cash). For the purposes of constraints migration,
+   it is desirable that any new output states are produced using the new Corda 4 signature constraint types.
+
+   Where you have long transaction chains of fungible states, it may be advisable to send them back to the issuer for re-issuance (this is
+   called "chain snipping" and has performance advantages as well as simplifying constraints type migration).
 
 * Should I use the **implicit** or **explicit** upgrade path?
 
@@ -29,6 +42,14 @@ Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, y
 
    **Implicit** upgrades allow pre-authorising multiple implementations of the contract ahead of time.
    They do not require additional coding and do not incur a complex choreographed operational upgrade process.
+
+.. warning:: the steps outlined in this page assume you are using the same CorDapp Contract (eg. same state definition, commands and verification code) and
+   wish to use that CorDapp to leverage the upgradeability benefits of Corda 4 signature constraints. If you are looking to upgrade an existing
+   Contract CorDapp please read :ref:`Contract and state versioning<contract_upgrading_ref>` and :doc:`cordapp-upgradeability` to understand your options.
+
+Please also remember that *states are always consumable if the version of the CorDapp that issued (created) them is installed*.
+In the simplest of scenarios it may be easier to re-issue existing hash or CZ whitelisted states (eg. exit them from the ledger using
+the original unsigned CorDapp and re-issuing them using the new signed CorDapp).
 
 .. _hash_constraint_migration:
 
@@ -40,9 +61,10 @@ Hash constraints migration
 Corda 4.0
 ~~~~~~~~~
 
-Corda 4.0 requires some additional steps to consume pre-existing on-ledger **hash** constrained states:
+Corda 4.0 requires some additional steps to consume and evolve pre-existing on-ledger **hash** constrained states:
 
-1. The Corda Node must be started using relaxed hash constraint checking mode as described in :ref:`relax_hash_constraints_checking_ref`.
+1. All Corda Nodes in the same CZ or business network that may encounter a transaction chain with a hash constrained state must be started using
+   relaxed hash constraint checking mode as described in :ref:`relax_hash_constraints_checking_ref`.
 
 2. CorDapp flows that build transactions using pre-existing *hash-constrained* states must explicitly set output states to use *signature constraints*
    and specify the related public key(s) used in signing the associated CorDapp Contract JAR:
@@ -84,7 +106,8 @@ Later releases
 ~~~~~~~~~~~~~~
 
 The next version of Corda will provide automatic migration of *hash constrained* states. This means that signed CorDapps running on a Corda 4.x node will
-automatically consume any pre-existing on-ledger *hash-constrained* states (and generate *signature-constrained* outputs).
+automatically consume any pre-existing on-ledger *hash-constrained* states (and generate *signature-constrained* outputs) when the system property
+to break constraints is set.
 
 .. _cz_whitelisted_constraint_migration:
 
@@ -96,7 +119,7 @@ CZ whitelisted constraints migration
 Corda 4.0
 ~~~~~~~~~
 
-Corda 4.0 requires some additional steps to consume pre-existing on-ledger **CZ whitelisted** constrained states:
+Corda 4.0 requires some additional steps to consume and evolve pre-existing on-ledger **CZ whitelisted** constrained states:
 
 1. As the original developer of the CorDapp, the first step is to sign the latest version of the JAR that was released (see :doc:`cordapp-build-systems`).
    The key used for signing will be used to sign all subsequent releases, so it should be stored appropriately. The JAR can be signed by multiple keys owned
@@ -104,9 +127,8 @@ Corda 4.0 requires some additional steps to consume pre-existing on-ledger **CZ 
    Use `JAR signing and verification tool <https://docs.oracle.com/javase/tutorial/deployment/jar/verify.html>`_ to sign the existing JAR.
    The signing capability of :ref:`corda-gradle-plugins <cordapp_build_system_signing_cordapp_jar_ref>` cannot be used in this context as it signs the JAR while building it from source.
 
-2. Both the original pre-Corda 4 CorDapp JAR (generating *CZ whitelisted* constrained states) and the new Corda 4 signed CorDapp JAR must be
-   registered with the CZ network operator (as whitelisted in the network parameters which are distributed to all nodes in that CZ).
-   The CZ network operator should check that the JAR is signed and not allow any more versions of it to be whitelisted in the future.
+2. The new Corda 4 signed CorDapp JAR must be registered with the CZ network operator (as whitelisted in the network parameters which are distributed
+   to all nodes in that CZ). The CZ network operator should check that the JAR is signed and not allow any more versions of it to be whitelisted in the future.
    From now on the development organisation that signed the JAR is responsible for signing new versions.
 
    The process of CZ network CorDapp whitelisting depends on how the Corda network is configured:
