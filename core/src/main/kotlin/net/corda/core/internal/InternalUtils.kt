@@ -524,6 +524,7 @@ fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronized
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
  * Size is very cheap as it doesn't call [transform].
+ * Used internally by [net.corda.core.transactions.TraversableTransaction].
  */
 class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
     private val partialResolvedList = MutableList<U?>(originalList.size) { null }
@@ -531,6 +532,15 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
     override fun get(index: Int): U {
         return partialResolvedList[index]
                 ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
+    }
+    fun eager(onError: (TransactionDeserialisationException, Int) -> U? = { ex, _ -> throw ex }) {
+        for (i in 0 until size) {
+            try {
+                get(i)
+            } catch (ex: TransactionDeserialisationException) {
+                partialResolvedList[i] = onError(ex, i)
+            }
+        }
     }
 }
 

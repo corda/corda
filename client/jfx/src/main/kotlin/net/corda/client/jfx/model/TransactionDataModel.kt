@@ -5,11 +5,24 @@ import net.corda.client.jfx.utils.distinctBy
 import net.corda.client.jfx.utils.lift
 import net.corda.client.jfx.utils.map
 import net.corda.client.jfx.utils.recordInSequence
-import net.corda.core.contracts.ContractState
-import net.corda.core.contracts.StateAndRef
-import net.corda.core.contracts.StateRef
+import net.corda.core.contracts.*
+import net.corda.core.crypto.entropyToKeyPair
+import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
+import net.corda.core.internal.LazyMappedList
+import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
+import java.math.BigInteger
+
+private class Unknown : Contract {
+    override fun verify(tx: LedgerTransaction) = throw UnsupportedOperationException()
+
+    object State : ContractState {
+        override val participants: List<AbstractParty> = emptyList()
+    }
+}
 
 /**
  * [PartiallyResolvedTransaction] holds a [SignedTransaction] that has zero or more inputs resolved. The intent is
@@ -41,10 +54,22 @@ data class PartiallyResolvedTransaction(
     }
 
     companion object {
+        private val UNKNOWN_PARTY = Party(CordaX500Name("Unknown Party", "Nowhere", "ZZ"), entropyToKeyPair(BigInteger.ZERO).public)
+        private val UNKNOWN_TRANSACTION_STATE: TransactionState<ContractState> = TransactionState(Unknown.State, Unknown::class.java.name, UNKNOWN_PARTY)
+
         fun fromSignedTransaction(
                 transaction: SignedTransaction,
                 inputTransactions: Map<StateRef, SignedTransaction?>
         ): PartiallyResolvedTransaction {
+            /**
+             * Forcibly deserialize our transaction outputs up-front.
+             * Replace any [TransactionState] objects that fail to
+             * deserialize with [UNKNOWN_TRANSACTION_STATE].
+             */
+            val txOutputs = transaction.coreTransaction.outputs
+            if (txOutputs is LazyMappedList<*, TransactionState<ContractState>>) {
+                txOutputs.eager { _, _ -> UNKNOWN_TRANSACTION_STATE }
+            }
             return PartiallyResolvedTransaction(
                     transaction = transaction,
                     inputs = transaction.inputs.map { stateRef ->
