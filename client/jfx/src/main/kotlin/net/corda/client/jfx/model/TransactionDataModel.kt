@@ -14,7 +14,7 @@ import net.corda.core.internal.LazyMappedList
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
-import java.math.BigInteger
+import java.math.BigInteger.ZERO
 
 private class Unknown : Contract {
     override fun verify(tx: LedgerTransaction) = throw UnsupportedOperationException()
@@ -54,7 +54,7 @@ data class PartiallyResolvedTransaction(
     }
 
     companion object {
-        private val UNKNOWN_PARTY = Party(CordaX500Name("Unknown Party", "Nowhere", "ZZ"), entropyToKeyPair(BigInteger.ZERO).public)
+        private val UNKNOWN_PARTY = Party(CordaX500Name("Unknown Party", "Nowhere", "ZZ"), entropyToKeyPair(ZERO).public)
         private val UNKNOWN_TRANSACTION_STATE: TransactionState<ContractState> = TransactionState(Unknown.State, Unknown::class.java.name, UNKNOWN_PARTY)
 
         fun fromSignedTransaction(
