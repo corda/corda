@@ -146,7 +146,7 @@ Hash constrained states in private networks
 Where private networks started life using CorDapps with hash constrained states, we have introduced a mechanism to relax the checking of
 these hash constrained states when upgrading to signed CorDapps using signature constraints.
 
-The java system property ``-Dnet.corda.node.disableHashConstraints="true"`` may be set to relax the hash constraint checking behaviour.
+The Java system property ``-Dnet.corda.node.disableHashConstraints="true"`` may be set to relax the hash constraint checking behaviour.
 
 This mode should only be used upon "out of band" agreement by all participants in a network.
 
