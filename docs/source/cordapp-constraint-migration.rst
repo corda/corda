@@ -43,12 +43,12 @@ Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, y
    **Implicit** upgrades allow pre-authorising multiple implementations of the contract ahead of time.
    They do not require additional coding and do not incur a complex choreographed operational upgrade process.
 
-.. warning:: the steps outlined in this page assume you are using the same CorDapp Contract (eg. same state definition, commands and verification code) and
-   wish to use that CorDapp to leverage the upgradeability benefits of Corda 4 signature constraints. If you are looking to upgrade an existing
+.. warning:: The steps outlined in this page assume you are using the same CorDapp Contract (eg. same state definition, commands and verification code) and
+   wish to use that CorDapp to leverage the upgradeability benefits of Corda 4 signature constraints. If you are looking to upgrade code within an existing
    Contract CorDapp please read :ref:`Contract and state versioning<contract_upgrading_ref>` and :doc:`cordapp-upgradeability` to understand your options.
 
 Please also remember that *states are always consumable if the version of the CorDapp that issued (created) them is installed*.
-In the simplest of scenarios it may be easier to re-issue existing hash or CZ whitelisted states (eg. exit them from the ledger using
+In the simplest of scenarios it may be easier to re-issue existing hash or CZ whitelist constrained states (eg. exit them from the ledger using
 the original unsigned CorDapp and re-issuing them using the new signed CorDapp).
 
 .. _hash_constraint_migration:
