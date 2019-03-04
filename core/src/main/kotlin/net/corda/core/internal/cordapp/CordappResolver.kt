@@ -31,7 +31,7 @@ object CordappResolver {
      * This could happen when trying to run different versions of the same CorDapp on the same node.
      */
     @Synchronized
-    fun register(cordapp: Cordapp) {
+    fun register(cordapp: Cordapp, classLoader: ClassLoader) {
         val existingClasses = cordappClasses.keys
         val classesToRegister = cordapp.cordappClasses.toSet()
         val notAlreadyRegisteredClasses = classesToRegister - existingClasses
@@ -41,7 +41,7 @@ object CordappResolver {
 
         for ((className, registeredCordapps) in alreadyRegistered) {
             if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
-            if (duplicateRegistrationFilter.shouldNotify(className, cordapp::class.java.classLoader)) {
+            if (duplicateRegistrationFilter.shouldNotify(className, classLoader)) {
                 logger.warn("More than one CorDapp registered for $className.")
             }
             cordappClasses[className] = registeredCordapps + cordapp
@@ -97,6 +97,7 @@ internal class DuplicateRegistrationFilter(private val ignoreList: Set<String>) 
         alreadySeen += className
 
         if (className.canBeIgnored) return false
+        println("Checking status of $className with $classLoader")
         return className.isContractClass(classLoader)
     }
 
