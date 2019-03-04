@@ -1,9 +1,7 @@
 package net.corda.serialization.internal.amqp
 
 import net.corda.core.internal.toPath
-import net.corda.core.serialization.CordaSerializationTransformEnumDefault
-import net.corda.core.serialization.CordaSerializationTransformEnumDefaults
-import net.corda.core.serialization.SerializedBytes
+import net.corda.core.serialization.*
 import net.corda.serialization.internal.amqp.testutils.deserialize
 import net.corda.serialization.internal.amqp.testutils.serialize
 import net.corda.serialization.internal.amqp.testutils.testDefaultFactory
@@ -248,7 +246,7 @@ class EnumEvolveTests {
     //         CordaSerializationTransformEnumDefault(old = "D", new = "E"),
     //         CordaSerializationTransformEnumDefault(old = "C", new = "D")
     // )
-    // @CordaSerializationTransformRenames (
+    // @CordaSerializationTransformRenames(
     //         CordaSerializationTransformRename(to = "CAT", from = "C"),
     //         CordaSerializationTransformRename(to = "BOB", from = "E")
     // )
@@ -272,8 +270,7 @@ class EnumEvolveTests {
     //
     // Finally, the original version of teh class that we're going to be testing with
     enum class MultiOperations { A, B, C }
-
-    @Ignore("https://r3-cev.atlassian.net/browse/CORDA-1497")
+    
     @Test
     fun multiOperations() {
         val resource = "${javaClass.simpleName}.${testName()}"
