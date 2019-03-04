@@ -330,9 +330,9 @@ Changes between version 3 and version 4 of Corda
 In Corda v3 transactions were verified inside the System Classloader that contained all the installed CorDapps.
 This was a temporary simplification and we explained above why it could only be short-lived.
 
-If we consider the example from above with the `Bonds` contract that depends on finance, the bonds contract developer could have just released
-the `Bonds` specific code (without bundling in the dependency on finance or attaching it to the transaction ) and rely on the fact that
-finance would be on the classpath during verification.
+If we consider the example from above with the `Apples` contract that depends on `Fruit`, the `Apples` CorDapp developer could have just released
+the `Apples` specific code (without bundling in the dependency on `Fruit` or attaching it to the transaction ) and rely on the fact that
+`Fruit` would be on the classpath during verification.
 
 This means that in Corda 3 nodes could have formed `valid` transactions that were not entirely self-contained. In Corda 4, because we
 moved transaction verification inside the `AttachmentsClassloader` these transactions would fail with `ClassNotFound` exceptions.
