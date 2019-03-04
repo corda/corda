@@ -1,9 +1,7 @@
 package com.r3.ha.utilities
 
 import net.corda.cliutils.*
-import net.corda.core.internal.copyTo
-import net.corda.core.internal.deleteIfExists
-import net.corda.core.internal.div
+import net.corda.core.internal.*
 import net.corda.core.utilities.NetworkHostAndPort
 import org.w3c.dom.Document
 import picocli.CommandLine
@@ -77,6 +75,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
 
         // Create Artemis instance
         if (createInstance) {
+            println("Installing new Artemis instance using distribution : $dist ...")
             val args = "create corda_p2p_broker --allow-anonymous --user $ARTEMIS_DEFAULT_USER --password $ARTEMIS_DEFAULT_USER_PASS -- $workingDir"
             val process = if (CordaSystemUtils.isOsWindows()) {
                 ProcessBuilder("cmd.exe", "/c", "${dist!! / "bin/artemis.cmd"} $args").start()
@@ -95,23 +94,27 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
 
         // Generate artemis-users.properties
         "artemis-users.properties".let {
+            println("Generating 'artemis-users.properties'...")
             val templateResolved = javaClass.classLoader.getResourceAsStream(it).reader().readText().replace(USER_ID, userX500Name)
             templateResolved.toByteArray().inputStream().copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
         // Generate artemis-roles.properties
         "artemis-roles.properties".let {
+            println("Generating 'artemis-roles.properties'...")
             javaClass.classLoader.getResourceAsStream(it).copyTo(workingDir / it, StandardCopyOption.REPLACE_EXISTING)
         }
 
         generateBrokerXml()
 
+        println("Artemis configuration completed.")
         return ExitCodes.SUCCESS
     }
 
     private fun validateConditionalOptions() {
         if (createInstance) {
             require(dist != null) { printError("Attempting to create a new Artemis instance. Distribution path missing.") }
+            require(dist!!.isDirectory() && (dist!!/"bin"/"artemis").exists()) { "Invalid artemis distribution directory path $dist, please extract the content prior running the utility if the distribution is in a compressed file." }
         }
 
         if (mode.isHa) {
@@ -120,6 +123,7 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
     }
 
     private fun generateBrokerXml() {
+        println("Generating 'broker.xml'...")
         val file = (workingDir / "broker.xml").toFile()
 
         val journalBufferTimeoutValue = if (file.exists()) {
@@ -147,6 +151,10 @@ class ArtemisConfigurationTool : CliWrapperBase("configure-artemis", "Generate a
             addHAPolicyConfig(doc)
             addConnectorConfig(doc)
             addClusterConnectorConfig(doc)
+        }else{
+            doc.getElementsByTagName("connectors").item(0).let {
+                it.parentNode.removeChild(it)
+            }
         }
 
         doc.normalizeDocument()
