@@ -97,10 +97,9 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
                 // Set the Signature constraint on the new state to migrate away from the hash constraint.
                 .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
 
-3. Both the original pre-Corda 4 CorDapp JAR (generating *hash-constrained* states) and the new Corda 4 signed CorDapp JAR must be present in the
-   Corda nodes /cordapps directory or imported manually via RPC using the ``uploadAttachment`` command (see
-   :ref:`CorDapp Contract Attachments <cordapp_contract_attachments_ref>` for further information).
-
+3. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
+   Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
+   nodes attachments store) to ensure the lookup code in step 2 retrieves the correct signed contract CorDapp JAR.
 
 Later releases
 ~~~~~~~~~~~~~~
@@ -172,7 +171,9 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
                 // Set the Signature constraint on the new state to migrate away from the WhitelistConstraint.
                 .addOutputState(outputState, myContract, new SignatureAttachmentConstraint(ownersKey))
 
-4. As a node operator you need to add the new signed version of the contracts CorDapp to the "cordapps" folder together with the latest version of the flows jar.
+4. As a node operator you need to add the new signed version of the contracts CorDapp to the ``/cordapps`` folder together with the latest version of the flows jar.
+   Please also ensure that the original unsigned contracts CorDapp is removed from the ``/cordapps`` folder (this will already be present in the
+   nodes attachments store) to ensure the lookup code in step 3 retrieves the correct signed contract CorDapp JAR.
 
 Later releases
 ~~~~~~~~~~~~~~
