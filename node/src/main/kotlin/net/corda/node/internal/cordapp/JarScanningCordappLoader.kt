@@ -214,12 +214,14 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
     }
 
     private fun findNotaryService(scanResult: RestrictedScanResult): Class<out NotaryService>? {
-        // Note: we search for implementations of both NotaryService and TrustedAuthorityNotaryService as
+        // Note: we search for implementations of both NotaryService and SinglePartyNotaryService as
         // the scanner won't find subclasses deeper down the hierarchy if any intermediate class is not
         // present in the CorDapp.
         val result = scanResult.getClassesWithSuperclass(NotaryService::class) +
                 scanResult.getClassesWithSuperclass(SinglePartyNotaryService::class)
-        logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
+        if(!result.isEmpty()) {
+            logger.info("Found notary service CorDapp implementations: " + result.joinToString(", "))
+        }
         return result.firstOrNull()
     }
 

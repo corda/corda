@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.*
 import java.io.NotSerializableException
 import java.lang.ClassCastException
@@ -14,7 +15,7 @@ interface TypeLoader {
      *
      * @param remoteTypeInformation The type information for the remote types.
      */
-    fun load(remoteTypeInformation: Collection<RemoteTypeInformation>): Map<TypeIdentifier, Type>
+    fun load(remoteTypeInformation: Collection<RemoteTypeInformation>, context: SerializationContext): Map<TypeIdentifier, Type>
 }
 
 /**
@@ -25,7 +26,10 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
 
     val cache = DefaultCacheProvider.createCache<TypeIdentifier, Type>()
 
-    override fun load(remoteTypeInformation: Collection<RemoteTypeInformation>): Map<TypeIdentifier, Type> {
+    override fun load(
+            remoteTypeInformation: Collection<RemoteTypeInformation>,
+            context: SerializationContext
+    ): Map<TypeIdentifier, Type> {
         val remoteInformationByIdentifier = remoteTypeInformation.associateBy { it.typeIdentifier }
 
         // Grab all the types we can from the cache, or the classloader.
@@ -33,6 +37,9 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
+                if (context.carpenterDisabled) {
+                    throw e
+                }
                 null
             }
         }.toMap()

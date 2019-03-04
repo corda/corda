@@ -2,6 +2,7 @@ package net.corda.serialization.internal.carpenter
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import org.junit.Test
 import java.io.NotSerializableException
 import java.util.*
@@ -26,7 +27,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val (_, envelope) = B(A(10), 20).roundTrip()
 
         // We load an unknown class, B_mangled, which includes a reference to a known class, A.
-        assertCanLoadAll(envelope.getMangled<B>())
+        assertCanLoadAll(testSerializationContext, envelope.getMangled<B>())
     }
 
     @Test
@@ -41,7 +42,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         // We load an unknown class, B_mangled, which includes a reference to an unknown class, A_mangled.
         // For this to work, we must include A_mangled in our set of classes to load.
-        assertCanLoadAll(envelope.getMangled<B>().mangle<A>(), envelope.getMangled<A>())
+        assertCanLoadAll(testSerializationContext,
+                envelope.getMangled<B>().mangle<A>(), envelope.getMangled<A>())
     }
 
     @Test
@@ -56,7 +58,8 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         // We load an unknown class, B_mangled, which includes a reference to an unknown class, A_mangled.
         // This will fail, because A_mangled is not included in our set of classes to load.
-        assertFailsWith<NotSerializableException> { assertCanLoadAll(envelope.getMangled<B>().mangle<A>()) }
+        assertFailsWith<NotSerializableException> { assertCanLoadAll(testSerializationContext,
+                envelope.getMangled<B>().mangle<A>()) }
     }
 
     // See https://github.com/corda/corda/issues/4107
@@ -71,7 +74,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val uuid = UUID.randomUUID()
         val(_, envelope) = IOUStateData(10, uuid, "new value").roundTrip()
-        val recarpented = envelope.getMangled<IOUStateData>().load()
+        val recarpented = envelope.getMangled<IOUStateData>().load(testSerializationContext)
         val instance = recarpented.new(null, uuid, 10)
         assertEquals(uuid, instance.get("ref"))
     }
@@ -90,7 +93,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
                 "java.util.Map<java.lang.String, ${mangledC.typeIdentifier.prettyPrint(false)}>",
                 mangledMap.prettyPrint(false))
 
-        assertCanLoadAll(infoForD, mangledMap, mangledC)
+        assertCanLoadAll(testSerializationContext, infoForD, mangledMap, mangledC)
     }
 
     @Test
@@ -104,6 +107,6 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         val mangledNotAMap = envelope.typeInformationFor<NotAMap<String, C>>().mangle<C>()
         val mangledC = envelope.getMangled<C>()
 
-        assertCanLoadAll(infoForD, mangledNotAMap, mangledC)
+        assertCanLoadAll(testSerializationContext, infoForD, mangledNotAMap, mangledC)
     }
 }

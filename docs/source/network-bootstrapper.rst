@@ -26,7 +26,7 @@ Bootstrapping a test network
 
 The Corda Network Bootstrapper can be downloaded from `here <https://corda.net/resources>`_.
 
-Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. Then run the
+Create a directory containing a node config file, ending in "_node.conf", for each node you want to create. "devMode" must be set to true. Then run the
 following command:
 
 ``java -jar network-bootstrapper-VERSION.jar --dir <nodes-root-dir>``
@@ -91,7 +91,8 @@ By default the Bootstrapper will whitelist all the contracts found in the unsign
 Whitelisted contracts are checked by `Zone constraints`, while contract classes from signed JARs will be checked by `Signature constraints`.
 To prevent certain contracts from unsigned JARs from being whitelisted, add their fully qualified class name in the ``exclude_whitelist.txt``.
 These will instead use the more restrictive ``HashAttachmentConstraint``.
-Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` files.
+To add certain contracts from signed JARs to whitelist, add their fully qualified class name in the ``include_whitelist.txt``.
+Refer to :doc:`api-contract-constraints` to understand the implication of different constraint types before adding ``exclude_whitelist.txt`` or ``include_whitelist.txt`` files.
 
 For example:
 

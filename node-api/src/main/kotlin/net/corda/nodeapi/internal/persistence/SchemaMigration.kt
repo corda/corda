@@ -45,6 +45,7 @@ class SchemaMigration(
         const val NODE_X500_NAME = "liquibase.nodeName"
         const val DRY_RUN = "liquibase.dryRun"
         val loader = ThreadLocal<CordappLoader>()
+        private val mutex = ReentrantLock()
     }
 
     init {
@@ -137,7 +138,10 @@ class SchemaMigration(
             }
             val customResourceAccessor = CustomResourceAccessor(dynamicInclude, changelogList, classLoader)
 
-            val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
+            // current version of Liquibase appears to be non-threadsafe
+            // this is apparent when multiple in-process nodes are all running migrations simultaneously
+            mutex.withLock {
+                val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
             val schemaName: String? = databaseConfig.schema
             if (!schemaName.isNullOrBlank()) {

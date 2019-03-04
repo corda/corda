@@ -10,6 +10,7 @@ import net.corda.core.serialization.internal.effectiveSerializationEnv
 import net.corda.core.utilities.ByteSequence
 import net.corda.core.utilities.OpaqueBytes
 import net.corda.core.utilities.sequence
+import java.io.NotSerializableException
 import java.sql.Blob
 
 data class ObjectWithCompatibleContext<out T : Any>(val obj: T, val context: SerializationContext)
@@ -150,7 +151,15 @@ interface SerializationContext {
      */
     val lenientCarpenterEnabled: Boolean
     /**
-     * If true the serialization evolver will fail if the binary to be deserialized contains more fields then the current object from the classpath.
+     * If true, deserialization calls using this context will not fallback to using the Class Carpenter to attempt
+     * to construct classes present in the schema but not on the current classpath.
+     *
+     * The default is false.
+     */
+    val carpenterDisabled: Boolean
+    /**
+     * If true the serialization evolver will fail if the binary to be deserialized contains more fields then the current object from
+     * the classpath.
      *
      * The default is false.
      */
@@ -179,6 +188,12 @@ interface SerializationContext {
      * @see lenientCarpenterEnabled
      */
     fun withLenientCarpenter(): SerializationContext
+
+    /**
+     * Returns a copy of the current context with carpentry of unknown classes disabled. On encountering
+     * such a class during deserialization the Serialization framework will throw a [NotSerializableException].
+     */
+    fun withoutCarpenter() : SerializationContext
 
     /**
      * Return a new context based on this one but with a strict evolution.

@@ -56,8 +56,8 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @property contractClass The fully qualified class name of the failing contract.
      */
     @KeepForDJVM
-    class ContractRejection(txId: SecureHash, val contractClass: String, cause: Throwable) : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, contract: $contractClass", cause) {
-        constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause)
+    class ContractRejection internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String) : TransactionVerificationException(txId, "Contract verification failed: $message, contract: $contractClass", cause) {
+        internal constructor(txId: SecureHash, contract: Contract, cause: Throwable) : this(txId, contract.javaClass.name, cause, cause.message ?: "")
     }
 
     /**
@@ -120,8 +120,10 @@ abstract class TransactionVerificationException(val txId: SecureHash, message: S
      * @property contractClass The fully qualified class name of the failing contract.
      */
     @KeepForDJVM
-    class ContractCreationError(txId: SecureHash, val contractClass: String, cause: Throwable)
-        : TransactionVerificationException(txId, "Contract verification failed: ${cause.message}, could not create contract class: $contractClass", cause)
+    class ContractCreationError internal constructor(txId: SecureHash, val contractClass: String, cause: Throwable?, message: String)
+        : TransactionVerificationException(txId, "Contract verification failed: $message, could not create contract class: $contractClass", cause) {
+        internal constructor(txId: SecureHash, contractClass: String, cause: Throwable) : this(txId, contractClass, cause, cause.message ?: "")
+    }
 
     /**
      * An output state has a notary that doesn't match the transaction's notary field. It must!
