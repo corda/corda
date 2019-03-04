@@ -2,6 +2,7 @@ package net.corda.serialization.internal.carpenter
 
 import com.google.common.reflect.TypeToken
 import net.corda.core.serialization.ClassWhitelist
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.serialization.SerializedBytes
 import net.corda.serialization.internal.amqp.*
 import net.corda.serialization.internal.amqp.testutils.deserializeAndReturnEnvelope
@@ -83,11 +84,11 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
         else -> this
     }
 
-    protected fun RemoteTypeInformation.load(): Class<*> =
-            typeLoader.load(listOf(this))[typeIdentifier]!!.asClass()
+    protected fun RemoteTypeInformation.load(context : SerializationContext): Class<*> =
+            typeLoader.load(listOf(this), context)[typeIdentifier]!!.asClass()
 
-    protected fun assertCanLoadAll(vararg types: RemoteTypeInformation) {
-        assertTrue(typeLoader.load(types.asList()).keys.containsAll(types.map { it.typeIdentifier }))
+    protected fun assertCanLoadAll(context: SerializationContext, vararg types: RemoteTypeInformation) {
+        assertTrue(typeLoader.load(types.asList(), context).keys.containsAll(types.map { it.typeIdentifier }))
     }
 
     protected fun Class<*>.new(vararg constructorParams: Any?) =

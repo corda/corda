@@ -26,6 +26,7 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
                                                               override val encoding: SerializationEncoding?,
                                                               override val encodingWhitelist: EncodingWhitelist = NullEncodingWhitelist,
                                                               override val lenientCarpenterEnabled: Boolean = false,
+                                                              override val carpenterDisabled: Boolean = false,
                                                               override val preventDataLoss: Boolean = false,
                                                               override val customSerializers: Set<SerializationCustomSerializer<*, *>> = emptySet()) : SerializationContext {
     /**
@@ -44,6 +45,8 @@ data class SerializationContextImpl @JvmOverloads constructor(override val prefe
     }
 
     override fun withLenientCarpenter(): SerializationContext = copy(lenientCarpenterEnabled = true)
+
+    override fun withoutCarpenter(): SerializationContext = copy(carpenterDisabled = true)
 
     override fun withPreventDataLoss(): SerializationContext = copy(preventDataLoss = true)
 
