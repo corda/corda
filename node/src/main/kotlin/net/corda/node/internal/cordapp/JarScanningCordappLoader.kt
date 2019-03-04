@@ -126,7 +126,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                         }
                     }
                 }
-        cordapps.forEach { CordappResolver.register(it) }
+        cordapps.forEach(CordappResolver::register)
         return cordapps
     }
 
