@@ -38,7 +38,7 @@ object CordappResolver {
         val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
 
         notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
-        
+
         for ((className, registeredCordapps) in alreadyRegistered) {
             if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
             if (duplicateRegistrationFilter.shouldNotify(className, cordapp::class.java.classLoader)) {
@@ -100,20 +100,7 @@ internal class DuplicateRegistrationFilter(private val ignoreList: Set<String>) 
         return className.isContractClass(classLoader)
     }
 
-    private val String.canBeIgnored: Boolean get() = packagePrefixes.any { it in ignoreList }
-    private val String.packagePrefixes: Iterable<String> get() = Iterable { object : Iterator<String> {
-
-        private var index: Int = 0
-        private val nextIndex: Int get() = this@packagePrefixes.indexOf(".", index)
-
-        override fun hasNext(): Boolean = nextIndex > 0
-
-        override fun next(): String {
-            val nextSeparatorPosition = nextIndex
-            index = nextSeparatorPosition + 1
-            return this@packagePrefixes.substring(0, nextSeparatorPosition)
-        }
-    } }
+    private val String.canBeIgnored: Boolean get() = ignoreList.any { startsWith(it) }
 
     private fun String.isContractClass(classLoader: ClassLoader): Boolean = Contract::class.java.isAssignableFrom(classLoader.loadClass(this))
 
