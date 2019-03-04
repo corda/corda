@@ -14,8 +14,6 @@ class CordappResolverTest {
         CordappResolver.clear()
     }
 
-    private val classLoader = ClassLoader.getSystemClassLoader()
-
     @Test
     fun `the correct cordapp resolver is used after calling withCordappInfo`() {
         val defaultTargetVersion = 222
@@ -24,7 +22,7 @@ class CordappResolverTest {
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = defaultTargetVersion
-        ), classLoader)
+        ))
         assertEquals(defaultTargetVersion, CordappResolver.currentTargetVersion)
 
         val expectedTargetVersion = 555
@@ -41,12 +39,12 @@ class CordappResolverTest {
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = 222
-        ), classLoader)
+        ))
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 2,
                 targetPlatformVersion = 456
-        ), classLoader)
+        ))
         assertThat(CordappResolver.currentCordapp).isNotNull()
     }
 
@@ -57,13 +55,13 @@ class CordappResolverTest {
                 minimumPlatformVersion = 3,
                 targetPlatformVersion = 222,
                 jarHash = SecureHash.randomSHA256()
-        ), classLoader)
+        ))
         CordappResolver.register(CordappImpl.TEST_INSTANCE.copy(
                 contractClassNames = listOf(javaClass.name),
                 minimumPlatformVersion = 2,
                 targetPlatformVersion = 456,
                 jarHash = SecureHash.randomSHA256()
-        ), classLoader)
+        ))
         assertThat(CordappResolver.currentCordapp).isNull()
     }
 }

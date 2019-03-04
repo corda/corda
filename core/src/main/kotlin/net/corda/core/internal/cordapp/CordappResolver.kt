@@ -1,9 +1,9 @@
 package net.corda.core.internal.cordapp
 
-import net.corda.core.contracts.Contract
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.warnOnce
 import net.corda.core.utilities.loggerFor
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,7 +14,6 @@ object CordappResolver {
 
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
-    private val duplicateRegistrationFilter = DuplicateRegistrationFilter(setOf("org.jolokia", "org.json"))
 
     // TODO Use the StackWalker API once we migrate to Java 9+
     private var cordappResolver: () -> Cordapp? = {
@@ -31,7 +30,8 @@ object CordappResolver {
      * This could happen when trying to run different versions of the same CorDapp on the same node.
      */
     @Synchronized
-    fun register(cordapp: Cordapp, classLoader: ClassLoader) {
+    fun register(cordapp: Cordapp) {
+        val contractClasses = cordapp.contractClassNames.toSet()
         val existingClasses = cordappClasses.keys
         val classesToRegister = cordapp.cordappClasses.toSet()
         val notAlreadyRegisteredClasses = classesToRegister - existingClasses
@@ -41,8 +41,8 @@ object CordappResolver {
 
         for ((className, registeredCordapps) in alreadyRegistered) {
             if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
-            if (duplicateRegistrationFilter.shouldNotify(className, classLoader)) {
-                logger.warn("More than one CorDapp registered for $className.")
+            if (className in contractClasses) {
+                logger.warnOnce("More than one CorDapp registered for contract $className.")
             }
             cordappClasses[className] = registeredCordapps + cordapp
         }
@@ -86,23 +86,4 @@ object CordappResolver {
     internal fun clear() {
         cordappClasses.clear()
     }
-}
-
-internal class DuplicateRegistrationFilter(private val ignoreList: Set<String>) {
-
-    private var alreadySeen: Set<String> = emptySet()
-
-    fun shouldNotify(className: String, classLoader: ClassLoader): Boolean {
-        if (className in alreadySeen) return false
-        alreadySeen += className
-
-        if (className.canBeIgnored) return false
-        println("Checking status of $className with $classLoader")
-        return className.isContractClass(classLoader)
-    }
-
-    private val String.canBeIgnored: Boolean get() = ignoreList.any { startsWith(it) }
-
-    private fun String.isContractClass(classLoader: ClassLoader): Boolean = Contract::class.java.isAssignableFrom(classLoader.loadClass(this))
-
 }
