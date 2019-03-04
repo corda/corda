@@ -10,7 +10,7 @@ import net.corda.core.crypto.entropyToKeyPair
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
-import net.corda.core.internal.LazyMappedList
+import net.corda.core.internal.eagerDeserialise
 import net.corda.core.transactions.LedgerTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.WireTransaction
@@ -66,10 +66,7 @@ data class PartiallyResolvedTransaction(
              * Replace any [TransactionState] objects that fail to
              * deserialize with [UNKNOWN_TRANSACTION_STATE].
              */
-            val txOutputs = transaction.coreTransaction.outputs
-            if (txOutputs is LazyMappedList<*, TransactionState<ContractState>>) {
-                txOutputs.eager { _, _ -> UNKNOWN_TRANSACTION_STATE }
-            }
+            transaction.coreTransaction.outputs.eagerDeserialise { _, _ -> UNKNOWN_TRANSACTION_STATE }
             return PartiallyResolvedTransaction(
                     transaction = transaction,
                     inputs = transaction.inputs.map { stateRef ->
