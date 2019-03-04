@@ -150,8 +150,8 @@ class ExternalBrokertests : IntegrationTest() {
             broker.stop()
             val defaultConfig = MessagingServerConnectionConfiguration.FAIL_FAST
             var reconnectTimeout = 0.0
-            (1..defaultConfig.reconnectAttempts).forEach {
-                reconnectTimeout += defaultConfig.retryInterval.toMillis() * defaultConfig.retryIntervalMultiplier.pow(it - 1)
+            (1..defaultConfig.reconnectAttempts(isHa = false)).forEach {
+                reconnectTimeout += defaultConfig.retryInterval().toMillis() * defaultConfig.retryIntervalMultiplier().pow(it - 1)
             }
 
             // Wait for the configured reconnection time to pass before attempting and RPC connection and check whether the node is stopped or running

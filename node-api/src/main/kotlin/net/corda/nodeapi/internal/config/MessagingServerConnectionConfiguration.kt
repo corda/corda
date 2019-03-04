@@ -24,65 +24,40 @@ import java.time.Duration
  * @param retryIntervalMultiplier Value used in the reconnection back-off process.
  * @param maxRetryInterval Determines the maximum duration between reconnection attempts. Useful when using infinite retries.
  */
-enum class MessagingServerConnectionConfiguration(
-        val failoverOnInitialAttempt: Boolean,
-        val initialConnectAttempts: Int,
-        val reconnectAttempts: Int,
-        val retryInterval: Duration,
-        val retryIntervalMultiplier: Double,
-        val maxRetryInterval: Duration) {
+enum class MessagingServerConnectionConfiguration {
 
-    DEFAULT(
-            failoverOnInitialAttempt = true,
-            initialConnectAttempts = 5,
-            reconnectAttempts = 5,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.5,
-            maxRetryInterval = 3.minutes
-    ),
+    DEFAULT {
+        override fun failoverOnInitialAttempt(isHa: Boolean) = true
+        override fun initialConnectAttempts(isHa: Boolean) = 5
+        override fun reconnectAttempts(isHa: Boolean) = 5
+        override fun retryInterval() = 5.seconds
+        override fun retryIntervalMultiplier() = 1.5
+        override fun maxRetryInterval(isHa: Boolean) = 3.minutes
+    },
 
-    FAIL_FAST(
-            failoverOnInitialAttempt = false,
-            initialConnectAttempts = 0,
-            reconnectAttempts = 0,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.5,
-            maxRetryInterval = 3.minutes
-    ),
+    FAIL_FAST {
+        override fun failoverOnInitialAttempt(isHa: Boolean) = isHa
+        override fun initialConnectAttempts(isHa: Boolean) = 0
+        // Client die too fast during failover/failback, need a few reconnect attempts to allow new master to become active
+        override fun reconnectAttempts(isHa: Boolean) = if (isHa) 3 else 0
+        override fun retryInterval() = 5.seconds
+        override fun retryIntervalMultiplier() = 1.5
+        override fun maxRetryInterval(isHa: Boolean) = 3.minutes
+    },
 
-    CONTINUOUS_RETRY(
-            failoverOnInitialAttempt = true,
-            initialConnectAttempts = 0,
-            reconnectAttempts = -1,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.5,
-            maxRetryInterval = 5.minutes
-    ),
+    CONTINUOUS_RETRY {
+        override fun failoverOnInitialAttempt(isHa: Boolean) = true
+        override fun initialConnectAttempts(isHa: Boolean) = if (isHa) 0 else -1
+        override fun reconnectAttempts(isHa: Boolean) = -1
+        override fun retryInterval() = 5.seconds
+        override fun retryIntervalMultiplier() = 1.5
+        override fun maxRetryInterval(isHa: Boolean) = if (isHa) 3.minutes else 5.minutes
+    };
 
-    FIVE_MINUTES(
-            failoverOnInitialAttempt = true,
-            initialConnectAttempts = 13,
-            reconnectAttempts = 13,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.2,
-            maxRetryInterval = 5.minutes
-    ),
-
-    TEN_MINUTES(
-            failoverOnInitialAttempt = true,
-            initialConnectAttempts = 17,
-            reconnectAttempts = 17,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.2,
-            maxRetryInterval = 5.minutes
-    ),
-
-    ONE_HOUR(
-            failoverOnInitialAttempt = true,
-            initialConnectAttempts = 17,
-            reconnectAttempts = 17,
-            retryInterval = 5.seconds,
-            retryIntervalMultiplier = 1.5,
-            maxRetryInterval = 10.minutes
-    )
+    abstract fun failoverOnInitialAttempt(isHa: Boolean): Boolean
+    abstract fun initialConnectAttempts(isHa: Boolean): Int
+    abstract fun reconnectAttempts(isHa: Boolean): Int
+    abstract fun retryInterval(): Duration
+    abstract fun retryIntervalMultiplier(): Double
+    abstract fun maxRetryInterval(isHa: Boolean): Duration
 }

@@ -378,6 +378,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
             startMessagingService(rpcOps, nodeInfo, myNotaryIdentity, netParams)
         } catch (e: Exception) {
             // Try to stop any started messaging services.
+            log.error("Messaging service could not be started.")
             stop()
             throw e
         }

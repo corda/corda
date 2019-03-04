@@ -42,6 +42,7 @@ import net.corda.nodeapi.internal.ArtemisTcpTransport.Companion.p2pConnectorTcpT
 import net.corda.nodeapi.internal.RoundRobinConnectionPolicy
 import net.corda.nodeapi.internal.bridging.BridgeControl
 import net.corda.nodeapi.internal.bridging.BridgeEntry
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.requireMessageSize
 import net.corda.nodeapi.internal.stillOpen
@@ -161,8 +162,8 @@ class P2PMessagingClient(val config: NodeConfiguration,
             }
             FailoverEventType.FAILOVER_FAILED -> state.locked {
                 if (running) {
-                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts} attempts. Node is shutting down.")
-                    Thread.sleep(config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval.toMillis())
+                    log.error("Could not reconnect to the broker after ${config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts(locator!!.isHA)} attempts. Node is shutting down.")
+                    Thread.sleep(config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval().toMillis())
                     Runtime.getRuntime().halt(1)
                 }
             }
@@ -186,6 +187,7 @@ class P2PMessagingClient(val config: NodeConfiguration,
         this.advertisedAddress = advertisedAddress
         this.maxMessageSize = maxMessageSize
         state.locked {
+            require(!started) { "P2P messaging client can't be started twice" }
             started = true
             val sslOptions = if (config.messagingServerExternal) {
                 config.enterpriseConfiguration.messagingServerSslConfiguration
@@ -212,12 +214,12 @@ class P2PMessagingClient(val config: NodeConfiguration,
                 // Configuration for dealing with external broker failover
                 if (config.messagingServerExternal) {
                     connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
-                    reconnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts
-                    retryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval.toMillis()
-                    retryIntervalMultiplier = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryIntervalMultiplier
-                    maxRetryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.maxRetryInterval.toMillis()
-                    isFailoverOnInitialConnection = config.enterpriseConfiguration.messagingServerConnectionConfiguration.failoverOnInitialAttempt
-                    initialConnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.initialConnectAttempts
+                    reconnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.reconnectAttempts(isHA)
+                    retryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryInterval().toMillis()
+                    retryIntervalMultiplier = config.enterpriseConfiguration.messagingServerConnectionConfiguration.retryIntervalMultiplier()
+                    maxRetryInterval = config.enterpriseConfiguration.messagingServerConnectionConfiguration.maxRetryInterval(isHA).toMillis()
+                    isFailoverOnInitialConnection = config.enterpriseConfiguration.messagingServerConnectionConfiguration.failoverOnInitialAttempt(isHA)
+                    initialConnectAttempts = config.enterpriseConfiguration.messagingServerConnectionConfiguration.initialConnectAttempts(isHA)
                 }
             }
 
@@ -510,19 +512,22 @@ class P2PMessagingClient(val config: NodeConfiguration,
         val running = state.locked {
             // We allow stop() to be called without a run() in between, but it must have at least been started.
             check(started)
+            started = false
             val prevRunning = running
             running = false
             networkChangeSubscription?.unsubscribe()
-            require(p2pConsumer != null) { "stop can't be called twice" }
-            require(producer != null) { "stop can't be called twice" }
-
             messagingExecutor?.close()
 
-            close(p2pConsumer)
-            p2pConsumer = null
+            p2pConsumer?.let {
+                close(p2pConsumer)
+                p2pConsumer = null
+            }
 
-            close(producer)
-            producer = null
+            producer?.let {
+                close(producer)
+                producer = null
+            }
+
             producerSession?.let {
                 if (it.stillOpen()) {
                     it.commit()

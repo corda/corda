@@ -57,12 +57,14 @@ import net.corda.nodeapi.internal.ArtemisMessagingComponent.Companion.INTERNAL_S
 import net.corda.nodeapi.internal.ShutdownHook
 import net.corda.nodeapi.internal.addShutdownHook
 import net.corda.nodeapi.internal.bridging.BridgeControlListener
+import net.corda.nodeapi.internal.config.MessagingServerConnectionConfiguration
 import net.corda.nodeapi.internal.config.MutualSslConfiguration
 import net.corda.nodeapi.internal.config.User
 import net.corda.nodeapi.internal.persistence.CouldNotCreateDataSourceException
 import net.corda.serialization.internal.*
 import net.corda.serialization.internal.amqp.SerializationFactoryCacheKey
 import net.corda.serialization.internal.amqp.SerializerFactory
+import org.apache.activemq.artemis.api.core.ActiveMQNotConnectedException
 import org.apache.commons.lang.SystemUtils
 import org.h2.jdbc.JdbcSQLException
 import org.slf4j.Logger
@@ -313,13 +315,33 @@ open class Node(configuration: NodeConfiguration,
             init(rpcOps, securityManager, cacheFactory)
         }
         network.closeOnStop()
-        network.start(
-                myIdentity = nodeInfo.legalIdentities[0].owningKey,
-                serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
-                advertisedAddress = nodeInfo.addresses[0],
-                maxMessageSize = networkParameters.maxMessageSize,
-                legalName = nodeInfo.legalIdentities[0].name.toString()
-        )
+        // Due to how Artemis treats HA client connections, special behaviour is required if using an HA locator (i.e. at least one back-up address)
+        var retry: Boolean
+        do {
+            retry = false
+            try {
+                network.start(
+                        myIdentity = nodeInfo.legalIdentities[0].owningKey,
+                        serviceIdentity = if (nodeInfo.legalIdentities.size == 1) null else nodeInfo.legalIdentities[1].owningKey,
+                        advertisedAddress = nodeInfo.addresses[0],
+                        maxMessageSize = networkParameters.maxMessageSize,
+                        legalName = nodeInfo.legalIdentities[0].name.toString()
+                )
+            } catch (e: Exception) {
+                when (e) {
+                    is ActiveMQNotConnectedException -> {
+                        if (configuration.enterpriseConfiguration.messagingServerBackupAddresses.isNotEmpty() &&
+                                configuration.enterpriseConfiguration.messagingServerConnectionConfiguration == MessagingServerConnectionConfiguration.CONTINUOUS_RETRY) {
+                            log.warn("Failed to connect to any messaging servers. Retrying.", e)
+                            // Clean-up any created bits before retry-ing
+                            network.stop()
+                            retry = true
+                        } else { throw e } // Preserve old behaviour
+                    }
+                    else -> { throw e } // All other exceptions are thrown to cause the node to exit
+                }
+            }
+        } while (retry)
     }
 
     private fun startLocalRpcBroker(securityManager: RPCSecurityManager, sslOptions: MutualSslConfiguration): BrokerAddresses? {

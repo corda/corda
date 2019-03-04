@@ -57,12 +57,12 @@ class ArtemisMessagingClient(private val config: MutualSslConfiguration,
             confirmationWindowSize = this@ArtemisMessagingClient.confirmationWindowSize
             messagingServerConnectionConfig?.let {
                 connectionLoadBalancingPolicyClassName = RoundRobinConnectionPolicy::class.java.canonicalName
-                reconnectAttempts = messagingServerConnectionConfig.reconnectAttempts
-                retryInterval = messagingServerConnectionConfig.retryInterval.toMillis()
-                retryIntervalMultiplier = messagingServerConnectionConfig.retryIntervalMultiplier
-                maxRetryInterval = messagingServerConnectionConfig.maxRetryInterval.toMillis()
-                isFailoverOnInitialConnection = messagingServerConnectionConfig.failoverOnInitialAttempt
-                initialConnectAttempts = messagingServerConnectionConfig.initialConnectAttempts
+                reconnectAttempts = messagingServerConnectionConfig.reconnectAttempts(isHA)
+                retryInterval = messagingServerConnectionConfig.retryInterval().toMillis()
+                retryIntervalMultiplier = messagingServerConnectionConfig.retryIntervalMultiplier()
+                maxRetryInterval = messagingServerConnectionConfig.maxRetryInterval(isHA).toMillis()
+                isFailoverOnInitialConnection = messagingServerConnectionConfig.failoverOnInitialAttempt(isHA)
+                initialConnectAttempts = messagingServerConnectionConfig.initialConnectAttempts(isHA)
             }
             addIncomingInterceptor(ArtemisMessageSizeChecksInterceptor(maxMessageSize))
         }
