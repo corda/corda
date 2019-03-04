@@ -97,9 +97,13 @@ then the Corda consensus rules mean that any transaction attaching an implementa
 
 The previous discussion explained the construction of a transaction that consumes one or more states. Now let's consider this from the perspective
 of somebody verifying a transaction they are presented with.
-The first thing it has to do is to ensure that the transaction was formed correctly and then execute the contract verification logic.
+The first thing the node has to do is to ensure that the transaction was formed correctly and then execute the contract verification logic.
 Given that the input states are already agreed to be valid facts, the attached code has to be compliant with their constraints.
-The output states are also objects created by a potential malicious node so they must be created with a valid constraint to ensure the validity of the future chain (:ref:`constraints_propagation`).
+
+.. note:: The output states created by this transaction must also specify constraints and, to prevent a malicious transaction creator specifying
+          constraints that enable their malicious code to take control of a state in a future transaction, these constraints must be consistent
+          with those of any input states of the same type. This is explained more fully as part of the platform's 'constraints propagation' rules documentation :ref:`constraints_propagation` .
+
 The rule for contract code attachment validity checking is that for each state there must be one and only one attachment that contains the fully qualified contract class name.
 This attachment will be identified as the CorDapp JAR corresponding to that state and thus it must satisfy the constraint of that state.
 For example, if one state is signature constrained, the corresponding attachment must be signed by the key specified in the state.
@@ -143,8 +147,6 @@ transaction, this could be a valid solution. But Corda is designed to support co
 can have a requirement to check that Pink Lady apples can only be traded against Valencia oranges. For this to be possible, the `Apples` contract needs to be able to find
 `Orange` states in the `LedgerTransaction`, understand their properties and run logic against them. If apples and oranges were loaded in
 separate classloaders then the `Apples` classloader would need to load code for `Oranges` anyway in order to perform those operations.
-This would cause some unexpected behaviour and many `ClassCastExceptions`. You can read more about this here:
-`Class identity crisis <https://www.ibm.com/developerworks/java/library/j-dyn0429/>`_ .
 
 
 CorDapp dependencies
@@ -192,7 +194,8 @@ As soon as support is added at the platform level this code can be removed from 
 It should be evident now that each CorDapp must add its own dependencies to the transaction, but what happens when two CorDapps depend on the same library?
 The node that is building the transaction must ensure that the attached JARs contain all code needed for all CorDapps and also do not break the `no-overlap` rule.
 
-In the above example, if the `Apples` code depends on `Fruit v3` and the `Oranges` code depends on `Fruit v4` that would be impossible to achieve.
+In the above example, if the `Apples` code depends on `Fruit v3.2` and the `Oranges` code depends on `Fruit v3.4` that would be impossible to achieve,
+because of the overlap over some of the fruit classes.
 
 A simple way to fix this problem is for CorDapps to shade this common dependency under their own namespace. This would avoid breaking the `no-overlap rule`.
 The primary downside is that multiple apps using (and shading) this dependency may lose the ability in other contexts to carry out operations like casting to a common superclass.
@@ -232,7 +235,7 @@ If someone attempts to build a swap transaction they would find it impossible:
 
  - If the two attachments are added to the transaction, then the `com.orangecompany.Orange` class would be found in both, and that would breat the rule that states
    "There can be only one and precisely one attachment that is identified as the contract code that controls each state".
- - In case only the `Apples` CorDapp is attached then the constraint of the `Oranges` states would not pass, as the JAR would not be signed by the actual `OrangCo`.
+ - In case only the `Apples` CorDapp is attached then the constraint of the `Oranges` states would not pass, as the JAR would not be signed by the actual `OrangeCo`.
 
 
 Another example that shows that bundling is not an option when depending on another CorDapp is if the `Fruit` library contains a ready to use `Banana` contract.
@@ -255,7 +258,7 @@ Another way to look at bundling third party CorDapps is from the point of view o
 by their creator, so the signature will become part of their identity: `com.fruitcompany.Banana` @SignedBy_TheFruitCo.
 But if another CorDapp developer, `OrangeCo` bundles the `Fruit` library, they must strip the signatures from `TheFruitCo` and sign the JAR themselves.
 This will create a `com.fruitcompany.Banana` @SignedBy_TheOrangeCo, so there could be two types of Banana states on the network,
-but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these `Banana` contracts to diverge.
+but "owned" by two different parties. This means that while they might have started using the same code, nothing stops these `Banana` contracts from diverging.
 Parties on the network receiving a `com.fruitcompany.Banana` will need to explicitly check the constraint to understand what they received.
 In Corda 4, to help avoid this type of confusion, we introduced the concept of Package Namespace Ownership (see ":doc:`design/data-model-upgrades/package-namespace-ownership`").
 Briefly, it allows companies to claim namespaces and anyone who encounters a class in that package that is not signed by the registered key knows is invalid.
@@ -321,8 +324,8 @@ In case the dependency has to be signed by a known public key:
             require.using("the correct my_reusable_cordapp jar was attached to the transaction", tx.getAttachments().stream().anyMatch(a -> new SignatureAttachmentConstraint(my_public_key).isSatisfiedBy(a))));
 
 
-Changes between version 3 to version 4 of Corda
------------------------------------------------
+Changes between version 3 and version 4 of Corda
+------------------------------------------------
 
 In Corda v3 transactions were verified inside the System Classloader that contained all the installed CorDapps.
 This was a temporary simplification and we explained above why it could only be short-lived.
