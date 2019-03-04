@@ -550,7 +550,7 @@ class DeserializeSimpleTypesTests {
     @Test
     fun classHasNoPublicConstructor() {
         assertFailsWithMessage("Trying to build an object serializer for ${Garbo::class.java.name}, " +
-                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Garbo.make(1))
         }
     }
@@ -558,7 +558,7 @@ class DeserializeSimpleTypesTests {
     @Test
     fun propertyClassHasNoPublicConstructor() {
         assertFailsWithMessage("Trying to build an object serializer for ${Greta::class.java.name}, " +
-                "but it is not constructible from its public properties, and so requires a custom serialiser.") {
+                "but it is not constructable from its public properties, and so requires a custom serialiser.") {
             TestSerializationOutput(VERBOSE, sf1).serializeAndReturnSchema(Greta(Garbo.make(1)))
         }
     }
