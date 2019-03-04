@@ -1,5 +1,6 @@
 package net.corda.core.internal.cordapp
 
+import net.corda.core.contracts.Contract
 import net.corda.core.cordapp.Cordapp
 import net.corda.core.internal.PLATFORM_VERSION
 import net.corda.core.internal.VisibleForTesting
@@ -10,8 +11,10 @@ import java.util.concurrent.ConcurrentHashMap
  * Provides a way to acquire information about the calling CorDapp.
  */
 object CordappResolver {
+
     private val logger = loggerFor<CordappResolver>()
     private val cordappClasses: ConcurrentHashMap<String, Set<Cordapp>> = ConcurrentHashMap()
+    private val duplicateRegistrationFilter = DuplicateRegistrationFilter(setOf("org.jolokia", "org.json"))
 
     // TODO Use the StackWalker API once we migrate to Java 9+
     private var cordappResolver: () -> Cordapp? = {
@@ -29,18 +32,26 @@ object CordappResolver {
      */
     @Synchronized
     fun register(cordapp: Cordapp) {
-        cordapp.cordappClasses.forEach {
-            val cordapps = cordappClasses[it]
-            if (cordapps != null) {
-                // we do not register CorDapps that originate from the same file.
-                if (cordapps.none { it.jarHash == cordapp.jarHash }) {
-                    logger.warn("More than one CorDapp registered for $it.")
-                    cordappClasses[it] = cordappClasses[it]!! + cordapp
-                }
-            } else {
-                cordappClasses[it] = setOf(cordapp)
+        val existingClasses = cordappClasses.keys
+        val classesToRegister = cordapp.cordappClasses.toSet()
+        val alreadyRegisteredClasses = existingClasses.intersect(classesToRegister)
+        val notAlreadyRegisteredClasses = classesToRegister - alreadyRegisteredClasses
+
+        notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
+
+        val toRegister = cordappClasses.entries.asSequence()
+                .filter { (className, _) -> className in alreadyRegisteredClasses}
+                .filter { (_, registeredCordapps) -> registeredCordapps.none { it.jarHash == cordapp.jarHash } }
+                .map { (className, registeredCordapps) -> className to registeredCordapps + cordapp }
+                .toMap()
+
+        for (className in toRegister.keys) {
+            if (duplicateRegistrationFilter.shouldNotify(className, cordapp::class.java.classLoader)) {
+                logger.warn("More than one CorDapp registered for $className.")
             }
         }
+
+        cordappClasses.putAll(toRegister)
     }
 
     /*
@@ -81,4 +92,35 @@ object CordappResolver {
     internal fun clear() {
         cordappClasses.clear()
     }
+}
+
+internal class DuplicateRegistrationFilter(private val ignoreList: Set<String>) {
+
+    private var alreadySeen: Set<String> = emptySet()
+
+    fun shouldNotify(className: String, classLoader: ClassLoader): Boolean {
+        if (className in alreadySeen) return false
+        alreadySeen += className
+
+        if (className.canBeIgnored) return false
+        return className.isContractClass(classLoader)
+    }
+
+    private val String.canBeIgnored: Boolean get() = packagePrefixes.any { it in ignoreList }
+    private val String.packagePrefixes: Iterable<String> get() = Iterable { object : Iterator<String> {
+
+        private var index: Int = 0
+        private val nextIndex: Int get() = this@packagePrefixes.indexOf(".", index)
+
+        override fun hasNext(): Boolean = nextIndex > 0
+
+        override fun next(): String {
+            val nextSeparatorPosition = nextIndex
+            index = nextSeparatorPosition + 1
+            return this@packagePrefixes.substring(0, nextSeparatorPosition)
+        }
+    } }
+
+    private fun String.isContractClass(classLoader: ClassLoader): Boolean = Contract::class.java.isAssignableFrom(classLoader.loadClass(this))
+
 }
