@@ -54,8 +54,7 @@ data class PartiallyResolvedTransaction(
     }
 
     companion object {
-        private val UNKNOWN_PARTY = Party(CordaX500Name("Unknown Party", "Nowhere", "ZZ"), entropyToKeyPair(ZERO).public)
-        private val UNKNOWN_TRANSACTION_STATE: TransactionState<ContractState> = TransactionState(Unknown.State, Unknown::class.java.name, UNKNOWN_PARTY)
+        private val DUMMY_NOTARY = Party(CordaX500Name("Dummy Notary", "Nowhere", "ZZ"), entropyToKeyPair(ZERO).public)
 
         fun fromSignedTransaction(
                 transaction: SignedTransaction,
@@ -64,9 +63,15 @@ data class PartiallyResolvedTransaction(
             /**
              * Forcibly deserialize our transaction outputs up-front.
              * Replace any [TransactionState] objects that fail to
-             * deserialize with [UNKNOWN_TRANSACTION_STATE].
+             * deserialize with a dummy transaction state that uses
+             * the transaction's notary.
              */
-            transaction.coreTransaction.outputs.eagerDeserialise { _, _ -> UNKNOWN_TRANSACTION_STATE }
+            val unknownTransactionState = TransactionState(
+                data = Unknown.State,
+                contract = Unknown::class.java.name,
+                notary = transaction.notary ?: DUMMY_NOTARY
+            )
+            transaction.coreTransaction.outputs.eagerDeserialise { _, _ -> unknownTransactionState }
             return PartiallyResolvedTransaction(
                     transaction = transaction,
                     inputs = transaction.inputs.map { stateRef ->

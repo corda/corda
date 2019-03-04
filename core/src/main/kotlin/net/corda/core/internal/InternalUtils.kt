@@ -553,6 +553,7 @@ fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedLis
 /**
  * Iterate over a [LazyMappedList], forcing it to transform all of its elements immediately.
  * This transformation is assumed to be "deserialisation". Does nothing for any other kind of [List].
+ * WARNING: Any changes made to the [LazyMappedList] contents are PERMANENT!
  */
 fun <T> List<T>.eagerDeserialise(onError: (TransactionDeserialisationException, Int) -> T? = { ex, _ -> throw ex }) {
     if (this is LazyMappedList<*, T>) {
