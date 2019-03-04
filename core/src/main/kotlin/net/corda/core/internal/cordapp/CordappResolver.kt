@@ -34,24 +34,18 @@ object CordappResolver {
     fun register(cordapp: Cordapp) {
         val existingClasses = cordappClasses.keys
         val classesToRegister = cordapp.cordappClasses.toSet()
-        val alreadyRegisteredClasses = existingClasses.intersect(classesToRegister)
-        val notAlreadyRegisteredClasses = classesToRegister - alreadyRegisteredClasses
+        val notAlreadyRegisteredClasses = classesToRegister - existingClasses
+        val alreadyRegistered= HashMap(cordappClasses).apply { keys.retainAll(classesToRegister) }
 
         notAlreadyRegisteredClasses.forEach { cordappClasses[it] = setOf(cordapp) }
-
-        val toRegister = cordappClasses.entries.asSequence()
-                .filter { (className, _) -> className in alreadyRegisteredClasses}
-                .filter { (_, registeredCordapps) -> registeredCordapps.none { it.jarHash == cordapp.jarHash } }
-                .map { (className, registeredCordapps) -> className to registeredCordapps + cordapp }
-                .toMap()
-
-        for (className in toRegister.keys) {
+        
+        for ((className, registeredCordapps) in alreadyRegistered) {
+            if (registeredCordapps.any { it.jarHash == cordapp.jarHash }) continue
             if (duplicateRegistrationFilter.shouldNotify(className, cordapp::class.java.classLoader)) {
                 logger.warn("More than one CorDapp registered for $className.")
             }
+            cordappClasses[className] = registeredCordapps + cordapp
         }
-
-        cordappClasses.putAll(toRegister)
     }
 
     /*
