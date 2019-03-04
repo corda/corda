@@ -15,7 +15,6 @@ import net.corda.nodeapi.internal.MigrationHelpers.getMigrationResource
 import net.corda.core.schemas.MappedSchema
 import net.corda.core.utilities.contextLogger
 import net.corda.nodeapi.internal.cordapp.CordappLoader
-import sun.security.x509.X500Name
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.file.Path
@@ -25,6 +24,8 @@ import liquibase.database.core.PostgresDatabase
 import liquibase.structure.DatabaseObject
 import liquibase.structure.core.Schema
 import java.io.Writer
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 // Migrate the database to the current version, using liquibase.
 //
@@ -143,45 +144,46 @@ class SchemaMigration(
             mutex.withLock {
                 val liquibase = Liquibase(dynamicInclude, customResourceAccessor, getLiquibaseDatabase(JdbcConnection(connection)))
 
-            val schemaName: String? = databaseConfig.schema
-            if (!schemaName.isNullOrBlank()) {
-                if (liquibase.database.defaultSchemaName != schemaName) {
-                    logger.debug("defaultSchemaName=${liquibase.database.defaultSchemaName} changed to $schemaName")
-                    liquibase.database.defaultSchemaName = schemaName
+                val schemaName: String? = databaseConfig.schema
+                if (!schemaName.isNullOrBlank()) {
+                    if (liquibase.database.defaultSchemaName != schemaName) {
+                        logger.debug("defaultSchemaName=${liquibase.database.defaultSchemaName} changed to $schemaName")
+                        liquibase.database.defaultSchemaName = schemaName
+                    }
+                    if (liquibase.database.liquibaseSchemaName != schemaName) {
+                        logger.debug("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName} changed to $schemaName")
+                        liquibase.database.liquibaseSchemaName = schemaName
+                    }
                 }
-                if (liquibase.database.liquibaseSchemaName != schemaName) {
-                    logger.debug("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName} changed to $schemaName")
-                    liquibase.database.liquibaseSchemaName = schemaName
+                logger.info("defaultSchemaName=${liquibase.database.defaultSchemaName}")
+                logger.info("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName}")
+                logger.info("outputDefaultSchema=${liquibase.database.outputDefaultSchema}")
+
+                val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
+
+                // When migrating between Corda versions, it's possible that changes may be made that invalidates the contents of the checkpoint
+                // table. If there are any checkpoint entries in this case, then prevent the migration occurring. Note however that this should
+                // not happen in all cases. Apps may also provide migrations, and blocking these may prevent a finalized transaction from
+                // being recovered from a checkpoint, if the migration is provided by a jar that also provides the contract for that
+                // transaction's states.
+                val shouldBlockOnCheckpoints = unRunChanges.any {
+                    it.id == "modify checkpoint_value column type" || // Changes the checkpoint blob type in the database
+                            it.id == "nullability" ||                         // Changes column constraint on checkpoint table
+                            it.id == "column_host_name" ||                    // Node was previously running version prior to ENT3.2
+                            it.id == "create-external-id-to-state-party-view" // Node was previously running a version prior to ENT4.0
                 }
-            }
-            logger.info("defaultSchemaName=${liquibase.database.defaultSchemaName}")
-            logger.info("liquibaseSchemaName=${liquibase.database.liquibaseSchemaName}")
-            logger.info("outputDefaultSchema=${liquibase.database.outputDefaultSchema}")
 
-            val unRunChanges = liquibase.listUnrunChangeSets(Contexts(), LabelExpression())
-
-            // When migrating between Corda versions, it's possible that changes may be made that invalidates the contents of the checkpoint
-            // table. If there are any checkpoint entries in this case, then prevent the migration occurring. Note however that this should
-            // not happen in all cases. Apps may also provide migrations, and blocking these may prevent a finalized transaction from
-            // being recovered from a checkpoint, if the migration is provided by a jar that also provides the contract for that
-            // transaction's states.
-            val shouldBlockOnCheckpoints = unRunChanges.any {
-                it.id == "modify checkpoint_value column type" || // Changes the checkpoint blob type in the database
-                it.id == "nullability" ||                         // Changes column constraint on checkpoint table
-                it.id == "column_host_name" ||                    // Node was previously running version prior to ENT3.2
-                it.id == "create-external-id-to-state-party-view" // Node was previously running a version prior to ENT4.0
-            }
-
-            when {
-                (run && !check) && (shouldBlockOnCheckpoints && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
-                run && !check -> liquibase.update(Contexts())
-                check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
-                check && !run -> {} // Do nothing will be interpreted as "check succeeded"
-                (outputWriter != null) && !check && !run ->  {
-                    System.setProperty(DRY_RUN, "true") // Enterprise only: disable VaultSchemaMigration for dry-run
-                    liquibase.update(Contexts(), outputWriter)
+                when {
+                    (run && !check) && (shouldBlockOnCheckpoints && existingCheckpoints!!) -> throw CheckpointsException() // Do not allow database migration when there are checkpoints
+                    run && !check -> liquibase.update(Contexts())
+                    check && !run && unRunChanges.isNotEmpty() -> throw OutstandingDatabaseChangesException(unRunChanges.size)
+                    check && !run -> {} // Do nothing will be interpreted as "check succeeded"
+                    (outputWriter != null) && !check && !run -> {
+                        System.setProperty(DRY_RUN, "true") // Enterprise only: disable VaultSchemaMigration for dry-run
+                        liquibase.update(Contexts(), outputWriter)
+                    }
+                    else -> throw IllegalStateException("Invalid usage.")
                 }
-                else -> throw IllegalStateException("Invalid usage.")
             }
         }
     }
