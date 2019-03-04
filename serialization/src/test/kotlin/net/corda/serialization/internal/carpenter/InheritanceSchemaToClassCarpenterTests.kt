@@ -2,6 +2,7 @@ package net.corda.serialization.internal.carpenter
 
 import net.corda.core.serialization.CordaSerializable
 import net.corda.serialization.internal.AllWhitelist
+import net.corda.serialization.internal.amqp.testutils.testSerializationContext
 import org.junit.Test
 import kotlin.test.*
 import java.io.NotSerializableException
@@ -41,7 +42,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val (_, env) = A(20).roundTrip()
         val mangledA = env.getMangled<A>()
 
-        val carpentedA = mangledA.load()
+        val carpentedA = mangledA.load(testSerializationContext)
         val carpentedInstance = carpentedA.new(20)
 
         assertEquals(20, carpentedInstance.get("j"))
@@ -52,10 +53,11 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
     @Test
     fun interfaceParent2() {
+        @Suppress("UNUSED")
         class A(override val j: Int, val jj: Int) : J
 
         val (_, env) = A(23, 42).roundTrip()
-        val carpentedA = env.getMangled<A>().load()
+        val carpentedA = env.getMangled<A>().load(testSerializationContext)
         val carpetedInstance = carpentedA.constructors[0].newInstance(23, 42)
 
         assertEquals(23, carpetedInstance.get("j"))
@@ -70,7 +72,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         class A(override val i: Int, override val ii: Int) : I, II
 
         val (_, env) = A(23, 42).roundTrip()
-        val carpentedA = env.getMangled<A>().load()
+        val carpentedA = env.getMangled<A>().load(testSerializationContext)
         val carpetedInstance = carpentedA.constructors[0].newInstance(23, 42)
 
         assertEquals(23, carpetedInstance.get("i"))
@@ -88,7 +90,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         class A(override val i: Int, override val iii: Int) : III
 
         val (_, env) = A(23, 42).roundTrip()
-        val carpentedA = env.getMangled<A>().load()
+        val carpentedA = env.getMangled<A>().load(testSerializationContext)
         val carpetedInstance = carpentedA.constructors[0].newInstance(23, 42)
 
         assertEquals(23, carpetedInstance.get("i"))
@@ -108,8 +110,8 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         class B(override val i: I, override val iiii: Int) : IIII
 
         val (_, env) = B(A(23), 42).roundTrip()
-        val carpentedA = env.getMangled<A>().load()
-        val carpentedB = env.getMangled<B>().load()
+        val carpentedA = env.getMangled<A>().load(testSerializationContext)
+        val carpentedB = env.getMangled<B>().load(testSerializationContext)
 
         val carpentedAInstance = carpentedA.new(23)
         val carpentedBInstance = carpentedB.new(carpentedAInstance, 42)
@@ -127,7 +129,9 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         // if we remove the nested interface we should get an error as it's impossible
         // to have a concrete class loaded without having access to all of it's elements
-        assertFailsWith<NotSerializableException> { assertCanLoadAll(env.getMangled<A>().mangle<I>()) }
+        assertFailsWith<NotSerializableException> { assertCanLoadAll(
+                testSerializationContext,
+                env.getMangled<A>().mangle<I>()) }
     }
 
     @Test
@@ -137,7 +141,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         val (_, env) = A(23).roundTrip()
 
         // This time around we will succeed, because the mangled I is included in the type information to be loaded.
-        assertCanLoadAll(env.getMangled<A>().mangle<I>(), env.getMangled<I>())
+        assertCanLoadAll(testSerializationContext, env.getMangled<A>().mangle<I>(), env.getMangled<I>())
     }
 
     @Test
@@ -146,6 +150,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val (_, env) = A(23, 42).roundTrip()
         assertCanLoadAll(
+                testSerializationContext,
                 env.getMangled<A>().mangle<I>().mangle<II>(),
                 env.getMangled<I>(),
                 env.getMangled<II>()
@@ -158,6 +163,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
 
         val (_, env) = A(23, 42).roundTrip()
         assertCanLoadAll(
+                testSerializationContext,
                 env.getMangled<A>().mangle<I>().mangle<III>(),
                 env.getMangled<I>(),
                 env.getMangled<III>().mangle<I>()

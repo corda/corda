@@ -7,6 +7,7 @@ import net.corda.core.serialization.SerializedBytes;
 import net.corda.serialization.internal.AllWhitelist;
 import net.corda.serialization.internal.amqp.*;
 import net.corda.serialization.internal.amqp.Schema;
+import net.corda.serialization.internal.amqp.testutils.TestSerializationContext;
 import net.corda.serialization.internal.model.RemoteTypeInformation;
 import net.corda.serialization.internal.model.TypeIdentifier;
 import net.corda.testing.core.SerializationEnvironmentRule;
@@ -77,7 +78,7 @@ public class JavaCalculatedValuesToClassCarpenterTest extends AmqpCarpenterBase 
 
         RemoteTypeInformation renamed = rename(typeInformation, typeToMangle, mangle(typeToMangle));
 
-        Class<?> pinochio = load(renamed);
+        Class<?> pinochio = load(renamed, TestSerializationContext.testSerializationContext);
         Object p = pinochio.getConstructors()[0].newInstance(4, 2, "4");
 
         assertEquals(2, pinochio.getMethod("getI").invoke(p));
