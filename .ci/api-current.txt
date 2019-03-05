@@ -1036,13 +1036,13 @@ public static final class net.corda.core.contracts.TransactionVerificationExcept
 ##
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$ContractCreationError extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, String, Throwable)
+  public <init>(net.corda.core.crypto.SecureHash, String, Throwable, String)
   @NotNull
   public final String getContractClass()
 ##
 @CordaSerializable
 public static final class net.corda.core.contracts.TransactionVerificationException$ContractRejection extends net.corda.core.contracts.TransactionVerificationException
-  public <init>(net.corda.core.crypto.SecureHash, String, Throwable)
+  public <init>(net.corda.core.crypto.SecureHash, String, Throwable, String)
   public <init>(net.corda.core.crypto.SecureHash, net.corda.core.contracts.Contract, Throwable)
   @NotNull
   public final String getContractClass()

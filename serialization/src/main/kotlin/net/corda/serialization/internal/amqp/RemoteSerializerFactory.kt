@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.serialization.SerializationContext
 import net.corda.core.utilities.contextLogger
 import net.corda.serialization.internal.model.*
 import org.hibernate.type.descriptor.java.ByteTypeDescriptor
@@ -16,8 +17,8 @@ interface RemoteSerializerFactory {
      * @param typeDescriptor The type descriptor for the type to obtain a serializer for.
      * @param schema The schemas sent along with the serialized data.
      */
-    @Throws(NotSerializableException::class)
-    fun get(typeDescriptor: TypeDescriptor, schema: SerializationSchemas): AMQPSerializer<Any>
+    @Throws(NotSerializableException::class, ClassNotFoundException::class)
+    fun get(typeDescriptor: TypeDescriptor, schema: SerializationSchemas, context: SerializationContext): AMQPSerializer<Any>
 }
 
 /**
@@ -57,14 +58,18 @@ class DefaultRemoteSerializerFactory(
         private val logger = contextLogger()
     }
 
-    override fun get(typeDescriptor: TypeDescriptor, schema: SerializationSchemas): AMQPSerializer<Any> =
+    override fun get(
+            typeDescriptor: TypeDescriptor,
+            schema: SerializationSchemas,
+            context: SerializationContext
+    ): AMQPSerializer<Any> =
         // If we have seen this descriptor before, we assume we have seen everything in this schema before.
         descriptorBasedSerializerRegistry.getOrBuild(typeDescriptor) {
             logger.trace("get Serializer descriptor=$typeDescriptor")
 
             // Interpret all of the types in the schema into RemoteTypeInformation, and reflect that into LocalTypeInformation.
             val remoteTypeInformationMap = remoteTypeModel.interpret(schema)
-            val reflected = reflect(remoteTypeInformationMap)
+            val reflected = reflect(remoteTypeInformationMap, context)
 
             // Get, and record in the registry, serializers for all of the types contained in the schema.
             // This will save us having to re-interpret the entire schema on re-entry when deserialising individual property values.
@@ -79,7 +84,10 @@ class DefaultRemoteSerializerFactory(
                     "Could not find type matching descriptor $typeDescriptor.")
         }
 
-    private fun getUncached(remoteTypeInformation: RemoteTypeInformation, localTypeInformation: LocalTypeInformation): AMQPSerializer<Any> {
+    private fun getUncached(
+            remoteTypeInformation: RemoteTypeInformation,
+            localTypeInformation: LocalTypeInformation
+    ): AMQPSerializer<Any> {
         val remoteDescriptor = remoteTypeInformation.typeDescriptor
 
         // Obtain a serializer and descriptor for the local type.
@@ -117,9 +125,9 @@ ${localTypeInformation.prettyPrint(false)}
         }
     }
 
-    private fun reflect(remoteInformation: Map<TypeDescriptor, RemoteTypeInformation>):
+    private fun reflect(remoteInformation: Map<TypeDescriptor, RemoteTypeInformation>, context: SerializationContext):
             Map<TypeDescriptor, RemoteAndLocalTypeInformation> {
-        val localInformationByIdentifier = typeLoader.load(remoteInformation.values).mapValues { (_, type) ->
+        val localInformationByIdentifier = typeLoader.load(remoteInformation.values, context).mapValues { (_, type) ->
             localTypeModel.inspect(type)
         }
 
