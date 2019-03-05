@@ -26,6 +26,10 @@ Sample ``jmeter.properties``
     An example of the ``jmeter.properties`` file used to configure JMeter. If you need a custom configuration, it is
     recommended to base it on this file.
 
+``sample-server-rmi.config``
+    An annotated sample for the server RMI mapping required to use remote JMeter over SSH tunnels. See :ref:`ssh_tunnel` for
+    details.
+
 Installation
 ============
 

@@ -110,7 +110,7 @@ If the SSH tunneling set-up from the wrapper is used, this option is **not** sup
 
 .. _ssh_tunnel:
 
-Ssh Tunnel Set-Up
+SSH Tunnel Set-Up
 -----------------
 
 The RMI traffic requires non-standard ports to be open, therefore the standard practice is to
@@ -162,6 +162,8 @@ places:
 
   These values must be the same on client and server side and must match the configured hostname of the target host.
   The configuration file can be passed to the process using the ``-XserverRmiMappings`` command line flag.
+- The server RMI mapping must be provided on the command line of the client and the server process when using SSH tunnels,
+  and the mappings on client and server side have to match.
 
 Connecting to remote JMeter servers
 -----------------------------------
