@@ -568,7 +568,14 @@ class NodeVaultService(
     }
 
     @Throws(VaultQueryException::class)
-    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
+    private fun <T : ContractState> _queryBy(criteria: QueryCriteria, paging_: PageSpecification, sorting: Sort, contractStateType: Class<out T>, skipPagingChecks: Boolean): Vault.Page<T> {
+        // We decrement by one if the client requests MAX_PAGE_SIZE, assuming they can not notice this because they don't have enough memory
+        // to request `MAX_PAGE_SIZE` states at once.
+        val paging = if (paging_.pageSize == Integer.MAX_VALUE) {
+            paging_.copy(pageSize = Integer.MAX_VALUE - 1)
+        } else {
+            paging_
+        }
         log.debug { "Vault Query for contract type: $contractStateType, criteria: $criteria, pagination: $paging, sorting: $sorting" }
         return database.transaction {
             // calculate total results where a page specification has been defined

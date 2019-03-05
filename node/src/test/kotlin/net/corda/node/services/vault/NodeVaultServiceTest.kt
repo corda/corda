@@ -170,6 +170,17 @@ class NodeVaultServiceTest {
     }
 
     @Test
+    fun `can query with page size max-integer`() {
+        database.transaction {
+            vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
+        }
+        database.transaction {
+            val w1 = vaultService.queryBy<Cash.State>(PageSpecification(pageNumber = 1, pageSize = Integer.MAX_VALUE)).states
+            assertThat(w1).hasSize(3)
+        }
+    }
+
+    @Test
     fun `states not local to instance`() {
         database.transaction {
             vaultFiller.fillWithSomeTestCash(100.DOLLARS, issuerServices, 3, DUMMY_CASH_ISSUER)
