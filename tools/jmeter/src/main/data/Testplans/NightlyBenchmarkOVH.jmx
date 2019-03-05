@@ -15,7 +15,7 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="host" elementType="Argument">
             <stringProp name="Argument.name">host</stringProp>
-            <stringProp name="Argument.value">ns3064148.ip-193-70-47.eu</stringProp>
+            <stringProp name="Argument.value">ns31051737.ip-54-38-85.eu</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="port" elementType="Argument">
@@ -60,7 +60,7 @@
           </elementProp>
           <elementProp name="firewallHost" elementType="Argument">
             <stringProp name="Argument.name">firewallHost</stringProp>
-            <stringProp name="Argument.value">ns31051737.ip-54-38-85.eu</stringProp>
+            <stringProp name="Argument.value">ns3064148.ip-193-70-47.eu</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -2007,7 +2007,7 @@
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue and Pay 160 states 40 Thread Group  ${__machineName}" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue and Pay 160 states 40 Thread Group  ${__machineName}" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
@@ -2156,7 +2156,7 @@
         </JavaSampler>
         <hashTree/>
       </hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue and Pay 640 states 40 Thread Group  ${__machineName}" enabled="false">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Cash Issue and Pay 640 states 40 Thread Group  ${__machineName}" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
           <boolProp name="LoopController.continue_forever">false</boolProp>
