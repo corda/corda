@@ -88,9 +88,10 @@ cordappSignerKeyFingerprintBlacklist
   *Default:* not defined
 
 crlCheckSoftFail
-  This is a boolean flag that when enabled (i.e. ``true`` value is set) causes the certificate revocation list (CRL) checking will use the soft fail mode.
-  The soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
-  If this parameter is set to ``false`` rigorous CRL checking takes place, involving each certificate in the certificate path being checked needs to have the CRL distribution point extension set and pointing to a URL serving a valid CRL.
+  This is a boolean flag that when enabled (i.e. ``true`` value is set) causes certificate revocation list (CRL) checking to use soft fail mode.
+  Soft fail mode allows the revocation check to succeed if the revocation status cannot be determined because of a network error.
+  If this parameter is set to ``false`` rigorous CRL checking takes place. This involves each certificate in the certificate path being checked for a CRL distribution point extension, and that this extension points to a URL serving a valid CRL.
+  If the CRL distribution point is inaccessible and this option is set to ``false``, then the revocation check will fail.
 
   *Default:* true
 
