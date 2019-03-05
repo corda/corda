@@ -37,7 +37,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
     private var shutdownHook: ShutdownHook? = null
 
     private var maxMessageSize: Int = -1
-    private lateinit var firewallAuditService: FirewallAuditService
+    private var firewallAuditService: FirewallAuditService? = null
     private var bridgeSupervisorService: BridgeSupervisorService? = null
     private var floatSupervisorService: FloatSupervisorService? = null
     private var statusFollower: ServiceStateCombiner? = null
@@ -112,8 +112,8 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // The process also runs a TLS/AMQP 1.0 server socket, which is can receive connections and messages from peers,
         // validate the messages and then forwards the packets to the Artemis inbox queue of the node.
             FirewallMode.SenderReceiver -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService)
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService, floatSupervisorService!!.amqpListenerService)
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!)
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!, floatSupervisorService!!.amqpListenerService)
             }
         // In the BridgeInner mode the process runs the full outbound message path as in the SenderReceiver mode, but the inbound path is split.
         // This 'Bridge Inner/Bridge Controller' process runs the more trusted portion of the inbound path.
@@ -122,7 +122,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // node inboxes, before transferring the message to Artemis. Potentially it might carry out deeper checks of received packets.
         // However, the 'Bridge Inner' is not directly exposed to the internet, or peers and does not host the TLS/AMQP 1.0 server socket.
             FirewallMode.BridgeInner -> {
-                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService, null)
+                bridgeSupervisorService = BridgeSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!, null)
             }
         // In the FloatOuter mode this process runs a minimal AMQP proxy that is designed to run in a DMZ zone.
         // The process holds the minimum data necessary to act as the TLS/AMQP 1.0 receiver socket and tries
@@ -137,7 +137,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
         // holding potentially sensitive information and are then forwarded across the control tunnel to the 'Bridge Inner' process for more
         // complete validation checks.
             FirewallMode.FloatOuter -> {
-                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService)
+                floatSupervisorService = FloatSupervisorServiceImpl(conf, maxMessageSize, firewallAuditService!!)
             }
         }
         statusFollower = ServiceStateCombiner(listOf(firewallAuditService, floatSupervisorService, bridgeSupervisorService).filterNotNull())
@@ -147,7 +147,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
     }
 
     private fun startServices() {
-        firewallAuditService.start()
+        firewallAuditService?.start()
         bridgeSupervisorService?.start()
         floatSupervisorService?.start()
     }
@@ -156,7 +156,7 @@ class FirewallInstance(val conf: FirewallConfiguration,
         stateHelper.active = false
         floatSupervisorService?.stop()
         bridgeSupervisorService?.stop()
-        firewallAuditService.stop()
+        firewallAuditService?.stop()
         statusSubscriber?.unsubscribe()
         statusSubscriber = null
         statusFollower = null
