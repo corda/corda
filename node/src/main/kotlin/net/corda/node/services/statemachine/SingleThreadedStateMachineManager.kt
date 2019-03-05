@@ -453,7 +453,8 @@ class SingleThreadedStateMachineManager(
                                 "unknown session $recipientId, discarding..."
                     }
                 } else {
-                    logger.warn("Cannot find flow corresponding to session ID $recipientId.")
+                    // It happens when flows restart and the old sessions messages still arrive from a peer.
+                    logger.info("Cannot find flow corresponding to session ID $recipientId.")
                 }
             } else {
                 val flow = mutex.locked { flows[flowId] }
