@@ -91,8 +91,7 @@ class ProtonWrapperTests {
 
     @Test
     fun `AMPQ Client fails to connect when crl soft fail check is disabled`() {
-        val amqpServer = createServer(serverPort, CordaX500Name("Rogue 1", "London", "GB"),
-                maxMessageSize = MAX_MESSAGE_SIZE, crlCheckSoftFail = false)
+        val amqpServer = createServer(serverPort, maxMessageSize = MAX_MESSAGE_SIZE, crlCheckSoftFail = false)
         amqpServer.use {
             amqpServer.start()
             val amqpClient = createClient()
@@ -448,6 +447,7 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort),
@@ -479,6 +479,7 @@ class ProtonWrapperTests {
             override val trustStore = clientTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val crlCheckSoftFail: Boolean = clientConfig.crlCheckSoftFail
         }
         return AMQPClient(
                 listOf(NetworkHostAndPort("localhost", serverPort)),
@@ -512,6 +513,7 @@ class ProtonWrapperTests {
             override val trustStore = serverTruststore
             override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
         }
         return AMQPServer(
                 "0.0.0.0",
