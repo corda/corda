@@ -37,6 +37,7 @@ interface AMQPConfiguration {
      */
     @JvmDefault
     val crlCheckSoftFail: Boolean
+        get() = true
 
     /**
      * Enables full debug tracing of all netty and AMQP level packets. This logs aat very high volume and is only for developers.
