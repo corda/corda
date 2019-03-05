@@ -34,7 +34,9 @@ import kotlin.concurrent.withLock
  *  The Netty thread pool used by the AMQPBridges is also shared and managed by the AMQPBridgeManager.
  */
 @VisibleForTesting
-class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
+class AMQPBridgeManager(config: MutualSslConfiguration,
+                        maxMessageSize: Int,
+                        crlCheckSoftFail: Boolean,
                         private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                         private val bridgeMetricsService: BridgeMetricsService? = null) : BridgeManager {
 
@@ -43,15 +45,19 @@ class AMQPBridgeManager(config: MutualSslConfiguration, maxMessageSize: Int,
 
     private class AMQPConfigurationImpl private constructor(override val keyStore: CertificateStore,
                                                             override val trustStore: CertificateStore,
-                                                            override val maxMessageSize: Int) : AMQPConfiguration {
-        constructor(config: MutualSslConfiguration, maxMessageSize: Int) : this(config.keyStore.get(), config.trustStore.get(), maxMessageSize)
+                                                            override val maxMessageSize: Int,
+                                                            override val crlCheckSoftFail: Boolean) : AMQPConfiguration {
+        constructor(config: MutualSslConfiguration, maxMessageSize: Int, crlCheckSoftFail: Boolean) : this(config.keyStore.get(), config.trustStore.get(), maxMessageSize, crlCheckSoftFail)
     }
 
-    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, maxMessageSize)
+    private val amqpConfig: AMQPConfiguration = AMQPConfigurationImpl(config, maxMessageSize, crlCheckSoftFail)
     private var sharedEventLoopGroup: EventLoopGroup? = null
     private var artemis: ArtemisSessionProvider? = null
 
-    constructor(config: MutualSslConfiguration, p2pAddress: NetworkHostAndPort, maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+    constructor(config: MutualSslConfiguration,
+                p2pAddress: NetworkHostAndPort,
+                maxMessageSize: Int,
+                crlCheckSoftFail: Boolean) : this(config, maxMessageSize, crlCheckSoftFail, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private const val NUM_BRIDGE_THREADS = 0 // Default sized pool

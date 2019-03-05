@@ -256,7 +256,11 @@ open class Node(configuration: NodeConfiguration,
             startLocalRpcBroker(securityManager)
         }
 
-        val bridgeControlListener = BridgeControlListener(configuration.p2pSslOptions, network.serverAddress, networkParameters.maxMessageSize)
+        val bridgeControlListener = BridgeControlListener(
+                configuration.p2pSslOptions,
+                network.serverAddress,
+                networkParameters.maxMessageSize,
+                configuration.crlCheckSoftFail)
 
         printBasicNodeInfo("Advertised P2P messaging addresses", nodeInfo.addresses.joinToString())
         val rpcServerConfiguration = RPCServerConfiguration.DEFAULT
