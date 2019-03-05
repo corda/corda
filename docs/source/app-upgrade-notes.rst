@@ -171,8 +171,13 @@ The flows that make use of ``FinalityFlow`` in a CorDapp can be classified in th
 * **initiating flows**: these are flows that initiate a counterpart (responder) flow.
 
 There is a main difference between these 2 different categories, which is relevant to how the CorDapp can be upgraded.
-The second category of flows can be upgraded to use the new ``FinalityFlow`` in a backwards compatible way, which means the upgraded CorDapp can be deployed at the various nodes using a rolling deployment.
-On the other hand, the first category of flows cannot be upgraded to the new ``FinalityFlow`` in a backwards compatible way, so the changes to these flows need to be deployed simultaneously at all the nodes, using a lockstep deployment.
+The second category of flows can be upgraded to use the new ``FinalityFlow`` in a backwards compatible way, which means the upgraded CorDapp can be deployed at the various nodes using a *rolling deployment*.
+On the other hand, the first category of flows cannot be upgraded to the new ``FinalityFlow`` in a backwards compatible way, so the changes to these flows need to be deployed simultaneously at all the nodes, using a *lockstep deployment*.
+
+.. note::  A *lockstep deployment* is one, where all the involved nodes are stopped, upgraded to the new version of the CorDapp and then re-started.
+    As a result, there can't be any nodes running different versions of the CorDapp at any time.
+    A *rolling deployment* is one, where every node can be stopped, upgraded to the new version of the CorDapp and re-started independently and on its own pace.
+    As a result, there can be nodes running different versions of the CorDapp and transact with each other successfully.
 
 The upgrade is a three step process:
 
