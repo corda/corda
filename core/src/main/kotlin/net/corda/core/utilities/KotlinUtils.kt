@@ -4,15 +4,12 @@ package net.corda.core.utilities
 
 import net.corda.core.DeleteForDJVM
 import net.corda.core.KeepForDJVM
-import net.corda.core.internal.LazyMappedList
 import net.corda.core.internal.concurrent.get
-import net.corda.core.internal.createSimpleCache
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.CordaSerializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import kotlin.reflect.KProperty

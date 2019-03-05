@@ -524,6 +524,7 @@ fun <E> MutableSet<E>.toSynchronised(): MutableSet<E> = Collections.synchronized
 /**
  * List implementation that applies the expensive [transform] function only when the element is accessed and caches calculated values.
  * Size is very cheap as it doesn't call [transform].
+ * Used internally by [net.corda.core.transactions.TraversableTransaction].
  */
 class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) -> U) : AbstractList<U>() {
     private val partialResolvedList = MutableList<U?>(originalList.size) { null }
@@ -532,6 +533,15 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
         return partialResolvedList[index]
                 ?: transform(originalList[index], index).also { computed -> partialResolvedList[index] = computed }
     }
+    internal fun eager(onError: (TransactionDeserialisationException, Int) -> U?) {
+        for (i in 0 until size) {
+            try {
+                get(i)
+            } catch (ex: TransactionDeserialisationException) {
+                partialResolvedList[i] = onError(ex, i)
+            }
+        }
+    }
 }
 
 /**
@@ -539,6 +549,17 @@ class LazyMappedList<T, U>(val originalList: List<T>, val transform: (T, Int) ->
  * Size is very cheap as it doesn't call [transform].
  */
 fun <T, U> List<T>.lazyMapped(transform: (T, Int) -> U): List<U> = LazyMappedList(this, transform)
+
+/**
+ * Iterate over a [LazyMappedList], forcing it to transform all of its elements immediately.
+ * This transformation is assumed to be "deserialisation". Does nothing for any other kind of [List].
+ * WARNING: Any changes made to the [LazyMappedList] contents are PERMANENT!
+ */
+fun <T> List<T>.eagerDeserialise(onError: (TransactionDeserialisationException, Int) -> T? = { ex, _ -> throw ex }) {
+    if (this is LazyMappedList<*, T>) {
+        eager(onError)
+    }
+}
 
 private const val MAX_SIZE = 100
 private val warnings = Collections.newSetFromMap(createSimpleCache<String, Boolean>(MAX_SIZE)).toSynchronised()
