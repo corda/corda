@@ -12,6 +12,11 @@ CorDapp constraints migration
 
 .. note:: Before reading this page, you should be familiar with the key concepts of :doc:`Contract Constraints <api-contract-constraints>`.
 
+Corda 4 introduces and recommends building signed CorDapps that issue states with signature constraints.
+Existing on ledger states issued before Corda 4 are not automatically propagated to new signature constraints when building transactions in Corda 4.
+This document explains how to modify existing CorDapp flows to explicitly consume and evolve pre Corda 4 states, and outlines a future mechanism
+where such states will propagate automatically (without explicit migration code).
+
 Faced with the exercise of upgrading an existing Corda 3.x CorDapp to Corda 4, you need to consider the following:
 
 * What existing unconsumed states have been issued on ledger by a previous version of this CorDapp and using other constraint types?
@@ -104,8 +109,8 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
 Later releases
 ~~~~~~~~~~~~~~
 
-The next version of Corda will provide automatic migration of *hash constrained* states. This means that signed CorDapps running on a Corda 4.x node will
-automatically consume any pre-existing on-ledger *hash-constrained* states (and generate *signature-constrained* outputs) when the system property
+The next version of Corda will provide automatic propagation of *hash constrained* states. This means that signed CorDapps running on a Corda 4.x node will
+automatically propagate any pre-existing on-ledger *hash-constrained* states (and generate *signature-constrained* outputs) when the system property
 to break constraints is set.
 
 .. _cz_whitelisted_constraint_migration:
@@ -178,5 +183,5 @@ Corda 4.0 requires some additional steps to consume and evolve pre-existing on-l
 Later releases
 ~~~~~~~~~~~~~~
 
-The next version of Corda will provide automatic migration of *CZ whitelisted* constrained states. This means that signed CorDapps running on a Corda 4.x node will
-automatically consume any pre-existing on-ledger *CZ whitelisted* constrained states (and generate *signature* constrained outputs).
+The next version of Corda will provide automatic propagation of *CZ whitelisted* constrained states. This means that signed CorDapps running on a Corda 4.x node will
+automatically propagate any pre-existing on-ledger *CZ whitelisted* constrained states (and generate *signature* constrained outputs).

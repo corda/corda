@@ -193,11 +193,11 @@ During transaction building the ``AutomaticPlaceholderConstraint`` for output st
 will be selected based on a variety of factors so that the above holds true. If it can't find attachments in storage or there are no
 possible constraints, the ``TransactionBuilder`` will throw an exception.
 
-CorDapp constraints migration
-------------------------------
+Constraints migration to Corda 4
+--------------------------------
 
-Please read :doc:`cordapp-constraint-migration` to understand how to consume pre-existing hash or CZ whitelisted constrained states
-issued using a previous version of Corda using Corda 4 signed CorDapps (using signature constraints).
+Please read :doc:`cordapp-constraint-migration` to understand how to consume and evolve pre-Corda 4 issued hash or CZ whitelisted constrained states
+using a Corda 4 signed CorDapp (using signature constraints).
 
 Debugging
 ---------
