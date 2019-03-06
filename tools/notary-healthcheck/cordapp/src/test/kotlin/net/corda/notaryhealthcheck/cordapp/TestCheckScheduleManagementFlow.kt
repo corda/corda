@@ -84,13 +84,13 @@ class TestCheckScheduleManagementFlow {
     @Test
     fun testStoppingTwoForOneTarget() {
         val target = Monitorable(notary1, notary1)
-        nodeA.startFlow(InstallCheckScheduleStateFlow(listOf(nodeA.info.legalIdentities.first()), target, emptyList(), Instant.now().plusSeconds(1), Instant.MIN, 2, 5, UniqueIdentifier(null)))
-        nodeA.startFlow(InstallCheckScheduleStateFlow(listOf(nodeA.info.legalIdentities.first()), target, emptyList(), Instant.now().plusSeconds(1), Instant.MIN, 2, 5, UniqueIdentifier(null)))
-        Thread.sleep(4.seconds.toMillis())
-        nodeA.transaction {
-            val successfulChecks = nodeA.services.vaultService.queryBy<SchedulingContract.SuccessfulCheckState>()
-            assertTrue(successfulChecks.states.size > 3, "Expected at least 2 successful checks per notary by now, got ${successfulChecks.states.size}")
+        val flowFuture1 = nodeA.startFlow(InstallCheckScheduleStateFlow(listOf(nodeA.info.legalIdentities.first()), target, emptyList(), Instant.now().plusSeconds(1000), Instant.MIN, 2, 5, UniqueIdentifier(null)))
+        val flowFuture2 = nodeA.startFlow(InstallCheckScheduleStateFlow(listOf(nodeA.info.legalIdentities.first()), target, emptyList(), Instant.now().plusSeconds(1000), Instant.MIN, 2, 5, UniqueIdentifier(null)))
 
+        flowFuture1.get()
+        flowFuture2.get()
+
+        nodeA.transaction {
             val pendingChecks = nodeA.services.vaultService.queryBy<SchedulingContract.ScheduledCheckState>(criteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.UNCONSUMED))
             assertEquals(2, pendingChecks.states.size, "Expected exactly 2 pending (scheduled) checks, got ${pendingChecks.states.size}")
         }

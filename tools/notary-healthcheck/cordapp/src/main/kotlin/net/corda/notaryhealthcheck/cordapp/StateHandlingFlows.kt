@@ -15,7 +15,6 @@ import net.corda.node.services.api.ServiceHubInternal
 import net.corda.notaryhealthcheck.utils.Monitorable
 import java.time.Instant
 
-
 /**
  * Flow to start monitoring a specified notary node.
  *
@@ -48,7 +47,7 @@ class StartCheckScheduleFlow(
 
 /**
  * Flow to stop monitoring a specified notary node
-
+ *
  * @param target The notary (or notary member) to stop monitoring
  */
 @StartableByRPC
@@ -73,7 +72,6 @@ class StopCheckScheduleFlow(private val target: Monitorable) : FlowLogic<Unit>()
             log.warn("Failed to find scheduled state for party ${target.party.name}")
         }
     }
-
 }
 
 /**
@@ -87,7 +85,7 @@ class StopCheckScheduleFlow(private val target: Monitorable) : FlowLogic<Unit>()
 @StartableByRPC
 class StartAllChecksFlow(private val waitTimeSeconds: Int, private val waitForOutstandingFlowsSeconds: Int) : FlowLogic<Unit>() {
     companion object {
-        internal fun getTargets(networkMap: NetworkMapCache): List<Monitorable> {
+        fun getTargets(networkMap: NetworkMapCache): List<Monitorable> {
             val notaries = networkMap.notaryIdentities
             val notaryClusterMembers = networkMap.allNodes.mapNotNull {
                 val party = it.legalIdentities.first()
@@ -112,7 +110,6 @@ class StartAllChecksFlow(private val waitTimeSeconds: Int, private val waitForOu
         val startTime = Instant.now().plusSeconds(waitTimeSeconds.toLong())
         targets.forEach { subFlow(InstallCheckScheduleStateFlow(listOf(ourIdentity), it, emptyList(), startTime, Instant.MIN, waitTimeSeconds, waitForOutstandingFlowsSeconds, UniqueIdentifier(null))) }
     }
-
 }
 
 /**

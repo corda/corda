@@ -24,8 +24,8 @@ class SchedulingContract : Contract {
     /**
      * Scheduled state to kick off a notary healthcheck at the specified start time
      *
-     * @param participants List of participands, inherited from LinearState. Should only be the node the check CordApp is running on
-     * @param linearId The linear id of this check (used to track progress from scheduled to running/abandonned/success/failure
+     * @param participants List of participants, inherited from LinearState. Should only be the node the check CordApp is running on
+     * @param linearId The linear id of this check (used to track progress from scheduled to running/abandoned/success/failure
      * @param statesToCheck A list of linear ids of scheduled/running checks that were outstanding when this state was created
      * @param target The notary or notary cluster member to check
      * @param startTime The time after which to run the check
@@ -67,9 +67,9 @@ class SchedulingContract : Contract {
     class FailedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 
     /**
-     * State to mark an abandonned (not started) healthcheck. The ScheduleCheckFlow evolves a ScheduleCheckState into this
+     * State to mark an abandoned (not started) healthcheck. The ScheduleCheckFlow evolves a ScheduleCheckState into this
      * if there was still one or more healthcheck flows outstanding and the last one had been started less than waitForOutstandingFlowsSeconds
      * ago.
      */
-    class AbandonnedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
+    class AbandonedCheckState(override val linearId: UniqueIdentifier, override val participants: List<AbstractParty>) : LinearState
 }

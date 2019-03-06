@@ -86,8 +86,8 @@ class TestScheduleCheckFlow {
             val startedChecks = nodeA.services.vaultService.queryBy<SchedulingContract.RunningCheckState>()
             assertTrue(startedChecks.states.size > 1, "Expected at least 2 started/running checks by now, got ${startedChecks.states.size}")
 
-            val abandonnedStates = nodeA.services.vaultService.queryBy<SchedulingContract.AbandonnedCheckState>()
-            assertTrue(abandonnedStates.states.size >= 1, "Expected at least 1 abandonned check by now, got ${abandonnedStates.states.size}")
+            val abandonedStates = nodeA.services.vaultService.queryBy<SchedulingContract.AbandonedCheckState>()
+            assertTrue(abandonedStates.states.isNotEmpty(), "Expected at least 1 abandoned check by now, got ${abandonedStates.states.size}")
 
             val scheduledStates = nodeA.services.vaultService.queryBy<SchedulingContract.ScheduledCheckState>()
             assertEquals(1, scheduledStates.states.size, "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}")
@@ -116,8 +116,8 @@ class TestScheduleCheckFlow {
             val failedStates = nodeA.services.vaultService.queryBy<SchedulingContract.FailedCheckState>()
             assertTrue(failedStates.states.size > 1, "Expected at least 2 failed checks by now, got ${failedStates.states.size}")
 
-            val abandonnedStates = nodeA.services.vaultService.queryBy<SchedulingContract.AbandonnedCheckState>()
-            assertTrue(abandonnedStates.states.isEmpty(), "Not expecting any abandonned checks, got ${abandonnedStates.states.size}")
+            val abandonedStates = nodeA.services.vaultService.queryBy<SchedulingContract.AbandonedCheckState>()
+            assertTrue(abandonedStates.states.isEmpty(), "Not expecting any abandoned checks, got ${abandonedStates.states.size}")
 
             val scheduledStates = nodeA.services.vaultService.queryBy<SchedulingContract.ScheduledCheckState>()
             assertEquals(1, scheduledStates.states.size, "Expected exactly 1 pending (scheduled check), got ${scheduledStates.states.size}")

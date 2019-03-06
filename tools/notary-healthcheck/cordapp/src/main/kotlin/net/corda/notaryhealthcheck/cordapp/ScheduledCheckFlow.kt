@@ -36,7 +36,6 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
     companion object {
         private val log = contextLogger()
 
-
         private fun formatLastSuccess(lastSuccess: Instant): String {
             return if (lastSuccess > Instant.MIN) {
                 "Last successful check: $lastSuccess"
@@ -68,16 +67,15 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
             }
             return lastSuccessTime
         }
-
     }
 
     @Suspendable
     override fun call() {
-        // get the actual state we are starting/are about to consume
+        // Get the actual state we are starting/are about to consume
         val state = serviceHub.toStateAndRef<SchedulingContract.ScheduledCheckState>(stateRef)
         val scheduledState = state.state.data
 
-        // get metrics to report
+        // Get metrics to report
         val monitoringService = (serviceHub as ServiceHubInternal).monitoringService
         val prefix = scheduledState.target.party.metricPrefix()
 
@@ -95,7 +93,7 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
                 waitForOutstandingFlowsSeconds,
                 UniqueIdentifier(null)))
 
-        // either start check or abandon this state
+        // Either start check or abandon this state
         if (startNewCheckFlow) {
             checkNotary(scheduledState, state, lastSuccessTime, monitoringService, prefix)
         } else {
@@ -113,11 +111,10 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
             state: SchedulingContract.ScheduledCheckState,
             monitoringService: MonitoringService,
             prefix: String): PrevFlowResult {
-        // check if any of the previous flows have succeeded, update the last succeeded time
+        // Check if any of the previous flows have succeeded, update the last succeeded time
         val lastSuccessTime = updateLastSuccess(state.statesToCheck, serviceHub.vaultService, state.lastSuccessTime)
 
-
-        // check if any flows started previously are still in flight - if so log/publish stats about this
+        // Check if any flows started previously are still in flight - if so log/publish stats about this
         val (statesToCheck, lastStartTime, earliestStartTime)
                 = checkRunningStates(state.statesToCheck, serviceHub.vaultService)
         if (!statesToCheck.isEmpty()) {
@@ -126,11 +123,11 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
             monitoringService.also { it.metrics.timer(Metrics.maxInflightTime(prefix)).update(duration.seconds, TimeUnit.SECONDS) }
         }
 
-        // do we need to start a new check flow? We only start a new flow if there are no outstanding flows or the last
+        // Do we need to start a new check flow? We only start a new flow if there are no outstanding flows or the last
         // one has been running for longer than waitForOutstandingFlowsSeconds
         val needToRunCheck = lastStartTime.plusSeconds(waitForOutstandingFlowsSeconds.toLong()) < Instant.now()
 
-        // the next state will have to check for the fate of anything still outstanding plus the flow we
+        // The next state will have to check for the fate of anything still outstanding plus the flow we
         // are potentially about to start
         return PrevFlowResult(
                 if (needToRunCheck) statesToCheck + state.linearId else statesToCheck,
@@ -191,7 +188,7 @@ class ScheduledCheckFlow(private val stateRef: StateRef, private val waitTimeSec
             lastSuccessTime: Instant,
             earliestStartTime: Instant) {
         log.info("${state.target} Waiting for previous flows since $earliestStartTime ${formatLastSuccess(lastSuccessTime)}")
-        val outputState = SchedulingContract.AbandonnedCheckState(state.linearId, state.participants)
+        val outputState = SchedulingContract.AbandonedCheckState(state.linearId, state.participants)
         val builder = TransactionBuilder(state.target.notary)
                 .addInputState(stateAndRef)
                 .addOutputState(outputState, SchedulingContract.PROGRAM_ID)
