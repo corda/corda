@@ -5,7 +5,7 @@ Corda Enterprise comes with two notary implementations built-in:
 
 1. **Single-node**: a simple notary service that persists notarisation requests in the node's database. It is easy to configure
    and can be used for testing, or networks that do not have strict availability requirements.
-2. **Crash fault-tolerant**: a highly available notary service operated by a single party.
+2. **Highly available**: a clustered notary service operated by a single party, able to tolerate crash faults.
 
 Single-node
 ===========
@@ -30,9 +30,12 @@ For clients to be able to use the notary service, its identity must be added to 
 done automatically when creating the network, if using :doc:`network-bootstrapper`. See :doc:`corda-networks-index`
 for more details.
 
-Crash fault-tolerant
-====================
+Highly available
+================
 
 Corda Enterprise provides a highly available notary service implementation backed by a replicated Percona XtraDB cluster.
 This is the recommended implementation for production networks. See :doc:`running-a-notary-cluster/toctree` for detailed
 setup steps.
+
+.. warning::
+    Upgrading an existing single-node notary to be highly available is currently unsupported.
