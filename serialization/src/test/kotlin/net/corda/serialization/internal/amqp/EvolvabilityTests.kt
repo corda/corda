@@ -21,6 +21,7 @@ import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import kotlin.test.assertFailsWith
 
 // To regenerate any of the binary test files do the following
 //
@@ -710,6 +711,41 @@ class EvolvabilityTests {
         val deserialized = DeserializationInput(sf).deserialize(SerializedBytes<Evolved>(sc2))
 
         assertEquals("dronf", deserialized.fnord)
+    }
+
+    // Class as it was serialized, with additional field containing a set of unknown type.
+    // enum class NewEnum { ONE, TWO, BUCKLE_MY_SHOE }
+    // data class Evolved2(val fnord: String, val newEnum: Set<NewEnum>?)
+
+    // Class before evolution
+    data class Evolved2(val fnord: String)
+    @Test
+    fun evolutionWithCarpentryDisabled() {
+        val resource = "EvolvabilityTests.evolutionWithCarpentryDisabled"
+        val sf = testDefaultFactory()
+        // Uncomment to recreate
+        // File(URI("$localPath/${resource}_null")).writeBytes(SerializationOutput(sf).serialize(Evolved2("dronf", null)).bytes)
+        // File(URI("$localPath/${resource}_non-null")).writeBytes(SerializationOutput(sf).serialize(Evolved2("dronf", setOf(NewEnum.BUCKLE_MY_SHOE))).bytes)
+
+        val withNullValueUrl = EvolvabilityTests::class.java.getResource("${resource}_null")
+        val withNonNullValueUrl = EvolvabilityTests::class.java.getResource("${resource}_non-null")
+
+        val withNullValue = withNullValueUrl.readBytes()
+        val withNonNullValue = withNonNullValueUrl.readBytes()
+        val deserializedWithNullValue = DeserializationInput(sf).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext.withoutCarpenter())
+        val deserializedWithNonNullValue = DeserializationInput(sf).deserialize(SerializedBytes<Evolved2>(withNonNullValue), testSerializationContext.withoutCarpenter())
+        assertEquals("dronf", deserializedWithNullValue.fnord)
+        assertEquals("dronf", deserializedWithNonNullValue.fnord)
+
+        // A non-null value for the unknown foreign type must still trigger data-loss protection, if enabled.
+        val protectedFactory = testDefaultFactoryNoDataLoss()
+        // This should be fine.
+        DeserializationInput(protectedFactory).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext.withoutCarpenter())
+
+        // This should blow up.
+        assertFailsWith<NotSerializableException> {
+            DeserializationInput(protectedFactory).deserialize(SerializedBytes<Evolved2>(withNonNullValue), testSerializationContext.withoutCarpenter())
+        }
     }
 
     // Container class

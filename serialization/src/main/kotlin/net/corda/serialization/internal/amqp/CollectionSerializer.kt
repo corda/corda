@@ -117,15 +117,16 @@ class CollectionSerializer(private val declaredType: ParameterizedType, factory:
         }
     }
 
-
     override fun readObject(
             obj: Any,
             schemas: SerializationSchemas,
             input: DeserializationInput,
             context: SerializationContext): Any = ifThrowsAppend({ declaredType.typeName }) {
         // TODO: Can we verify the entries in the list?
-        concreteBuilder((obj as List<*>).map {
-            input.readObjectOrNull(it, schemas, inboundType, context)
+        concreteBuilder((obj as List<*>).mapIndexed { index, serializedItem ->
+            val item = input.readObjectOrNull(serializedItem, schemas, inboundType, context)
+            if (item is NonDeserializable) throw NotSerializableException("Collection item $index is non-deserializable ${item.descriptor}")
+            item
         })
     }
 }

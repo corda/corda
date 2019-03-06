@@ -11,16 +11,23 @@ import net.corda.serialization.internal.*
 import net.corda.serialization.internal.model.TypeIdentifier
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
+import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.InputStream
 import java.io.NotSerializableException
 import java.lang.Exception
+import java.lang.UnsupportedOperationException
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.TypeVariable
 import java.lang.reflect.WildcardType
 import java.nio.ByteBuffer
+
+/**
+ * Token for an object that could not be deserialised, usually because the target class does not exist on the classpath.
+ */
+internal data class NonDeserializable(val descriptor: String)
 
 data class ObjectAndEnvelope<out T>(val obj: T, val envelope: Envelope)
 
@@ -121,8 +128,11 @@ class DeserializationInput constructor(
 
                 logger.trace("deserialize blob scheme=\"${envelope.schema}\"")
 
-                clazz.cast(readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
-                        clazz, context))
+                val result = readObjectOrNull(envelope.obj, SerializationSchemas(envelope.schema, envelope.transformsSchema),
+                        clazz, context)
+
+                if (result is NonDeserializable) throw NotSerializableException("Object ${result.descriptor} is not deserializable")
+                clazz.cast(result)
             }
 
     @Throws(NotSerializableException::class)
@@ -148,51 +158,64 @@ class DeserializationInput constructor(
     }
 
     internal fun readObject(obj: Any, schemas: SerializationSchemas, type: Type, context: SerializationContext): Any =
-            if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) {
-                // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
-                val objectIndex = (obj.described as UnsignedInteger).toInt()
-                if (objectIndex >= objectHistory.size)
-                    throw AMQPNotSerializableException(
-                            type,
-                            "Retrieval of existing reference failed. Requested index $objectIndex " +
+            if (obj is DescribedType && ReferencedObject.DESCRIPTOR == obj.descriptor) alreadyRead(obj, type)
+            else readNew(obj, schemas, context, type)
+
+
+    private fun readNew(obj: Any, schemas: SerializationSchemas, context: SerializationContext, type: Type): Any {
+        val objectRead = when (obj) {
+            is DescribedType -> {
+                // Look up serializer in factory by descriptor
+                val serializer = serializerFactory.get(obj.descriptor.toString(), schemas, context)
+                if (serializer == null) NonDeserializable(
+                        schemas.schema.types.find { it.descriptor == obj.descriptor }?.name ?:
+                        obj.descriptor.toString())
+                else readObjectWithSerializer(type, serializer, obj, schemas, context)
+            }
+            is Binary -> obj.array
+            else -> obj // this will be the case for primitive types like [boolean] et al.
+        }
+
+        // Store the reference in case we need it later on.
+        // Skip for primitive types as they are too small and overhead of referencing them will be much higher
+        // than their content
+        if (suitableForObjectReference(objectRead.javaClass)) {
+            objectHistory.add(objectRead)
+        }
+        return objectRead
+    }
+
+    private fun readObjectWithSerializer(type: Type, serializer: AMQPSerializer<Any>, obj: DescribedType, schemas: SerializationSchemas, context: SerializationContext): Any {
+        if (type != TypeIdentifier.UnknownType.getLocalType() && serializer.type != type && with(serializer.type) {
+                    !isSubClassOf(type) && !materiallyEquivalentTo(type)
+                }
+        ) {
+            throw AMQPNotSerializableException(
+                    type,
+                    "Described type with descriptor ${obj.descriptor} was " +
+                            "expected to be of type $type but was ${serializer.type}")
+        }
+        return serializer.readObject(obj.described, schemas, this, context)
+    }
+
+    private fun alreadyRead(obj: DescribedType, type: Type): Any {
+        // It must be a reference to an instance that has already been read, cheaply and quickly returning it by reference.
+        val objectIndex = (obj.described as UnsignedInteger).toInt()
+        if (objectIndex >= objectHistory.size)
+            throw AMQPNotSerializableException(
+                    type,
+                    "Retrieval of existing reference failed. Requested index $objectIndex " +
                             "is outside of the bounds for the list of size: ${objectHistory.size}")
 
-                val objectRetrieved = objectHistory[objectIndex]
-                if (!objectRetrieved::class.java.isSubClassOf(type.asClass())) {
-                    throw AMQPNotSerializableException(
-                            type,
-                            "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +
-                                    "@ $objectIndex")
-                }
-                objectRetrieved
-            } else {
-                val objectRead = when (obj) {
-                    is DescribedType -> {
-                        // Look up serializer in factory by descriptor
-                        val serializer = serializerFactory.get(obj.descriptor.toString(), schemas, context)
-                        if (type != TypeIdentifier.UnknownType.getLocalType() && serializer.type != type && with(serializer.type) {
-                                    !isSubClassOf(type) && !materiallyEquivalentTo(type)
-                                }
-                        ) {
-                            throw AMQPNotSerializableException(
-                                    type,
-                                    "Described type with descriptor ${obj.descriptor} was " +
-                                    "expected to be of type $type but was ${serializer.type}")
-                        }
-                        serializer.readObject(obj.described, schemas, this, context)
-                    }
-                    is Binary -> obj.array
-                    else -> obj // this will be the case for primitive types like [boolean] et al.
-                }
-
-                // Store the reference in case we need it later on.
-                // Skip for primitive types as they are too small and overhead of referencing them will be much higher
-                // than their content
-                if (suitableForObjectReference(objectRead.javaClass)) {
-                    objectHistory.add(objectRead)
-                }
-                objectRead
-            }
+        val objectRetrieved = objectHistory[objectIndex]
+        if (!objectRetrieved::class.java.isSubClassOf(type.asClass())) {
+            throw AMQPNotSerializableException(
+                    type,
+                    "Existing reference type mismatch. Expected: '$type', found: '${objectRetrieved::class.java}' " +
+                            "@ $objectIndex")
+        }
+        return objectRetrieved
+    }
 
     /**
      * Currently performs checks aimed at:

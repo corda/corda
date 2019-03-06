@@ -37,15 +37,12 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
-                if (context.carpenterDisabled) {
-                    throw e
-                }
                 null
             }
         }.toMap()
 
-        // If we have everything we need, return immediately.
-        if (noCarpentryRequired.size == remoteTypeInformation.size) return noCarpentryRequired
+        // If we have everything we need, or carpentry is disabled, return immediately.
+        if (context.carpenterDisabled || noCarpentryRequired.size == remoteTypeInformation.size) return noCarpentryRequired
 
         // Identify the types which need carpenting up.
         val requiringCarpentry = remoteInformationByIdentifier.asSequence().mapNotNull { (identifier, information) ->
@@ -65,4 +62,3 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
         return noCarpentryRequired + carpented
     }
 }
-

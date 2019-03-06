@@ -17,8 +17,7 @@ interface RemoteSerializerFactory {
      * @param typeDescriptor The type descriptor for the type to obtain a serializer for.
      * @param schema The schemas sent along with the serialized data.
      */
-    @Throws(NotSerializableException::class, ClassNotFoundException::class)
-    fun get(typeDescriptor: TypeDescriptor, schema: SerializationSchemas, context: SerializationContext): AMQPSerializer<Any>
+    fun get(typeDescriptor: TypeDescriptor, schema: SerializationSchemas, context: SerializationContext): AMQPSerializer<Any>?
 }
 
 /**
@@ -62,7 +61,7 @@ class DefaultRemoteSerializerFactory(
             typeDescriptor: TypeDescriptor,
             schema: SerializationSchemas,
             context: SerializationContext
-    ): AMQPSerializer<Any> =
+    ): AMQPSerializer<Any>? =
         // If we have seen this descriptor before, we assume we have seen everything in this schema before.
         descriptorBasedSerializerRegistry.getOrBuild(typeDescriptor) {
             logger.trace("get Serializer descriptor=$typeDescriptor")
@@ -80,8 +79,7 @@ class DefaultRemoteSerializerFactory(
             }
 
             // Return the specific serializer the caller asked for.
-            serializers[typeDescriptor] ?: throw NotSerializableException(
-                    "Could not find type matching descriptor $typeDescriptor.")
+            serializers[typeDescriptor]
         }
 
     private fun getUncached(
@@ -131,9 +129,10 @@ ${localTypeInformation.prettyPrint(false)}
             localTypeModel.inspect(type)
         }
 
-        return remoteInformation.mapValues { (_, remoteInformation) ->
-            RemoteAndLocalTypeInformation(remoteInformation, localInformationByIdentifier[remoteInformation.typeIdentifier]!!)
-        }
+        return remoteInformation.asSequence().mapNotNull { (descriptor, remoteInformation) ->
+            val localInformation = localInformationByIdentifier[remoteInformation.typeIdentifier]
+            if (localInformation == null) null else descriptor to RemoteAndLocalTypeInformation(remoteInformation, localInformation)
+        }.toMap()
     }
 
     private fun RemoteTypeInformation.isEvolvableTo(localTypeInformation: LocalTypeInformation): Boolean = when(this) {

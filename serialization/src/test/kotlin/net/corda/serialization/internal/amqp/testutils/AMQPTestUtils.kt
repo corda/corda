@@ -30,8 +30,8 @@ class TestDescriptorBasedSerializerRegistry : DescriptorBasedSerializerRegistry 
         contents.putIfAbsent(descriptor, serializer)
     }
 
-    override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any> =
-            get(descriptor) ?: builder().also { set(descriptor, it) }
+    override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>?): AMQPSerializer<Any>? =
+            get(descriptor) ?: builder()?.also { set(descriptor, it) }
 }
 
 @JvmOverloads
@@ -41,6 +41,15 @@ fun testDefaultFactory(descriptorBasedSerializerRegistry: DescriptorBasedSeriali
             AllWhitelist,
             ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
             descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry)
+
+@JvmOverloads
+fun testDefaultFactoryNoDataLoss(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =
+                               DefaultDescriptorBasedSerializerRegistry()) =
+        SerializerFactoryBuilder.build(
+                AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+                descriptorBasedSerializerRegistry = descriptorBasedSerializerRegistry,
+                mustPreserveDataWhenEvolving = true)
 
 @JvmOverloads
 fun testDefaultFactoryNoEvolution(descriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry =

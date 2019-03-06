@@ -253,6 +253,50 @@ class DeserializeNeedingCarpentryTests : AmqpCarpenterBase(AllWhitelist) {
     }
 
     @Test
+    fun mapKeyOfType() {
+        val unknownClass = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+                "v1" to NonNullableField(Int::class.java),
+                "v2" to NonNullableField(Int::class.java))))
+
+        @CordaSerializable
+        data class outer(val l: Map<Any, Any>)
+
+        val toSerialise = outer(mapOf(
+                unknownClass.constructors.first().newInstance(1, 2) to "foo"))
+
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(toSerialise)
+
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
+        var sentinel = 1
+        deserializedObj.l.forEach { (key, _) ->
+            assertEquals(sentinel++, key::class.java.getMethod("getV1").invoke(key))
+            assertEquals(sentinel++, key::class.java.getMethod("getV2").invoke(key))
+        }
+    }
+
+    @Test
+    fun mapValueOfType() {
+        val unknownClass = ClassCarpenterImpl(whitelist = AllWhitelist).build(ClassSchema(testName(), mapOf(
+                "v1" to NonNullableField(Int::class.java),
+                "v2" to NonNullableField(Int::class.java))))
+
+        @CordaSerializable
+        data class outer(val l: Map<Any, Any>)
+
+        val toSerialise = outer(mapOf(
+                "foo" to unknownClass.constructors.first().newInstance(1, 2)))
+
+        val serialisedBytes = TestSerializationOutput(VERBOSE, sf1).serialize(toSerialise)
+
+        val deserializedObj = DeserializationInput(sf2).deserializeWithoutAndWithCarpenter(serialisedBytes)
+        var sentinel = 1
+        deserializedObj.l.forEach { (_, value) ->
+            assertEquals(sentinel++, value::class.java.getMethod("getV1").invoke(value))
+            assertEquals(sentinel++, value::class.java.getMethod("getV2").invoke(value))
+        }
+    }
+
+    @Test
     fun unknownInterface() {
         val cc = ClassCarpenterImpl(whitelist = AllWhitelist)
 

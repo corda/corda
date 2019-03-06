@@ -129,8 +129,13 @@ class MapSerializer(private val declaredType: ParameterizedType, factory: LocalS
 
     private fun readEntry(schemas: SerializationSchemas, input: DeserializationInput, entry: Map.Entry<Any?, Any?>,
                           context: SerializationContext
-    ) = input.readObjectOrNull(entry.key, schemas, inboundKeyType, context) to
-            input.readObjectOrNull(entry.value, schemas, inboundValueType, context)
+    ): Pair<Any?, Any?> {
+        val key = input.readObjectOrNull(entry.key, schemas, inboundKeyType, context)
+        val value= input.readObjectOrNull(entry.value, schemas, inboundValueType, context)
+        if (key is NonDeserializable) throw NotSerializableException("Map key is non-deserializable ${key.descriptor}")
+        if (value is NonDeserializable) throw NotSerializableException("Map value at $key is non-deserializable ${value.descriptor}")
+        return key to value
+    }
 
     // Cannot use * as a bound for EnumMap and EnumSet since * is not an enum.  So, we use a sample enum instead.
     // We don't actually care about the type, we just need to make the compiler happier.

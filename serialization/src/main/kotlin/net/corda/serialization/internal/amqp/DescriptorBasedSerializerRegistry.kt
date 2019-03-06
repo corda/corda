@@ -11,7 +11,7 @@ import net.corda.serialization.internal.model.DefaultCacheProvider
 interface DescriptorBasedSerializerRegistry {
     operator fun get(descriptor: String): AMQPSerializer<Any>?
     operator fun set(descriptor: String, serializer: AMQPSerializer<Any>)
-    fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>): AMQPSerializer<Any>
+    fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>?): AMQPSerializer<Any>?
 }
 
 class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistry {
@@ -24,6 +24,6 @@ class DefaultDescriptorBasedSerializerRegistry: DescriptorBasedSerializerRegistr
         registry.putIfAbsent(descriptor, serializer)
     }
 
-    override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>) =
-            registry.getOrPut(descriptor) { builder() }
+    override fun getOrBuild(descriptor: String, builder: () -> AMQPSerializer<Any>?): AMQPSerializer<Any>? =
+        registry[descriptor] ?: builder()?.apply { registry.putIfAbsent(descriptor, this) }
 }

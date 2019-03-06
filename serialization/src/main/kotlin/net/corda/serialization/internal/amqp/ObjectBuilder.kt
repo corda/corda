@@ -26,14 +26,12 @@ private class ConstructorCaller(private val javaConstructor: Constructor<Any>): 
         try {
             javaConstructor.newInstance(*parameters)
         } catch (e: InvocationTargetException) {
-            throw NotSerializableException(
-                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                    "failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
+            throw NotSerializableException("$this failed when called with parameters ${parameters.toList()}: ${e.cause!!.message}")
         } catch (e: IllegalAccessException) {
-            throw NotSerializableException(
-                    "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}) " +
-                    "not accessible: ${e.message}")
+            throw NotSerializableException("$this not accessible: ${e.message}")
         }
+
+    override fun toString() = "Constructor for ${javaConstructor.declaringClass} (isAccessible=${javaConstructor.isAccessible}"
 }
 
 /**
@@ -150,7 +148,9 @@ private class SetterBasedObjectBuilder(
     }
 
     override fun populate(slot: Int, value: Any?) {
-        setters[slot]?.invoke(target, value)
+        val setter = setters[slot] ?: return
+        if (value is NonDeserializable) throw NotSerializableException("Non-deserializable <${value.descriptor}> supplied to setter ${setter.setter.name}")
+        setter.invoke(target, value)
     }
 
     override fun build(): Any = target
@@ -170,7 +170,10 @@ private class ConstructorBasedObjectBuilder(
 
     override fun populate(slot: Int, value: Any?) {
         val parameterIndex = parameterIndices[slot]
-        if (parameterIndex != IGNORE_COMPUTED) params[parameterIndex] = value
+        if (parameterIndex == IGNORE_COMPUTED) return
+        if (value is NonDeserializable) throw NotSerializableException(
+                "Non-deserializable <${value.descriptor}> supplied to parameter $parameterIndex of $constructor")
+        params[parameterIndex] = value
     }
 
     override fun build(): Any = constructor.invoke(params)

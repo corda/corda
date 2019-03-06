@@ -8,6 +8,7 @@ import net.corda.core.utilities.loggerFor
 import net.corda.core.utilities.trace
 import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
+import java.io.NotSerializableException
 import java.lang.reflect.Type
 
 /**
@@ -88,7 +89,11 @@ open class ArraySerializer(override val type: Type, factory: LocalSerializerFact
                             context: SerializationContext
     ): Any {
         if (obj is List<*>) {
-            return obj.map { input.readObjectOrNull(it, schemas, elementType, context) }.toArrayOfType(elementType)
+            return obj.mapIndexed { index, serializedItem ->
+                val item = input.readObjectOrNull(serializedItem, schemas, elementType, context)
+                if (item is NonDeserializable) throw NotSerializableException("Array item index $index is non-deserializable ${item.descriptor}")
+                item
+            }.toArrayOfType(elementType)
         } else throw AMQPNotSerializableException(type, "Expected a List but found $obj")
     }
 

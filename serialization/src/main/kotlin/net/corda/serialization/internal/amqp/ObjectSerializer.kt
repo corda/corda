@@ -196,7 +196,11 @@ class EvolutionObjectSerializer(
                 remoteProperties.mapValues { (name, property) ->
                     val localProperty = localProperties[name]
                     val isCalculated = localProperty?.isCalculated ?: false
-                    val type = localProperty?.type?.observedType ?: property.type.typeIdentifier.getLocalType(classLoader)
+                    val type = localProperty?.type?.observedType ?: try {
+                        property.type.typeIdentifier.getLocalType(classLoader)
+                    } catch (e: ClassNotFoundException) {
+                        NonDeserializable::class.java
+                    }
                     ComposableTypePropertySerializer.makeForEvolution(name, isCalculated, property.type.typeIdentifier, type)
                 }
     }
