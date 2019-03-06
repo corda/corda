@@ -87,13 +87,13 @@ class DefaultEvolutionSerializerFactory(
     // provided property types.
     private fun findEvolverConstructor(constructors: List<EvolutionConstructorInformation>,
                                        properties: Map<String, RemotePropertyInformation>): EvolutionConstructorInformation? {
-        val propertyTypes = properties.asSequence().mapNotNull { (name, info) ->
+        val propertyTypes = properties.mapValues { (name, info) ->
             try {
-                name to info.type.typeIdentifier.getLocalType(classLoader).asClass()
+                info.type.typeIdentifier.getLocalType(classLoader).asClass()
             } catch (e: ClassNotFoundException) {
-                null
+                NonDeserializable::class.java
             }
-        }.toMap()
+        }
 
         // Evolver constructors are listed in ascending version order, so we just want the last that matches.
         return constructors.lastOrNull { (_, evolverProperties) ->
