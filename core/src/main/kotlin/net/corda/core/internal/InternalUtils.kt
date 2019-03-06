@@ -583,3 +583,9 @@ fun Logger.warnOnce(warning: String) {
         this.warn(warning)
     }
 }
+
+/**
+ * A simple marker to indicate something is used in the Corda Enterprise codebase but we want, for example, to align
+ * function or constructor signatures so that parameters are not refactored away in Corda.
+ */
+fun <T> usedInEnterprise(param: T) {}

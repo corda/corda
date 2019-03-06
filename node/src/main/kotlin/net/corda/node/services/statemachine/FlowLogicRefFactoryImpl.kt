@@ -1,8 +1,10 @@
 package net.corda.node.services.statemachine
 
-import net.corda.core.internal.VisibleForTesting
 import com.google.common.primitives.Primitives
 import net.corda.core.flows.*
+import net.corda.core.internal.NamedCacheFactory
+import net.corda.core.internal.VisibleForTesting
+import net.corda.core.internal.usedInEnterprise
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
@@ -32,7 +34,10 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * in response to a potential malicious use or buggy update to an app etc.
  */
 // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
-class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonSerializeAsToken(), FlowLogicRefFactory {
+class FlowLogicRefFactoryImpl(private val classloader: ClassLoader, cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), FlowLogicRefFactory {
+    init {
+        usedInEnterprise(cacheFactory)
+    }
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
             throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
