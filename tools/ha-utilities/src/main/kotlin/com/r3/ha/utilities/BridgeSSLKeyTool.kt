@@ -38,17 +38,28 @@ class BridgeSSLKeyTool : CliWrapperBase("import-ssl-key", "Key copying tool for 
             val passwords = if (nodeKeystorePasswords.size == 1) MutableList(nodeKeystore.size) { nodeKeystorePasswords.first() }.toTypedArray() else nodeKeystorePasswords
 
             require(passwords.size == nodeKeystore.size) { "Number of passwords doesn't match the number of keystores, got ${passwords.size} passwords for ${nodeKeystore.size} keystores." }
+            val skippedKeystore = mutableListOf<Path>()
             nodeKeystore.zip(passwords).forEach { (keystore, password) ->
-                val tlsKeystore = X509KeyStore.fromFile(keystore, password, createNew = false)
-                val tlsKey = tlsKeystore.getPrivateKey(X509Utilities.CORDA_CLIENT_TLS, password)
-                val certChain = tlsKeystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
-                val nameHash = SecureHash.sha256(certChain.first().subjectX500Principal.toString())
-                // Key password need to be same as the keystore password
-                val alias = "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash"
-                setPrivateKey(alias, tlsKey, certChain, bridgeKeystorePassword)
-                println("Added new SSL key with alias '$alias', for identity '${certChain.first().subjectX500Principal}'")
+                try {
+                    println("Importing SSL key from $keystore")
+                    require(keystore.exists()) { "Invalid keystore path : $keystore" }
+                    val tlsKeystore = X509KeyStore.fromFile(keystore, password, createNew = false)
+                    val tlsKey = tlsKeystore.getPrivateKey(X509Utilities.CORDA_CLIENT_TLS, password)
+                    val certChain = tlsKeystore.getCertificateChain(X509Utilities.CORDA_CLIENT_TLS)
+                    val nameHash = SecureHash.sha256(certChain.first().subjectX500Principal.toString())
+                    // Key password need to be same as the keystore password
+                    val alias = "${X509Utilities.CORDA_CLIENT_TLS}-$nameHash"
+                    setPrivateKey(alias, tlsKey, certChain, bridgeKeystorePassword)
+                    println("Added new SSL key with alias '$alias', for identity '${certChain.first().subjectX500Principal}'")
+                } catch (e: Exception) {
+                    System.err.println("Unable to import SSL key from $keystore due to error : '${e.message}'")
+                    skippedKeystore.add(keystore)
+                }
             }
             println("Finish adding keys to keystore '$bridgeKeystore', keystore contains ${aliases().asSequence().count()} entries.")
+            if (skippedKeystore.isNotEmpty()) {
+                throw Exception("Error encountered when processing the following keystore(s) : $skippedKeystore , please check the inputs and rerun the key importing tool if necessary.")
+            }
         }
         return ExitCodes.SUCCESS
     }
