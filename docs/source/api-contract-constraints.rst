@@ -24,7 +24,7 @@ to it.
 There are several types of constraint:
 
 1. Hash constraint: exactly one version of the app can be used with this state.
-2. Zone whitelist constraint: the compatibility zone operator lists the hashes of the versions that can be used with this contract class name.
+2. Compatibility zone whitelisted (or CZ whitelisted) constraint: the compatibility zone operator lists the hashes of the versions that can be used with this contract class name.
 3. Signature constraint: any version of the app signed by the given ``CompositeKey`` can be used.
 4. Always accept constraint: any app can be used at all. This is insecure but convenient for testing.
 
