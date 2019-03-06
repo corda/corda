@@ -47,7 +47,7 @@ private class SetterCaller(val setter: Method): (Any, Any?) -> Unit {
                             "failed when called with parameter $value: ${e.cause!!.message}")
         } catch (e: IllegalAccessException) {
             throw NotSerializableException(
-                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible} " +
+                    "Setter ${setter.declaringClass}.${setter.name} (isAccessible=${setter.isAccessible}) " +
                     "not accessible: ${e.message}")
         }
     }
