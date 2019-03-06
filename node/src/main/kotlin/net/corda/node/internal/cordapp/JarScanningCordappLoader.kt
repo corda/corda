@@ -144,7 +144,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
                 findServiceFlows(this),
                 findSchedulableFlows(this),
                 findServices(this),
-                findPlugins(url),
+                findWhitelists(url),
                 findSerializers(this),
                 findCustomSchemas(this),
                 findAllFlows(this),
@@ -267,7 +267,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         return contractClasses
     }
 
-    private fun findPlugins(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
+    private fun findWhitelists(cordappJarPath: RestrictedURL): List<SerializationWhitelist> {
         val whitelists = URLClassLoader(arrayOf(cordappJarPath.url)).use {
             ServiceLoader.load(SerializationWhitelist::class.java, it).toList()
         }
@@ -306,6 +306,7 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
         }
     }
 
+    // TODO Remove this class as rootPackageName is never non-null.
     /** @property rootPackageName only this package and subpackages may be extracted from [url], or null to allow all packages. */
     private data class RestrictedURL(val url: URL, val rootPackageName: String?) {
         val qualifiedNamePrefix: String get() = rootPackageName?.let { "$it." } ?: ""
@@ -359,14 +360,14 @@ class JarScanningCordappLoader private constructor(private val cordappJarPaths: 
 
         fun getAllStandardClasses(): List<String> {
             return scanResult
-                    .getAllStandardClasses()
+                    .allStandardClasses
                     .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
         }
 
         fun getAllInterfaces(): List<String> {
             return scanResult
-                    .getAllInterfaces()
+                    .allInterfaces
                     .names
                     .filter { it.startsWith(qualifiedNamePrefix) }
         }
@@ -400,13 +401,14 @@ abstract class CordappLoaderTemplate : CordappLoader {
                         logger.error("There are multiple CorDapp JARs on the classpath for flow " +
                                 "${entry.value.first().first.name}: [ ${entry.value.joinToString { it.second.jarPath.toString() }} ].")
                         entry.value.forEach { (_, cordapp) ->
-                            val zip = ZipInputStream(cordapp.jarPath.openStream())
-                            val ident = BigInteger(64, Random()).toString(36)
-                            logger.error("Contents of: ${cordapp.jarPath} will be prefaced with: ${ident}")
-                            var e = zip.nextEntry
-                            while (e != null) {
-                                logger.error("$ident\t ${e.name}")
-                                e = zip.nextEntry
+                            ZipInputStream(cordapp.jarPath.openStream()).use { zip ->
+                                val ident = BigInteger(64, Random()).toString(36)
+                                logger.error("Contents of: ${cordapp.jarPath} will be prefaced with: $ident")
+                                var e = zip.nextEntry
+                                while (e != null) {
+                                    logger.error("$ident\t ${e.name}")
+                                    e = zip.nextEntry
+                                }
                             }
                         }
                         throw MultipleCordappsForFlowException("There are multiple CorDapp JARs on the classpath for flow " +
