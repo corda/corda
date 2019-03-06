@@ -60,17 +60,32 @@ Database vendor specific instructions are listed below in their own respective :
 2) Database schema creation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   Data structures (e.g. tables, indexes) can be created and updated by an administrator using the Corda :ref:`migration-tool` or auto-created
+   The database schema creation process is described in details in :doc:`node-operations-database-schema-setup` page.
+   If you choose the first option as described below, you don't need to perform actions
+   described on :doc:`node-operations-database-schema-setup` except configuring the node,
+   as a Corda node will create database schema content by itself.
+
+   Data structures (e.g. tables, indexes) can be created and updated by an administrator using the Corda :ref:`database-management-tool-ref` or auto-created
    upon node startup. This will depend on the type of database user permissions setup in the previous step:
 
    * When a Corda node connects to a database with **administrative permissions**, it will create all tables and other data structures upon startup using embedded scripts
      defined using :ref:`Liquibase <liquibase_ref>`, the database schema management tool adopted by Corda Enterprise.
      Additionally, the node will also execute any scripts to create/upgrade tables bundled with CorDapps (where these define and use custom persisted contract states).
+     To allow the node to auto create/upgrade schema add ``runMigration`` option in ``node.conf``:
+
+     .. sourcecode:: groovy
+
+        database {
+            runMigration = true
+            # ...
+        }
 
    * When a Corda node connects to a database with **restricted permissions**, all data structures (tables, indexes) must already be created.
-     The database administrator should use the Corda :ref:`migration-tool` to connect to the database and create the data structures.
+     The database administrator should use the Corda :ref:`database-management-tool-ref` to connect to the database and create the data structures.
      This tool can also be used to create DDL scripts without executing them against the database (dry-run mode), giving an administrator the opportunity to preview before applying manually.
      The same activity needs to be performed before installing a new Corda release, or a new or upgraded corDapp.
+
+     Refer to :doc:`node-operations-database-schema-setup` page how to perform database schema creation or update.
 
    .. note::  For developing and testing the node using the Gradle plugin ``Cordform`` ``deployNodes`` task you need to create the database user/schema manually (:ref:`the first Step <db_setup_step_1_ref>`)
       before running the task (deploying nodes).
@@ -381,6 +396,8 @@ Revise these settings depending on your nodes sizing requirements.
   A database administrator can create schema objects (tables/sequences) via a user with administrative permissions.
   Corda node accesses the schema created by the administrator via a user with readonly permissions allowing to select/insert/delete data.
   Permissions *SELECT*, *INSERT*, *UPDATE*, *DELETE* need to be granted for each table or sequence, as presented in the DDL script.
+
+  Run this script after the database schema content has been created in :ref:`step 2 <db_setup_step_2_ref>`:
 
   .. sourcecode:: sql
 

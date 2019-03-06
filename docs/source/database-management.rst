@@ -73,7 +73,7 @@ Integration with the Corda node
 
 By default, a node will *not* attempt to execute database migration scripts at startup (even when a new version has been
 deployed), but will check the database "version" and halt if the database is not in sync with the node, to
-avoid data corruption. To bring the database to the correct state we provide an advanced :ref:`migration-tool`.
+avoid data corruption. To bring the database to the correct state we provide an advanced :ref:`database-management-tool-ref`.
 
 Running the migration at startup automatically can be configured by specifying true in the ``database.runMigration``
 node configuration setting (default behaviour is false). We recommend node administrators to leave the default behaviour
@@ -156,7 +156,7 @@ The ``PersistentCashState`` entity is included in the ``CashSchemaV1`` schema, s
 As we can see in this example, database migrations can "destroy" data, so it is therefore good practice to backup the
 database before executing the migration scripts.
 
-.. _migration-tool:
+.. _database-management-tool-ref:
 
 Database management tool
 ------------------------
