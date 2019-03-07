@@ -6,7 +6,7 @@ Software requirements
 
 Corda uses industry-standard tools:
 
-* **Java 8 JVM** - we require at least version **|java_version|**, but do not currently support Java 9 or higher.
+* **Java 8 JVM** - we require at least version |java_version|, but do not currently support Java 9 or higher.
   We have tested with Oracle JDK, Amazon Corretto, and Red Hat's OpenJDK builds. Please note that OpenJDK builds
   usually exclude JavaFX, which our GUI tools require.
 * **IntelliJ IDEA** - supported versions **2017.x** and **2018.x** (with Kotlin plugin version |kotlin_version|)
