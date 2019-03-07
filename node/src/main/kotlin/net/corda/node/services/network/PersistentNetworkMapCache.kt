@@ -67,20 +67,20 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                             else -> logger.info("Previous node was identical to incoming one - doing nothing")
                         }
                     }
-            updatedNodes.forEach { (node, previousNode) ->
-                //updated
-                database.transaction {
+
+            database.transaction {
+                updatedNodes.forEach { (node, previousNode) ->
+                    //updated
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Modified(node, previousNode))
                 }
-            }
-            newNodes.forEach { node ->
-                //new
-                database.transaction {
+                newNodes.forEach { node ->
+                    //new
                     updateInfoDB(node, session)
                     changePublisher.onNext(MapChange.Added(node))
                 }
             }
+
         }
     }
 

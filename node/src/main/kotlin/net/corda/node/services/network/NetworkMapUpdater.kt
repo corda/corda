@@ -9,6 +9,7 @@ import net.corda.core.messaging.DataFeed
 import net.corda.core.messaging.ParametersUpdateInfo
 import net.corda.core.node.AutoAcceptable
 import net.corda.core.node.NetworkParameters
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
@@ -22,12 +23,17 @@ import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.network.*
 import rx.Subscription
 import rx.subjects.PublishSubject
+import java.lang.Integer.max
+import java.lang.Integer.min
 import java.lang.reflect.Method
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Supplier
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -185,24 +191,41 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
 
         //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
         //as HTTP GET is mostly IO bound, use more threads than CPU's
-        val poolToUse = ForkJoinPool(Runtime.getRuntime().availableProcessors() * 4)
-        poolToUse.submit {
-            (allHashesFromNetworkMap - currentNodeHashes).chunked(100).stream().parallel().mapNotNull { nodeInfosToGet ->
-                // Download new node info from network map
-                try {
-                    logger.info("Using Thread: ${Thread.currentThread().name} to retrieve: ${nodeInfosToGet.size} nodeInfos")
-                    nodeInfosToGet.map { nodeInfo -> networkMapClient.getNodeInfo(nodeInfo) }
-                } catch (e: Exception) {
-                    // Failure to retrieve one node info shouldn't stop the whole update, log and return null instead.
-                    logger.warn("Error encountered when downloading node info '$nodeInfosToGet', skipping...", e)
-                    null
-                }
-            }.forEach { retrievedNodeInfos ->
-                // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
-                networkMapCache.addNodes(retrievedNodeInfos)
+        //maximum threads to use = 24.
+        val threadsToUseForNetworkMapDownload = min(Runtime.getRuntime().availableProcessors() * 4, 24)
+        val executorToUse = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, object : ThreadFactory {
+            val threadCounter = AtomicInteger(1)
+            override fun newThread(r: Runnable?): Thread {
+                return Thread(r, "NetworkMapDownloadThread${threadCounter.getAndIncrement()}")
             }
-        }.getOrThrow()
-        poolToUse.shutdown()
+        })
+
+        val hashesToFetch = (allHashesFromNetworkMap - currentNodeHashes)
+
+        if (hashesToFetch.isNotEmpty()){
+            val networkMapDownloadFutures = hashesToFetch.chunked(max(hashesToFetch.size / threadsToUseForNetworkMapDownload, 1))
+                    .map { nodeInfosToGet ->
+                        //for a set of chunked hashes, get the nodeInfo for each hash
+                        CompletableFuture.supplyAsync(Supplier<List<NodeInfo>> {
+                            nodeInfosToGet.mapNotNull { nodeInfo ->
+                                try {
+                                    networkMapClient.getNodeInfo(nodeInfo)
+                                } catch (e: Exception) {
+                                    // Failure to retrieve one node info shouldn't stop the whole update, log and return null instead.
+                                    logger.warn("Error encountered when downloading node info '$nodeInfo', skipping...", e)
+                                    null
+                                }
+                            }
+                        }, executorToUse).thenAccept { retrievedNodeInfos ->
+                            // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
+                            networkMapCache.addNodes(retrievedNodeInfos)
+                        }
+                    }.toTypedArray()
+
+            //wait for all the futures to complete
+            CompletableFuture.allOf(*networkMapDownloadFutures).getOrThrow()
+        }
+
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
         // it's empty
         networkMapCache.nodeReady.set(null)
