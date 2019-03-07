@@ -170,6 +170,10 @@ task buildReleasePackage(type: Zip) {
         include "Sample Testplans/*"
         include "LICENSE"
         include "README"
+        include "sample-server-rmi.config"
+    }
+    from(sourceSets.main.resources){
+        include "jmeter.properties"
     }
 }
 
