@@ -42,7 +42,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
 
     // TODO Limit number of flows shown option?
     @Command
-    @Usage("Watch information about state machines running on the node with result information")
+    @Usage("Watch information about state machines running on the node with result information.")
     public void watch(InvocationContext<TableElement> context) throws Exception {
         logger.info("Executing command \"flow watch\".");
         runStateMachinesView(out, ops());
@@ -63,7 +63,7 @@ public class FlowShellCommand extends InteractiveShellCommand {
     }
 
     @Command
-    @Usage("List flows that user can start")
+    @Usage("List flows that user can start.")
     public void list(InvocationContext<String> context) throws Exception {
         logger.info("Executing command \"flow list\".");
         for (String name : ops().registeredFlows()) {
