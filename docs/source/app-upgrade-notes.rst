@@ -376,6 +376,9 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
 
+.. note:: Please read the :doc:`cordapp-constraint-migration` guide to understand how to upgrade CorDapps to use Corda 4 signature constraints and consume
+    existing states on ledger issued with older constraint types (e.g. Corda 3.x states issued with **hash** or **CZ whitelisted** constraints).
+
 Step 10. Security: Package namespace handling
 ---------------------------------------------
 
