@@ -21,7 +21,8 @@ class TestCommandLine {
 
         val stream = ByteArrayOutputStream()
         val ps = PrintStream(stream)
-        CommandLine.usage(cli, ps)
+        CommandLine.usage(cli, ps, CommandLine.Help.Ansi.OFF)
+
         assertEquals("""Usage: jmeter-corda [OPTIONS] -- [<jMeter args>...]
       [<jMeter args>...]    All arguments after -- are passed to JMeter
   -?, -h, --help            Prints usage
@@ -49,7 +50,7 @@ class TestCommandLine {
                               Lines starting with # are comments and are ignored.
                             Example line for host example-server.corda.net:
                             example-server:10101
-""", stream.toString())
+""".replace("\n", System.lineSeparator()), stream.toString())
     }
 
     @Test
