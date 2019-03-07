@@ -12,6 +12,7 @@ import net.corda.core.node.NetworkParameters
 import net.corda.core.node.services.KeyManagementService
 import net.corda.core.serialization.serialize
 import net.corda.core.utilities.contextLogger
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.minutes
 import net.corda.node.services.api.NetworkMapCacheInternal
 import net.corda.node.services.config.NetworkParameterAcceptanceSettings
@@ -27,6 +28,7 @@ import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -181,20 +183,26 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                 .mapNotNull { if (it != ourNodeInfoHash) networkMapCache.getNodeByHash(it) else null }
                 .forEach(networkMapCache::removeNode)
 
-        (allHashesFromNetworkMap - currentNodeHashes).mapNotNull {
-            // Download new node info from network map
-            try {
-                networkMapClient.getNodeInfo(it)
-            } catch (e: Exception) {
-                // Failure to retrieve one node info shouldn't stop the whole update, log and return null instead.
-                logger.warn("Error encountered when downloading node info '$it', skipping...", e)
-                null
+        //at the moment we use a blocking HTTP library - but under the covers, the OS will interleave threads waiting for IO
+        //as HTTP GET is mostly IO bound, use more threads than CPU's
+        val poolToUse = ForkJoinPool(Runtime.getRuntime().availableProcessors() * 4)
+        poolToUse.submit {
+            (allHashesFromNetworkMap - currentNodeHashes).chunked(100).stream().parallel().mapNotNull { nodeInfosToGet ->
+                // Download new node info from network map
+                try {
+                    logger.info("Using Thread: ${Thread.currentThread().name} to retrieve: ${nodeInfosToGet.size} nodeInfos")
+                    nodeInfosToGet.map { nodeInfo -> networkMapClient.getNodeInfo(nodeInfo) }
+                } catch (e: Exception) {
+                    // Failure to retrieve one node info shouldn't stop the whole update, log and return null instead.
+                    logger.warn("Error encountered when downloading node info '$nodeInfosToGet', skipping...", e)
+                    null
+                }
+            }.forEach { retrievedNodeInfos ->
+                // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
+                networkMapCache.addNodes(retrievedNodeInfos)
             }
-        }.forEach {
-            // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
-            networkMapCache.addNode(it)
-        }
-
+        }.getOrThrow()
+        poolToUse.shutdown()
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
         // it's empty
         networkMapCache.nodeReady.set(null)
@@ -247,7 +255,8 @@ The node will shutdown now.""")
     }
 
     fun acceptNewNetworkParameters(parametersHash: SecureHash, sign: (SecureHash) -> SignedData<SecureHash>) {
-        networkMapClient ?: throw IllegalStateException("Network parameters updates are not supported without compatibility zone configured")
+        networkMapClient
+                ?: throw IllegalStateException("Network parameters updates are not supported without compatibility zone configured")
         // TODO This scenario will happen if node was restarted and didn't download parameters yet, but we accepted them.
         // Add persisting of newest parameters from update.
         val (update, signedNewNetParams) = requireNotNull(newNetworkParameters) { "Couldn't find parameters update for the hash: $parametersHash" }
