@@ -2,6 +2,7 @@ package net.corda.node.services.network
 
 import com.google.common.jimfs.Configuration.unix
 import com.google.common.jimfs.Jimfs
+import com.natpryce.hamkrest.assertion.assertThat
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.crypto.Crypto
 import net.corda.core.crypto.SecureHash
@@ -37,10 +38,10 @@ import net.corda.testing.node.internal.network.NetworkMapServer
 import net.corda.testing.node.makeTestIdentityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.After
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
+import org.hamcrest.CoreMatchers
+import org.hamcrest.collection.IsIterableContainingInAnyOrder
+import org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder
+import org.junit.*
 import rx.schedulers.TestScheduler
 import java.io.IOException
 import java.net.URL
@@ -128,9 +129,9 @@ class NetworkMapUpdaterTest {
         assertThat(nodeReadyFuture).isNotDone()
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, times(2)).addNode(any())
-        verify(networkMapCache, times(1)).addNode(nodeInfo1)
-        verify(networkMapCache, times(1)).addNode(nodeInfo2)
+
+        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(signedNodeInfo1.raw.hash, signedNodeInfo2.raw.hash))
+
         assertThat(nodeReadyFuture).isDone()
 
         NodeInfoWatcher.saveToFile(nodeInfoDir, fileNodeInfoAndSigned)
@@ -140,10 +141,14 @@ class NetworkMapUpdaterTest {
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
         // 4 node info from network map, and 1 from file.
-        verify(networkMapCache, times(5)).addNode(any())
-        verify(networkMapCache, times(1)).addNode(nodeInfo3)
-        verify(networkMapCache, times(1)).addNode(nodeInfo4)
-        verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
+
+        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+                signedNodeInfo1.raw.hash,
+                signedNodeInfo2.raw.hash,
+                signedNodeInfo3.raw.hash,
+                signedNodeInfo4.raw.hash,
+                fileNodeInfoAndSigned.signed.raw.hash
+        ))
     }
 
     @Test
@@ -167,9 +172,14 @@ class NetworkMapUpdaterTest {
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
 
-        // 4 node info from network map, and 1 from file.
-        verify(networkMapCache, times(5)).addNode(any())
-        verify(networkMapCache, times(1)).addNode(fileNodeInfoAndSigned.nodeInfo)
+
+        Assert.assertThat(networkMapCache.allNodeHashes, IsIterableContainingInAnyOrder.containsInAnyOrder(
+                signedNodeInfo1.raw.hash,
+                signedNodeInfo2.raw.hash,
+                signedNodeInfo3.raw.hash,
+                signedNodeInfo4.raw.hash,
+                fileNodeInfoAndSigned.signed.raw.hash
+        ))
 
         // Test remove node.
         listOf(nodeInfo1, nodeInfo2, nodeInfo3, nodeInfo4).forEach {
@@ -404,15 +414,12 @@ class NetworkMapUpdaterTest {
 
         // TODO: Remove sleep in unit test.
         Thread.sleep(2L * cacheExpiryMs)
-        verify(networkMapCache, times(1)).addNode(signedNodeInfo1.verified())
         assert(networkMapCache.allNodeHashes.size == 1)
         networkMapClient.publish(signedNodeInfo2)
         Thread.sleep(2L * cacheExpiryMs)
         advanceTime()
 
-        verify(networkMapCache, times(1)).addNode(signedNodeInfo2.verified())
         verify(networkMapCache, times(1)).removeNode(signedNodeInfo1.verified())
-
         assert(networkMapCache.allNodeHashes.size == 1)
     }
 
@@ -443,6 +450,14 @@ class NetworkMapUpdaterTest {
     }
 
     private fun createMockNetworkMapCache(): NetworkMapCacheInternal {
+
+        fun addNodeToMockCache (nodeInfo: NodeInfo, data: ConcurrentHashMap<Party, NodeInfo>){
+            val party = nodeInfo.legalIdentities[0]
+            data.compute(party) { _, current ->
+                if (current == null || current.serial < nodeInfo.serial) nodeInfo else current
+            }
+        }
+
         return mock {
             on { nodeReady }.thenReturn(nodeReadyFuture)
             val data = ConcurrentHashMap<Party, NodeInfo>()
@@ -453,12 +468,23 @@ class NetworkMapUpdaterTest {
                     if (current == null || current.serial < nodeInfo.serial) nodeInfo else current
                 }
             }
+
+            on {addNodes(any<List<NodeInfo>>())}.then {
+                val nodeInfos = it.arguments[0] as List<NodeInfo>
+                nodeInfos.forEach {nodeInfo ->
+                    addNodeToMockCache(nodeInfo, data)
+                }
+            }
+
             on { removeNode(any()) }.then { data.remove((it.arguments[0] as NodeInfo).legalIdentities[0]) }
             on { getNodeByLegalIdentity(any()) }.then { data[it.arguments[0]] }
             on { allNodeHashes }.then { data.values.map { it.serialize().hash } }
             on { getNodeByHash(any()) }.then { mock -> data.values.singleOrNull { it.serialize().hash == mock.arguments[0] } }
         }
+
+
     }
+
 
     private fun createNodeInfoAndSigned(org: String, keyPair: KeyPair = Crypto.generateKeyPair(X509Utilities.DEFAULT_TLS_SIGNATURE_SCHEME)): NodeInfoAndSigned {
         val serial: Long = 1
