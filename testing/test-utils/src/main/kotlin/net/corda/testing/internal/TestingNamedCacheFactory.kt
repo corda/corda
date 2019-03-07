@@ -11,7 +11,6 @@ import net.corda.node.services.config.NodeConfiguration
 import net.corda.node.utilities.BindableNamedCacheFactory
 
 class TestingNamedCacheFactory private constructor(private val sizeOverride: Long, private val metricRegistry: MetricRegistry?, private val nodeConfiguration: NodeConfiguration?) : BindableNamedCacheFactory, SingletonSerializeAsToken() {
-    @JvmOverloads
     constructor(sizeOverride: Long = 1024) : this(sizeOverride, null, null)
 
     override fun bindWithMetrics(metricRegistry: MetricRegistry): BindableNamedCacheFactory = TestingNamedCacheFactory(sizeOverride, metricRegistry, this.nodeConfiguration)
