@@ -175,17 +175,6 @@ class AMQPBridgeTest {
         val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
         val (artemisServer, artemisClient, bridge) = createArtemis(sourceQueueName, crlCheckSoftFail = false)
 
-        val artemis = artemisClient.started!!
-        for (i in 0 until 3) {
-            val artemisMessage = artemis.session.createMessage(true).apply {
-                putIntProperty(P2PMessagingHeaders.senderUUID, i)
-                writeBodyBufferBytes("Test$i".toByteArray())
-                // Use the magic deduplication property built into Artemis as our message identity too
-                putStringProperty(HDR_DUPLICATE_DETECTION_ID, SimpleString(UUID.randomUUID().toString()))
-            }
-            artemis.producer.send(sourceQueueName, artemisMessage)
-        }
-
         createAMQPServer().use {
             val connectedFuture = it.onConnection.toFuture()
             it.start()

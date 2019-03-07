@@ -30,7 +30,7 @@ data class NodeConfigurationImpl(
         override val emailAddress: String,
         private val keyStorePassword: String,
         private val trustStorePassword: String,
-        override val crlCheckSoftFail: Boolean = Defaults.crlCheckSoftFail,
+        override val crlCheckSoftFail: Boolean,
         override val dataSourceProperties: Properties,
         override val compatibilityZoneURL: URL? = Defaults.compatibilityZoneURL,
         override var networkServices: NetworkServicesConfig? = Defaults.networkServices,
@@ -108,7 +108,6 @@ data class NodeConfigurationImpl(
         val jmxReporterType: JmxReporterType = NodeConfiguration.defaultJmxReporterType
         val cordappSignerKeyFingerprintBlacklist: List<String> = DEV_PUB_KEY_HASHES.map { it.toString() }
         val networkParameterAcceptanceSettings: NetworkParameterAcceptanceSettings = NetworkParameterAcceptanceSettings()
-        val crlCheckSoftFail: Boolean = true
 
         fun cordappsDirectories(baseDirectory: Path) = listOf(baseDirectory / CORDAPPS_DIR_NAME_DEFAULT)
 
