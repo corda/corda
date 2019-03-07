@@ -43,6 +43,8 @@ interface NetworkMapCacheInternal : NetworkMapCache, NetworkMapCacheBase {
     /** Adds a node to the local cache (generally only used for adding ourselves). */
     fun addNode(node: NodeInfo)
 
+    fun addNodes(nodes: List<NodeInfo>)
+
     /** Removes a node from the local cache. */
     fun removeNode(node: NodeInfo)
 }
