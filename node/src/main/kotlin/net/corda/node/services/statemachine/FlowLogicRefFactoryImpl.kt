@@ -2,9 +2,7 @@ package net.corda.node.services.statemachine
 
 import com.google.common.primitives.Primitives
 import net.corda.core.flows.*
-import net.corda.core.internal.NamedCacheFactory
 import net.corda.core.internal.VisibleForTesting
-import net.corda.core.internal.usedInEnterprise
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.serialization.SingletonSerializeAsToken
 import java.lang.reflect.ParameterizedType
@@ -34,10 +32,7 @@ data class FlowLogicRefImpl internal constructor(val flowLogicClassName: String,
  * in response to a potential malicious use or buggy update to an app etc.
  */
 // TODO: Replace with a per app classloader/cordapp provider/cordapp loader - this will do for now
-class FlowLogicRefFactoryImpl(private val classloader: ClassLoader, cacheFactory: NamedCacheFactory) : SingletonSerializeAsToken(), FlowLogicRefFactory {
-    init {
-        usedInEnterprise(cacheFactory)
-    }
+open class FlowLogicRefFactoryImpl(private val classloader: ClassLoader) : SingletonSerializeAsToken(), FlowLogicRefFactory {
     override fun create(flowClass: Class<out FlowLogic<*>>, vararg args: Any?): FlowLogicRef {
         if (!flowClass.isAnnotationPresent(SchedulableFlow::class.java)) {
             throw IllegalFlowLogicException(flowClass, "because it's not a schedulable flow")
@@ -68,17 +63,7 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader, cacheFactory
         // to avoid requiring only a single constructor.
         val argTypes = args.map { it?.javaClass }
         val constructor = try {
-            flowClass.kotlin.constructors.single { ctor ->
-                // Get the types of the arguments, always boxed (as that's what we get in the invocation).
-                val ctorTypes = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
-                if (argTypes.size != ctorTypes.size)
-                    return@single false
-                for ((argType, ctorType) in argTypes.zip(ctorTypes)) {
-                    if (argType == null) continue   // Try and find a match based on the other arguments.
-                    if (!ctorType.isAssignableFrom(argType)) return@single false
-                }
-                true
-            }
+            findConstructor(flowClass, argTypes)
         } catch (e: IllegalArgumentException) {
             throw IllegalFlowLogicException(flowClass, "due to ambiguous match against the constructors: $argTypes")
         } catch (e: NoSuchElementException) {
@@ -88,6 +73,20 @@ class FlowLogicRefFactoryImpl(private val classloader: ClassLoader, cacheFactory
         // Build map of args from array
         val argsMap = args.zip(constructor.parameters).map { Pair(it.second.name!!, it.first) }.toMap()
         return createKotlin(flowClass, argsMap)
+    }
+
+    protected open fun findConstructor(flowClass: Class<out FlowLogic<*>>, argTypes: List<Class<Any>?>): KFunction<FlowLogic<*>> {
+        return flowClass.kotlin.constructors.single { ctor ->
+            // Get the types of the arguments, always boxed (as that's what we get in the invocation).
+            val ctorTypes = ctor.javaConstructor!!.parameterTypes.map { Primitives.wrap(it) }
+            if (argTypes.size != ctorTypes.size)
+                return@single false
+            for ((argType, ctorType) in argTypes.zip(ctorTypes)) {
+                if (argType == null) continue   // Try and find a match based on the other arguments.
+                if (!ctorType.isAssignableFrom(argType)) return@single false
+            }
+            true
+        }
     }
 
     /**

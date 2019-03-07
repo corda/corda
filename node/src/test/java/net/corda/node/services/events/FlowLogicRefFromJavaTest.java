@@ -2,7 +2,6 @@ package net.corda.node.services.events;
 
 import net.corda.core.flows.FlowLogic;
 import net.corda.node.services.statemachine.FlowLogicRefFactoryImpl;
-import net.corda.testing.internal.TestingNamedCacheFactory;
 import org.junit.Test;
 
 public class FlowLogicRefFromJavaTest {
@@ -49,7 +48,7 @@ public class FlowLogicRefFromJavaTest {
         }
     }
 
-    private final FlowLogicRefFactoryImpl flowLogicRefFactory = new FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl.class.getClassLoader(), new TestingNamedCacheFactory());
+    private final FlowLogicRefFactoryImpl flowLogicRefFactory = new FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl.class.getClassLoader());
 
     @Test
     public void test() {

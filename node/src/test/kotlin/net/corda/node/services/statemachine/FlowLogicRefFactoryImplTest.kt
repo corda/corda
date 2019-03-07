@@ -3,7 +3,6 @@ package net.corda.node.services.statemachine
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.IllegalFlowLogicException
 import net.corda.core.flows.SchedulableFlow
-import net.corda.testing.internal.TestingNamedCacheFactory
 import org.junit.Test
 import java.time.Duration
 import kotlin.reflect.jvm.jvmName
@@ -38,7 +37,7 @@ class FlowLogicRefFactoryImplTest {
         override fun call() = Unit
     }
 
-    private val flowLogicRefFactory = FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl::class.java.classLoader, TestingNamedCacheFactory())
+    private val flowLogicRefFactory = FlowLogicRefFactoryImpl(FlowLogicRefFactoryImpl::class.java.classLoader)
     @Test
     fun `create kotlin no arg`() {
         flowLogicRefFactory.create(KotlinNoArgFlowLogic::class.jvmName)
