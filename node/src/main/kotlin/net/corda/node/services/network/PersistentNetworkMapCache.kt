@@ -49,7 +49,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                     .forEach { (node, previousNode) ->
                         when {
                             previousNode == null -> {
-                                logger.info("No previous node found")
+                                logger.info("No previous node found for ${node.legalIdentities.first().name}")
                                 if (verifyAndRegisterIdentities(node)) {
                                     newNodes.add(node)
                                 }
@@ -58,7 +58,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
                                 logger.info("Discarding older nodeInfo for ${node.legalIdentities.first().name}")
                             }
                             previousNode != node -> {
-                                logger.info("Previous node was found as: $previousNode")
+                                logger.info("Previous node was found for ${node.legalIdentities.first().name} as: $previousNode")
                                 // TODO We should be adding any new identities as well
                                 if (verifyIdentities(node)) {
                                     updatedNodes.add(node to previousNode)
@@ -203,7 +203,7 @@ open class PersistentNetworkMapCache(cacheFactory: NamedCacheFactory,
 
     override fun addNode(node: NodeInfo) {
         logger.info("Adding node with info: $node")
-
+        addNodes(listOf(node))
         logger.debug { "Done adding node with info: $node" }
     }
 
