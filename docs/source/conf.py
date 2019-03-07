@@ -7,10 +7,21 @@ import sys, os
 #
 # TEXT SUBSTITUTIONS
 
+with open("../../constants.properties", "r") as f:
+    constants_properties_lines = f.readlines()
+constants_properties_dict = dict([l.strip().split('=') for l in constants_properties_lines if not l.startswith("#") and not l.strip() == ""])
+
 rst_epilog = """
-.. |java_version| replace:: 8u171
-.. |kotlin_version| replace:: 1.2.71
-"""
+.. |java_version| replace:: 8u%s
+.. |kotlin_version| replace:: %s
+.. |gradle_plugins_version| replace:: %s
+.. |quasar_version| replace:: %s
+.. |corda_version| replace:: %s
+""" % (constants_properties_dict["java8MinUpdateVersion"],
+       constants_properties_dict["kotlinVersion"],
+       constants_properties_dict["gradlePluginsVersion"],
+       constants_properties_dict["quasarVersion"],
+       constants_properties_dict["cordaVersion"])
 
 ############################################################################
 
