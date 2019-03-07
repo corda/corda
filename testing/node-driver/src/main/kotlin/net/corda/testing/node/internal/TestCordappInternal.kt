@@ -6,8 +6,8 @@ import net.corda.core.internal.createDirectories
 import net.corda.core.internal.div
 import net.corda.core.internal.writeText
 import net.corda.testing.node.TestCordapp
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
 /**
  * Extends the public [TestCordapp] API with internal extensions for use within the testing framework and for internal testing of the platform.
@@ -36,7 +36,11 @@ abstract class TestCordappInternal : TestCordapp() {
             val configDir = (cordappsDir / "config").createDirectories()
 
             jarToCordapp.forEach { jar, cordapp ->
-                jar.copyToDirectory(cordappsDir, REPLACE_EXISTING)
+                try {
+                    jar.copyToDirectory(cordappsDir)
+                } catch (e: FileAlreadyExistsException) {
+                    // Ignore if the node already has the same CorDapp jar. This can happen if the node is being restarted.
+                }
                 val configString = ConfigValueFactory.fromMap(cordapp.config).toConfig().root().render()
                 (configDir / "${jar.fileName.toString().removeSuffix(".jar")}.conf").writeText(configString)
             }
