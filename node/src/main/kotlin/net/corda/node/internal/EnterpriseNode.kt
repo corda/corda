@@ -66,11 +66,13 @@ open class EnterpriseNode(configuration: NodeConfiguration,
             AnsiConsole.systemInstall()
 
             val logo = """
-R   ______               __        B
-R  / ____/     _________/ /___ _   B_______ __   _ _______ _______  ______  _____   ______ _____ _______ _______
-R / /     __  / ___/ __  / __ `/   B|______ | \  |    |    |______ |_____/ |_____] |_____/   |   |______ |______
-R/ /___  /_/ / /  / /_/ / /_/ /    B|______ |  \_|    |    |______ |    \_ |       |    \_ __|__ ______| |______
-R\____/     /_/   \__,_/\__,_/     W____________________________________________________________________________
+R   ______               __       B  _____ _   _ _____ _____ ____  ____  ____  ___ ____  _____
+R  / ____/     _________/ /___ _  B | ____| \ | |_   _| ____|  _ \|  _ \|  _ \|_ _/ ___|| ____|
+R / /     __  / ___/ __  / __ `/  B |  _| |  \| | | | |  _| | |_) | |_) | |_) || |\___ \|  _|
+R/ /___  /_/ / /  / /_/ / /_/ /   B | |___| |\  | | | | |___|  _ <|  __/|  _ < | | ___) | |___
+R\____/     /_/   \__,_/\__,_/    B |_____|_| \_| |_| |_____|_| \_\_|   |_| \_\___|____/|_____|
+
+W${generateVersionString(versionInfo)}
 D""".trimStart()
 
             val license = """
@@ -98,14 +100,20 @@ D""".trimStart()
                                         else
                                             "Tip: "
                                         ) +
-                                Ansi.ansi().bold().a(tip).reset() +
-                                System.lineSeparator()
+                                Ansi.ansi().bold().a(tip).reset()
 
                 println(banner)
                 println(license)
             } else {
                 println(logo.replace("R", "").replace("B", "").replace("W", "").replace("D", ""))
             }
+        }
+
+        private fun generateVersionString(versionInfo: VersionInfo): String {
+            val versionString = "--- ${versionInfo.vendor} ${versionInfo.releaseVersion} (${versionInfo.revision.take(7)}) ---"
+            // Make sure the version string is padded to be the same length as the logo
+            val paddingLength = Math.max(93 - versionString.length, 0)
+            return versionString + "-".repeat(paddingLength)
         }
 
         private val tip: String
