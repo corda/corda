@@ -314,12 +314,10 @@ open class MockServices private constructor(
     constructor(initialIdentityName: CordaX500Name, identityService: IdentityService = makeTestIdentityService())
             : this(listOf(getCallerPackage(MockServices::class)!!), TestIdentity(initialIdentityName), identityService)
 
-    @JvmOverloads
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters)
             : this(cordappPackages, TestIdentity(initialIdentityName), identityService, networkParameters)
 
 
-    @JvmOverloads
     constructor(cordappPackages: List<String>, initialIdentityName: CordaX500Name, identityService: IdentityService, networkParameters: NetworkParameters, key: KeyPair)
             : this(cordappPackages, TestIdentity(initialIdentityName, key), identityService, networkParameters)
 
