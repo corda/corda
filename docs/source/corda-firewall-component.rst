@@ -284,5 +284,5 @@ This setup can be configured by setting NodeA and B's ``haConfig.haTopic`` to ``
 ZooKeeper alternative
 ---------------------
 It is possible to have the hot-warm capability of the bridge and float clusters without the added deployment complexity of a ZooKeeper cluster. The firewall provides a ``Bully Algorithm`` implementation for master election which can be enabled
-by simply changing the ``haConnectionString`` configuration property from ``zk://<host>:<port>`` to ``bully://<host>:<port>``. This feature uses Publish/Subscribe messages on the P2P Artemis messaging broker for coordination. Please be aware that
+by simply changing the ``haConnectionString`` configuration property from ``zk://<host>:<port>`` to the pseudo-url``bully://localhost`` (the host is a dummy string). This feature uses Publish/Subscribe messages on the P2P Artemis messaging broker for coordination. Please be aware that
 this approach does not protect against network partitioning problems, therefore it is strongly recommended to use ZooKeeper in production environments.
