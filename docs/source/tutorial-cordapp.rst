@@ -481,6 +481,28 @@ Integration tests
 ~~~~~~~~~~~~~~~~~
 You can run the CorDapp's integration tests by running the ``Run Integration Tests - Kotlin`` run configuration.
 
+Running tests in IntelliJ
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We recommend editing your IntelliJ preferences so that you use the gradle runner - this means that the quasar utils
+plugin will make sure that some flags (like ``-javaagent`` - see "Alternatively..." below) are set for you.
+
+To switch to using the gradle runner:
+
+ * Navigate to ``Build, Execution, Deployment -> Build Tools -> Gradle -> Runner`` (or search for `runner`)
+   * Windows: this is in "Settings"
+   * MacOS: this is in "Preferences"
+ * set "Delegate IDE build/run actions to gradle" to true
+ * set "Run test using:" to "Gradle Test Runner"
+
+Alternatively, to use the built in IntelliJ JUnit test runner, you can:
+
+ * copy your quasar-core.jar to the ``<project root>/lib/`` dir
+   * this will be the one specified in build.gradle - you can find it in your gradle cache
+     * e.g. on mac/linux you can run something similar to: ``find ~/.gradle/caches -name quasar-core\*.jar``
+ * for each test specify ``-javaagent:lib/quasar-core-<version>.jar`` and setting the run directory to the project root directory
+
+
 Debugging your CorDapp
 ----------------------
 
