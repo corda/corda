@@ -33,6 +33,7 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.ScheduledThreadPoolExecutor
@@ -193,16 +194,18 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24.
         val threadsToUseForNetworkMapDownload = min(Runtime.getRuntime().availableProcessors() * 4, 24)
-        val executorToUse = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, object : ThreadFactory {
+        val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, object : ThreadFactory {
             val threadCounter = AtomicInteger(1)
             override fun newThread(r: Runnable?): Thread {
                 return Thread(r, "NetworkMapDownloadThread${threadCounter.getAndIncrement()}")
             }
         })
+        //DB insert is single threaded - use a single threaded executor for it.
+        val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor()
 
         val hashesToFetch = (allHashesFromNetworkMap - currentNodeHashes)
-
-        if (hashesToFetch.isNotEmpty()){
+        val networkMapDownloadStartTime = System.currentTimeMillis()
+        if (hashesToFetch.isNotEmpty()) {
             val networkMapDownloadFutures = hashesToFetch.chunked(max(hashesToFetch.size / threadsToUseForNetworkMapDownload, 1))
                     .map { nodeInfosToGet ->
                         //for a set of chunked hashes, get the nodeInfo for each hash
@@ -216,14 +219,20 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
                                     null
                                 }
                             }
-                        }, executorToUse).thenAccept { retrievedNodeInfos ->
+                        }, executorToUseForDownloadingNodeInfos).thenAcceptAsync(Consumer { retrievedNodeInfos ->
                             // Add new node info to the network map cache, these could be new node info or modification of node info for existing nodes.
                             networkMapCache.addNodes(retrievedNodeInfos)
-                        }
+                        }, executorToUseForInsertionIntoDB)
                     }.toTypedArray()
 
             //wait for all the futures to complete
-            CompletableFuture.allOf(*networkMapDownloadFutures).getOrThrow()
+            val waitForAllHashes = CompletableFuture.allOf(*networkMapDownloadFutures)
+            waitForAllHashes.thenRunAsync {
+                logger.info("Fetched: ${hashesToFetch.size} using $threadsToUseForNetworkMapDownload Threads in ${System.currentTimeMillis() - networkMapDownloadStartTime}ms")
+                executorToUseForDownloadingNodeInfos.shutdown()
+                executorToUseForInsertionIntoDB.shutdown()
+            }
+            waitForAllHashes.getOrThrow()
         }
 
         // Mark the network map cache as ready on a successful poll of the HTTP network map, even on the odd chance that
