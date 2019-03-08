@@ -23,8 +23,8 @@ import net.corda.node.services.api.SchemaService
 import net.corda.node.services.api.VaultServiceInternal
 import net.corda.node.services.schema.PersistentStateService
 import net.corda.node.services.statemachine.FlowStateMachineImpl
-import net.corda.nodeapi.internal.persistence.*
 import net.corda.node.utilities.InfrequentlyMutatedCache
+import net.corda.nodeapi.internal.persistence.*
 import org.hibernate.Session
 import rx.Observable
 import rx.subjects.PublishSubject
@@ -261,10 +261,14 @@ class NodeVaultService(
                 tx.outRef<ContractState>(it.index)
             }
             val cachedBitSet = producedStatesMapping.get(tx.id) { outputsBitSet }
-            // If any outputBitSet bits are not set in the cached value, invalidate.
-            if (!outputsBitSet.and(cachedBitSet).equals(outputsBitSet)) {
-                // For some reason, we cached the vault entries for this transaction previously.
-                producedStatesMapping.invalidate(tx.id)
+            if (cachedBitSet != outputsBitSet) {
+                // If any outputBitSet bits are not set in the cached value, invalidate.
+                val intersection = outputsBitSet.clone() as BitSet
+                intersection.and(cachedBitSet)
+                if (intersection != outputsBitSet) {
+                    // For some reason, we cached the vault entries for this transaction previously.
+                    producedStatesMapping.invalidate(tx.id)
+                }
             }
 
             // Retrieve all unconsumed states for this transaction's inputs
