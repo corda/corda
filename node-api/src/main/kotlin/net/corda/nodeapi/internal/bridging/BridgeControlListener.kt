@@ -20,18 +20,24 @@ import java.util.*
 
 class BridgeControlListener(val config: MutualSslConfiguration,
                             maxMessageSize: Int,
+                            crlCheckSoftFail: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null) : AutoCloseable {
     private val bridgeId: String = UUID.randomUUID().toString()
-    private val bridgeManager: BridgeManager = AMQPBridgeManager(config, maxMessageSize,
-            artemisMessageClientFactory, bridgeMetricsService)
+    private val bridgeManager: BridgeManager = AMQPBridgeManager(
+            config,
+            maxMessageSize,
+            crlCheckSoftFail,
+            artemisMessageClientFactory,
+            bridgeMetricsService)
     private val validInboundQueues = mutableSetOf<String>()
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
 
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
-                maxMessageSize: Int) : this(config, maxMessageSize, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                maxMessageSize: Int,
+                crlCheckSoftFail: Boolean) : this(config, maxMessageSize, crlCheckSoftFail, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()
