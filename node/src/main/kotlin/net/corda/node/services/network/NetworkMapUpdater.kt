@@ -31,8 +31,10 @@ import java.nio.file.StandardCopyOption
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.*
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.concurrent.ForkJoinPool
@@ -194,14 +196,9 @@ class NetworkMapUpdater(private val networkMapCache: NetworkMapCacheInternal,
         //as HTTP GET is mostly IO bound, use more threads than CPU's
         //maximum threads to use = 24.
         val threadsToUseForNetworkMapDownload = min(Runtime.getRuntime().availableProcessors() * 4, 24)
-        val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, object : ThreadFactory {
-            val threadCounter = AtomicInteger(1)
-            override fun newThread(r: Runnable?): Thread {
-                return Thread(r, "NetworkMapDownloadThread${threadCounter.getAndIncrement()}")
-            }
-        })
+        val executorToUseForDownloadingNodeInfos = Executors.newFixedThreadPool(threadsToUseForNetworkMapDownload, NamedThreadFactory("NetworkMapUpdaterNodeInfoDownloadThread"))
         //DB insert is single threaded - use a single threaded executor for it.
-        val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor()
+        val executorToUseForInsertionIntoDB = Executors.newSingleThreadExecutor(NamedThreadFactory("NetworkMapUpdateDBInsertThread"))
 
         val hashesToFetch = (allHashesFromNetworkMap - currentNodeHashes)
         val networkMapDownloadStartTime = System.currentTimeMillis()
