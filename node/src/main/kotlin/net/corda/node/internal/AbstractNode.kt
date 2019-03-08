@@ -33,7 +33,6 @@ import net.corda.core.serialization.SingletonSerializeAsToken
 import net.corda.core.utilities.*
 import net.corda.node.CordaClock
 import net.corda.node.VersionInfo
-import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.node.internal.classloading.requireAnnotation
 import net.corda.node.internal.cordapp.*
 import net.corda.node.internal.rpc.proxies.AuthenticatedRpcOpsProxy
@@ -72,6 +71,7 @@ import net.corda.node.utilities.*
 import net.corda.nodeapi.internal.NodeInfoAndSigned
 import net.corda.nodeapi.internal.SignedNodeInfo
 import net.corda.nodeapi.internal.config.CertificateStore
+import net.corda.nodeapi.internal.cordapp.CordappLoader
 import net.corda.nodeapi.internal.crypto.CertificateType
 import net.corda.nodeapi.internal.crypto.X509Utilities
 import net.corda.nodeapi.internal.crypto.X509Utilities.CORDA_CLIENT_CA
@@ -184,7 +184,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database, cordappLoader).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
-    val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+    open val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,

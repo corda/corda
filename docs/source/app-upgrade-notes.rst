@@ -66,6 +66,8 @@ Although the RPC API is backwards compatible with Corda 3, the RPC wire protocol
 updated in lockstep with the node to use the new version of the RPC library. Corda 4 delivers RPC wire stability and therefore in future you
 will be able to update the node and apps without updating RPC clients.
 
+.. _cordapp_upgrade_version_numbers_ref:
+
 Step 2. Adjust the version numbers in your Gradle build files
 -------------------------------------------------------------
 
@@ -199,11 +201,25 @@ The previous ``FinalityFlow`` API is insecure. It doesn't have a receive flow, s
 all signed transactions that are sent to it, without checks. It is **highly** recommended that existing CorDapps migrate
 away to the new API, as otherwise things like business network membership checks won't be reliably enforced.
 
-This is a three step process:
+The flows that make use of ``FinalityFlow`` in a CorDapp can be classified in the following 2 basic categories:
+
+* **non-initiating flows**: these are flows that finalise a transaction without the involvement of a counterpart flow at all.
+* **initiating flows**: these are flows that initiate a counterpart (responder) flow.
+
+There is a main difference between these 2 different categories, which is relevant to how the CorDapp can be upgraded.
+The second category of flows can be upgraded to use the new ``FinalityFlow`` in a backwards compatible way, which means the upgraded CorDapp can be deployed at the various nodes using a *rolling deployment*.
+On the other hand, the first category of flows cannot be upgraded to the new ``FinalityFlow`` in a backwards compatible way, so the changes to these flows need to be deployed simultaneously at all the nodes, using a *lockstep deployment*.
+
+.. note::  A *lockstep deployment* is one, where all the involved nodes are stopped, upgraded to the new version of the CorDapp and then re-started.
+    As a result, there can't be any nodes running different versions of the CorDapp at any time.
+    A *rolling deployment* is one, where every node can be stopped, upgraded to the new version of the CorDapp and re-started independently and on its own pace.
+    As a result, there can be nodes running different versions of the CorDapp and transact with each other successfully.
+
+The upgrade is a three step process:
 
 1. Change the flow that calls ``FinalityFlow``.
 2. Change or create the flow that will receive the finalised transaction.
-3. Make sure your application's minimum and target version numbers are both set to 4 (see step 2).
+3. Make sure your application's minimum and target version numbers are both set to 4 (see :ref:`cordapp_upgrade_version_numbers_ref`).
 
 Upgrading a non-initiating flow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -258,7 +274,7 @@ to record the finalised transaction:
         :end-before: DOCEND SimpleNewResponderFlow
         :dedent: 4
 
-.. note:: All the nodes in your business network will need the new CorDapp, otherwise they won't know how to receive the transaction. **This
+.. note:: As described above, all the nodes in your business network will need the new CorDapp, otherwise they won't know how to receive the transaction. **This
    includes nodes which previously didn't have the old CorDapp.** If a node is sent a transaction and it doesn't have the new CorDapp loaded
    then simply restart it with the CorDapp and the transaction will be recorded.
 
@@ -398,6 +414,9 @@ automatically use them if your application JAR is signed. **We recommend all JAR
 :ref:`cordapp_build_system_signing_cordapp_jar_ref`. In dev mode, all JARs are signed by developer certificates. If a JAR that was signed
 with developer certificates is deployed to a production node, the node will refuse to start. Therefore to deploy apps built for Corda 4
 to production you will need to generate signing keys and integrate them with the build process.
+
+.. note:: Please read the :doc:`cordapp-constraint-migration` guide to understand how to upgrade CorDapps to use Corda 4 signature constraints and consume
+    existing states on ledger issued with older constraint types (e.g. Corda 3.x states issued with **hash** or **CZ whitelisted** constraints).
 
 Step 10. Security: Package namespace handling
 ---------------------------------------------
