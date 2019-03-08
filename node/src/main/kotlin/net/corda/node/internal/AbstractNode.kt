@@ -184,7 +184,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
     @Suppress("LeakingThis")
     val vaultService = makeVaultService(keyManagementService, servicesForResolution, database, cordappLoader).tokenize()
     val nodeProperties = NodePropertiesPersistentStore(StubbedNodeUniqueIdProvider::value, database, cacheFactory)
-    open val flowLogicRefFactory = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
+    val flowLogicRefFactory = makeFlowLogicRefFactoryImpl()
     // TODO Cancelling parameters updates - if we do that, how we ensure that no one uses cancelled parameters in the transactions?
     val networkMapUpdater = NetworkMapUpdater(
             networkMapCache,
@@ -540,6 +540,8 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
                 cordappLoader.appClassLoader
         )
     }
+
+    protected open fun makeFlowLogicRefFactoryImpl() = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
         val generatedCordapps = mutableListOf(VirtualCordapp.generateCore(versionInfo))
