@@ -21,7 +21,7 @@ import kotlin.streams.toList
 
 class NodeVersioningTest {
     private companion object {
-        val user = User("user1", "test", permissions = setOf("ALL"))
+        val superUser = User("superUser", "test", permissions = setOf("ALL"))
         val port = AtomicInteger(15100)
     }
 
@@ -33,7 +33,7 @@ class NodeVersioningTest {
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
             isNotary = true,
-            users = listOf(user)
+            users = listOf(superUser)
     )
 
     private val aliceConfig = NodeConfig(
@@ -42,7 +42,7 @@ class NodeVersioningTest {
             rpcPort = port.andIncrement,
             rpcAdminPort = port.andIncrement,
             isNotary = false,
-            users = listOf(user)
+            users = listOf(superUser)
     )
 
     private lateinit var notary: NodeProcess
@@ -73,7 +73,7 @@ class NodeVersioningTest {
         selfCordapp.copyToDirectory(cordappsDir)
 
         factory.create(aliceConfig).use { alice ->
-            alice.connect().use {
+            alice.connect(superUser).use {
                 val rpc = it.proxy
                 assertThat(rpc.protocolVersion).isEqualTo(PLATFORM_VERSION)
                 assertThat(rpc.nodeInfo().platformVersion).isEqualTo(PLATFORM_VERSION)

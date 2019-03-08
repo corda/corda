@@ -26,9 +26,11 @@ Permissions
 When accessing the shell (embedded, standalone, via SSH) RPC permissions are required. This is because the shell actually communicates
 with the node using RPC calls.
 
-* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``
+* Watching flows (``flow watch``) requires ``InvokeRpc.stateMachinesFeed``.
 * Starting flows requires ``InvokeRpc.startTrackedFlowDynamic``, ``InvokeRpc.registeredFlows`` and ``InvokeRpc.wellKnownPartyFromX500Name``, as well as a
-  permission for the flow being started
+  permission for the flow being started.
+* Killing flows (``flow kill``) requires ``InvokeRpc.killFlow``. This currently
+  allows the user to kill *any* flow, so please be careful when granting it!
 
 The shell via the local terminal
 --------------------------------
@@ -231,6 +233,7 @@ The shell also has special commands for working with flows:
   names and types of the arguments will be used to try and automatically determine which one to use. If the match
   against available constructors is unclear, the reasons each available constructor failed to match will be printed
   out. In the case of an ambiguous match, the first applicable constructor will be used
+* ``flow kill`` kills a single flow, as identified by its UUID.
 
 Parameter syntax
 ****************
