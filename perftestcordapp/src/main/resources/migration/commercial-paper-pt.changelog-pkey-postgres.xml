@@ -2,8 +2,9 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
-
-    <include file="migration/cash-pt.changelog-init.xml"/>
-    <include file="migration/cash-pt.changelog-pkey.xml"/>
-    <include file="migration/cash-pt.changelog-pkey-postgres.xml"/>
+    <changeSet id="non-clustered_pk_pt-commercial-paper-postgres" author="R3.Corda" dbms="postgresql">
+        <dropPrimaryKey tableName="cp_pt_states" constraintName="cp_pt_states_pkey"/>
+        <addPrimaryKey tableName="cp_pt_states" columnNames="transaction_id, output_index"
+                       constraintName="cp_pt_states_pkey"/>
+    </changeSet>
 </databaseChangeLog>

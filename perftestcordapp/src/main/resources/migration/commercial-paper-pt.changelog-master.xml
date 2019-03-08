@@ -5,5 +5,5 @@
 
     <include file="migration/commercial-paper-pt.changelog-init.xml"/>
     <include file="migration/commercial-paper-pt.changelog-pkey.xml"/>
-
+    <include file="migration/commercial-paper-pt.changelog-pkey-postgres.xml"/>
 </databaseChangeLog>
