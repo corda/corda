@@ -252,7 +252,7 @@ open class SerializerFactory(
                 // This carpenting should only be carried out for non-collections. These are detected by looking for
                 // types that are not composites (RestrictedTypes), and not enums (have no choices).
                 if (!(notation is RestrictedType && notation.choices.isEmpty())) {
-                    interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
+                    interfacesPerClass.getValue(name).forEach { processSchemaEntry(it) }
                     metaSchema.buildFor(notation, classloader)
                 }
                 null
@@ -260,17 +260,22 @@ open class SerializerFactory(
         }.toMap()
 
         if (metaSchema.isNotEmpty()) {
-            val mc = MetaCarpenter(metaSchema, classCarpenter)
-            mc.build()
+            MetaCarpenter(metaSchema, classCarpenter, tolerateFailure = true).build()
         }
 
         val carpented = notationByNameForNonInterfaceTypes.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
-            processSchemaEntry(notation)
+            try {
+                processSchemaEntry(notation)
+            } catch (_ : ClassNotFoundException) {
+                UncarpentableSerializer(name)
+            }
         }
 
         val allLocalSerializers = noCarpentryRequired + carpented
 
         allLocalSerializers.forEach { (name, serializer) ->
+            if (serializer is UncarpentableSerializer) return@forEach
+
             val typeNotation = notationByNameForNonInterfaceTypes[name]!!
             if (serializer.typeDescriptor != typeNotation.descriptor.name ) {
                 getEvolutionSerializer(typeNotation, serializer, schemaAndDescriptor.schemas)
@@ -278,10 +283,12 @@ open class SerializerFactory(
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-        is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
-        is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
-    }
+    private fun processSchemaEntry(typeNotation: TypeNotation) =
+        when (typeNotation) {
+            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+            is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
+        }
+
 
     // TODO: class loader logic, and compare the schema.
     private fun processRestrictedType(typeNotation: RestrictedType) = get(null,
