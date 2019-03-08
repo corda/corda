@@ -75,7 +75,7 @@ class NotaryLoader(
     /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */
     private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal) {
         var configuredAsValidatingNotary = services.configuration.notary?.validating
-        val notaryParty = myNotaryIdentity?.party ?: throw IllegalStateException("Notary doesn't have a party")
+        val notaryParty = myNotaryIdentity?.party ?: throw IllegalStateException("Could not establish notary identity of this node")
         var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
