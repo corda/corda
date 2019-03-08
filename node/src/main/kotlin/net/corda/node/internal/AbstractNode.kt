@@ -541,6 +541,7 @@ abstract class AbstractNode<S>(val configuration: NodeConfiguration,
         )
     }
 
+    // Extracted into a function to allow overriding in subclasses.
     protected open fun makeFlowLogicRefFactoryImpl() = FlowLogicRefFactoryImpl(cordappLoader.appClassLoader)
 
     private fun makeCordappLoader(configuration: NodeConfiguration, versionInfo: VersionInfo): CordappLoader {
