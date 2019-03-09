@@ -2,7 +2,7 @@
 
 file="${BASH_SOURCE[0]}"
 base_dir="$(cd "$(dirname "$file")/" && pwd)"
-version="$(cat $base_dir/../../build.gradle | sed -n 's/^[ ]*ext\.corda_release_version[ =]*"\([^"]*\)".*$/\1/p')"
+version="$(cat $base_dir/../../constants.properties | sed -n 's/^[ ]*cordaVersion[ =]*\(.*\).*$/\1/p')"
 
 # Build DJVM module and CLI
 cd "$base_dir/.."
