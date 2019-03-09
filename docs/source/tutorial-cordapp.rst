@@ -487,7 +487,7 @@ Running tests in IntelliJ
 We recommend editing your IntelliJ preferences so that you use the gradle runner - this means that the quasar utils
 plugin will make sure that some flags (like ``-javaagent`` - see "Alternatively..." below) are set for you.
 
-To switch to using the gradle runner:
+To switch to using the Gradle runner:
 
 * Navigate to ``Build, Execution, Deployment -> Build Tools -> Gradle -> Runner`` (or search for `runner`)
 
@@ -497,15 +497,35 @@ To switch to using the gradle runner:
 * set "Delegate IDE build/run actions to gradle" to true
 * set "Run test using:" to "Gradle Test Runner"
 
-Alternatively, to use the built in IntelliJ JUnit test runner, you can:
+If you would prefer to use the built in IntelliJ JUnit test runner, you can either manually copy the quasar jar to, say, the lib
+directory, or you can add some code to your build.gradle file and it will do it for you.  See below for details.
+
+Whichever you pick, with the IntelliJ Junit test runner you will need to specify ``-javaagent:lib/quasar-core-<version>.jar``
+and set the run directory to the project root directory for each test.
+
+The manual approach would be to:
 
 * copy your quasar-core.jar to the ``<project root>/lib/`` dir
 
-  * this will be the one specified in build.gradle - you can find it in your gradle cache
+  * this will be the one specified in build.gradle - you can find it in your Gradle cache
 
     * e.g. on mac/linux you can run something similar to: ``find ~/.gradle/caches -name quasar-core\*.jar``
-* for each test specify ``-javaagent:lib/quasar-core-<version>.jar`` and set the run directory to the project root directory
 
+The Gradle based approach would be to add this to your build.gradle file:
+
+.. sourcecode:: gradle
+
+    apply plugin: 'net.corda.plugins.quasar-utils'
+
+    task installQuasar(type: Copy) {
+        destinationDir rootProject.file("lib")
+        from(configurations.quasar) {
+            rename 'quasar-core(.*).jar', 'quasar.jar'
+        }
+    }
+
+
+and then you can run `gradlew installQuasar`
 
 Debugging your CorDapp
 ----------------------
