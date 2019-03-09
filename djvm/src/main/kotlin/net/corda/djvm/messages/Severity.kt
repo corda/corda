@@ -12,7 +12,12 @@ enum class Severity(val shortName: String, val precedence: Int, val color: Strin
     /**
      * Trace message.
      */
-    TRACE("TRACE", 3, null),
+    TRACE("TRACE", 4, null),
+
+    /**
+     * Debug message.
+     */
+    DEBUG("DEBUG", 3, null),
 
     /**
      * Informational message.
