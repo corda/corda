@@ -21,7 +21,7 @@ abstract class CommandBase : Callable<Boolean> {
 
     @Option(
             names = ["-l", "--level"],
-            description = ["The minimum severity level to log (TRACE, INFO, WARNING or ERROR."],
+            description = ["The minimum severity level to log (TRACE, DEBUG, INFO, WARNING or ERROR."],
             converter = [SeverityConverter::class]
     )
     protected var level: Severity = Severity.WARNING
