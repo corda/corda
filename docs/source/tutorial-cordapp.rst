@@ -484,8 +484,9 @@ You can run the CorDapp's integration tests by running the ``Run Integration Tes
 Running tests in IntelliJ
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We recommend editing your IntelliJ preferences so that you use the gradle runner - this means that the quasar utils
-plugin will make sure that some flags (like ``-javaagent`` - see "Alternatively..." below) are set for you.
+We recommend editing your IntelliJ preferences so that you use the Gradle runner - this means that the quasar utils
+plugin will make sure that some flags (like ``-javaagent`` - see :ref:`below <tutorial_cordapp_alternative_test_runners>`) are
+set for you.
 
 To switch to using the Gradle runner:
 
@@ -494,26 +495,18 @@ To switch to using the Gradle runner:
   * Windows: this is in "Settings"
   * MacOS: this is in "Preferences"
 
-* set "Delegate IDE build/run actions to gradle" to true
-* set "Run test using:" to "Gradle Test Runner"
+* Set "Delegate IDE build/run actions to gradle" to true
+* Set "Run test using:" to "Gradle Test Runner"
 
-If you would prefer to use the built in IntelliJ JUnit test runner, you can either manually copy the quasar jar to, say, the lib
-directory, or you can add some code to your build.gradle file and it will do it for you.  See below for details.
+.. _tutorial_cordapp_alternative_test_runners:
 
-Whichever you pick, with the IntelliJ Junit test runner you will need to specify ``-javaagent:lib/quasar-core-<version>.jar``
+If you would prefer to use the built in IntelliJ JUnit test runner, you can add some code to your ``build.gradle`` file and
+it will copy your quasar JAR file to the lib directory. You will also need to specify ``-javaagent:lib/quasar.jar``
 and set the run directory to the project root directory for each test.
 
-The manual approach would be to:
+Add the following to your ``build.gradle`` file:
 
-* copy your quasar-core.jar to the ``<project root>/lib/`` dir
-
-  * this will be the one specified in build.gradle - you can find it in your Gradle cache
-
-    * e.g. on mac/linux you can run something similar to: ``find ~/.gradle/caches -name quasar-core\*.jar``
-
-The Gradle based approach would be to add this to your build.gradle file:
-
-.. sourcecode:: gradle
+.. sourcecode:: groovy
 
     apply plugin: 'net.corda.plugins.quasar-utils'
 
@@ -525,7 +518,7 @@ The Gradle based approach would be to add this to your build.gradle file:
     }
 
 
-and then you can run `gradlew installQuasar`
+and then you can run ``gradlew installQuasar``.
 
 Debugging your CorDapp
 ----------------------
