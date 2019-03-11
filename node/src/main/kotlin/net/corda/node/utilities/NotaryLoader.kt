@@ -79,7 +79,8 @@ class NotaryLoader(
         var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
         
         if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
-            throw IllegalStateException("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down.")    
+            throw IllegalStateException("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. " 
+            + "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")    
         }
     }
     
