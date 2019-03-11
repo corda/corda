@@ -29,6 +29,7 @@ import java.util.*
 class BridgeControlListener(val config: MutualSslConfiguration,
                             proxyConfig: ProxyConfig? = null,
                             maxMessageSize: Int,
+                            crlCheckSoftFail: Boolean,
                             enableSNI: Boolean,
                             private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                             bridgeMetricsService: BridgeMetricsService? = null,
@@ -40,7 +41,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private val bridgeManager = if (enableSNI) {
         LoopbackBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
     } else {
-        AMQPBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
+        AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
     }
     private var artemis: ArtemisSessionProvider? = null
     private var controlConsumer: ClientConsumer? = null
@@ -49,8 +50,9 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     constructor(config: MutualSslConfiguration,
                 p2pAddress: NetworkHostAndPort,
                 maxMessageSize: Int,
+                crlCheckSoftFail: Boolean,
                 enableSNI: Boolean,
-                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
+                proxy: ProxyConfig? = null) : this(config, proxy, maxMessageSize, crlCheckSoftFail, enableSNI, { ArtemisMessagingClient(config, p2pAddress, maxMessageSize) })
 
     companion object {
         private val log = contextLogger()

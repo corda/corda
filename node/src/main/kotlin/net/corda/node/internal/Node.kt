@@ -275,7 +275,7 @@ open class Node(configuration: NodeConfiguration,
                         configuration.enterpriseConfiguration.messagingServerConnectionConfiguration,
                         configuration.enterpriseConfiguration.messagingServerBackupAddresses)
             }
-            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.enableSNI, artemisClient)
+            BridgeControlListener(configuration.p2pSslOptions, null, networkParameters.maxMessageSize, configuration.crlCheckSoftFail, configuration.enableSNI, artemisClient)
         } else {
             null
         }

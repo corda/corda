@@ -4,7 +4,7 @@ buildscript {
     file("$projectDir/constants.properties").withInputStream { constants.load(it) }
 
     // Our version: bump this on release.
-    ext.corda_release_version = "5.0-SNAPSHOT"
+    ext.corda_release_version = constants.getProperty("cordaVersion")
     ext.corda_release_distribution = "com.r3.corda"
 
     //OS version for shared dependencies
@@ -20,7 +20,7 @@ buildscript {
     ext.kotlin_version = constants.getProperty("kotlinVersion")
 
     ext.quasar_group = 'co.paralleluniverse'
-    ext.quasar_version = '0.7.11_r3'
+    ext.quasar_version = constants.getProperty("quasarVersion")
 
     // gradle-capsule-plugin:1.0.2 contains capsule:1.0.1 by default.
     // We must configure it manually to use the latest capsule version.
@@ -91,7 +91,7 @@ buildscript {
     // Update 121 is required for ObjectInputFilter.
     // Updates [131, 161] also have zip compression bugs on MacOS (High Sierra).
     // when the java version in NodeStartup.hasMinimumJavaVersion() changes, so must this check
-    ext.java8_minUpdateVersion = '171'
+    ext.java8_minUpdateVersion = constants.getProperty('java8MinUpdateVersion')
 
     repositories {
         mavenCentral()
