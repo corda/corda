@@ -55,10 +55,7 @@ class AppendOnlyPersistentMapNonConcurrentTest {
 
     @Test
     fun `map prevents duplicates, when key has been evicted from cache, but present in database`() {
-        val map = database.transaction {
-            createMap(1)
-        }
-
+        val map = createMap(1)
 
         database.transaction {
             map.addWithDuplicatesAllowed(1, "1")
