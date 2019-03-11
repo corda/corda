@@ -22,7 +22,7 @@ interface TypeLoader {
  * A [TypeLoader] that uses the [ClassCarpenter] to build a class matching the supplied [RemoteTypeInformation] if none
  * is visible from the current classloader.
  *
- * @param mustCarpentMissingTypes Controlled by feature flag DISABLE_JIRA_CORDA_2707 - if this flag is set, then a [ClassNotFoundException]
+ * @param mustCarpentMissingTypes Controlled by feature flag DISABLE-CORDA-2707 - if this flag is set, then a [ClassNotFoundException]
  * will be thrown if any unknown type is mentioned in the schema of a received message and [carpenterDisabled] is set to `true`. This will
  * prevent any attempt at deserialisation where some of the types in the received message are unknown.
  *
