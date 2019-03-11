@@ -38,8 +38,8 @@ import kotlin.concurrent.withLock
 open class AMQPBridgeManager(config: MutualSslConfiguration,
                              proxyConfig: ProxyConfig? = null,
                              maxMessageSize: Int,
-                             enableSNI: Boolean,
                              crlCheckSoftFail: Boolean,
+                             enableSNI: Boolean,
                              private val artemisMessageClientFactory: () -> ArtemisSessionProvider,
                              private val bridgeMetricsService: BridgeMetricsService? = null,
                              private val trace: Boolean) : BridgeManager {
