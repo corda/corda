@@ -120,6 +120,15 @@ is asserting.
 
 Next we want Bob to send this cash back to Alice.
 
+.. note::
+
+    To make sure the driver classes are included in your project you will need the following in your ``build.gradle`` file in the module in
+    which you want to test:
+
+    .. sourcecode:: groovy
+
+        testCompile "$corda_release_group:corda-node-driver:$corda_release_version"
+
 That's it! We saw how to start up several corda nodes locally, how to connect to them, and how to test some simple invariants
 about ``CashIssueAndPaymentFlow`` and ``CashPaymentFlow``.
 
