@@ -5,7 +5,6 @@ import net.corda.bank.api.BankOfCordaClientApi
 import net.corda.bank.api.BankOfCordaWebApi
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.VisibleForTesting
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.testing.core.BOC_NAME
@@ -16,7 +15,12 @@ object IssueCash {
     private val NOTARY_NAME = CordaX500Name(organisation = "Notary Service", locality = "Zurich", country = "CH")
     private val BIGCORP_NAME = CordaX500Name(organisation = "BigCorporation", locality = "New York", country = "US")
     private const val BOC_RPC_PORT = 10006
+    private const val BOC2_RPC_PORT = 10012
     private const val BOC_WEB_PORT = 10007
+
+    private val availableRpcServersBOC = listOf(
+            NetworkHostAndPort("localhost", BOC_RPC_PORT),
+            NetworkHostAndPort("localhost", BOC2_RPC_PORT))
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -45,12 +49,20 @@ object IssueCash {
                 requestWebIssue(amount)
                 println("Successfully processed Cash Issue request")
             }
+            Role.ISSUE_CASH_RPC_HA -> {
+                println("Issuing Cash via RPC using first available node from list of [$availableRpcServersBOC] available servers ...")
+                val result = requestRPCIssueHA(amount)
+                println("Success!! Your transaction receipt is ${result.tx.id}")
+            }
         }
     }
 
-    @VisibleForTesting
-    fun requestRpcIssue(amount: Amount<Currency>): SignedTransaction {
+    private fun requestRpcIssue(amount: Amount<Currency>): SignedTransaction {
         return BankOfCordaClientApi.requestRPCIssue(NetworkHostAndPort("localhost", BOC_RPC_PORT), createParams(amount, NOTARY_NAME))
+    }
+
+    private fun requestRPCIssueHA(amount: Amount<Currency>): SignedTransaction {
+        return BankOfCordaClientApi.requestRPCIssueHA(availableRpcServersBOC, createParams(amount, NOTARY_NAME))
     }
 
     private fun requestWebIssue(amount: Amount<Currency>) {
@@ -73,5 +85,6 @@ object IssueCash {
     enum class Role {
         ISSUE_CASH_RPC,
         ISSUE_CASH_WEB,
+        ISSUE_CASH_RPC_HA
     }
 }
