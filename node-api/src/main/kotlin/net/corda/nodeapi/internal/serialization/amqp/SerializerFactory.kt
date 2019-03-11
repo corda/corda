@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
@@ -20,6 +21,10 @@ import javax.annotation.concurrent.ThreadSafe
 
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
+
+open class Environment {
+    open fun getenv(envVar : String) : String? = System.getenv(envVar)
+}
 
 /**
  * Factory of serializers designed to be shared across threads and invocations.
@@ -40,10 +45,11 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-open class SerializerFactory(
+open class SerializerFactory @JvmOverloads constructor (
     val whitelist: ClassWhitelist,
     cl: ClassLoader,
-    private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()
+    private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+    environment : Environment = Environment()
 ) {
     @VisibleForTesting
     internal val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
@@ -65,6 +71,13 @@ open class SerializerFactory(
     fun getTransformsCache() = transformsCache
 
     private val logger by lazy { loggerFor<SerializerFactory>() }
+
+    /**
+     * feature flag to disable the behaviour where carpentry errors are ignored if the failed class is
+     * evolved out of the class hierarchy. Passed as a flag to the [MetaCarpenter]s build method as
+     * [MetaCarpenter.tolerateFailure] where setting this to true enabled the new behaviour.
+     */
+    private val disable2704 : Boolean = environment.getenv("DISABLE-CORDA-2704")?.toBoolean() ?: false
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -260,14 +273,19 @@ open class SerializerFactory(
         }.toMap()
 
         if (metaSchema.isNotEmpty()) {
-            MetaCarpenter(metaSchema, classCarpenter, tolerateFailure = true).build()
+            // If we disable the feature added in Corda-2704 then we need to not tolerate failures so
+            // just invert the tolerateFailure flag
+            MetaCarpenter(metaSchema, classCarpenter, tolerateFailure = !disable2704).build()
         }
 
         val carpented = notationByNameForNonInterfaceTypes.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
             try {
                 processSchemaEntry(notation)
             } catch (_ : ClassNotFoundException) {
-                UncarpentableSerializer(name)
+                UncarpentableSerializer(name).apply {
+                    serializersByDescriptor[notation.descriptor.name!!] = this
+
+                }
             }
         }
 
@@ -283,11 +301,12 @@ open class SerializerFactory(
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) =
+    private fun processSchemaEntry(typeNotation: TypeNotation) = run {
         when (typeNotation) {
             is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
             is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
         }
+    }
 
 
     // TODO: class loader logic, and compare the schema.

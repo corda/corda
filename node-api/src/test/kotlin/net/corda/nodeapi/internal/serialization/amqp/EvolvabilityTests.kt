@@ -624,6 +624,25 @@ class EvolvabilityTests {
         File(URI("$localPath/$resource")).writeBytes( signedAndSerialized.bytes)
     }
 
+    @Test
+    fun removesList() {
+        val file = File(URI("$localPath/${javaClass.simpleName}.${testName()}"))
+        val factory = testDefaultFactory()
+
+        // Classes as it was serialized
+        //
+        // class ToBeEvolved(val a: String, val b: List<String>)
+        // file.writeBytes(SerializationOutput(factory).serialize(ToBeEvolved("hello", listOf("a", "b"))).bytes)
+
+        // Class as it exited then (from the perspective that this is replicating an older node receiving
+        // a newer version of the class
+        class ToBeEvolved(val a: String)
+
+        val tbe = DeserializationInput(factory).deserialize(SerializedBytes<ToBeEvolved>(file.readBytes()))
+
+        assertEquals("hello", tbe.a)
+    }
+
     @Suppress("UNCHECKED_CAST")
     @Test
     fun getterSetterEvolver1() {

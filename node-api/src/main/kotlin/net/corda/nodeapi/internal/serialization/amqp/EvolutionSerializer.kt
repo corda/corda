@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.amqp
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.nodeapi.internal.serialization.carpenter.getTypeAsClass
 import net.corda.core.utilities.contextLogger
@@ -38,47 +39,49 @@ abstract class EvolutionSerializer(
      * should be placed
      * @property property object to read the actual property value
      */
-    abstract class RemoteParam(var resultsIndex: Int, open val property: PropertySerializer) {
+    sealed class RemoteParam(var resultsIndex: Int, open val property: PropertySerializer) {
         abstract fun readProperty(
                 obj: Any?,
                 schemas: SerializationSchemas,
                 input: DeserializationInput, new: Array<Any?>)
-    }
 
-    open class ValidRemoteParam(
-            resultsIndex: Int,
-            override val property: PropertySerializer
-    ) : RemoteParam (
-            resultsIndex,
-            property
-    ) {
-        override fun readProperty(
-                obj: Any?,
-                schemas: SerializationSchemas,
-                input: DeserializationInput,
-                new: Array<Any?>
+
+        class ValidRemoteParam(
+                resultsIndex: Int,
+                override val property: PropertySerializer
+        ) : RemoteParam(
+                resultsIndex,
+                property
         ) {
-            property.readProperty(obj, schemas, input).apply {
-                if(resultsIndex >= 0) {
-                    new[resultsIndex] = this
+            override fun readProperty(
+                    obj: Any?,
+                    schemas: SerializationSchemas,
+                    input: DeserializationInput,
+                    new: Array<Any?>
+            ) {
+                property.readProperty(obj, schemas, input).apply {
+                    if (resultsIndex >= 0) {
+                        new[resultsIndex] = this
+                    }
                 }
             }
-        }
-        override fun toString(): String {
-            return "resultsIndex = $resultsIndex property = ${property.name}"
-        }
-    }
 
-    class UncarpentedRemoteParam(
-            name: String
-    ) : RemoteParam (-1, PropertySerializer.UncarpentablePropertySerializer(name)) {
-        override fun readProperty(
-                obj: Any?,
-                schemas: SerializationSchemas,
-                input: DeserializationInput,
-                new: Array<Any?>
-        ) {
-            // don't do anything
+            override fun toString(): String {
+                return "resultsIndex = $resultsIndex property = ${property.name}"
+            }
+        }
+
+        class UncarpentedRemoteParam(
+                name: String
+        ) : RemoteParam(-1, PropertySerializer.UncarpentablePropertySerializer(name)) {
+            override fun readProperty(
+                    obj: Any?,
+                    schemas: SerializationSchemas,
+                    input: DeserializationInput,
+                    new: Array<Any?>
+            ) {
+                // don't do anything
+            }
         }
     }
 
@@ -195,15 +198,15 @@ abstract class EvolutionSerializer(
                  local: ObjectSerializer,
                  factory: SerializerFactory
         ): AMQPSerializer<Any> {
-            // The order in which the properties were serialised is important and must be preserved
+             // The order in which the properties were serialised is important and must be preserved
             val readersAsSerialized = LinkedHashMap<String, RemoteParam>()
 
             remote.fields.forEach {
                 readersAsSerialized[it.name] = try {
-                    ValidRemoteParam(-1, PropertySerializer.make(it.name, EvolutionPropertyReader(),
+                    RemoteParam.ValidRemoteParam(-1, PropertySerializer.make(it.name, EvolutionPropertyReader(),
                             it.getTypeAsClass(factory.classloader), factory))
                 } catch (e: ClassNotFoundException) {
-                    UncarpentedRemoteParam(it.name)
+                    RemoteParam.UncarpentedRemoteParam(it.name)
                 }
             }
 
@@ -232,7 +235,8 @@ class EvolutionSerializerViaConstructor(
         factory: SerializerFactory,
         oldReaders: Map<String, EvolutionSerializer.RemoteParam>,
         kotlinConstructor: KFunction<Any>?,
-        private val constructorArgs: Array<Any?>) : EvolutionSerializer (clazz, factory, oldReaders, kotlinConstructor) {
+        private val constructorArgs: Array<Any?>) : EvolutionSerializer (clazz, factory, oldReaders, kotlinConstructor
+) {
     /**
      * Unlike a normal [readObject] call where we simply apply the parameter deserialisers
      * to the object list of values we need to map that list, which is ordered per the
@@ -246,7 +250,16 @@ class EvolutionSerializerViaConstructor(
         if (obj !is List<*>) throw NotSerializableException("Body of described type is unexpected $obj")
 
         // *must* read all the parameters in the order they were serialized
-        oldReaders.values.zip(obj).map { it.first.readProperty(it.second, schemas, input, constructorArgs) }
+        oldReaders.values.zip(obj).map {
+            it.first.readProperty(it.second, schemas, input, constructorArgs)
+            /*
+            try {
+                it.first.readProperty(it.second, schemas, input, constructorArgs)
+            } catch (_ : CordaRuntimeException) {
+                null
+            }
+            */
+        }
 
         return javaConstructor?.newInstance(*(constructorArgs)) ?:
                 throw NotSerializableException(
@@ -301,13 +314,16 @@ abstract class EvolutionSerializerGetterBase {
  * between the received schema and the class as it exists now on the class path,
  */
 class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
-    override fun getEvolutionSerializer(factory: SerializerFactory,
-                                        typeNotation: TypeNotation,
-                                        newSerializer: AMQPSerializer<Any>,
-                                        schemas: SerializationSchemas): AMQPSerializer<Any> {
-        return factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
+    override fun getEvolutionSerializer(
+            factory: SerializerFactory,
+            typeNotation: TypeNotation,
+            newSerializer: AMQPSerializer<Any>,
+            schemas: SerializationSchemas
+    ): AMQPSerializer<Any> = factory.getSerializersByDescriptor().computeIfAbsent(typeNotation.descriptor.name!!) {
             when (typeNotation) {
-                is CompositeType -> EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                is CompositeType -> {
+                    EvolutionSerializer.make(typeNotation, newSerializer as ObjectSerializer, factory)
+                }
                 is RestrictedType -> {
                     // The fingerprint of a generic collection can be changed through bug fixes to the
                     // fingerprinting function making it appear as if the class has altered whereas it hasn't.
@@ -322,6 +338,6 @@ class EvolutionSerializerGetter : EvolutionSerializerGetterBase() {
                 }
             }
         }
-    }
+
 }
 

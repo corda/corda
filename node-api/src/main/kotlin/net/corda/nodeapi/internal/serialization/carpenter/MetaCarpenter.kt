@@ -77,6 +77,7 @@ abstract class MetaCarpenterBase(
             cc.build(newObject)
         } catch (e : Exception) {
             if (!tolerateFailure) throw e
+
             when (e) {
                 is InterfaceMismatchException, is UncarpentableException -> null
                 else -> throw e
