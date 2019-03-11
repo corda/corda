@@ -751,7 +751,7 @@ class EvolvabilityTests {
             DeserializationInput(protectedFactory).deserialize(SerializedBytes<Evolved2>(withNonNullValue), testSerializationContext.withoutCarpenter())
         }
 
-        // Set DISABLE_JIRA_CORDA_2707 = true
+        // Set DISABLE-CORDA-2707 = true
         val factoryWithFeatureFlagDisabled = SerializerFactoryBuilder.build(
                 AllWhitelist,
                 ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),

@@ -35,7 +35,7 @@ object SerializerFactoryBuilder {
             overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false,
             mustPreserveDataWhenEvolving: Boolean = false,
-            // Set by environment variable DISABLE_JIRA_CORDA_2707
+            // Set by environment variable DISABLE-CORDA-2707
             mustCarpentMissingTypes: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,

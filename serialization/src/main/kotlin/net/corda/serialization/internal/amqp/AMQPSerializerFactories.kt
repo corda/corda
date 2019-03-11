@@ -12,7 +12,7 @@ open class SerializerFactoryFactoryImpl : SerializerFactoryFactory {
         return SerializerFactoryBuilder.build(context.whitelist,
                 ClassCarpenterImpl(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled),
                 mustPreserveDataWhenEvolving = context.preventDataLoss,
-                mustCarpentMissingTypes = System.getenv("DISABLE_JIRA_2707")?.equals("true") ?: false
+                mustCarpentMissingTypes = System.getenv("DISABLE-CORDA-2707")?.toBoolean() ?: false
         )
     }
 }
