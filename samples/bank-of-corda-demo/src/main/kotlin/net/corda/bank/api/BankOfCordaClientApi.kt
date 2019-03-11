@@ -5,12 +5,15 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.client.rpc.RPCException
+import net.corda.core.messaging.StateMachineUpdate
 import net.corda.core.messaging.startFlow
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.*
 import net.corda.finance.flows.CashIssueAndPaymentFlow
 import net.corda.testing.http.HttpApi
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import rx.Subscription
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Interface for communicating with Bank of Corda node
@@ -35,26 +38,7 @@ object BankOfCordaClientApi {
      *
      * @return a payment transaction (following successful issuance of cash to self).
      */
-    fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction {
-        val client = establishConnectionWithRetry(listOf(rpcAddress), BOC_RPC_USER, BOC_RPC_PWD)
-        // TODO: privileged security controls required
-        client.use { connection ->
-            val rpc = connection.proxy
-            rpc.waitUntilNetworkReady().getOrThrow()
-
-            // Resolve parties via RPC
-            val issueToParty = rpc.wellKnownPartyFromX500Name(params.issueToPartyName)
-                    ?: throw IllegalStateException("Unable to locate ${params.issueToPartyName} in Network Map Service")
-            val notaryLegalIdentity = rpc.notaryIdentities().firstOrNull { it.name == params.notaryName }
-                    ?: throw IllegalStateException("Couldn't locate notary ${params.notaryName} in NetworkMapCache")
-
-            val anonymous = true
-            val issuerBankPartyRef = OpaqueBytes.of(params.issuerBankPartyRef.toByte())
-
-            return rpc.startFlow(::CashIssueAndPaymentFlow, params.amount, issuerBankPartyRef, issueToParty, anonymous, notaryLegalIdentity)
-                    .returnValue.getOrThrow().stx
-        }
-    }
+    fun requestRPCIssue(rpcAddress: NetworkHostAndPort, params: IssueRequestParams): SignedTransaction = requestRPCIssueHA(listOf(rpcAddress), params)
 
     /**
      * RPC API
@@ -62,7 +46,7 @@ object BankOfCordaClientApi {
      * @return a cash issue transaction.
      */
     fun requestRPCIssueHA(availableRpcServers: List<NetworkHostAndPort>, params: IssueRequestParams): SignedTransaction {
-        val client = establishConnectionWithRetry(availableRpcServers, BOC_RPC_USER, BOC_RPC_PWD)
+        val client = performRpcReconnect(availableRpcServers, BOC_RPC_USER, BOC_RPC_PWD)
         // TODO: privileged security controls required
         client.use { connection ->
             val rpc = connection.proxy
@@ -83,6 +67,33 @@ object BankOfCordaClientApi {
         }
     }
 
+    // DOCSTART rpcClientConnectionRecovery
+    fun performRpcReconnect(nodeHostAndPorts: List<NetworkHostAndPort>, username: String, password: String): CordaRPCConnection {
+        val connection = establishConnectionWithRetry(nodeHostAndPorts, username, password)
+        val proxy = connection.proxy
+
+        val (stateMachineInfos, stateMachineUpdatesRaw) = proxy.stateMachinesFeed()
+
+        val retryableStateMachineUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
+        val subscription: Subscription = stateMachineUpdatesRaw
+                .startWith(stateMachineInfos.map { StateMachineUpdate.Added(it) })
+                .subscribe({ /* Client code here */ }, {
+                    // Terminate subscription such that nothing gets past this point to downstream Observables.
+                    retryableStateMachineUpdatesSubscription.get()?.unsubscribe()
+                    // It is good idea to close connection to properly mark the end of it. During re-connect we will create a new
+                    // client and a new connection, so no going back to this one. Also the server might be down, so we are
+                    // force closing the connection to avoid propagation of notification to the server side.
+                    connection.forceClose()
+                    // Perform re-connect.
+                    performRpcReconnect(nodeHostAndPorts, username, password)
+                })
+
+        retryableStateMachineUpdatesSubscription.set(subscription)
+        return connection
+    }
+    // DOCEND rpcClientConnectionRecovery
+
+    // DOCSTART rpcClientConnectionWithRetry
     private fun establishConnectionWithRetry(nodeHostAndPorts: List<NetworkHostAndPort>, username: String, password: String): CordaRPCConnection {
         val retryInterval = 5.seconds
         var connection: CordaRPCConnection?
@@ -113,4 +124,5 @@ object BankOfCordaClientApi {
         logger.info("Connection successfully established with: ${connection.proxy.nodeInfo()}")
         return connection
     }
+    // DOCEND rpcClientConnectionWithRetry
 }

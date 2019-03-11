@@ -74,22 +74,6 @@ task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, 
                 h2Settings: [address: "localhost:10018"]
         ]
     }
-    node {
-        name "O=BankOfCorda2,L=London,C=GB"
-        p2pPort 10011
-        rpcSettings {
-            address "localhost:10012"
-            adminAddress "localhost:10014"
-        }
-        webPort 10013
-        rpcUsers = [[user: "bankUser", password: "test", permissions: ["ALL"]]]
-        extraConfig = [
-                h2Settings: [address: "localhost:10019"]
-        ]
-        cordapp(project(':finance:workflows')) {
-            config "issuableCurrencies = [ USD ]"
-        }
-    }
 }
 
 idea {
@@ -119,17 +103,6 @@ task runWebCashIssue(type: JavaExec) {
     args 30000
     args '--currency'
     args 'GBP'
-}
-
-task runRPCCashIssueHA(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'net.corda.bank.IssueCash'
-    args '--role'
-    args 'ISSUE_CASH_RPC_HA'
-    args '--quantity'
-    args 40000
-    args '--currency'
-    args 'CHF'
 }
 
 jar {
