@@ -5,34 +5,12 @@ apply plugin: 'net.corda.plugins.cordapp'
 
 description 'Corda attachment demo - workflows'
 
-sourceSets {
-    integrationTest {
-        kotlin {
-            compileClasspath += main.output + test.output
-            runtimeClasspath += main.output + test.output
-            srcDir file('src/integration-test/kotlin')
-        }
-    }
-}
-
-configurations {
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
-}
-
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+
     // Corda integration dependencies
     cordaCompile project(':core')
-    cordaCompile project(':webserver')
     cordapp project(':samples:attachment-demo:contracts')
-    testCompile project(':node-driver')
-    testCompile "junit:junit:$junit_version"
-}
-
-task integrationTest(type: Test, dependsOn: []) {
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    classpath = sourceSets.integrationTest.runtimeClasspath
 }
 
 idea {
