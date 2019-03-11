@@ -21,8 +21,17 @@ interface TypeLoader {
 /**
  * A [TypeLoader] that uses the [ClassCarpenter] to build a class matching the supplied [RemoteTypeInformation] if none
  * is visible from the current classloader.
+ *
+ * @param mustCarpentMissingTypes Controlled by feature flag DISABLE_JIRA_CORDA_2707 - if this flag is set, then a [ClassNotFoundException]
+ * will be thrown if any unknown type is mentioned in the schema of a received message and [carpenterDisabled] is set to `true`. This will
+ * prevent any attempt at deserialisation where some of the types in the received message are unknown.
+ *
+ * If the flag is not set, then deserialisation in the presence of unknown types is permitted, and will only fail if a value of an
+ * unknown type is required in the construction of a deserialised object (i.e. if the value is not discarded during type evolution).
  */
-class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, private val classLoader: ClassLoader): TypeLoader {
+class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter,
+                                private val classLoader: ClassLoader,
+                                private val mustCarpentMissingTypes: Boolean): TypeLoader {
 
     val cache = DefaultCacheProvider.createCache<TypeIdentifier, Type>()
 
@@ -37,6 +46,9 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter, priv
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
+                if (context.carpenterDisabled && mustCarpentMissingTypes) {
+                    throw e
+                }
                 null
             }
         }.toMap()

@@ -23,7 +23,7 @@ open class AmqpCarpenterBase(whitelist: ClassWhitelist) {
     var factory = serializerFactoryExternalCarpenter(cc)
 
     protected val remoteTypeModel = AMQPRemoteTypeModel()
-    protected val typeLoader = ClassCarpentingTypeLoader(SchemaBuildingRemoteTypeCarpenter(cc), cc.classloader)
+    protected val typeLoader = ClassCarpentingTypeLoader(SchemaBuildingRemoteTypeCarpenter(cc), cc.classloader, true)
 
     protected inline fun <reified T: Any> T.roundTrip(): ObjectAndEnvelope<T> =
         DeserializationInput(factory).deserializeAndReturnEnvelope(serialise(this))

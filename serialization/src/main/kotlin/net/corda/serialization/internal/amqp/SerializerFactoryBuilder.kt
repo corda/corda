@@ -20,7 +20,8 @@ object SerializerFactoryBuilder {
                 allowEvolution = true,
                 overrideFingerPrinter = null,
                 onlyCustomSerializers = false,
-                mustPreserveDataWhenEvolving = false)
+                mustPreserveDataWhenEvolving = false,
+                mustCarpentMissingTypes = false)
     }
 
     @JvmStatic
@@ -33,7 +34,9 @@ object SerializerFactoryBuilder {
             allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false,
-            mustPreserveDataWhenEvolving: Boolean = false): SerializerFactory {
+            mustPreserveDataWhenEvolving: Boolean = false,
+            // Set by environment variable DISABLE_JIRA_CORDA_2707
+            mustCarpentMissingTypes: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 classCarpenter,
@@ -41,7 +44,8 @@ object SerializerFactoryBuilder {
                 allowEvolution,
                 overrideFingerPrinter,
                 onlyCustomSerializers,
-                mustPreserveDataWhenEvolving)
+                mustPreserveDataWhenEvolving,
+                mustCarpentMissingTypes)
     }
 
     @JvmStatic
@@ -55,7 +59,8 @@ object SerializerFactoryBuilder {
             allowEvolution: Boolean = true,
             overrideFingerPrinter: FingerPrinter? = null,
             onlyCustomSerializers: Boolean = false,
-            mustPreserveDataWhenEvolving: Boolean = false): SerializerFactory {
+            mustPreserveDataWhenEvolving: Boolean = false,
+            mustCarpentMissingTypes: Boolean = false): SerializerFactory {
         return makeFactory(
                 whitelist,
                 ClassCarpenterImpl(whitelist, carpenterClassLoader, lenientCarpenterEnabled),
@@ -63,7 +68,8 @@ object SerializerFactoryBuilder {
                 allowEvolution,
                 overrideFingerPrinter,
                 onlyCustomSerializers,
-                mustPreserveDataWhenEvolving)
+                mustPreserveDataWhenEvolving,
+                mustCarpentMissingTypes)
     }
 
     private fun makeFactory(whitelist: ClassWhitelist,
@@ -72,7 +78,8 @@ object SerializerFactoryBuilder {
                             allowEvolution: Boolean,
                             overrideFingerPrinter: FingerPrinter?,
                             onlyCustomSerializers: Boolean,
-                            mustPreserveDataWhenEvolving: Boolean): SerializerFactory {
+                            mustPreserveDataWhenEvolving: Boolean,
+                            mustCarpentMissingTypes: Boolean): SerializerFactory {
         val customSerializerRegistry = CachingCustomSerializerRegistry(descriptorBasedSerializerRegistry)
 
         val localTypeModel = ConfigurableLocalTypeModel(
@@ -94,7 +101,8 @@ object SerializerFactoryBuilder {
 
         val typeLoader = ClassCarpentingTypeLoader(
                 SchemaBuildingRemoteTypeCarpenter(classCarpenter),
-                classCarpenter.classloader)
+                classCarpenter.classloader,
+                mustCarpentMissingTypes)
 
         val evolutionSerializerFactory = if (allowEvolution) DefaultEvolutionSerializerFactory(
                 localSerializerFactory,

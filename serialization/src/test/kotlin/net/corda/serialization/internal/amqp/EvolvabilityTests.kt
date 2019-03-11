@@ -9,6 +9,7 @@ import net.corda.core.serialization.ConstructorForDeserialization
 import net.corda.core.serialization.DeprecatedConstructorForDeserialization
 import net.corda.core.serialization.SerializableCalculatedProperty
 import net.corda.core.serialization.SerializedBytes
+import net.corda.serialization.internal.AllWhitelist
 import net.corda.serialization.internal.amqp.testutils.*
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_NOTARY_NAME
@@ -21,7 +22,10 @@ import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
 import net.corda.serialization.internal.amqp.custom.InstantSerializer
+import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
+import org.junit.Assert.fail
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 // To regenerate any of the binary test files do the following
 //
@@ -746,6 +750,25 @@ class EvolvabilityTests {
         assertFailsWith<NotSerializableException> {
             DeserializationInput(protectedFactory).deserialize(SerializedBytes<Evolved2>(withNonNullValue), testSerializationContext.withoutCarpenter())
         }
+
+        // Set DISABLE_JIRA_CORDA_2707 = true
+        val factoryWithFeatureFlagDisabled = SerializerFactoryBuilder.build(
+                AllWhitelist,
+                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
+                descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
+                mustCarpentMissingTypes = true)
+
+        // This should blow up with a wrapped ClassNotFoundException
+        try {
+            DeserializationInput(factoryWithFeatureFlagDisabled).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext.withoutCarpenter())
+            fail("Expected NotSerializableException")
+        } catch (e: NotSerializableException) {
+            assertTrue { e.cause is ClassNotFoundException }
+        }
+
+        // This should be fine.
+        DeserializationInput(factoryWithFeatureFlagDisabled).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext)
+
     }
 
     // Container class

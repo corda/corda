@@ -11,7 +11,8 @@ open class SerializerFactoryFactoryImpl : SerializerFactoryFactory {
     override fun make(context: SerializationContext): SerializerFactory {
         return SerializerFactoryBuilder.build(context.whitelist,
                 ClassCarpenterImpl(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled),
-                mustPreserveDataWhenEvolving = context.preventDataLoss
+                mustPreserveDataWhenEvolving = context.preventDataLoss,
+                mustCarpentMissingTypes = System.getenv("DISABLE_JIRA_2707")?.equals("true") ?: false
         )
     }
 }
