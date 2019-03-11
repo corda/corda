@@ -504,7 +504,7 @@ If you would prefer to use the built in IntelliJ JUnit test runner, you can add 
 it will copy your quasar JAR file to the lib directory. You will also need to specify ``-javaagent:lib/quasar.jar``
 and set the run directory to the project root directory for each test.
 
-Add the following to your ``build.gradle`` file:
+Add the following to your ``build.gradle`` file - ideally to a ``build.gradle`` that already contains the quasar-utils plugin line:
 
 .. sourcecode:: groovy
 
