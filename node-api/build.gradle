@@ -89,7 +89,7 @@ shadowJar {
         include(dependency("org.apache.curator:curator-client:${curator_version}"))
         include(dependency("org.apache.curator:curator-recipes:${curator_version}"))
         include(dependency("org.apache.curator:curator-framework:${curator_version}"))
-        include(dependency('org.apache.zookeeper:zookeeper:3.5.3-beta'))
+        include(dependency('org.apache.zookeeper:zookeeper:3.5.4-beta'))
         include(dependency('commons-cli:commons-cli:1.2'))
         include(dependency('io.netty:netty:3.10.5.Final'))
     }
