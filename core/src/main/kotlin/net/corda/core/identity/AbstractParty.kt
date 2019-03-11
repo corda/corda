@@ -30,4 +30,6 @@ abstract class AbstractParty(val owningKey: PublicKey) {
      * ledger.
      */
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
+
+    abstract fun host(): AbstractParty
 }
