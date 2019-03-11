@@ -39,7 +39,7 @@ class BridgeControlListener(val config: MutualSslConfiguration,
     private val bridgeNotifyQueue = "$BRIDGE_NOTIFY.$bridgeId"
     private val validInboundQueues = mutableSetOf<String>()
     private val bridgeManager = if (enableSNI) {
-        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
+        LoopbackBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, this::validateReceiveTopic, trace)
     } else {
         AMQPBridgeManager(config, proxyConfig, maxMessageSize, crlCheckSoftFail, enableSNI, artemisMessageClientFactory, bridgeMetricsService, trace)
     }

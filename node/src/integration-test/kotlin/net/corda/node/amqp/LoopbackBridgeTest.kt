@@ -208,6 +208,7 @@ class LoopbackBridgeTest(private val useOpenSsl: Boolean) {
         val bridgeManager = LoopbackBridgeManager(artemisConfig.p2pSslOptions,
                 null,
                 MAX_MESSAGE_SIZE,
+                artemisConfig.crlCheckSoftFail,
                 artemisConfig.enableSNI,
                 { ArtemisMessagingClient(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, confirmationWindowSize = artemisConfig.enterpriseConfiguration.tuning.p2pConfirmationWindowSize) },
                 null,
