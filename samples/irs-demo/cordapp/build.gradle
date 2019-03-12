@@ -17,14 +17,22 @@ sourceSets {
     }
 }
 
+cordapp {
+    info {
+        name "Corda IRS Demo"
+        vendor "R3"
+        targetPlatformVersion corda_platform_version.toInteger()
+        minimumPlatformVersion 1
+    }
+}
+
 dependencies {
     cordapp project(':finance:contracts')
     cordapp project(':finance:workflows')
 
     // Corda integration dependencies
     cordaRuntime project(path: ":node:capsule", configuration: 'runtimeArtifacts')
-    cordaCompile project(':core')
-    cordaRuntime project(':node-api')
+    runtimeOnly "org.slf4j:slf4j-simple:$slf4j_version"
 
     cordapp project(':samples:irs-demo:cordapp:contracts-irs')
     cordapp project(':samples:irs-demo:cordapp:workflows-irs')

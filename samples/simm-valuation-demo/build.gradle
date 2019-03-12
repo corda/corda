@@ -62,6 +62,11 @@ dependencies {
     testCompile "org.assertj:assertj-core:$assertj_version"
 }
 
+jar {
+    // A CorDapp does not configure the Node's logging!
+    exclude "**/log4j2*.xml"
+}
+
 def nodeTask = tasks.getByPath(':node:capsule:assemble')
 def webTask = tasks.getByPath(':webserver:webcapsule:assemble')
 task deployNodes(type: net.corda.plugins.Cordform, dependsOn: ['jar', nodeTask, webTask]) {
