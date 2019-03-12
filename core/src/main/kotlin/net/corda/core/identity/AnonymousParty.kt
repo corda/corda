@@ -12,10 +12,6 @@ import java.security.PublicKey
  */
 @KeepForDJVM
 class AnonymousParty(owningKey: PublicKey) : AbstractParty(owningKey) {
-    override fun host(): AbstractParty {
-        return this
-    }
-
     override fun nameOrNull(): CordaX500Name? = null
     override fun ref(bytes: OpaqueBytes): PartyAndReference = PartyAndReference(this, bytes)
     override fun toString() = "Anonymous(${owningKey.toStringShort()})"

@@ -29,10 +29,6 @@ import java.security.cert.X509Certificate
  */
 @KeepForDJVM
 class Party(val name: CordaX500Name, owningKey: PublicKey) : AbstractParty(owningKey) {
-    override fun host(): AbstractParty {
-        return this
-    }
-
     constructor(certificate: X509Certificate)
             : this(CordaX500Name.build(certificate.subjectX500Principal), Crypto.toSupportedPublicKey(certificate.publicKey))
 

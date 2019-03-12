@@ -31,5 +31,6 @@ abstract class AbstractParty(val owningKey: PublicKey) {
      */
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 
-    abstract fun host(): AbstractParty
+    open val host: AbstractParty
+        get() = this
 }

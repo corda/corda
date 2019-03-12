@@ -94,7 +94,7 @@ interface IdentityService {
         // The original version of this would return the party as-is if it was a Party (rather than AnonymousParty),
         // however that means that we don't verify that we know who owns the key. As such as now enforce turning the key
         // into a party, and from there figure out the well known party.
-        val candidate = partyFromKey(party.host().owningKey)
+        val candidate = partyFromKey(party.host.owningKey)
         // TODO: This should be done via the network map cache, which is the authoritative source of well known identities
         return if (candidate != null) {
             require(party.nameOrNull() == null || party.nameOrNull() == candidate.name) {
