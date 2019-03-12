@@ -9,7 +9,7 @@ Building and installing a CorDapp
 
 .. contents::
 
-Cordapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
+CorDapps run on the Corda platform and integrate with it and each other. This article explains how to build CorDapps.
 To learn what a CorDapp is, please read :doc:`cordapp-overview`.
 
 CorDapp format
@@ -45,29 +45,22 @@ Setting your dependencies
 
 Choosing your Corda, Quasar and Kotlin versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define which versions are used to build your CorDapp:
+Several ``ext`` variables are used in a CorDapp's ``build.gradle`` file to define version numbers that should match the version of
+Corda you're developing against:
 
-* ``ext.corda_release_version`` defines the version of Corda
+* ``ext.corda_release_version`` defines the version of Corda itself
 * ``ext.corda_gradle_plugins_version`` defines the version of the Corda Gradle Plugins
-* ``ext.quasar_version`` defines the version of Quasar
+* ``ext.quasar_version`` defines the version of Quasar, a library that we use to implement the flow framework
 * ``ext.kotlin_version`` defines the version of Kotlin (if using Kotlin to write your CorDapp)
 
-``corda_gradle_plugins_versions`` are given in the form ``major.minor.patch``. You should use the same ``major`` and
-``minor`` versions as the Corda version you are using, and the latest ``patch`` version. A list of all the available
-versions can be found here: https://bintray.com/r3/corda/cordapp. If in doubt, you should base yourself on the version
-numbers used in the ``build.gradle`` file of the
-`Kotlin CorDapp Template <https://github.com/corda/cordapp-template-kotlin>`_ and the
-`Java CorDapp Template <https://github.com/corda/cordapp-template-java>`_.
+The current versions used are as follows:
 
-For example, to use version 3.0 of Corda, version 3.0.8 of the Corda gradle plugins, version 0.7.9 of Quasar, and
-version 1.1.60 of Kotlin, you'd write:
+.. parsed-literal::
 
-.. sourcecode:: groovy
-
-    ext.corda_release_version = 'corda-3.0'
-    ext.corda_gradle_plugins_version = '3.0.8'
-    ext.quasar_version = '0.7.9'
-    ext.kotlin_version = '1.1.60'
+    ext.corda_release_version = '|corda_version|'
+    ext.corda_gradle_plugins_version = '|gradle_plugins_version|'
+    ext.quasar_version = '|quasar_version|'
+    ext.kotlin_version = '|kotlin_version|'
 
 In certain cases, you may also wish to build against the unstable Master branch. See :doc:`building-against-master`.
 

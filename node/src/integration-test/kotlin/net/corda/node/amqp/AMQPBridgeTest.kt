@@ -7,6 +7,7 @@ import net.corda.core.internal.div
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.contextLogger
 import net.corda.core.utilities.hours
+import net.corda.core.toFuture
 import net.corda.core.utilities.loggerFor
 import net.corda.node.services.config.*
 import net.corda.node.services.messaging.ArtemisMessagingServer
@@ -329,8 +330,25 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
         artemisRecServer.stop()
     }
 
+    @Test
+    fun `bridge with strict CRL checking does not connect to server with invalid certificates`() {
+        // Note that the opposite of this test (that a connection is established if strict checking is disabled) is carried out by the
+        // ack/nack test above. "Strict CRL checking" means that soft fail mode is disabled.
+        val sourceQueueName = "internal.peers." + BOB.publicKey.toStringShort()
+        val (artemisServer, artemisClient, bridge) = createArtemis(sourceQueueName, crlCheckSoftFail = false)
 
-    private fun createArtemis(sourceQueueName: String?): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
+        createAMQPServer().use {
+            val connectedFuture = it.onConnection.toFuture()
+            it.start()
+            val connectedResult = connectedFuture.get()
+            assertEquals(false, connectedResult.connected)
+        }
+        bridge.stop()
+        artemisClient.stop()
+        artemisServer.stop()
+    }
+
+    private fun createArtemis(sourceQueueName: String?, crlCheckSoftFail: Boolean = true): Triple<ArtemisMessagingServer, ArtemisMessagingClient, BridgeManager> {
         val baseDir = temporaryFolder.root.toPath() / "artemis"
         val certificatesDirectory = baseDir / "certificates"
         val p2pSslConfiguration = CertificateStoreStubs.P2P.withCertificatesDirectory(certificatesDirectory, useOpenSsl = useOpenSsl)
@@ -341,7 +359,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
-            doReturn(true).whenever(it).crlCheckSoftFail
+            doReturn(crlCheckSoftFail).whenever(it).crlCheckSoftFail
             doReturn(artemisAddress).whenever(it).p2pAddress
             doReturn(null).whenever(it).jmxMonitoringHttpPort
             doReturn(EnterpriseConfiguration(MutualExclusionConfiguration(false, "", 20000, 40000))).whenever(it).enterpriseConfiguration
@@ -354,7 +372,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
 
         artemisServer.start()
         artemisClient.start()
-        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, enableSNI)
+        val bridgeManager = AMQPBridgeManager(artemisConfig.p2pSslOptions, artemisAddress, MAX_MESSAGE_SIZE, artemisConfig.crlCheckSoftFail, enableSNI)
         bridgeManager.start()
         val artemis = artemisClient.started!!
         if (sourceQueueName != null) {
@@ -364,7 +382,6 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
         }
         return Triple(artemisServer, artemisClient, bridgeManager)
     }
-
 
     private fun createArtemisReceiver(targetAdress: NetworkHostAndPort, workingDir: String): Pair<ArtemisMessagingServer, ArtemisMessagingClient> {
         val baseDir = temporaryFolder.root.toPath() / workingDir
@@ -404,6 +421,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
             doReturn(certificatesDirectory).whenever(it).certificatesDirectory
             doReturn(signingCertificateStore).whenever(it).signingCertificateStore
             doReturn(p2pSslConfiguration).whenever(it).p2pSslOptions
+            doReturn(true).whenever(it).crlCheckSoftFail
         }
         serverConfig.configureWithDevSSLCertificate()
 
@@ -413,6 +431,7 @@ class AMQPBridgeTest(private val useOpenSsl: Boolean, private val enableSNI: Boo
             override val trustStore = serverConfig.p2pSslOptions.trustStore.get()
             //override val trace: Boolean = true
             override val maxMessageSize: Int = maxMessageSize
+            override val crlCheckSoftFail: Boolean = serverConfig.crlCheckSoftFail
             override val useOpenSsl = serverConfig.p2pSslOptions.useOpenSsl
             override val enableSNI: Boolean = this@AMQPBridgeTest.enableSNI
             override val healthCheckPhrase = echoPhrase

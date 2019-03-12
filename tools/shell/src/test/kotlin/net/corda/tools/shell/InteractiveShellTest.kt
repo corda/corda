@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.type.TypeFactory
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.whenever
@@ -30,6 +30,7 @@ import net.corda.testing.core.TestIdentity
 import net.corda.testing.core.getTestPartyAndCertificate
 import net.corda.testing.internal.DEV_ROOT_CA
 import org.crsh.command.InvocationContext
+import org.crsh.text.Color
 import org.crsh.text.RenderPrintWriter
 import org.junit.Before
 import org.junit.Test
@@ -128,7 +129,7 @@ class InteractiveShellTest {
     }
 
     private fun objectMapperWithClassLoader(classLoader: ClassLoader?): ObjectMapper {
-        val objectMapper = ObjectMapper()
+        val objectMapper = JacksonSupport.createNonRpcMapper()
         val tf = TypeFactory.defaultInstance().withClassLoader(classLoader)
         objectMapper.typeFactory = tf
 
@@ -231,6 +232,34 @@ class InteractiveShellTest {
         verify(printWriter).println(NETWORK_MAP_JSON_PAYLOAD.replace("\n", System.lineSeparator()))
     }
 
+    @Test
+    fun killFlowWithNonsenseID() {
+        InteractiveShell.killFlowById("nonsense", printWriter, cordaRpcOps, om)
+        verify(printWriter).println("Cannot parse flow ID of 'nonsense' - expecting a UUID.", Color.red)
+        verify(printWriter).flush()
+    }
+
+    @Test
+    fun killFlowFailure() {
+        val runId = StateMachineRunId.createRandom()
+        whenever(cordaRpcOps.killFlow(any())).thenReturn(false)
+
+        InteractiveShell.killFlowById(runId.uuid.toString(), printWriter, cordaRpcOps, om)
+        verify(cordaRpcOps).killFlow(runId)
+        verify(printWriter).println("Failed to kill flow $runId", Color.red)
+        verify(printWriter).flush()
+    }
+
+    @Test
+    fun killFlowSuccess() {
+        val runId = StateMachineRunId.createRandom()
+        whenever(cordaRpcOps.killFlow(any())).thenReturn(true)
+
+        InteractiveShell.killFlowById(runId.uuid.toString(), printWriter, cordaRpcOps, om)
+        verify(cordaRpcOps).killFlow(runId)
+        verify(printWriter).println("Killed flow $runId", Color.yellow)
+        verify(printWriter).flush()
+    }
 }
 
 @ToStringSerialize

@@ -8,6 +8,8 @@ import net.corda.djvm.references.ClassReference
 import net.corda.djvm.references.EntityReference
 import net.corda.djvm.references.MemberReference
 import net.corda.djvm.rewiring.SandboxClassLoadingException
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.core.config.Configurator
 import picocli.CommandLine
 import picocli.CommandLine.Help.Ansi
 import picocli.CommandLine.Option
@@ -19,7 +21,7 @@ abstract class CommandBase : Callable<Boolean> {
 
     @Option(
             names = ["-l", "--level"],
-            description = ["The minimum severity level to log (TRACE, INFO, WARNING or ERROR."],
+            description = ["The minimum severity level to log (TRACE, DEBUG, INFO, WARNING or ERROR."],
             converter = [SeverityConverter::class]
     )
     protected var level: Severity = Severity.WARNING
@@ -102,12 +104,24 @@ abstract class CommandBase : Callable<Boolean> {
             printError("Error: Cannot set verbose and quiet modes at the same time")
             return false
         }
+        configureLogging()
         return try {
             handleCommand()
         } catch (exception: Throwable) {
             printException(exception)
             false
         }
+    }
+
+    private fun configureLogging() {
+        val logLevel = when(level) {
+            Severity.ERROR -> Level.ERROR
+            Severity.WARNING -> Level.WARN
+            Severity.INFORMATIONAL -> Level.INFO
+            Severity.DEBUG -> Level.DEBUG
+            Severity.TRACE -> Level.TRACE
+        }
+        Configurator.setRootLevel(logLevel)
     }
 
     protected fun printException(exception: Throwable) = when (exception) {

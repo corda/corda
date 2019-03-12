@@ -1,6 +1,7 @@
 package net.corda.tools.shell
 
 import com.fasterxml.jackson.core.JsonFactory
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -16,6 +17,7 @@ import net.corda.core.CordaException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.flows.FlowLogic
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.internal.*
 import net.corda.core.internal.concurrent.doneFuture
 import net.corda.core.internal.concurrent.openFuture
@@ -346,6 +348,30 @@ object InteractiveShell {
         }
 
         return innerLoop(type)
+    }
+
+    @JvmStatic
+    fun killFlowById(id: String,
+                     output: RenderPrintWriter,
+                     rpcOps: CordaRPCOps,
+                     inputObjectMapper: ObjectMapper = createYamlInputMapper(rpcOps)) {
+        try {
+            val runId = try {
+                inputObjectMapper.readValue(id, StateMachineRunId::class.java)
+            } catch (e: JsonMappingException) {
+                output.println("Cannot parse flow ID of '$id' - expecting a UUID.", Color.red)
+                log.error("Failed to parse flow ID", e)
+                return
+            }
+
+            if (rpcOps.killFlow(runId)) {
+                output.println("Killed flow $runId", Color.yellow)
+            } else {
+                output.println("Failed to kill flow $runId", Color.red)
+            }
+        } finally {
+            output.flush()
+        }
     }
 
     // TODO: This utility is generally useful and might be better moved to the node class, or an RPC, if we can commit to making it stable API.

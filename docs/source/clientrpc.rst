@@ -70,7 +70,7 @@ RPC users are created by adding them to the ``rpcUsers`` list in the node's ``no
                 username=exampleUser
                 password=examplePass
                 permissions=[]
-            }
+            },
             ...
         ]
 
@@ -93,7 +93,7 @@ You provide an RPC user with the permission to start a specific flow using the s
                     "StartFlow.net.corda.flows.ExampleFlow1",
                     "StartFlow.net.corda.flows.ExampleFlow2"
                 ]
-            }
+            },
             ...
         ]
 
@@ -111,7 +111,7 @@ You can also provide an RPC user with the permission to start any flow using the
                 permissions=[
                     "InvokeRpc.startFlow"
                 ]
-            }
+            },
             ...
         ]
 
@@ -132,7 +132,7 @@ You provide an RPC user with the permission to perform a specific RPC operation 
                     "InvokeRpc.nodeInfo",
                     "InvokeRpc.networkMapSnapshot"
                 ]
-            }
+            },
             ...
         ]
 
@@ -152,7 +152,7 @@ You can provide an RPC user with the permission to perform any RPC operation (in
                 permissions=[
                     "ALL"
                 ]
-            }
+            },
             ...
         ]
 
@@ -182,8 +182,8 @@ passwords in hash-encrypted format and enable in-memory caching of users data:
         security = {
             authService = {
                 dataSource = {
-                    type = "DB",
-                    passwordEncryption = "SHIRO_1_CRYPT",
+                    type = "DB"
+                    passwordEncryption = "SHIRO_1_CRYPT"
                     connection = {
                        jdbcUrl = "<jdbc connection string>"
                        username = "<db username>"
@@ -210,11 +210,11 @@ of ``INMEMORY`` type:
         security = {
             authService = {
                 dataSource = {
-                    type = "INMEMORY",
+                    type = "INMEMORY"
                     users = [
                         {
-                            username = "<username>",
-                            password = "<password>",
+                            username = "<username>"
+                            password = "<password>"
                             permissions = ["<permission 1>", "<permission 2>", ...]
                         },
                         ...
