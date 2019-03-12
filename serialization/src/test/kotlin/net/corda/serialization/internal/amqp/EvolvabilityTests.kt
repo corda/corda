@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.context.FeatureFlag
 import net.corda.core.crypto.Crypto.generateKeyPair
 import net.corda.core.crypto.SignedData
 import net.corda.core.crypto.sign
@@ -752,22 +753,20 @@ class EvolvabilityTests {
         }
 
         // Set DISABLE-CORDA-2707 = true
-        val factoryWithFeatureFlagDisabled = SerializerFactoryBuilder.build(
-                AllWhitelist,
-                ClassCarpenterImpl(AllWhitelist, ClassLoader.getSystemClassLoader()),
-                descriptorBasedSerializerRegistry = DefaultDescriptorBasedSerializerRegistry(),
-                mustCarpentMissingTypes = true)
+        FeatureFlag.withSet(FeatureFlag::DISABLE_CORDA_2707) {
+            val sf2 = testDefaultFactory()
 
-        // This should blow up with a wrapped ClassNotFoundException
-        try {
-            DeserializationInput(factoryWithFeatureFlagDisabled).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext.withoutCarpenter())
-            fail("Expected NotSerializableException")
-        } catch (e: NotSerializableException) {
-            assertTrue { e.cause is ClassNotFoundException }
+            // This should blow up with a wrapped ClassNotFoundException
+            try {
+                DeserializationInput(sf2).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext.withoutCarpenter())
+                fail("Expected NotSerializableException")
+            } catch (e: NotSerializableException) {
+                assertTrue { e.cause is ClassNotFoundException }
+            }
+
+            // This should be fine.
+            DeserializationInput(sf2).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext)
         }
-
-        // This should be fine.
-        DeserializationInput(factoryWithFeatureFlagDisabled).deserialize(SerializedBytes<Evolved2>(withNullValue), testSerializationContext)
 
     }
 

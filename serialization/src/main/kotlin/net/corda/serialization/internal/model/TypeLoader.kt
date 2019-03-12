@@ -1,5 +1,6 @@
 package net.corda.serialization.internal.model
 
+import net.corda.core.context.FeatureFlag
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.*
 import java.io.NotSerializableException
@@ -30,8 +31,7 @@ interface TypeLoader {
  * unknown type is required in the construction of a deserialised object (i.e. if the value is not discarded during type evolution).
  */
 class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter,
-                                private val classLoader: ClassLoader,
-                                private val mustCarpentMissingTypes: Boolean): TypeLoader {
+                                private val classLoader: ClassLoader): TypeLoader {
 
     val cache = DefaultCacheProvider.createCache<TypeIdentifier, Type>()
 
@@ -46,7 +46,7 @@ class ClassCarpentingTypeLoader(private val carpenter: RemoteTypeCarpenter,
             try {
                 identifier to cache.computeIfAbsent(identifier) { identifier.getLocalType(classLoader) }
             } catch (e: ClassNotFoundException) {
-                if (context.carpenterDisabled && mustCarpentMissingTypes) {
+                if (context.carpenterDisabled && FeatureFlag.DISABLE_CORDA_2707) {
                     throw e
                 }
                 null

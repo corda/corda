@@ -2,6 +2,7 @@
 
 package net.corda.serialization.internal.amqp
 
+import net.corda.core.context.FeatureFlag
 import net.corda.core.serialization.SerializationContext
 import net.corda.serialization.internal.carpenter.ClassCarpenterImpl
 
@@ -11,8 +12,6 @@ open class SerializerFactoryFactoryImpl : SerializerFactoryFactory {
     override fun make(context: SerializationContext): SerializerFactory {
         return SerializerFactoryBuilder.build(context.whitelist,
                 ClassCarpenterImpl(context.whitelist, context.deserializationClassLoader, context.lenientCarpenterEnabled),
-                mustPreserveDataWhenEvolving = context.preventDataLoss,
-                mustCarpentMissingTypes = System.getenv("DISABLE-CORDA-2707")?.toBoolean() ?: false
-        )
+                mustPreserveDataWhenEvolving = context.preventDataLoss)
     }
 }

@@ -14,7 +14,7 @@ class ClassCarpentingTypeLoaderTests {
 
     val carpenter = ClassCarpenterImpl(AllWhitelist)
     private val remoteTypeCarpenter = SchemaBuildingRemoteTypeCarpenter(carpenter)
-    private val typeLoader = ClassCarpentingTypeLoader(remoteTypeCarpenter, carpenter.classloader, true)
+    private val typeLoader = ClassCarpentingTypeLoader(remoteTypeCarpenter, carpenter.classloader)
 
     @Test
     fun `carpent some related classes`() {
