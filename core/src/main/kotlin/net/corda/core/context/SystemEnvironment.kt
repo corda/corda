@@ -3,6 +3,8 @@ package net.corda.core.context
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.VisibleForTesting
 import java.lang.UnsupportedOperationException
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 import kotlin.reflect.jvm.isAccessible
@@ -35,16 +37,31 @@ object FeatureFlag  {
 
     val DISABLE_CORDA_2707: Boolean by FeatureFlagValue()
 
-    // Nothing outside of testing should ever use this.
+    /**
+     * Set the supplied feature flags to "true", run the supplied action, then return the supplied feature flags to their original values.
+     *
+     * This should never be used outside of testing for any reason.
+     *
+     * @param properties The feature flags to set, indicated by property references e.g. `FeatureFlag::DISABLE_CORDA_2707`.
+     * @param action The action to run with the flags set.
+     *
+     * @return The value (if any) returned by the action.
+     */
     @VisibleForTesting
-    fun <T> withSet(property: KProperty0<Boolean>, action: () -> T): T {
-        val delegate = property.apply { isAccessible = true }.getDelegate() as FeatureFlagValue
-        val oldValue = property.get()
+    fun <T> withSet(vararg properties: KProperty0<Boolean>, action: () -> T): T {
+        val delegates = properties.map { property ->
+            property.apply { isAccessible = true }.getDelegate() as? FeatureFlagValue
+                    ?: throw UnsupportedOperationException("$property is not a FeatureFlagValue")
+        }
+
+        val oldValues = properties.map(KProperty0<Boolean>::get)
         try {
-            delegate.isSet = true
+            delegates.forEach { it.isSet = true }
             return action()
         } finally {
-            delegate.isSet = oldValue
+            delegates.asSequence().zip(oldValues.asSequence()).forEach { (delegate, oldValue) ->
+                delegate.isSet = oldValue
+            }
         }
     }
 
