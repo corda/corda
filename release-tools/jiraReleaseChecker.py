@@ -238,7 +238,7 @@ if __name__ == "__main__" :
     parser.add_argument("oldTag", help="The previous release tag")
     parser.add_argument("jiraTag", help="The current Jira release")
     parser.add_argument("jiraUser", help="Who to authenticate with Jira as")
-    parser.add_argument("--resetPassword", help="Set flag to allow reseting of password in the keyring",
+    parser.add_argument("--resetPassword", help="Set flag to allow resetting of password in the keyring",
             action='store_true')
 
     args = parser.parse_args()
