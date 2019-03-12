@@ -1,10 +1,9 @@
 package net.corda.core.context
 
+import net.corda.core.KeepForDJVM
 import net.corda.core.StubOutForDJVM
 import net.corda.core.internal.VisibleForTesting
 import java.lang.UnsupportedOperationException
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 import kotlin.reflect.jvm.isAccessible
@@ -12,6 +11,7 @@ import kotlin.reflect.jvm.isAccessible
 /**
  * Encapsulates [System.getenv] in such a way as to avoid falling foul of determinisation.
  */
+@KeepForDJVM
 object SystemEnvironment : (String) -> String? {
     override fun invoke(variableName: String) =
         try {
@@ -33,9 +33,10 @@ object SystemEnvironment : (String) -> String? {
  *
  * A feature flag can be temporarily set for testing using the withSet method.
  */
+@KeepForDJVM
 object FeatureFlag  {
 
-    val DISABLE_CORDA_2707: Boolean by FeatureFlagValue()
+    val DISABLE_CORDA_2707 by FeatureFlagValue()
 
     /**
      * Set the supplied feature flags to "true", run the supplied action, then return the supplied feature flags to their original values.
