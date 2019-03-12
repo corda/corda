@@ -5,7 +5,7 @@ import org.apache.qpid.proton.amqp.Symbol
 import org.apache.qpid.proton.codec.Data
 import java.lang.reflect.Type
 
-class Uncarepntable
+class Uncarpentable
 
 /**
  * Serializer injected into a Factories cache for a remote type it failed to synthesise. Should only be used
@@ -14,7 +14,7 @@ class Uncarepntable
 class UncarpentableSerializer(private val name : String) : AMQPSerializer<Any> {
     private val error : String get() = "$name cannot be serialized"
 
-    override val type: Type get() = Uncarepntable::class.java
+    override val type: Type get() = Uncarpentable::class.java
 
     override val typeDescriptor: Symbol get() = throw CordaRuntimeException (error)
 
