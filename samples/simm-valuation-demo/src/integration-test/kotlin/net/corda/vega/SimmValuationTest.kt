@@ -3,9 +3,7 @@ package net.corda.vega
 import com.opengamma.strata.product.common.BuySell
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.div
-import net.corda.core.internal.packageName
 import net.corda.core.utilities.getOrThrow
-import net.corda.serialization.internal.amqp.AbstractAMQPSerializationScheme
 import net.corda.testing.common.internal.ProjectStructure.projectRootDir
 import net.corda.testing.core.DUMMY_BANK_A_NAME
 import net.corda.testing.core.DUMMY_BANK_B_NAME
@@ -15,16 +13,13 @@ import net.corda.testing.driver.driver
 import net.corda.testing.http.HttpApi
 import net.corda.testing.internal.IntegrationTest
 import net.corda.testing.internal.IntegrationTestSchemas
+import net.corda.testing.node.TestCordapp.Companion.findCordapp
 import net.corda.testing.node.internal.FINANCE_CORDAPPS
-import net.corda.testing.node.internal.findCordapp
 import net.corda.vega.api.PortfolioApi
 import net.corda.vega.api.PortfolioApiUtils
 import net.corda.vega.api.SwapDataModel
 import net.corda.vega.api.SwapDataView
-import net.corda.vega.plugin.customserializers.CurrencyParameterSensitivitiesSerializer
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.After
-import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
 import java.math.BigDecimal

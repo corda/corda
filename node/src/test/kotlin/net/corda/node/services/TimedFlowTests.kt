@@ -78,7 +78,7 @@ class TimedFlowTests {
 
         @ClassRule
         @JvmField
-        val ruleChain = RuleChain.outerRule(globalDatabaseRule).around(globalRule)
+        val ruleChain: RuleChain = RuleChain.outerRule(globalDatabaseRule).around(globalRule)
     }
 
     @Before
@@ -257,7 +257,7 @@ class TimedFlowTestRule(private val clusterSize: Int) : ExternalResource() {
         val networkParameters = NetworkParametersCopier(testNetworkParameters(listOf(NotaryInfo(notaryIdentity, false))))
         val notaryConfig = mock<NotaryConfig> {
             whenever(it.serviceLegalName).thenReturn(serviceLegalName)
-            whenever(it.validating).thenReturn(true)
+            whenever(it.validating).thenReturn(false)
             whenever(it.className).thenReturn(TimedFlowTests.TestNotaryService::class.java.name)
         }
 

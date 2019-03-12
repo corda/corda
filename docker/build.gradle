@@ -1,10 +1,6 @@
-evaluationDependsOn(":node:capsule")
-evaluationDependsOn(":tools:dbmigration")
 buildscript {
     repositories {
-        mavenLocal()
         mavenCentral()
-        jcenter()
     }
     dependencies {
         classpath 'com.spotify:docker-client:8.14.5'
@@ -19,6 +15,9 @@ import com.spotify.docker.client.messages.RegistryAuth
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+
+evaluationDependsOn(":node:capsule")
+evaluationDependsOn(":tools:dbmigration")
 
 apply plugin: 'kotlin'
 apply plugin: 'application'
