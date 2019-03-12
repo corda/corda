@@ -5,7 +5,6 @@ import net.corda.core.serialization.SerializedBytes
 import net.corda.core.utilities.ByteSequence
 import org.apache.qpid.proton.amqp.Binary
 import org.apache.qpid.proton.amqp.DescribedType
-import org.apache.qpid.proton.amqp.UnsignedByte
 import org.apache.qpid.proton.amqp.UnsignedInteger
 import org.apache.qpid.proton.codec.Data
 import java.io.NotSerializableException
@@ -107,7 +106,7 @@ class DeserializationInput(private val serializerFactory: SerializerFactory) {
                     is DescribedType -> {
                         // Look up serializer in factory by descriptor
                         val serializer = serializerFactory.get(obj.descriptor, schemas)
-                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) } && serializer.type != Uncarpntable::class.java)
+                        if (SerializerFactory.AnyType != type && serializer.type != type && with(serializer.type) { !isSubClassOf(type) && !materiallyEquivalentTo(type) } && serializer.type != Uncarepntable::class.java)
                             throw NotSerializableException("Described type with descriptor ${obj.descriptor} was " +
                                     "expected to be of type $type but was ${serializer.type}")
                         serializer.readObject(obj.described, schemas, this)

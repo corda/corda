@@ -22,10 +22,6 @@ import javax.annotation.concurrent.ThreadSafe
 data class SerializationSchemas(val schema: Schema, val transforms: TransformsSchema)
 data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typeDescriptor: Any)
 
-open class Environment {
-    open fun getenv(envVar : String) : String? = System.getenv(envVar)
-}
-
 /**
  * Factory of serializers designed to be shared across threads and invocations.
  *
@@ -49,7 +45,7 @@ open class SerializerFactory @JvmOverloads constructor (
     val whitelist: ClassWhitelist,
     cl: ClassLoader,
     private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
-    environment : Environment = Environment()
+    environment : (String) -> String? = { s -> System.getenv(s) }
 ) {
     @VisibleForTesting
     internal val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
@@ -77,7 +73,7 @@ open class SerializerFactory @JvmOverloads constructor (
      * evolved out of the class hierarchy. Passed as a flag to the [MetaCarpenter]s build method as
      * [MetaCarpenter.tolerateFailure] where setting this to true enabled the new behaviour.
      */
-    private val disable2704 : Boolean = environment.getenv("DISABLE-CORDA-2704")?.toBoolean() ?: false
+    private val disable2704 : Boolean = environment("DISABLE-CORDA-2704")?.toBoolean() ?: false
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.

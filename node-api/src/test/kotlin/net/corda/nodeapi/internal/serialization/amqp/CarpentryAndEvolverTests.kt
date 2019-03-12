@@ -27,6 +27,10 @@ class CarpentryAndEvolverTests(private val carpenterException : Exception) {
                     InterfaceMismatchException("")
             )
         }
+
+        private val testEnvironment : (String) -> String? = {
+            s : String -> if (s == "DISABLE-CORDA-2704") "true" else System.getenv(s)
+        }
     }
 
     private var localPath = ProjectStructure.projectRootDir.toUri().resolve(
@@ -41,16 +45,11 @@ class CarpentryAndEvolverTests(private val carpenterException : Exception) {
                 carpenterException)
     }
 
-    class TestEnvironment : Environment() {
-        override fun getenv(envVar: String): String? {
-            return if (envVar == "DISABLE-CORDA-2704") "true" else super.getenv(envVar)
-        }
 
-    }
 
     class FactoryWithoutCorda2709 (
             carpenterException: Exception
-    ): SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(), environment = TestEnvironment()) {
+    ): SerializerFactory(AllWhitelist, ClassLoader.getSystemClassLoader(), environment = testEnvironment) {
         override val classCarpenter = TerribleCarpenter(
                 ClassLoader.getSystemClassLoader(),
                 AllWhitelist,
