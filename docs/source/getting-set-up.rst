@@ -25,7 +25,7 @@ Please note:
 
 * IntelliJ IDEA is recommended due to the strength of its Kotlin integration.
 
-* If an HA Bridge/Float deployment is required then a ``Zookeeper 3.5.3-Beta`` cluster will be required.
+* If an HA Bridge/Float deployment is required then a ``Zookeeper 3.5.4-Beta`` cluster will be required.
   Refer to :doc:`Hot-cold deployment <hot-cold-deployment>` and :doc:`Bridge configuration <bridge-configuration-file>`
   for more deployment information.
 
