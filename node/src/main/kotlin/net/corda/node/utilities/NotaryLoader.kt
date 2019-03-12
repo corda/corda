@@ -55,6 +55,8 @@ class NotaryLoader(
     }
 
     fun loadService(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal, cordappLoader: CordappLoader): NotaryService {
+        validateNotaryType(myNotaryIdentity, services)
+
         val serviceClass = builtInServiceClass ?: scanCorDapps(cordappLoader)
         log.info("Starting notary service: $serviceClass")
 
@@ -70,6 +72,18 @@ class NotaryLoader(
         return constructor.newInstance(services, notaryKey)
     }
 
+    /** Validates that the notary is correctly configured by comparing the configured type against the type advertised in the network map cache */
+    private fun validateNotaryType(myNotaryIdentity: PartyAndCertificate?, services: ServiceHubInternal) {
+        var configuredAsValidatingNotary = services.configuration.notary?.validating
+        val notaryParty = myNotaryIdentity?.party ?: throw IllegalStateException("Could not establish notary identity of this node")
+        var validatingNotaryInNetworkMapCache = services.networkMapCache.isValidatingNotary(notaryParty)
+        
+        if(configuredAsValidatingNotary != validatingNotaryInNetworkMapCache) {
+            throw IllegalStateException("There is a discrepancy in the configured notary type and the one advertised in the network parameters - shutting down. " 
+            + "Configured as validating: ${configuredAsValidatingNotary}. Advertised as validating: ${validatingNotaryInNetworkMapCache}")    
+        }
+    }
+    
     /** Looks for the config specified notary service implementation in loaded CorDapps. This mechanism is for internal use only. */
     private fun scanCorDapps(cordappLoader: CordappLoader): Class<out NotaryService> {
         val loadedImplementations = cordappLoader.cordapps.mapNotNull { it.notaryService }
