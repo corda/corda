@@ -173,7 +173,11 @@ Please read :ref:`Common Configuration Steps <common_configuration_steps_ref>` b
 Permissions for database user and schema namespace
 """"""""""""""""""""""""""""""""""""""""""""""""""
 
-* To set up a database schema with administrative permissions, run the following SQL against the master database:
+* Database schema setup with administrative permissions
+
+  Connect to the master database as an administrator
+  (e.g. *jdbc:sqlserver://<database_server>.database.windows.net:1433;databaseName=master;[...]*).
+  Run the following script to create a user and a login:
 
   .. sourcecode:: sql
 
@@ -183,30 +187,58 @@ Permissions for database user and schema namespace
   The password must contain characters from three of the following four sets: Uppercase letters, Lowercase letters, Digits, and Symbols.
   For example *C0rdaAP4ssword* is a correct password. Wrap password by single quotes.
 
-  Then run the following SQL against a user database:
+  Connect to a user database as the administrator (replace *master* with a user database in the connection string).
+  Run the following script to create a schema and user's permissions:
 
   .. sourcecode:: sql
 
      CREATE SCHEMA my_schema;
+
      CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
-     GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::my_schema TO my_login;
+     GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::my_schema TO my_user;
      GRANT CREATE TABLE TO my_user;
      GRANT CREATE VIEW TO my_user;
 
-* To set up a database schema with restrictive permissions, run the following SQL against the master database:
+* Database schema setup with restrictive permissions
+
+  Two database users needed to be created, the first one with administrative permission to create schema objects,
+  the latter one with restrictive permissions for a Corda node.
+  You cannot create schema objects with a default database administrator as Corda Database Management Tool
+  may not add a schema namespace prefix to each DDL statement and
+  the default database administrator would default to a different schema namespace.
+  In order to avoid this issue the, first user with administrative permission has a correct schema set as default.
+
+  Connect to the master database as an administrator
+  (e.g. *jdbc:sqlserver://<database_server>.database.windows.net:1433;databaseName=master;[...]*).
+  Run the following script to create both users and their logins:
 
   .. sourcecode:: sql
 
-     REATE LOGIN my_login WITH PASSWORD = 'my_password';
-     CREATE USER my_user FOR LOGIN my_login;
+    CREATE LOGIN my_admin_login WITH PASSWORD = 'my_password';
+    CREATE USER my_admin_user FOR LOGIN my_admin_login;
 
-  Then run the following SQL against a user database:
+    CREATE LOGIN my_login WITH PASSWORD = 'my_password';
+    CREATE USER my_user FOR LOGIN my_login;
+
+  Passwords must contain characters from three of the following four sets: Uppercase letters, Lowercase letters, Digits, and Symbols.
+  For example *C0rdaAP4ssword* is a correct password. Wrap password by single quotes.
+  Use different passwords for *my_admin_user* and *my_user*.
+
+  Connect to a user database as the administrator (replace *master* with a user database in the connection string).
+  Run the following script to create a schema and users' permissions:
 
   .. sourcecode:: sql
 
-     CREATE SCHEMA my_schema;
-     CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
-     GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_user;
+    CREATE SCHEMA my_schema;
+
+    CREATE USER my_admin_user FOR LOGIN my_admin_login WITH DEFAULT_SCHEMA = my_schema;
+    GRANT ALTER ON SCHEMA::my_schema TO my_admin_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_admin_user;
+    GRANT CREATE TABLE TO my_admin_user;
+    GRANT CREATE VIEW TO my_admin_user;
+
+    CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_user;
 
 Node configuration
 """"""""""""""""""
@@ -215,7 +247,7 @@ Node configuration
 
     dataSourceProperties = {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
-        dataSource.url = "jdbc:sqlserver://<database_server>.database.windows.net:1433;databaseName=<database>;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
+        dataSource.url = "jdbc:sqlserver://<database_server>.database.windows.net:1433;databaseName=<my_database>;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
         dataSource.user = my_login
         dataSource.password = "my_password"
     }
@@ -225,7 +257,7 @@ Node configuration
         runMigration = true
     }
 
-Replace placeholders *<database_server>* and *<database>* with appropriate values.
+Replace placeholders *<database_server>* and *<my_database>* with appropriate values (*<my_database>* is a user database).
 Do not change the default isolation for this database (*READ_COMMITTED*) as the Corda platform has been validated for functional correctness and performance using this level.
 The ``database.schema`` is the database schema name assigned to the user.
 ``runMigration`` value should be set to *true* when using *administrative* permissions only, otherwise set the value to *false*.
@@ -237,7 +269,8 @@ extract the archive and copy the single file *mssql-jdbc-6.2.2.jre8.jar* as the 
 Schema cleanup
 """"""""""""""
 
-For development purpose, to remove node data run the following SQL script, also similarly delete Cordapps specific tables:
+For development purpose, to remove node data run the following SQL script against a user database as *my_user*
+if the user has administrative permissions or *my_admin_user* if a Corda node user has restrictive permissions:
 
 .. sourcecode:: sql
 
@@ -282,6 +315,24 @@ For development purpose, to remove node data run the following SQL script, also 
     DROP TABLE IF EXISTS my_schema.NODE_RAFT_COMMITTED_STATES;
     DROP TABLE IF EXISTS my_schema.NODE_RAFT_COMMITTED_TXS;
 
+Also similarly delete Cordapps specific tables.
+
+If you need to remove schema and the users, run the following script as a database administrator on a user database:
+
+.. sourcecode:: sql
+
+    DROP SCHEMA my_schema;
+    DROP USER my_user;
+    DROP USER IF EXISTS my_admin_user;
+
+To remove users' logins, run the following script as a database administrator on the master database
+(skip the second statement if you haven't create *my_admin_login* login):
+
+.. sourcecode:: sql
+
+    DROP LOGIN my_login;
+    DROP LOGIN my_admin_login;
+
 .. _db_setup_sql_server_ref:
 
 SQL Server
@@ -298,28 +349,80 @@ The database collation should be *case insensitive*, refer to
 Permissions for database user and schema namespace
 """"""""""""""""""""""""""""""""""""""""""""""""""
 
-*  To set up a database schema with administrative permissions, run the following SQL:
+* Database schema setup with administrative permissions
 
-   .. sourcecode:: sql
+  Connect to the master database as an administrator (e.g. *jdbc:sqlserver://<host>:<port>;databaseName=master*).
+  Run the following script to create a database, a user and a login:
 
-      CREATE LOGIN my_login WITH PASSWORD = 'my_password';
-      CREATE SCHEMA my_schema;
-      CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
-      GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::my_schema TO my_user;
-      GRANT CREATE TABLE TO my_user;
-      GRANT CREATE VIEW TO my_user;
+  .. sourcecode:: sql
 
-   The password must contain characters from three of the following four sets: Uppercase letters, Lowercase letters, Digits, and Symbols.
-   For example *C0rdaAP4ssword* is a correct password. Wrap password by single quotes.
+    CREATE DATABASE my_database;
 
-* To set up a database schema with restrictive permissions, run the following SQL:
+    CREATE LOGIN my_login WITH PASSWORD = 'my_password', DEFAULT_DATABASE = my_database;
+    CREATE USER my_user FOR LOGIN my_login;
 
-   .. sourcecode:: sql
+  The password must contain characters from three of the following four sets: Uppercase letters, Lowercase letters, Digits, and Symbols.
+  For example *C0rdaAP4ssword* is a correct password. Wrap password by single quotes.
 
-      CREATE LOGIN my_login WITH PASSWORD = 'my_password';
-      CREATE SCHEMA my_schema;
-      CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
-      GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_user;
+  You can create schemas of all Corda nodes in the same database,
+  in such case create database only once (*CREATE DATABASE my_database;*) and use it in DDL statements for each node.
+
+  Connect to a user database as the administrator (replace *master* with *my_database* in the connection string).
+  Run the following script to create a schema and user's permissions:
+
+  .. sourcecode:: sql
+
+    CREATE SCHEMA my_schema;
+
+    CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, ALTER, REFERENCES ON SCHEMA::my_schema TO my_user;
+    GRANT CREATE TABLE TO my_user;
+    GRANT CREATE VIEW TO my_user;
+
+* Database schema setup with restrictive permissions
+
+  Two database users needed to be created, the first one with administrative permission to create schema objects,
+  the latter one with restrictive permissions for a Corda node.
+  You cannot create schema objects with the default database administrator as Corda Database Management Tool
+  may not add a schema namespace prefix to each DDL statement and
+  the default database administrator would default to a different schema namespace.
+  In order to avoid this issue the, first user with administrative permission has a correct schema set as default.
+
+  Connect to a master database as an administrator (e.g. *jdbc:sqlserver://<host>:<port>;databaseName=master*).
+  Run the following script to create a database, a user and a login:
+
+  .. sourcecode:: sql
+
+    CREATE DATABASE my_database;
+
+    CREATE LOGIN my_admin_login WITH PASSWORD = 'my_password', DEFAULT_DATABASE = my_database;
+    CREATE USER my_admin_user FOR LOGIN my_admin_login;
+
+    CREATE LOGIN my_login WITH PASSWORD = 'my_password', DEFAULT_DATABASE = my_database;
+    CREATE USER my_user FOR LOGIN my_login;
+
+  Passwords must contain characters from three of the following four sets: Uppercase letters, Lowercase letters, Digits, and Symbols.
+  For example *C0rdaAP4ssword* is a correct password. Wrap password by single quotes.
+  Use different passwords for *my_admin_user* and *my_user*.
+
+  You can create schemas for each Corda node within the same database (*my_database*),
+  in such case use the same my_database name and run the first DDL statement CREATE DATABASE my_database; only once.
+
+  Connect to a user database as the administrator (replace *master* with *my_database* in the connection string).
+  Run the following script to create a schema and users' permissions:
+
+  .. sourcecode:: sql
+
+    CREATE SCHEMA my_schema;
+
+    CREATE USER my_admin_user FOR LOGIN my_admin_login WITH DEFAULT_SCHEMA = my_schema;
+    GRANT ALTER ON SCHEMA::my_schema TO my_admin_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_admin_user;
+    GRANT CREATE TABLE TO my_admin_user;
+    GRANT CREATE VIEW TO my_admin_user;
+
+    CREATE USER my_user FOR LOGIN my_login WITH DEFAULT_SCHEMA = my_schema;
+    GRANT SELECT, INSERT, UPDATE, DELETE, VIEW DEFINITION, REFERENCES ON SCHEMA::my_schema TO my_user;
 
 Node configuration
 """"""""""""""""""
@@ -328,7 +431,7 @@ Node configuration
 
     dataSourceProperties = {
         dataSourceClassName = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
-        dataSource.url = "jdbc:sqlserver://<host>:<port>;databaseName=<database>"
+        dataSource.url = "jdbc:sqlserver://<host>:<port>;databaseName=my_database"
         dataSource.user = my_login
         dataSource.password = "my_password"
     }
@@ -338,7 +441,7 @@ Node configuration
         runMigration = true
     }
 
-Replace placeholders *<host>*, *<port>* and *<database>* with appropriate values.
+Replace placeholders *<host>*, *<port>* with appropriate values, the default SQL Server port is 1433.
 By default the connection to the database is not SSL, for securing JDBC connection refer to
 `Securing JDBC Driver Application <https://docs.microsoft.com/en-us/sql/connect/jdbc/securing-jdbc-driver-applications?view=sql-server-2017>`_.
 
