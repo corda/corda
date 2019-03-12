@@ -11,12 +11,12 @@ Advanced CorDapp Concepts
 .. Preamble.
 
 At the heart of the Corda design and security model is the idea that a transaction is valid if and only if all the `verify()` functions in
-the contract code associated with each state in the transaction succeed. And the contract constraints features in Corda provide a rich set
+the contract code associated with each state in the transaction succeed. The contract constraints features in Corda provide a rich set
 of tools for specifying and constraining which verify functions out of the universe of possibilities can legitimately be used in (attached to) a transaction.
 
-In simple scenarios, this works as you would expect and Corda's in-built security controls ensure that your applications work as you expect them too.
+In simple scenarios, this works as you would expect and Corda's built-in security controls ensure that your applications work as you expect them too.
 However, if you move to more advanced scenarios, especially ones where your verify function depends on code from other non-Corda libraries,
-especially code that other people's verify functions may also depend on, you need to start thinking about what happens if and when states
+code that other people's verify functions may also depend on, you need to start thinking about what happens if and when states
 governed by these different pieces of code are brought together. If they both depend on a library, which common version should be used?
 How do you avoid your verify function's behaviour changing unexpectedly if the wrong version of the library is used? Are you at risk of subtle attacks?
 The good news is that Corda is designed to deal with these situations but the flip side is that you need to understand how this is done,
@@ -44,9 +44,11 @@ The only thing that is protecting your `Cash` is the contract verification code,
 `net.corda.finance.contracts.asset.Cash` contract class that permits this transition to occur.
 So we clearly need a way to ensure that the actual code attached to a transaction purporting to implement any given contract is constrained in some way.
 For example, perhaps we wish to ensure that only the specific implementation of `net.corda.finance.contracts.asset.Cash` that was specified by the initial issuer of the cash is used.
-Or perhaps we wish to constrain it in some other way. To prevent the types of attacks that can arise if there were no restrictions on which
-implementations of Contract classes were attached to transactions, we provide the contract constraints mechanism to complement the class name,
-that allows the State to specify exactly what code can be attached.
+Or perhaps we wish to constrain it in some other way.
+
+To prevent the types of attacks that can arise if there were no restrictions on which
+implementations of Contract classes were attached to transactions, we provide the contract constraints mechanism to complement the class name.
+This mechanism allows the state to specify exactly what code can be attached.
 In Corda 4, for example, the state can say: "I'm ok to be spent if the transaction is verified by a class: `com.megacorp.megacontract.MegaContract` as
 long as the JAR containing this contract is signed by `Mega Corp`".
 
@@ -65,13 +67,13 @@ Behind the scenes, the matter is more complex. As can be seen in this illustrati
 
 .. How The UTxO model is applied.
 
-.. note:: Corda's design is based on the UTxO model. In a serialized transaction the input and reference states are `StateRefs` - only references
+.. note:: Corda's design is based on the UTXO model. In a serialized transaction the input and reference states are `StateRefs` - only references
           to output states from previous transactions (see :doc:`api-transactions`).
           When building the `LedgerTransaction`, the `inputs` and `references` are resolved to Java objects created by deserialising blobs of data
           fetched from previous transactions that were serialized in that context - within the classloader of that transaction.
           This model has consequences when it comes to how states can be evolved. Removing a field from a newer version of a state would mean
           that when deserialising that state in the context of a transaction using the more recent code, that field could just disappear.
-          To prevent this, in Corda 4 we implemented the no-data loss rule, which prevents this to happen. See :doc:`serialization-default-evolution`
+          In Corda 4 we implemented the no-data loss rule, which prevents this to happen. See :doc:`serialization-default-evolution`
 
 .. Go through a very basic example of transaction verification.
 
@@ -120,7 +122,7 @@ This is done by creating an `AttachmentsClassloader` from all the attachments li
 representation of the transaction inside this classloader, create the `LedgerTransaction` and then running the contract verification code
 in this classloader.
 
-Because Corda transactions can combine any states, it is possible that 2 different transaction attachments contain the same class name (they overlap).
+Corda transactions can combine any states, which makes it possible that 2 different transaction attachments contain the same class name (they overlap).
 This can happen legitimately or it can be a malicious party attempting to break the contract rules. Due to how Java classloaders work,
 this would cause ambiguity as to what code will be executed, so an attacker could attempt to exploit this and trick other nodes that a transaction that
 should be invalid is actually valid. To address this vulnerability, Corda introduces the `no-overlap` rule:
@@ -170,7 +172,7 @@ There are 2 options to achieve this (given the hypothetical `Apples` for `Orange
 
 These options have pros and cons, which are now discussed:
 
-The first approach is fairly straight forward and does not require any additional setup. Just declaring a `compile` dependency
+The first approach is fairly straightforward and does not require any additional setup. Just declaring a `compile` dependency
 will by default bundle the dependency with the CorDapp. One obvious drawback is that CorDapp JARs can grow quite large in case they depend on
 large libraries. Other more subtle drawbacks will be discussed below.
 
@@ -308,20 +310,27 @@ In case the contract depends on a specific version:
             require.using("the correct fruit jar was attached to the transaction", tx.getAttachments().contains(hash_of_fruit_jar));
         ...
 
-In case the dependency has to be signed by a known public key:
+.. _contract_security_signed:
+
+In case the dependency has to be signed by a known public key the contract must check that there is a JAR attached that contains that class name and is signed by the right key:
 
 .. container:: codeset
 
     .. sourcecode:: kotlin
 
         requireThat {
-            "the correct my_reusable_cordapp jar was attached to the transaction" using (tx.attachments.find {SignatureAttachmentConstraint(my_public_key).isSatisfiedBy(it)} !=null)
+            "the correct my_reusable_cordapp jar was attached to the transaction" using (tx.attachments.find {attch -> attch.containsClass(dependentClass) && SignatureAttachmentConstraint(my_public_key).isSatisfiedBy(attch)} !=null)
         }
 
     .. sourcecode:: java
 
         requireThat(require -> {
-            require.using("the correct my_reusable_cordapp jar was attached to the transaction", tx.getAttachments().stream().anyMatch(a -> new SignatureAttachmentConstraint(my_public_key).isSatisfiedBy(a))));
+            require.using("the correct my_reusable_cordapp jar was attached to the transaction", tx.getAttachments().stream().anyMatch(attch -> containsClass(attch, dependentClass)  new SignatureAttachmentConstraint(my_public_key).isSatisfiedBy(attch))));
+
+
+.. note:: Dependencies that are not Corda specific need to be imported using the `uploadAttachment` RPC command. The reason for this is that in Corda 4
+          only JARs containing contracts are automatically imported in the `AttachmentStorage`. It needs to be in the `AttachmentStorage` because
+          that's the only way to attach JARs to a transaction.
 
 
 Changes between version 3 and version 4 of Corda
@@ -371,3 +380,28 @@ needs to be updated with the code described here: :ref:`contract_security`.
 
 .. warning:: The `finance` CorDapp is a sample and should not normally be used in production or depended upon in a production CorDapp. In case
              the app developer requires some code, they can just copy it under their own namespace.
+
+
+
+The Tokens SDK CorDapp
+----------------------
+
+The Tokens SDK is the successor of the `finance` CorDapp and will be suitable to be used by production CorDapps.
+
+When it will be officially released, it will be signed by R3. Until then, development against it can proceed without the additional security checks.
+These security checks matter only when the CorDapp is released.
+
+The Tokens SDK will be released as three artifacts:
+
+    - A `money` JAR containing utilities. This will be shipped as a signed JAR.
+    - A `contracts` JAR containing ready-to-use contracts and contracts and states that can be extended. This will also be shipped as a signed JAR.
+    - A `flows` JAR, which is not relevant for security concerns.
+
+The `money` and the `contracts` JARs are typical signed dependencies so the code that needs to be added is this: :ref:`contract_security_signed`.
+
+
+Suggested steps for using the Tokens SDK:
+
+- During development time, just following the instructions `here <https://github.com/corda/cordapp-template-kotlin/tree/token-template>`_ is enough.
+- The snippet of code required to add the right attachment to the transaction builder will be provided in the Tokens SDK instructions.
+- When your CorDapp is ready for release, just add contract verification code that will also be provided in the Tokens SDK instructions
