@@ -89,6 +89,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
      * Leaves the election process, relinquishing leadership if acquired.
      * Cleans up all watchers and connection listener
      */
+    @Synchronized
     @Throws(IOException::class, IllegalStateException::class)
     override fun close() {
         Preconditions.checkState(state.compareAndSet(State.STARTED, State.CLOSED),
@@ -128,6 +129,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         return State.STARTED == state.get() && hasLeadership.get()
     }
 
+    @Synchronized
     private fun internalStart() {
         if (State.STARTED == state.get()) {
             log.info("$nodeId latch started for path $path.")
@@ -151,6 +153,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         return false
     }
 
+    @Synchronized
     private fun handleStateChange(newState: ConnectionState?) {
         log.info("State change. New state: $newState")
         when (newState) {
@@ -168,11 +171,12 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
             }
 
             ConnectionState.SUSPENDED -> {
+                watchedClient.removeWatchers()
                 if (watchedClient.connectionStateErrorPolicy.isErrorState(ConnectionState.SUSPENDED))
                     setLeadership(false)
             }
 
-            ConnectionState.LOST -> setLeadership(false)
+            ConnectionState.LOST ->  { setLeadership(false); watchedClient.removeWatchers() }
 
             else -> log.debug { "Ignoring state change $newState" }
         }
@@ -209,6 +213,7 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         }
     }
 
+    @Synchronized
     private fun setLeadership(newValue: Boolean) {
         val oldValue = hasLeadership.getAndSet(newValue)
         log.info("Client $nodeId: setting leadership to $newValue; old value was $oldValue.")
@@ -218,6 +223,8 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
             try {
                 if (leaderLock.isAcquiredInThisProcess) {
                     leaderLock.release()
+                } else {
+                    log.info("Lock is not held by this process. Cannot release.")
                 }
             } catch (e: IllegalStateException) {
                 log.warn("Client $nodeId: tried to release leader lock without owning it.")
@@ -326,9 +333,13 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         fun asyncAcquire(onComplete: () -> Unit) {
             lockHandlingExecutor.submit {
                 try {
-                    log.info("Acquiring leader lock...")
-                    leaderLock.acquire()
-                    log.info("Leader lock acquired. Becoming the new leader...")
+                    log.info("Acquiring leader lock.")
+                    if (!isAcquiredInThisProcess) {
+                       leaderLock.acquire()
+                    } else {
+                        log.info("Lock already acquired.")
+                    }
+                    log.info("Leader lock acquired.")
                 } catch (e: IOException) {
                     log.warn("Client closed while trying to acquire leader lock.")
                 } catch (e: IllegalStateException) {
