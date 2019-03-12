@@ -225,7 +225,10 @@ internal class PrioritizedLeaderLatch(private val client: CuratorFramework,
         } else if (!oldValue && newValue) {
             // Make sure we're the only leader before invoking listeners.
             leaderLock.asyncAcquire {
-                listeners.forEach { listener -> listener?.isLeader(); null }
+                listeners.forEach { listener ->
+                    listener?.isLeader()
+                    null
+                }
             }
         }
     }
