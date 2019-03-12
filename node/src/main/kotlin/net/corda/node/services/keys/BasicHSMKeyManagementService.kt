@@ -14,7 +14,6 @@ import net.corda.nodeapi.internal.persistence.CordaPersistence
 import net.corda.nodeapi.internal.persistence.NODE_DATABASE_PREFIX
 import org.apache.commons.lang.ArrayUtils.EMPTY_BYTE_ARRAY
 import org.bouncycastle.operator.ContentSigner
-import org.hibernate.annotations.Type
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -84,7 +83,7 @@ class BasicHSMKeyManagementService(cacheFactory: NamedCacheFactory, val identity
     }
 
     override fun filterMyKeys(candidateKeys: Iterable<PublicKey>): Iterable<PublicKey> = database.transaction {
-        identityService.stripNotOurKeys(candidateKeys)
+        (identityService.stripNotOurKeys(candidateKeys) + candidateKeys.filter { containsPublicKey(it) }).toSet()
     }
 
     // Unlike initial keys, freshkey() is related confidential keys and it utilises platform's software key generation

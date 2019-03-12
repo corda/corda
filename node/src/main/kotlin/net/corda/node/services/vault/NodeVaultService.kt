@@ -68,7 +68,13 @@ class NodeVaultService(
         fun isRelevant(state: ContractState, myKeys: Set<PublicKey>): Boolean {
             val keysToCheck = when (state) {
                 is OwnableState -> listOf(state.owner.owningKey)
-                else -> state.participants.map { it.owningKey }
+                else -> state.participants.map {participant ->
+                    if (participant.owningKey == participant.host().owningKey){
+                        listOf(participant.owningKey)
+                    }else{
+                        listOf(participant.owningKey, participant.host().owningKey)
+                    }
+                }.flatten()
             }
             return keysToCheck.any { it.containsAny(myKeys) }
         }
