@@ -120,6 +120,13 @@ is asserting.
 
 Next we want Bob to send this cash back to Alice.
 
+That's it! We saw how to start up several corda nodes locally, how to connect to them, and how to test some simple invariants
+about ``CashIssueAndPaymentFlow`` and ``CashPaymentFlow``.
+
+You can find the complete test at ``example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java``
+(Java) and ``example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt`` (Kotlin) in the
+`Corda repo <https://github.com/corda/corda>`_.
+
 .. note::
 
     To make sure the driver classes are included in your project you will need the following in your ``build.gradle`` file in the module in
@@ -128,10 +135,3 @@ Next we want Bob to send this cash back to Alice.
     .. sourcecode:: groovy
 
         testCompile "$corda_release_group:corda-node-driver:$corda_release_version"
-
-That's it! We saw how to start up several corda nodes locally, how to connect to them, and how to test some simple invariants
-about ``CashIssueAndPaymentFlow`` and ``CashPaymentFlow``.
-
-You can find the complete test at ``example-code/src/integration-test/java/net/corda/docs/java/tutorial/test/JavaIntegrationTestingTutorial.java``
-(Java) and ``example-code/src/integration-test/kotlin/net/corda/docs/kotlin/tutorial/test/KotlinIntegrationTestingTutorial.kt`` (Kotlin) in the
-`Corda repo <https://github.com/corda/corda>`_.
