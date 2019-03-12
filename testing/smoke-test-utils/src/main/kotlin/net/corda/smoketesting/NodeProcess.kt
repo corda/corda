@@ -106,7 +106,7 @@ class NodeProcess(
             }
 
             (nodeDir / "node.conf").writeText(config.toText())
-            createNetworkParameters(NotaryInfo(notaryParty!!, false), nodeDir)
+            createNetworkParameters(NotaryInfo(notaryParty!!, true), nodeDir)
 
             val process = startNode(nodeDir)
             val client = CordaRPCClient(NetworkHostAndPort("localhost", config.rpcPort))
