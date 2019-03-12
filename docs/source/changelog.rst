@@ -4,6 +4,14 @@ Changelog
 Here's a summary of what's changed in each Corda release. For guidance on how to upgrade code from the previous
 release, see :doc:`upgrade-notes`.
 
+Unreleased
+----------
+
+* Added a mode to the Class Carpenter where classes it cannot synthesise that are removed from an objects dependency
+  graph by the evolution code no longer causes an error. This is a small enhancement to better facilitate compatibility
+  with newer version of Corda. It allows Version 3 nodes to receive serialised forms of evolved types and cope with
+  them in a more elegant way than previously.
+
 Version 3.3
 -----------
 

@@ -118,11 +118,10 @@ public class SetterConstructorTests {
     // despite having no constructor we should still be able to serialise an instance of C
     @Test
     public void serialiseC() throws NotSerializableException {
-        EvolutionSerializerGetterBase evolutionSerialiserGetter = new EvolutionSerializerGetter();
         SerializerFactory factory1 = new SerializerFactory(
                 AllWhitelist.INSTANCE,
                 ClassLoader.getSystemClassLoader(),
-                evolutionSerialiserGetter);
+                new EvolutionSerializerGetter());
 
         SerializationOutput ser = new SerializationOutput(factory1);
 

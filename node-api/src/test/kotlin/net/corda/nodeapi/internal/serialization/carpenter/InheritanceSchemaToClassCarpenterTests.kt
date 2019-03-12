@@ -333,7 +333,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, carpenterSchema.dependsOn[iName]!!.size)
         assertEquals(aName, carpenterSchema.dependsOn[iName]!![0])
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -386,7 +386,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiName })
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)
@@ -446,7 +446,7 @@ class InheritanceSchemaToClassCarpenterTests : AmqpCarpenterBase(AllWhitelist) {
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iiiName })
         assertNotNull(carpenterSchema.dependencies[aName]!!.second.find { it == iName })
 
-        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val mc = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
         mc.build()
 
         assertEquals(0, mc.schemas.carpenterSchemas.size)

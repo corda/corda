@@ -2,6 +2,7 @@ package net.corda.nodeapi.internal.serialization.amqp
 
 import com.google.common.primitives.Primitives
 import com.google.common.reflect.TypeResolver
+import net.corda.core.CordaRuntimeException
 import net.corda.core.internal.VisibleForTesting
 import net.corda.core.internal.uncheckedCast
 import net.corda.core.serialization.ClassWhitelist
@@ -40,10 +41,11 @@ data class FactorySchemaAndDescriptor(val schemas: SerializationSchemas, val typ
 // TODO: need to rethink matching of constructor to properties in relation to implementing interfaces and needing those properties etc.
 // TODO: need to support super classes as well as interfaces with our current code base... what's involved?  If we continue to ban, what is the impact?
 @ThreadSafe
-open class SerializerFactory(
+open class SerializerFactory @JvmOverloads constructor (
     val whitelist: ClassWhitelist,
     cl: ClassLoader,
-    private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter()
+    private val evolutionSerializerGetter: EvolutionSerializerGetterBase = EvolutionSerializerGetter(),
+    environment : (String) -> String? = { s -> System.getenv(s) }
 ) {
     @VisibleForTesting
     internal val serializersByType = ConcurrentHashMap<Type, AMQPSerializer<Any>>()
@@ -65,6 +67,13 @@ open class SerializerFactory(
     fun getTransformsCache() = transformsCache
 
     private val logger by lazy { loggerFor<SerializerFactory>() }
+
+    /**
+     * feature flag to disable the behaviour where carpentry errors are ignored if the failed class is
+     * evolved out of the class hierarchy. Passed as a flag to the [MetaCarpenter]s build method as
+     * [MetaCarpenter.tolerateFailure] where setting this to true enabled the new behaviour.
+     */
+    private val disable2704 : Boolean = environment("DISABLE-CORDA-2704")?.toBoolean() ?: false
 
     /**
      * Look up, and manufacture if necessary, a serializer for the given type.
@@ -252,7 +261,7 @@ open class SerializerFactory(
                 // This carpenting should only be carried out for non-collections. These are detected by looking for
                 // types that are not composites (RestrictedTypes), and not enums (have no choices).
                 if (!(notation is RestrictedType && notation.choices.isEmpty())) {
-                    interfacesPerClass[name]!!.forEach { processSchemaEntry(it) }
+                    interfacesPerClass.getValue(name).forEach { processSchemaEntry(it) }
                     metaSchema.buildFor(notation, classloader)
                 }
                 null
@@ -260,17 +269,27 @@ open class SerializerFactory(
         }.toMap()
 
         if (metaSchema.isNotEmpty()) {
-            val mc = MetaCarpenter(metaSchema, classCarpenter)
-            mc.build()
+            // If we disable the feature added in Corda-2704 then we need to not tolerate failures so
+            // just invert the tolerateFailure flag
+            MetaCarpenter(metaSchema, classCarpenter, tolerateFailure = !disable2704).build()
         }
 
         val carpented = notationByNameForNonInterfaceTypes.minus(noCarpentryRequired.keys).mapValues { (name, notation) ->
-            processSchemaEntry(notation)
+            try {
+                processSchemaEntry(notation)
+            } catch (_ : ClassNotFoundException) {
+                UncarpentableSerializer(name).apply {
+                    serializersByDescriptor[notation.descriptor.name!!] = this
+
+                }
+            }
         }
 
         val allLocalSerializers = noCarpentryRequired + carpented
 
         allLocalSerializers.forEach { (name, serializer) ->
+            if (serializer is UncarpentableSerializer) return@forEach
+
             val typeNotation = notationByNameForNonInterfaceTypes[name]!!
             if (serializer.typeDescriptor != typeNotation.descriptor.name ) {
                 getEvolutionSerializer(typeNotation, serializer, schemaAndDescriptor.schemas)
@@ -278,10 +297,13 @@ open class SerializerFactory(
         }
     }
 
-    private fun processSchemaEntry(typeNotation: TypeNotation) = when (typeNotation) {
-        is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
-        is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
+    private fun processSchemaEntry(typeNotation: TypeNotation) = run {
+        when (typeNotation) {
+            is CompositeType -> processCompositeType(typeNotation) // java.lang.Class (whether a class or interface)
+            is RestrictedType -> processRestrictedType(typeNotation) // Collection / Map, possibly with generics
+        }
     }
+
 
     // TODO: class loader logic, and compare the schema.
     private fun processRestrictedType(typeNotation: RestrictedType) = get(null,

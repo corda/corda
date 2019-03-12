@@ -117,7 +117,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         assertEquals(1, carpenterSchema.size)
 
-        val metaCarpenter = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val metaCarpenter = MetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
 
         metaCarpenter.build()
 
@@ -152,7 +152,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
         assertEquals(1, carpenterSchema.dependsOn.size)
         assert(mangleName(classTestName("A")) in carpenterSchema.dependsOn)
 
-        val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist))
+        val metaCarpenter = TestMetaCarpenter(carpenterSchema, ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
 
         assertEquals(0, metaCarpenter.objects.size)
 
@@ -253,7 +253,7 @@ class CompositeMembers : AmqpCarpenterBase(AllWhitelist) {
 
         val carpenterSchema = obj.envelope.schema.mangleNames(listOf(classTestName("A"), classTestName("B")))
         TestMetaCarpenter(carpenterSchema.carpenterSchema(
-                ClassLoader.getSystemClassLoader()), ClassCarpenter(whitelist = AllWhitelist))
+                ClassLoader.getSystemClassLoader()), ClassCarpenter(whitelist = AllWhitelist), tolerateFailure = false)
     }
 
     /*

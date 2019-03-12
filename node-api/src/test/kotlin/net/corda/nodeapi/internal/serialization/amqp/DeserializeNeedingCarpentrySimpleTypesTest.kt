@@ -33,7 +33,7 @@ class DeserializeNeedingCarpentrySimpleTypesTest : AmqpCarpenterBase(AllWhitelis
         val db2 = DeserializationInput(sf2).deserialize(sb)
 
         // despite being carpented, and thus not on the class path, we should've cached clazz
-        // inside the serialiser object and thus we should have created the same type
+        // inside the serializer object and thus we should have created the same type
         assertEquals(db::class.java, clazz)
         assertNotEquals(db2::class.java, clazz)
         assertNotEquals(db::class.java, db2::class.java)

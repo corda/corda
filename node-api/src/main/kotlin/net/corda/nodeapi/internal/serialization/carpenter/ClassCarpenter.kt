@@ -1,5 +1,6 @@
 package net.corda.nodeapi.internal.serialization.carpenter
 
+import net.corda.core.CordaException
 import net.corda.core.serialization.ClassWhitelist
 import net.corda.core.serialization.CordaSerializable
 import org.objectweb.asm.ClassWriter
@@ -79,7 +80,7 @@ private val jlClass get() = Type.getInternalName(Class::class.java)
  *
  * Equals/hashCode methods are not yet supported.
  */
-class ClassCarpenter(
+open class ClassCarpenter(
     cl: ClassLoader = Thread.currentThread().contextClassLoader,
     val whitelist: ClassWhitelist
 ) {
@@ -104,7 +105,7 @@ class ClassCarpenter(
      * @throws DuplicateNameException if the schema's name is already taken in this namespace (you can create a
      * new ClassCarpenter if you're OK with ambiguous names)
      */
-    fun build(schema: Schema): Class<*> {
+    open fun build(schema: Schema): Class<*> {
         validateSchema(schema)
         // Walk up the inheritance hierarchy until we hit either the top or a class we've already generated,
         // then walk back down it generating classes.
